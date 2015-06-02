@@ -39,9 +39,11 @@ def setup_module(module):
     rt1 = dispatch_node("calvinip://localhost:5000", "http://localhost:5003")
     rt2 = dispatch_node("calvinip://localhost:5001", "http://localhost:5004")
     rt3 = dispatch_node("calvinip://localhost:5002", "http://localhost:5005")
+    time.sleep(.4)
     utils.peer_setup(rt1, ["calvinip://localhost:5001", "calvinip://localhost:5002"])
     utils.peer_setup(rt2, ["calvinip://localhost:5000", "calvinip://localhost:5002"])
     utils.peer_setup(rt3, ["calvinip://localhost:5000", "calvinip://localhost:5001"])
+    time.sleep(.4)
 
 def teardown_module(module):
     global rt1
@@ -50,10 +52,10 @@ def teardown_module(module):
     utils.quit(rt1)
     utils.quit(rt2)
     utils.quit(rt3)
-    time.sleep(0.2)
+    time.sleep(0.4)
     for p in multiprocessing.active_children():
         p.terminate()
-    time.sleep(0.2)
+    time.sleep(0.4)
 
 class CalvinTestBase(unittest.TestCase):
 
@@ -276,7 +278,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         utils.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         actual = utils.report(self.rt1, snk)
 
@@ -294,7 +296,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
-        time.sleep(0.5)
+        time.sleep(0.06)
 
         snk = d.actor_map['simple:snk']
         actual = utils.report(self.rt1, snk)
@@ -309,7 +311,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
         utils.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.5)
+        time.sleep(0.2)
 
         actual = utils.report(self.rt1, snk)
 
@@ -324,7 +326,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
         utils.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         actual = utils.report(self.rt3, snk)
 
@@ -339,7 +341,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
         utils.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
 
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         actual = utils.report(self.rt3, snk)
 
@@ -353,7 +355,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
         utils.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
 
-        time.sleep(0.5)
+        time.sleep(0.2)
 
         actual = utils.report(self.rt1, snk)
 
@@ -372,7 +374,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         app_info, errors, warnings = compiler.compile(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.4)
 
         snk = d.actor_map['simple:snk']
         actual = utils.report(self.rt1, snk)
@@ -390,7 +392,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt1, snk1, 'token', self.rt1.id, src, 'integer')
         utils.connect(self.rt1, snk2, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.5)
+        time.sleep(0.2)
 
         actual1 = utils.report(self.rt1, snk1)
         actual2 = utils.report(self.rt1, snk2)
@@ -411,7 +413,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         app_info, errors, warnings = compiler.compile(script, "test31")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         snk1 = d.actor_map['test31:snk1']
         snk2 = d.actor_map['test31:snk2']
@@ -442,7 +444,7 @@ class TestNullPorts(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.4)
 
         snk = d.actor_map['testVoidActor:snk']
         actual = utils.report(self.rt1, snk)
@@ -490,7 +492,7 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.05)
 
         snk = d.actor_map['testBadOp:snk']
         actual = utils.report(self.rt1, snk)
@@ -513,7 +515,7 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         snk = d.actor_map['testEqual:snk']
         actual = utils.report(self.rt1, snk)
@@ -536,7 +538,7 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         snk = d.actor_map['testGreaterThanOrEqual:snk']
         actual = utils.report(self.rt1, snk)
@@ -565,7 +567,7 @@ class TestSelect(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.2)
 
         snk = d.actor_map['testTrue:snk']
         actual = utils.report(self.rt1, snk)
@@ -733,7 +735,7 @@ class TestLineJoin(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(1)
 
         snk = d.actor_map['testBasicJoin:snk']
         actual = utils.report(self.rt1, snk)
@@ -814,7 +816,7 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexMatch:snk']
         actual = utils.report(self.rt1, snk)
@@ -838,7 +840,7 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexNoMatch:snk']
         actual = utils.report(self.rt1, snk)
@@ -861,7 +863,7 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexCapture:snk']
         actual = utils.report(self.rt1, snk)
@@ -884,7 +886,7 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexMultiCapture:snk']
         actual = utils.report(self.rt1, snk)
@@ -908,7 +910,7 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexCaptureNoMatch:snk']
         actual = utils.report(self.rt1, snk)

@@ -14,3 +14,7 @@ calvin.conf
 dist/
 calvin.egg-info
 ./build/
+*_BACKUP_*
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*

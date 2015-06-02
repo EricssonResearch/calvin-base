@@ -18,8 +18,8 @@ from calvin.runtime.south.plugins.async import server_connection
 
 
 class Server(object):
-    def __init__(self, node, mode, delimiter, max_length):
-        self.connection_factory = server_connection.ServerProtocolFactory(node.sched.trigger_loop, mode, delimiter, max_length)
+    def __init__(self, node, mode, delimiter, max_length, actor_id=None):
+        self.connection_factory = server_connection.ServerProtocolFactory(node.sched.trigger_loop, mode, delimiter, max_length, actor_id)
 
     def start(self, host, port):
         self.connection_factory.start(host, port)
@@ -43,13 +43,14 @@ class Server(object):
 
 
 class ServerHandler(object):
-    def __init__(self, node):
+    def __init__(self, node, actor):
         super(ServerHandler, self).__init__()
         self.node   = node
         self.server = None
+        self._actor = actor
 
     def start(self, host, port, mode, delimiter, max_length):
-        self.server = Server(self.node, mode, delimiter, max_length)
+        self.server = Server(self.node, mode, delimiter, max_length, actor_id=self._actor.id)
         self.server.start(host, port)
         return self.server
 
@@ -57,8 +58,8 @@ class ServerHandler(object):
         self.server.stop()
 
 
-def register(node, io):
+def register(node, actor, io):
     """
         Called when the system object is first created.
     """
-    io.tcp_server = ServerHandler(node)
+    io.tcp_server = ServerHandler(node, actor)

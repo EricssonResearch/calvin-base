@@ -18,6 +18,10 @@ import os
 import requests
 import json
 
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
+
 
 def get_local_ip():
     import socket

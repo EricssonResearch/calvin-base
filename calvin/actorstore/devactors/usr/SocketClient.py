@@ -50,7 +50,7 @@ class SocketClient(Actor):
             self.connect()
 
     def connect(self):
-        self.cc = self.calvinsys.io.socket_client.connect(self.id, self.address, self.port,
+        self.cc = self.calvinsys.io.socket_client.connect(self.address, self.port,
                                                           self.protocol, self.type_, self.delimiter)
 
     def will_migrate(self):

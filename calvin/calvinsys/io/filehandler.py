@@ -72,7 +72,7 @@ class FileHandler(object):
         fp.close()
 
 
-def register(node, io):
+def register(node, actor, io):
     """
         Called when the system object is first created.
     """

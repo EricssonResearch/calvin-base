@@ -22,11 +22,13 @@ _log = get_logger(__name__)
 
 
 class TimerEvent(async.DelayedCall):
-    def __init__(self, delay, trigger_loop, repeats=False):
+    def __init__(self, actor_id, delay, trigger_loop, repeats=False):
         super(TimerEvent, self).__init__(delay, callback=self.trigger)
+        self._actor_id = actor_id
         self._triggered = False
         self.trigger_loop = trigger_loop
         self.repeats = repeats
+        _log.debug("Set calvinsys timer %f %s on %s" % (delay, "repeat" if self.repeats else "", self._actor_id))
         self.reset()
 
     @property
@@ -37,27 +39,30 @@ class TimerEvent(async.DelayedCall):
         self._triggered = False
 
     def trigger(self):
+        _log.debug("Trigger calvinsys timer on %s" % (self._actor_id))
         self._triggered = True
         if self.repeats:
             self.reset()
-        self.trigger_loop()
+        self.trigger_loop(actor_ids=[self._actor_id])
 
 
 class TimerHandler(object):
-    def __init__(self, node):
+    def __init__(self, node, actor):
         super(TimerHandler, self).__init__()
+        self._actor = actor
         self.node = node
 
     def once(self, delay):
-        return TimerEvent(delay, self.node.sched.trigger_loop)
+        return TimerEvent(self._actor.id, delay, self.node.sched.trigger_loop)
 
     def repeat(self, delay):
-        return TimerEvent(delay, self.node.sched.trigger_loop, repeats=True)
-        
-    def _trigger_loop(self):
-        return self.node.sched.trigger_loop()
+        return TimerEvent(self._actor.id, delay, self.node.sched.trigger_loop, repeats=True)
 
-def register(node, events):
+    # FIXME remove this no users
+    def _trigger_loop(self):
+        return self.node.sched.trigger_loop(actor_ids=[self._actor_id])
+
+def register(node, actor, events):
     """
         Registers is called when the Event-system object is created.
         Place an object in the event object - in this case the
@@ -66,4 +71,4 @@ def register(node, events):
         Also register any hooks for actor migration.
     """
 
-    events.timer = TimerHandler(node)
+    events.timer = TimerHandler(node, actor)

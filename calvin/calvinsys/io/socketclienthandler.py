@@ -16,11 +16,20 @@
 
 from calvin.runtime.south.plugins.async import client_connection
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
 
 
 class ClientHandler(object):
-    def __init__(self):
+    def __init__(self, node, actor):
+        _log.debug("Client handler %s for %s" % (self, actor.id))
+        self._actor = actor
+        self._node = node
         self._connections = {}
+
+    def _trigger_sched(self):
+        self._node.sched.trigger_loop(actor_ids=[self._actor.id])
 
     # Callbacks from socket client imp
     def _disconnected(self, handle, addr, reason):
@@ -35,16 +44,16 @@ class ClientHandler(object):
         self._push_control(("connection_failed", reason), handle)
 
     def _push_data(self, handle, data):
-        return self._connections[handle]['data'].append(data)
-        # TODO: call loop once on the right actor later on
+        self._connections[handle]['data'].append(data)
+        self._trigger_sched()
 
     def _push_control(self, data, handle):
-        return self._connections[handle]['control'].append(data)
-        # TODO: call loop once on the right actor later on
+        self._connections[handle]['control'].append(data)
+        self._trigger_sched()
 
     # External API
-    def connect(self, actor_id, addr, port, protocol="raw", type_="TCP", delimiter="\r\n"):
-        handle = "%s:%s:%s" % (actor_id, addr, port)
+    def connect(self, addr, port, protocol="raw", type_="TCP", delimiter="\r\n"):
+        handle = "%s:%s:%s" % (self._actor.id, addr, port)
         connection_factory = client_connection.ClientProtocolFactory(protocol=protocol, type_=type_,
                                                                      delimiter=delimiter,
                                                                      callbacks={'data_received':
@@ -109,8 +118,8 @@ class ClientConnection(object):
             raise AttributeError
 
 
-def register(node, io):
+def register(node, actor, io):
     """
         Called when the system object is first created.
     """
-    io.socket_client = ClientHandler()
+    io.socket_client = ClientHandler(node, actor)

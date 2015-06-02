@@ -91,7 +91,7 @@ class ActorManager(object):
             a = class_(actor_type)
             # FIXME: Resolve the required (calvin) APIs and attach them to the actor
             #        (if it has the required access rights)
-            a.attach_API("calvinsys", CalvinSys(self.node))
+            a.attach_API("calvinsys", CalvinSys(a, self.node))
         except Exception as e:
             _log.exception("")
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))

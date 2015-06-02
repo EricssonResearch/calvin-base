@@ -123,7 +123,7 @@ class CalvinControl(object):
             (re_delete_index, self.handle_delete_index),
             (re_get_index, self.handle_get_index)
         ]
-        self.server = server_connection.ServerProtocolFactory(self.node.sched.trigger_loop, "raw")
+        self.server = server_connection.ServerProtocolFactory(self.handle_request, "raw")
         self.server.start(self.host, self.port)
 
     def stop(self):
@@ -131,7 +131,7 @@ class CalvinControl(object):
         """
         self.server.stop()
 
-    def handle_request(self):
+    def handle_request(self, actor_ids=None):
         """ Handle incoming requests
         """
         if self.server.pending_connections:

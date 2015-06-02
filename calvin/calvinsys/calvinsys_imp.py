@@ -22,10 +22,10 @@ class CalvinSys(object):
 
     """CalvinSys is the interface to the calvin runtime for the actor"""
 
-    def __init__(self, node):
+    def __init__(self, actor, node):
         super(CalvinSys, self).__init__()
         self._node = node
-        self.events = calvin_events.Events(node)
-        self.io = calvin_io.Io(node)
-        self.network = calvin_network.Network(node)
+        self.events = calvin_events.Events(actor, node)
+        self.io = calvin_io.Io(actor, node)
+        self.network = calvin_network.Network(actor, node)
         # TODO add the storage subsystems

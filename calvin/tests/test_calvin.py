@@ -71,6 +71,8 @@ def setup_module(module):
 
     runtime = dispatch_node(localhost[0], localhost[1])
 
+    time.sleep(.1)
+
     # FIXME When storage up and running peersetup not needed, but still useful during testing
     utils.peer_setup(runtime, [i[0] for i in remotehosts])
 
