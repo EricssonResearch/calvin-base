@@ -65,8 +65,8 @@ class Deployer(object):
     def instantiate_primitive(self, actor_name, actor_type, args):
         # name is <namespace>:<identifier>, e.g. app:src, or app:component:src
         # args is a **dictionary** of key-value arguments for this instance
+        args['name'] = actor_name
         if self.node is not None:
-            args['name'] = actor_name
             instance_id = self.node.new(
                 actor_type=actor_type,
                 args=args,
