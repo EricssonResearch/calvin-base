@@ -1,0 +1,8 @@
+src:std.Counter()
+dmy:std.DummyAction()
+del:std.Delay()
+snk:io.StandardOut()
+
+src.integer > dmy.token
+dmy.token > del.token
+del.token > snk.token

@@ -1,0 +1,25 @@
+// Nested components 3 (same port names, minimal)
+
+component E() token -> token {
+  /* Use Identity from standard lib */
+  f:std.Identity()
+  g:std.Identity()
+
+  in > f.token
+  f.token > g.token
+  g.token > out
+}
+
+component B() in -> out {
+  e:E()
+
+  in > e.in
+  e.out > out
+}
+
+a:std.Counter()
+b:B()
+c:io.StandardOut()
+
+a.integer > b.in
+b.out > c.token

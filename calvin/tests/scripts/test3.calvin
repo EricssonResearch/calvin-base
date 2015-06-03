@@ -1,0 +1,9 @@
+// a -> b(arg) -> c -> d
+src:std.Counter()
+delay : std.Delay(delay=0.5)
+sum : std.SumActor()
+snk : io.StandardOut()
+
+src.integer > delay.token
+delay.token > sum.integer
+sum.integer > snk.token

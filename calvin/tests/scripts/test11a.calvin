@@ -1,0 +1,9 @@
+// Actor fan-out
+
+
+snk1 : io.StandardOut()
+snk2 : io.StandardOut()
+src : std.Counter()
+
+src.integer > snk1.token
+src.integer > snk2.token

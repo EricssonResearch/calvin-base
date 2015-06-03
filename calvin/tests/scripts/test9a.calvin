@@ -1,0 +1,40 @@
+// Nested components 3 (different port names)
+
+/* Declare local identity with a delay */
+component Identity(delay) din -> dout {
+  /* Use identity from standard lib */
+  id : std.Identity()
+  /* Use delay from standard lib */
+  delay : std.Delay(delay=delay)
+
+  din > id.token
+  id.token > delay.token
+  delay.token > dout
+}
+
+component E() in -> out {
+  /* Use Identity from standard lib */
+  f:std.Identity()
+  g:std.Identity()
+
+  in > f.token
+  f.token > g.token
+  g.token > out
+}
+
+component B() in -> out {
+  /* Use local identity */
+  d:Identity(delay=0.1)
+  e:E()
+
+  in > e.in
+  e.out > d.din
+  d.dout > out
+}
+
+a:std.Counter()
+b:B()
+c:io.StandardOut()
+
+a.integer > b.in
+b.out > c.token

@@ -1,0 +1,32 @@
+{
+    "components": [], 
+    "sourcefile": "tests/scripts/test1.calvin", 
+    "structure": {
+        "actors": {
+            "snk": {
+                "actor_type": "io.StandardOut", 
+                "args": {
+                    "store_tokens": [
+                        "NUMBER", 
+                        1
+                    ]
+                }, 
+                "dbg_line": 5
+            }, 
+            "src": {
+                "actor_type": "std.CountTimer", 
+                "args": {}, 
+                "dbg_line": 4
+            }
+        }, 
+        "connections": [
+            {
+                "dbg_line": 7, 
+                "dst": "snk", 
+                "dst_port": "token", 
+                "src": "src", 
+                "src_port": "integer"
+            }
+        ]
+    }
+}

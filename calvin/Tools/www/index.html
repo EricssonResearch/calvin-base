@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body { font: 12px Arial;}
+
+.link {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
+
+text {
+  font: 10px sans-serif;
+  pointer-events: none;
+  text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+}
+
+.spinner {
+    position: fixed;
+    top: 40%;
+    left: 40%;
+}
+
+/*----- Table selection -----*/
+table tr.active {background: #ccc;}
+
+/*----- Tabs -----*/
+.tabs {
+    float: left;
+    width:100%;
+    height: 50%;
+    clear: both;
+}
+
+    /*----- Tab Links -----*/
+    /* Clearfix */
+    .tab-links:after {
+        display:block;
+        clear:both;
+        content:'';
+    }
+
+    .tab-links li {
+        margin:0px 5px;
+        float:left;
+        list-style:none;
+    }
+
+        .tab-links a {
+            padding:9px 15px;
+            display:inline-block;
+            border-radius:3px 3px 0px 0px;
+            background:#7FB5DA;
+            font-size:16px;
+            font-weight:600;
+            color:#4c4c4c;
+            transition:all linear 0.15s;
+        }
+
+        .tab-links a:hover {
+            background:#a7cce5;
+            text-decoration:none;
+        }
+
+    li.active a, li.active a:hover {
+        background:#fff;
+        color:#4c4c4c;
+    }
+
+    /*----- Content of Tabs -----*/
+    .tab-content {
+        padding:15px;
+        border-radius:3px;
+        box-shadow:-1px 1px 1px rgba(0,0,0,0.15);
+        background:#fff;
+        width:100%;
+        height: 100%;
+    }
+
+        .tab {
+            display:none;
+        }
+
+        .tab.active {
+            display:block;
+        }
+
+#logData {
+    width:100%;
+    height: 50%;
+    clear: both;
+}
+</style>
+<body>
+
+<div class="tabs">
+    <ul class="tab-links">
+        <li class="active"><a href="#tabPeers">Peers</a></li>
+        <li><a href="#tabApplications">Applications</a></li>
+        <li><a href="#tabActors">Actors</a></li>
+        <li><a href="#tabDeploy">Deploy</a></li>
+    </ul>
+
+    <div class="tab-content">
+        <div id="tabPeers" class="tab active">
+            <table id="peersTable">
+                <th align="left">ID</th>
+                <th align="left">URI</th>
+                <th align="left">Control URI</th>
+                <th align="left">Destroy</th>
+            </table>
+        </div>
+
+        <div id="tabApplications" class="tab">
+                <table id="applicationsTable">
+                    <th align="left">ID</th>
+                    <th align="left">Name</th>
+                    <th align="left">Destroy</th>
+                    <th align="left">Draw graph</th>
+                </table>
+                <input id="chkLinkNames" type="checkbox" name="chkLinkNames" value="true">Show port names
+                <div id="actorGraph"></div>
+        </div>
+
+        <div id="tabActors" class="tab">
+            <table id="actorsTable">
+                <th align="left">Actor ID</th>
+                <th align="left">Name</th>
+                <th align="left">Type</th>
+                <th align="left">Peer</th>
+                <th align="left">Migrate</th>
+                <th align="left">Destroy</th>
+            </table>
+            <table id="actorPortsTable">
+                <th align="left">Port ID</th>
+                <th align="left">Name</th>
+                <th align="left">Direction</th>
+                <th align="left">Connected</th>
+            </table>
+            <table id="actorPortPeersTable">
+                <th align="left">Peer id</th>
+                <th align="left">Port id</th>
+            </table>
+        </div>
+
+        <div id="tabDeploy" class="tab">
+            <input type="file" id="fileInput">
+            <br>
+            <textarea name="deploy_script" id="deploy_script" rows="30" cols="50">
+            </textarea>
+            <br>
+            Name: <input type="text" id="deploy_name" name="deploy_name" value="script1">
+            <br>
+            Peer: <select id="deploySelector" name="deploySelector"></select>
+            <br>
+            <button onclick="deployApplication()">Deploy</button>
+        </div>
+    </div>
+</div>
+
+<div id="logData">
+    <br>
+    Trace<br>
+    Node: <select id="traceSelector" name="traceSelector"></select>
+    <button onclick="startLog()">On</button>
+    <button onclick="stopLog()">Off</button>
+    <br>
+    <table id="logTable" align="left" width="1100">
+        <th align="left">Timestamp</th>
+        <th align="left">Node</th>
+        <th align="left">Type</th>
+        <th align="left">Actor</th>
+        <th align="left">Action method</th>
+        <th align="left">Consumed</th>
+        <th align="left">Produced</th>
+    </table>
+</div>
+<div id='spinner' class='spinner'></div>
+<script src="spin.js" type="text/javascript"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script>
+var connect_uri;
+var peers = []; // peers
+var applications = []; // applications
+var actors = []; // actors
+var ports = []; // actor ports
+var source; // EventSource for log stream
+
+var color = d3.scale.category20();
+
+var selectedCode = '0',
+    path,
+    circle,
+    text,
+    path_label,
+    force,
+    links = [],
+    nodes = [],
+    width = 1600,
+    height = 600;
+
+var svg = d3.select("#actorGraph").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+// find a chart node
+var findNode = function (id)
+{
+    for (var i=0; i < nodes.length; i++) {
+        if (nodes[i].id === id)
+            return nodes[i];
+    }
+}
+
+// chart tick function
+// Use elliptical arc path segments to doubly-encode directionality.
+function tick() {
+  path.attr("d", linkArc);
+  circle.attr("transform", transform);
+  text.attr("transform", transform);
+}
+
+function linkArc(d) {
+  var dx = d.target.x - d.source.x,
+      dy = d.target.y - d.source.y,
+      dr = Math.sqrt(dx * dx + dy * dy);
+  return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
+}
+
+function transform(d) {
+  return "translate(" + d.x + "," + d.y + ")";
+}
+
+// Clear nodes and update chart with application_id
+function drawApplication(application_id)
+{
+    clearNodes();
+    updateNodes(application_id);
+}
+
+// Clear nodes and chart
+function clearNodes()
+{
+    nodes = [];
+    links = [];
+    if (force) {
+        force.start();
+        d3.timer(force.resume);
+    }
+    svg.selectAll('*').remove();
+}
+
+// Update nodes and links and draw chart
+function updateNodes(application_id)
+{
+    application = findApplication(application_id);
+    if (application) {
+        for (actor_index = 0; actor_index < application.actors.length; actor_index++) {
+            var actor = findActor(application.actors[actor_index]);
+            if (actor) {
+                // add actor node
+                nodes.push({id:actor.id, type:"actor", name:actor.name, peer_id:actor.peer_id, actor_type:actor.type});
+                actor_node = findNode(actor.id);
+                if (actor_node) {
+                    // add inports
+                    for (port_index = 0; port_index < actor.inports.length; port_index++) {
+                        port = findPort(actor.inports[port_index]);
+                        if (port) {
+                            peer_port = findPort(port.peer[1]);
+                            if (peer_port) {
+                                peer_actor = findNode(peer_port.actor_id);
+                                if (peer_actor) {
+                                    links.push({source:peer_actor, target:actor_node, source_name:peer_port.name, target_name:port.name});
+                                } else {
+                                    console.log("No node with id: " + port.peer[1]);
+                                }
+                            }
+                        } else {
+                            console.log("No port with id: " + actor.inports[port_index]);
+                        }
+                    }
+
+                    // add outports
+                    for (port_index = 0; port_index < actor.outports.length; port_index++) {
+                        port = findPort(actor.outports[port_index]);
+                        if (port) {
+                            // add links to peers
+                            for (peer_index = 0; peer_index < port.peers.length; peer_index++) {
+                                peer_port = findPort(port.peers[peer_index][1]);
+                                if (peer_port) {
+                                    peer_actor = findNode(peer_port.actor_id);
+                                    if (peer_actor) {
+                                        links.push({source:actor_node, target:peer_actor, source_name:port.name, target_name:peer_port.name});
+                                    } else {
+                                        console.log("No node with id: " + port.peers[peer_index][1]);
+                                    }
+                                }
+                            }
+                        } else {
+                            console.log("No port with id: " + actor.outports[port_index]);
+                        }
+                    }
+                }
+            } else {
+                console.log("No actor with id: " + application.actors[actor_index]);
+            }
+        }
+    } else {
+        console.log("No application with id: " + application_id);
+    }
+
+    var dist = 150;
+    var showNames = document.getElementById("chkLinkNames").checked;
+    if (!showNames) {
+        dist = 30;
+    }
+    
+    force = d3.layout.force()
+        .nodes(d3.values(nodes))
+        .links(links)
+        .size([width, height])
+        .linkDistance(dist)
+        .charge(-800)
+        .on("tick", tick)
+        .start();
+
+    // Per-type markers, as they don't inherit styles.
+    svg.append("svg:defs").selectAll("marker")
+        .data(force.links())
+      .enter().append("svg:marker")
+        .attr("id", function(d) { return d.target.id; })
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 15)
+        .attr("refY", -1.5)
+        .attr("markerWidth", 8)
+        .attr("markerHeight", 8)
+        .attr("orient", "auto")
+      .append("svg:path")
+        .attr("d", "M0,-5L10,0L0,5");
+
+    path = svg.append("svg:g").selectAll("path")
+        .data(force.links())
+      .enter().append("svg:path")
+        .attr("id", function(d) { return d.source.id + "-" + d.target.id; })
+        .attr("class", function(d) { return "link "; })
+        .attr("marker-end", function(d) { return "url(#" + d.target.id + ")"; });
+
+    circle = svg.append("svg:g").selectAll("circle")
+        .data(force.nodes())
+      .enter().append("svg:circle")
+        .attr("r", 8)
+        .style("fill", function(d) { return color(d.peer_id); })
+        .call(force.drag);
+
+    circle.append("svg:title")
+        .text(function(d) { return "Node id: " + d.peer_id + " Type: " + d.actor_type; });
+
+    text = svg.append("svg:g").selectAll("g")
+        .data(force.nodes())
+      .enter().append("svg:g");
+
+    // A copy of the text with a thick white stroke for legibility.
+    text.append("svg:text")
+        .attr("x", 8)
+        .attr("y", ".31em")
+        .style("font-size", "15px")
+        .attr("class", "shadow")
+        .text(function(d) { return d.name; });
+
+    text.append("svg:text")
+        .attr("x", 8)
+        .attr("y", ".31em")
+        .style("font-size", "15px")
+        .text(function(d) { return d.name; });
+
+    if (showNames) {
+        path_label = svg.append("svg:g").selectAll(".path_label")
+            .data(force.links())
+          .enter().append("svg:text")
+            .attr("class", "path_label")
+            .append("svg:textPath")
+              .attr("startOffset", "50%")
+              .attr("text-anchor", "middle")
+              .attr("xlink:href", function(d) { return "#" + d.source.id + "-" + d.target.id; })
+              .style("fill", "#000")
+              .style("font-family", "Arial")
+              .style("font-size", "12px")
+              .text(function(d) { return d.source_name + " > " + d.target_name; });
+    }
+}
+
+// peer object constructor function
+function peerObject(id)
+{
+    this.id = id;
+    this.actors = [];
+}
+
+// return peer from id
+function findPeer(id)
+{
+    for (i = 0; i < peers.length; i++) {
+        if (peers[i].id == id) {
+            return peers[i];
+        }
+    }
+}
+
+// application object constructor function
+function applicationObject(id)
+{
+    this.id = id;
+    this.actors = [];
+}
+
+// return application object
+function findApplication(id)
+{
+    for (i = 0; i < applications.length; i++) {
+        if (applications[i].id == id) {
+            return applications[i];
+        }
+    }
+}
+
+// actor object constructor function
+function actorObject(id)
+{
+    this.id = id;
+    this.inports = [];
+    this.outports = [];
+}
+
+// return actor from id
+function findActor(id)
+{
+    for (i = 0; i < actors.length; i++) {
+        if (actors[i].id == id) {
+            return actors[i];
+        }
+    }
+}
+
+// port object constructor function
+function portObject(id)
+{
+    this.id = id;
+}
+
+// return port from id
+function findPort(id)
+{
+    for (i = 0; i < ports.length; i++) {
+        if (ports[i].id == id) {
+            return ports[i];
+        }
+    }
+}
+
+function clearTable(tableRef)
+{
+    var rowCount = tableRef.rows.length;
+    for (var x=rowCount-1; x>0; x--) {
+       tableRef.deleteRow(x);
+    }
+}
+
+var opts = {
+    lines: 11, // The number of lines to draw
+    length: 15, // The length of each line
+    width: 10, // The line thickness
+    radius: 30, // The radius of the inner circle
+    corners: 1, // Corner roundness (0..1)
+    rotate: 0, // The rotation offset
+    direction: 1, // 1: clockwise, -1: counterclockwise
+    color: '#000', // #rgb or #rrggbb
+    speed: 0.6, // Rounds per second
+    trail: 60, // Afterglow percentage
+    shadow: false, // Whether to render a shadow
+    hwaccel: false, // Whether to use hardware acceleration
+    className: 'spinner', // The CSS class to assign to the spinner
+    zIndex: 2e9, // The z-index (defaults to 2000000000)
+    top: 'auto', // Top position relative to parent in px
+    left: 'auto' // Left position relative to parent in px
+};
+
+var spinner = new Spinner(opts);
+var spinner_div = $('#spinner').get(0);
+var spinCount = 0;
+
+function startSpin()
+{
+    if (spinCount == 0) {
+        spinner.spin(spinner_div);
+    }
+    spinCount = spinCount + 1;
+}
+
+function stopSpin()
+{
+    spinCount = spinCount - 1;
+    if (spinCount == 0) {
+        spinner.stop();
+    }
+}
+
+function connect()
+{
+    peers = [];
+    applications = [];
+    actors = [];
+    ports = [];
+
+    clearTable(document.getElementById("peersTable"));
+    clearCombo(document.getElementById("traceSelector"));
+    clearCombo(document.getElementById("deploySelector"));
+
+    if (connect_uri == null) {
+        connect_uri = prompt("Enter uri", "http://localhost:5001");
+    }
+    
+    getPeerID(connect_uri);
+    getPeers(connect_uri);
+}
+
+function getPeerID(uri)
+{
+    $.ajax({
+        uri: uri,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: uri + '/id',
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                getPeer(this.uri, data.id);
+            } else {
+                console.log("Empty result");
+            }
+        },
+        error: function() {
+            console.log("Error");
+        }
+    });
+}
+
+function getPeers(uri)
+{
+    $.ajax({
+        uri: uri,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: uri + '/nodes',
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                for (i = 0; i < data.length; i++) {
+                    getPeer(this.uri, data[i]);
+                }
+            } else {
+                console.log("Empty result");
+            }
+        },
+        error: function() {
+            console.log("Failed");
+        }
+    });
+}
+
+function getPeer(uri, id)
+{
+    $.ajax({
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: uri + '/node/' + id,
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                var peer = new peerObject(id);
+                peer.uri = data.uri;
+                peer.control_uri = data.control_uri;
+                peers[peers.length] = peer;
+                showPeer(peer);
+                optTrace = document.getElementById("traceSelector")
+                optTrace.options.add(new Option(peer.id));
+                optDeploy = document.getElementById("deploySelector")
+                optDeploy.options.add(new Option(peer.id));
+            } else {
+                console.log("Empty result");
+            }
+        },
+        error: function() {
+            console.log("Error");
+        }
+    });
+}
+
+function getApplications()
+{
+    clearTable(document.getElementById("applicationsTable"));
+    applications = [];
+    for (index = 0; index < peers.length; index++) {
+        $.ajax({
+            uri: peers[index].control_uri,
+            beforeSend: function() {
+                startSpin();
+            },
+            complete: function() {
+                stopSpin();
+            },
+            dataType: 'json',
+            url: peers[index].control_uri + '/applications',
+            type: 'GET',
+            success: function(data) {
+                if (data) {
+                    for (application_index = 0; application_index < data.length; application_index++) {
+                        getApplication(this.uri, data[application_index]);
+                    }
+                } else {
+                    console.log("Empty result");
+                }
+            },
+            error: function() {
+                console.log("Error");
+            }
+        });
+    }
+}
+
+function getApplication(uri, id)
+{
+    $.ajax({
+        uri: uri,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: uri + '/application/' + id,
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                var application = new applicationObject(id);
+                application.name = data.name;
+                application.control_uri = this.uri;
+                application.actors = data.actors;
+                applications[applications.length] = application;
+                showApplication(application);
+                for (index = 0; index < data.actors.length; index++) {
+                    getActor(this.uri, data.actors[index], false);
+                }
+            } else {
+                console.log("Empty result");
+            }
+        },
+        error: function() {
+            console.log("Error");
+        }
+    });
+}
+
+function getActors()
+{
+    clearTable(document.getElementById("actorsTable"));
+    clearTable(document.getElementById("actorPortsTable"));
+    clearTable(document.getElementById("actorPortPeersTable"));
+    actors = [];
+    for (index = 0; index < peers.length; index++) {        
+        $.ajax({
+            uri: peers[index].control_uri,
+            beforeSend: function() {
+                startSpin();
+            },
+            complete: function() {
+                stopSpin();
+            },
+            dataType: 'json',
+            url: peers[index].control_uri + '/actors',
+            type: 'GET',
+            success: function(data) {
+                if (data) {
+                    for (index = 0; index < data.length; index++) {
+                        getActor(this.uri, data[index], true);
+                    }
+                } else {
+                    console.log("Empty result");
+                }
+            },
+            error: function() {
+                console.log("Error");
+            }
+        });
+    }
+}
+
+// Get actor information
+function getActor(uri, id, show)
+{
+    $.ajax({
+        uri: uri,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: uri + '/actor/' + id,
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                var actor = findActor(id);
+                if (!actor) {
+                    actor = new actorObject(id);
+                }
+                actor.id = id;
+                actor.name = data.name;
+                actor.type = data.type;
+                actor.peer_id = data.node_id;
+                actor.inports = [];
+                for (index = 0; index < data.inports.length; index++) {
+                    actor.inports[actor.inports.length] = data.inports[index].id;
+                    getPort(this.uri, id, data.inports[index].id);
+                }
+                actor.outports = [];
+                for (index = 0; index < data.outports.length; index++) {
+                    actor.outports[actor.outports.length] = data.outports[index].id;
+                    getPort(this.uri, id, data.outports[index].id);
+                }
+                actors[actors.length] = actor;
+                if (show == true) {
+                    showActor(actor);
+                }
+            } else {
+                console.log("Empty result");
+            }
+        },
+        error: function() {
+            console.log("Error");
+        }
+    });
+}
+
+// Get port information
+function getPort(uri, actor_id, port_id)
+{
+    $.ajax({
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: uri + '/actor/' + actor_id + '/port/' + port_id,
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                var port = new portObject(port_id);
+                port.actor_id = data.actor_id;
+                port.direction = data.direction;
+                port.name = data.name;
+                port.connected = data.connected;
+                port.peer_id = data.node_id;
+                port.peers = []
+                if (port.direction == "out") {
+                    for (index = 0; index < data.peers.length; index++) {
+                        port.peers[port.peers.length] = data.peers[index];
+                    }
+                }
+                if (port.direction == "in") {
+                    port.peer = data.peer;
+                }
+                ports[ports.length] = port;
+            } else {
+                console.log("Empty result");
+            }
+        },
+        error: function() {
+            console.log("Error");
+        }
+    });
+}
+
+// Add peer to peersTable
+function showPeer(peer)
+{
+    var tableRef = document.getElementById('peersTable');
+    var row = tableRef.insertRow();
+    var cell = row.insertCell(0);
+    cell.appendChild(document.createTextNode(peer.id));
+    cell = row.insertCell(1);
+    cell.appendChild(document.createTextNode(peer.uri));
+
+    cell = row.insertCell(2);
+    cell.appendChild(document.createTextNode(peer.control_uri));
+
+    cell = row.insertCell(3);
+    var btnDestroy = document.createElement('input');
+    btnDestroy.type = 'button';
+    btnDestroy.id = peer.id;
+    btnDestroy.className = 'btnDestroyPeer';
+    btnDestroy.value = 'Destroy';
+    btnDestroy.setAttribute("onclick", "destroyPeer(this.id)");
+    cell.appendChild(btnDestroy);
+}
+
+// Add application to applicationsTable
+function showApplication(application)
+{
+    var tableRef = document.getElementById('applicationsTable');
+    var newRow = tableRef.insertRow();
+    newRow.id = application.id;
+//    newRow.setAttribute("onclick", "drawApplication(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");")
+    var cell = newRow.insertCell(0);
+    cell.appendChild(document.createTextNode(application.id));
+    cell = newRow.insertCell(1);
+    cell.appendChild(document.createTextNode(application.name));
+    cell = newRow.insertCell(2);
+    var btnDestroy = document.createElement('input');
+    btnDestroy.type = 'button';
+    btnDestroy.id = application.id;
+    btnDestroy.className = 'btnDestroyApplication';
+    btnDestroy.value = 'Destroy';
+    btnDestroy.setAttribute("onclick", "destroyApplication(this.id)");
+    cell.appendChild(btnDestroy);
+
+    cell = newRow.insertCell(3);
+    var btnDraw = document.createElement('input');
+    btnDraw.type = 'button';
+    btnDraw.id = application.id;
+    btnDraw.className = 'btnDrawApplication';
+    btnDraw.value = 'Draw';
+    btnDraw.setAttribute("onclick", "drawApplication(this.id)");
+    cell.appendChild(btnDraw);
+}
+
+// Add actor to actorsTable
+function showActor(actor)
+{
+    var tableRef = document.getElementById('actorsTable');
+    var newRow = tableRef.insertRow();
+    newRow.id = actor.id;
+    newRow.setAttribute("onclick", "showActorPortInformation(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");")
+    var cell = newRow.insertCell(0);
+    cell.appendChild(document.createTextNode(actor.id));
+    cell = newRow.insertCell(1);
+    cell.appendChild(document.createTextNode(actor.name));
+    cell = newRow.insertCell(2);
+    cell.appendChild(document.createTextNode(actor.type));
+    cell = newRow.insertCell(3);
+    cell.appendChild(document.createTextNode(actor.peer_id));
+    // migrate
+    cell = newRow.insertCell(4);
+    selectNode = document.createElement("select");
+    for (peer_index = 0; peer_index < peers.length; peer_index++) {
+        if (peers[peer_index].id != actor.peer_id) {
+            selectNode.options.add(new Option(peers[peer_index].id))
+        }
+    }
+    cell.appendChild(selectNode);
+    var btnMigrate = document.createElement('input');
+    btnMigrate.type = 'button';
+    btnMigrate.id = actor.id;
+    btnMigrate.className = 'btnMigrate';
+    btnMigrate.value = 'Migrate';
+    btnMigrate.setAttribute("onclick", "migrate(this.id, selectNode.options[selectNode.selectedIndex].value)");
+    cell.appendChild(btnMigrate);
+    // destroy
+    cell = newRow.insertCell(5);
+    var btnDestroy = document.createElement('input');
+    btnDestroy.type = 'button';
+    btnDestroy.id = actor.id;
+    btnDestroy.className = 'btnDestroyActor';
+    btnDestroy.value = 'Destroy';
+    btnDestroy.setAttribute("onclick", "destroyActor(this.id)");
+    cell.appendChild(btnDestroy);
+}
+
+// update actorPortsTable with available ports
+function showActorPortInformation(actor_id)
+{
+    clearTable(document.getElementById("actorPortPeersTable"));
+    var tableRef = document.getElementById('actorPortsTable');
+    var rowCount = tableRef.rows.length;
+    for (var x=rowCount-1; x>0; x--) {
+       tableRef.deleteRow(x);
+    }
+
+    actor = findActor(actor_id);
+    if (actor) {
+        for (port_index = 0; port_index < actor.inports.length; port_index++) {
+            port = findPort(actor.inports[port_index]);
+            if (port) {
+                var newRow = tableRef.insertRow();
+                newRow.id = port.id;
+                newRow.setAttribute("onclick", "showActorPortPeers(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");");
+                var cell = newRow.insertCell(0);
+                cell.appendChild(document.createTextNode(port.id));
+                cell = newRow.insertCell(1);
+                cell.appendChild(document.createTextNode(port.name));
+                cell = newRow.insertCell(2);
+                cell.appendChild(document.createTextNode(port.direction));
+                cell = newRow.insertCell(3);
+                cell.appendChild(document.createTextNode(port.connected));
+            }
+        }
+
+        for (port_index = 0; port_index < actor.outports.length; port_index++) {
+            port = findPort(actor.outports[port_index]);
+            if (port) {
+                var newRow = tableRef.insertRow();
+                newRow.id = port.id;
+                newRow.setAttribute("onclick", "showActorPortPeers(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");");
+                var cell = newRow.insertCell(0);
+                cell.appendChild(document.createTextNode(port.id));
+                cell = newRow.insertCell(1);
+                cell.appendChild(document.createTextNode(port.name));
+                cell = newRow.insertCell(2);
+                cell.appendChild(document.createTextNode(port.direction));
+                cell = newRow.insertCell(3);
+                cell.appendChild(document.createTextNode(port.connected));
+            }
+        }
+    } else {
+        console.log("No actor with id: " + actor_id);
+    }
+}
+
+// update actorPortPeersTable with peers
+function showActorPortPeers(port_id)
+{
+    var tableRef = document.getElementById('actorPortPeersTable');
+    var rowCount = tableRef.rows.length;
+    for (var x=rowCount-1; x>0; x--) {
+       tableRef.deleteRow(x);
+    }
+
+    port = findPort(port_id);
+    if (port) {
+        if (port.direction == "in") {
+            var newRow = tableRef.insertRow();
+            var cell = newRow.insertCell(0);
+            cell.appendChild(document.createTextNode(port.peer[0]));
+            cell = newRow.insertCell(1);
+            cell.appendChild(document.createTextNode(port.peer[1]));
+
+        } else if(port.direction == "out") {
+            for (index = 0; index < port.peers.length; index++) {
+                var newRow = tableRef.insertRow();
+                var cell = newRow.insertCell(0);
+                cell.appendChild(document.createTextNode(port.peers[index][0]));
+                cell = newRow.insertCell(1);
+                cell.appendChild(document.createTextNode(port.peers[index][1]));
+            }
+        }
+    }
+}
+
+// Migrate actor_id to peer_id
+function migrate(actor_id, peer_id)
+{
+    actor = findActor(actor_id);
+    if (actor) {
+        node = findPeer(actor.peer_id);
+        if (node) {
+            $.ajax({
+                beforeSend: function() {
+                    startSpin();
+                },
+                complete: function() {
+                    stopSpin();
+                },
+                url: node.control_uri + '/actor/' + actor.id + '/migrate',
+                type: 'POST',
+                data: JSON.stringify({'peer_node_id': peer_id}),
+                success: function() {
+                    getActors();
+                },
+                error: function() {
+                    console.log("Error");
+                }
+            });
+        } else {
+            console.log("No node with id: " + actor.peer_id);
+        }
+    } else {
+        console.log("No actor with id: " + actor_id);
+    }
+}
+
+// Destroy application_id
+function destroyApplication(application_id)
+{
+    application = findApplication(application_id);
+    if (application) {
+        $.ajax({
+            beforeSend: function() {
+                startSpin();
+            },
+            complete: function() {
+                stopSpin();
+            },
+            url: application.control_uri + '/application/' + application_id,
+            type: 'DELETE',
+            success: function() {
+                clearNodes();
+                getApplications();
+            },
+            error: function() {
+                console.log("Error");
+            }
+        });
+    }
+}
+
+// Destroy an actor
+function destroyActor(actor_id)
+{
+    actor = findActor(actor_id);
+    if (actor) {
+        peer = findPeer(actor.peer_id);
+        if (peer) {
+            $.ajax({
+                beforeSend: function() {
+                    startSpin();
+                },
+                complete: function() {
+                    stopSpin();
+                },
+                url: peer.control_uri + '/actor/' + actor_id,
+                type: 'DELETE',
+                success: function() {
+                    getActors();
+                },
+                error: function() {
+                    console.log("Error");
+                }
+            });
+        }
+    }
+}
+
+// Destroy peer_id
+function destroyPeer(peer_id)
+{
+    peer = findPeer(peer_id);
+    if (peer) {
+        $.ajax({
+            beforeSend: function() {
+                startSpin();
+            },
+            complete: function() {
+                stopSpin();
+            },
+            url: peer.control_uri + '/node',
+            type: 'DELETE',
+            success: function() {
+                connect();
+            },
+            error: function() {
+                console.log("Error");
+            }
+        });
+    } else {
+        console.log("No peer with id: " + peer_id);
+    }
+}
+
+// Start log stream
+function startLog()
+{
+    if (source) {
+        console.log("startLog() - TODO: handle multiple streams");
+        return;
+    }
+
+    optTrace = document.getElementById("traceSelector")
+    node_id = optTrace.options[optTrace.selectedIndex].value;
+    peer = findPeer(node_id);
+    if (peer) {
+        source = new EventSource(peer.control_uri + '/log');
+        source.addEventListener("message", eventHandler, false);
+    }
+}
+
+// Stop log stream
+function stopLog()
+{
+    if (source) {
+        source.removeEventListener("message", eventHandler, false);
+        source = null;
+    }
+}
+
+// Event handler for log data
+function eventHandler(event)
+{
+    var data = JSON.parse(event.data);
+    var tableRef = document.getElementById('logTable');
+    var newRow = tableRef.insertRow(1);
+    var cell0 = newRow.insertCell(0);
+    var cell1 = newRow.insertCell(1);
+    var cell2 = newRow.insertCell(2);
+    var cell3 = newRow.insertCell(3);
+    var cell4 = newRow.insertCell(4);
+    var cell5 = newRow.insertCell(5);
+    var cell6 = newRow.insertCell(6);
+
+    cell0.appendChild(document.createTextNode(data.timestamp));
+    cell1.appendChild(document.createTextNode(data.node_id));
+    cell2.appendChild(document.createTextNode(data.type));
+    if (data.type == "fire") {
+        cell3.appendChild(document.createTextNode(data.actor));
+        cell4.appendChild(document.createTextNode(data.action_method));
+        cell5.appendChild(document.createTextNode(data.consumed));
+        cell6.appendChild(document.createTextNode(data.produced));
+    }
+}
+
+// Deploy app and update applicationsTable and actorsTable
+function deployApplication()
+{
+    optDeploy = document.getElementById("deploySelector")
+    node_id = optDeploy.options[optDeploy.selectedIndex].value;
+    node = findPeer(node_id);
+    if (node) {
+        $.ajax({
+            beforeSend: function() {
+                startSpin();
+            },
+            complete: function() {
+                stopSpin();
+            },
+            url: node.control_uri + '/deploy',
+            type: 'POST',
+            data: JSON.stringify({'script': document.getElementById('deploy_script').value, 'name': document.getElementById('deploy_name').value}),
+            success: function(data) {
+            },
+            error: function() {
+                console.log("Error");
+            }
+        });
+    } else {
+        console.log("No node with id: " + node_id);
+    }
+}
+
+jQuery(document).ready(function() {
+    connect();
+
+    // handle file select in deploy app
+    var fileInput = document.getElementById('fileInput');
+    var fileDisplayArea = document.getElementById('deploy_script');
+
+    fileInput.addEventListener('change', function(e) {
+        var file = fileInput.files[0];
+        var reader = new FileReader();
+        document.getElementById('deploy_name').value = file.name.split(".")[0];
+        reader.onload = function(e) {
+            fileDisplayArea.innerText = reader.result;
+        }
+
+        reader.readAsText(file);
+    });
+
+    // handle tabbed view
+    jQuery('.tabs .tab-links a').on('click', function(e)  {
+        var currentAttrValue = jQuery(this).attr('href');
+
+        if (currentAttrValue == "#tabPeers") {
+            connect();
+        }
+        else if (currentAttrValue == "#tabApplications") {
+            getApplications();
+        } else if (currentAttrValue == "#tabActors") {
+            getActors();
+        }
+
+        // Show/Hide Tabs
+        jQuery('.tabs ' + currentAttrValue).show().siblings().hide();
+
+        // Change/remove current tab to active
+        jQuery(this).parent('li').addClass('active').siblings().removeClass('active');
+
+        e.preventDefault();
+    });
+});
+
+function clearCombo(obj)
+{
+    while(obj.options.length) {
+        obj.remove(0);
+    }
+}
+
+</script>
+</body>
+</html>

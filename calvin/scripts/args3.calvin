@@ -1,0 +1,25 @@
+component PrefixFile(prefix, file) -> out {
+  filename : std.Constant(data=file)
+  file : io.FileReader()
+  prep : std.PrefixString(prefix=prefix)
+
+  filename.token > file.filename
+  file.out > prep.in
+  prep.out > out
+}
+
+
+component PrefixFileTwice(file, prefix) -> out {
+  prefixedFile : PrefixFile(prefix=prefix, file=file)
+  prefix : std.PrefixString(prefix=prefix)
+
+  prefixedFile.out > prefix.in
+  prefix.out > out
+}
+
+
+/* Order of arguments is irrelevant */
+src:PrefixFileTwice(prefix="--- ", file="data.txt")
+snk:io.StandardOut()
+
+src.out>snk.token

@@ -1,0 +1,20 @@
+// Wrapper component [2] -> [1] without arguments 
+
+component Wrapper() A, B -> out {
+  join: std.Join()
+  sum: std.SumActor()
+
+  A > sum.integer
+  sum.integer > join.token_1
+  B > join.token_2
+  join.token > out
+}
+
+counter:std.Counter()
+file:io.FileReader(file="data.txt")
+wrap:Wrapper()
+snk:io.StandardOut()
+
+counter.integer > wrap.A
+file.out > wrap.B
+wrap.out > snk.token

@@ -1,0 +1,7 @@
+// a(arg) -> b 
+
+/* Actors */
+src:io.FileReader(file="data.txt")
+snk:io.StandardOut()
+/* Connections */
+src.out>snk.token

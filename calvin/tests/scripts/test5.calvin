@@ -1,0 +1,15 @@
+// Wrapper component without arguments 
+
+component Wrapper() A -> B {
+  sum: std.SumActor()
+  
+  A > sum.integer
+  sum.integer > B
+}
+
+src:std.Counter()
+wsum:Wrapper()
+snk:io.StandardOut()
+
+src.integer > wsum.A
+wsum.B > snk.token

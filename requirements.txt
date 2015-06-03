@@ -1,0 +1,7 @@
+colorlog>=2.6.0
+kademlia>=0.4
+ply>=3.4
+Twisted>=15.0.0
+requests >= 2.6.0
+infi.traceback>=0.3.11
+wrapt==1.10.2

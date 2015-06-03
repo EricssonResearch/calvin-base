@@ -1,0 +1,6 @@
+[pep8]
+show-source = yes
+statistics = yes
+count = yes
+ignore = E222
+max-line-length = 120

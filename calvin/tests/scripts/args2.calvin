@@ -1,0 +1,16 @@
+// Component with two arguments
+
+component PrefixFile(prefix, filename) -> out {
+  /* FileReader takes input parameter 'file' */ 
+  file:io.FileReader(file=filename)
+  /* PrefixStrings as as input the prefix string 'prefix' */
+  prep:std.PrefixString(prefix=prefix)
+
+  file.out > prep.in
+  prep.out >out
+}
+
+src:PrefixFile(prefix="--- ", filename="data.txt")
+snk:io.StandardOut()
+
+src.out > snk.token

@@ -1,0 +1,16 @@
+*.pyc
+*.bak
+*.orig
+*.tmp
+*.testing
+*~
+__pycache__
+*-project
+*-workspace
+.coverage
+.cache
+calvin.conf
+/.tox
+dist/
+calvin.egg-info
+./build/

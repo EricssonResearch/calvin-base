@@ -1,0 +1,7 @@
+/* Actors */
+f : std.Constant(data="data.txt")
+src:io.FileReader()
+snk:io.StandardOut()
+/* Connections */
+f.token > src.filename
+src.out>snk.token

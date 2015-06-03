@@ -1,0 +1,23 @@
+// Nested components 4
+
+component B() in -> out {
+  d : I()
+  e : I()
+  
+  in > d.in
+  d.out > e.in
+  e.out > out 
+}
+
+component I() in -> out {
+  i : std.Identity()
+  in > i.token
+  i.token > out
+}
+
+a : std.Counter()
+b : B()
+c : io.StandardOut()
+
+a.integer > b.in
+b.out > c.token

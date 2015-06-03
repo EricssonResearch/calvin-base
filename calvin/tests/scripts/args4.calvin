@@ -1,0 +1,15 @@
+// Component where argname is same as argument
+
+component PrefixFile(prefix, file) -> out {
+  /* FileReader takes input parameter 'file' */ 
+  file : io.FileReader(file=file)
+  prep : std.PrefixString(prefix=prefix)
+
+  file.out > prep.in
+  prep.out >out
+}
+
+src : PrefixFile(prefix="?--- ", file="data.txt")
+snk : io.StandardOut()
+
+src.out>snk.token

@@ -1,0 +1,138 @@
+{
+    "components": [
+        {
+            "arg_identifiers": [], 
+            "dbg_line": 0, 
+            "docstring": "Someone(TM) should write some documentation for this component.", 
+            "inports": [
+                "in"
+            ], 
+            "name": "E", 
+            "outports": [
+                "out"
+            ], 
+            "structure": {
+                "actors": {
+                    "f": {
+                        "actor_type": "std.Identity", 
+                        "args": {}, 
+                        "dbg_line": 4
+                    }, 
+                    "g": {
+                        "actor_type": "std.Identity", 
+                        "args": {}, 
+                        "dbg_line": 5
+                    }
+                }, 
+                "connections": [
+                    {
+                        "dbg_line": 7, 
+                        "dst": "f", 
+                        "dst_port": "token", 
+                        "src": null, 
+                        "src_port": "in"
+                    }, 
+                    {
+                        "dbg_line": 8, 
+                        "dst": "g", 
+                        "dst_port": "token", 
+                        "src": "f", 
+                        "src_port": "token"
+                    }, 
+                    {
+                        "dbg_line": 9, 
+                        "dst": null, 
+                        "dst_port": "out", 
+                        "src": "g", 
+                        "src_port": "token"
+                    }
+                ]
+            }
+        }, 
+        {
+            "arg_identifiers": [], 
+            "dbg_line": 0, 
+            "docstring": "Someone(TM) should write some documentation for this component.", 
+            "inports": [
+                "in"
+            ], 
+            "name": "B", 
+            "outports": [
+                "out"
+            ], 
+            "structure": {
+                "actors": {
+                    "d": {
+                        "actor_type": "std.Identity", 
+                        "args": {}, 
+                        "dbg_line": 13
+                    }, 
+                    "e": {
+                        "actor_type": "E", 
+                        "args": {}, 
+                        "dbg_line": 14
+                    }
+                }, 
+                "connections": [
+                    {
+                        "dbg_line": 16, 
+                        "dst": "d", 
+                        "dst_port": "token", 
+                        "src": null, 
+                        "src_port": "in"
+                    }, 
+                    {
+                        "dbg_line": 17, 
+                        "dst": "e", 
+                        "dst_port": "in", 
+                        "src": "d", 
+                        "src_port": "token"
+                    }, 
+                    {
+                        "dbg_line": 18, 
+                        "dst": null, 
+                        "dst_port": "out", 
+                        "src": "e", 
+                        "src_port": "out"
+                    }
+                ]
+            }
+        }
+    ], 
+    "sourcefile": "tests/scripts/test8.calvin", 
+    "structure": {
+        "actors": {
+            "a": {
+                "actor_type": "std.Counter", 
+                "args": {}, 
+                "dbg_line": 21
+            }, 
+            "b": {
+                "actor_type": "B", 
+                "args": {}, 
+                "dbg_line": 22
+            }, 
+            "c": {
+                "actor_type": "io.StandardOut", 
+                "args": {}, 
+                "dbg_line": 23
+            }
+        }, 
+        "connections": [
+            {
+                "dbg_line": 25, 
+                "dst": "b", 
+                "dst_port": "in", 
+                "src": "a", 
+                "src_port": "integer"
+            }, 
+            {
+                "dbg_line": 26, 
+                "dst": "c", 
+                "dst_port": "token", 
+                "src": "b", 
+                "src_port": "out"
+            }
+        ]
+    }
+}

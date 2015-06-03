@@ -1,0 +1,13 @@
+include README.md
+include LICENSE
+include TODO
+include requirements.txt
+include test-requirements.txt
+recursive-include calvin *.py
+recursive-include calvin *.calvin
+include calvin/actorstore/systemactors/io/data.txt
+include calvin/tests/data.txt
+include calvin/Tools/www/index.html
+include calvin/Tools/www/spin.js
+include setup.cfg
+include tox.ini

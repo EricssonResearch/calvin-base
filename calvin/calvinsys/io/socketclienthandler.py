@@ -1,0 +1,116 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2015 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from calvin.runtime.south.plugins.async import client_connection
+from calvin.utilities.calvin_callback import CalvinCB
+
+
+class ClientHandler(object):
+    def __init__(self):
+        self._connections = {}
+
+    # Callbacks from socket client imp
+    def _disconnected(self, handle, addr, reason):
+        self._connections[handle]['connection'] = None
+        self._push_control(("disconnected", addr, reason), handle)
+
+    def _connected(self, handle, connection_factory, addr):
+        self._connections[handle]['connection'] = connection_factory
+        self._push_control(("connected", addr, ""), handle)
+
+    def _connection_failed(self, handle, connection_factory, addr, reason):
+        self._push_control(("connection_failed", reason), handle)
+
+    def _push_data(self, handle, data):
+        return self._connections[handle]['data'].append(data)
+        # TODO: call loop once on the right actor later on
+
+    def _push_control(self, data, handle):
+        return self._connections[handle]['control'].append(data)
+        # TODO: call loop once on the right actor later on
+
+    # External API
+    def connect(self, actor_id, addr, port, protocol="raw", type_="TCP", delimiter="\r\n"):
+        handle = "%s:%s:%s" % (actor_id, addr, port)
+        connection_factory = client_connection.ClientProtocolFactory(protocol=protocol, type_=type_,
+                                                                     delimiter=delimiter,
+                                                                     callbacks={'data_received':
+                                                                                [CalvinCB(self._push_data, handle)]})
+
+        connection_factory.callback_register('connected', CalvinCB(self._connected, handle, connection_factory))
+        connection_factory.callback_register('disconnected', CalvinCB(self._disconnected, handle))
+        connection_factory.callback_register('connection_failed', CalvinCB(self._connection_failed, handle,
+                                                                           connection_factory))
+
+        connection_factory.connect(addr, port)
+        self._connections[handle] = {'data': [], 'control': [], 'connection': None}
+        return ClientConnection(self, handle)
+
+    def disconnect(self, handle):
+        self._connections[handle]['connection'].stop()
+
+    def get_data(self, handle):
+        return self._connections[handle]['data'].pop()
+
+    def is_connected(self, handle):
+        return self._connections[handle]['connection'] is not None
+
+    def have_data(self, handle):
+        return len(self._connections[handle]['data'])
+
+    def send(self, handle, data):
+        return self._connections[handle]['connection'].send(data)
+
+    def have_control(self, handle):
+        return len(self._connections[handle]['control'])
+
+    def get_control(self, handle):
+        return self._connections[handle]['control'].pop()
+
+
+class ClientConnection(object):
+    def __init__(self, client_handler, handle):
+        self._client_handler = client_handler
+        self._handle = handle
+
+    def _call(self, func, *args, **kwargs):
+        return func(self._handle, *args, **kwargs)
+
+    def __getattr__(self, name):
+        class Caller(object):
+            def __init__(self, f, func):
+                self.f = f
+                self.func = func
+
+            def __call__(self, *args, **kwargs):
+                return self.f(self.func, *args, **kwargs)
+
+        if hasattr(self._client_handler, name):
+            if callable(getattr(self._client_handler, name)):
+                return Caller(self._call, getattr(self._client_handler, name))
+            else:
+                return getattr(self._obj, name)
+
+        else:
+            # Default behaviour
+            raise AttributeError
+
+
+def register(node, io):
+    """
+        Called when the system object is first created.
+    """
+    io.socket_client = ClientHandler()
