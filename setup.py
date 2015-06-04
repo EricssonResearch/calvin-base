@@ -16,10 +16,11 @@
 
 import os
 from setuptools import setup
-from pip.req import parse_requirements
 
-install_requirements = parse_requirements("requirements.txt")
-test_requirements = parse_requirements("test-requirements.txt")
+
+def make_parser():
+    from calvin.csparser.parser import make_parser
+    make_parser()
 
 
 def read_desc(fname):
@@ -30,6 +31,9 @@ def read_reqs(fname):
     with open(fname, "r") as f:
         requirements = f.readlines()
     return requirements
+
+# Create parsetab before setup
+make_parser()
 
 setup(name='calvin',
       version='0.1',

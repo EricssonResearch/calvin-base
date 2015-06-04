@@ -277,7 +277,9 @@ def calvin_parser(source_text, source_file=''):
     return result, errors, warnings
 
 
-
+def make_parser():
+    parser = yacc.yacc()
+    return parser
 
 if __name__ == '__main__':
     import sys
