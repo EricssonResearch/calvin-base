@@ -663,12 +663,10 @@ class TestCalvinScript(CalvinTestBase):
         assert src not in actors
         assert snk not in actors
 
-    @unittest.skip("No migration (yet)")
     def testDestroyAppWithMigratedActors(self):
         rt = self.runtime
-        id_ = rt.id
-        peer_0 = self.peerlist[0]
-        peer_1 = self.peerlist[1]
+        rt1 = self.runtimes[0]
+        rt2 = self.runtimes[1]
 
         script = """
       src : std.CountTimer()
@@ -683,26 +681,23 @@ class TestCalvinScript(CalvinTestBase):
         snk = d.actor_map['simple:snk']
 
         # FIXME --> remove when operating on closed pending connections during migration is fixed
-        disable(rt, id_, src)
-        disable(rt, id_, snk)
+        utils.disable(rt, src)
+        utils.disable(rt, snk)
         # <--
-        migrate(rt, id_, snk, peer_0)
-        migrate(rt, id_, src, peer_1)
+        utils.migrate(rt, snk, rt1.id)
+        utils.migrate(rt, src, rt2.id)
 
-        applications = send_command(rt, rt.id, {'cmd': 'list_applications'})
+        applications = utils.get_applications(rt)
         assert app_id in applications
 
-        response = d.destroy()
-        if response != "OK":
-            while send_command(rt, rt.id, {'cmd': 'reply', 'msg_id': response}) == "ERROR_AGAIN":
-                time.sleep(0.1)
+        d.destroy()
 
-        applications = send_command(rt, rt.id, {'cmd': 'list_applications'})
+        applications = utils.get_applications(rt)
         assert app_id not in applications
 
         actors = []
-        actors.extend(send_command(rt, rt.id, {'cmd': 'list'}))
-        actors.extend(send_command(rt, peer_0, {'cmd': 'list'}))
-        actors.extend(send_command(rt, peer_1, {'cmd': 'list'}))
+        actors.extend(utils.get_actors(rt))
+        actors.extend(utils.get_actors(rt1))
+        actors.extend(utils.get_actors(rt2))
         for actor in d.actor_map.values():
             assert actor not in actors

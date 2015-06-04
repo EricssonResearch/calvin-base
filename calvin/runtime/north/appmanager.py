@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from calvin.utilities import utils
+from calvin.utilities.calvin_callback import CalvinCB
+
 class Application(object):
 
     """ Application class """
@@ -40,12 +43,23 @@ class AppManager(object):
             self.applications[application_id] = Application(application_id, application_name, actor_id)
         self.storage.add_application(self.applications[application_id])
 
+    def get_node_cb(self, key, value, actor_id):
+        """ Get node callback """
+        rt = utils.RT(value['control_uri'])
+        utils.delete_actor(rt, actor_id)
+
+    def get_actor_cb(self, key, value, actor_id):
+        """ Get actor callback """
+        self.storage.get_node(value['node_id'], CalvinCB(func=self.get_node_cb, actor_id=actor_id))
+
     def destroy(self, application_id):
         """ Destroy an application and its actors """
-        # TODO: Destroy migrated actors
         if application_id in self.applications:
             for actor in self.applications[application_id].actors:
-                self._node.am.destroy(actor)
+                if actor in self._node.am.list_actors():
+                    self._node.am.destroy(actor)
+                else:
+                    self.storage.get_actor(actor, CalvinCB(func=self.get_actor_cb, actor_id=actor))
             del self.applications[application_id]
         self.storage.delete_application(application_id)
 

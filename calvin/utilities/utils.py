@@ -49,6 +49,11 @@ def uniq_list(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 
+class RT():
+    def __init__(self, control_uri):
+        self.control_uri = control_uri
+
+
 def get_node_id(rt):
     r = requests.get(rt.control_uri + '/id')
     return json.loads(r.text)["id"]
