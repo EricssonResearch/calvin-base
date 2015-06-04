@@ -136,7 +136,7 @@ class CalvinProto(CalvinCBClass):
             # functions that should be called. Either permanent here
             # or using the callback_register method.
             'ACTOR_NEW': [CalvinCB(self.actor_new_handler)],
-            'ACTOR_DESTROY': [CalvinCB(self.actor_destroy_handler)],
+            'APP_DESTROY': [CalvinCB(self.app_destroy_handler)],
             'PORT_CONNECT': [CalvinCB(self.port_connect_handler)],
             'PORT_DISCONNECT': [CalvinCB(self.port_disconnect_handler)],
             'PORT_PENDING_MIGRATE': [CalvinCB(self.not_impl_handler)],
@@ -215,7 +215,7 @@ class CalvinProto(CalvinCBClass):
             msg = {'cmd': 'ACTOR_NEW',
                    'state':{'actor_type': actor_type, 'actor_state': state, 'prev_connections':prev_connections}}
             self.network.links[to_rt_uuid].send_with_reply(callback, msg)
-        else:
+        elif callback:
             callback(status=status)
 
     def actor_new_handler(self, payload):
@@ -231,27 +231,36 @@ class CalvinProto(CalvinCBClass):
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status}
         self.network.links[payload['from_rt_uuid']].send(msg)
 
-    def actor_destroy(self, to_rt_uuid, callback, actor_id):
-        """ Destroys a remote actor on to_rt_uuid node
-            callback: called when finished with the peers respons as argument
-            actor_id: the actor to destroy
-            
-            TODO: should we allow remote destruction?
-        """
-        try:
-            self.network.link_check(to_rt_uuid)
-        except:
-            raise Exception("ERROR_UNKNOWN_RUNTIME")
-        msg = {'cmd': 'ACTOR_DESTROY', 'actor_uuid': actor_id}
-        self.network.links[to_rt_uuid].send_with_reply(callback, msg)
+    #### APPS ####
 
-    def actor_destroy_handler(self, payload):
-        """ Peer request destruction of actor """
-        reply = "ACK"
-        try:
-            self.node.am.destroy(payload['actor_uuid'])
-        except:
-            reply = "NACK"
+    def app_destroy(self, to_rt_uuid, callback, app_id, actor_ids):
+        """ Destroys an application with remote actors on to_rt_uuid node
+            callback: called when finished with the peer's respons as argument
+            app_id: the application to destroy
+            actor_ids: optional list of actors to destroy
+        """
+        if self.network.link_request(to_rt_uuid):
+            # Already have link just continue in _app_destroy
+            self._app_destroy(to_rt_uuid, callback, app_id, actor_ids)
+        else:
+            # Request link before continue in _app_destroy
+            self.node.network.link_request(to_rt_uuid, CalvinCB(self._app_destroy,
+                                                        to_rt_uuid=to_rt_uuid,
+                                                        callback=callback,
+                                                        app_id=app_id,
+                                                        actor_ids=actor_ids))
+    def _app_destroy(self, to_rt_uuid, callback, app_id, actor_ids, status='ACK', uri=None):
+        """ Got link? continue app destruction """
+        if status=='ACK':
+            msg = {'cmd': 'APP_DESTROY', 'app_uuid': app_id, 'actor_uuids': actor_ids}
+            self.network.links[to_rt_uuid].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def app_destroy_handler(self, payload):
+        """ Peer request destruction of app and its actors """
+        reply = self.node.app_manager.destroy_request(payload['app_uuid'], 
+                                                      payload['actor_uuids'] if 'actor_uuids' in payload else [])
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply}
         self.network.links[payload['from_rt_uuid']].send(msg)
 

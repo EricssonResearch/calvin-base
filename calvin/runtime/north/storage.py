@@ -157,7 +157,11 @@ class Storage(object):
         """
         Add application to storage
         """
-        self.set(prefix="application-", key=application.id, value={"name": application.name, "actors": application.actors}, cb=cb)
+        self.set(prefix="application-", key=application.id,
+                 value={"name": application.name,
+                        "actors": application.actors,
+                        "origin_node_id": application.origin_node_id},
+                 cb=cb)
 
     def get_application(self, application_id, cb=None):
         """

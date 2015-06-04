@@ -201,6 +201,71 @@ class TestStateMigration(CalvinTestBase):
         self.assert_lists_equal(expected, actual)
 
 
+@pytest.mark.slow
+@pytest.mark.essential
+class TestAppLifeCycle(CalvinTestBase):
+
+    def testAppDestructionOneRemote(self):
+        script = """
+          src : std.CountTimer()
+          sum : std.Sum()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > sum.integer
+          sum.integer > snk.token
+          """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(1)
+        src = d.actor_map['simple:src']
+        csum = d.actor_map['simple:sum']
+        snk = d.actor_map['simple:snk']
+
+        utils.migrate(self.rt1, csum, self.rt2.id)
+        time.sleep(1)
+
+        actual = utils.report(self.rt1, snk)
+        expected = [sum(range(i+1)) for i in range(1,10)]
+        self.assert_lists_equal(expected, actual)
+        utils.delete_application(self.rt1, d.app_id)
+        time.sleep(0.5)
+        self.assertIsNone(utils.get_actor(self.rt1, src))
+        self.assertIsNone(utils.get_actor(self.rt1, csum))
+        self.assertIsNone(utils.get_actor(self.rt1, snk))
+        self.assertIsNone(utils.get_application(self.rt1, d.app_id))
+
+    def testAppDestructionAllRemote(self):
+        script = """
+          src : std.CountTimer()
+          sum : std.Sum()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > sum.integer
+          sum.integer > snk.token
+          """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(1)
+        src = d.actor_map['simple:src']
+        csum = d.actor_map['simple:sum']
+        snk = d.actor_map['simple:snk']
+
+        utils.migrate(self.rt1, src, self.rt2.id)
+        utils.migrate(self.rt1, csum, self.rt2.id)
+        utils.migrate(self.rt1, snk, self.rt2.id)
+        time.sleep(1)
+
+        actual = utils.report(self.rt2, snk)
+        expected = [sum(range(i+1)) for i in range(1,10)]
+        self.assert_lists_equal(expected, actual)
+        utils.delete_application(self.rt1, d.app_id)
+        time.sleep(0.5)
+        self.assertIsNone(utils.get_actor(self.rt1, src))
+        self.assertIsNone(utils.get_actor(self.rt1, csum))
+        self.assertIsNone(utils.get_actor(self.rt1, snk))
+        self.assertIsNone(utils.get_application(self.rt1, d.app_id))
+
+
 @pytest.mark.essential
 class TestEnabledToEnabledBug(CalvinTestBase):
 
