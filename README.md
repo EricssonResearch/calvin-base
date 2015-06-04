@@ -23,10 +23,6 @@ To install Calvin, use the accompanying `setup.py`
 
     $ python setup.py install
 
-Install the required packages
-
-    $ pip install -r requirements.txt
-
 To verify a working installation, try
 
     $ csdeploy calvin/scripts/test1.calvin
