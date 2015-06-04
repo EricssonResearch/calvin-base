@@ -65,7 +65,7 @@ Alternatively, a nicer way of doing it is using the web interface, described nex
 
 Start a runtime
 
-   $ csdeploy --start-only --host localhost --controlport 5001 --port 5000 --keep-alive
+    $ csdeploy --start-only --host localhost --controlport 5001 --port 5000 --keep-alive
 
 Start web server
 
@@ -88,7 +88,7 @@ applications can also be stopped here.
 
 Once you have two runtimes up and running, executing the following will allow you to migrate actors between them;
 
-    $ csdeploy --node <address> --port <port> --peer calvinip://<other node address>:<other node port>
+    $ csdeploy --host <address> --port <port> --peer calvinip://<other node address>:<other node port>
 
 Deploy an application to one of them (from the command line or the web interface) and visit the `Actors` tab
 in the web interface. It should now be possible to select an actor and migrate it to the other node.
@@ -131,8 +131,6 @@ This section deals with developing Calvin internals, for information on how to
 develop actors, or applications using CalvinScript, see sections 'Writing
 Actors in Python' and 'Writing CalvinScript Applications', respectively below. 
 
-[ Elaboration needed ]
-
 ## Assumptions on a Calvin application
 
 * An _application_ is a set of actors and a graph describing the connections
@@ -146,10 +144,6 @@ Actors in Python' and 'Writing CalvinScript Applications', respectively below.
 * Output ports may have a one-to-many relation (fan-out) to their input port(s)
 * Fan-out delivers same sequence to all readers (see open issues)
 
-## Commands to Node
-
-[ Elaboration needed ]
-
 ## Writing Actors in Python
 A new actor can be developed easily by inheriting from the `Actor` class, which holds
 similarity to CAL actors, if one is familiar with them.
@@ -159,7 +153,7 @@ similarity to CAL actors, if one is familiar with them.
 The following is an example of an actor. In this case, the only function is to pass any token recived
 on the inport to the outport, optionally printing it to standard out.
 
-    from Actor.actor import Actor, ActionResult, manage, condition
+    from calvin.actor.actor import Actor, ActionResult, manage, condition
 
     class Identity(Actor):
         """
@@ -188,7 +182,7 @@ on the inport to the outport, optionally printing it to standard out.
 
 The first lines import the necessary parts of the Actor module.
 
-    from Actor.actor import Actor, ActionResult, manage, condition
+    from calvin.actor.actor import Actor, ActionResult, manage, condition
 
 Here, `Actor` is the base class of all actors and should always be included.
 `ActionResult` is how an action reports its result to the runtime, including
@@ -300,10 +294,10 @@ An instantiation (of an actor) is is a statement of the form:
 e.g.
 
     src:std.Counter()
-    output1:io.FileSink(file="/tmp/foo.txt")
+    output1:io.StandardOut()
 
 where we have created two actors, `src` and `output1` of type `Counter` and
-`FileSink`, belonging to the `std` and `io` namespace, respectively.
+`StandardOut`, belonging to the `std` and `io` namespace, respectively.
 
 A connection describes how actors are connected over ports using the form:
 
@@ -315,7 +309,7 @@ e.g.
 
 where the integer sequence produced by `src` on its `integer` output port is
 connected to the `token` input port of the `output1` actor.
-The resulting application will write a sequence of integer to the file `/tmp/foo.txt`. 
+The resulting application will write a sequence of integer to the log.
 
 Together, the instantiations and connections describe the application graph.
 
