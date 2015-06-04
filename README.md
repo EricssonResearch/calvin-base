@@ -23,6 +23,10 @@ To install Calvin, use the accompanying `setup.py`
 
     $ python setup.py install
 
+Alternatively, install the requirements using `pip`
+
+    $ pip install -r requirements.txt
+
 To verify a working installation, try
 
     $ csdeploy calvin/scripts/test1.calvin
@@ -91,7 +95,7 @@ in the web interface. It should now be possible to select an actor and migrate i
 
 ### Testing
 
-Install the extra packages needed for testing
+If necessary, install the extra packages needed for testing
 
     $ pip install -r test-requirements.txt
 
@@ -103,6 +107,8 @@ Run the quick test suite
 
     $ py.test -m "not slow"
 
+Some tests are skipped (marked `s`), some are expected to fail (marked `x` or `X`). The important
+thing is that the line at the bottom is green.
 
 ## My first Calvinscript
 

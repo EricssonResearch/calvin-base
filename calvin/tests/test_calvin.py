@@ -110,7 +110,9 @@ class CalvinTestBase(unittest.TestCase):
         assert actual
         if len(expected) > len(actual):
             self.assertListEqual(expected[:len(actual)], actual)
-        else:
+        elif len(expected) < len(actual):
+            self.assertListEqual(expected, actual[:len(expected)])
+        else :
             self.assertListEqual(expected, actual)
 
     def setUp(self):

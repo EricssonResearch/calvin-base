@@ -18,22 +18,9 @@ import os
 from setuptools import setup
 
 
-def make_parser():
-    from calvin.csparser.parser import make_parser
-    make_parser()
-
-
 def read_desc(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-
-def read_reqs(fname):
-    with open(fname, "r") as f:
-        requirements = f.readlines()
-    return requirements
-
-# Create parsetab before setup
-make_parser()
 
 setup(name='calvin',
       version='0.1',
@@ -41,8 +28,20 @@ setup(name='calvin',
       license="Apache Software License",
       author="Ericsson Research",
       author_email="N/A",
-      tests_require=read_reqs('test-requirements.txt'),
-      install_requires=read_reqs('requirements.txt'),
+      tests_require=[
+          'mock>1.0.1',
+          'pytest>=1.4.25',
+          'pytest-twisted'
+      ],
+      install_requires=[
+          'colorlog>=2.6.0',
+          'kademlia>=0.4',
+          'ply>=3.4',
+          'Twisted>=15.0.0',
+          'requests >= 2.6.0',
+          'infi.traceback>=0.3.11',
+          ' wrapt==1.10.2'
+      ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
       long_description=read_desc('README.md'),
