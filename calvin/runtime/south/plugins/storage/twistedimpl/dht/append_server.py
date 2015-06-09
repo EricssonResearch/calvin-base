@@ -44,8 +44,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                     return False
 
                 old_value = json.loads(self.storage[key])
-                # TODO: What happens if we dont have list ?
-                self.storage[key] = json.dumps(old_value + pvalue)
+                self.storage[key] = json.dumps(list(set(old_value + pvalue)))
                 self.storage[mid] = True
 
             return True
@@ -60,6 +59,35 @@ class KademliaProtocolAppend(KademliaProtocol):
         d = self.append(address, mid, self.sourceNode.id, key, value)
         return d.addCallback(self.handleCallResponse, nodeToAsk)
 
+    def rpc_remove(self, sender, mid, nodeid, key, value):
+        source = Node(nodeid, sender[0], sender[1])
+        self.router.addContact(source)
+        self.log.debug("got a remove request from %s, storing value" %
+                       str(sender))
+
+        try:
+            pvalue = json.loads(value)
+
+            if key in self.storage:
+                if mid in self.storage:
+                    return False
+
+                old_value = json.loads(self.storage[key])
+                self.storage[key] = json.dumps(list(set(old_value) - set(pvalue)))
+                self.storage[mid] = True
+
+            return True
+
+        except:
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def callRemove(self, nodeToAsk, mid, key, value):
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        d = self.remove(address, mid, self.sourceNode.id, key, value)
+        return d.addCallback(self.handleCallResponse, nodeToAsk)
+
 
 class AppendServer(Server):
 
@@ -69,18 +97,15 @@ class AppendServer(Server):
 
     def append(self, key, value):
         """
-        Append the given key to the given value in the network.
+        For the given key append the given list values to the set in the network.
         """
-        self.log.debug("setting '%s' = '%s' on network" % (key, value))
+        self.log.debug("appending '%s' = '%s' on network" % (key, value))
         dkey = digest(key)
 
         def append(nodes, mid):
             self.log.info("setting '%s' on %s" % (key, map(str, nodes)))
 
-            # TODO: Must add transaction ID so we dont append multiple times.
-            print "org mid", mid
             mid = uuid.uuid1().hex
-            print "new mid", mid
 
             ds = [self.protocol.callAppend(node, mid, dkey, value) for node in nodes]
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
@@ -93,3 +118,27 @@ class AppendServer(Server):
 
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(append, "hej")
+
+    def remove(self, key, value):
+        """
+        For the given key remove the given list values from the set in the network.
+        """
+        self.log.debug("removing '%s' = '%s' on network" % (key, value))
+        dkey = digest(key)
+
+        def remove(nodes, mid):
+            self.log.info("setting '%s' on %s" % (key, map(str, nodes)))
+
+            mid = uuid.uuid1().hex
+
+            ds = [self.protocol.callRemove(node, mid, dkey, value) for node in nodes]
+            return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
+
+        node = Node(dkey)
+        nearest = self.protocol.router.findNeighbors(node)
+        if len(nearest) == 0:
+            self.log.warning("There are no known neighbors to set key %s" % key)
+            return defer.succeed(False)
+
+        spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
+        return spider.find().addCallback(remove, "hej")

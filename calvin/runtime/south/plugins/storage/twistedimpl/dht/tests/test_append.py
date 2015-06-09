@@ -118,6 +118,25 @@ def normal_test(match):
         return obj == match
     return test
 
+def json_test(match):
+    try:
+        jmatch = json.loads(match)
+    except:
+        print("Not JSON in json test!!!")
+        return False
+    def test(obj):
+        try:
+            jobj = json.loads(obj)
+        except:
+            print("Not JSON in json test!!!")
+            return False
+        if jobj != jmatch and not isinstance(jobj, list) and not isinstance(jmatch, list):
+            print("%s != %s" % (repr(jobj), repr(jmatch)))
+        if isinstance(jobj, list) and isinstance(jmatch, list):
+            return set(jobj) == set(jmatch)
+        return jobj == jmatch
+    return test
+
 
 def do_sync(func, **kwargs):
     test = None
@@ -163,17 +182,46 @@ class TestKAppend(object):
             item = ["apa"]
             test_str = json.dumps(item)
 
+            # set(["apa"])
             do_sync(a.get_rand_node().append, key="kalas", value=test_str, test=normal_test(True))
             do_sync(a.get_rand_node().append, key="kalas", value=test_str, test=normal_test(True))
             do_sync(a.get_rand_node().append, key="kalas", value=test_str, test=normal_test(True))
             do_sync(a.get_rand_node().append, key="kalas", value=test_str, test=normal_test(True))
 
-            match_str = json.dumps(item * 4)
-            do_sync(a.get_rand_node().get, key="kalas", test=normal_test(match_str))
+            match_str = json.dumps(item)
+            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+
+            # set(["apa", "elefant", "tiger"])
+            test_str2 = json.dumps(["elefant", "tiger"])
+            do_sync(a.get_rand_node().append, key="kalas", value=test_str2, test=normal_test(True))
+
+            match_str = json.dumps(["apa", "elefant", "tiger"])
+            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+
+            # set(["apa", "tiger"])
+            test_str3 = json.dumps(["elefant"])
+            do_sync(a.get_rand_node().remove, key="kalas", value=test_str3, test=normal_test(True))
+
+            match_str = json.dumps(["apa", "tiger"])
+            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+
+            # set(["apa", "elefant", "tiger"])
+            test_str2 = json.dumps(["elefant", "tiger"])
+            do_sync(a.get_rand_node().append, key="kalas", value=test_str2, test=normal_test(True))
+
+            match_str = json.dumps(["apa", "elefant", "tiger"])
+            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+
+            # set(["apa", "elefant", "tiger"])
+            test_str4 = json.dumps(["lejon"])
+            do_sync(a.get_rand_node().remove, key="kalas", value=test_str4, test=normal_test(True))
+
+            match_str = json.dumps(["apa", "elefant", "tiger"])
+            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
 
             match_str = json.dumps(item)
             do_sync(a.get_rand_node().set, key="kalas", value=test_str, test=normal_test(True))
-            do_sync(a.get_rand_node().get, key="kalas", test=normal_test(match_str))
+            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
 
             # Should fail
             do_sync(a.get_rand_node().append, key="kalas", value="apa", test=normal_test(False))
