@@ -1,0 +1,14 @@
+language: python
+python:
+  - "2.7"
+  - "nightly"
+# command to install dependencies
+install:
+  - "pip install tox"
+# command to run tests
+script:
+  - tox
+env:
+  - TOXENV=py27
+  - TOXENV=pep8
+  - TOXENV=pylint-errors
