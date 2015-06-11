@@ -11,11 +11,15 @@ implementation, and an app developer should not have to worry about
 communication protocols or hardware specifics (but will not stop you from
 doing it if you want to.)
 
+
+See the [wiki](https://github.com/EricssonResearch/calvin-base/wiki) for more
+detailed information, or continue reading.
+
 ## Quick start
 
 ### Download
 
-The latest version of Calvin can be found on [github](https//github.com/EricssonResearch/calvin-base).
+The latest version of Calvin can be found on [github](https://github.com/EricssonResearch/calvin-base).
 
 ### Setup
 
