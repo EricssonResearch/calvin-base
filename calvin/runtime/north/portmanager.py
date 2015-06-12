@@ -89,8 +89,10 @@ class PortManager(object):
         """ Gets called when a token arrives on any port """
         try:
             port = self._get_local_port(port_id=payload['peer_port_id'])
+            port.endpoint.recv_token(payload)
         except:
-            # Inform other end that it sent token to a port that does not exist on this node
+            # Inform other end that it sent token to a port that does not exist on this node or
+            # that we have initiated a disconnect (endpoint does not have recv_token).
             # Can happen e.g. when the actor and port just migrated and the token was in the air
             reply = {'cmd': 'TOKEN_REPLY', 
                      'port_id':payload['port_id'], 
@@ -98,8 +100,6 @@ class PortManager(object):
                      'sequencenbr': payload['sequencenbr'], 
                      'value': 'ABORT'}
             tunnel.send(reply)
-        else:
-            port.endpoint.recv_token(payload)
 
     def recv_token_reply_handler(self, tunnel, payload):
         """ Gets called when a token is (N)ACKed for any port """
@@ -110,9 +110,14 @@ class PortManager(object):
         else:
             # Send the reply to correct endpoint (an outport may have several when doing fan-out)
             for e in port.endpoints:
-                if e.get_peer()[1] == payload['peer_port_id']:
-                    e.reply(payload['sequencenbr'], payload['value'])
-                    break
+                # We might have started disconnect before getting the reply back, just ignore in that case
+                # it is sorted out if we connect again
+                try:
+                    if e.get_peer()[1] == payload['peer_port_id']:
+                        e.reply(payload['sequencenbr'], payload['value'])
+                        break
+                except:
+                    pass
 
     def tunnel_recv_handler(self, tunnel, payload):
         """ Gets called when we receive a message over a tunnel """
