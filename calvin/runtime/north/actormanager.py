@@ -80,7 +80,7 @@ class ActorManager(object):
             else:
                 return a.id
 
-    def _new_actor(self, actor_type):
+    def _new_actor(self, actor_type, actor_id=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         (found, is_primitive, class_) = ActorStore().lookup(actor_type)
         if not found or not is_primitive:
@@ -88,7 +88,7 @@ class ActorManager(object):
             raise Exception("ERROR_NOT_FOUND")
         try:
             # Create a 'bare' instance of the actor
-            a = class_(actor_type)
+            a = class_(actor_type, actor_id)
             # FIXME: Resolve the required (calvin) APIs and attach them to the actor
             #        (if it has the required access rights)
             a.attach_API("calvinsys", CalvinSys(a, self.node))
@@ -118,7 +118,8 @@ class ActorManager(object):
     def _new_from_state(self, actor_type, state):
         """Return an restored actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type)
+            print repr(state)
+            a = self._new_actor(actor_type, actor_id=state['id'])
             a.set_state(state)
             self.node.pm.add_ports_of_actor(a)
             a.did_migrate()

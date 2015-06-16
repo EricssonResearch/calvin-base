@@ -316,12 +316,12 @@ class Actor(object):
 
     # What are the arguments, really?
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
-                 disable_state_checks=False):
+                 disable_state_checks=False, actor_id=None):
         """Should normally _not_ be overridden in subclasses."""
         super(Actor, self).__init__()
         self._type = actor_type
         self.name = name  # optional: human_readable_name
-        self.id = calvinuuid.uuid("ACTOR")
+        self.id = actor_id or calvinuuid.uuid("ACTOR")
         self._managed = set(('id', 'name'))
         self.calvinsys = None # CalvinSys(node)
         self.control = calvincontrol.get_calvincontrol()
@@ -536,6 +536,7 @@ class Actor(object):
     def set_state(self, state):
         # Managed state handling
         self._managed = set(state['_managed'])
+
         for key in self._managed:
             if key not in self.__dict__:
                 self.__dict__[key] = state.pop(key)
