@@ -58,6 +58,9 @@ re_set_port_property = re.compile(r"POST /set_port_property\sHTTP/1")
 re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
 re_post_disconnect = re.compile(r"POST /disconnect\sHTTP/1")
 re_delete_node = re.compile(r"DELETE /node\sHTTP/1")
+re_post_index = re.compile(r"POST /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
+re_delete_index = re.compile(r"DELETE /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
+re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
 
 
 _calvincontrol = None
@@ -115,7 +118,10 @@ class CalvinControl(object):
             (re_set_port_property, self.handle_set_port_property),
             (re_post_deploy, self.handle_deploy),
             (re_delete_node, self.handle_quit),
-            (re_post_disconnect, self.handle_disconnect)
+            (re_post_disconnect, self.handle_disconnect),
+            (re_post_index, self.handle_post_index),
+            (re_delete_index, self.handle_delete_index),
+            (re_get_index, self.handle_get_index)
         ]
         self.server = server_connection.ServerProtocolFactory(self.node.sched.trigger_loop, "raw")
         self.server.start(self.host, self.port)
@@ -340,6 +346,40 @@ class CalvinControl(object):
         self.node.disconnect(
             data['actor_id'], data['port_name'], data['port_dir'], data['port_id'])
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+
+    def handle_post_index(self, handle, connection, match, data):
+        """ Add to index
+        """
+        self.node.storage.add_index(match.group(1), data['value'], 
+                             cb=CalvinCB(self.index_cb, handle, connection))
+
+    def handle_delete_index(self, handle, connection, match, data):
+        """ Remove from index
+        """
+        self.node.storage.remove_index(match.group(1), data['value'], 
+                             cb=CalvinCB(self.index_cb, handle, connection))
+
+    def handle_get_index(self, handle, connection, match, data):
+        """ Get from index
+        """
+        self.node.storage.get_index(match.group(1), 
+                             cb=CalvinCB(self.get_index_cb, handle, connection))
+
+    def index_cb(self, handle, connection, *args, **kwargs):
+        """ Index operation response 
+        """
+        _log.debug("index cb (in control) %s, %s" % (args, kwargs))
+        if 'value' in kwargs:
+            value = kwargs['value']
+        else:
+            value = None
+        self.send_response(handle, connection, json.dumps({'result': value}))
+
+    def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
+        """ Index operation response 
+        """
+        _log.debug("get index cb (in control) %s, %s" % (key, value))
+        self.send_response(handle, connection, json.dumps({'result': value}))
 
     def log_firing(self, actor_name, action_method, tokens_produced, tokens_consumed, production):
         """ Trace firing, sends data on log_sock

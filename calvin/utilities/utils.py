@@ -174,3 +174,20 @@ def get_application(rt, application_id):
 def delete_application(rt, application_id):
     r = requests.delete(rt.control_uri + '/application/' + application_id)
     return json.loads(r.text)
+
+
+def add_index(rt, index, value):
+    data = {'value': value}
+    r = requests.post(rt.control_uri + '/index/' + index, data=json.dumps(data))
+    return json.loads(r.text)
+
+
+def remove_index(rt, index, value):
+    data = {'value': value}
+    r = requests.delete(rt.control_uri + '/index/' + index, data=json.dumps(data))
+    return json.loads(r.text)
+
+
+def get_index(rt, index):
+    r = requests.get(rt.control_uri + '/index/' + index)
+    return json.loads(r.text)
