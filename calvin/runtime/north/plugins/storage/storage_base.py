@@ -65,6 +65,9 @@ class StorageBase(object):
     def append(self, key, value, cb=None):
         raise NotImplementedError()
 
+    def remove(self, key, value, cb=None):
+        raise NotImplementedError()
+
     def bootstrap(self, addrs, cb=None):
         raise NotImplementedError()
 

@@ -179,6 +179,9 @@ class AutoDHTServer(StorageBase):
     def append(self, key, value, cb=None):
         return TwistedWaitObject(self.dht_server.append, key=key, value=value, cb=cb)
 
+    def remove(self, key, value, cb=None):
+        return TwistedWaitObject(self.dht_server.remove, key=key, value=value, cb=cb)
+
     def bootstrap(self, addrs, cb=None):
         return TwistedWaitObject(self.dht_server.bootstrap, addr=addrs, cb=cb)
 
