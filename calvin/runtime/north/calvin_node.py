@@ -42,7 +42,7 @@ class Node(object):
     """A node of calvin
        the uri is used as server connection point
        the control_uri is the local console
-       attributes is a supplied dictionary of external defined attributes & capabilities
+       attributes is a supplied list of external defined attributes that will be used as the key when storing index
        such as name of node
     """
 

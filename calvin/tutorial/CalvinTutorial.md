@@ -353,7 +353,8 @@
     from utilities import utils
     import time
     
-    node_1 = calvin_node.dispatch_node(uri="calvinip://localhost:5000", contorl_uri="http://localhost:5001", attributes={'name': 'node-1'})
+    node_1 = calvin_node.dispatch_node(uri="calvinip://localhost:5000", contorl_uri="http://localhost:5001",
+                                       attributes=["node/affiliation/owner/me", "node/affiliation/name/bot"])
     
     counter_id = utils.new_actor(node_1, 'std.Counter', 'counter')
     
@@ -372,8 +373,10 @@
     from utilities import utils
     import time
     
-    node_1 = calvin_node.dispatch_node(uri="calvinip://localhost:5000", contorl_uri="http://localhost:5001", attributes={'name': 'node-1'})
-    node_2 = calvin_node.dispatch_node(uri="calvinip://localhost:5002", control_uri="http://localhost:5003", attributes={'name': 'node-2'})
+    node_1 = calvin_node.dispatch_node(uri="calvinip://localhost:5000", contorl_uri="http://localhost:5001",
+                                       attributes=["node/affiliation/owner/me", "node/affiliation/name/node-1"])
+    node_2 = calvin_node.dispatch_node(uri="calvinip://localhost:5002", control_uri="http://localhost:5003",
+                                       attributes=["node/affiliation/owner/me", "node/affiliation/name/node-2"])
     
     counter_id = utils.new_actor(node_1, 'std.Counter', 'counter')
 

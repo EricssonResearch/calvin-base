@@ -26,7 +26,8 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import utils
 from calvin.utilities.nodecontrol import dispatch_node, node_control
 import logging
-
+import random
+import time
 
 _log = get_logger(__name__)
 
@@ -82,12 +83,24 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('--kill', dest='appid', metavar='appid',
                            help="stop application")
 
+    argparser.add_argument('--attr', metavar='<attr>', type=str,
+                           help='a comma seperate list of attributes for started node ' + 
+                                'e.g. node/affiliation/owner/me,node/affiliation/name/bot',
+                           dest='attr')
+
+    argparser.add_argument('--deploy-to', metavar='<attr>', type=str,
+                           help='an attribute of an existing node to deploy to, ' +
+                                'will pick a random node from attribute lookup, ' +
+                                'e.g. node/affiliation/owner/me',
+                           dest='to_attr')
+
     return argparser.parse_args()
 
 
-def runtime(uri, control_uri, start_new):
+def runtime(uri, control_uri, start_new, attributes=None):
     if start_new:
-        rt = dispatch_node(uri=uri, control_uri=control_uri)
+        kwargs = {'attributes': attributes} if attributes else {}
+        rt = dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
     else:
         rt = node_control(control_uri)
     return rt
@@ -113,6 +126,18 @@ def deploy(rt, app_info, verbose):
             traceback.print_exc()
     return d.app_id
 
+def get_control_uri_from_index(rt, deploy_to):
+    node_ids = utils.get_index(rt, deploy_to)
+    if not isinstance(node_ids, list) or not node_ids:
+        # No list of node ids
+        return None
+    while(node_ids):
+        node_id = random.choice(node_ids)
+        node_ids.remove(node_id)
+        node_info = utils.get_node(rt, node_id)
+        if isinstance(node_info, dict) and 'control_uri' in node_info:
+            return node_info['control_uri']
+    return None
 
 def set_loglevel(verbose, quiet):
     logger = get_logger()
@@ -152,21 +177,36 @@ def main():
     uri = "calvinip://%s:%d" % (args.host, args.port)
     control_uri = "http://%s:%d" % (args.host, args.controlport)
 
-    rt = runtime(uri, control_uri, start_runtime)
+    attr_list = None
+    if args.attr:
+        attr_list = args.attr.split(',')
+
+    rt = runtime(uri, control_uri, start_runtime, attr_list)
+    # Default we deploy to the specified runtime
+    deploy_rt = rt
+
+    # When deploy-to option get the deploy runtime from index, 
+    # but need the first runtime to have access to the storage
+    if args.to_attr:
+        # If we started a new runtime above let it first connect the storage
+        time.sleep(2)
+        deploy_rt_control_uri = get_control_uri_from_index(rt, args.to_attr)
+        if deploy_rt_control_uri:
+            deploy_rt = runtime(None, deploy_rt_control_uri, False, [])
 
     if add_peer:
-        res = utils.peer_setup(rt, [args.peer])
+        res = utils.peer_setup(deploy_rt, [args.peer])
         print res
         return 0
 
     if args.appid:
-        res = utils.delete_application(rt, args.appid)
+        res = utils.delete_application(deploy_rt, args.appid)
         print res['result']
         return 0
 
     app_id = None
     if deploy_app:
-        app_id = deploy(rt, app_info, args.verbose)
+        app_id = deploy(deploy_rt, app_info, args.verbose)
 
     if start_runtime:
         timeout = int(args.wait) if int(args.wait) else None
