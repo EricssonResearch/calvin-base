@@ -176,6 +176,9 @@ class AutoDHTServer(StorageBase):
     def get(self, key, cb=None):
         return TwistedWaitObject(self.dht_server.get, key=key, cb=cb)
 
+    def get_concat(self, key, cb=None):
+        return TwistedWaitObject(self.dht_server.get_concat, key=key, cb=cb)
+
     def append(self, key, value, cb=None):
         return TwistedWaitObject(self.dht_server.append, key=key, value=value, cb=cb)
 

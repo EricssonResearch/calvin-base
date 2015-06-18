@@ -62,6 +62,12 @@ class StorageBase(object):
         """
         raise NotImplementedError()
 
+    def get_concat(self, key, cb=None):
+        """
+            Gets a value from the storage
+        """
+        raise NotImplementedError()
+
     def append(self, key, value, cb=None):
         raise NotImplementedError()
 

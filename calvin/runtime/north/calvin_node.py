@@ -154,8 +154,9 @@ class Node(object):
             _log.debug(args)
             self.sched.stop()
             self.control.stop()
-        _log.debug(self.storage.delete_node(self.id))
-        self.storage.stop(stopped)
+        def deleted_node(*args, **kwargs):
+            self.storage.stop(stopped)
+        self.storage.delete_node(self, cb=deleted_node)
 
 
 def create_node(uri, control_uri, trace_exec=False, attributes=None):

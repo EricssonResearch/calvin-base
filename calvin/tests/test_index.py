@@ -113,7 +113,7 @@ class TestIndex(CalvinTestBase):
 
         if h_['result'] is not None:
             # Test that the storage is local
-            warn("Storage is no longer only local, it had time to start")
+            warn("Storage is no longer only local, it had time to start %s" % h_['result'])
         assert(set(h['result']) == set([common]))
         assert(set(p['result']) == set(lindex["Per"][1:] + [common]))
         assert(set(e['result']) == set(lindex["Per"][1:] + [common]))
@@ -182,3 +182,115 @@ class TestIndex(CalvinTestBase):
         assert(set(e['result']) == set(lindex["Per"][1:] + [common]))
 
 
+class CalvinNodeTestBase(unittest.TestCase):
+
+    def setUp(self):
+        self.rt1 = dispatch_node("calvinip://localhost:5000", "http://localhost:5003",
+                                 attributes=["node/affiliation/owner/org.testexample/testOwner1",
+                                             "node/affiliation/name/org.testexample.testNode1",
+                                             "node/address/testCountry/testCity/testStreet/1"])
+        self.rt2 = dispatch_node("calvinip://localhost:5001", "http://localhost:5004",
+                                 attributes=["node/affiliation/owner/org.testexample/testOwner1",
+                                             "node/affiliation/name/org.testexample.testNode2",
+                                             "node/address/testCountry/testCity/testStreet/1"])
+        self.rt3 = dispatch_node("calvinip://localhost:5002", "http://localhost:5005",
+                                 attributes=["node/affiliation/owner/org.testexample/testOwner2",
+                                             "node/affiliation/name/org.testexample.testNode3",
+                                             "node/address/testCountry/testCity/testStreet/2"])
+
+    def tearDown(self):
+        utils.quit(self.rt1)
+        utils.quit(self.rt2)
+        utils.quit(self.rt3)
+        time.sleep(0.2)
+        for p in multiprocessing.active_children():
+            p.terminate()
+        time.sleep(0.2)
+
+
+@pytest.mark.slow
+class TestNodeIndex(CalvinNodeTestBase):
+
+    @pytest.mark.slow
+    def testNodeIndexThree(self):
+        time.sleep(4)
+
+        print self.rt1.id, self.rt2.id, self.rt3.id
+
+        owner1 = utils.get_index(self.rt1, "node/affiliation/owner/org.testexample/testOwner1")
+        assert(set(owner1['result']) == set([self.rt1.id, self.rt2.id]))
+
+        owner2 = utils.get_index(self.rt1, "node/affiliation/owner/org.testexample/testOwner2")
+        assert(set(owner2['result']) == set([self.rt3.id]))
+
+        owners = utils.get_index(self.rt1, "node/affiliation/owner/org.testexample")
+        assert(set(owners['result']) == set([self.rt1.id, self.rt2.id, self.rt3.id]))
+
+        names = utils.get_index(self.rt1, "node/affiliation/name")
+        assert(set(names['result']) == set([self.rt1.id, self.rt2.id, self.rt3.id]))
+
+        addr2 = utils.get_index(self.rt1, "node/address/testCountry/testCity/testStreet/2")
+        assert(set(addr2['result']) == set([self.rt3.id]))
+
+@pytest.mark.slow
+class CalvinNodeTestIndexAll(unittest.TestCase):
+
+    def setUp(self):
+        self.hosts = []
+        self.rt = []
+
+    def tearDown(self):
+        for r in self.rt:
+            utils.quit(r)
+        time.sleep(0.2)
+        for p in multiprocessing.active_children():
+            p.terminate()
+        time.sleep(0.2)
+
+    @pytest.mark.slow
+    def testNodeIndexMany(self):
+        """ Since storage is eventually consistent, and we don't really know when,
+            this test is quite loose on its asserts but shows some warnings when
+            inconsistent. It is also extremly slow.
+        """
+        self.hosts = [("calvinip://127.0.0.1:%d" % d, "http://localhost:%d" % (d+1), "owner%d" % ((d-5000)/2)) for d in range(5000, 5041, 2)]
+        self.rt = [dispatch_node(h[0], h[1], attributes=["node/affiliation/owner/%s" % h[2]]) for h in self.hosts]
+        time.sleep(3)
+        owner = []
+        for i in range(len(self.hosts)):
+            res = utils.get_index(self.rt[0], "node/affiliation/owner/%s" % self.hosts[i][2])
+            owner.append(res)
+            assert(set(res['result']) == set([self.rt[i].id]))
+
+        owners = utils.get_index(self.rt[0], "node/affiliation/owner")
+        assert(set(owners['result']) <= set([r.id for r in self.rt]))
+        if set(owners['result']) == set([r.id for r in self.rt]):
+            warn("Not all nodes manage to reach the index")
+        rt = self.rt[:]
+        ids = [r.id for r in rt]
+        hosts = self.hosts[:]
+        utils.quit(self.rt[10])
+        del self.rt[10]
+        del self.hosts[10]
+        owners = utils.get_index(self.rt[0], "node/affiliation/owner")
+        assert(set(owners['result']) <= set(ids))
+        if ids[10] in set(owners['result']):
+            warn("The removed node is still in the all owners set")
+
+        removed_owner = utils.get_index(self.rt[0], "node/affiliation/owner/%s" % hosts[10][2])
+        assert(not removed_owner['result'] or set(removed_owner['result']) == set([ids[10]]))
+        if removed_owner['result']:
+            warn("The removed node is still in its own index")
+
+        # Destroy a bunch of the nodes
+        for _ in range(7):
+            utils.quit(self.rt[10])
+            del self.rt[10]
+            del self.hosts[10]
+
+        time.sleep(2)
+        owners = utils.get_index(self.rt[0], "node/affiliation/owner")
+        assert(set(owners['result']) <= set(ids))
+        l = len(set(owners['result']))
+        if l > (len(ids)-8):
+            warn("Did have %d nodes left even after removal of 8 from %d" % (l, len(ids)))

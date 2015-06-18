@@ -139,7 +139,7 @@ class TestStorageStarted(object):
         value = self.q.get(timeout=0.2)
         assert value["value"] == {'uri': node.uri}
 
-        yield threads.defer_to_thread(self.storage.delete_node, node.id, cb=CalvinCB(cb))
+        yield threads.defer_to_thread(self.storage.delete_node, node, cb=CalvinCB(cb))
         yield threads.defer_to_thread(time.sleep, 2)
         value = self.q.get(timeout=0.2)
         assert value["value"] is True
@@ -239,7 +239,7 @@ class TestStorageNotStarted(object):
         value = self.q.get(timeout=0.2)
         assert value["key"] == node.id and value["value"] == {'uri': node.uri}
 
-        self.storage.delete_node(node.id, cb=CalvinCB(func=cb))
+        self.storage.delete_node(node, cb=CalvinCB(func=cb))
         value = self.q.get(timeout=0.2)
         assert value
         assert node.id not in self.storage.localstore

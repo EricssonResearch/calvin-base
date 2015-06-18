@@ -189,35 +189,35 @@ class TestKAppend(object):
             do_sync(a.get_rand_node().append, key="kalas", value=test_str, test=normal_test(True))
 
             match_str = json.dumps(item)
-            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+            do_sync(a.get_rand_node().get_concat, key="kalas", test=json_test(match_str))
 
             # set(["apa", "elefant", "tiger"])
             test_str2 = json.dumps(["elefant", "tiger"])
             do_sync(a.get_rand_node().append, key="kalas", value=test_str2, test=normal_test(True))
 
             match_str = json.dumps(["apa", "elefant", "tiger"])
-            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+            do_sync(a.get_rand_node().get_concat, key="kalas", test=json_test(match_str))
 
             # set(["apa", "tiger"])
             test_str3 = json.dumps(["elefant"])
             do_sync(a.get_rand_node().remove, key="kalas", value=test_str3, test=normal_test(True))
 
             match_str = json.dumps(["apa", "tiger"])
-            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+            do_sync(a.get_rand_node().get_concat, key="kalas", test=json_test(match_str))
 
             # set(["apa", "elefant", "tiger"])
             test_str2 = json.dumps(["elefant", "tiger"])
             do_sync(a.get_rand_node().append, key="kalas", value=test_str2, test=normal_test(True))
 
             match_str = json.dumps(["apa", "elefant", "tiger"])
-            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+            do_sync(a.get_rand_node().get_concat, key="kalas", test=json_test(match_str))
 
             # set(["apa", "elefant", "tiger"])
             test_str4 = json.dumps(["lejon"])
             do_sync(a.get_rand_node().remove, key="kalas", value=test_str4, test=normal_test(True))
 
             match_str = json.dumps(["apa", "elefant", "tiger"])
-            do_sync(a.get_rand_node().get, key="kalas", test=json_test(match_str))
+            do_sync(a.get_rand_node().get_concat, key="kalas", test=json_test(match_str))
 
             match_str = json.dumps(item)
             do_sync(a.get_rand_node().set, key="kalas", value=test_str, test=normal_test(True))

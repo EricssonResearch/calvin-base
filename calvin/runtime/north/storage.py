@@ -45,16 +45,19 @@ class Storage(object):
     def flush_localdata(self):
         """ Write data in localstore to storage
         """
+        _log.debug("Flush local storage data")
         self.flush_delayedcall = None
         for key in self.localstore:
             self.storage.set(key=key, value=self.localstore[key],
                              cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None))
         for key, value in self.localstore_sets.iteritems():
             if value['+']:
+                _log.debug("Flush append on key %s: %s" % (key, list(value['+'])))
                 coded_value = self.coder.encode(list(value['+']))
                 self.storage.append(key=key, value=coded_value, 
                                     cb=CalvinCB(func=self.append_cb, org_key=None, org_value=None, org_cb=None))
             if value['-']:
+                _log.debug("Flush remove on key %s: %s" % (key, list(value['-'])))
                 coded_value = self.coder.encode(list(value['-']))
                 self.storage.remove(key=key, value=coded_value, 
                                     cb=CalvinCB(func=self.remove_cb, org_key=None, org_value=None, org_cb=None))
@@ -135,13 +138,35 @@ class Storage(object):
                 if value:
                     value = self.coder.decode(value)
                 cb(key=key, value=value)
-            elif prefix + key in self.localstore_sets:
+            else:
+                try:
+                    self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
+                except:
+                    _log.error("Failed to get: %s" % key)
+                    cb(key=key, value=False)
+
+    def get_concat_cb(self, key, value, org_cb, org_key):
+        """ get callback
+        """
+        if value:
+            value = self.coder.decode(value)
+        org_cb(org_key, value)
+
+    def get_concat(self, prefix, key, cb):
+        """ Get value for key: prefix+key, first look in localstore
+            Return value is list. The storage could be eventually consistent.
+            For example a remove might only have reached part of the
+            storage and hence the return list might contain removed items,
+            but also missing items.
+        """
+        if cb:
+            if prefix + key in self.localstore_sets:
                 value = self.localstore_sets[prefix + key]
                 # Return the set that we intended to append since that's all we have until it is synced
                 cb(key=key, value=list(value['+']))
             else:
                 try:
-                    self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
+                    self.storage.get_concat(key=prefix + key, cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key))
                 except:
                     _log.error("Failed to get: %s" % key)
                     cb(key=key, value=False)
@@ -245,7 +270,20 @@ class Storage(object):
         """
         Add node to storage
         """
-        self.set(prefix="node-", key=node.id, value={"uri": node.uri, "control_uri": node.control_uri}, cb=cb)
+        self.set(prefix="node-", key=node.id, value={"uri": node.uri, 
+                                                     "control_uri": node.control_uri,
+                                                     "attributes": node.attributes}, cb=cb)
+        # Add to index after a while since storage not up and running anyway
+        #async.DelayedCall(1.0, self._add_node_index, node)
+        self._add_node_index(node)
+
+    def _add_node_index(self, node, cb=None):
+        try:
+            for index in node.attributes:
+                # TODO add callback, but currently no users supply a cb anyway
+                self.add_index(index, node.id)
+        except:
+            pass
 
     def get_node(self, node_id, cb=None):
         """
@@ -253,11 +291,34 @@ class Storage(object):
         """
         self.get(prefix="node-", key=node_id, cb=cb)
 
-    def delete_node(self, node_id, cb=None):
+    def delete_node(self, node, cb=None):
         """
         Delete node from storage
         """
-        self.delete(prefix="node-", key=node_id, cb=cb)
+        self.delete(prefix="node-", key=node.id, cb=None if node.attributes else cb)
+        if node.attributes:
+            self._delete_node_index(node, cb=cb)
+
+    def _delete_node_index(self, node, cb=None):
+        try:
+            counter = [len(node.attributes)]  # counter value by reference used in callback
+            for index in node.attributes:
+                self.remove_index(index, node.id, cb=CalvinCB(self._delete_node_cb, counter=counter, org_cb=cb))
+            # The remove index gets 1 second otherwise we call the callback anyway, i.e. stop the node
+            async.DelayedCall(1.0, self._delete_node_timeout_cb, counter=counter, org_cb=cb)
+        except:
+            if cb:
+                cb()
+
+    def _delete_node_cb(self, counter, org_cb, *args, **kwargs):
+        counter[0] = counter[0] - 1
+        if counter[0] == 0:
+            org_cb(*args, **kwargs)
+
+    def _delete_node_timeout_cb(self, counter, org_cb):
+        if counter[0] > 0:
+            _log.debug("Delete node index not finished but call callback anyway")
+            org_cb()
 
     def add_application(self, application, cb=None):
         """
@@ -369,7 +430,7 @@ class Storage(object):
             if not index_items:
                 org_cb(key=org_key, value=True)
 
-    def add_index(self, index, value, root_prefix_level=1, cb=None):
+    def add_index(self, index, value, root_prefix_level=2, cb=None):
         """
         Add value (typically a node id) to the storage as a set.
         index: a string with slash as delimiter for finer level of index,
@@ -406,7 +467,7 @@ class Storage(object):
             self.append(prefix="index-", key=i, value=[value], 
                         cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
 
-    def remove_index(self, index, value, root_prefix_level=1, cb=None):
+    def remove_index(self, index, value, root_prefix_level=2, cb=None):
         """
         Remove value (typically a node id) from the storage as a set.
         index: a string with slash as delimiter for finer level of index,
@@ -456,6 +517,10 @@ class Storage(object):
                node/affiliation/name/com.ericsson/laptop
         cb: will be called when done. Should expect to be called several times with
                partial results. Currently only called once.
+        
+        Since storage might be eventually consistent caller must expect that the 
+        list can containe node ids that are removed and node ids have not yet reached
+        the storage.
         """
 
         # TODO this implementation will get the value from the level of the index.
@@ -469,5 +534,5 @@ class Storage(object):
         if not index.startswith("/"):
             index = "/" + index
         _log.debug("get index %s" % (index))
-        self.get(prefix="index-", key=index, cb=cb)
+        self.get_concat(prefix="index-", key=index, cb=cb)
 
