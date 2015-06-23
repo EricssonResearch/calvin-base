@@ -22,7 +22,7 @@ from calvin.Tools import cscompiler as compiler
 from calvin.Tools import deployer
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.south.plugins.async import server_connection 
+from calvin.runtime.south.plugins.async import server_connection
 from urlparse import urlparse
 
 _log = get_logger(__name__)
@@ -31,28 +31,29 @@ re_get_log = re.compile(r"GET /log\sHTTP/1")
 re_get_node_id = re.compile(r"GET /id\sHTTP/1")
 re_get_nodes = re.compile(r"GET /nodes\sHTTP/1")
 re_get_node = re.compile(
-    r"GET /node/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+    r"GET /node/((NODE_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
 re_post_peer_setup = re.compile(r"POST /peer_setup\sHTTP/1")
 re_get_applications = re.compile(r"GET /applications\sHTTP/1")
 re_get_application = re.compile(
-    r"GET /application/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+    r"GET /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
 re_del_application = re.compile(
-    r"DELETE /application/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+    r"DELETE /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
 re_post_new_actor = re.compile(r"POST /actor\sHTTP/1")
 re_get_actors = re.compile(
     r"GET /actors\sHTTP/1")
 re_get_actor = re.compile(
-    r"GET /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+    r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
 re_del_actor = re.compile(
-    r"DELETE /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+    r"DELETE /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
 re_get_actor_report = re.compile(
-    r"GET /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/report\sHTTP/1")
+    r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/report\sHTTP/1")
 re_post_actor_migrate = re.compile(
-    r"POST /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/migrate\sHTTP/1")
+    r"POST /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/migrate\sHTTP/1")
 re_post_actor_disable = re.compile(
-    r"POST /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/disable\sHTTP/1")
+    r"POST /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/disable\sHTTP/1")
 re_get_port = re.compile(
-    r"GET /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/port/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+    r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}) \
+    /port/((PORT_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
 re_post_connect = re.compile(r"POST /connect\sHTTP/1")
 re_set_port_property = re.compile(r"POST /set_port_property\sHTTP/1")
 re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
@@ -177,9 +178,9 @@ class CalvinControl(object):
         """
         if not connection.connection_lost:
             connection.send("HTTP/1.0 200 OK\n"
-                               + "Content-Type: text/event-stream\n"
-                               + "Access-Control-Allow-Origin: *\r\n"
-                               + "\n")
+                            + "Content-Type: text/event-stream\n"
+                            + "Access-Control-Allow-Origin: *\r\n"
+                            + "\n")
 
     def storage_cb(self, key, value, handle, connection):
         self.send_response(handle, connection, json.dumps(value))
@@ -266,11 +267,11 @@ class CalvinControl(object):
     def handle_actor_migrate(self, handle, connection, match, data):
         """ Migrate actor
         """
-        self.node.am.migrate(match.group(1), data['peer_node_id'], 
+        self.node.am.migrate(match.group(1), data['peer_node_id'],
                              callback=CalvinCB(self.actor_migrate_cb, handle, connection))
 
     def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
-        """ Migrate actor respons 
+        """ Migrate actor respons
         """
         self.send_response(handle, connection, json.dumps({'result': status}))
 
@@ -350,23 +351,23 @@ class CalvinControl(object):
     def handle_post_index(self, handle, connection, match, data):
         """ Add to index
         """
-        self.node.storage.add_index(match.group(1), data['value'], 
-                             cb=CalvinCB(self.index_cb, handle, connection))
+        self.node.storage.add_index(
+            match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
 
     def handle_delete_index(self, handle, connection, match, data):
         """ Remove from index
         """
-        self.node.storage.remove_index(match.group(1), data['value'], 
-                             cb=CalvinCB(self.index_cb, handle, connection))
+        self.node.storage.remove_index(
+            match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
 
     def handle_get_index(self, handle, connection, match, data):
         """ Get from index
         """
-        self.node.storage.get_index(match.group(1), 
-                             cb=CalvinCB(self.get_index_cb, handle, connection))
+        self.node.storage.get_index(
+            match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
 
     def index_cb(self, handle, connection, *args, **kwargs):
-        """ Index operation response 
+        """ Index operation response
         """
         _log.debug("index cb (in control) %s, %s" % (args, kwargs))
         if 'value' in kwargs:
@@ -376,7 +377,7 @@ class CalvinControl(object):
         self.send_response(handle, connection, json.dumps({'result': value}))
 
     def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
-        """ Index operation response 
+        """ Index operation response
         """
         _log.debug("get index cb (in control) %s, %s" % (key, value))
         self.send_response(handle, connection, json.dumps({'result': value}))
