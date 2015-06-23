@@ -17,6 +17,7 @@
 import sys
 import logging
 from infi.traceback import format_exception, traceback_context
+from conditional import conditional
 
 from calvin.actor.actor import ActionResult
 from calvin.runtime.south.plugins.async import async
@@ -104,17 +105,16 @@ class Scheduler(object):
                 if self._loop_once is None:
                     self._loop_once = async.DelayedCall(0, self.loop_once)
 
-        if _log.getEffectiveLevel() >= logging.DEBUG:
+        if _log.getEffectiveLevel() <= logging.DEBUG:
             import inspect, traceback
             (frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
             _log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
-            if  _log.getEffectiveLevel() >= logging.DEBUG:
-                _log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
+            _log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
 
     def fire_actors(self, actor_ids=None):
         total = ActionResult(node=self.node, did_fire=False)
 
-        with traceback_context():
+        with conditional(_log.getEffectiveLevel() <= logging.DEBUG, traceback_context()):
             for actor in self.actor_mgr.enabled_actors():
                 if actor_ids is not None and actor.id not in actor_ids:
                     _log.debug("ignoring actor %s(%s)" % (actor._type, actor.id))
