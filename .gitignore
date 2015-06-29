@@ -14,6 +14,7 @@ calvin.conf
 dist/
 calvin.egg-info
 ./build/
+build/
 *_BACKUP_*
 *_BASE_*
 *_LOCAL_*
