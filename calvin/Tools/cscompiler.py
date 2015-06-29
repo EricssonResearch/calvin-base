@@ -37,6 +37,8 @@ def compile(source_text, filename=''):
         errors.extend(c_errors)
         warnings.extend(c_warnings)
         deployable = generate_app_info(ir)
+        if errors:
+            deployable['valid'] = False
     return deployable, errors, warnings
 
 
