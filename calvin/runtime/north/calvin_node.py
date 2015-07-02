@@ -18,6 +18,7 @@ from multiprocessing import Process
 # For trace
 import sys
 import trace
+import logging
 
 from calvin.runtime.north import actormanager
 from calvin.runtime.north import appmanager
@@ -55,7 +56,8 @@ class Node(object):
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
         self.control = calvincontrol.get_calvincontrol()
-        self.sched = scheduler.Scheduler(self, self.am, self.monitor)
+        _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
+        self.sched = _scheduler(self, self.am, self.monitor)
         self.control.start(node=self, uri=control_uri)
         self.async_msg_ids = {}
         self.storage = storage.Storage()

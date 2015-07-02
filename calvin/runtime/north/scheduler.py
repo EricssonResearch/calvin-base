@@ -15,13 +15,11 @@
 # limitations under the License.
 
 import sys
+import time
 import logging
-from infi.traceback import format_exception, traceback_context
-from conditional import conditional
 
 from calvin.actor.actor import ActionResult
 from calvin.runtime.south.plugins.async import async
-import time
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -105,25 +103,45 @@ class Scheduler(object):
                 if self._loop_once is None:
                     self._loop_once = async.DelayedCall(0, self.loop_once)
 
-        if _log.getEffectiveLevel() <= logging.DEBUG:
-            import inspect, traceback
-            (frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
-            _log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
-            _log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
+    def _log_exception_during_fire(self, e):
+        _log.exception(e)
 
     def fire_actors(self, actor_ids=None):
         total = ActionResult(node=self.node, did_fire=False)
 
-        with conditional(_log.getEffectiveLevel() <= logging.DEBUG, traceback_context()):
-            for actor in self.actor_mgr.enabled_actors():
-                if actor_ids is not None and actor.id not in actor_ids:
-                    _log.debug("ignoring actor %s(%s)" % (actor._type, actor.id))
-                    continue
-                try:
-                    action_result = actor.fire()
-                    _log.debug("fired actor %s(%s)" % (actor._type, actor.id))
-                    total.merge(action_result)
-                except:
-                    _log.error('\n'.join(format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback)))
+        for actor in self.actor_mgr.enabled_actors():
+            if actor_ids is not None and actor.id not in actor_ids:
+                _log.debug("ignoring actor %s(%s)" % (actor._type, actor.id))
+                continue
+            try:
+                action_result = actor.fire()
+                _log.debug("fired actor %s(%s)" % (actor._type, actor.id))
+                total.merge(action_result)
+            except Exception as e:
+                self._log_exception_during_fire(e)
         self.idle = not total.did_fire
         return total
+
+
+class DebugScheduler(Scheduler):
+    """This is an instrumented version of the scheduler for use in debugging runs."""
+
+    def __init__(self, node, actor_mgr, monitor):
+        super(DebugScheduler, self).__init__(node, actor_mgr, monitor)
+
+    def trigger_loop(self, delay=0, actor_ids=None):
+        import inspect, traceback
+        super(DebugScheduler, self).trigger_loop(delay, actor_ids)
+        (frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
+        _log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
+        _log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
+
+    def _log_exception_during_fire(self, e):
+        from infi.traceback import format_exception
+        _log.error('\n'.join(format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback)))
+
+    def fire_actors(self, actor_ids=None):
+        from infi.traceback import traceback_context
+        traceback_context()
+        return super(DebugScheduler, self).fire_actors(actor_ids)
+
