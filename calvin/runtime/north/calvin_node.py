@@ -52,31 +52,22 @@ class Node(object):
         self.control_uri = control_uri
         self.attributes = attributes
         self.id = calvinuuid.uuid("NODE")
-        _log.debug("Calvin init 1")
         self.monitor = Event_Monitor()
-        _log.debug("Calvin init 2")
         self.am = actormanager.ActorManager(self)
-        _log.debug("Calvin init 3")
         self.control = calvincontrol.get_calvincontrol()
-        _log.debug("Calvin init 4")
         self.sched = scheduler.Scheduler(self, self.am, self.monitor)
-        _log.debug("Calvin init 5")
         self.control.start(node=self, uri=control_uri)
         self.async_msg_ids = {}
-        _log.debug("Calvin init 6")
         self.storage = storage.Storage()
         self.storage.start()
-        _log.debug("Calvin init 7")
         self.network = CalvinNetwork(self)
-        _log.debug("Calvin init 8")
         self.proto = CalvinProto(self, self.network)
         self.pm = PortManager(self, self.proto)
-        _log.debug("Calvin init 9")
         self.app_manager = appmanager.AppManager(self)
-        _log.debug("Calvin init 10")
         # The initialization that requires the main loop operating is deferred to start function
+        # FIXME: Don't use delayed call in calvin-tiny
         async.DelayedCall(0, self.start)
-        _log.debug("Calvin init 11")
+        # self.start()
 
     def insert_local_reply(self):
         msg_id = calvinuuid.uuid("LMSG")
