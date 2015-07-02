@@ -59,7 +59,7 @@ Start runtime, compile calvinscript and deploy application.
                            help='source file to compile')
 
     argparser.add_argument('-d', '--debug', dest='debug', action='store_true',
-                           help='keep debugging information from compilation')
+                           help='Start PDB')
 
     argparser.add_argument('-l', '--loglevel', dest='loglevel', action='append', default=[],
                            help="Set log level, levels: CRITICAL, ERROR, WARNING, INFO and DEBUG. \
@@ -162,6 +162,9 @@ def set_loglevel(levels):
 
 def main():
     args = parse_arguments()
+
+    if args.debug:
+        import pdb ; pdb.set_trace()
 
     set_loglevel(args.loglevel)
 
