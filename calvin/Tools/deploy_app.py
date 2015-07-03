@@ -21,7 +21,6 @@ import select
 import time
 import traceback
 import cscompiler as compiler
-from calvin.utilities import dtrace
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import utils
 from calvin.utilities.nodecontrol import dispatch_node, node_control
@@ -29,11 +28,6 @@ import logging
 import random
 
 _log = get_logger(__name__)
-
-dtrace._trace_on = True
-dtrace._marker = "|   "
-dtrace._indent_size = 1
-
 
 def parse_arguments():
     long_description = """
@@ -147,10 +141,8 @@ def set_loglevel(levels):
             if ":" in level:
                 module, level = level.split(":")
             if level == "CRITICAL":
-                dtrace._trace_on = True
                 get_logger(module).setLevel(logging.CRITICAL)
             elif level == "ERROR":
-                dtrace._trace_on = True
                 get_logger(module).setLevel(logging.ERROR)
             elif level == "WARNING":
                 get_logger(module).setLevel(logging.WARNING)
