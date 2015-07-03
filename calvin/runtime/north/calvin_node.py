@@ -152,27 +152,37 @@ class Node(object):
         self.storage.delete_node(self, cb=deleted_node)
 
 
-def create_node(uri, control_uri, trace_exec=False, attributes=None):
-    _log.debug("create_node")
+def create_node(uri, control_uri, attributes=None):
     n = Node(uri, control_uri, attributes)
-    _log.debug("create_node 2")
-    if trace_exec:
-        _, host = uri.split('://')
-        # Trace execution and dump in output file "<host>_<port>.trace"
-        with open("%s.trace" % (host, ), "w") as f:
-            tmp = sys.stdout
-            # Modules to ignore
-            modlist = ['fifo', 'calvin', 'actor', 'pickle', 'socket',
-                       'uuid', 'codecs', 'copy_reg', 'string_escape', '__init__']
-            with f as sys.stdout:
-                tracer = trace.Trace(trace=1, count=0, ignoremods=modlist)
-                tracer.runfunc(n.run)
-            sys.stdout = tmp
-    else:
-        n.run()
-        _log.info('Quitting node "%s"' % n.uri)
+    n.run()
+    _log.info('Quitting node "%s"' % n.uri)
+
+def create_tracing_node(uri, control_uri, attributes=None):
+    """
+    Same as create_node, but will trace every line of execution.
+    Creates trace dump in output file '<host>_<port>.trace'
+    """
+    n = Node(uri, control_uri, attributes)
+    _, host = uri.split('://')
+    with open("%s.trace" % (host, ), "w") as f:
+        tmp = sys.stdout
+        # Modules to ignore
+        ignore = [
+            'fifo', 'calvin', 'actor', 'pickle', 'socket',
+            'uuid', 'codecs', 'copy_reg', 'string_escape', '__init__',
+            'colorlog', 'posixpath', 'glob', 'genericpath', 'base',
+            'sre_parse', 'sre_compile', 'fdesc', 'posixbase', 'escape_codes',
+            'fnmatch', 'urlparse', 're', 'stat', 'six'
+        ]
+        with f as sys.stdout:
+            tracer = trace.Trace(trace=1, count=0, ignoremods=ignore)
+            tracer.runfunc(n.run)
+        sys.stdout = tmp
+    _log.info('Quitting node "%s"' % n.uri)
 
 
 def start_node(uri, control_uri, trace_exec=False, attributes=None):
-    p = Process(target=create_node, args=(uri, control_uri, trace_exec, attributes))
+    _create_node = create_tracing_node if trace_exec else create_node
+    p = Process(target=_create_node, args=(uri, control_uri, attributes))
+    p.daemon = True
     p.start()
