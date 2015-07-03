@@ -206,10 +206,14 @@ def main():
         app_id = deploy(deploy_rt, app_info, args.loglevel)
 
     if start_runtime:
+        # FIXME: This is a weird construct that is required since python's
+        #        MultiProcess will reap all it's children on exit, regardless
+        #        of deamon attribute value
         timeout = int(args.wait) if int(args.wait) else None
         select.select([], [], [], timeout)
         utils.quit(rt)
         time.sleep(0.1)
+
     if app_id:
         print "Deployed application", app_id
 
