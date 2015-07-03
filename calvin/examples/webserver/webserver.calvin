@@ -1,0 +1,200 @@
+component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_data, out, status {
+  """
+  Allow daisy-chaining of data/status along a processing flow.
+
+  Conceptually, the flow looks like the following picture:
+
+                +-----------+          +-----------+          +-----------+
+                |   actor   |          |   actor   |          |   actor   |
+                |           |          |           |          |           |
+                |     r  s  |          |     r  s  |          |     r  s  |
+                |     e  t  |          |     e  t  |          |     e  t  |
+                |  d  s  a  |          |  d  s  a  |          |  d  s  a  |
+                |  a  u  t  |          |  a  u  t  |          |  a  u  t  |
+                |  t  l  u  |          |  t  l  u  |          |  t  l  u  |
+                |  a  t  s  |          |  a  t  s  |          |  a  t  s  |
+                +-----------+          +-----------+          +-----------+
+                   ^  |  |                ^  |  |                ^  |  |
+                   |  v  v                |  v  v                |  v  v
+         data   +--+--+--+--+   data   +--+--+--+--+   data   +--+--+--+--+   data
+  ... --------->|           |--------->|           |--------->|           |---------> ...
+        status  |   daisy   |  status  |   daisy   |  status  |   daisy   |  status
+  ... --------->|           |--------->|           |--------->|           |---------> ...
+                +-----------+          +-----------+          +-----------+
+
+  Data propagates down the chain and is processed by the actors, in order, as long as each actor
+  reports its status as OK (according to the argument provided to DaisyAdapter). If an actor reports
+  its status as not OK, the error status and the corresponding data is simply propagated down the
+  flow, without further processing.
+  """
+
+  const_OK : std.Constantify(constant=status_OK)
+  cmp : std.Compare(op="=")
+  route_input : std.Select()
+  route_status : std.Select()
+  join_status : std.Join()
+  join_output : std.Join()
+  term : std.Terminator()
+
+
+  # Is incoming status 200 (OK)?
+  status > const_OK.in
+  const_OK.out > cmp.a
+  status > cmp.b
+  # Route input and status based on the outcome
+  cmp.result > route_status.select
+  cmp.result > route_input.select
+  status > route_status.data
+  in > route_input.data
+  # Propagate any incoming status != 200 (OK) to status out
+  route_status.false > join_status.token_1
+  # Also bypass any computation and pass input directly to output
+  route_input.false > join_output.token_1
+  # If incoming status is 200 (OK) drop it since we will soon have a new status
+  route_status.true > term.null
+  # Merge statii
+  join_status.token > status
+  join_output.token > out
+  #
+  # Connect to work actor here
+  #
+  route_input.true > work_data
+  work_result > join_output.token_2
+  work_status > join_status.token_2
+}
+
+
+component HTTPGETRequestCheck() request -> path, status {
+  """
+  Check if request is valid HTTP GET request.
+
+  Input:
+	  request: an HTTP request, possibly malformed
+  Outputs:
+    path: the requested resource path, or the full request on error
+    status: the request status, either OK (200) or Bad Request (400)
+  """
+  match_request_method : text.RegexMatch(regex="(GET) \S+ HTTP/\d\.\d")
+  match_request_path : text.RegexMatch(regex="[A-Z]+ (\S+) HTTP/\d\.\d")
+  const_BAD_REQUEST : std.Constantify(constant=400)
+  const_OK : std.Constantify(constant=200)
+  join_output : std.Join()
+  join_status : std.Join()
+
+  request > match_request_method.text
+  request > match_request_path.text
+  match_request_method.match > const_OK.in
+  match_request_path.match > join_output.token_1
+  match_request_path.no_match > join_output.token_2
+  join_output.token > path
+  // Successful path
+  const_OK.out > join_status.token_1
+  // Error path
+  match_request_method.no_match > const_BAD_REQUEST.in
+  const_BAD_REQUEST.out > join_status.token_2
+  // Status
+  join_status.token > status
+}
+
+
+component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
+  """
+  Locate a resource by appending rel_path to base_path.
+  If the resulting path is outside of base_path,
+  or if the resource doesn't exist an error is genrated.
+
+  Input:
+    rel_path : Path for resource relative to base_path
+  Outputs:
+    abs_path : Absolute path to resource.
+    status : An integer status code (200) 'OK' or (404) 'Not found'
+  """
+
+  const_base : std.Constantify(constant=base_path)
+  const_FILE_NOT_FOUND : std.Constant(data=404, n=-1)
+  const_FILE_OK : std.Constant(data=200, n=-1)
+  status : std.Deselect()
+  abs_path : path.Append(inside_base=1)
+
+  rel_path > const_base.in
+  const_base.out > abs_path.base
+  rel_path > abs_path.append
+  # Partially successful path
+  abs_path.path > abs_path
+  # Update status based on error
+  # 0 => OK
+  # 1 => FILE NOT FOUND
+  abs_path.error > status.select
+  const_FILE_OK.token > status.false
+  const_FILE_NOT_FOUND.token > status.true
+  status.data > status
+}
+
+
+component HTTPFileReader() filename -> resource, status {
+  """
+  Concatenate lines into a chunk of text (the requested resource)
+
+  Input:
+    filename : the resource to read
+  Outputs:
+    resource : contents of resource file
+    status : OK (200) or File not found (404)
+  """
+  read_html : usr.FileReader2(status_OK=200, status_ERR=404)
+  concat : text.LineJoin()
+
+  filename > read_html.filename
+  read_html.out > concat.line
+  concat.text > resource
+  read_html.ses > status
+}
+
+const_host : std.Constant(data="127.0.0.1", n=1)
+const_port : std.Constant(data=8089, n=1)
+tcp_server : net.TCP_Server(delimiter="\r\n\r\n")
+daisy_GET : DaisyAdapter(status_OK=200)
+daisy_path : DaisyAdapter(status_OK=200)
+daisy_resource : DaisyAdapter(status_OK=200)
+check_GET : HTTPGETRequestCheck()
+resource_path : HTTPResourceLocator(base_path="html")
+resource_reader : HTTPFileReader()
+resp: http.HTTPResponseGenerator()
+const_OK : std.Constantify(constant=200)
+
+const_host.token > tcp_server.host
+const_port.token > tcp_server.port
+# This line is a surprising consequence of the dataflow paradigm
+tcp_server.handle > tcp_server.handle
+# Request
+tcp_server.token > daisy_GET.in
+# Bootstrap status (OK)
+tcp_server.token > const_OK.in
+const_OK.out > daisy_GET.status
+daisy_GET.work_data > check_GET.request
+check_GET.path > daisy_GET.work_result
+check_GET.status > daisy_GET.work_status
+
+daisy_GET.status > daisy_path.status
+daisy_GET.out > daisy_path.in
+
+daisy_path.work_data > resource_path.rel_path
+resource_path.abs_path > daisy_path.work_result
+resource_path.status > daisy_path.work_status
+
+daisy_path.status > daisy_resource.status
+daisy_path.out > daisy_resource.in
+daisy_resource.work_data > resource_reader.filename
+resource_reader.resource > daisy_resource.work_result
+resource_reader.status > daisy_resource.work_status
+
+daisy_resource.status > resp.status
+daisy_resource.out > resp.body
+resp.out > tcp_server.token
+
+# Logging
+# Tip: To help with debugging, attach a StandardOut actor
+#      to any output port to log the data flow, e.g.
+# snk: io.StandardOut()
+# tcp_server.token > snk.token
+
