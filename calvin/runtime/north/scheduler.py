@@ -107,16 +107,18 @@ class Scheduler(object):
         _log.exception(e)
 
     def fire_actors(self, actor_ids=None):
-        total = ActionResult(node=self.node, did_fire=False)
+        total = ActionResult(did_fire=False)
+        total.actor_ids = set()
 
         for actor in self.actor_mgr.enabled_actors():
-            if actor_ids is not None and actor.id not in actor_ids:
-                _log.debug("ignoring actor %s(%s)" % (actor._type, actor.id))
-                continue
+            # if actor_ids is not None and actor.id not in actor_ids:
+            #     _log.debug("ignoring actor %s(%s)" % (actor._type, actor.id))
+            #     continue
             try:
                 action_result = actor.fire()
                 _log.debug("fired actor %s(%s)" % (actor._type, actor.id))
                 total.merge(action_result)
+                total.actor_ids.add(actor.id)
             except Exception as e:
                 self._log_exception_during_fire(e)
         self.idle = not total.did_fire

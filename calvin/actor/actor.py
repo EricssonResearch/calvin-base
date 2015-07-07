@@ -227,19 +227,12 @@ class ActionResult(object):
 
     """Return type from action and @guard"""
 
-    def __init__(self, node=None, actor_id=None, did_fire=True, tokens_consumed=0, tokens_produced=0, production=()):
+    def __init__(self, did_fire=True, tokens_consumed=0, tokens_produced=0, production=()):
         super(ActionResult, self).__init__()
-        self.node = node
         self.did_fire = did_fire
-        self.tokens_consumed = tokens_consumed
-        self.tokens_produced = tokens_produced
+        self.tokens_consumed = 0
+        self.tokens_produced = 0
         self.production = production
-        self.actor_id = actor_id
-
-        if actor_id is not None:
-            self.actor_ids = [actor_id]
-        else:
-            self.actor_ids = []
 
     def __str__(self):
         fmtstr = "%s - did_fire:%s, consumed:%d, produced:%d"
@@ -256,18 +249,7 @@ class ActionResult(object):
         self.did_fire |= other_result.did_fire
         self.tokens_consumed += other_result.tokens_consumed
         self.tokens_produced += other_result.tokens_produced
-        if self.node is not None and other_result.actor_id is not None:
-            if other_result.did_fire:
-                # Add us to the list
-                self.actor_ids.append(other_result.actor_id)
-            if other_result.tokens_produced or other_result.tokens_consumed:
-                # Get connected endpoints and their ids
-                actor = self.node.am.actors.get(other_result.actor_id)
-                # TODO: Move to actor actormanager and cache
-                self.actor_ids += actor.local_neighbors
-                _log.debug("adding actors to trigger list %s" % (actor.local_neighbors))
 
-            _log.debug("merge %s , %s" % (self.actor_ids, other_result.actor_ids))
 
 def _implements_state(obj):
     """Helper method to check if foreign object supports setting/getting state."""
@@ -436,35 +418,23 @@ class Actor(object):
         # Three non-patological options:
         # have inports, have outports, or have in- and outports
 
-        self.local_neighbors = []
-
         if self.inports:
             for p in self.inports.values():
                 if not p.is_connected():
                     return
-                peer = p.get_peer()
-                _log.debug("Peer is %s" % repr(peer))
-                if peer[0] == 'local':
-                    port = self.calvinsys._node.pm._get_local_port(None, None, None, peer[1])
-                    self.local_neighbors.append(port.owner.id)
 
         if self.outports:
             for p in self.outports.values():
                 if not p.is_connected():
                     return
-                for peer in p.get_peers():
-                    _log.debug("Peer is %s" % repr(peer))
-                    if peer[0] == 'local':
-                        port = self.calvinsys._node.pm._get_local_port(None, None, None, peer[1])
-                        self.local_neighbors.append(port.owner.id)
-
-        _log.debug("Actor %s local neighbors %s" % (self.id, self.local_neighbors))
 
         # If we made it here, all ports are connected
         self.fsm.transition_to(Actor.STATUS.ENABLED)
-        # Trigger us
-        _log.debug("Connected trigger %s" % self._type)
-        self.calvinsys._node.sched.trigger_loop(actor_ids=[self.id] + self.local_neighbors)
+        self.calvinsys.events.timer._trigger_loop()
+
+        # # Trigger us
+        # _log.debug("Connected trigger %s" % self._type)
+        # self.calvinsys._node.sched.trigger_loop(actor_ids=[self.id] + self.local_neighbors)
 
     @verify_status([STATUS.ENABLED, STATUS.PENDING])
     def did_disconnect(self, port):
@@ -472,9 +442,6 @@ class Actor(object):
         # If we happen to by in ENABLED, go to PENDING
         if self.fsm.state() == Actor.STATUS.ENABLED:
             self.fsm.transition_to(Actor.STATUS.PENDING)
-
-        # Empty local neighbors since can't fire anyway while not fully connected
-        self.local_neighbors = []
 
         # Three non-patological options:
         # have inports, have outports, or have in- and outports
@@ -493,7 +460,7 @@ class Actor(object):
 
     @verify_status([STATUS.ENABLED])
     def fire(self):
-        total_result = ActionResult(node=self.calvinsys._node, actor_id=self.id, did_fire=False)
+        total_result = ActionResult(did_fire=False)
         while True:
             # Re-try action in list order after EVERY firing
             for action_method in self.__class__.action_priority:
@@ -502,18 +469,18 @@ class Actor(object):
                 # Action firing should fire the first action that can fire,
                 # hence when fired start from the beginning
                 if action_result.did_fire:
+                    # FIXME: Make this a hook for the runtime too use, don't
+                    #        import and use calvin_control in actor
                     self.control.log_firing(
                         self.name,
                         action_method.__name__,
                         action_result.tokens_produced,
                         action_result.tokens_consumed,
                         action_result.production)
-                    _log.debug("Actor %s(%s) did fire %s(%s, %s, %s)" % (
+                    _log.debug("Actor %s(%s) did fire %s -> %s" % (
                         self._type, self.id,
                         action_method.__name__,
-                        action_result.tokens_produced,
-                        action_result.tokens_consumed,
-                        action_result.production))
+                        str(action_result)))
                     break
 
             if not action_result.did_fire:
