@@ -58,9 +58,8 @@ class TimerHandler(object):
     def repeat(self, delay):
         return TimerEvent(self._actor.id, delay, self.node.sched.trigger_loop, repeats=True)
 
-    # FIXME remove this no users
     def _trigger_loop(self):
-        return self.node.sched.trigger_loop(actor_ids=[self._actor_id])
+        return self.node.sched.trigger_loop(actor_ids=[self._actor.id])
 
 def register(node, actor, events):
     """
