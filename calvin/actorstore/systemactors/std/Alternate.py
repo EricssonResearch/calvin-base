@@ -40,13 +40,13 @@ class Alternate(Actor):
     @guard(is_even)
     def port_one(self, input):
         self.token_one = False
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(input, ))
+        return ActionResult(production=(input, ))
 
     @condition(['token_2'], ['token'])
     @guard(is_odd)
     def port_two(self, input):
         self.token_one = True
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(input, ))
+        return ActionResult(production=(input, ))
 
     action_priority = (port_one, port_two)
 

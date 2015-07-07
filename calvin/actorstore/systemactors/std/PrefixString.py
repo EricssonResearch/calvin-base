@@ -32,11 +32,11 @@ class PrefixString(Actor):
         self.prefix = str(prefix)
 
     def exception_handler(self, action, args, exceptions):
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(EOSToken(), ))
+        return ActionResult(production=(EOSToken(), ))
 
     @condition(['in'], ['out'])
     def prefix(self, token):
-        return ActionResult(tokens_produced=1, production=(self.prefix + str(token), ))
+        return ActionResult(production=(self.prefix + str(token), ))
 
     action_priority = (prefix, )
 

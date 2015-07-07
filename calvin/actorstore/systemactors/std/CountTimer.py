@@ -69,7 +69,7 @@ class CountTimer(Actor):
     def step_periodic(self):
         self.timer.ack()
         self.count += 1
-        return ActionResult(tokens_produced=1, production=(self.count, ))
+        return ActionResult(production=(self.count, ))
 
     # The stopping action, need guard with raised() since the actor might be
     # fired for other reasons

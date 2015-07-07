@@ -44,7 +44,7 @@ class Delay(Actor):
     @guard(lambda self, _: self.timer and self.timer.triggered)
     def next(self, input):
         self.timer.ack()
-        return ActionResult(tokens_produced=1, tokens_consumed=1, production=(input, ))
+        return ActionResult(production=(input, ))
 
     action_priority = (next,)
 

@@ -33,8 +33,7 @@ class Sum(Actor):
     @condition(['integer'], ['integer'])
     def sum(self, input):
         self.sum = self.sum + input
-        return ActionResult(tokens_consumed=1, tokens_produced=1,
-                            production=(self.sum, ))
+        return ActionResult(production=(self.sum, ))
 
     action_priority = (sum, )
 

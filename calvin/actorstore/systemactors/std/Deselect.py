@@ -38,18 +38,18 @@ class Deselect(Actor):
     @condition(['select', 'false'], ['data'])
     @guard(lambda self, select, data : select == 0)
     def false_action(self, select, data):
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(data, ))
+        return ActionResult(production=(data, ))
 
     @condition(['select', 'true'], ['data'])
     @guard(lambda self, select, data : select == 1)
     def true_action(self, select, data):
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(data, ))
+        return ActionResult(production=(data, ))
 
     @condition(['select', 'false'], ['data'])
     @guard(lambda self, select, data : select not in [0, 1])
     def invalid_select_action(self, select, data):
         # Default to false if select value is not 0 or 1
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(data, ))
+        return ActionResult(production=(data, ))
 
 
     action_priority = (false_action, true_action, invalid_select_action)

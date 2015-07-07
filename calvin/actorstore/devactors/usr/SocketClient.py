@@ -63,13 +63,13 @@ class SocketClient(Actor):
     @guard(lambda self, token: self.cc and self.cc.is_connected())
     def send(self, token):
         self.cc.send(token)
-        return ActionResult(tokens_consumed=1, production=())
+        return ActionResult(production=())
 
     @condition(action_output=['outData'])
     @guard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
     def receive(self):
         data = self.cc.get_data()
-        return ActionResult(tokens_produced=1, production=(data,))
+        return ActionResult(production=(data,))
 
     @condition(action_input=['inControl'])
     @guard(lambda self, token: True)
@@ -84,17 +84,17 @@ class SocketClient(Actor):
             if self.cc:
                 self.cc.disconnect()
                 self.cc = None
-        return ActionResult(tokens_consumed=1, production=())
+        return ActionResult(production=())
 
     @condition(action_output=['outControl'])
     @guard(lambda self: self.cc and self.cc.have_control())
     def send_control(self):
         data = self.cc.get_control()
-        return ActionResult(tokens_produced=1, production=(data,))
+        return ActionResult(production=(data,))
 
     def exception_handler(self, action, args, context):
         """Handler ExceptionTokens"""
         self.EOST_token_received = True
-        return ActionResult(tokens_consumed=1, production=())
+        return ActionResult(production=())
 
     action_priority = (receive_control, receive, send, send_control)

@@ -40,7 +40,7 @@ class HTTPResponseGenerator(Actor):
             reason=self.STATUSMAP.get(status, "Unknown"),
             body=body
         )
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(response, ))
+        return ActionResult(production=(response, ))
 
     @condition(['status', 'body'], ['out'])
     @guard(lambda self, status, body : status != 200)
@@ -59,7 +59,7 @@ class HTTPResponseGenerator(Actor):
             reason=self.STATUSMAP.get(status, "Unknown"),
             body=body
         )
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(response, ))
+        return ActionResult(production=(response, ))
 
     action_priority = (ok, error)
 

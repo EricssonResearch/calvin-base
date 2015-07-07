@@ -32,6 +32,6 @@ class InputMult(Actor):
     @condition(action_input=['multiplier', 'argument'], action_output=['result'])
     def multiply(self, multiplier, argument):
         result = multiplier * argument
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(result, ))
+        return ActionResult(production=(result, ))
 
     action_priority = (multiply, )

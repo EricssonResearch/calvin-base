@@ -36,7 +36,7 @@ class FileNotFoundHandler(Actor):
     def exception_handler(self, action, args, exceptions):
         self.token = EOSToken()
         self.status = 1
-        return ActionResult(tokens_consumed=1, tokens_produced=0)
+        return ActionResult()
 
     @manage([])
     def init(self):
@@ -47,13 +47,13 @@ class FileNotFoundHandler(Actor):
     def produce(self):
         tok = self.token
         self.token = None
-        return ActionResult(tokens_consumed=0, tokens_produced=2, production=(tok, self.status))
+        return ActionResult(production=(tok, self.status))
 
     @condition(['token'])
     def consume(self, tok):
         self.token = tok
         self.status = 0
-        return ActionResult(tokens_consumed=1)
+        return ActionResult()
 
     action_priority = (produce, consume)
 

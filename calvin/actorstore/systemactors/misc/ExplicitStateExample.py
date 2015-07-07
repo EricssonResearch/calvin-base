@@ -65,7 +65,7 @@ class ExplicitStateExample(Actor):
 
     @condition(['token'], ['token'])
     def wrap_action(self, input):
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(self.wrapper.wrap(input), ))
+        return ActionResult(production=(self.wrapper.wrap(input), ))
 
     action_priority = (wrap_action,)
 

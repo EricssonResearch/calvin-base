@@ -46,7 +46,7 @@ class Append(Actor):
     @condition(['base', 'append'], ['path', 'error'])
     def path(self, base, append):
         prod = self.gen_path(base, append)
-        return ActionResult(tokens_consumed=2, tokens_produced=2, production=prod)
+        return ActionResult(production=prod)
 
     action_priority = (path, )
 

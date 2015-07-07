@@ -51,20 +51,20 @@ class RegexMatch(Actor):
     @guard(lambda self, text: self.result is None)
     def match(self, text):
         self.perform_match(str(text))
-        return ActionResult(tokens_consumed=1, tokens_produced=0)
+        return ActionResult()
 
     @condition([], ['match'])
     @guard(lambda self: self.result is not None and self.did_match)
     def output_match(self):
         result = self.result
         self.result = None
-        return ActionResult(tokens_consumed=0, tokens_produced=1, production=(result,))
+        return ActionResult(production=(result,))
 
     @condition([], ['no_match'])
     @guard(lambda self: self.result is not None and not self.did_match)
     def output_no_match(self):
         result = self.result
         self.result = None
-        return ActionResult(tokens_consumed=0, tokens_produced=1, production=(result,))
+        return ActionResult(production=(result,))
 
     action_priority = (match, output_match, output_no_match)

@@ -36,12 +36,12 @@ class InputDiv(Actor):
     @guard(lambda self, n, d: d != 0)
     def divide(self, numerator, denumerator):
         result = numerator / denumerator
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(result,))
+        return ActionResult(production=(result,))
 
     @condition(action_input=[('dividend', 1), ('divisor', 1)], action_output=[('result', 1)])
     @guard(lambda self, n, d: d == 0)
     def divide_by_zero(self, numerator, denumerator):
         result = ExceptionToken("Division by 0")
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(result,))
+        return ActionResult(production=(result,))
 
     action_priority = (divide_by_zero, divide)

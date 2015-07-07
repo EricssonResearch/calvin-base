@@ -36,6 +36,6 @@ class Void(Actor):
     @condition([], ['null'])
     @guard(lambda self: False)
     def null(self):
-        return ActionResult(tokens_consumed=0, tokens_produced=1, production=(0, ))
+        return ActionResult(production=(0, ))
 
     action_priority = (null, )

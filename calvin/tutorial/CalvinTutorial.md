@@ -155,7 +155,7 @@
         @condition(action_input=[('integer', 1)], action_output=[('integer', 1)])
         def multiply(self, data):
             result = self.multiplier * data
-            return ActionResult(tokens_consumed=1, tokens_produced=1, production=(result, ))
+            return ActionResult(production=(result, ))
     
         action_priority = (multiply, )
 
@@ -199,7 +199,7 @@
         @condition(action_input=['multiplier', 'argument'], action_output=['result'])
         def multiply(self, multiplier, argument) :
             result = multiplier * argument
-            return ActionResult(tokens_consumed=2, tokens_produced=1, production=(result, ))
+            return ActionResult(production=(result, ))
             
         action_priority = (multiply, )
 
@@ -248,13 +248,13 @@
         @guard(lambda self, n, d: d != 0)
         def divide(self, numerator, denumerator):
             result = numerator / denumerator
-            return ActionResult(tokens_consumed=2, tokens_produced=1, production=(result,))
+            return ActionResult(production=(result,))
     
         @condition(action_input=[('dividend', 1), ('divisor', 1)], action_output=[('result', 1)])
         @guard(lambda self, n, d: d == 0)
         def divide_by_zero(self, numerator, denumerator):
             result = ExceptionToken("Division by 0")
-            return ActionResult(tokens_consumed=2, tokens_produced=1, production=(result,))
+            return ActionResult(production=(result,))
     
         action_priority = (divide_by_zero, divide)
 
@@ -301,7 +301,7 @@
         
         @condition(action_input=[('in', 1)], action_output=[('out_1', 1), ('out_2', 1)])
         def tee(self, token) :
-            return ActionResult(tokens_consumed=1, tokens_produced=2, production = (token, token))
+            return ActionResult(production = (token, token))
             
         action_priority = (tee,)
 

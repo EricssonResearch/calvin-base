@@ -227,7 +227,7 @@ class ActionResult(object):
 
     """Return type from action and @guard"""
 
-    def __init__(self, did_fire=True, tokens_consumed=0, tokens_produced=0, production=()):
+    def __init__(self, did_fire=True, production=()):
         super(ActionResult, self).__init__()
         self.did_fire = did_fire
         self.tokens_consumed = 0

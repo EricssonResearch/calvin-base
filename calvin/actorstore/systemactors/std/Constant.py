@@ -39,7 +39,7 @@ class Constant(Actor):
             self.n -= 1
         if self.dump:
             self.log(self.data)
-        return ActionResult(tokens_produced=1, production=(self.data,))
+        return ActionResult(production=(self.data,))
 
     action_priority = (send_it, )
 

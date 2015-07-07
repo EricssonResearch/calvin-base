@@ -59,7 +59,7 @@ class TCP_Server(Actor):
     def setup(self, host, port):
         self.host = host
         self.port = port
-        return ActionResult(tokens_consumed=2)
+        return ActionResult()
 
     @condition()
     @guard(lambda self: self.host and self.port and not self.server)
@@ -83,7 +83,7 @@ class TCP_Server(Actor):
         for h, c in self.connections.items():
             if h == handle:
                 self.server.send(c, token.encode('utf-8'))
-        return ActionResult(tokens_consumed=2, production=())
+        return ActionResult(production=())
 
     @condition([], ['handle', 'token'])
     @guard(lambda self: self.connections and any([c.data_available for c in self.connections.values()]))
@@ -92,7 +92,7 @@ class TCP_Server(Actor):
             if c.data_available:
                 data = self.server.receive(c)
                 break
-        return ActionResult(tokens_produced=2, production=(h, data))
+        return ActionResult(production=(h, data))
 
     @condition()
     @guard(lambda self: self.connections and any([c.connection_lost for c in self.connections.values()]))

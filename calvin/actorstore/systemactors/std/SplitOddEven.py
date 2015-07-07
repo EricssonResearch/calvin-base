@@ -45,14 +45,14 @@ class SplitOddEven(Actor):
     def even(self, input):
         if self.dump:
             self.log(input)
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(input, ))
+        return ActionResult(production=(input, ))
 
     @condition(['integer'], ['odd'])
     @guard(is_odd)
     def odd(self, input):
         if self.dump:
             print "SplitOddEven<%s> : " % (self.id, ), input
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(input, ))
+        return ActionResult(production=(input, ))
 
     action_priority = (even, odd)
 

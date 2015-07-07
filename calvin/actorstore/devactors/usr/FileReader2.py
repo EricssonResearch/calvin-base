@@ -58,26 +58,26 @@ class FileReader2(Actor):
         except:
             self.file = None
             self.file_not_found = True
-        return ActionResult(tokens_consumed=1)
+        return ActionResult()
 
     @condition([], ['out', 'ses'])
     @guard(lambda self: self.file_not_found)
     def file_not_found(self):
         self.file_not_found = False  # Only report once
-        return ActionResult(tokens_produced=2, production=(EOSToken(), self.status_ERR))
+        return ActionResult(production=(EOSToken(), self.status_ERR))
 
     @condition([], ['out'])
     @guard(lambda self: self.file and not self.file.eof() and self.file.has_data())
     def readline(self):
         line = self.file.read_line()
-        return ActionResult(tokens_produced=1, production=(line, ))
+        return ActionResult(production=(line, ))
 
     @condition([], ['out', 'ses'])
     @guard(lambda self: self.file and self.file.eof())
     def eof(self):
         self.calvinsys.io.file.close(self.file)
         self.file = None
-        return ActionResult(tokens_produced=2, production=(EOSToken(), self.status_OK))
+        return ActionResult(production=(EOSToken(), self.status_OK))
 
     action_priority = (readline, eof, open_file, file_not_found)
 

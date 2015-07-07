@@ -35,6 +35,6 @@ class Terminator(Actor):
 
     @condition(['null'], [])
     def null(self, input):
-        return ActionResult(tokens_consumed=1)
+        return ActionResult()
 
     action_priority = (null, )
