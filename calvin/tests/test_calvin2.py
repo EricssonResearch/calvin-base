@@ -79,7 +79,7 @@ class TestConnections(CalvinTestBase):
 
         utils.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(1)
+        time.sleep(.5)
 
         actual = utils.report(self.rt1, snk)
 
@@ -176,7 +176,6 @@ class TestScripts(CalvinTestBase):
         self.assert_lists_equal(range(1, 20), actual)
 
 
-@unittest.skip("no migrate")
 class TestStateMigration(CalvinTestBase):
 
     def testSimpleState(self):
@@ -317,7 +316,6 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(range(1, 11), actual)
 
-    @pytest.mark.xfail
     def test21(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt2, 'std.Identity', 'ity')
@@ -332,7 +330,6 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(range(1, 11), actual)
 
-    @pytest.mark.xfail
     def test22(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt2, 'std.Identity', 'ity')

@@ -153,7 +153,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         snk = utils.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
         utils.connect(rt, snk, 'token', id_, src, 'integer')
 
-        time.sleep(0.2)
+        time.sleep(0.4)
 
         # disable(rt, id_, src)
         utils.disconnect(rt, src)
@@ -625,7 +625,7 @@ class TestCalvinScript(CalvinTestBase):
         app_info, errors, warnings = compiler.compile(script, "simple")
         d = deployer.Deployer(rt, app_info)
         d.deploy() # ignoring app_id here
-        time.sleep(0.2)
+        time.sleep(0.5)
         src = d.actor_map['simple:src']
         snk = d.actor_map['simple:snk']
 

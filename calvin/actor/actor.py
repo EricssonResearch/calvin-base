@@ -86,6 +86,9 @@ def condition(action_input=[], action_output=[]):
     #
     action_input = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_input]
     action_output = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_output]
+    contract_output = tuple(n for _, n in action_output)
+    tokens_produced = sum(contract_output)
+    tokens_consumed = sum([n for _, n in action_input])
 
     def wrap(action_method):
 
@@ -133,23 +136,44 @@ def condition(action_input=[], action_output=[]):
                 # Perform the action (N.B. the method may be wrapped in a guard)
                 #
                 action_result = action_method(self, *args)
-                _log.debug(action_result)
-            #
-            # Commit/rewind to the read from the FIFOs
-            #
-            for (portname, _) in action_input:
-                port = self.inports[portname]
-                port.commit_peek_as_read() if action_result.did_fire else port.peek_rewind()
 
-            if action_result.did_fire:
+            valid_production = False
+            if action_result.did_fire and (len(contract_output) == len(action_result.production)):
+                valid_production = True
+                for repeat, prod in zip(contract_output, action_result.production):
+                    if repeat > 1 and len(prod) != repeat:
+                        valid_production = False
+                        break
+
+            if action_result.did_fire and valid_production:
+                #
+                # Commit to the read from the FIFOs
+                #
+                for (portname, _) in action_input:
+                    self.inports[portname].commit_peek_as_read()
                 #
                 # Write the results from the action to the output port(s)
                 #
-                # FIXME: Make use of tokens_produced attribute in action_result
                 for (portname, repeat), retval in zip(action_output, action_result.production):
                     port = self.outports[portname]
                     for data in retval if repeat > 1 else [retval]:
                         port.write_token(data if isinstance(data, Token) else Token(data))
+                #
+                # Bookkeeping
+                #
+                action_result.tokens_consumed = tokens_consumed
+                action_result.tokens_produced = tokens_produced
+            else:
+                #
+                # Rewind the read from the FIFOs
+                #
+                for (portname, _) in action_input:
+                    self.inports[portname].peek_rewind()
+
+            if action_result.did_fire and not valid_production:
+                action = "%s.%s" % (self._type, action_method.__name__)
+                raise Exception("%s invalid production %s, expected %s" % (action, str(action_result.production), str(tuple(action_output))))
+
             return action_result
 
         return condition_wrapper
