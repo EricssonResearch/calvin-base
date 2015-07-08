@@ -26,6 +26,9 @@ class DummyNode:
         self.pm = mock.Mock()
         self.storage = mock.Mock()
 
+    def calvinsys(self, actor):
+        return None
+
 
 
 class ActorManagerTests(unittest.TestCase):

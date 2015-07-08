@@ -372,11 +372,11 @@ class Actor(object):
         pass
 
     @verify_status([STATUS.LOADED])
-    def attach_API(self, api_name, api):
-        # FIXME: This should really go into a dict where each required API is granted
-        #        by the actor manager (if security allows), e.g.
-        #        self.calvinsys = {'event':evt, 'timer':tmr, 'socket':sck}
-        self.calvinsys = api
+    def attach_API(self, api_name, api_factory):
+        """Called during creation of actor with a callable api_factory."""
+        # FIXME: Resolve the required (calvin) APIs and attach them to the actor
+        #        See calvin_node::calvinsys
+        self.calvinsys = api_factory(self)
 
     def __str__(self):
         ip = ""

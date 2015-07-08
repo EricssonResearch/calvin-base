@@ -195,7 +195,7 @@ class ActorTester(object):
                     if not hasattr(actor, 'test_set'):
                         self.actors[a] = 'no_test'
                         continue
-                    actor.attach_API("calvinsys", CalvinSys(actor, None))
+                    actor.attach_API("calvinsys", lambda a: CalvinSys(a, None))
                     actor.calvinsys.io.file = CalvinSysFileMock()
                     actor.calvinsys.events.timer = CalvinSysTimerMock()
                     actor.init(*actorclass.test_args, **actorclass.test_kwargs)

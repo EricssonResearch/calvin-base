@@ -20,6 +20,8 @@ import sys
 import trace
 import logging
 
+from calvin.calvinsys import CalvinSys
+
 from calvin.runtime.north import actormanager
 from calvin.runtime.north import appmanager
 from calvin.runtime.north import scheduler
@@ -126,6 +128,11 @@ class Node(object):
                 app_name = deploy_args['app_name']
             self.app_manager.add(app_id, app_name, actor_id)
         return actor_id
+
+    def calvinsys(self, actor):
+        """Return a CalvinSys instance"""
+        # FIXME: We still need to sort out actor requirements vs. node capabilities and user permissions.
+        return CalvinSys(actor, self)
 
     #
     # Event loop
