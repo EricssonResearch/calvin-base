@@ -24,7 +24,7 @@ from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
 # FIXME should be read from calvin config
-TRANSPORT_PLUGIN_PATH = '/'.join(os.path.dirname(__file__).split('/')[:-1] + ['south', 'plugins', 'transports'])
+TRANSPORT_PLUGIN_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), *['south', 'plugins', 'transports'])
 TRANSPORT_PLUGIN_NS = "calvin.runtime.south.plugins.transports"
 
 class CalvinLink(object):
