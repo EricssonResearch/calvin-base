@@ -30,9 +30,30 @@ class CalvinEOFError(Exception):
         super(CalvinEOFError, self).__init__(message)
 
 def p_script(p):
-    """script : opt_compdef_list opt_program"""
-    p[0] = {'components': p[1], 'structure': p[2]}
+    """script : opt_constdef_list opt_compdef_list opt_program"""
+    p[0] = {'constants': p[1], 'components': p[2], 'structure': p[3]}
 
+
+def p_opt_constdef_list(p):
+    """opt_constdef_list :
+                        | constdef_list"""
+    p[0] = {} if len(p) == 1 else p[1]
+
+
+def p_constdef_list(p):
+    """constdef_list : constdef_list constdef
+                    | constdef"""
+    if len(p) == 3:
+        p[1].update(p[2])
+        p[0] = p[1]
+    else:
+        p[0] = p[1]
+
+# FIXME: Should be VALUE rather than NUMBER
+def p_constdef(p):
+    """constdef : CONSTANT IDENTIFIER LET NUMBER"""
+    constdef = {p[2]:p[4]}
+    p[0] = constdef
 
 def p_opt_compdef_list(p):
     """opt_compdef_list :
@@ -179,7 +200,7 @@ def p_named_argument(p):
     """named_argument : IDENTIFIER EQ argument"""
     p[0] = {p[1]: p[3]}
 
-
+# FIXME: Introduce p_value for STRING | NUMBER and extend VALUE to JSON...
 def p_argument(p):
     """argument : STRING
                 | NUMBER
@@ -286,6 +307,8 @@ if __name__ == '__main__':
         script = 'inline'
         source_text = \
 """# Test script
+constant xyz := 11
+constant baz := 12
 x:std.Foo()
 y:std.Bar()
 """

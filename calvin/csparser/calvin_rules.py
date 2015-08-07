@@ -16,7 +16,7 @@
 
 import ply.lex as lex
 
-keywords = {'component': 'COMPONENT'}
+keywords = {'component': 'COMPONENT', 'constant': 'CONSTANT'}
 
 tokens = [
     'IDENTIFIER', 'STRING', 'NUMBER',
@@ -25,6 +25,7 @@ tokens = [
     'DOT', 'COMMA', 'COLON',
     'GT', 'EQ',
     'RARROW',
+    'LET',
     'DOCSTRING'
 ] + list(keywords.values())
 
@@ -38,6 +39,7 @@ t_COLON = r':'
 t_GT = r'>'
 t_EQ = r'='
 t_RARROW = r'->'
+t_LET = r':='
 
 
 def t_COMMENT(t):
