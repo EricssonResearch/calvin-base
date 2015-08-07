@@ -200,17 +200,17 @@ def p_named_argument(p):
     p[0] = {p[1]: p[3]}
 
 def p_argument(p):
-    """argument : value
-                | IDENTIFIER"""
-    p[0] = (p.slice[1].type, p[1])
+    """argument : value"""
+    p[0] = p[1]
 
 # FIXME: Extend VALUE to JSON...
 # FIXME: Should allow constant (i.e. IDENTIFIER) into value
 # FIXME: Use value instead of argument everywhere?
 def p_value(p):
     """value : STRING
-             | NUMBER"""
-    p[0] = p[1]
+             | NUMBER
+             | IDENTIFIER"""
+    p[0] = (p.slice[1].type, p[1])
 
 def p_opt_id_list(p):
     """opt_id_list :
@@ -312,6 +312,7 @@ if __name__ == '__main__':
 """# Test script
 constant xyz := 11
 constant baz := "abc"
+constant foo := baz
 x:std.Foo()
 y:std.Bar()
 """
