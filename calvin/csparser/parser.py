@@ -196,12 +196,9 @@ def p_named_argument_list(p):
 
 
 def p_named_argument(p):
-    """named_argument : IDENTIFIER EQ argument"""
+    """named_argument : IDENTIFIER EQ value"""
     p[0] = {p[1]: p[3]}
 
-def p_argument(p):
-    """argument : value"""
-    p[0] = p[1]
 
 # FIXME: Extend VALUE to JSON...
 # FIXME: Should allow constant (i.e. IDENTIFIER) into value
