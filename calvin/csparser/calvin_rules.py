@@ -53,9 +53,9 @@ def t_DOCSTRING(t):
     t.value = t.value.strip(' \n\t')
     return t
 
-
+# FIXME: Give some thought as to wether this should be greedy or not
 def t_STRING(t):
-    r'!?".*?"'
+    r'!?".*"'
     is_raw = False
     if t.value.startswith('!'):
         # Keep as raw string
