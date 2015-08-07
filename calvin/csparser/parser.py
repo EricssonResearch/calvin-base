@@ -49,9 +49,8 @@ def p_constdef_list(p):
     else:
         p[0] = p[1]
 
-# FIXME: Should be VALUE rather than NUMBER
 def p_constdef(p):
-    """constdef : CONSTANT IDENTIFIER LET NUMBER"""
+    """constdef : CONSTANT IDENTIFIER LET value"""
     constdef = {p[2]:p[4]}
     p[0] = constdef
 
@@ -200,13 +199,18 @@ def p_named_argument(p):
     """named_argument : IDENTIFIER EQ argument"""
     p[0] = {p[1]: p[3]}
 
-# FIXME: Introduce p_value for STRING | NUMBER and extend VALUE to JSON...
 def p_argument(p):
-    """argument : STRING
-                | NUMBER
+    """argument : value
                 | IDENTIFIER"""
     p[0] = (p.slice[1].type, p[1])
 
+# FIXME: Extend VALUE to JSON...
+# FIXME: Should allow constant (i.e. IDENTIFIER) into value
+# FIXME: Use value instead of argument everywhere?
+def p_value(p):
+    """value : STRING
+             | NUMBER"""
+    p[0] = p[1]
 
 def p_opt_id_list(p):
     """opt_id_list :
@@ -215,7 +219,6 @@ def p_opt_id_list(p):
         p[0] = []
     else:
         p[0] = p[1]
-
 
 def p_id_list(p):
     """id_list : id_list COMMA IDENTIFIER
@@ -308,7 +311,7 @@ if __name__ == '__main__':
         source_text = \
 """# Test script
 constant xyz := 11
-constant baz := 12
+constant baz := "abc"
 x:std.Foo()
 y:std.Bar()
 """
