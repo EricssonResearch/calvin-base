@@ -160,7 +160,8 @@
             }
         }
     ], 
-    "sourcefile": "tests/scripts/test9.calvin", 
+    "constants": {}, 
+    "sourcefile": "/Users/eperspe/Source/calvin-base/calvin/tests/scripts/test9.calvin", 
     "structure": {
         "actors": {
             "a": {
