@@ -200,12 +200,66 @@ def p_named_argument(p):
     p[0] = {p[1]: p[3]}
 
 
-# FIXME: Extend VALUE to JSON...
 def p_value(p):
-    """value : STRING
+    """value : object
+             | array
+             | STRING
              | NUMBER
              | IDENTIFIER"""
-    p[0] = (p.slice[1].type, p[1])
+    p[0] = (p.slice[1].type.upper(), p[1])
+
+
+def p_value_false(p):
+  """value : FALSE"""
+  p[0] = False
+
+
+def p_value_true(p):
+  """value : TRUE"""
+  p[0] = True
+
+
+def p_value_null(p):
+  """value : NULL"""
+  p[0] = None
+
+
+def p_object(p):
+  """object : LBRACE members RBRACE"""
+  p[0] = dict(p[2])
+
+
+def p_members(p):
+  """members :
+             | members member COMMA
+             | members member"""
+  if len(p) == 1:
+    p[0] = list()
+  else:
+    p[1].append(p[2])
+    p[0] = p[1]
+
+
+def p_member(p):
+  """member : STRING COLON value"""
+  p[0] = (p[1], p[3])
+
+
+def p_values(p):
+  """values :
+            | values value COMMA
+            | values value"""
+  if len(p) == 1:
+    p[0] = list()
+  else:
+    p[1].append(p[2])
+    p[0] = p[1]
+
+
+def p_array(p):
+  """array :  LBRACK values RBRACK"""
+  p[0] = p[2]
+
 
 def p_opt_id_list(p):
     """opt_id_list :
@@ -311,7 +365,7 @@ constant foo := baz
 x:std.Foo()
 y:std.Bar()
 x.out > y.in
-xyz > x.in
+[false, true, null, 1, {"ABCdef":11}] > x.in
 """
     else:
         script = sys.argv[1]

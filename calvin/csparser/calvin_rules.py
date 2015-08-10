@@ -22,17 +22,22 @@ tokens = [
     'IDENTIFIER', 'STRING', 'NUMBER',
     'LPAREN', 'RPAREN',
     'LBRACE', 'RBRACE',
+    'LBRACK', 'RBRACK',
     'DOT', 'COMMA', 'COLON',
     'GT', 'EQ',
     'RARROW',
     'LET',
-    'DOCSTRING'
+    'DOCSTRING',
+    'FALSE', 'TRUE', 'NULL'
+
 ] + list(keywords.values())
 
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_LBRACE = r'\{'
 t_RBRACE = r'\}'
+t_LBRACK = r'\['
+t_RBRACK = r'\]'
 t_DOT = r'\.'
 t_COMMA = r','
 t_COLON = r':'
@@ -40,6 +45,9 @@ t_GT = r'>'
 t_EQ = r'='
 t_RARROW = r'->'
 t_LET = r':='
+t_FALSE = r'false'
+t_TRUE = r'true'
+t_NULL = r'null'
 
 
 def t_COMMENT(t):
