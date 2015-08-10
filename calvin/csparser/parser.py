@@ -156,7 +156,7 @@ def p_assignment(p):
 
 def p_link(p):
     """link : qualified_port GT qualified_port
-            | IDENTIFIER GT qualified_port
+            | value GT qualified_port
             | qualified_port GT IDENTIFIER"""
     left_qp = type(p[1]) is list
     right_qp = type(p[3]) is list
@@ -201,8 +201,6 @@ def p_named_argument(p):
 
 
 # FIXME: Extend VALUE to JSON...
-# FIXME: Should allow constant (i.e. IDENTIFIER) into value
-# FIXME: Use value instead of argument everywhere?
 def p_value(p):
     """value : STRING
              | NUMBER
@@ -312,6 +310,8 @@ constant baz := "abc"
 constant foo := baz
 x:std.Foo()
 y:std.Bar()
+x.out > y.in
+xyz > x.in
 """
     else:
         script = sys.argv[1]
