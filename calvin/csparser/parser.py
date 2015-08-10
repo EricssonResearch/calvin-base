@@ -156,8 +156,9 @@ def p_assignment(p):
 
 def p_link(p):
     """link : qualified_port GT qualified_port
-            | value GT qualified_port
-            | qualified_port GT IDENTIFIER"""
+            | qualified_port GT IDENTIFIER
+            | IDENTIFIER GT qualified_port
+            | value GT qualified_port"""
     left_qp = type(p[1]) is list
     right_qp = type(p[3]) is list
     d = {}
