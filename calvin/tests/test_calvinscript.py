@@ -440,4 +440,64 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(warnings), 0)
 
 
+class CalvinScriptDefinesTest(CalvinTestBase):
+    """Test CalvinsScript defines"""
+
+    def testUndefinedConstant(self):
+        script = """
+        src : std.Constant(data=FOO)
+        snk : io.StandardOut()
+        src.token > snk.token
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        print errors
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(warnings), 0)
+        self.assertEqual(errors[0]['reason'], "Undefined identifier: 'FOO'")
+
+
+    def testDefinedConstant(self):
+        script = """
+        define FOO = 42
+        src : std.Constant(data=FOO)
+        snk : io.StandardOut()
+        src.token > snk.token
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        print errors
+        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(warnings), 0)
+
+    def testUndefinedRecursiveConstant(self):
+        script = """
+        define FOO = BAR
+        src : std.Constant(data=FOO)
+        snk : io.StandardOut()
+        src.token > snk.token
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        print errors
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(warnings), 0)
+        self.assertEqual(errors[0]['reason'], "Undefined identifier: 'FOO'")
+
+
+    def testDefinedRecursiveConstant(self):
+        script = """
+        define FOO = BAR
+        define BAR = 42
+        src : std.Constant(data=FOO)
+        snk : io.StandardOut()
+        src.token > snk.token
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        print errors
+        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(warnings), 0)
+
+
 

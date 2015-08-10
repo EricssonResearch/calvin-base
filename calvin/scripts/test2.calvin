@@ -1,5 +1,6 @@
 /* Actors */
-f : std.Constant(data="data.txt")
+define FILE = "data.txt"
+f : std.Constant(data=FILE)
 src:io.FileReader()
 snk:io.StandardOut()
 /* Connections */

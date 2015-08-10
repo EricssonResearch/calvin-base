@@ -914,3 +914,45 @@ class TestRegex(CalvinTestBase):
         expected = ["x24.1632"]
 
         self.assert_lists_equal(expected, actual, min_length=1)
+
+@pytest.mark.essential
+class TestConstantAsArguments(CalvinTestBase):
+
+    def testConstant(self):
+        script = """
+            define FOO = 42
+            src   : std.Constant(data=FOO, n=10)
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.token > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstant")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstant:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = [42]*10
+
+        self.assert_lists_equal(expected, actual, min_length=1)
+
+    def testConstantRecursive(self):
+        script = """
+            define FOO = BAR
+            define BAR = 42
+            src   : std.Constant(data=FOO, n=10)
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.token > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstantRecursive")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstantRecursive:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = [42]*10
+
+        self.assert_lists_equal(expected, actual, min_length=1)

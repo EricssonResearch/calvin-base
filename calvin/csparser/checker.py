@@ -32,6 +32,7 @@ class Checker(object):
         super(Checker, self).__init__()
         self.ds = DocumentationStore()
         self.cs_info = cs_info
+        self.constants = {}
         self.local_actors = {}
         self.errors = []
         self.warnings = []
@@ -49,6 +50,7 @@ class Checker(object):
         self.warnings.append(issue)
 
     def check(self):
+        self.constants = self.cs_info['constants']
         components = self.cs_info['components']
         for comp in components:
             self.local_actors[comp['name']] = comp
@@ -76,6 +78,16 @@ class Checker(object):
         if actor_type in self.local_actors:
             return self.ds.component_docs("local."+actor_type, self.local_actors[actor_type])
         return self.ds.actor_docs(actor_type)
+
+    def lookup_constant(self, identifier):
+        """
+        Return value for constant 'identifier'
+        Raise an exception if not found
+        """
+        kind, value = self.constants[identifier]
+        if kind != "IDENTIFIER":
+            return value
+        return self.lookup_constant(value)
 
     def dbg_lines(self, s):
         try:
@@ -143,7 +155,23 @@ class Checker(object):
         else:
             self.check_component_connections(definition, connections)
 
+    def expand_arguments(self, declaration):
+        """
+        Check the the arguments for constants that must be expanded
+        Append errors if definition is missing.
+        """
+        for argname, (kind, value) in declaration['args'].iteritems():
+            if kind != "IDENTIFIER":
+                continue
+            try:
+                self.lookup_constant(value)
+            except:
+                fmt = "Undefined identifier: '{param}'"
+                self.append_error(fmt, line=declaration['dbg_line'], param=value)
+
+
     def check_arguments(self, definition, declaration):
+        self.expand_arguments(declaration)
         mandatory = set(definition['args']['mandatory'])
         defined = set(declaration['args'].keys())
         undefined = mandatory - defined

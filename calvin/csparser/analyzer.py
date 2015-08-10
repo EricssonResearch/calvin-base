@@ -46,6 +46,7 @@ class Analyzer(object):
         super(Analyzer, self).__init__()
         self.cs_info = cs_info
         self.local_components = {c['name']:c for c in cs_info['components']}
+        self.constants = {}
         self.app_info = {}
         self.connections = {}
         self.actors = {}
@@ -68,6 +69,7 @@ class Analyzer(object):
         self.script_name = os.path.basename(self.cs_info['sourcefile'])
         s = self.cs_info['structure']
         root_namespace, _ = os.path.splitext(self.script_name)
+        self.constants = self.cs_info['constants']
         argd = {}
         valid = True
 
@@ -82,6 +84,17 @@ class Analyzer(object):
         file = 'File "%s"' % self.script_name
         line = ', line %d' % d['dbg_line'] if 'dbg_line' in d else ''
         return file + line
+
+    def lookup_constant(self, identifier):
+        """
+        Return value for constant 'identifier'
+        Raise an exception if not found
+        """
+        kind, value = self.constants[identifier]
+        if kind != "IDENTIFIER":
+            return value
+        return self.lookup_constant(value)
+
 
     def lookup(self, actor_type):
         """
@@ -129,14 +142,19 @@ class Analyzer(object):
                 if arg_type == 'IDENTIFIER':
                     # We are looking for the value of a variable whose name is in value
                     variable_name = arg_value
-                    if variable_name not in argd:
+                    if variable_name in argd:
+                        arg_value = argd[variable_name]
+                    else:
                         # If the value is missing from argd the programmer made an error, e.g.
                         # component PrefixFile(prefix, filename) -> out {
                         #   file:io.FileReader(file=foo) // Should have been 'file=filename'
                         #   ...
-                        msg = 'Undefined variable "%s". %s' % (variable_name, self.debug_info(actor_def))
-                        raise Exception(msg)
-                    arg_value = argd[variable_name]
+                        # OR, it could be referring to a constant, so try a lookup before giving up.
+                        try:
+                           arg_value = self.lookup_constant(variable_name)
+                        except:
+                            msg = 'Undefined identifier "%s". %s' % (variable_name, self.debug_info(actor_def))
+                            raise Exception(msg)
                 args[arg_name] = arg_value
 
             qualified_name = namespace+':'+actor_name
