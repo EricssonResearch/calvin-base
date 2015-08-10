@@ -50,7 +50,7 @@ def p_constdef_list(p):
         p[0] = p[1]
 
 def p_constdef(p):
-    """constdef : CONSTANT IDENTIFIER LET value"""
+    """constdef : DEFINE IDENTIFIER EQ value"""
     constdef = {p[2]:p[4]}
     p[0] = constdef
 

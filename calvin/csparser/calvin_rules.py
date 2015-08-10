@@ -16,7 +16,7 @@
 
 import ply.lex as lex
 
-keywords = {'component': 'COMPONENT', 'constant': 'CONSTANT'}
+keywords = {'component': 'COMPONENT', 'define': 'DEFINE'}
 
 tokens = [
     'IDENTIFIER', 'STRING', 'NUMBER',
@@ -44,7 +44,6 @@ t_COLON = r':'
 t_GT = r'>'
 t_EQ = r'='
 t_RARROW = r'->'
-t_LET = r':='
 t_FALSE = r'false'
 t_TRUE = r'true'
 t_NULL = r'null'
