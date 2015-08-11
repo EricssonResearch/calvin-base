@@ -27,13 +27,13 @@ class Void(Actor):
     unconnected is not an option.
 
     Outputs:
-      null : A port that will never produce tokens
+      void : A port that will never produce tokens
     """
     @manage()
     def init(self):
         pass
 
-    @condition([], ['null'])
+    @condition([], ['void'])
     @guard(lambda self: False)
     def null(self):
         return ActionResult(production=(0, ))

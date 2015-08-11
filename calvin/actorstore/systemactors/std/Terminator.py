@@ -27,13 +27,13 @@ class Terminator(Actor):
     unconnected is not an option.
 
     Inputs:
-      null : A port that will consume tokens
+      void : A port that will consume tokens
     """
     @manage()
     def init(self):
         pass
 
-    @condition(['null'], [])
+    @condition(['void'], [])
     def null(self, input):
         return ActionResult()
 

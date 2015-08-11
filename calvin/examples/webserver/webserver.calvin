@@ -47,18 +47,18 @@ component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_d
   status > route_status.data
   in > route_input.data
   # Propagate any incoming status != 200 (OK) to status out
-  route_status.false > join_status.token_1
+  route_status.case_false > join_status.token_1
   # Also bypass any computation and pass input directly to output
-  route_input.false > join_output.token_1
+  route_input.case_false > join_output.token_1
   # If incoming status is 200 (OK) drop it since we will soon have a new status
-  route_status.true > term.null
+  route_status.case_true > term.null
   # Merge statii
   join_status.token > status
   join_output.token > out
   #
   # Connect to work actor here
   #
-  route_input.true > work_data
+  route_input.case_true > work_data
   work_result > join_output.token_2
   work_status > join_status.token_2
 }
@@ -125,8 +125,8 @@ component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
   # 0 => OK
   # 1 => FILE NOT FOUND
   abs_path.error > status.select
-  const_FILE_OK.token > status.false
-  const_FILE_NOT_FOUND.token > status.true
+  const_FILE_OK.token > status.case_false
+  const_FILE_NOT_FOUND.token > status.case_true
   status.data > status
 }
 

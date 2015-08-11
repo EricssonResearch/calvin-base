@@ -7,11 +7,11 @@
                 "actor_type": "io.StandardOut", 
                 "args": {
                     "quiet": [
-                        "NUMBER", 
+                        "VALUE", 
                         1
                     ], 
                     "store_tokens": [
-                        "NUMBER", 
+                        "VALUE", 
                         1
                     ]
                 }, 

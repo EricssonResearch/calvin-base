@@ -122,7 +122,7 @@
                         "actor_type": "Identity", 
                         "args": {
                             "delay": [
-                                "NUMBER", 
+                                "VALUE", 
                                 0.1
                             ]
                         }, 

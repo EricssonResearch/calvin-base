@@ -434,7 +434,7 @@ class TestNullPorts(CalvinTestBase):
             snk  : io.StandardOut(store_tokens=1, quiet=1)
 
             src1.integer > join.token_1
-            src2.null > join.token_2
+            src2.void > join.token_2
             join.token > snk.token
         """
         app_info, errors, warnings = compiler.compile(script, "testVoidActor")
@@ -456,7 +456,7 @@ class TestNullPorts(CalvinTestBase):
             term : std.Terminator()
             snk  : io.StandardOut(store_tokens=1, quiet=1)
 
-            src.integer > term.null
+            src.integer > term.void
             src.integer > snk.token
         """
         app_info, errors, warnings = compiler.compile(script, "testTerminatorActor")
@@ -557,8 +557,8 @@ class TestSelect(CalvinTestBase):
 
             src.integer > route.data
             const.token > route.select
-            route.true  > snk.token
-            route.false > term.null
+            route.case_true  > snk.token
+            route.case_false > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testTrue")
         print errors
@@ -582,8 +582,8 @@ class TestSelect(CalvinTestBase):
 
             src.integer > route.data
             const.token > route.select
-            route.true  > term.null
-            route.false > snk.token
+            route.case_true  > term.void
+            route.case_false > snk.token
         """
         app_info, errors, warnings = compiler.compile(script, "testFalse")
         print errors
@@ -607,8 +607,8 @@ class TestSelect(CalvinTestBase):
 
             src.integer > route.data
             const.token > route.select
-            route.true  > term.null
-            route.false > snk.token
+            route.case_true  > term.void
+            route.case_false > snk.token
         """
         app_info, errors, warnings = compiler.compile(script, "testBadSelect")
         print errors
@@ -636,8 +636,8 @@ class TestDeselect(CalvinTestBase):
             ds      : std.Deselect()
             snk     : io.StandardOut(store_tokens=1, quiet=1)
 
-            const_0.token > ds.false
-            const_1.token > ds.true
+            const_0.token > ds.case_false
+            const_1.token > ds.case_true
             src.integer > comp.a
             src.integer > const_5.in
             const_5.out > comp.b
@@ -666,8 +666,8 @@ class TestDeselect(CalvinTestBase):
             ds      : std.Deselect()
             snk     : io.StandardOut(store_tokens=1, quiet=1)
 
-            const_0.token > ds.true
-            const_1.token > ds.false
+            const_0.token > ds.case_true
+            const_1.token > ds.case_false
             src.integer > comp.a
             src.integer > const_5.in
             const_5.out > comp.b
@@ -694,8 +694,8 @@ class TestDeselect(CalvinTestBase):
             ds      : std.Deselect()
             snk     : io.StandardOut(store_tokens=1, quiet=1)
 
-            const_0.token > ds.false
-            src.integer > ds.true
+            const_0.token > ds.case_false
+            src.integer > ds.case_true
             const_0.token > const_5.in
             const_5.out > ds.select
             ds.data > snk.token
@@ -807,7 +807,7 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.match    > snk.token
-            regex.no_match > term.null
+            regex.no_match > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexMatch")
         print errors
@@ -831,7 +831,7 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.no_match > snk.token
-            regex.match    > term.null
+            regex.match    > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexNoMatch")
         print errors
@@ -854,7 +854,7 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.match    > snk.token
-            regex.no_match > term.null
+            regex.no_match > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexCapture")
         print errors
@@ -877,7 +877,7 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.match    > snk.token
-            regex.no_match > term.null
+            regex.no_match > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexMultiCapture")
         print errors
@@ -901,7 +901,7 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.no_match > snk.token
-            regex.match    > term.null
+            regex.match    > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexCaptureNoMatch")
         print errors
