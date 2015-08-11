@@ -50,7 +50,7 @@ def p_constdef_list(p):
         p[0] = p[1]
 
 def p_constdef(p):
-    """constdef : DEFINE IDENTIFIER EQ value"""
+    """constdef : DEFINE IDENTIFIER EQ argument"""
     constdef = {p[2]:p[4]}
     p[0] = constdef
 
@@ -156,9 +156,9 @@ def p_assignment(p):
 
 def p_link(p):
     """link : qualified_port GT qualified_port
-            | qualified_port GT IDENTIFIER
-            | IDENTIFIER GT qualified_port
-            | value GT qualified_port"""
+            | local_port GT qualified_port
+            | qualified_port GT local_port
+            | argument GT qualified_port"""
     left_qp = type(p[1]) is list
     right_qp = type(p[3]) is list
     d = {}
@@ -173,6 +173,10 @@ def p_link(p):
 def p_qualified_port(p):
     """qualified_port : IDENTIFIER DOT IDENTIFIER"""
     p[0] = [p[1], p[3]]
+
+def p_local_port(p):
+    """local_port : DOT IDENTIFIER"""
+    p[0] = [p[1], p[2]]
 
 
 def p_opt_named_argument_list(p):
@@ -197,16 +201,25 @@ def p_named_argument_list(p):
 
 
 def p_named_argument(p):
-    """named_argument : IDENTIFIER EQ value"""
+    """named_argument : IDENTIFIER EQ argument"""
     p[0] = {p[1]: p[3]}
+
+
+def p_argument(p):
+    """argument : value
+                | identifier"""
+    p[0] = p[1]
+
+def p_identifier(p):
+    """identifier : IDENTIFIER"""
+    p[0] = (p.slice[1].type.upper(), p[1])
 
 
 def p_value(p):
     """value : object
              | array
              | STRING
-             | NUMBER
-             | IDENTIFIER"""
+             | NUMBER"""
     p[0] = (p.slice[1].type.upper(), p[1])
 
 
@@ -360,13 +373,11 @@ if __name__ == '__main__':
         script = 'inline'
         source_text = \
 """# Test script
-constant xyz := 11
-constant baz := "abc"
-constant foo := baz
-x:std.Foo()
-y:std.Bar()
-x.out > y.in
-[false, true, null, 1, {"ABCdef":11}] > x.in
+define FOO = 42
+define BAR = FOO
+src : std.Counter()
+snk : io.StandardOut(n=BAR)
+src.integer > snk.token
 """
     else:
         script = sys.argv[1]

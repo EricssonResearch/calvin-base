@@ -935,7 +935,7 @@ class TestConstantAsArguments(CalvinTestBase):
         actual = utils.report(self.rt1, snk)
         expected = [42]*10
 
-        self.assert_lists_equal(expected, actual, min_length=1)
+        self.assert_lists_equal(expected, actual, min_length=10)
 
     def testConstantRecursive(self):
         script = """
@@ -955,4 +955,63 @@ class TestConstantAsArguments(CalvinTestBase):
         actual = utils.report(self.rt1, snk)
         expected = [42]*10
 
-        self.assert_lists_equal(expected, actual, min_length=1)
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+
+@pytest.mark.essential
+class TestConstantOnPort(CalvinTestBase):
+
+    def testLiteralOnPort(self):
+        script = """
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            42 > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testLiteralOnPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testLiteralOnPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = [42]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testConstantOnPort(self):
+        script = """
+            define FOO = "Hello"
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            FOO > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstantOnPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstantOnPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["Hello"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testConstantRecursiveOnPort(self):
+        script = """
+            define FOO = BAR
+            define BAR = "yay"
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            FOO > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstantRecursiveOnPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstantRecursiveOnPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["yay"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+

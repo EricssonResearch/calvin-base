@@ -26,7 +26,6 @@ tokens = [
     'DOT', 'COMMA', 'COLON',
     'GT', 'EQ',
     'RARROW',
-    'LET',
     'DOCSTRING',
     'FALSE', 'TRUE', 'NULL'
 

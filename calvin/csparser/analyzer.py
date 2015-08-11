@@ -24,7 +24,7 @@ _log = get_logger(__name__)
 
 
 def full_port_name(namespace, actor_name, port_name):
-    if actor_name:
+    if actor_name != ".":
         return namespace + ':' + actor_name + '.' + port_name
     return namespace + '.' + port_name
 
@@ -45,7 +45,7 @@ class Analyzer(object):
     def __init__(self, cs_info):
         super(Analyzer, self).__init__()
         self.cs_info = cs_info
-        self.local_components = {c['name']:c for c in cs_info['components']}
+        self.local_components = {c['name']:c for c in cs_info['components']} if 'components' in cs_info else {}
         self.constants = {}
         self.app_info = {}
         self.connections = {}
@@ -92,7 +92,7 @@ class Analyzer(object):
         """
         kind, value = self.constants[identifier]
         if kind != "IDENTIFIER":
-            return value
+            return (kind, value)
         return self.lookup_constant(value)
 
 
@@ -127,8 +127,28 @@ class Analyzer(object):
         of the structure, i.e. the ports of a component.
         """
 
+        const_count = 1
         mappings = {'in':{}, 'out':{}}
         export_mappings = {'in':{}, 'out':{}}
+
+        # Check for literals on inports...
+        for c in structure['connections']:
+            if not c['src']:
+                # This could be a constant transformation...
+                kind, value = c['src_port']
+                if kind == "IDENTIFIER":
+                    kind, value = self.lookup_constant(value)
+                    print "GOT", kind, value
+                # Replace constant with std.Constant(data=value, n=-1) its outport
+                name = '_literal_const_'+str(const_count)
+                const_count += 1
+                structure['actors'][name] = {'actor_type':'std.Constant', 'args':{'data':(kind, value), 'n':('NUMBER', -1)}, 'dbg_line':c['dbg_line']}
+                c['src'] = name
+                c['src_port'] = 'token'
+                # except Exception as e:
+                #     print e
+                #     msg = 'Bad constant. %s' % self.debug_info(c)
+                #     raise Exception(msg)
 
         for actor_name, actor_def in structure['actors'].iteritems():
             # Look up actor
@@ -151,7 +171,7 @@ class Analyzer(object):
                         #   ...
                         # OR, it could be referring to a constant, so try a lookup before giving up.
                         try:
-                           arg_value = self.lookup_constant(variable_name)
+                           kind, arg_value = self.lookup_constant(variable_name)
                         except:
                             msg = 'Undefined identifier "%s". %s' % (variable_name, self.debug_info(actor_def))
                             raise Exception(msg)
@@ -174,8 +194,8 @@ class Analyzer(object):
             src_actor_port = full_port_name(namespace, c['src'], c['src_port'])
             dst_actor_port = full_port_name(namespace, c['dst'], c['dst_port'])
 
-            can_resolve_src = bool(c['src'])
-            can_resolve_dst = bool(c['dst'])
+            can_resolve_src = c['src'] != "."
+            can_resolve_dst = c['dst'] != "."
             if not can_resolve_src and not can_resolve_dst:
                 msg = 'Mapping in > out in component is illegal. %s' % self.debug_info(c)
                 raise Exception(msg)

@@ -29,7 +29,7 @@
                         "dbg_line": 7, 
                         "dst": "f", 
                         "dst_port": "token", 
-                        "src": null, 
+                        "src": ".", 
                         "src_port": "in"
                     }, 
                     {
@@ -41,7 +41,7 @@
                     }, 
                     {
                         "dbg_line": 9, 
-                        "dst": null, 
+                        "dst": ".", 
                         "dst_port": "out", 
                         "src": "g", 
                         "src_port": "token"
@@ -78,7 +78,7 @@
                         "dbg_line": 16, 
                         "dst": "d", 
                         "dst_port": "token", 
-                        "src": null, 
+                        "src": ".", 
                         "src_port": "in"
                     }, 
                     {
@@ -90,7 +90,7 @@
                     }, 
                     {
                         "dbg_line": 18, 
-                        "dst": null, 
+                        "dst": ".", 
                         "dst_port": "out", 
                         "src": "e", 
                         "src_port": "out"

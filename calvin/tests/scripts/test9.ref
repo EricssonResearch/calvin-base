@@ -36,7 +36,7 @@
                         "dbg_line": 10, 
                         "dst": "id", 
                         "dst_port": "token", 
-                        "src": null, 
+                        "src": ".", 
                         "src_port": "token"
                     }, 
                     {
@@ -48,7 +48,7 @@
                     }, 
                     {
                         "dbg_line": 12, 
-                        "dst": null, 
+                        "dst": ".", 
                         "dst_port": "token", 
                         "src": "delay", 
                         "src_port": "token"
@@ -85,7 +85,7 @@
                         "dbg_line": 20, 
                         "dst": "f", 
                         "dst_port": "token", 
-                        "src": null, 
+                        "src": ".", 
                         "src_port": "in"
                     }, 
                     {
@@ -97,7 +97,7 @@
                     }, 
                     {
                         "dbg_line": 22, 
-                        "dst": null, 
+                        "dst": ".", 
                         "dst_port": "out", 
                         "src": "g", 
                         "src_port": "token"
@@ -139,7 +139,7 @@
                         "dbg_line": 30, 
                         "dst": "e", 
                         "dst_port": "in", 
-                        "src": null, 
+                        "src": ".", 
                         "src_port": "in"
                     }, 
                     {
@@ -151,7 +151,7 @@
                     }, 
                     {
                         "dbg_line": 32, 
-                        "dst": null, 
+                        "dst": ".", 
                         "dst_port": "out", 
                         "src": "d", 
                         "src_port": "token"

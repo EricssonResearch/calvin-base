@@ -1,7 +1,8 @@
-// a(arg) -> b 
-
+// a(arg) -> b
+define FILE = "data.txt"
 /* Actors */
-src:io.FileReader(file="data.txt")
+src:io.FileReader()
 snk:io.StandardOut()
 /* Connections */
+FILE > src.filename
 src.out>snk.token

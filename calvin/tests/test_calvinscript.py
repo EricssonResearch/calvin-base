@@ -137,7 +137,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         component Foo() -> out {
             f:std.CountTimer()
-            f.integer > out
+            f.integer > .out
         }
         a:Foo()
         b:io.StandardOut()
@@ -188,7 +188,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         component Foo() -> out {
             a:std.CountTimer()
             b:std.CountTimer()
-            a.integer > out
+            a.integer > .out
         }
         a:Foo()
         b:io.StandardOut()
@@ -221,8 +221,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         component Foo() -> out {
             a:std.CountTimer()
-            a.integer > out
-            a.integer > out
+            a.integer > .out
+            a.integer > .out
         }
         a:Foo()
         b:io.StandardOut()
@@ -255,7 +255,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         component Foo() in -> {
             a:io.StandardOut()
-            foo > a.token
+            .foo > a.token
         }
         b:Foo()
         a:std.CountTimer()
@@ -272,7 +272,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         component Foo() -> out {
             a:std.CountTimer()
-            a.integer > foo
+            a.integer > .foo
         }
         b:Foo()
         a:io.StandardOut()
@@ -311,7 +311,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         component Foo(file) in -> {
             a:io.StandardOut()
-            in > a.token
+            .in > a.token
         }
         b:Foo()
         a:std.CountTimer()
@@ -319,7 +319,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Missing argument: 'file'")
 
@@ -327,7 +326,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         component Foo(file) in -> {
             a:io.StandardOut()
-            in > a.token
+            .in > a.token
         }
         b:Foo(file="Foo.txt")
         a:std.CountTimer()
@@ -344,14 +343,14 @@ class CalvinScriptCheckerTest(CalvinTestBase):
           component E() in -> out {
           f:std.Identity()
 
-          in > f.token
-          f.token > out
+          .in > f.token
+          f.token > .out
         }
         component B() in -> out {
           e:E()
 
-          in > e.in
-          e.out > out
+          .in > e.in
+          e.out > .out
         }
 
         a:std.Counter()
@@ -371,14 +370,14 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         component B() in -> out {
           e:E()
 
-          in > e.in
-          e.out > out
+          .in > e.in
+          e.out > .out
         }
         component E() in -> out {
           f:std.Identity()
 
-          in > f.token
-          f.token > out
+          .in > f.token
+          f.token > .out
         }
 
         a:std.Counter()
@@ -430,7 +429,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testUndefinedActorInComponent(self):
         script = """
         component Bug() -> out {
-          b.out > out
+          b.out > .out
         }
         """
         result = self.invoke_parser_assert_syntax('inline', script)
@@ -498,6 +497,19 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         print errors
         self.assertEqual(len(errors), 0)
         self.assertEqual(len(warnings), 0)
+
+
+    def testLiteralOnPort(self):
+        script = """
+        snk : io.StandardOut()
+        42 > snk.token
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        print errors
+        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(warnings), 0)
+
 
 
 

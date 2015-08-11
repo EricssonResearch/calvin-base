@@ -99,15 +99,15 @@ class Checker(object):
         inport_names = [p for p, _ in definition['inputs']]
         outport_names = [p for p, _ in definition['outputs']]
         # Verify names of ports
-        invalid_inports = [(c['src_port'], 'in', c['dbg_line']) for c in connections if not c['src'] and c['src_port'] not in inport_names]
-        invalid_outports = [(c['dst_port'], 'out', c['dbg_line']) for c in connections if not c['dst'] and c['dst_port'] not in outport_names]
+        invalid_inports = [(c['src_port'], 'in', c['dbg_line']) for c in connections if c['src'] == "." and c['src_port'] not in inport_names]
+        invalid_outports = [(c['dst_port'], 'out', c['dbg_line']) for c in connections if c['dst'] == "." and c['dst_port'] not in outport_names]
         invalid_ports = invalid_inports + invalid_outports
         for port, port_dir, line in invalid_ports:
             fmt = "Component {name} has no {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
         # outports should have exactly one connection
         for port in outport_names:
-            incoming = [c for c in connections if not c['dst'] and c['dst_port'] == port]
+            incoming = [c for c in connections if c['dst'] == "." and c['dst_port'] == port]
             if len(incoming) == 0:
                 fmt = "Component {name} is missing connection to outport '{port}'"
                 self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, **definition)
@@ -117,7 +117,7 @@ class Checker(object):
                     self.append_error(fmt, line=c['dbg_line'], port=port, **definition)
         # inports should have at least one connection
         for port in inport_names:
-            outgoing = [c for c in connections if not c['src'] and c['src_port'] == port]
+            outgoing = [c for c in connections if c['src'] == "." and c['src_port'] == port]
             if len(outgoing) < 1:
                 fmt = "Component {name} is missing connection to inport '{port}'"
                 self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, **definition)
@@ -184,10 +184,12 @@ class Checker(object):
         actors = structure['actors'].keys()
 
         # Look for undefined actors
-        src_actors = {c['src'] for c in structure['connections'] if c['src']}
-        dst_actors = {c['dst'] for c in structure['connections'] if c['dst']}
+        src_actors = {c['src'] for c in structure['connections'] if c['src'] != "."}
+        dst_actors = {c['dst'] for c in structure['connections'] if c['dst'] != "."}
+        # Implicit src actors are defined by a constant on the inport
+        implicit_src_actors = {c['src'] for c in structure['connections'] if c['src'] is None}
         all_actors = src_actors | dst_actors
-        undefined_actors = all_actors - set(actors)
+        undefined_actors = all_actors - (set(actors) | implicit_src_actors)
         for actor in undefined_actors:
             fmt = "Undefined actor: '{actor}'"
             lines = [c['dbg_line'] for c in structure['connections'] if c['src'] == actor or c['dst'] == actor]
