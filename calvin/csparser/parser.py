@@ -208,38 +208,43 @@ def p_named_argument(p):
 def p_argument(p):
     """argument : value
                 | identifier"""
-    p[0] = p[1]
+    # p[0] = p[1]
+    p[0] = (p.slice[1].type.upper(), p[1])
 
 def p_identifier(p):
     """identifier : IDENTIFIER"""
-    p[0] = (p.slice[1].type.upper(), p[1])
+    # p[0] = (p.slice[1].type.upper(), p[1])
+    p[0] = p[1]
 
 
 def p_value(p):
-    """value : object
+    """value : dictionary
              | array
-             | STRING
-             | NUMBER"""
-    p[0] = (p.slice[1].type.upper(), p[1])
+             | bool
+             | null
+             | NUMBER
+             | STRING"""
+    # p[0] = (p.slice[1].type.upper(), p[1])
+    p[0] = p[1]
 
 
-def p_value_false(p):
-  """value : FALSE"""
+def p_bool_false(p):
+  """bool : FALSE"""
   p[0] = False
 
 
-def p_value_true(p):
-  """value : TRUE"""
+def p_bool_true(p):
+  """bool : TRUE"""
   p[0] = True
 
 
-def p_value_null(p):
-  """value : NULL"""
+def p_null(p):
+  """null : NULL"""
   p[0] = None
 
 
-def p_object(p):
-  """object : LBRACE members RBRACE"""
+def p_dictionary(p):
+  """dictionary : LBRACE members RBRACE"""
   p[0] = dict(p[2])
 
 

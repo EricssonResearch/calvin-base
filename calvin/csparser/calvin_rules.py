@@ -43,9 +43,9 @@ t_COLON = r':'
 t_GT = r'>'
 t_EQ = r'='
 t_RARROW = r'->'
-t_FALSE = r'false'
-t_TRUE = r'true'
-t_NULL = r'null'
+# t_FALSE = r'false'
+# t_TRUE = r'true'
+# t_NULL = r'null'
 
 
 def t_COMMENT(t):
@@ -84,6 +84,17 @@ def t_NUMBER(t):
         t.value = int(t.value)
     return t
 
+def t_TRUE(t):
+    r'true'
+    return t
+
+def t_FALSE(t):
+    r'false'
+    return t
+
+def t_NULL(t):
+    r'null'
+    return t
 
 def t_IDENTIFIER(t):
     r'[a-zA-Z][a-zA-Z0-9_]*'
