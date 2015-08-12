@@ -138,7 +138,6 @@ class Analyzer(object):
                 kind, value = c['src_port']
                 if kind == "IDENTIFIER":
                     kind, value = self.lookup_constant(value)
-                    print "GOT", kind, value
                 # Replace constant with std.Constant(data=value, n=-1) its outport
                 name = '_literal_const_'+str(const_count)
                 const_count += 1

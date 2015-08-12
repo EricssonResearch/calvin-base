@@ -1015,3 +1015,150 @@ class TestConstantOnPort(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
+
+@pytest.mark.essential
+class TestConstantAndComponents(CalvinTestBase):
+
+    def testLiteralOnCompPort(self):
+        script = """
+            component Foo() -> out {
+                i:std.Stringify()
+                42 > i.in
+                i.out > .out
+            }
+            src   : Foo()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.out > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testLiteralOnCompPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testLiteralOnCompPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["42"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testConstantOnCompPort(self):
+        script = """
+            define MEANING = 42
+            component Foo() -> out {
+                i:std.Stringify()
+                MEANING > i.in
+                i.out > .out
+            }
+            src   : Foo()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.out > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstantOnCompPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstantOnCompPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["42"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testStringConstantOnCompPort(self):
+        script = """
+            define MEANING = "42"
+            component Foo() -> out {
+                i:std.Identity()
+                MEANING > i.token
+                i.token > .out
+            }
+            src   : Foo()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.out > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testStringConstantOnCompPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testStringConstantOnCompPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["42"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+@pytest.mark.essential
+class TestConstantAndComponentsArguments(CalvinTestBase):
+
+    def testComponentArgument(self):
+        script = """
+        component Count(len) -> seq {
+            src : std.Constant(data="hup", n=len)
+            src.token > .seq
+        }
+        src : Count(len=5)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentArgument")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentArgument:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*5
+
+        self.assert_lists_equal(expected, actual, min_length=5)
+
+    def testComponentConstantArgument(self):
+        script = """
+        define FOO = 5
+        component Count(len) -> seq {
+            src : std.Constant(data="hup", n=len)
+            src.token > .seq
+        }
+        src : Count(len=FOO)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgument")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentConstantArgument:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*5
+
+        self.assert_lists_equal(expected, actual, min_length=5)
+
+
+
+    def testComponentConstantArgumentDirect(self):
+        script = """
+        define FOO = 10
+        component Count() -> seq {
+         src : std.Constant(data="hup", n=FOO)
+         src.token > .seq
+        }
+        src : Count()
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgumentDirect")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentConstantArgumentDirect:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)

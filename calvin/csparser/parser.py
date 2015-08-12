@@ -378,11 +378,14 @@ if __name__ == '__main__':
         script = 'inline'
         source_text = \
 """# Test script
-define FOO = 42
-define BAR = FOO
-src : std.Counter()
-snk : io.StandardOut(n=BAR)
-src.integer > snk.token
+        component Count(len) -> seq {
+            src : std.Constant(data="hup", n=len)
+            src.token > .seq
+        }
+
+        src: Count(len=5)
+        snk : io.StandardOut()
+        src.seq > snk.token
 """
     else:
         script = sys.argv[1]

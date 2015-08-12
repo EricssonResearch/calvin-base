@@ -171,14 +171,17 @@ class Checker(object):
 
 
     def check_arguments(self, definition, declaration):
-        self.expand_arguments(declaration)
         mandatory = set(definition['args']['mandatory'])
         defined = set(declaration['args'].keys())
-        undefined = mandatory - defined
-        for u in undefined:
+        missing = mandatory - defined
+        # Case 1: Missing parameters
+        for m in missing:
             fmt = "Missing argument: '{param}'"
-            self.append_error(fmt, line=declaration['dbg_line'], param=u)
-            print self.errors[-1], definition
+            self.append_error(fmt, line=declaration['dbg_line'], param=m)
+        # FIXME: Case 2: Unused parameter
+        # FIXME: Case 3: value for arg is IDENTIFIER rather than VALUE, and not defined in constants
+        # self.expand_arguments(declaration)
+
 
     def check_structure(self, structure):
         actors = structure['actors'].keys()
@@ -225,16 +228,14 @@ if __name__ == '__main__':
         script = 'inline'
         source_text = \
 """# Test script
-component Foo() in -> out {
+        component Count(len) -> seq {
+            src : std.Constant(data="hup", n=len)
+            src.token > .seq
+        }
 
-  x:std.Foo()
-
-  in > x.in
-  x.out > out
-}
-
-a:Foo()
-b:io.StandardOut()
+        src: Count(len=5)
+        snk : io.StandardOut()
+        src.seq > snk.token
 """
     else:
         script = sys.argv[1]

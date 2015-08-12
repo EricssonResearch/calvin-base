@@ -442,6 +442,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 class CalvinScriptDefinesTest(CalvinTestBase):
     """Test CalvinsScript defines"""
 
+    @pytest.mark.xfail()
     def testUndefinedConstant(self):
         script = """
         src : std.Constant(data=FOO)
@@ -454,7 +455,6 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(len(warnings), 0)
         self.assertEqual(errors[0]['reason'], "Undefined identifier: 'FOO'")
-
 
     def testDefinedConstant(self):
         script = """
@@ -469,6 +469,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         self.assertEqual(len(errors), 0)
         self.assertEqual(len(warnings), 0)
 
+    @pytest.mark.xfail()
     def testUndefinedRecursiveConstant(self):
         script = """
         define FOO = BAR
