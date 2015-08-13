@@ -115,6 +115,32 @@ class Checker(object):
         except:
             return [0]
 
+    def generate_ports(self, definition, actor=None):
+        """
+        This generator takes care of remapping src and dst with respect to programs and component definitions.
+        Given definition, connections, and optionally actor it will generate a list of tuples:
+        (port, target, target_port, port_dir, actor) according to the following scheme:
+
+        component inports  : (port, 'src', 'src_port', 'in', '.')
+        component outports : (port, 'dst', 'dst_port', 'out', '.')
+        actor inports      : (port, 'dst', 'dst_port', 'in', actor)
+        actor outports     : (port, 'src', 'src_port', 'out', actor)
+
+        that help sorting out connections.
+        """
+        is_component = actor is None
+        actor = '.' if is_component else actor
+        for port_dir in ['in', 'out']:
+            if is_component:
+                target, target_port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
+            else:
+                target, target_port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
+            def_dir = 'inputs' if port_dir == 'in' else 'outputs'
+            for p, _ in definition[def_dir]:
+                yield((p, target, target_port, port_dir, actor))
+
+
+
     def _verify_port_names(self, definition, connections, actor=None):
         """Look for misspelled port names."""
         # A little transformation is required depending on actor vs. component and port direction
@@ -143,52 +169,25 @@ class Checker(object):
 
 
     def check_atleast_one_connection(self, definition, connections, actor=None):
-        # A little transformation is required depending on actor vs. component and port direction
-        # component inports : pc = [c for c in connections if c['src'] == "." and c['src_port'] == port]
-        # component outports: pc = [c for c in connections if c['dst'] == "." and c['dst_port'] == port]
-        # actor inports     : pc = [c for c in connections if c['dst'] == actor and c['dst_port'] == port]
-        # actor outports    : pc = [c for c in connections if c['src'] == actor and c['src_port'] == port]
+        """Check that all ports have at least one connection"""
         retval = []
-        is_component = actor is None
-        actor = '.' if is_component else actor
-        for port_dir in ['in', 'out']:
-            if is_component:
-                target, target_port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
-            else:
-                target, target_port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
-            def_dir = 'inputs' if port_dir == 'in' else 'outputs'
-            ports = [p for p, _ in definition[def_dir]]
-            for port in ports:
-                pc = [c for c in connections if c[target] == actor and c[target_port] == port]
-                if len(pc) < 1:
-                    retval.append((port, port_dir, max(self.dbg_lines(connections))))
+        for port, target, target_port, port_dir, actor in self.generate_ports(definition, actor):
+            pc = [c for c in connections if c[target] == actor and c[target_port] == port]
+            if len(pc) < 1:
+                retval.append((port, port_dir, max(self.dbg_lines(connections))))
         return retval
 
-    def check_exactly_one_connection(self, definition, connections, actor=None):
-        # A little transformation is required depending on actor vs. component and port direction
-        # component inports : pc = [c for c in connections if c['src'] == "." and c['src_port'] == port]
-        # component outports: pc = [c for c in connections if c['dst'] == "." and c['dst_port'] == port] <-- check
-        # actor inports     : pc = [c for c in connections if c['dst'] == actor and c['dst_port'] == port] <-- check
-        # actor outports    : pc = [c for c in connections if c['src'] == actor and c['src_port'] == port]
+    def check_atmost_one_connection(self, definition, connections, actor=None):
+        """Check that input ports have at most one connection"""
         retval = []
-        is_component = actor is None
-        actor = '.' if is_component else actor
-        for port_dir in ['in', 'out']:
-            if is_component:
-                target, target_port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
-            else:
-                target, target_port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
-
-            def_dir = 'inputs' if port_dir == 'in' else 'outputs'
-            ports = [p for p, _ in definition[def_dir]]
-            for port in ports:
-                if target == 'src':
-                    continue
-                pc = [c for c in connections if c[target] == actor and c[target_port] == port]
-                if len(pc) > 1:
-                    retval.extend([(port, port_dir, c['dbg_line']) for c in pc])
+        for port, target, target_port, port_dir, actor in self.generate_ports(definition, actor):
+            if target == 'src':
+                # Skip output (src) ports since they can have multiple connections
+                continue
+            pc = [c for c in connections if c[target] == actor and c[target_port] == port]
+            if len(pc) > 1:
+                retval.extend([(port, port_dir, c['dbg_line']) for c in pc])
         return retval
-
 
 
     def check_component_connections(self, definition, connections):
@@ -204,7 +203,7 @@ class Checker(object):
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
 
         # ... but outports should have exactly one connection
-        bad_ports = self.check_exactly_one_connection(definition, connections)
+        bad_ports = self.check_atmost_one_connection(definition, connections)
         for port, port_dir, line in bad_ports:
             fmt = "Component {name} has multiple connections to {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
@@ -223,7 +222,7 @@ class Checker(object):
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
 
         # ... but inports should have exactly one connection
-        bad_ports = self.check_exactly_one_connection(definition, connections, actor)
+        bad_ports = self.check_atmost_one_connection(definition, connections, actor)
         for port, port_dir, line in bad_ports:
             fmt = "Actor {actor} ({ns}.{name}) has multiple connections to {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
