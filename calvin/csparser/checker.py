@@ -131,25 +131,37 @@ class Checker(object):
         actor = '.' if is_component else actor
         for port_dir in ['in', 'out']:
             if is_component:
-                target, port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
+                target, target_port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
             else:
-                target, port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
+                target, target_port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
             def_dir = 'inputs' if port_dir == 'in' else 'outputs'
             ports = [p for p, _ in definition[def_dir]]
-            invalid_ports = [(c[port], port_dir, c['dbg_line']) for c in connections if c[target] == actor and c[port] not in ports]
+            invalid_ports = [(c[target_port], port_dir, c['dbg_line']) for c in connections if c[target] == actor and c[target_port] not in ports]
             retval.extend(invalid_ports)
 
         return retval
 
-    def check_atleast_one_connection(self, ports, connections, actor=None):
-        # inports should have at least one connection
+
+    def check_atleast_one_connection(self, definition, connections, actor=None):
+        # A little transformation is required depending on actor vs. component and port direction
+        # component inports : pc = [c for c in connections if c['src'] == "." and c['src_port'] == port]
+        # component outports: pc = [c for c in connections if c['dst'] == "." and c['dst_port'] == port]
+        # actor inports     : pc = [c for c in connections if c['dst'] == actor and c['dst_port'] == port]
+        # actor outports    : pc = [c for c in connections if c['src'] == actor and c['src_port'] == port]
         retval = []
         is_component = actor is None
         actor = '.' if is_component else actor
-        for port in ports:
-            pc = [c for c in connections if c['src'] == actor and c['src_port'] == port]
-            if len(pc) < 1:
-                retval.append(port)
+        for port_dir in ['in', 'out']:
+            if is_component:
+                target, target_port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
+            else:
+                target, target_port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
+            def_dir = 'inputs' if port_dir == 'in' else 'outputs'
+            ports = [p for p, _ in definition[def_dir]]
+            for port in ports:
+                pc = [c for c in connections if c[target] == actor and c[target_port] == port]
+                if len(pc) < 1:
+                    retval.append((port, port_dir, max(self.dbg_lines(connections))))
         return retval
 
     def check_component_connections(self, definition, connections):
@@ -158,50 +170,42 @@ class Checker(object):
             fmt = "Component {name} has no {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
 
-        # outports should have exactly one connection
+        # All ports should have at least one connection...
+        bad_ports = self.check_atleast_one_connection(definition, connections)
+        for port, port_dir, line in bad_ports:
+            fmt = "Component {name} is missing connection to {port_dir}port '{port}'"
+            self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
+
+        # ... but should have exactly one connection
         outport_names = [p for p, _ in definition['outputs']]
         for port in outport_names:
             incoming = [c for c in connections if c['dst'] == "." and c['dst_port'] == port]
-            if len(incoming) == 0:
-                fmt = "Component {name} is missing connection to outport '{port}'"
-                self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, **definition)
             if len(incoming) > 1:
                 fmt = "Component {name} has multiple connections to outport '{port}'"
                 for c in incoming:
                     self.append_error(fmt, line=c['dbg_line'], port=port, **definition)
 
-        # inports should have at least one connection
-        inport_names = [p for p, _ in definition['inputs']]
-        bad_ports = self.check_atleast_one_connection(inport_names, connections)
-        for port in bad_ports:
-            fmt = "Component {name} is missing connection to inport '{port}'"
-            self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, **definition)
-
 
     def check_actor_connections(self, actor, definition, connections):
-
         invalid_ports = self._verify_port_names(definition, connections, actor)
         for port, port_dir, line in invalid_ports:
             fmt = "Actor {actor} ({ns}.{name}) has no {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
 
-        # inports should have exactly one connection
+        # All ports should have at least one connection...
+        bad_ports = self.check_atleast_one_connection(definition, connections, actor)
+        for port, port_dir, line in bad_ports:
+            fmt = "Actor {actor} ({ns}.{name}) is missing connection to {port_dir}port '{port}'"
+            self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
+
+        # ... but inports should have exactly one connection
         inport_names = [p for p, _ in definition['inputs']]
         for port in inport_names:
             incoming = [c for c in connections if c['dst'] == actor and c['dst_port'] == port]
-            if len(incoming) == 0:
-                fmt = "Actor {actor} ({ns}.{name}) is missing connection to inport '{port}'"
-                self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, actor=actor, **definition)
             if len(incoming) > 1:
                 fmt = "Actor {actor} ({ns}.{name}) has multiple connections to inport '{port}'"
                 for c in incoming:
                     self.append_error(fmt, line=c['dbg_line'], port=port, actor=actor, **definition)
-        # outports should have at least one connection
-        outport_names = [p for p, _ in definition['outputs']]
-        bad_ports = self.check_atleast_one_connection(outport_names, connections, actor)
-        for port in bad_ports:
-            fmt = "Actor {actor} ({ns}.{name}) is missing connection to outport '{port}'"
-            self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, actor=actor, **definition)
 
 
     def check_connections(self, actor, definition, connections):
