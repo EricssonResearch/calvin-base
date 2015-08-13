@@ -127,17 +127,16 @@ class Checker(object):
         # # actor outports:
         # invalid_ports = [(c['src_port'], 'out', c['dbg_line']) for c in connections if c['src'] == actor and c['src_port'] not in ports]
         retval = []
+        is_component = actor is None
+        actor = '.' if is_component else actor
         for port_dir in ['in', 'out']:
-            if actor:
-                target, port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
-                _actor = actor
-            else:
+            if is_component:
                 target, port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
-                _actor = '.'
+            else:
+                target, port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
             def_dir = 'inputs' if port_dir == 'in' else 'outputs'
-
             ports = [p for p, _ in definition[def_dir]]
-            invalid_ports = [(c[port], port_dir, c['dbg_line']) for c in connections if c[target] == _actor and c[port] not in ports]
+            invalid_ports = [(c[port], port_dir, c['dbg_line']) for c in connections if c[target] == actor and c[port] not in ports]
             retval.extend(invalid_ports)
 
         return retval
