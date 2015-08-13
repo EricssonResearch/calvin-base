@@ -115,6 +115,16 @@ class Checker(object):
         except:
             return [0]
 
+    def twiddle_portrefs(self, is_component, port_dir):
+        if port_dir not in ['in', 'out']:
+            raise Exception("Invalid port direction: {}".format(port_dir))
+        if is_component:
+            target, target_port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
+        else:
+            target, target_port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
+        return target, target_port
+
+
     def generate_ports(self, definition, actor=None):
         """
         This generator takes care of remapping src and dst with respect to programs and component definitions.
@@ -131,40 +141,24 @@ class Checker(object):
         is_component = actor is None
         actor = '.' if is_component else actor
         for port_dir in ['in', 'out']:
-            if is_component:
-                target, target_port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
-            else:
-                target, target_port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
+            target, target_port = self.twiddle_portrefs(is_component, port_dir)
             def_dir = 'inputs' if port_dir == 'in' else 'outputs'
             for p, _ in definition[def_dir]:
                 yield((p, target, target_port, port_dir, actor))
 
 
-
     def _verify_port_names(self, definition, connections, actor=None):
         """Look for misspelled port names."""
         # A little transformation is required depending on actor vs. component and port direction
-        # # component inports:
-        # invalid_ports = [(c['src_port'], 'in', c['dbg_line']) for c in connections if c['src'] == "." and c['src_port'] not in ports]
-        # # component outports:
-        # invalid_ports = [(c['dst_port'], 'out', c['dbg_line']) for c in connections if c['dst'] == "." and c['dst_port'] not in ports]
-        # # actor inports:
-        # invalid_ports = [(c['dst_port'], 'in', c['dbg_line']) for c in connections if c['dst'] == actor and c['dst_port'] not in ports]
-        # # actor outports:
-        # invalid_ports = [(c['src_port'], 'out', c['dbg_line']) for c in connections if c['src'] == actor and c['src_port'] not in ports]
         retval = []
         is_component = actor is None
         actor = '.' if is_component else actor
         for port_dir in ['in', 'out']:
-            if is_component:
-                target, target_port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
-            else:
-                target, target_port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
+            target, target_port = self.twiddle_portrefs(is_component, port_dir)
             def_dir = 'inputs' if port_dir == 'in' else 'outputs'
             ports = [p for p, _ in definition[def_dir]]
             invalid_ports = [(c[target_port], port_dir, c['dbg_line']) for c in connections if c[target] == actor and c[target_port] not in ports]
             retval.extend(invalid_ports)
-
         return retval
 
 
