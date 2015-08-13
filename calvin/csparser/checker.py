@@ -32,8 +32,8 @@ class Checker(object):
         super(Checker, self).__init__()
         self.ds = DocumentationStore()
         self.cs_info = cs_info
-        self.constants = {}
-        self.local_actors = {}
+        self.constants = self.cs_info['constants']
+        self.local_actors = self.cs_info['components']
         self.errors = []
         self.warnings = []
         self.check()
@@ -50,19 +50,36 @@ class Checker(object):
         self.warnings.append(issue)
 
     def check(self):
-        self.constants = self.cs_info['constants']
-        self.local_actors = self.cs_info['components']
+        """
+        Check constants, local components, and program, in that order.
+        Generate error and warning issues as they are encountered.
+        """
+        self.check_constants()
         for comp in self.local_actors.values():
             self.check_component(comp)
         self.check_structure(self.cs_info['structure'])
 
+    def check_constants(self):
+        """Verify that all constant definitions evaluate to a value."""
+        for constant in self.constants:
+            try:
+                self.lookup_constant(constant)
+            except KeyError as e:
+                fmt = "Constant '{name}' is undefined"
+                self.append_error(fmt, name=e.args[0])
+
     def check_component(self, comp_def):
-        # print comp_name, json.dumps(comp_def, indent=4), json.dumps(self.get_definition(comp_name), indent=4)
-        # fake definition for component test inputs/outputs have reversed meaning
-        # defs = {'inputs':[(p, '') for p in comp_def['outports']], 'outputs':[(p, '') for p in comp_def['inports']]}
+        """
+        Check connections, structure, and argument for local component
+        """
         defs = self.get_definition(comp_def['name'])
         self.check_connections(None, defs, comp_def['structure']['connections'])
         self.check_structure(comp_def['structure'])
+        self.check_component_arguments(comp_def)
+
+
+    def check_component_arguments(self, comp_def):
+        # FIXME: Compare to check_arguments and extend?
         # Check for unused arguments and issue warning, not error
         args = set(comp_def['arg_identifiers'])
         used_args = set([])
@@ -74,13 +91,17 @@ class Checker(object):
             self.append_warning(fmt, line=comp_def['dbg_line'], param=u)
 
     def get_definition(self, actor_type):
+        """
+        Get the actor/component definition from the docstore.
+        For local components, let the docstore generate the definition.
+        """
         if actor_type in self.local_actors:
             return self.ds.component_docs("local."+actor_type, self.local_actors[actor_type])
         return self.ds.actor_docs(actor_type)
 
     def lookup_constant(self, identifier):
         """
-        Return value for constant 'identifier'
+        Return value for constant 'identifier' by recursively looking for a value.
         Raise an exception if not found
         """
         kind, value = self.constants[identifier]
@@ -94,16 +115,43 @@ class Checker(object):
         except:
             return [0]
 
+    def _verify_port_names(self, definition, connections, actor=None):
+        """Look for misspelled port names."""
+        # A little transformation is required depending on actor vs. component and port direction
+        # # component inports:
+        # invalid_ports = [(c['src_port'], 'in', c['dbg_line']) for c in connections if c['src'] == "." and c['src_port'] not in ports]
+        # # component outports:
+        # invalid_ports = [(c['dst_port'], 'out', c['dbg_line']) for c in connections if c['dst'] == "." and c['dst_port'] not in ports]
+        # # actor inports:
+        # invalid_ports = [(c['dst_port'], 'in', c['dbg_line']) for c in connections if c['dst'] == actor and c['dst_port'] not in ports]
+        # # actor outports:
+        # invalid_ports = [(c['src_port'], 'out', c['dbg_line']) for c in connections if c['src'] == actor and c['src_port'] not in ports]
+        retval = []
+        for port_dir in ['in', 'out']:
+            if actor:
+                target, port = ('dst', 'dst_port') if port_dir == 'in' else ('src', 'src_port')
+                _actor = actor
+            else:
+                target, port = ('dst', 'dst_port') if port_dir == 'out' else ('src', 'src_port')
+                _actor = '.'
+            def_dir = 'inputs' if port_dir == 'in' else 'outputs'
+
+            ports = [p for p, _ in definition[def_dir]]
+            invalid_ports = [(c[port], port_dir, c['dbg_line']) for c in connections if c[target] == _actor and c[port] not in ports]
+            retval.extend(invalid_ports)
+
+        return retval
+
+
     def check_component_connections(self, definition, connections):
-        inport_names = [p for p, _ in definition['inputs']]
-        outport_names = [p for p, _ in definition['outputs']]
-        # Verify names of ports
-        invalid_inports = [(c['src_port'], 'in', c['dbg_line']) for c in connections if c['src'] == "." and c['src_port'] not in inport_names]
-        invalid_outports = [(c['dst_port'], 'out', c['dbg_line']) for c in connections if c['dst'] == "." and c['dst_port'] not in outport_names]
-        invalid_ports = invalid_inports + invalid_outports
+        invalid_ports = self._verify_port_names(definition, connections)
         for port, port_dir, line in invalid_ports:
             fmt = "Component {name} has no {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
+
+        inport_names = [p for p, _ in definition['inputs']]
+        outport_names = [p for p, _ in definition['outputs']]
+
         # outports should have exactly one connection
         for port in outport_names:
             incoming = [c for c in connections if c['dst'] == "." and c['dst_port'] == port]
@@ -122,15 +170,14 @@ class Checker(object):
                 self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, **definition)
 
     def check_actor_connections(self, actor, definition, connections):
-        inport_names = [p for p, _ in definition['inputs']]
-        outport_names = [p for p, _ in definition['outputs']]
-        # Verify names of ports
-        invalid_inports = [(c['dst_port'], 'in', c['dbg_line']) for c in connections if c['dst'] == actor and c['dst_port'] not in inport_names]
-        invalid_outports = [(c['src_port'], 'out', c['dbg_line']) for c in connections if c['src'] == actor and c['src_port'] not in outport_names]
-        invalid_ports = invalid_inports + invalid_outports
+
+        invalid_ports = self._verify_port_names(definition, connections, actor)
         for port, port_dir, line in invalid_ports:
             fmt = "Actor {actor} ({ns}.{name}) has no {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
+
+        inport_names = [p for p, _ in definition['inputs']]
+        outport_names = [p for p, _ in definition['outputs']]
         # inports should have exactly one connection
         for port in inport_names:
             incoming = [c for c in connections if c['dst'] == actor and c['dst_port'] == port]
