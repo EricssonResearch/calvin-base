@@ -141,6 +141,16 @@ class Checker(object):
 
         return retval
 
+    def check_atleast_one_connection(self, ports, connections, actor=None):
+        # inports should have at least one connection
+        retval = []
+        is_component = actor is None
+        actor = '.' if is_component else actor
+        for port in ports:
+            pc = [c for c in connections if c['src'] == actor and c['src_port'] == port]
+            if len(pc) < 1:
+                retval.append(port)
+        return retval
 
     def check_component_connections(self, definition, connections):
         invalid_ports = self._verify_port_names(definition, connections)
@@ -148,10 +158,8 @@ class Checker(object):
             fmt = "Component {name} has no {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
 
-        inport_names = [p for p, _ in definition['inputs']]
-        outport_names = [p for p, _ in definition['outputs']]
-
         # outports should have exactly one connection
+        outport_names = [p for p, _ in definition['outputs']]
         for port in outport_names:
             incoming = [c for c in connections if c['dst'] == "." and c['dst_port'] == port]
             if len(incoming) == 0:
@@ -161,12 +169,14 @@ class Checker(object):
                 fmt = "Component {name} has multiple connections to outport '{port}'"
                 for c in incoming:
                     self.append_error(fmt, line=c['dbg_line'], port=port, **definition)
+
         # inports should have at least one connection
-        for port in inport_names:
-            outgoing = [c for c in connections if c['src'] == "." and c['src_port'] == port]
-            if len(outgoing) < 1:
-                fmt = "Component {name} is missing connection to inport '{port}'"
-                self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, **definition)
+        inport_names = [p for p, _ in definition['inputs']]
+        bad_ports = self.check_atleast_one_connection(inport_names, connections)
+        for port in bad_ports:
+            fmt = "Component {name} is missing connection to inport '{port}'"
+            self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, **definition)
+
 
     def check_actor_connections(self, actor, definition, connections):
 
@@ -175,9 +185,8 @@ class Checker(object):
             fmt = "Actor {actor} ({ns}.{name}) has no {port_dir}port '{port}'"
             self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
 
-        inport_names = [p for p, _ in definition['inputs']]
-        outport_names = [p for p, _ in definition['outputs']]
         # inports should have exactly one connection
+        inport_names = [p for p, _ in definition['inputs']]
         for port in inport_names:
             incoming = [c for c in connections if c['dst'] == actor and c['dst_port'] == port]
             if len(incoming) == 0:
@@ -188,11 +197,12 @@ class Checker(object):
                 for c in incoming:
                     self.append_error(fmt, line=c['dbg_line'], port=port, actor=actor, **definition)
         # outports should have at least one connection
-        for port in outport_names:
-            outgoing = [c for c in connections if c['src'] == actor and c['src_port'] == port]
-            if not outgoing:
-                fmt = "Actor {actor} ({ns}.{name}) is missing connection to outport '{port}'"
-                self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, actor=actor, **definition)
+        outport_names = [p for p, _ in definition['outputs']]
+        bad_ports = self.check_atleast_one_connection(outport_names, connections, actor)
+        for port in bad_ports:
+            fmt = "Actor {actor} ({ns}.{name}) is missing connection to outport '{port}'"
+            self.append_error(fmt, line=max(self.dbg_lines(connections)), port=port, actor=actor, **definition)
+
 
     def check_connections(self, actor, definition, connections):
         if actor:
