@@ -45,7 +45,7 @@ class Analyzer(object):
     def __init__(self, cs_info):
         super(Analyzer, self).__init__()
         self.cs_info = cs_info
-        self.local_components = {c['name']:c for c in cs_info['components']} if 'components' in cs_info else {}
+        self.local_components = cs_info['components'] if 'components' in cs_info else {}
         self.constants = {}
         self.app_info = {}
         self.connections = {}

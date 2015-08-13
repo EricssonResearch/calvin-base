@@ -51,9 +51,8 @@ class Checker(object):
 
     def check(self):
         self.constants = self.cs_info['constants']
-        components = self.cs_info['components']
-        for comp in components:
-            self.local_actors[comp['name']] = comp
+        self.local_actors = self.cs_info['components']
+        for comp in self.local_actors.values():
             self.check_component(comp)
         self.check_structure(self.cs_info['structure'])
 

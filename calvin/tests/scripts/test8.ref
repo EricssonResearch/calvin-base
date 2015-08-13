@@ -1,55 +1,6 @@
 {
-    "components": [
-        {
-            "arg_identifiers": [], 
-            "dbg_line": 0, 
-            "docstring": "Someone(TM) should write some documentation for this component.", 
-            "inports": [
-                "in"
-            ], 
-            "name": "E", 
-            "outports": [
-                "out"
-            ], 
-            "structure": {
-                "actors": {
-                    "f": {
-                        "actor_type": "std.Identity", 
-                        "args": {}, 
-                        "dbg_line": 4
-                    }, 
-                    "g": {
-                        "actor_type": "std.Identity", 
-                        "args": {}, 
-                        "dbg_line": 5
-                    }
-                }, 
-                "connections": [
-                    {
-                        "dbg_line": 7, 
-                        "dst": "f", 
-                        "dst_port": "token", 
-                        "src": ".", 
-                        "src_port": "in"
-                    }, 
-                    {
-                        "dbg_line": 8, 
-                        "dst": "g", 
-                        "dst_port": "token", 
-                        "src": "f", 
-                        "src_port": "token"
-                    }, 
-                    {
-                        "dbg_line": 9, 
-                        "dst": ".", 
-                        "dst_port": "out", 
-                        "src": "g", 
-                        "src_port": "token"
-                    }
-                ]
-            }
-        }, 
-        {
+    "components": {
+        "B": {
             "arg_identifiers": [], 
             "dbg_line": 0, 
             "docstring": "Someone(TM) should write some documentation for this component.", 
@@ -97,10 +48,59 @@
                     }
                 ]
             }
+        }, 
+        "E": {
+            "arg_identifiers": [], 
+            "dbg_line": 0, 
+            "docstring": "Someone(TM) should write some documentation for this component.", 
+            "inports": [
+                "in"
+            ], 
+            "name": "E", 
+            "outports": [
+                "out"
+            ], 
+            "structure": {
+                "actors": {
+                    "f": {
+                        "actor_type": "std.Identity", 
+                        "args": {}, 
+                        "dbg_line": 4
+                    }, 
+                    "g": {
+                        "actor_type": "std.Identity", 
+                        "args": {}, 
+                        "dbg_line": 5
+                    }
+                }, 
+                "connections": [
+                    {
+                        "dbg_line": 7, 
+                        "dst": "f", 
+                        "dst_port": "token", 
+                        "src": ".", 
+                        "src_port": "in"
+                    }, 
+                    {
+                        "dbg_line": 8, 
+                        "dst": "g", 
+                        "dst_port": "token", 
+                        "src": "f", 
+                        "src_port": "token"
+                    }, 
+                    {
+                        "dbg_line": 9, 
+                        "dst": ".", 
+                        "dst_port": "out", 
+                        "src": "g", 
+                        "src_port": "token"
+                    }
+                ]
+            }
         }
-    ], 
+    }, 
     "constants": {}, 
-    "sourcefile": "/Users/eperspe/Source/calvin-base/calvin/tests/scripts/test8.calvin", 
+    "sourcefile": "calvin/tests/scripts/test8.calvin", 
     "structure": {
         "actors": {
             "a": {

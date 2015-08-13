@@ -30,58 +30,43 @@ class CalvinEOFError(Exception):
         super(CalvinEOFError, self).__init__(message)
 
 def p_script(p):
-    """script : opt_constdef_list opt_compdef_list opt_program"""
+    """script : constdefs compdefs opt_program"""
     p[0] = {'constants': p[1], 'components': p[2], 'structure': p[3]}
 
 
-def p_opt_constdef_list(p):
-    """opt_constdef_list :
-                        | constdef_list"""
-    p[0] = {} if len(p) == 1 else p[1]
-
-
-def p_constdef_list(p):
-    """constdef_list : constdef_list constdef
-                    | constdef"""
+def p_constdefs(p):
+    """constdefs :
+                 | constdefs constdef
+                 | constdef"""
     if len(p) == 3:
         p[1].update(p[2])
-        p[0] = p[1]
-    else:
-        p[0] = p[1]
+    p[0] = p[1] if len(p) > 1 else {}
+
 
 def p_constdef(p):
     """constdef : DEFINE IDENTIFIER EQ argument"""
     constdef = {p[2]:p[4]}
     p[0] = constdef
 
-def p_opt_compdef_list(p):
-    """opt_compdef_list :
-                        | compdef_list"""
-    if len(p) == 1:
-        p[0] = []
-    else:
-        p[0] = p[1]
 
-
-def p_compdef_list(p):
-    """compdef_list : compdef_list compdef
-                    | compdef"""
+def p_compdefs(p):
+    """compdefs :
+                | compdefs compdef
+                | compdef"""
     if len(p) == 3:
-        p[1].append(p[2])
-        p[0] = p[1]
-    else:
-        p[0] = [p[1]]
+        p[1].update(p[2])
+    p[0] = p[1] if len(p) > 1 else {}
 
 
 def p_compdef(p):
-    """compdef : COMPONENT qualified_name LPAREN opt_id_list RPAREN opt_id_list RARROW opt_id_list LBRACE opt_docstring program RBRACE"""
+    """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring program RBRACE"""
     name = p[2]
     arg_ids = p[4]
     inputs = p[6]
     outputs = p[8]
     docstring = p[10]
     structure = p[11]
-    p[0] = {
+    comp = {
         'name': name,
         'inports': inputs,
         'outports': outputs,
@@ -90,20 +75,16 @@ def p_compdef(p):
         'docstring': docstring,
         'dbg_line':p.lineno(2)
     }
+    p[0] = {name:comp}
 
 
-def p_opt_docstring(p):
-    """opt_docstring :
-                     | docstring """
+def p_docstring(p):
+    """docstring :
+                 | DOCSTRING """
     if len(p) == 1:
         p[0] = "Someone(TM) should write some documentation for this component."
     else:
         p[0] = p[1]
-
-
-def p_docstring(p):
-    """docstring : DOCSTRING """
-    p[0] = p[1]
 
 
 def p_opt_program(p):
@@ -116,15 +97,8 @@ def p_opt_program(p):
 
 
 def p_program(p):
-    """program : statement_list"""
-    # Return a dictionary {'connections':[ [<conn1>], [<conn2>], ... ],
-    # 'actors':{ <name1>:{}, <name2>:{} }}
-    p[0] = p[1]
-
-
-def p_statement_list(p):
-    """statement_list : statement_list statement
-                      | statement """
+    """program : program statement
+               | statement """
     if len(p) == 3:
         # Update dict
         # p[1] is dict and p[2] is tuple (assignment|link, statement)
@@ -150,71 +124,50 @@ def p_statement(p):
 
 
 def p_assignment(p):
-    """assignment : IDENTIFIER COLON qualified_name LPAREN opt_named_argument_list RPAREN"""
+    """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
     p[0] = ('assignment', {p[1]: {'actor_type': p[3], 'args': p[5], 'dbg_line':p.lineno(2)}})
 
 
 def p_link(p):
-    """link : qualified_port GT qualified_port
-            | local_port GT qualified_port
-            | qualified_port GT local_port
-            | argument GT qualified_port"""
-    left_qp = type(p[1]) is list
-    right_qp = type(p[3]) is list
+    """link : port GT port
+            | argument GT port"""
+    kind, value = p[1]
+    (src, port) = value if kind == 'PORT' else (None, (kind, value))
     d = {}
-    d['src'] = p[1][0] if left_qp else None
-    d['src_port'] = p[1][1] if left_qp else p[1]
-    d['dst'] = p[3][0] if right_qp else None
-    d['dst_port'] = p[3][1] if right_qp else p[3]
+    d['src'] = src
+    d['src_port'] = port
+    _, (dst, port) = p[3]
+    d['dst'] = dst
+    d['dst_port'] = port
     d['dbg_line'] = p.lineno(2)
     p[0] = ('link', d)
 
 
-def p_qualified_port(p):
-    """qualified_port : IDENTIFIER DOT IDENTIFIER"""
-    p[0] = [p[1], p[3]]
-
-def p_local_port(p):
-    """local_port : DOT IDENTIFIER"""
-    p[0] = [p[1], p[2]]
+def p_port(p):
+    """port : IDENTIFIER DOT IDENTIFIER
+            | DOT IDENTIFIER"""
+    p[0] = ('PORT', (p[1], p[2] if len(p) == 3 else p[3]))
 
 
-def p_opt_named_argument_list(p):
-    """opt_named_argument_list :
-                               | named_argument_list"""
-    if len(p) == 1:
-        p[0] = {}
-    else:
-        p[0] = p[1]
+def p_named_args(p):
+    """named_args :
+                  | named_args named_arg COMMA
+                  | named_args named_arg"""
+
+    if len(p) > 2:
+        p[1].update(p[2])
+    p[0] = p[1] if len(p) > 1 else {}
 
 
-def p_named_argument_list(p):
-    """named_argument_list : named_argument_list COMMA named_argument
-                           | named_argument"""
-    if len(p) == 4:
-        # Update dict
-        p[1].update(p[3])
-        p[0] = p[1]
-    else:
-        # Create dict, p[1] is in fact a dictionary
-        p[0] = p[1]
-
-
-def p_named_argument(p):
-    """named_argument : IDENTIFIER EQ argument"""
+def p_named_arg(p):
+    """named_arg : IDENTIFIER EQ argument"""
     p[0] = {p[1]: p[3]}
 
 
 def p_argument(p):
     """argument : value
-                | identifier"""
-    # p[0] = p[1]
+                | IDENTIFIER"""
     p[0] = (p.slice[1].type.upper(), p[1])
-
-def p_identifier(p):
-    """identifier : IDENTIFIER"""
-    # p[0] = (p.slice[1].type.upper(), p[1])
-    p[0] = p[1]
 
 
 def p_value(p):
@@ -224,18 +177,13 @@ def p_value(p):
              | null
              | NUMBER
              | STRING"""
-    # p[0] = (p.slice[1].type.upper(), p[1])
     p[0] = p[1]
 
 
-def p_bool_false(p):
-  """bool : FALSE"""
-  p[0] = False
-
-
-def p_bool_true(p):
-  """bool : TRUE"""
-  p[0] = True
+def p_bool(p):
+  """bool : TRUE
+          | FALSE"""
+  p[0] = bool(p.slice[1].type == 'TRUE')
 
 
 def p_null(p):
@@ -280,32 +228,31 @@ def p_array(p):
   p[0] = p[2]
 
 
-def p_opt_id_list(p):
-    """opt_id_list :
-                   | id_list"""
-    if len(p) == 1:
-        p[0] = []
-    else:
-        p[0] = p[1]
+# def p_opt_id_list(p):
+#     """opt_id_list :
+#                    | id_list"""
+#     if len(p) == 1:
+#         p[0] = []
+#     else:
+#         p[0] = p[1]
 
-def p_id_list(p):
-    """id_list : id_list COMMA IDENTIFIER
-               | IDENTIFIER"""
-    if len(p) == 4:
-        # Append list
-        p[0] = p[1] + [p[3]]
-    else:
-        # Create list
-        p[0] = [p[1]]
+def p_identifiers(p):
+    """identifiers :
+                   | identifiers IDENTIFIER COMMA
+                   | identifiers IDENTIFIER"""
+
+    if len(p) > 2:
+        p[1].append(p[2])
+    p[0] = p[1] if len(p) > 1 else []
+
 
 def p_qualified_name(p):
     """qualified_name : qualified_name DOT IDENTIFIER
                       | IDENTIFIER"""
     if len(p) == 4:
-        # Append list
+        # Concatenate name
         p[0] = p[1] + p[2] + p[3]
     else:
-        # Create list
         p[0] = p[1]
 
 
@@ -377,16 +324,24 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         script = 'inline'
         source_text = \
-"""# Test script
-        component Count(len) -> seq {
+'''        # Test script
+        define FOO = true
+        define BAR = false
+        # define BAZ = 43
+        component Count(len)  -> a,b,seq {
+            """FOO"""
             src : std.Constant(data="hup", n=len)
             src.token > .seq
         }
-
+        # component Count2(len) -> seq {
+        #     src : std.Constant(data="hup", n=len)
+        #     src.token > .seq
+        # }
+        #
         src: Count(len=5)
         snk : io.StandardOut()
-        src.seq > snk.token
-"""
+        42 > snk.token
+'''
     else:
         script = sys.argv[1]
         script = os.path.expanduser(script)
