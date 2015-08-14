@@ -110,13 +110,13 @@ class ServerHandler(BaseTHandler):
                 'peer_disconnected': [CalvinCB(self._peer_disconnected)],
                 'peer_connected': [CalvinCB(self._peer_connected)]}
 
-    def _data_recieved(self, *args):
-        print("server_data_recieved", args)
+    def _data_received(self, *args):
+        print("server_data_received", args)
 
     def _peer_connected(self, transport, uri):
         print("server_peer_connected", transport)
         transport.callback_register('join_finished', CalvinCB(self._join_finished))
-        transport.callback_register('data_recieved', CalvinCB(self._data_recieved))
+        transport.callback_register('data_received', CalvinCB(self._data_received))
 
     def _join_finished(self, transport, _id, uri, is_orginator):
         print("server_join_finshed", transport, _id, uri)
@@ -190,14 +190,14 @@ class ClientHandler(BaseTHandler):
         return {'peer_disconnected': [CalvinCB(self._peer_disconnected)],
                 'peer_connected': [CalvinCB(self._peer_connected)]}
 
-    def _data_recieved(self, data):
-        print("client_data_recieved", data)
-        self._return('client_data_recieved', {'data': data})
+    def _data_received(self, data):
+        print("client_data_received", data)
+        self._return('client_data_received', {'data': data})
 
     def _peer_connected(self, transport, uri):
         print("client_peer_connected", transport)
         transport.callback_register('join_finished', CalvinCB(self._join_finished))
-        transport.callback_register('data_recieved', CalvinCB(self._data_recieved))
+        transport.callback_register('data_received', CalvinCB(self._data_received))
         self._return('client_connected', {'transport': repr(transport), 'uri': uri})
         self._item = transport
 

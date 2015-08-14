@@ -22,8 +22,8 @@ class LineJoin(Actor):
     """
     Join strings into a text token using delimiter 'delim' (defaults to '\\n')
 
-    Consume consecutive strings until an end-of-stream (EOSToken) is recieved,
-    which triggers an output of the joined lines. After recieving the EOFToken,
+    Consume consecutive strings until an end-of-stream (EOSToken) is received,
+    which triggers an output of the joined lines. After receiving the EOFToken,
     the LineJoin is reset and ready for new lines to join.
 
     Inputs:
