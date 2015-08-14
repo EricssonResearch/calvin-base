@@ -218,13 +218,15 @@ class Checker(object):
         return self.lookup_constant(value, seen)
 
     def check_component_arguments(self, comp_def):
-        # FIXME: Compare to check_arguments and extend?
-        # Check for unused arguments and issue warning, not error
-        args = set(comp_def['arg_identifiers'])
-        used_args = set([])
-        for a in comp_def['structure']['actors'].values():
-            used_args.update(a['args'].keys())
-        unused_args = args - used_args
+        """
+        Warn if component declares parameters that are not used by the actors in the component.
+        """
+        declared_args = set(comp_def['arg_identifiers'])
+        used_args = set()
+        for actor_def in comp_def['structure']['actors'].values():
+            used_args.update({value for kind, value in actor_def['args'].values() if kind == 'IDENTIFIER'})
+
+        unused_args = declared_args - used_args
         for u in unused_args:
             fmt = "Unused argument: '{param}'"
             self.append_warning(fmt, line=comp_def['dbg_line'], param=u)
