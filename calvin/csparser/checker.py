@@ -359,7 +359,7 @@ if __name__ == '__main__':
 
     result, errors, warnings = calvin_parser(source_text, script)
     if errors:
-        print "{reason} {script} [{line}:{col}]".format(script=script, **error)
+        print "{reason} {script} [{line}:{col}]".format(script=script, **errors[0])
     else:
         errors, warnings = check(result)
         print "errors:", [x['reason'] for x in errors]
