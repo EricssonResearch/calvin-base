@@ -256,35 +256,55 @@ class Checker(object):
         # self.expand_arguments(declaration)
 
 
-    def check_structure(self, structure):
-        actors = structure['actors'].keys()
-
-        # Look for undefined actors
-        src_actors = {c['src'] for c in structure['connections'] if c['src'] != "."}
-        dst_actors = {c['dst'] for c in structure['connections'] if c['dst'] != "."}
+    def undeclared_actors(self, connections, declared_actors):
+        """
+        Scan connections for actors and compare to the set of declared actors in order
+        to find actors that are referenced in the script but not declared.
+        """
+        # Look for undeclared actors
+        src_actors = {c['src'] for c in connections if c['src'] != "."}
+        dst_actors = {c['dst'] for c in connections if c['dst'] != "."}
         # Implicit src actors are defined by a constant on the inport
-        implicit_src_actors = {c['src'] for c in structure['connections'] if c['src'] is None}
+        implicit_src_actors = {c['src'] for c in connections if c['src'] is None}
         all_actors = src_actors | dst_actors
-        undefined_actors = all_actors - (set(actors) | implicit_src_actors)
-        for actor in undefined_actors:
+        undefined_actors = all_actors - (set(declared_actors) | implicit_src_actors)
+        return undefined_actors
+
+    def unknown_actors(self, actor_decls):
+        """
+        Find unknown actors, i.e. actors that are declared in the script,
+        but whose definition is missing from the actorstore.
+        """
+        unknown_actors = [a for a, decl in actor_decls.iteritems() if not self.get_definition(decl['actor_type'])]
+        return unknown_actors
+
+    def check_structure(self, structure):
+        connections = structure['connections']
+        actor_declarations = structure['actors']
+        declared_actors = actor_declarations.keys()
+
+        # Look for missing actors
+        for actor in self.undeclared_actors(connections, declared_actors):
             fmt = "Undefined actor: '{actor}'"
-            lines = [c['dbg_line'] for c in structure['connections'] if c['src'] == actor or c['dst'] == actor]
+            lines = [c['dbg_line'] for c in connections if c['src'] == actor or c['dst'] == actor]
             for line in lines:
                 self.append_error(fmt, line=line, actor=actor)
 
+        # FIXME: Add check for actors declared more than once
         # Note: Unused actors will be caught when checking connections
 
-        # Check if actor exists
-        for actor in actors:
-            actor_type = structure['actors'][actor]['actor_type']
-            definition = self.get_definition(actor_type)
-            if not definition:
-                fmt = "Unknown actor type: '{type}'"
-                self.append_error(fmt, type=actor_type, line=structure['actors'][actor]['dbg_line'])
-                continue
-            # We have actor definition, check that it is fully connected
-            self.check_connections(actor, definition, structure['connections'])
-            self.check_arguments(definition, structure['actors'][actor])
+        # Check if actor definition exists
+        unknown_actors = self.unknown_actors(actor_declarations)
+        for actor in unknown_actors:
+            fmt = "Unknown actor type: '{type}'"
+            self.append_error(fmt, type=actor_declarations[actor]['actor_type'], line=actor_declarations[actor]['dbg_line'])
+
+        # Check the validity of the known actors
+        known_actors = set(declared_actors) - set(unknown_actors)
+        for actor in known_actors:
+            definition = self.get_definition(actor_declarations[actor]['actor_type'])
+            self.check_connections(actor, definition, connections)
+            self.check_arguments(definition, actor_declarations[actor])
 
 
 def check(cs_info):
