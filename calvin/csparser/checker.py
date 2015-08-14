@@ -174,6 +174,11 @@ class Checker(object):
         fmt = "Component {name} has multiple connections to {port_dir}port '{port}'"
         self.report_port_errors(fmt, bad_ports, definition)
 
+        # Check for illegal passthrough (.in > .out) connections
+        fmt = "Component {name} passes port '{src_port}' directly to port '{dst_port}'"
+        for pc in [c for c in connections if c['src']==c['dst']=='.']:
+            self.append_error(fmt, line=c['dbg_line'], src_port=c['src_port'], dst_port=c['dst_port'], **definition)
+
 
     def check_actor_connections(self, actor, definition, connections):
         invalid_ports = self._verify_port_names(definition, connections, actor)

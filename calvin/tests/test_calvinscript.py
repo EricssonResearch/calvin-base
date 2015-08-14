@@ -285,6 +285,18 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(errors[1]['reason'], "Component Foo is missing connection to outport 'out'")
         self.assertEqual(len(warnings), 0)
 
+    def testBadComponent7(self):
+        script = """
+        component Foo() in -> out {
+            .in > .out
+        }
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Component Foo passes port 'in' directly to port 'out'")
+        self.assertEqual(len(warnings), 0)
+
     def testUndefinedActors(self):
         script = """
         a.token > b.token
