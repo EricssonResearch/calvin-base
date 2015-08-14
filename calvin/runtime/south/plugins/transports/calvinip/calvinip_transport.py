@@ -37,11 +37,11 @@ class CalvinTransport(base_transport.BaseTransport):
         self._transport = transport(self._uri.hostname, self._uri.port, callbacks, proto=proto)
         self._rtt = 2000  # Init rt in ms
 
-        # TODO: This should be incomming param
+        # TODO: This should be incoming param
         self._verify_client = lambda x: True
 
-        self._incomming = proto is not None
-        if self._incomming:
+        self._incoming = proto is not None
+        if self._incoming:
             # TODO: Set timeout
             # Incomming connection timeout if no join
             self._transport.callback_register("disconnected", CalvinCB(self._disconnected))
@@ -167,7 +167,7 @@ class CalvinTransport(base_transport.BaseTransport):
     def _data_received(self, data):
         self._callback_execute('raw_data_received', self, data)
         if self._remote_rt_id is None:
-            if self._incomming:
+            if self._incoming:
                 self._handle_join(data)
             else:
                 # We have not joined yet
