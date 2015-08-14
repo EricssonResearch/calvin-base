@@ -65,7 +65,7 @@ class Checker(object):
         """
         defs = self.get_definition(comp_def['name'])
         self.check_component_connections(defs, comp_def['structure']['connections'])
-        self.check_structure(comp_def['structure'])
+        self.check_structure(comp_def['structure'], comp_def['arg_identifiers'])
         self.check_component_arguments(comp_def)
 
     def get_definition(self, actor_type):
@@ -229,8 +229,12 @@ class Checker(object):
             fmt = "Unused argument: '{param}'"
             self.append_warning(fmt, line=comp_def['dbg_line'], param=u)
 
-    def check_arguments(self, definition, declaration):
-        """Verify that all arguments are present and valid when instantiating actors"""
+    def check_arguments(self, definition, declaration, arguments):
+        """
+        Verify that all arguments are present and valid when instantiating actors.
+        'arguments' is a list of the arguments whose value is supplied by a component
+        to it's constituent actors.
+        """
         mandatory = set(definition['args']['mandatory'])
         optional = set(definition['args']['optional'])
         defined = set(declaration['args'].keys())
@@ -249,8 +253,13 @@ class Checker(object):
 
         # Case 3: value for arg is IDENTIFIER rather than VALUE, and IDENTIFIER is not in constants
         for param, (kind, value) in declaration['args'].iteritems():
+            # If kind is not IDENTIFIER we have an actual value => continue to next argument
             if kind != 'IDENTIFIER':
                 continue
+            # First check if the identifier (value) is provided by a wrapping component...
+            if value in arguments:
+                continue
+            # ... and if it is not it have to be a constant or there was an error in the script.
             if value not in self.constants:
                 fmt = "Undefined identifier: '{param}'"
                 self.append_error(fmt, line=declaration['dbg_line'], param=value)
@@ -278,10 +287,16 @@ class Checker(object):
         unknown_actors = [a for a, decl in actor_decls.iteritems() if not self.get_definition(decl['actor_type'])]
         return unknown_actors
 
-    def check_structure(self, structure):
+    def check_structure(self, structure, arguments=None):
+        """
+        Check structure of program or component definition.
+        'arguments' is a list of the parameters provided by the component to its constituent actors,
+        and is only present if this method is called from 'check_component'.
+        """
         connections = structure['connections']
         actor_declarations = structure['actors']
         declared_actors = actor_declarations.keys()
+        arguments = arguments or []
 
         # Look for missing actors
         for actor in self.undeclared_actors(connections, declared_actors):
@@ -304,7 +319,7 @@ class Checker(object):
         for actor in known_actors:
             definition = self.get_definition(actor_declarations[actor]['actor_type'])
             self.check_actor_connections(actor, definition, connections)
-            self.check_arguments(definition, actor_declarations[actor])
+            self.check_arguments(definition, actor_declarations[actor], arguments)
 
 
 def check(cs_info):
