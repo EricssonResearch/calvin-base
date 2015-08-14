@@ -443,7 +443,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 class CalvinScriptDefinesTest(CalvinTestBase):
     """Test CalvinsScript defines"""
 
-    @pytest.mark.xfail()
     def testUndefinedConstant(self):
         script = """
         src : std.Constant(data=FOO)

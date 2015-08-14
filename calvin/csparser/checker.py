@@ -59,15 +59,6 @@ class Checker(object):
             self.check_component(comp)
         self.check_structure(self.cs_info['structure'])
 
-    def check_constants(self):
-        """Verify that all constant definitions evaluate to a value."""
-        for constant in self.constants:
-            try:
-                self.lookup_constant(constant)
-            except KeyError as e:
-                fmt = "Constant '{name}' is undefined"
-                self.append_error(fmt, name=e.args[0])
-
     def check_component(self, comp_def):
         """
         Check connections, structure, and argument for local component
@@ -77,19 +68,6 @@ class Checker(object):
         self.check_structure(comp_def['structure'])
         self.check_component_arguments(comp_def)
 
-
-    def check_component_arguments(self, comp_def):
-        # FIXME: Compare to check_arguments and extend?
-        # Check for unused arguments and issue warning, not error
-        args = set(comp_def['arg_identifiers'])
-        used_args = set([])
-        for a in comp_def['structure']['actors'].values():
-            used_args.update(a['args'].keys())
-        unused_args = args - used_args
-        for u in unused_args:
-            fmt = "Unused argument: '{param}'"
-            self.append_warning(fmt, line=comp_def['dbg_line'], param=u)
-
     def get_definition(self, actor_type):
         """
         Get the actor/component definition from the docstore.
@@ -98,16 +76,6 @@ class Checker(object):
         if actor_type in self.local_actors:
             return self.ds.component_docs("local."+actor_type, self.local_actors[actor_type])
         return self.ds.actor_docs(actor_type)
-
-    def lookup_constant(self, identifier):
-        """
-        Return value for constant 'identifier' by recursively looking for a value.
-        Raise an exception if not found
-        """
-        kind, value = self.constants[identifier]
-        if kind != "IDENTIFIER":
-            return value
-        return self.lookup_constant(value)
 
     def dbg_lines(self, s):
         """Return the debug line numbers in a construct. Default to 0."""
@@ -222,33 +190,64 @@ class Checker(object):
         fmt = "Actor {actor} ({ns}.{name}) has multiple connections to {port_dir}port '{port}'"
         self.report_port_errors(fmt, bad_ports, definition, actor)
 
-
-    def expand_arguments(self, declaration):
-        """
-        Check the the arguments for constants that must be expanded
-        Append errors if definition is missing.
-        """
-        for argname, (kind, value) in declaration['args'].iteritems():
-            if kind != "IDENTIFIER":
-                continue
+    def check_constants(self):
+        """Verify that all constant definitions evaluate to a value."""
+        for constant in self.constants:
             try:
-                self.lookup_constant(value)
-            except:
-                fmt = "Undefined identifier: '{param}'"
-                self.append_error(fmt, line=declaration['dbg_line'], param=value)
+                self.lookup_constant(constant)
+            except KeyError as e:
+                fmt = "Constant '{name}' is undefined"
+                self.append_error(fmt, name=e.args[0])
 
+    def lookup_constant(self, identifier):
+        """
+        Return value for constant 'identifier' by recursively looking for a value.
+        Raise an exception if not found
+        Known issues: Circular references (i.e. define FOO=FOO or variations thereof) cause infinite recursion.
+        """
+        # FIXME: Detect circular references
+        kind, value = self.constants[identifier]
+        if kind != "IDENTIFIER":
+            return value
+        return self.lookup_constant(value)
+
+    def check_component_arguments(self, comp_def):
+        # FIXME: Compare to check_arguments and extend?
+        # Check for unused arguments and issue warning, not error
+        args = set(comp_def['arg_identifiers'])
+        used_args = set([])
+        for a in comp_def['structure']['actors'].values():
+            used_args.update(a['args'].keys())
+        unused_args = args - used_args
+        for u in unused_args:
+            fmt = "Unused argument: '{param}'"
+            self.append_warning(fmt, line=comp_def['dbg_line'], param=u)
 
     def check_arguments(self, definition, declaration):
+        """Verify that all arguments are present and valid when instantiating actors"""
         mandatory = set(definition['args']['mandatory'])
+        optional = set(definition['args']['optional'])
         defined = set(declaration['args'].keys())
+
+        # Case 1: Missing arguments
         missing = mandatory - defined
-        # Case 1: Missing parameters
         for m in missing:
             fmt = "Missing argument: '{param}'"
             self.append_error(fmt, line=declaration['dbg_line'], param=m)
-        # FIXME: Case 2: Unused parameter
-        # FIXME: Case 3: value for arg is IDENTIFIER rather than VALUE, and not defined in constants
-        # self.expand_arguments(declaration)
+
+        # Case 2: Extra (unused) arguments
+        unused = defined - (mandatory | optional)
+        for m in unused:
+            fmt = "Unused argument: '{param}'"
+            self.append_warning(fmt, line=declaration['dbg_line'], param=m)
+
+        # Case 3: value for arg is IDENTIFIER rather than VALUE, and IDENTIFIER is not in constants
+        for param, (kind, value) in declaration['args'].iteritems():
+            if kind != 'IDENTIFIER':
+                continue
+            if value not in self.constants:
+                fmt = "Undefined identifier: '{param}'"
+                self.append_error(fmt, line=declaration['dbg_line'], param=value)
 
 
     def undeclared_actors(self, connections, declared_actors):
