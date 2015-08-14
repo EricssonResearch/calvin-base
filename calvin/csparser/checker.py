@@ -110,8 +110,9 @@ class Checker(object):
         return self.lookup_constant(value)
 
     def dbg_lines(self, s):
+        """Return the debug line numbers in a construct. Default to 0."""
         try:
-            return [x['dbg_line'] for x in s] + [0]
+            return [x['dbg_line'] for x in s] or [0]
         except:
             return [0]
 
