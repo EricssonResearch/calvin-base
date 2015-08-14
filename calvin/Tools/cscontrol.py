@@ -78,6 +78,10 @@ def control_deploy(args):
 def control_actors(args):
     if args.cmd == 'list':
         return requests.get(args.node + "/actors")
+    if args.cmd == 'info':
+        if not args.id:
+            raise Exception("No actor id given")
+        return requests.get(args.node + "/actor/" + args.id)
     elif args.cmd == 'delete':
         if not args.id:
             raise Exception("No actor id given")
@@ -139,7 +143,7 @@ def parse_args():
     cmd_deploy.set_defaults(func=control_deploy)
 
     # parsers for actor commands
-    actor_commands = ['list', 'delete', 'migrate']
+    actor_commands = ['info', 'list', 'delete', 'migrate']
     cmd_actor = cmdparsers.add_parser('actor', help="handle actors on node")
     cmd_actor.add_argument('cmd', metavar="<command>", choices=actor_commands, type=str,
                            help="one of %s" % (", ".join(actor_commands)))
