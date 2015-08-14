@@ -198,18 +198,24 @@ class Checker(object):
             except KeyError as e:
                 fmt = "Constant '{name}' is undefined"
                 self.append_error(fmt, name=e.args[0])
+            except:
+                fmt = "Constant '{name}' has a circular reference"
+                self.append_error(fmt, name=constant)
 
-    def lookup_constant(self, identifier):
+
+    def lookup_constant(self, identifier, seen=None):
         """
         Return value for constant 'identifier' by recursively looking for a value.
         Raise an exception if not found
-        Known issues: Circular references (i.e. define FOO=FOO or variations thereof) cause infinite recursion.
         """
-        # FIXME: Detect circular references
+        seen = seen or []
         kind, value = self.constants[identifier]
         if kind != "IDENTIFIER":
             return value
-        return self.lookup_constant(value)
+        if value in seen:
+            raise Exception("Circular reference in constant definition")
+        seen.append(value)
+        return self.lookup_constant(value, seen)
 
     def check_component_arguments(self, comp_def):
         # FIXME: Compare to check_arguments and extend?
