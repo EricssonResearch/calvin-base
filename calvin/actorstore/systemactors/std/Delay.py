@@ -26,7 +26,7 @@ class Delay(Actor):
         token : anything
     """
 
-    @manage()
+    @manage(['delay'])
     def init(self, delay=0.1):
         self.delay = delay
         self.setup()
