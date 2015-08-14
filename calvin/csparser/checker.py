@@ -73,7 +73,7 @@ class Checker(object):
         Check connections, structure, and argument for local component
         """
         defs = self.get_definition(comp_def['name'])
-        self.check_connections(None, defs, comp_def['structure']['connections'])
+        self.check_component_connections(defs, comp_def['structure']['connections'])
         self.check_structure(comp_def['structure'])
         self.check_component_arguments(comp_def)
 
@@ -184,49 +184,43 @@ class Checker(object):
         return retval
 
 
+    def report_port_errors(self, fmt, portspecs, definition, actor=None):
+        for port, port_dir, line in portspecs:
+            self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
+
+
     def check_component_connections(self, definition, connections):
+        # Check for bogus ports
         invalid_ports = self._verify_port_names(definition, connections)
-        for port, port_dir, line in invalid_ports:
-            fmt = "Component {name} has no {port_dir}port '{port}'"
-            self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
+        fmt = "Component {name} has no {port_dir}port '{port}'"
+        self.report_port_errors(fmt, invalid_ports, definition)
 
         # All ports should have at least one connection...
         bad_ports = self.check_atleast_one_connection(definition, connections)
-        for port, port_dir, line in bad_ports:
-            fmt = "Component {name} is missing connection to {port_dir}port '{port}'"
-            self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
+        fmt = "Component {name} is missing connection to {port_dir}port '{port}'"
+        self.report_port_errors(fmt, bad_ports, definition)
 
         # ... but outports should have exactly one connection
         bad_ports = self.check_atmost_one_connection(definition, connections)
-        for port, port_dir, line in bad_ports:
-            fmt = "Component {name} has multiple connections to {port_dir}port '{port}'"
-            self.append_error(fmt, line=line, port=port, port_dir=port_dir, **definition)
+        fmt = "Component {name} has multiple connections to {port_dir}port '{port}'"
+        self.report_port_errors(fmt, bad_ports, definition)
 
 
     def check_actor_connections(self, actor, definition, connections):
         invalid_ports = self._verify_port_names(definition, connections, actor)
-        for port, port_dir, line in invalid_ports:
-            fmt = "Actor {actor} ({ns}.{name}) has no {port_dir}port '{port}'"
-            self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
+        fmt = "Actor {actor} ({ns}.{name}) has no {port_dir}port '{port}'"
+        self.report_port_errors(fmt, invalid_ports, definition, actor)
 
         # All ports should have at least one connection...
         bad_ports = self.check_atleast_one_connection(definition, connections, actor)
-        for port, port_dir, line in bad_ports:
-            fmt = "Actor {actor} ({ns}.{name}) is missing connection to {port_dir}port '{port}'"
-            self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
+        fmt = "Actor {actor} ({ns}.{name}) is missing connection to {port_dir}port '{port}'"
+        self.report_port_errors(fmt, bad_ports, definition, actor)
 
         # ... but inports should have exactly one connection
         bad_ports = self.check_atmost_one_connection(definition, connections, actor)
-        for port, port_dir, line in bad_ports:
-            fmt = "Actor {actor} ({ns}.{name}) has multiple connections to {port_dir}port '{port}'"
-            self.append_error(fmt, line=line, port=port, port_dir=port_dir, actor=actor, **definition)
+        fmt = "Actor {actor} ({ns}.{name}) has multiple connections to {port_dir}port '{port}'"
+        self.report_port_errors(fmt, bad_ports, definition, actor)
 
-
-    def check_connections(self, actor, definition, connections):
-        if actor:
-            self.check_actor_connections(actor, definition, connections)
-        else:
-            self.check_component_connections(definition, connections)
 
     def expand_arguments(self, declaration):
         """
@@ -303,7 +297,7 @@ class Checker(object):
         known_actors = set(declared_actors) - set(unknown_actors)
         for actor in known_actors:
             definition = self.get_definition(actor_declarations[actor]['actor_type'])
-            self.check_connections(actor, definition, connections)
+            self.check_actor_connections(actor, definition, connections)
             self.check_arguments(definition, actor_declarations[actor])
 
 
