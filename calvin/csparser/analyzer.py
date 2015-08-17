@@ -119,6 +119,27 @@ class Analyzer(object):
         else:
             self.connections.setdefault(src_actor_port, []).append(dst_actor_port)
 
+    def expand_literals(self, structure, argd):
+        # Check for literals on inports...
+        const_count = 1
+        implicit = [c for c in structure['connections'] if not c['src']]
+        for c in implicit:
+            kind, value = c['src_port']
+            if kind == "IDENTIFIER":
+                if value in argd:
+                    kind, value = ('VALUE', argd[value])
+                else:
+                    kind, value = self.lookup_constant(value)
+            # Replace constant with std.Constant(data=value, n=-1) its outport
+            name = '_literal_const_'+str(const_count)
+            const_count += 1
+            # Replace implicit actor with actual actor ...
+            structure['actors'][name] = {'actor_type':'std.Constant', 'args':{'data':(kind, value), 'n':('NUMBER', -1)}, 'dbg_line':c['dbg_line']}
+            # ... and create a connection from it
+            c['src'] = name
+            c['src_port'] = 'token'
+
+
     def analyze_structure(self, structure, namespace, argd):
         """
         Analyze a (sub) structure and resolve actor names, arguments, and connections.
@@ -127,27 +148,11 @@ class Analyzer(object):
         of the structure, i.e. the ports of a component.
         """
 
-        const_count = 1
         mappings = {'in':{}, 'out':{}}
         export_mappings = {'in':{}, 'out':{}}
 
         # Check for literals on inports...
-        for c in structure['connections']:
-            if not c['src']:
-                # This could be a constant transformation...
-                kind, value = c['src_port']
-                if kind == "IDENTIFIER":
-                    kind, value = self.lookup_constant(value)
-                # Replace constant with std.Constant(data=value, n=-1) its outport
-                name = '_literal_const_'+str(const_count)
-                const_count += 1
-                structure['actors'][name] = {'actor_type':'std.Constant', 'args':{'data':(kind, value), 'n':('NUMBER', -1)}, 'dbg_line':c['dbg_line']}
-                c['src'] = name
-                c['src_port'] = 'token'
-                # except Exception as e:
-                #     print e
-                #     msg = 'Bad constant. %s' % self.debug_info(c)
-                #     raise Exception(msg)
+        self.expand_literals(structure, argd)
 
         for actor_name, actor_def in structure['actors'].iteritems():
             # Look up actor
@@ -193,6 +198,7 @@ class Analyzer(object):
             src_actor_port = full_port_name(namespace, c['src'], c['src_port'])
             dst_actor_port = full_port_name(namespace, c['dst'], c['dst_port'])
 
+            # FIXME: Remove (This is now caught by checker)
             can_resolve_src = c['src'] != "."
             can_resolve_dst = c['dst'] != "."
             if not can_resolve_src and not can_resolve_dst:
