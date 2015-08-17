@@ -523,7 +523,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         self.assertEqual(len(errors), 0)
         self.assertEqual(len(warnings), 0)
 
-
+    @pytest.mark.xfail()
     def testComponentArgumentOnPort(self):
         script = """
         component Foo(foo) -> out {
