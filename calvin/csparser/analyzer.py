@@ -109,9 +109,12 @@ class Analyzer(object):
         """
         if actor_type in self.local_components:
             compdef = self.local_components[actor_type]
-            return (True, False, compdef)
-
-        return ActorStore().lookup(actor_type)
+            return compdef, False
+        found, is_actor, info = ActorStore().lookup(actor_type)
+        if not found:
+            msg = 'Actor "%s" not found. %s' % (actor_def['actor_type'], self.debug_info(actor_def))
+            raise Exception(msg)
+        return info, True
 
     def add_connection(self, src_actor_port, dst_actor_port):
         if type(dst_actor_port) is list:
@@ -156,10 +159,7 @@ class Analyzer(object):
 
         for actor_name, actor_def in structure['actors'].iteritems():
             # Look up actor
-            found, is_actor, info = self.lookup(actor_def['actor_type'])
-            if not found:
-                msg = 'Actor "%s" not found. %s' % (actor_def['actor_type'], self.debug_info(actor_def))
-                raise Exception(msg)
+            info, is_actor= self.lookup(actor_def['actor_type'])
             # Resolve arguments
             args = {}
             for arg_name, (arg_type, arg_value) in actor_def['args'].iteritems():
