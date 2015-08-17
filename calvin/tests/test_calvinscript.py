@@ -524,5 +524,34 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         self.assertEqual(len(warnings), 0)
 
 
+    def testComponentArgumentOnPort(self):
+        script = """
+        component Foo(foo) -> out {
+            foo > .out
+        }
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        print errors
+        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(warnings), 0)
+
+    @pytest.mark.xfail()
+    def testBadLocalPort(self):
+        script = """
+        component Foo() in -> {
+            snk : io.StandardOut()
+            .in > snk.token
+        }
+        src : std.Counter()
+        src.integer > .in
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        print errors
+        self.assertNotEqual(len(errors), 0)
+        self.assertEqual(len(warnings), 0)
+
+
 
 
