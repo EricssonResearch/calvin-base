@@ -155,7 +155,7 @@ class Analyzer(object):
             args[arg_name] = arg_value
         return args
 
-    def create_connection(self, c, namespace, mappings):
+    def create_connection(self, c, namespace, in_mappings, out_mappings):
         # export_mapping = {'in':{}, 'out':{}}
         # Get the full port name.
         # If src/dst is ".", the full port name is component port name at caller level
@@ -164,10 +164,10 @@ class Analyzer(object):
 
         # resolve any references to components first
         # N.B. if there is a match for src_actor_port the result is a list:
-        dst_actor_port = mappings['in'].get(dst_actor_port, dst_actor_port)
-        src_actor_port = mappings['out'].get(src_actor_port, src_actor_port)
+        dst_actor_port = in_mappings.get(dst_actor_port, dst_actor_port)
+        src_actor_port = out_mappings.get(src_actor_port, src_actor_port)
 
-        # Add connections if possible, or add a export a port mapping for calling level
+        # Add connections if possible, or export a port mapping for calling level
         if c['src'] != '.' and c['dst'] != '.':
             self.add_connection(src_actor_port, dst_actor_port)
             export_mapping = {}, {}
@@ -175,12 +175,11 @@ class Analyzer(object):
             # Add mapping from component inport to internal actors/components
             if type(dst_actor_port) is not list:
                 dst_actor_port = [dst_actor_port]
-            # export_mapping['in'].setdefault(src_actor_port, []).extend(dst_actor_port)
             export_mapping = {src_actor_port:dst_actor_port}, {}
         else:
             # Add mapping from internal actor/component to component outport
-            # export_mapping['out'][dst_actor_port] = src_actor_port
             export_mapping = {}, {dst_actor_port:src_actor_port}
+
         return export_mapping
 
 
@@ -194,7 +193,8 @@ class Analyzer(object):
         # Check for literals on inports...
         self.expand_literals(structure, argd)
 
-        mappings = {'in':{}, 'out':{}}
+        in_mappings = {}
+        out_mappings = {}
         for actor_name, actor_def in structure['actors'].iteritems():
             # Look up actor
             info, is_actor= self.lookup(actor_def['actor_type'])
@@ -209,17 +209,18 @@ class Analyzer(object):
             else:
                 # Recurse into components
                 # qualified_name constitutes a namespace here
-                port_mappings = self.analyze_structure(info['structure'], qualified_name, args)
-                mappings['in'].update(port_mappings['in'])
-                mappings['out'].update(port_mappings['out'])
+                comp_in_mapping, comp_out_mapping = self.analyze_structure(info['structure'], qualified_name, args)
+                in_mappings.update(comp_in_mapping)
+                out_mappings.update(comp_out_mapping)
 
-        export_mappings = {'in':{}, 'out':{}}
+        export_in_mappings = {}
+        export_out_mappings = {}
         for c in structure['connections']:
-            in_mapping, out_mapping = self.create_connection(c, namespace, mappings)
-            export_mappings['in'].update(in_mapping)
-            export_mappings['out'].update(out_mapping)
+            in_mapping, out_mapping = self.create_connection(c, namespace, in_mappings, out_mappings)
+            export_in_mappings.update(in_mapping)
+            export_out_mappings.update(out_mapping)
 
-        return export_mappings
+        return export_in_mappings, export_out_mappings
 
 def generate_app_info(cs_info):
     a = Analyzer(cs_info)
