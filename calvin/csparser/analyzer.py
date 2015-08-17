@@ -142,6 +142,19 @@ class Analyzer(object):
             c['src'] = name
             c['src_port'] = 'token'
 
+    def resolve_arguments(self, arguments, argd):
+        args = {}
+        for arg_name, (arg_type, arg_value) in arguments.iteritems():
+            if arg_type == 'IDENTIFIER':
+                # We are looking for the value of a variable whose name is in value
+                variable_name = arg_value
+                if variable_name in argd:
+                    arg_value = argd[variable_name]
+                else:
+                    _, arg_value = self.lookup_constant(variable_name)
+            args[arg_name] = arg_value
+        return args
+
 
     def analyze_structure(self, structure, namespace, argd):
         """
@@ -161,25 +174,7 @@ class Analyzer(object):
             # Look up actor
             info, is_actor= self.lookup(actor_def['actor_type'])
             # Resolve arguments
-            args = {}
-            for arg_name, (arg_type, arg_value) in actor_def['args'].iteritems():
-                if arg_type == 'IDENTIFIER':
-                    # We are looking for the value of a variable whose name is in value
-                    variable_name = arg_value
-                    if variable_name in argd:
-                        arg_value = argd[variable_name]
-                    else:
-                        # If the value is missing from argd the programmer made an error, e.g.
-                        # component PrefixFile(prefix, filename) -> out {
-                        #   file:io.FileReader(file=foo) // Should have been 'file=filename'
-                        #   ...
-                        # OR, it could be referring to a constant, so try a lookup before giving up.
-                        try:
-                           kind, arg_value = self.lookup_constant(variable_name)
-                        except:
-                            msg = 'Undefined identifier "%s". %s' % (variable_name, self.debug_info(actor_def))
-                            raise Exception(msg)
-                args[arg_name] = arg_value
+            args = self.resolve_arguments(actor_def['args'], argd)
 
             qualified_name = namespace+':'+actor_name
             if is_actor:
