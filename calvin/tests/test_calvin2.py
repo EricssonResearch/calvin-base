@@ -1186,3 +1186,28 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         expected = ["hup"]*10
 
         self.assert_lists_equal(expected, actual, min_length=10)
+
+
+    def testComponentConstantArgumentAsImplicitActor(self):
+        script = """
+        define FOO = "hup"
+        component Count(data) -> seq {
+            i : std.Identity()
+            data > i.token
+            i.token > .seq
+        }
+        src : Count(data=FOO)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgumentAsImplicitActor")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentConstantArgumentAsImplicitActor:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
