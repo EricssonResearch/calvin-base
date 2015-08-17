@@ -155,6 +155,34 @@ class Analyzer(object):
             args[arg_name] = arg_value
         return args
 
+    def create_connection(self, c, namespace, mappings):
+        # export_mapping = {'in':{}, 'out':{}}
+        # Get the full port name.
+        # If src/dst is ".", the full port name is component port name at caller level
+        src_actor_port = full_port_name(namespace, c['src'], c['src_port'])
+        dst_actor_port = full_port_name(namespace, c['dst'], c['dst_port'])
+
+        # resolve any references to components first
+        # N.B. if there is a match for src_actor_port the result is a list:
+        dst_actor_port = mappings['in'].get(dst_actor_port, dst_actor_port)
+        src_actor_port = mappings['out'].get(src_actor_port, src_actor_port)
+
+        # Add connections if possible, or add a export a port mapping for calling level
+        if c['src'] != '.' and c['dst'] != '.':
+            self.add_connection(src_actor_port, dst_actor_port)
+            export_mapping = {}, {}
+        elif c['dst'] != '.':
+            # Add mapping from component inport to internal actors/components
+            if type(dst_actor_port) is not list:
+                dst_actor_port = [dst_actor_port]
+            # export_mapping['in'].setdefault(src_actor_port, []).extend(dst_actor_port)
+            export_mapping = {src_actor_port:dst_actor_port}, {}
+        else:
+            # Add mapping from internal actor/component to component outport
+            # export_mapping['out'][dst_actor_port] = src_actor_port
+            export_mapping = {}, {dst_actor_port:src_actor_port}
+        return export_mapping
+
 
     def analyze_structure(self, structure, namespace, argd):
         """
@@ -163,13 +191,10 @@ class Analyzer(object):
         Returns a dict with port mappings corresponding to the externally visible ports
         of the structure, i.e. the ports of a component.
         """
-
-        mappings = {'in':{}, 'out':{}}
-        export_mappings = {'in':{}, 'out':{}}
-
         # Check for literals on inports...
         self.expand_literals(structure, argd)
 
+        mappings = {'in':{}, 'out':{}}
         for actor_name, actor_def in structure['actors'].iteritems():
             # Look up actor
             info, is_actor= self.lookup(actor_def['actor_type'])
@@ -177,6 +202,7 @@ class Analyzer(object):
             args = self.resolve_arguments(actor_def['args'], argd)
 
             qualified_name = namespace+':'+actor_name
+
             if is_actor:
                 # Add actor and its arguments to the list of actor instances
                 self.actors[qualified_name] = {'actor_type':actor_def['actor_type'], 'args':args}
@@ -187,35 +213,11 @@ class Analyzer(object):
                 mappings['in'].update(port_mappings['in'])
                 mappings['out'].update(port_mappings['out'])
 
+        export_mappings = {'in':{}, 'out':{}}
         for c in structure['connections']:
-            # Get the full port name.
-            # If src/dst is None, the full port name is component port name at caller level
-            src_actor_port = full_port_name(namespace, c['src'], c['src_port'])
-            dst_actor_port = full_port_name(namespace, c['dst'], c['dst_port'])
-
-            # FIXME: Remove (This is now caught by checker)
-            can_resolve_src = c['src'] != "."
-            can_resolve_dst = c['dst'] != "."
-            if not can_resolve_src and not can_resolve_dst:
-                msg = 'Mapping in > out in component is illegal. %s' % self.debug_info(c)
-                raise Exception(msg)
-
-            # resolve any references to components first
-            # N.B. if there is a match for src_actor_port the result is a list:
-            dst_actor_port = mappings['in'].get(dst_actor_port, dst_actor_port)
-            src_actor_port = mappings['out'].get(src_actor_port, src_actor_port)
-
-            # Add connections if possible, or add a export a port mapping for calling level
-            if can_resolve_src and can_resolve_dst:
-                self.add_connection(src_actor_port, dst_actor_port)
-            elif can_resolve_dst:
-                # Add mapping from component inport to internal actors/components
-                if type(dst_actor_port) is not list:
-                    dst_actor_port = [dst_actor_port]
-                export_mappings['in'].setdefault(src_actor_port, []).extend(dst_actor_port)
-            else:
-                # Add mapping from internal actor/component to component outport
-                export_mappings['out'][dst_actor_port] = src_actor_port
+            in_mapping, out_mapping = self.create_connection(c, namespace, mappings)
+            export_mappings['in'].update(in_mapping)
+            export_mappings['out'].update(out_mapping)
 
         return export_mappings
 
