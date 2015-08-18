@@ -33,7 +33,7 @@ class Checker(object):
         self.ds = DocumentationStore()
         self.cs_info = cs_info
         self.constants = self.cs_info['constants']
-        self.local_actors = self.cs_info['components']
+        self.comp_defs = self.cs_info['components']
         self.errors = []
         self.warnings = []
         self.check()
@@ -55,7 +55,7 @@ class Checker(object):
         Generate error and warning issues as they are encountered.
         """
         self.check_constants()
-        for comp in self.local_actors.values():
+        for comp in self.comp_defs.values():
             self.check_component(comp)
         self.check_structure(self.cs_info['structure'])
 
@@ -73,8 +73,8 @@ class Checker(object):
         Get the actor/component definition from the docstore.
         For local components, let the docstore generate the definition.
         """
-        if actor_type in self.local_actors:
-            return self.ds.component_docs("local."+actor_type, self.local_actors[actor_type])
+        if actor_type in self.comp_defs:
+            return self.ds.component_docs("local."+actor_type, self.comp_defs[actor_type])
         return self.ds.actor_docs(actor_type)
 
     def dbg_lines(self, s):
