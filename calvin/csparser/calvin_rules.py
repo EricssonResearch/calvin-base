@@ -61,7 +61,7 @@ def t_DOCSTRING(t):
     t.value = t.value.strip(' \n\t')
     return t
 
-# FIXME: Give some thought as to wether this should be greedy or not
+# FIXME: Strings need a better definition
 def t_STRING(t):
     r'!?".*?"'
     is_raw = False
