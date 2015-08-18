@@ -1,9 +1,9 @@
 component CountTimer(delay) -> integer {
 	counter : std.Counter()
 	delay : std.Delay(delay=delay)
-	
+
 	counter.integer > delay.token
-	delay.token > integer
+	delay.token > .integer
 }
 
 src : CountTimer(delay=0.5)

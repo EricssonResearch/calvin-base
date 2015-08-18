@@ -1,8 +1,8 @@
 component Wrapper() A -> B {
   sum: std.Sum()
-  
-  A > sum.integer
-  sum.integer > B
+
+  .A > sum.integer
+  sum.integer > .B
 }
 
 src:std.Counter()

@@ -5,7 +5,7 @@ component PrefixFile(prefix, file) -> out {
 
   filename.token > file.filename
   file.out > prep.in
-  prep.out > out
+  prep.out > .out
 }
 
 
@@ -14,7 +14,7 @@ component PrefixFileTwice(file, prefix) -> out {
   prefix : std.PrefixString(prefix=prefix)
 
   prefixedFile.out > prefix.in
-  prefix.out > out
+  prefix.out > .out
 }
 
 
