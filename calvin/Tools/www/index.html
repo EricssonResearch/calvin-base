@@ -109,6 +109,7 @@ table tr.active {background: #ccc;}
                 <th align="left">URI</th>
                 <th align="left">Control URI</th>
                 <th align="left">Destroy</th>
+                <th align="left">Trace</th>
             </table>
         </div>
 
@@ -130,7 +131,6 @@ table tr.active {background: #ccc;}
                 <th align="left">Type</th>
                 <th align="left">Peer</th>
                 <th align="left">Migrate</th>
-                <th align="left">Destroy</th>
             </table>
             <table id="actorPortsTable">
                 <th align="left">Port ID</th>
@@ -161,10 +161,7 @@ table tr.active {background: #ccc;}
 
 <div id="logData">
     <br>
-    Trace<br>
-    Node: <select id="traceSelector" name="traceSelector"></select>
-    <button onclick="startLog()">On</button>
-    <button onclick="stopLog()">Off</button>
+    Trace
     <br>
     <table id="logTable" align="left" width="1100">
         <th align="left">Timestamp</th>
@@ -186,7 +183,6 @@ var peers = []; // peers
 var applications = []; // applications
 var actors = []; // actors
 var ports = []; // actor ports
-var source; // EventSource for log stream
 
 var color = d3.scale.category20();
 
@@ -396,6 +392,7 @@ function peerObject(id)
 {
     this.id = id;
     this.actors = [];
+    this.source = null;
 }
 
 // return peer from id
@@ -514,11 +511,10 @@ function connect()
     ports = [];
 
     clearTable(document.getElementById("peersTable"));
-    clearCombo(document.getElementById("traceSelector"));
     clearCombo(document.getElementById("deploySelector"));
 
     if (connect_uri == null) {
-        connect_uri = prompt("Enter uri", "http://localhost:5001");
+        connect_uri = prompt("Enter <address>:<controlport>", "http://localhost:5001");
     }
     
     getPeerID(connect_uri);
@@ -546,7 +542,7 @@ function getPeerID(uri)
             }
         },
         error: function() {
-            console.log("Error");
+            alert("Failed to get id for " + uri);
         }
     });
 }
@@ -567,7 +563,9 @@ function getPeers(uri)
         success: function(data) {
             if (data) {
                 for (i = 0; i < data.length; i++) {
-                    getPeer(this.uri, data[i]);
+                    if (!findPeer(data[i])) {
+                        getPeer(this.uri, data[i]);
+                    }
                 }
             } else {
                 console.log("Empty result");
@@ -598,8 +596,6 @@ function getPeer(uri, id)
                 peer.control_uri = data.control_uri;
                 peers[peers.length] = peer;
                 showPeer(peer);
-                optTrace = document.getElementById("traceSelector")
-                optTrace.options.add(new Option(peer.id));
                 optDeploy = document.getElementById("deploySelector")
                 optDeploy.options.add(new Option(peer.id));
             } else {
@@ -822,6 +818,13 @@ function showPeer(peer)
     btnDestroy.value = 'Destroy';
     btnDestroy.setAttribute("onclick", "destroyPeer(this.id)");
     cell.appendChild(btnDestroy);
+
+    cell = row.insertCell(4);
+    var chkTrace = document.createElement("input");
+    chkTrace.type = "checkbox";
+    chkTrace.id = peer.id;
+    chkTrace.setAttribute("onclick", "trace(this.id)");
+    cell.appendChild(chkTrace);
 }
 
 // Add application to applicationsTable
@@ -830,7 +833,6 @@ function showApplication(application)
     var tableRef = document.getElementById('applicationsTable');
     var newRow = tableRef.insertRow();
     newRow.id = application.id;
-//    newRow.setAttribute("onclick", "drawApplication(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");")
     var cell = newRow.insertCell(0);
     cell.appendChild(document.createTextNode(application.id));
     cell = newRow.insertCell(1);
@@ -883,17 +885,8 @@ function showActor(actor)
     btnMigrate.id = actor.id;
     btnMigrate.className = 'btnMigrate';
     btnMigrate.value = 'Migrate';
-    btnMigrate.setAttribute("onclick", "migrate(this.id, selectNode.options[selectNode.selectedIndex].value)");
+    btnMigrate.setAttribute("onclick", "migrate(this.id)");
     cell.appendChild(btnMigrate);
-    // destroy
-    cell = newRow.insertCell(5);
-    var btnDestroy = document.createElement('input');
-    btnDestroy.type = 'button';
-    btnDestroy.id = actor.id;
-    btnDestroy.className = 'btnDestroyActor';
-    btnDestroy.value = 'Destroy';
-    btnDestroy.setAttribute("onclick", "destroyActor(this.id)");
-    cell.appendChild(btnDestroy);
 }
 
 // update actorPortsTable with available ports
@@ -976,35 +969,44 @@ function showActorPortPeers(port_id)
     }
 }
 
-// Migrate actor_id to peer_id
-function migrate(actor_id, peer_id)
+// Migrate actor_id
+function migrate(actor_id)
 {
-    actor = findActor(actor_id);
-    if (actor) {
-        node = findPeer(actor.peer_id);
-        if (node) {
-            $.ajax({
-                beforeSend: function() {
-                    startSpin();
-                },
-                complete: function() {
-                    stopSpin();
-                },
-                url: node.control_uri + '/actor/' + actor.id + '/migrate',
-                type: 'POST',
-                data: JSON.stringify({'peer_node_id': peer_id}),
-                success: function() {
-                    getActors();
-                },
-                error: function() {
-                    console.log("Error");
+    var tableRef = document.getElementById('actorsTable');
+    for (var x = 0; x < tableRef.rows.length; x++) {
+        if (tableRef.rows[x].cells[0].innerHTML == actor_id) {
+            combo = tableRef.rows[x].cells[4].childNodes[0];
+            peer_id = combo.options[combo.selectedIndex].text;
+
+            actor = findActor(actor_id);
+            if (actor) {
+                node = findPeer(actor.peer_id);
+                if (node) {
+                    $.ajax({
+                        beforeSend: function() {
+                            startSpin();
+                        },
+                        complete: function() {
+                            stopSpin();
+                        },
+                        url: node.control_uri + '/actor/' + actor.id + '/migrate',
+                        type: 'POST',
+                        data: JSON.stringify({'peer_node_id': peer_id}),
+                        success: function() {
+                            getActors();
+                        },
+                        error: function() {
+                            console.log("Error");
+                        }
+                    });
+                } else {
+                    console.log("No node with id: " + actor.peer_id);
                 }
-            });
-        } else {
-            console.log("No node with id: " + actor.peer_id);
+            } else {
+                console.log("No actor with id: " + actor_id);
+            }
+            break;
         }
-    } else {
-        console.log("No actor with id: " + actor_id);
     }
 }
 
@@ -1033,38 +1035,15 @@ function destroyApplication(application_id)
     }
 }
 
-// Destroy an actor
-function destroyActor(actor_id)
-{
-    actor = findActor(actor_id);
-    if (actor) {
-        peer = findPeer(actor.peer_id);
-        if (peer) {
-            $.ajax({
-                beforeSend: function() {
-                    startSpin();
-                },
-                complete: function() {
-                    stopSpin();
-                },
-                url: peer.control_uri + '/actor/' + actor_id,
-                type: 'DELETE',
-                success: function() {
-                    getActors();
-                },
-                error: function() {
-                    console.log("Error");
-                }
-            });
-        }
-    }
-}
-
 // Destroy peer_id
 function destroyPeer(peer_id)
 {
     peer = findPeer(peer_id);
     if (peer) {
+        if (peer.source != null) {
+            peer.source.removeEventListener("message", eventHandler, false);
+        }
+
         $.ajax({
             beforeSend: function() {
                 startSpin();
@@ -1086,29 +1065,26 @@ function destroyPeer(peer_id)
     }
 }
 
-// Start log stream
-function startLog()
+// Start/stop log stream
+function trace(peer_id)
 {
-    if (source) {
-        console.log("startLog() - TODO: handle multiple streams");
-        return;
-    }
-
-    optTrace = document.getElementById("traceSelector")
-    node_id = optTrace.options[optTrace.selectedIndex].value;
-    peer = findPeer(node_id);
+    peer = findPeer(peer_id);
     if (peer) {
-        source = new EventSource(peer.control_uri + '/log');
-        source.addEventListener("message", eventHandler, false);
-    }
-}
-
-// Stop log stream
-function stopLog()
-{
-    if (source) {
-        source.removeEventListener("message", eventHandler, false);
-        source = null;
+        var tableRef = document.getElementById('peersTable');
+        for (var x = 0; x < tableRef.rows.length; x++) {
+            if (tableRef.rows[x].cells[0].innerHTML == peer_id) {
+                if (tableRef.rows[x].cells[4].childNodes[0].checked == true) {
+                    peer.source = new EventSource(peer.control_uri + '/log');
+                    peer.source.addEventListener("message", eventHandler, false);
+                } else {
+                    peer.source.removeEventListener("message", eventHandler, false);
+                    peer.source = null;
+                }
+                return;
+            }
+        }
+    } else {
+        console.log("No peer with id: " + peer_id);
     }
 }
 
@@ -1176,8 +1152,9 @@ jQuery(document).ready(function() {
         var file = fileInput.files[0];
         var reader = new FileReader();
         document.getElementById('deploy_name').value = file.name.split(".")[0];
+
         reader.onload = function(e) {
-            fileDisplayArea.innerText = reader.result;
+            fileDisplayArea.innerHTML = e.target.result;
         }
 
         reader.readAsText(file);
@@ -1187,10 +1164,7 @@ jQuery(document).ready(function() {
     jQuery('.tabs .tab-links a').on('click', function(e)  {
         var currentAttrValue = jQuery(this).attr('href');
 
-        if (currentAttrValue == "#tabPeers") {
-            connect();
-        }
-        else if (currentAttrValue == "#tabApplications") {
+        if (currentAttrValue == "#tabApplications") {
             getApplications();
         } else if (currentAttrValue == "#tabActors") {
             getActors();
