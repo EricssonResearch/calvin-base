@@ -5,9 +5,9 @@
 
     $ python setup.py install
 
-### Run script 'test.calvin'
+### Run script 'test.calvin' on localhost
 
-    $ csdeploy test.calvin
+    $ csrun --host localhost test.calvin
 
 ### Install all components in the script to usr namespace
 
