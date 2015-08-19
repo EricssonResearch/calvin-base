@@ -22,8 +22,8 @@ from calvin.runtime.south.plugins.transports import base_transport
 
 _log = calvinlogger.get_logger(__name__)
 
-_join_request_reply = {'cmd': 'join_reply', 'id': None, 'sid': None, 'serializer': None}
-_join_request = {'cmd': 'join_request', 'id': None, 'sid': None, 'serializers': []}
+_join_request_reply = {'cmd': 'JOIN_REPLY', 'id': None, 'sid': None, 'serializer': None}
+_join_request = {'cmd': 'JOIN_REQUEST', 'id': None, 'sid': None, 'serializers': []}
 
 
 class CalvinTransport(base_transport.BaseTransport):
@@ -109,7 +109,7 @@ class CalvinTransport(base_transport.BaseTransport):
             data_obj = self._get_join_coder().decode(data)
             coder_name = None
             # Verify package
-            if 'cmd' not in data_obj or data_obj['cmd'] != 'join_request' or \
+            if 'cmd' not in data_obj or data_obj['cmd'] != 'JOIN_REQUEST' or \
                'serializers' not in data_obj or 'id' not in data_obj or 'sid' not in data_obj:
                 raise Exception('Not a valid package "%s"' % data_obj)
 
