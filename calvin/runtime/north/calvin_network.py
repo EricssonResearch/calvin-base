@@ -137,7 +137,8 @@ class CalvinNetwork(object):
                 # Get a dictionary of schemas -> transport factory
                 schema_objects = self.transport_modules[m].register(self.node.id,
                                                                     {'join_finished': [CalvinCB(self.join_finished)],
-                                                                     'data_received': [self.recv_handler]},
+                                                                     'data_received': [self.recv_handler],
+                                                                     'peer_disconnected': [CalvinCB(self.peer_disconnected)]},
                                                                     schemas, formats)
             except:
                 _log.debug("Could not register transport plugin %s" % (m,), exc_info=True)
@@ -301,6 +302,9 @@ class CalvinNetwork(object):
         # join the peer node
         _log.debug("Send join request for (%s, %s) CB: %s" % (key, value, callback))
         self.join([value['uri']], callback, [key])
+
+    def peer_disconnected(self, link, rt_id, reason):
+        self.link_remove(rt_id)
 
     def link_remove(self, peer_id):
         """ Removes a link to peer id """
