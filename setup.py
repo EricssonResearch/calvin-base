@@ -70,7 +70,8 @@ setup(name='calvin',
               'csdocs=calvin.Tools.calvindoc:main',
               'cscompile=calvin.Tools.cscompiler:main',
               'csinstall=calvin.Tools.csinstaller:main',
-              'csweb=calvin.Tools.www.csweb:main'
+              'csweb=calvin.Tools.www.csweb:main',
+              'csviz=calvin.Tools.csviz:main'
           ]
       }
       )
