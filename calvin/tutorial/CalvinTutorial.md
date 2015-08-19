@@ -7,7 +7,7 @@
 
 ### Run script 'test.calvin' on localhost
 
-    $ csrun --host localhost test.calvin
+    $ csruntime --host localhost test.calvin
 
 ### Install all components in the script to usr namespace
 

@@ -65,7 +65,7 @@ setup(name='calvin',
       },
       entry_points={
           'console_scripts': [
-              'csrun=calvin.Tools.csrun:main',
+              'csruntime=calvin.Tools.csruntime:main',
               'cscontrol=calvin.Tools.cscontrol:main',
               'csdocs=calvin.Tools.calvindoc:main',
               'cscompile=calvin.Tools.cscompiler:main',

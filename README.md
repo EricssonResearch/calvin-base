@@ -33,7 +33,7 @@ Alternatively, install the requirements using `pip`
 
 To verify a working installation, try
 
-    $ csrun --host localhost calvin/scripts/test1.calvin
+    $ csruntime --host localhost calvin/scripts/test1.calvin
 
 This should produced an output similar to this:
 
@@ -52,7 +52,7 @@ The exact output may vary; the number of lines and the UUID of the actor will mo
 
 It is also possible to start a runtime without deploying an application to it,
 
-    $ csrun --start-only --host <address> --controlport 5001 --port 5000 --keep-alive
+    $ csruntime --start-only --host <address> --controlport 5001 --port 5000 --keep-alive
 
 Applications can then be deployed remotely using
 
@@ -69,7 +69,7 @@ Alternatively, a nicer way of doing it is using the web interface, described nex
 
 Start a runtime
 
-    $ csrun --host localhost --controlport 5001 --port 5000 --keep-alive
+    $ csruntime --host localhost --controlport 5001 --port 5000 --keep-alive
 
 Start web server
 
