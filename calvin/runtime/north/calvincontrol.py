@@ -27,6 +27,7 @@ from urlparse import urlparse
 
 _log = get_logger(__name__)
 
+uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
 control_api_doc = ""
 # control_api_doc += \
@@ -63,7 +64,7 @@ control_api_doc += \
         "uri": "calvinip://<address>:<port>"
     }
 """
-re_get_node = re.compile(r"GET /node/((NODE_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+re_get_node = re.compile(r"GET /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
 """
@@ -93,7 +94,7 @@ control_api_doc += \
          "name": <name or id of this application>
     }
 """
-re_get_application = re.compile(r"GET /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+re_get_application = re.compile(r"GET /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
 """
@@ -101,7 +102,7 @@ control_api_doc += \
     Stop application (only applications launched from this node)
     Response: {"result: "OK"}
 """
-re_del_application = re.compile(r"DELETE /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+re_del_application = re.compile(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
 """
@@ -138,7 +139,7 @@ control_api_doc += \
         "outports": list of outports
      }
 """
-re_get_actor = re.compile(r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+re_get_actor = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
 """
@@ -146,7 +147,7 @@ control_api_doc += \
     Delete actor
     Response: {"result": "OK"}
 """
-re_del_actor = re.compile(r"DELETE /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+re_del_actor = re.compile(r"DELETE /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
 """
@@ -154,7 +155,7 @@ control_api_doc += \
     Some actor store statistics on inputs and outputs, this reports these. Not always present.
     Repsonse: Depends on actor
 """
-re_get_actor_report = re.compile(r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/report\sHTTP/1")
+re_get_actor_report = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report\sHTTP/1")
 
 control_api_doc += \
 """
@@ -163,7 +164,7 @@ control_api_doc += \
     Body: {"peer_node_id": <node-id>}
     Response: {"result": "ACK"}
 """
-re_post_actor_migrate = re.compile(r"POST /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/migrate\sHTTP/1")
+re_post_actor_migrate = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
 
 control_api_doc += \
 """
@@ -171,14 +172,14 @@ control_api_doc += \
     DEPRECATED. Disables an actor
     Response: {"result": "OK"}
 """
-re_post_actor_disable = re.compile(r"POST /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/disable\sHTTP/1")
+re_post_actor_disable = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/disable\sHTTP/1")
 
 # control_api_doc += \
 """
     GET /actor/{actor-id}/port/{port-id}
     Broken. Get information on port {port-id} of actor {actor-id}
 """
-re_get_port = re.compile(r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/port/((PORT_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+re_get_port = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
 """
