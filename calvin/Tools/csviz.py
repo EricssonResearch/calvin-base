@@ -148,7 +148,7 @@ class AppViz(Viz):
 class ScriptViz(AppViz):
     """docstring for ScriptViz"""
     def __init__(self, ir):
-        comp_defs = {c['name']:c for c in ir['components']} if 'components' in ir else {}
+        comp_defs = ir['components'] if 'components' in ir else {}
         self.actors = [ActorViz(name, **args) for name, args in ir['structure']['actors'].iteritems() if '.' in args['actor_type']]
         self.links = [LinkViz(link) for link in ir['structure']['connections'] if link['src'] and link['dst']]
         self.components = [CompViz(name, args['actor_type'], comp_defs[args['actor_type']]) for name, args in ir['structure']['actors'].iteritems() if args['actor_type'] in comp_defs]
