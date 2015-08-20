@@ -17,10 +17,10 @@ detailed information, or continue reading.
 ## New in this version
 
  - New command line commands:
-     - `csruntime` to start runtime
-     - `cscontrol` to send commands and deploy applications to runtime
-     - `csviz` to generate a graphical representation of an application
-     - `csdeploy` is obsolete and has been removed
+   - `csruntime` to start runtime
+   - `cscontrol` to send commands and deploy applications to runtime
+   - `csviz` to generate a graphical representation of an application
+   - `csdeploy` is obsolete and has been removed
 
  - Calvin script changes:
    - JSON types: any valid JSON can be used as values and constants in scripts (and actors) __NOTE__: This introduces reserved word `false`, `true`, `null`.
@@ -45,8 +45,8 @@ component DelayedCounter(delay) -> out {
 }
 ```
 
-  - Internal changes:
-      - Extended storage with set operations & index.
+ - Internal changes:
+   - Extended storage with set operations & index.
 
 ## Quick start
 
@@ -85,7 +85,7 @@ The exact output may vary; the number of lines and the UUID of the actor will mo
 
 It is also possible to start a runtime without deploying an application to it,
 
-    $ csruntime --start-only --host <address> --controlport 5001 --port 5000 --keep-alive
+    $ csruntime --host <address> --controlport <controlport> --port <port> --keep-alive
 
 Applications can then be deployed remotely using
 
@@ -170,7 +170,7 @@ Using your favorite editor, create a file named `myfirst.calvin` containing the 
 
 Save the file, and deploy and run the program (assuming you have a runtime running on localhost):
 
-    $ csdeploy http://localhost:5001 myfirst.calvin
+    $ cscontrol http://localhost:5001 myfirst.calvin
 
 The output should be identical to the earlier example.
 
