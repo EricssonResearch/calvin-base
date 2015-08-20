@@ -40,7 +40,8 @@ setup(name='calvin',
           'Twisted>=15.0.0',
           'requests >= 2.6.0',
           'infi.traceback>=0.3.11',
-          'wrapt==1.10.2'
+          'wrapt==1.10.2',
+          'pyserial>=2.6'
       ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
