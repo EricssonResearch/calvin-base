@@ -11,9 +11,42 @@ implementation, and an app developer should not have to worry about
 communication protocols or hardware specifics (but will not stop you from
 doing it if you want to.)
 
-
 See the [wiki](https://github.com/EricssonResearch/calvin-base/wiki) for more
 detailed information, or continue reading.
+
+## New in this version
+
+ - New command line commands:
+     - `csruntime` to start runtime
+     - `cscontrol` to send commands and deploy applications to runtime
+     - `csviz` to generate a graphical representation of an application
+     - `csdeploy` is obsolete and has been removed
+
+ - Calvin script changes:
+     - JSON types: any valid JSON can be used as values and constants in scripts (and actors) __NOTE__: This introduces reserved word `false`, `true`, `null`.
+     - Constants: use `define` to create constants in scripts, e.g.
+```
+define DELAY = 1
+
+actor1 : std.Delay(delay=DELAY)
+actor2 : std.Delay(delay=DELAY)
+
+```
+     - Constant port values: values can be used to send constant values to a port, e.g. `"data.txt" > src.filename`. __NOTE__: There will then _always_ be a token available, so the actor must be able to handle this correctly.
+
+     - Component ports prefixed with '.' when used
+```
+component DelayedCounter(delay) -> out {
+   counter : std.Counter()
+   delay : std.Delay(delay=delay)
+
+   counter.integer > delay.token
+   delay.token > .out
+}
+```
+
+  - Internal changes:
+      - Extended storage with set operations & index.
 
 ## Quick start
 
@@ -33,7 +66,7 @@ Alternatively, install the requirements using `pip`
 
 To verify a working installation, try
 
-    $ csdeploy calvin/scripts/test1.calvin
+    $ csruntime --host localhost calvin/scripts/test1.calvin
 
 This should produced an output similar to this:
 
@@ -52,16 +85,16 @@ The exact output may vary; the number of lines and the UUID of the actor will mo
 
 It is also possible to start a runtime without deploying an application to it,
 
-    $ csdeploy --start-only --host <address> --controlport 5001 --port 5000 --keep-alive
+    $ csruntime --start-only --host <address> --controlport 5001 --port 5000 --keep-alive
 
 Applications can then be deployed remotely using
 
-    $ csdeploy --deploy-only --host <address> --controlport 5001 --port 5000 <script-file>
+    $ cscontrol http://<address>:<controlport> deploy <script-file>
     Deployed application <app id>
 
 and stopped with 
 
-    $ csdeploy --host <address> --controlport 5001 --port 5000 --kill <app id>
+    $ cscontrol http://<address>:<controlport> applications delete <app id>
 
 Alternatively, a nicer way of doing it is using the web interface, described next.
 
@@ -69,7 +102,7 @@ Alternatively, a nicer way of doing it is using the web interface, described nex
 
 Start a runtime
 
-    $ csdeploy --start-only --host localhost --controlport 5001 --port 5000 --keep-alive
+    $ csruntime --host localhost --controlport 5001 --port 5000 --keep-alive
 
 Start web server
 
@@ -90,12 +123,22 @@ applications can also be stopped here.
 
 ### Migration
 
-Once you have two runtimes up and running, executing the following will allow you to migrate actors between them;
+Once you have to runtimes up and running, they can be joined together to form a network with
 
-    $ csdeploy --host <address> --port <port> --peer calvinip://<other node address>:<other node port>
+    $ cscontrol http://<first runtime address>:<controlport> nodes add calvinip://<other runtime address>:<port>
 
 Deploy an application to one of them (from the command line or the web interface) and visit the `Actors` tab
 in the web interface. It should now be possible to select an actor and migrate it to the other node.
+
+Alternatively, this can be done from the command line using the cscontrol utility:
+
+    $ cscontrol http://<first runtime address>:<controlport> actor migrate <actor id> <other runtime id>
+
+Where the necessary information (runtime id, actor id) can be gathered using the same utility. USe
+
+    $ cscontrol --help
+
+for more information. Note that the control uri is mandatory even for most of the help commands.
 
 ### Testing
 
@@ -125,9 +168,9 @@ Using your favorite editor, create a file named `myfirst.calvin` containing the 
 
     source.integer > output.token
 
-Save the file, and deploy and run the program
+Save the file, and deploy and run the program (assuming you have a runtime running on localhost):
 
-    $ csdeploy myfirst.calvin
+    $ csdeploy http://localhost:5001 myfirst.calvin
 
 The output should be identical to the earlier example.
 

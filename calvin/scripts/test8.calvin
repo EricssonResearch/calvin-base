@@ -2,18 +2,18 @@ component E() in -> out {
   f:std.Identity()
   g:std.Identity()
 
-  in > f.token
+  .in > f.token
   f.token > g.token
-  g.token > out
+  g.token > .out
 }
 
 component B() in -> out {
   d:std.Identity()
   e:E()
-  
-  in > d.token
+
+  .in > d.token
   d.token > e.in
-  e.out > out
+  e.out > .out
 }
 
 a:std.Counter()

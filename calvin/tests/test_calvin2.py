@@ -39,9 +39,11 @@ def setup_module(module):
     rt1 = dispatch_node("calvinip://localhost:5000", "http://localhost:5003")
     rt2 = dispatch_node("calvinip://localhost:5001", "http://localhost:5004")
     rt3 = dispatch_node("calvinip://localhost:5002", "http://localhost:5005")
+    time.sleep(.4)
     utils.peer_setup(rt1, ["calvinip://localhost:5001", "calvinip://localhost:5002"])
     utils.peer_setup(rt2, ["calvinip://localhost:5000", "calvinip://localhost:5002"])
     utils.peer_setup(rt3, ["calvinip://localhost:5000", "calvinip://localhost:5001"])
+    time.sleep(.4)
 
 def teardown_module(module):
     global rt1
@@ -50,10 +52,10 @@ def teardown_module(module):
     utils.quit(rt1)
     utils.quit(rt2)
     utils.quit(rt3)
-    time.sleep(0.2)
+    time.sleep(0.4)
     for p in multiprocessing.active_children():
         p.terminate()
-    time.sleep(0.2)
+    time.sleep(0.4)
 
 class CalvinTestBase(unittest.TestCase):
 
@@ -77,7 +79,7 @@ class TestConnections(CalvinTestBase):
 
         utils.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(1)
+        time.sleep(.5)
 
         actual = utils.report(self.rt1, snk)
 
@@ -174,7 +176,6 @@ class TestScripts(CalvinTestBase):
         self.assert_lists_equal(range(1, 20), actual)
 
 
-@unittest.skip("no migrate")
 class TestStateMigration(CalvinTestBase):
 
     def testSimpleState(self):
@@ -276,7 +277,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         utils.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         actual = utils.report(self.rt1, snk)
 
@@ -294,7 +295,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
-        time.sleep(0.5)
+        time.sleep(0.06)
 
         snk = d.actor_map['simple:snk']
         actual = utils.report(self.rt1, snk)
@@ -309,13 +310,12 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
         utils.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.5)
+        time.sleep(0.2)
 
         actual = utils.report(self.rt1, snk)
 
         self.assert_lists_equal(range(1, 11), actual)
 
-    @pytest.mark.xfail
     def test21(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt2, 'std.Identity', 'ity')
@@ -324,13 +324,12 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
         utils.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         actual = utils.report(self.rt3, snk)
 
         self.assert_lists_equal(range(1, 11), actual)
 
-    @pytest.mark.xfail
     def test22(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt2, 'std.Identity', 'ity')
@@ -339,7 +338,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
         utils.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
 
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         actual = utils.report(self.rt3, snk)
 
@@ -353,7 +352,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
         utils.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
 
-        time.sleep(0.5)
+        time.sleep(0.2)
 
         actual = utils.report(self.rt1, snk)
 
@@ -372,7 +371,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         app_info, errors, warnings = compiler.compile(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.4)
 
         snk = d.actor_map['simple:snk']
         actual = utils.report(self.rt1, snk)
@@ -390,7 +389,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt1, snk1, 'token', self.rt1.id, src, 'integer')
         utils.connect(self.rt1, snk2, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.5)
+        time.sleep(0.2)
 
         actual1 = utils.report(self.rt1, snk1)
         actual2 = utils.report(self.rt1, snk2)
@@ -411,7 +410,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         app_info, errors, warnings = compiler.compile(script, "test31")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         snk1 = d.actor_map['test31:snk1']
         snk2 = d.actor_map['test31:snk2']
@@ -435,14 +434,14 @@ class TestNullPorts(CalvinTestBase):
             snk  : io.StandardOut(store_tokens=1, quiet=1)
 
             src1.integer > join.token_1
-            src2.null > join.token_2
+            src2.void > join.token_2
             join.token > snk.token
         """
         app_info, errors, warnings = compiler.compile(script, "testVoidActor")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.4)
 
         snk = d.actor_map['testVoidActor:snk']
         actual = utils.report(self.rt1, snk)
@@ -457,7 +456,7 @@ class TestNullPorts(CalvinTestBase):
             term : std.Terminator()
             snk  : io.StandardOut(store_tokens=1, quiet=1)
 
-            src.integer > term.null
+            src.integer > term.void
             src.integer > snk.token
         """
         app_info, errors, warnings = compiler.compile(script, "testTerminatorActor")
@@ -490,7 +489,7 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.05)
 
         snk = d.actor_map['testBadOp:snk']
         actual = utils.report(self.rt1, snk)
@@ -513,7 +512,7 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         snk = d.actor_map['testEqual:snk']
         actual = utils.report(self.rt1, snk)
@@ -536,7 +535,7 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         snk = d.actor_map['testGreaterThanOrEqual:snk']
         actual = utils.report(self.rt1, snk)
@@ -558,14 +557,14 @@ class TestSelect(CalvinTestBase):
 
             src.integer > route.data
             const.token > route.select
-            route.true  > snk.token
-            route.false > term.null
+            route.case_true  > snk.token
+            route.case_false > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testTrue")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.2)
 
         snk = d.actor_map['testTrue:snk']
         actual = utils.report(self.rt1, snk)
@@ -583,8 +582,8 @@ class TestSelect(CalvinTestBase):
 
             src.integer > route.data
             const.token > route.select
-            route.true  > term.null
-            route.false > snk.token
+            route.case_true  > term.void
+            route.case_false > snk.token
         """
         app_info, errors, warnings = compiler.compile(script, "testFalse")
         print errors
@@ -608,8 +607,8 @@ class TestSelect(CalvinTestBase):
 
             src.integer > route.data
             const.token > route.select
-            route.true  > term.null
-            route.false > snk.token
+            route.case_true  > term.void
+            route.case_false > snk.token
         """
         app_info, errors, warnings = compiler.compile(script, "testBadSelect")
         print errors
@@ -637,8 +636,8 @@ class TestDeselect(CalvinTestBase):
             ds      : std.Deselect()
             snk     : io.StandardOut(store_tokens=1, quiet=1)
 
-            const_0.token > ds.false
-            const_1.token > ds.true
+            const_0.token > ds.case_false
+            const_1.token > ds.case_true
             src.integer > comp.a
             src.integer > const_5.in
             const_5.out > comp.b
@@ -667,8 +666,8 @@ class TestDeselect(CalvinTestBase):
             ds      : std.Deselect()
             snk     : io.StandardOut(store_tokens=1, quiet=1)
 
-            const_0.token > ds.true
-            const_1.token > ds.false
+            const_0.token > ds.case_true
+            const_1.token > ds.case_false
             src.integer > comp.a
             src.integer > const_5.in
             const_5.out > comp.b
@@ -695,8 +694,8 @@ class TestDeselect(CalvinTestBase):
             ds      : std.Deselect()
             snk     : io.StandardOut(store_tokens=1, quiet=1)
 
-            const_0.token > ds.false
-            src.integer > ds.true
+            const_0.token > ds.case_false
+            src.integer > ds.case_true
             const_0.token > const_5.in
             const_5.out > ds.select
             ds.data > snk.token
@@ -733,7 +732,7 @@ class TestLineJoin(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(1)
 
         snk = d.actor_map['testBasicJoin:snk']
         actual = utils.report(self.rt1, snk)
@@ -808,13 +807,13 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.match    > snk.token
-            regex.no_match > term.null
+            regex.no_match > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexMatch")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexMatch:snk']
         actual = utils.report(self.rt1, snk)
@@ -832,13 +831,13 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.no_match > snk.token
-            regex.match    > term.null
+            regex.match    > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexNoMatch")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexNoMatch:snk']
         actual = utils.report(self.rt1, snk)
@@ -855,13 +854,13 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.match    > snk.token
-            regex.no_match > term.null
+            regex.no_match > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexCapture")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexCapture:snk']
         actual = utils.report(self.rt1, snk)
@@ -878,13 +877,13 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.match    > snk.token
-            regex.no_match > term.null
+            regex.no_match > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexMultiCapture")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexMultiCapture:snk']
         actual = utils.report(self.rt1, snk)
@@ -902,16 +901,313 @@ class TestRegex(CalvinTestBase):
 
             src.token      > regex.text
             regex.no_match > snk.token
-            regex.match    > term.null
+            regex.match    > term.void
         """
         app_info, errors, warnings = compiler.compile(script, "testRegexCaptureNoMatch")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        time.sleep(.1)
 
         snk = d.actor_map['testRegexCaptureNoMatch:snk']
         actual = utils.report(self.rt1, snk)
         expected = ["x24.1632"]
 
         self.assert_lists_equal(expected, actual, min_length=1)
+
+@pytest.mark.essential
+class TestConstantAsArguments(CalvinTestBase):
+
+    def testConstant(self):
+        script = """
+            define FOO = 42
+            src   : std.Constant(data=FOO, n=10)
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.token > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstant")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstant:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = [42]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testConstantRecursive(self):
+        script = """
+            define FOO = BAR
+            define BAR = 42
+            src   : std.Constant(data=FOO, n=10)
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.token > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstantRecursive")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstantRecursive:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = [42]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+
+@pytest.mark.essential
+class TestConstantOnPort(CalvinTestBase):
+
+    def testLiteralOnPort(self):
+        script = """
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            42 > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testLiteralOnPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testLiteralOnPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = [42]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testConstantOnPort(self):
+        script = """
+            define FOO = "Hello"
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            FOO > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstantOnPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstantOnPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["Hello"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testConstantRecursiveOnPort(self):
+        script = """
+            define FOO = BAR
+            define BAR = "yay"
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            FOO > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstantRecursiveOnPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstantRecursiveOnPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["yay"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+
+@pytest.mark.essential
+class TestConstantAndComponents(CalvinTestBase):
+
+    def testLiteralOnCompPort(self):
+        script = """
+            component Foo() -> out {
+                i:std.Stringify()
+                42 > i.in
+                i.out > .out
+            }
+            src   : Foo()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.out > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testLiteralOnCompPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testLiteralOnCompPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["42"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testConstantOnCompPort(self):
+        script = """
+            define MEANING = 42
+            component Foo() -> out {
+                i:std.Stringify()
+                MEANING > i.in
+                i.out > .out
+            }
+            src   : Foo()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.out > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testConstantOnCompPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testConstantOnCompPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["42"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+    def testStringConstantOnCompPort(self):
+        script = """
+            define MEANING = "42"
+            component Foo() -> out {
+                i:std.Identity()
+                MEANING > i.token
+                i.token > .out
+            }
+            src   : Foo()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.out > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testStringConstantOnCompPort")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testStringConstantOnCompPort:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["42"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+@pytest.mark.essential
+class TestConstantAndComponentsArguments(CalvinTestBase):
+
+    def testComponentArgument(self):
+        script = """
+        component Count(len) -> seq {
+            src : std.Constant(data="hup", n=len)
+            src.token > .seq
+        }
+        src : Count(len=5)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentArgument")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentArgument:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*5
+
+        self.assert_lists_equal(expected, actual, min_length=5)
+
+    def testComponentConstantArgument(self):
+        script = """
+        define FOO = 5
+        component Count(len) -> seq {
+            src : std.Constant(data="hup", n=len)
+            src.token > .seq
+        }
+        src : Count(len=FOO)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgument")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentConstantArgument:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*5
+
+        self.assert_lists_equal(expected, actual, min_length=5)
+
+
+
+    def testComponentConstantArgumentDirect(self):
+        script = """
+        define FOO = 10
+        component Count() -> seq {
+         src : std.Constant(data="hup", n=FOO)
+         src.token > .seq
+        }
+        src : Count()
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgumentDirect")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentConstantArgumentDirect:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+
+    def testComponentArgumentAsImplicitActor(self):
+        script = """
+        component Count(data) -> seq {
+            i : std.Identity()
+            data > i.token
+            i.token > .seq
+        }
+        src : Count(data="hup")
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentArgumentAsImplicitActor")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentArgumentAsImplicitActor:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+
+    def testComponentConstantArgumentAsImplicitActor(self):
+        script = """
+        define FOO = "hup"
+        component Count(data) -> seq {
+            i : std.Identity()
+            data > i.token
+            i.token > .seq
+        }
+        src : Count(data=FOO)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src.seq > snk.token
+        """
+
+        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgumentAsImplicitActor")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testComponentConstantArgumentAsImplicitActor:snk']
+        actual = utils.report(self.rt1, snk)
+        expected = ["hup"]*10
+
+        self.assert_lists_equal(expected, actual, min_length=10)

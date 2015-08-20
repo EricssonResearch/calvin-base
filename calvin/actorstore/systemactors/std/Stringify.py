@@ -32,7 +32,7 @@ class Stringify(Actor):
 
     @condition(['in'], ['out'])
     def stringify(self, input):
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(str(input), ))
+        return ActionResult(production=(str(input), ))
 
     action_priority = (stringify, )
 

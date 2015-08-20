@@ -137,7 +137,7 @@ class CalvinNetwork(object):
                 # Get a dictionary of schemas -> transport factory
                 schema_objects = self.transport_modules[m].register(self.node.id,
                                                                     {'join_finished': [CalvinCB(self.join_finished)],
-                                                                     'data_recieved': [self.recv_handler]},
+                                                                     'data_received': [self.recv_handler]},
                                                                     schemas, formats)
             except:
                 _log.debug("Could not register transport plugin %s" % (m,), exc_info=True)

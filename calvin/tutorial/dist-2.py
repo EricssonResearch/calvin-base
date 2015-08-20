@@ -19,8 +19,10 @@ from calvin.utilities import utils
 import time
 
 # create two nodes, named node-1 and node-2, respectively
-node_1 = dispatch_node(uri="calvinip://localhost:5000", control_uri="http://localhost:5001", attributes={'name': 'node-1'})
-node_2 = dispatch_node(uri="calvinip://localhost:5002", control_uri="http://localhost:5003", attributes={'name': 'node-2'})
+node_1 = dispatch_node(uri="calvinip://localhost:5000", control_uri="http://localhost:5001",
+                       attributes=["node/affiliation/owner/me", "node/affiliation/name/node-1"])
+node_2 = dispatch_node(uri="calvinip://localhost:5002", control_uri="http://localhost:5003",
+                       attributes=["node/affiliation/owner/me", "node/affiliation/name/node-2"])
 
 # send 'new actor' command to node_2
 counter_id = utils.new_actor(node_2, 'std.Counter', 'counter')

@@ -36,8 +36,8 @@ class Events(object):
     """Events is the interface to events in the calvin runtime for the actor
     """
 
-    def __init__(self, node):
+    def __init__(self, actor, node):
         super(Events, self).__init__()
         self._node = node
         for m in __all__:
-            subsys[m].register(node, self)
+            subsys[m].register(node, actor, self)

@@ -23,7 +23,7 @@ def read_desc(fname):
 
 
 setup(name='calvin',
-      version='0.1',
+      version='0.2',
       url="http://github.com/EricssonResearch/calvin-base",
       license="Apache Software License",
       author="Ericsson Research",
@@ -36,11 +36,11 @@ setup(name='calvin',
       install_requires=[
           'colorlog>=2.6.0',
           'kademlia>=0.4',
-          'ply>=3.4',
+          'ply>=3.6',
           'Twisted>=15.0.0',
           'requests >= 2.6.0',
           'infi.traceback>=0.3.11',
-          ' wrapt==1.10.2'
+          'wrapt==1.10.2'
       ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
@@ -65,11 +65,13 @@ setup(name='calvin',
       },
       entry_points={
           'console_scripts': [
-              'csdeploy=calvin.Tools.deploy_app:main',
+              'csruntime=calvin.Tools.csruntime:main',
+              'cscontrol=calvin.Tools.cscontrol:main',
               'csdocs=calvin.Tools.calvindoc:main',
               'cscompile=calvin.Tools.cscompiler:main',
               'csinstall=calvin.Tools.csinstaller:main',
-              'csweb=calvin.Tools.www.csweb:main'
+              'csweb=calvin.Tools.www.csweb:main',
+              'csviz=calvin.Tools.csviz:main'
           ]
       }
       )

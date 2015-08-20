@@ -27,15 +27,15 @@ class Void(Actor):
     unconnected is not an option.
 
     Outputs:
-      null : A port that will never produce tokens
+      void : A port that will never produce tokens
     """
     @manage()
     def init(self):
         pass
 
-    @condition([], ['null'])
+    @condition([], ['void'])
     @guard(lambda self: False)
     def null(self):
-        return ActionResult(tokens_consumed=0, tokens_produced=1, production=(0, ))
+        return ActionResult(production=(0, ))
 
     action_priority = (null, )

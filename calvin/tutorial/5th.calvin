@@ -4,7 +4,7 @@ component DelayCounter(delay) -> integer {
   delay : std.Delay(delay=delay)
 
   source.integer > delay.token
-  delay.token > integer
+  delay.token > .integer
 }
 
 source : DelayCounter(delay=0.5)

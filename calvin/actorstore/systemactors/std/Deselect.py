@@ -19,37 +19,37 @@ from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
 
 class Deselect(Actor):
     """
-    Route token from 'true' or 'false' to 'data' port depending on 'select'
+    Route token from 'case_true' or 'case_false' to 'data' port depending on 'select'
 
     Deselect assumes 0 (false) or 1 (true) as input, values outside that
-    range will default to 'false'.
+    range will default to 'case_false'.
 
     Inputs:
-      false  : Token to output 'data' if select token is 0
-      true   : Token to output 'data' if select token is 1
+      case_false  : Token to output 'data' if select token is 0
+      case_true   : Token to output 'data' if select token is 1
       select : Select which inport will propagate to 'data' port
     Outputs:
-      data  : Token from 'true' or 'false' port
+      data  : Token from 'case_true' or 'case_false' port
     """
     @manage([])
     def init(self):
         pass
 
-    @condition(['select', 'false'], ['data'])
+    @condition(['select', 'case_false'], ['data'])
     @guard(lambda self, select, data : select == 0)
     def false_action(self, select, data):
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(data, ))
+        return ActionResult(production=(data, ))
 
-    @condition(['select', 'true'], ['data'])
+    @condition(['select', 'case_true'], ['data'])
     @guard(lambda self, select, data : select == 1)
     def true_action(self, select, data):
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(data, ))
+        return ActionResult(production=(data, ))
 
-    @condition(['select', 'false'], ['data'])
+    @condition(['select', 'case_false'], ['data'])
     @guard(lambda self, select, data : select not in [0, 1])
     def invalid_select_action(self, select, data):
         # Default to false if select value is not 0 or 1
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(data, ))
+        return ActionResult(production=(data, ))
 
 
     action_priority = (false_action, true_action, invalid_select_action)

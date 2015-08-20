@@ -18,6 +18,9 @@ from multiprocessing import Process
 # For trace
 import sys
 import trace
+import logging
+
+from calvin.calvinsys import CalvinSys
 
 from calvin.runtime.north import actormanager
 from calvin.runtime.north import appmanager
@@ -42,7 +45,7 @@ class Node(object):
     """A node of calvin
        the uri is used as server connection point
        the control_uri is the local console
-       attributes is a supplied dictionary of external defined attributes & capabilities
+       attributes is a supplied list of external defined attributes that will be used as the key when storing index
        such as name of node
     """
 
@@ -52,31 +55,23 @@ class Node(object):
         self.control_uri = control_uri
         self.attributes = attributes
         self.id = calvinuuid.uuid("NODE")
-        _log.debug("Calvin init 1")
         self.monitor = Event_Monitor()
-        _log.debug("Calvin init 2")
         self.am = actormanager.ActorManager(self)
-        _log.debug("Calvin init 3")
         self.control = calvincontrol.get_calvincontrol()
-        _log.debug("Calvin init 4")
-        self.sched = scheduler.Scheduler(self, self.am, self.monitor)
-        _log.debug("Calvin init 5")
+        _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
+        self.sched = _scheduler(self, self.am, self.monitor)
         self.control.start(node=self, uri=control_uri)
         self.async_msg_ids = {}
-        _log.debug("Calvin init 6")
         self.storage = storage.Storage()
         self.storage.start()
-        _log.debug("Calvin init 7")
         self.network = CalvinNetwork(self)
-        _log.debug("Calvin init 8")
         self.proto = CalvinProto(self, self.network)
         self.pm = PortManager(self, self.proto)
-        _log.debug("Calvin init 9")
         self.app_manager = appmanager.AppManager(self)
-        _log.debug("Calvin init 10")
         # The initialization that requires the main loop operating is deferred to start function
+        # FIXME: Don't use delayed call in calvin-tiny
         async.DelayedCall(0, self.start)
-        _log.debug("Calvin init 11")
+        # self.start()
 
     def insert_local_reply(self):
         msg_id = calvinuuid.uuid("LMSG")
@@ -134,6 +129,11 @@ class Node(object):
             self.app_manager.add(app_id, app_name, actor_id)
         return actor_id
 
+    def calvinsys(self, actor):
+        """Return a CalvinSys instance"""
+        # FIXME: We still need to sort out actor requirements vs. node capabilities and user permissions.
+        return CalvinSys(actor, self)
+
     #
     # Event loop
     #
@@ -154,31 +154,42 @@ class Node(object):
             _log.debug(args)
             self.sched.stop()
             self.control.stop()
-        _log.debug(self.storage.delete_node(self.id))
-        self.storage.stop(stopped)
+        def deleted_node(*args, **kwargs):
+            self.storage.stop(stopped)
+        self.storage.delete_node(self, cb=deleted_node)
 
 
-def create_node(uri, control_uri, trace_exec=False, attributes=None):
-    _log.debug("create_node")
+def create_node(uri, control_uri, attributes=None):
     n = Node(uri, control_uri, attributes)
-    _log.debug("create_node 2")
-    if trace_exec:
-        _, host = uri.split('://')
-        # Trace execution and dump in output file "<host>_<port>.trace"
-        with open("%s.trace" % (host, ), "w") as f:
-            tmp = sys.stdout
-            # Modules to ignore
-            modlist = ['fifo', 'calvin', 'actor', 'pickle', 'socket',
-                       'uuid', 'codecs', 'copy_reg', 'string_escape', '__init__']
-            with f as sys.stdout:
-                tracer = trace.Trace(trace=1, count=0, ignoremods=modlist)
-                tracer.runfunc(n.run)
-            sys.stdout = tmp
-    else:
-        n.run()
-        _log.info('Quitting node "%s"' % n.uri)
+    n.run()
+    _log.info('Quitting node "%s"' % n.uri)
+
+def create_tracing_node(uri, control_uri, attributes=None):
+    """
+    Same as create_node, but will trace every line of execution.
+    Creates trace dump in output file '<host>_<port>.trace'
+    """
+    n = Node(uri, control_uri, attributes)
+    _, host = uri.split('://')
+    with open("%s.trace" % (host, ), "w") as f:
+        tmp = sys.stdout
+        # Modules to ignore
+        ignore = [
+            'fifo', 'calvin', 'actor', 'pickle', 'socket',
+            'uuid', 'codecs', 'copy_reg', 'string_escape', '__init__',
+            'colorlog', 'posixpath', 'glob', 'genericpath', 'base',
+            'sre_parse', 'sre_compile', 'fdesc', 'posixbase', 'escape_codes',
+            'fnmatch', 'urlparse', 're', 'stat', 'six'
+        ]
+        with f as sys.stdout:
+            tracer = trace.Trace(trace=1, count=0, ignoremods=ignore)
+            tracer.runfunc(n.run)
+        sys.stdout = tmp
+    _log.info('Quitting node "%s"' % n.uri)
 
 
 def start_node(uri, control_uri, trace_exec=False, attributes=None):
-    p = Process(target=create_node, args=(uri, control_uri, trace_exec, attributes))
+    _create_node = create_tracing_node if trace_exec else create_node
+    p = Process(target=_create_node, args=(uri, control_uri, attributes))
+    p.daemon = True
     p.start()

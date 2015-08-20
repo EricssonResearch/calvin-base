@@ -103,7 +103,7 @@ class ServerBase(DatagramProtocol):
                         reactor.callLater(delay, self.send_it,
                                           response, address)
         except:
-            _log.exception("Error datagram recieved")
+            _log.exception("Error datagram received")
 
     def add_service(self, service, ip, port):
         self._services[service] = (ip, port)

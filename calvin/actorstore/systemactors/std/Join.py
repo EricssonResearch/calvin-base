@@ -32,11 +32,11 @@ class Join(Actor):
 
     @condition(['token_1'], ['token'])
     def port_one(self, input):
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(input, ))
+        return ActionResult(production=(input, ))
 
     @condition(['token_2'], ['token'])
     def port_two(self, input):
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(input, ))
+        return ActionResult(production=(input, ))
 
     action_priority = (port_one, port_two)
 

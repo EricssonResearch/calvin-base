@@ -1,6 +1,109 @@
 {
-    "components": [
-        {
+    "components": {
+        "B": {
+            "arg_identifiers": [], 
+            "dbg_line": 0, 
+            "docstring": "Someone(TM) should write some documentation for this component.", 
+            "inports": [
+                "in"
+            ], 
+            "name": "B", 
+            "outports": [
+                "out"
+            ], 
+            "structure": {
+                "actors": {
+                    "d": {
+                        "actor_type": "Identity", 
+                        "args": {
+                            "delay": [
+                                "VALUE", 
+                                0.1
+                            ]
+                        }, 
+                        "dbg_line": 27
+                    }, 
+                    "e": {
+                        "actor_type": "E", 
+                        "args": {}, 
+                        "dbg_line": 28
+                    }
+                }, 
+                "connections": [
+                    {
+                        "dbg_line": 30, 
+                        "dst": "e", 
+                        "dst_port": "in", 
+                        "src": ".", 
+                        "src_port": "in"
+                    }, 
+                    {
+                        "dbg_line": 31, 
+                        "dst": "d", 
+                        "dst_port": "token", 
+                        "src": "e", 
+                        "src_port": "out"
+                    }, 
+                    {
+                        "dbg_line": 32, 
+                        "dst": ".", 
+                        "dst_port": "out", 
+                        "src": "d", 
+                        "src_port": "token"
+                    }
+                ]
+            }
+        }, 
+        "E": {
+            "arg_identifiers": [], 
+            "dbg_line": 0, 
+            "docstring": "Someone(TM) should write some documentation for this component.", 
+            "inports": [
+                "in"
+            ], 
+            "name": "E", 
+            "outports": [
+                "out"
+            ], 
+            "structure": {
+                "actors": {
+                    "f": {
+                        "actor_type": "std.Identity", 
+                        "args": {}, 
+                        "dbg_line": 17
+                    }, 
+                    "g": {
+                        "actor_type": "std.Identity", 
+                        "args": {}, 
+                        "dbg_line": 18
+                    }
+                }, 
+                "connections": [
+                    {
+                        "dbg_line": 20, 
+                        "dst": "f", 
+                        "dst_port": "token", 
+                        "src": ".", 
+                        "src_port": "in"
+                    }, 
+                    {
+                        "dbg_line": 21, 
+                        "dst": "g", 
+                        "dst_port": "token", 
+                        "src": "f", 
+                        "src_port": "token"
+                    }, 
+                    {
+                        "dbg_line": 22, 
+                        "dst": ".", 
+                        "dst_port": "out", 
+                        "src": "g", 
+                        "src_port": "token"
+                    }
+                ]
+            }
+        }, 
+        "Identity": {
             "arg_identifiers": [
                 "delay"
             ], 
@@ -36,7 +139,7 @@
                         "dbg_line": 10, 
                         "dst": "id", 
                         "dst_port": "token", 
-                        "src": null, 
+                        "src": ".", 
                         "src_port": "token"
                     }, 
                     {
@@ -48,119 +151,17 @@
                     }, 
                     {
                         "dbg_line": 12, 
-                        "dst": null, 
+                        "dst": ".", 
                         "dst_port": "token", 
                         "src": "delay", 
                         "src_port": "token"
                     }
                 ]
             }
-        }, 
-        {
-            "arg_identifiers": [], 
-            "dbg_line": 0, 
-            "docstring": "Someone(TM) should write some documentation for this component.", 
-            "inports": [
-                "in"
-            ], 
-            "name": "E", 
-            "outports": [
-                "out"
-            ], 
-            "structure": {
-                "actors": {
-                    "f": {
-                        "actor_type": "std.Identity", 
-                        "args": {}, 
-                        "dbg_line": 17
-                    }, 
-                    "g": {
-                        "actor_type": "std.Identity", 
-                        "args": {}, 
-                        "dbg_line": 18
-                    }
-                }, 
-                "connections": [
-                    {
-                        "dbg_line": 20, 
-                        "dst": "f", 
-                        "dst_port": "token", 
-                        "src": null, 
-                        "src_port": "in"
-                    }, 
-                    {
-                        "dbg_line": 21, 
-                        "dst": "g", 
-                        "dst_port": "token", 
-                        "src": "f", 
-                        "src_port": "token"
-                    }, 
-                    {
-                        "dbg_line": 22, 
-                        "dst": null, 
-                        "dst_port": "out", 
-                        "src": "g", 
-                        "src_port": "token"
-                    }
-                ]
-            }
-        }, 
-        {
-            "arg_identifiers": [], 
-            "dbg_line": 0, 
-            "docstring": "Someone(TM) should write some documentation for this component.", 
-            "inports": [
-                "in"
-            ], 
-            "name": "B", 
-            "outports": [
-                "out"
-            ], 
-            "structure": {
-                "actors": {
-                    "d": {
-                        "actor_type": "Identity", 
-                        "args": {
-                            "delay": [
-                                "NUMBER", 
-                                0.1
-                            ]
-                        }, 
-                        "dbg_line": 27
-                    }, 
-                    "e": {
-                        "actor_type": "E", 
-                        "args": {}, 
-                        "dbg_line": 28
-                    }
-                }, 
-                "connections": [
-                    {
-                        "dbg_line": 30, 
-                        "dst": "e", 
-                        "dst_port": "in", 
-                        "src": null, 
-                        "src_port": "in"
-                    }, 
-                    {
-                        "dbg_line": 31, 
-                        "dst": "d", 
-                        "dst_port": "token", 
-                        "src": "e", 
-                        "src_port": "out"
-                    }, 
-                    {
-                        "dbg_line": 32, 
-                        "dst": null, 
-                        "dst_port": "out", 
-                        "src": "d", 
-                        "src_port": "token"
-                    }
-                ]
-            }
         }
-    ], 
-    "sourcefile": "tests/scripts/test9.calvin", 
+    }, 
+    "constants": {}, 
+    "sourcefile": "calvin/tests/scripts/test9.calvin", 
     "structure": {
         "actors": {
             "a": {

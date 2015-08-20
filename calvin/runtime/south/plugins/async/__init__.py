@@ -27,6 +27,7 @@ from calvin.utilities import calconfig
 # Spec
 _MODULES = {'async': ['DelayedCall', 'run_ioloop', 'stop_ioloop'],
             'filedescriptor': ['FD'],
+            'serialport': ['SerialPort'],
             'pipe': ['Pipe'],
             'defer': [],
             'threads': [],

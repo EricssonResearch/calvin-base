@@ -36,8 +36,8 @@ class Network(object):
     """Network is the network interface to the calvin runtime for the actor
     """
 
-    def __init__(self, node):
+    def __init__(self, actor, node):
         super(Network, self).__init__()
         self._node = node
         for m in __all__:
-            subsys[m].register(node, self)
+            subsys[m].register(node, actor, self)

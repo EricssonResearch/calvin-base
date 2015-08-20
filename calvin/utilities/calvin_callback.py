@@ -149,11 +149,11 @@ class CalvinCBClass(object):
         reply = {}
 
         if not name in self.__callbacks:
-            _log.debug("Execute callbacks for '%s' but none exist" % name)
-            tb_str = ''
-            for a in traceback.format_stack(limit=10)[:-1]:
-                tb_str += a
-            _log.debug('\n' + tb_str)
+            _log.debug("No callback registered for '%s'" % name)
+            # tb_str = ''
+            # for a in traceback.format_stack(limit=10)[:-1]:
+            #     tb_str += a
+            # _log.debug('\n' + tb_str)
             return reply
 
         # So we can change __callbacks from callbacks

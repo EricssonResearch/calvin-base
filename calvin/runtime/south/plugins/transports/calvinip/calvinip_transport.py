@@ -22,8 +22,8 @@ from calvin.runtime.south.plugins.transports import base_transport
 
 _log = calvinlogger.get_logger(__name__)
 
-_join_request_reply = {'cmd': 'join_reply', 'id': None, 'sid': None, 'serializer': None}
-_join_request = {'cmd': 'join_request', 'id': None, 'sid': None, 'serializers': []}
+_join_request_reply = {'cmd': 'JOIN_REPLY', 'id': None, 'sid': None, 'serializer': None}
+_join_request = {'cmd': 'JOIN_REQUEST', 'id': None, 'sid': None, 'serializers': []}
 
 
 class CalvinTransport(base_transport.BaseTransport):
@@ -37,15 +37,15 @@ class CalvinTransport(base_transport.BaseTransport):
         self._transport = transport(self._uri.hostname, self._uri.port, callbacks, proto=proto)
         self._rtt = 2000  # Init rt in ms
 
-        # TODO: This should be incomming param
+        # TODO: This should be incoming param
         self._verify_client = lambda x: True
 
-        self._incomming = proto is not None
-        if self._incomming:
+        self._incoming = proto is not None
+        if self._incoming:
             # TODO: Set timeout
             # Incomming connection timeout if no join
             self._transport.callback_register("disconnected", CalvinCB(self._disconnected))
-            self._transport.callback_register("data", CalvinCB(self._data_recieved))
+            self._transport.callback_register("data", CalvinCB(self._data_received))
 
     def connect(self, timeout=10):
         if self._transport.is_connected():
@@ -53,7 +53,7 @@ class CalvinTransport(base_transport.BaseTransport):
 
         self._transport.callback_register("connected", CalvinCB(self._send_join))
         self._transport.callback_register("disconnected", CalvinCB(self._disconnected))
-        self._transport.callback_register("data", CalvinCB(self._data_recieved))
+        self._transport.callback_register("data", CalvinCB(self._data_received))
         # TODO: set timeout
         self._transport.join()
 
@@ -109,7 +109,7 @@ class CalvinTransport(base_transport.BaseTransport):
             data_obj = self._get_join_coder().decode(data)
             coder_name = None
             # Verify package
-            if 'cmd' not in data_obj or data_obj['cmd'] != 'join_request' or \
+            if 'cmd' not in data_obj or data_obj['cmd'] != 'JOIN_REQUEST' or \
                'serializers' not in data_obj or 'id' not in data_obj or 'sid' not in data_obj:
                 raise Exception('Not a valid package "%s"' % data_obj)
 
@@ -164,10 +164,10 @@ class CalvinTransport(base_transport.BaseTransport):
         # TODO: unify reason
         self._callback_execute('peer_disconnected', self, self._remote_rt_id, reason)
 
-    def _data_recieved(self, data):
-        self._callback_execute('raw_data_recieved', self, data)
+    def _data_received(self, data):
+        self._callback_execute('raw_data_received', self, data)
         if self._remote_rt_id is None:
-            if self._incomming:
+            if self._incoming:
                 self._handle_join(data)
             else:
                 # We have not joined yet
@@ -181,7 +181,7 @@ class CalvinTransport(base_transport.BaseTransport):
             data_obj = self._coder.decode(data)
         except:
             _log.exception("Message decode failed")
-        self._callback_execute('data_recieved', self, data_obj)
+        self._callback_execute('data_received', self, data_obj)
 
 
 class CalvinServer(base_transport.BaseServer):

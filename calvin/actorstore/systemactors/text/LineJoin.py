@@ -22,8 +22,8 @@ class LineJoin(Actor):
     """
     Join strings into a text token using delimiter 'delim' (defaults to '\\n')
 
-    Consume consecutive strings until an end-of-stream (EOSToken) is recieved,
-    which triggers an output of the joined lines. After recieving the EOFToken,
+    Consume consecutive strings until an end-of-stream (EOSToken) is received,
+    which triggers an output of the joined lines. After receiving the EOFToken,
     the LineJoin is reset and ready for new lines to join.
 
     Inputs:
@@ -43,20 +43,20 @@ class LineJoin(Actor):
         #        Similarly, if self.text is not None => raise
         self.text = self.delim.join(self.lines)
         self.lines = []
-        return ActionResult(tokens_consumed=1, tokens_produced=0)
+        return ActionResult()
 
     @condition([], ['text'])
     @guard(lambda self: self.text is not None)
     def produce(self):
         text = self.text
         self.text = None
-        return ActionResult(tokens_consumed=0, tokens_produced=1, production=(text,))
+        return ActionResult(production=(text,))
 
     @condition(['line'], [])
     @guard(lambda self, token: self.text is None)
     def append(self, token):
         self.lines.append(token)
-        return ActionResult(tokens_consumed=1, tokens_produced=0)
+        return ActionResult()
 
     action_priority = (produce, append, )
 

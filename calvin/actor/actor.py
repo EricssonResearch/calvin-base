@@ -86,6 +86,9 @@ def condition(action_input=[], action_output=[]):
     #
     action_input = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_input]
     action_output = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_output]
+    contract_output = tuple(n for _, n in action_output)
+    tokens_produced = sum(contract_output)
+    tokens_consumed = sum([n for _, n in action_input])
 
     def wrap(action_method):
 
@@ -133,23 +136,44 @@ def condition(action_input=[], action_output=[]):
                 # Perform the action (N.B. the method may be wrapped in a guard)
                 #
                 action_result = action_method(self, *args)
-                _log.debug(action_result)
-            #
-            # Commit/rewind to the read from the FIFOs
-            #
-            for (portname, _) in action_input:
-                port = self.inports[portname]
-                port.commit_peek_as_read() if action_result.did_fire else port.peek_rewind()
 
-            if action_result.did_fire:
+            valid_production = False
+            if action_result.did_fire and (len(contract_output) == len(action_result.production)):
+                valid_production = True
+                for repeat, prod in zip(contract_output, action_result.production):
+                    if repeat > 1 and len(prod) != repeat:
+                        valid_production = False
+                        break
+
+            if action_result.did_fire and valid_production:
+                #
+                # Commit to the read from the FIFOs
+                #
+                for (portname, _) in action_input:
+                    self.inports[portname].commit_peek_as_read()
                 #
                 # Write the results from the action to the output port(s)
                 #
-                # FIXME: Make use of tokens_produced attribute in action_result
                 for (portname, repeat), retval in zip(action_output, action_result.production):
                     port = self.outports[portname]
                     for data in retval if repeat > 1 else [retval]:
                         port.write_token(data if isinstance(data, Token) else Token(data))
+                #
+                # Bookkeeping
+                #
+                action_result.tokens_consumed = tokens_consumed
+                action_result.tokens_produced = tokens_produced
+            else:
+                #
+                # Rewind the read from the FIFOs
+                #
+                for (portname, _) in action_input:
+                    self.inports[portname].peek_rewind()
+
+            if action_result.did_fire and not valid_production:
+                action = "%s.%s" % (self._type, action_method.__name__)
+                raise Exception("%s invalid production %s, expected %s" % (action, str(action_result.production), str(tuple(action_output))))
+
             return action_result
 
         return condition_wrapper
@@ -203,11 +227,11 @@ class ActionResult(object):
 
     """Return type from action and @guard"""
 
-    def __init__(self, did_fire=True, tokens_consumed=0, tokens_produced=0, production=()):
+    def __init__(self, did_fire=True, production=()):
         super(ActionResult, self).__init__()
         self.did_fire = did_fire
-        self.tokens_consumed = tokens_consumed
-        self.tokens_produced = tokens_produced
+        self.tokens_consumed = 0
+        self.tokens_produced = 0
         self.production = production
 
     def __str__(self):
@@ -298,12 +322,12 @@ class Actor(object):
 
     # What are the arguments, really?
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
-                 disable_state_checks=False):
+                 disable_state_checks=False, actor_id=None):
         """Should normally _not_ be overridden in subclasses."""
         super(Actor, self).__init__()
         self._type = actor_type
         self.name = name  # optional: human_readable_name
-        self.id = calvinuuid.uuid("ACTOR")
+        self.id = actor_id or calvinuuid.uuid("ACTOR")
         self._managed = set(('id', 'name'))
         self.calvinsys = None # CalvinSys(node)
         self.control = calvincontrol.get_calvincontrol()
@@ -348,11 +372,11 @@ class Actor(object):
         pass
 
     @verify_status([STATUS.LOADED])
-    def attach_API(self, api_name, api):
-        # FIXME: This should really go into a dict where each required API is granted
-        #        by the actor manager (if security allows), e.g.
-        #        self.calvinsys = {'event':evt, 'timer':tmr, 'socket':sck}
-        self.calvinsys = api
+    def attach_API(self, api_name, api_factory):
+        """Called during creation of actor with a callable api_factory."""
+        # FIXME: Resolve the required (calvin) APIs and attach them to the actor
+        #        See calvin_node::calvinsys
+        self.calvinsys = api_factory(self)
 
     def __str__(self):
         ip = ""
@@ -393,17 +417,24 @@ class Actor(object):
             self.fsm.transition_to(Actor.STATUS.PENDING)
         # Three non-patological options:
         # have inports, have outports, or have in- and outports
+
         if self.inports:
             for p in self.inports.values():
                 if not p.is_connected():
                     return
+
         if self.outports:
             for p in self.outports.values():
                 if not p.is_connected():
                     return
+
         # If we made it here, all ports are connected
         self.fsm.transition_to(Actor.STATUS.ENABLED)
         self.calvinsys.events.timer._trigger_loop()
+
+        # # Trigger us
+        # _log.debug("Connected trigger %s" % self._type)
+        # self.calvinsys._node.sched.trigger_loop(actor_ids=[self.id] + self.local_neighbors)
 
     @verify_status([STATUS.ENABLED, STATUS.PENDING])
     def did_disconnect(self, port):
@@ -411,16 +442,19 @@ class Actor(object):
         # If we happen to by in ENABLED, go to PENDING
         if self.fsm.state() == Actor.STATUS.ENABLED:
             self.fsm.transition_to(Actor.STATUS.PENDING)
+
         # Three non-patological options:
         # have inports, have outports, or have in- and outports
         if self.inports:
             for p in self.inports.values():
                 if p.is_connected():
                     return
+
         if self.outports:
             for p in self.outports.values():
                 if p.is_connected():
                     return
+
         # If we made it here, all ports are disconnected
         self.fsm.transition_to(Actor.STATUS.READY)
 
@@ -435,13 +469,20 @@ class Actor(object):
                 # Action firing should fire the first action that can fire,
                 # hence when fired start from the beginning
                 if action_result.did_fire:
+                    # FIXME: Make this a hook for the runtime too use, don't
+                    #        import and use calvin_control in actor
                     self.control.log_firing(
                         self.name,
                         action_method.__name__,
                         action_result.tokens_produced,
                         action_result.tokens_consumed,
                         action_result.production)
+                    _log.debug("Actor %s(%s) did fire %s -> %s" % (
+                        self._type, self.id,
+                        action_method.__name__,
+                        str(action_result)))
                     break
+
             if not action_result.did_fire:
                 # We reached the end of the list without ANY firing => return
                 return total_result
@@ -449,7 +490,6 @@ class Actor(object):
         raise Exception('Exit from fire should ALWAYS be from previous line.')
 
     def enabled(self):
-        self.calvinsys.events.timer._trigger_loop()
         return self.fsm.state() == Actor.STATUS.ENABLED
 
     # DEPRECATED: Only here for backwards compatibility
@@ -487,6 +527,7 @@ class Actor(object):
     def set_state(self, state):
         # Managed state handling
         self._managed = set(state['_managed'])
+
         for key in self._managed:
             if key not in self.__dict__:
                 self.__dict__[key] = state.pop(key)

@@ -40,12 +40,12 @@ class DummyAction(Actor):
     @condition(['token'], ['token'])
     @guard(is_even)
     def dummy_action(self, input):
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(input, ))
+        return ActionResult(production=(input, ))
 
     @condition(['token'], ['token'])
     @guard(is_odd)
     def verbose_action(self, input):
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=("(" + str(input) + ")", ))
+        return ActionResult(production=("(" + str(input) + ")", ))
 
     action_priority = (dummy_action, verbose_action)
 

@@ -1,13 +1,17 @@
 {
-    "components": [], 
-    "sourcefile": "tests/scripts/test1.calvin", 
+    "components": {}, 
+    "constants": {}, 
     "structure": {
         "actors": {
             "snk": {
                 "actor_type": "io.StandardOut", 
                 "args": {
+                    "quiet": [
+                        "VALUE", 
+                        1
+                    ], 
                     "store_tokens": [
-                        "NUMBER", 
+                        "VALUE", 
                         1
                     ]
                 }, 

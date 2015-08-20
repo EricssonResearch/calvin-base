@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.calvinsys import CalvinSys
 from calvin.actorstore.store import ActorStore
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
@@ -80,7 +79,7 @@ class ActorManager(object):
             else:
                 return a.id
 
-    def _new_actor(self, actor_type):
+    def _new_actor(self, actor_type, actor_id=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         (found, is_primitive, class_) = ActorStore().lookup(actor_type)
         if not found or not is_primitive:
@@ -88,10 +87,9 @@ class ActorManager(object):
             raise Exception("ERROR_NOT_FOUND")
         try:
             # Create a 'bare' instance of the actor
-            a = class_(actor_type)
-            # FIXME: Resolve the required (calvin) APIs and attach them to the actor
-            #        (if it has the required access rights)
-            a.attach_API("calvinsys", CalvinSys(self.node))
+            a = class_(actor_type, actor_id)
+            # Hand over a CalvinSys factory method to the actor.
+            a.attach_API("calvinsys", self.node.calvinsys)
         except Exception as e:
             _log.exception("")
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
@@ -118,7 +116,8 @@ class ActorManager(object):
     def _new_from_state(self, actor_type, state):
         """Return an restored actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type)
+            print repr(state)
+            a = self._new_actor(actor_type, actor_id=state['id'])
             a.set_state(state)
             self.node.pm.add_ports_of_actor(a)
             a.did_migrate()
@@ -158,7 +157,7 @@ class ActorManager(object):
         actor_type = actor._type
         ports = actor.connections(self.node.id)
         # Disconnect ports and continue in _migrate_disconnect
-        self.node.pm.disconnect(callback=CalvinCB(self._migrate_disconnected, 
+        self.node.pm.disconnect(callback=CalvinCB(self._migrate_disconnected,
                                                   actor=actor,
                                                   actor_type=actor_type,
                                                   ports=ports,
@@ -219,7 +218,7 @@ class ActorManager(object):
         """ Get called for each of the actor's ports when connecting, but callback should only be called once
             status: 'ACK'/'NACK'
             _callback: original callback
-            peer_port_ids: list of port ids kept in context between calls when *changed* by this function, 
+            peer_port_ids: list of port ids kept in context between calls when *changed* by this function,
                            do not replace it
         """
         # Send NACK if not already done it

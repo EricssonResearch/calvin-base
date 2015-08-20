@@ -53,10 +53,10 @@ class Compare(Actor):
     @condition(['a', 'b'], ['result'])
     @guard(lambda self, a, b: self.op is not None)
     def test(self, a, b):
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(1 if self.op(a, b) else 0, ))
+        return ActionResult(production=(1 if self.op(a, b) else 0, ))
 
     @condition(['a', 'b'], ['result'])
     def fail(self, a, b):
-        return ActionResult(tokens_consumed=2, tokens_produced=1, production=(0, ))
+        return ActionResult(production=(0, ))
 
     action_priority = (test, fail)

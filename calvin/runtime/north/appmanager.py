@@ -95,7 +95,10 @@ class AppManager(object):
     def _destroy_actor_cb(self, actor_id, value, application):
         """ Get actor callback """
         _log.debug("Destroy app peers actor cb %s" % actor_id)
-        application.update_node_info(value['node_id'], actor_id)
+        if 'node_id' in value:
+            application.update_node_info(value['node_id'], actor_id)
+        else:
+            application.update_node_info(None, actor_id)
         if application.complete_node_info():
             self._destroy_final(application)
 
@@ -103,9 +106,12 @@ class AppManager(object):
         """ Final destruction of the application on this node and send request to peers to also destroy the app """
         _log.debug("Destroy final \n%s\n%s" % (application.node_info, application.origin_node_id))
         for node_id, actor_ids in application.node_info.iteritems():
+            if not node_id:
+                continue
             # Inform peers to destroy their part of the application
             # FIXME interested in response, use a callback
             self._node.proto.app_destroy(node_id, None, application.id, actor_ids)
+
         if application.id in self.applications:
             del self.applications[application.id]
         elif application.origin_node_id not in application.node_info:

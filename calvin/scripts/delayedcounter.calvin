@@ -4,5 +4,5 @@ component DelayedCounter(delay) -> integer {
     delay : std.Delay(delay=delay)
 
     counter.integer > delay.token
-    delay.token > integer
+    delay.token > .integer
 }

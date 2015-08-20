@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import pytest
+import sys
 from calvin.calvinsys import CalvinSys
 from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
@@ -194,14 +195,16 @@ class ActorTester(object):
                     if not hasattr(actor, 'test_set'):
                         self.actors[a] = 'no_test'
                         continue
-                    actor.attach_API("calvinsys", CalvinSys(None))
+                    actor.attach_API("calvinsys", lambda a: CalvinSys(a, None))
                     actor.calvinsys.io.file = CalvinSysFileMock()
                     actor.calvinsys.events.timer = CalvinSysTimerMock()
                     actor.init(*actorclass.test_args, **actorclass.test_kwargs)
                     actor.setup_complete()
                 except Exception as e:
                     self.illegal_actors[a] = "Failed to instantiate"
-                    # print "Actor %s: %s" % (a, e)
+                    sys.stderr.write("Actor %s: %s" % (a, e))
+                    import traceback
+                    sys.stderr.write(''.join(traceback.format_exc()))
                     raise e
 
                 for inport in actor.inports.values():
@@ -328,7 +331,6 @@ def test_actors(actor="", show=False):
 
 
 if __name__ == '__main__':
-    import sys
     if len(sys.argv) > 1:
         show_results(test_actors(actor=sys.argv[1], show=True))
     else:

@@ -35,7 +35,7 @@ class FakeTransport(base_transport.BaseTransport):
         return coders.get("json")
 
     def send(self, payload, timeout=None):
-        self.peer._callback_execute('data_recieved', self.peer, payload)
+        self.peer._callback_execute('data_received', self.peer, payload)
 
 
 class FakeTransportFactory(base_transport.BaseTransportFactory):
@@ -49,7 +49,7 @@ class FakeTransportFactory(base_transport.BaseTransportFactory):
         _schema, peer_id = uri.split(':')
         if peer_id not in factories:
             raise Exception("FAKE trying to join not existing peer")
-        tp = FakeTransport(self._rt_id, peer_id, uri, {'data_recieved': self.callbacks['data_recieved']})
+        tp = FakeTransport(self._rt_id, peer_id, uri, {'data_received': self.callbacks['data_received']})
         self.peers[peer_id] = tp
         ptp = factories[peer_id]._joined(self._rt_id, tp, "fake_transport:" + self._rt_id)
         tp._set_peer(ptp)
@@ -61,7 +61,7 @@ class FakeTransportFactory(base_transport.BaseTransportFactory):
         pass
 
     def _joined(self, peer_id, ptp, uri):
-        tp = FakeTransport(self._rt_id, peer_id, uri, {'data_recieved': self.callbacks['data_recieved']})
+        tp = FakeTransport(self._rt_id, peer_id, uri, {'data_received': self.callbacks['data_received']})
         tp._set_peer(ptp)
         self._callback_execute('join_finished', tp, peer_id, uri)
         return tp

@@ -124,6 +124,11 @@ class LocalInEndpoint(Endpoint):
     def commit_peek_as_read(self):
         if self.data_in_local_fifo:
             self.port.fifo.commit_reads(self.port.id)
+            if self.port.fifo.can_read(self.port.id):
+                # Still data left in own fifo, no need to commit on peer port and no sync should be done
+                return
+            else:
+                self.data_in_local_fifo = False
         self.peer_port.fifo.commit_reads(self.port.id)
         self._sync_local_fifos()
 

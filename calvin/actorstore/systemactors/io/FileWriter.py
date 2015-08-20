@@ -69,20 +69,20 @@ class FileWriter(Actor):
         self.calvinsys.io.file.close(self.file)
         self.file = None
 
-        return ActionResult(tokens_consumed=1, tokens_produced=0, production=())
+        return ActionResult(production=())
 
     @condition(action_input=['data'])
     @guard(lambda self, _: not self.file)
     def open(self, data):
         self.setup()
         self.file.write_line(data)
-        return ActionResult(tokens_consumed=1, tokens_produced=0, production=())
+        return ActionResult(production=())
 
     @condition(action_input=['data'])
     @guard(lambda self, _: self.file)
     def write(self, data):
         self.file.write_line(data)
-        return ActionResult(tokens_consumed=1, tokens_produced=0, production=())
+        return ActionResult(production=())
 
     action_priority = (write, open)
 

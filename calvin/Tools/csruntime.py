@@ -21,18 +21,12 @@ import select
 import time
 import traceback
 import cscompiler as compiler
-from calvin.utilities import dtrace
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import utils
-from calvin.utilities.nodecontrol import dispatch_node, node_control
+from calvin.utilities.nodecontrol import dispatch_node
 import logging
 
-
 _log = get_logger(__name__)
-
-dtrace._trace_on = True
-dtrace._marker = "|   "
-dtrace._indent_size = 1
 
 
 def parse_arguments():
@@ -44,10 +38,7 @@ Start runtime, compile calvinscript and deploy application.
 
     argparser.add_argument('-n', '--host', metavar='<host>', type=str,
                            help='ip address/hostname of calvin runtime',
-                           dest='host', default='localhost')
-
-    argparser.add_argument('--peer', metavar='<calvin uri>', dest='peer',
-                           help="add peer to calvin runtime")
+                           dest='host', required=True)
 
     argparser.add_argument('-p', '--port', metavar='<port>', type=int, dest='port',
                            help='port# of calvin runtime', default=5000)
@@ -59,38 +50,29 @@ Start runtime, compile calvinscript and deploy application.
                            help='source file to compile')
 
     argparser.add_argument('-d', '--debug', dest='debug', action='store_true',
-                           help='keep debugging information from compilation')
+                           help='Start PDB')
 
-    argparser.add_argument('-v', '--verbose', dest='verbose', action='count', default=0,
-                           help='print extra information during deployment')
+    argparser.add_argument('-l', '--loglevel', dest='loglevel', action='append', default=[],
+                           help="Set log level, levels: CRITICAL, ERROR, WARNING, INFO and DEBUG. \
+                           To enable on specific modules use 'module:level'")
 
     argparser.add_argument('-w', '--wait', dest='wait', metavar='sec', default=2,
                            help='wait for sec seconds before quitting (0 means forever).')
 
-    argparser.add_argument('-q', '--quiet', action='store_const', const=0, dest='quiet',
-                           help='quiet, no output')
-
-    argparser.add_argument('--deploy-only', dest='runtime', action='store_false',
-                           help='do not start a new runtime')
-
-    argparser.add_argument('--start-only', dest='deploy', action='store_false',
-                           help='start runtime without deploying an application')
-
     argparser.add_argument('--keep-alive', dest='wait', action='store_const', const=0,
                            help='run forever (equivalent to -w 0 option).')
 
-    argparser.add_argument('--kill', dest='appid', metavar='appid',
-                           help="stop application")
+    argparser.add_argument('--attr', metavar='<attr>', type=str,
+                           help='a comma separated list of attributes for started node '
+                                'e.g. node/affiliation/owner/me,node/affiliation/name/bot',
+                           dest='attr')
 
     return argparser.parse_args()
 
 
-def runtime(uri, control_uri, start_new):
-    if start_new:
-        rt = dispatch_node(uri=uri, control_uri=control_uri)
-    else:
-        rt = node_control(control_uri)
-    return rt
+def runtime(uri, control_uri, attributes=None):
+    kwargs = {'attributes': attributes} if attributes else {}
+    return dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
 
 
 def compile(scriptfile):
@@ -102,46 +84,49 @@ def compile(scriptfile):
     return app_info
 
 
-def deploy(rt, app_info, verbose):
+def deploy(rt, app_info, loglevel):
     d = {}
     try:
         d = deployer.Deployer(rt, app_info)
         d.deploy()
     except Exception:
         time.sleep(0.1)
-        if verbose:
+        if get_logger().getEffectiveLevel <= logging.DEBUG:
             traceback.print_exc()
     return d.app_id
 
 
-def set_loglevel(verbose, quiet):
-    logger = get_logger()
+def set_loglevel(levels):
+    if not levels:
+        get_logger().setLevel(logging.INFO)
+        return
 
-    if quiet:
-        logger.setLevel(logging.WARNING)
-    else:
-        logger.setLevel(logging.INFO)
-
-    if verbose == 1:
-        dtrace._trace_on = True
-        logger.setLevel(logging.INFO)
-    elif verbose == 2:
-        dtrace._trace_on = True
-        logger.setLevel(logging.DEBUG)
-    else:
-        dtrace._trace_on = False
-        logger.setLevel(logging.INFO)
+    for level in levels:
+        module = None
+        if ":" in level:
+            module, level = level.split(":")
+        if level == "CRITICAL":
+            get_logger(module).setLevel(logging.CRITICAL)
+        elif level == "ERROR":
+            get_logger(module).setLevel(logging.ERROR)
+        elif level == "WARNING":
+            get_logger(module).setLevel(logging.WARNING)
+        elif level == "INFO":
+            get_logger(module).setLevel(logging.INFO)
+        elif level == "DEBUG":
+            get_logger(module).setLevel(logging.DEBUG)
 
 
 def main():
     args = parse_arguments()
 
-    set_loglevel(args.verbose, args.quiet)
+    if args.debug:
+        import pdb
+        pdb.set_trace()
 
-    add_peer = args.peer
-    kill_app = args.appid and not add_peer
-    start_runtime = args.runtime and not kill_app and not add_peer
-    deploy_app = args.deploy and args.file and not kill_app
+    set_loglevel(args.loglevel)
+
+    deploy_app = args.file
 
     app_info = None
     if deploy_app:
@@ -152,27 +137,24 @@ def main():
     uri = "calvinip://%s:%d" % (args.host, args.port)
     control_uri = "http://%s:%d" % (args.host, args.controlport)
 
-    rt = runtime(uri, control_uri, start_runtime)
+    attr_list = None
+    if args.attr:
+        attr_list = args.attr.split(',')
 
-    if add_peer:
-        res = utils.peer_setup(rt, [args.peer])
-        print res
-        return 0
-
-    if args.appid:
-        res = utils.delete_application(rt, args.appid)
-        print res['result']
-        return 0
+    rt = runtime(uri, control_uri, attr_list)
 
     app_id = None
     if deploy_app:
-        app_id = deploy(rt, app_info, args.verbose)
+        app_id = deploy(rt, app_info, args.loglevel)
 
-    if start_runtime:
-        timeout = int(args.wait) if int(args.wait) else None
-        select.select([], [], [], timeout)
-        utils.quit(rt)
-        time.sleep(0.1)
+    # FIXME: This is a weird construct that is required since python's
+    #        MultiProcess will reap all it's children on exit, regardless
+    #        of deamon attribute value
+    timeout = int(args.wait) if int(args.wait) else None
+    select.select([], [], [], timeout)
+    utils.quit(rt)
+    time.sleep(0.1)
+
     if app_id:
         print "Deployed application", app_id
 

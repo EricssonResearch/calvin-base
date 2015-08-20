@@ -32,6 +32,6 @@ class Constantify(Actor):
 
     @condition(['in'], ['out'])
     def constantify(self, input):
-        return ActionResult(tokens_consumed=1, tokens_produced=1, production=(self.constant, ))
+        return ActionResult(production=(self.constant, ))
 
     action_priority = (constantify, )

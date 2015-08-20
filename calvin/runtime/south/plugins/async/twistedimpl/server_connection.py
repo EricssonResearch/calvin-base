@@ -25,12 +25,13 @@ _log = get_logger(__name__)
 
 class RawDataProtocol(Protocol):
     """A Calvin Server object"""
-    def __init__(self, factory, max_length):
+    def __init__(self, factory, max_length, actor_id):
         self.MAX_LENGTH          = max_length
         self.data_available      = False
         self.connection_lost     = False
         self.factory             = factory
         self._data_buffer        = []
+        self._actor_id = actor_id
 
     def connectionMade(self):
         self.factory.connections.append(self)
@@ -65,12 +66,13 @@ class RawDataProtocol(Protocol):
 
 
 class LineProtocol(LineReceiver):
-    def __init__(self, factory, delimiter):
+    def __init__(self, factory, delimiter, actor_id):
         self.delimiter           = delimiter
         self.data_available      = False
         self.connection_lost     = False
         self._line_buffer             = []
         self.factory             = factory
+        self._actor_id = actor_id
 
     def connectionMade(self):
         self.factory.connections.append(self)
@@ -104,20 +106,24 @@ class LineProtocol(LineReceiver):
 
 
 class ServerProtocolFactory(Factory):
-    def __init__(self, trigger, mode='line', delimiter='\r\n', max_length=8192):
-        self.trigger             = trigger
+    def __init__(self, trigger, mode='line', delimiter='\r\n', max_length=8192, actor_id=None):
+        self._trigger             = trigger
         self.mode                = mode
         self.delimiter           = delimiter
         self.MAX_LENGTH          = max_length
         self.connections         = []
         self.pending_connections = []
-        self._port = None
+        self._port               = None
+        self._actor_id           = actor_id
+
+    def trigger(self):
+        self._trigger(actor_ids=[self._actor_id])
 
     def buildProtocol(self, addr):
         if self.mode == 'line':
-            connection = LineProtocol(self, self.delimiter)
+            connection = LineProtocol(self, self.delimiter, actor_id=self._actor_id)
         elif self.mode == 'raw':
-            connection = RawDataProtocol(self, self.MAX_LENGTH)
+            connection = RawDataProtocol(self, self.MAX_LENGTH, actor_id=self._actor_id)
         else:
             raise Exception("ServerProtocolFactory: Protocol not supported")
         self.pending_connections.append((addr, connection))

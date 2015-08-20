@@ -3,10 +3,10 @@ component Wrapper() A, B -> out {
   join: std.Join()
   sum: std.Sum()
 
-  A > sum.integer
+  .A > sum.integer
   sum.integer > join.token_1
-  B > join.token_2
-  join.token > out
+  .B > join.token_2
+  join.token > .out
 }
 
 counter:std.Counter()

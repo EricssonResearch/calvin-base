@@ -32,6 +32,6 @@ class Tee(Actor):
 
     @condition(action_input=[('token', 1)], action_output=[('token_1', 1), ('token_2', 1)])
     def tee(self, token):
-        return ActionResult(tokens_consumed=1, tokens_produced=2, production=(token, token))
+        return ActionResult(production=(token, token))
 
     action_priority = (tee,)

@@ -22,42 +22,265 @@ from calvin.Tools import cscompiler as compiler
 from calvin.Tools import deployer
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.south.plugins.async import server_connection 
+from calvin.runtime.south.plugins.async import server_connection
 from urlparse import urlparse
 
 _log = get_logger(__name__)
 
+
+control_api_doc = ""
+# control_api_doc += \
+"""
+    GET /log
+    Streaming log from calvin node (more documentation needed)
+"""
 re_get_log = re.compile(r"GET /log\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /id
+    Get id of this calvin node
+    Response: node-id
+"""
 re_get_node_id = re.compile(r"GET /id\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /nodes
+    List nodes in network (excluding self)
+    Response: List of node-ids
+"""
 re_get_nodes = re.compile(r"GET /nodes\sHTTP/1")
-re_get_node = re.compile(
-    r"GET /node/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /node/{node-id}
+    Get information on node node-id
+    Response:
+    {
+        "attributes": null,
+        "control_uri": "http://<address>:<controlport>",
+        "uri": "calvinip://<address>:<port>"
+    }
+"""
+re_get_node = re.compile(r"GET /node/((NODE_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /peer_setup
+    Add calvin nodes to network
+    Body: {"peers: ["calvinip://<address>:<port>", ...] }
+    Response: {"result": "OK"}
+"""
 re_post_peer_setup = re.compile(r"POST /peer_setup\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /applications
+    Get applications launched from this node
+    Response: List of application ids
+"""
 re_get_applications = re.compile(r"GET /applications\sHTTP/1")
-re_get_application = re.compile(
-    r"GET /application/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
-re_del_application = re.compile(
-    r"DELETE /application/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /application/{application-id}
+    Get information on application application-id
+    Response:
+    {
+         "origin_node_id": <node id>,
+         "actors": <list of actor ids>
+         "name": <name or id of this application>
+    }
+"""
+re_get_application = re.compile(r"GET /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    DELETE /application/{application-id}
+    Stop application (only applications launched from this node)
+    Response: {"result: "OK"}
+"""
+re_del_application = re.compile(r"DELETE /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /actor
+    Create a new actor
+    Body:
+    {
+        "actor_type:" <type of actor>,
+        "args" : { "name": <name of actor>, <actor argument>:<value>, ... }
+        "deploy_args" : {"app_id": <application id>, "app_name": <application name>} (optional)
+    }
+    Response: {"actor_id": <actor-id>}
+"""
 re_post_new_actor = re.compile(r"POST /actor\sHTTP/1")
-re_get_actors = re.compile(
-    r"GET /actors\sHTTP/1")
-re_get_actor = re.compile(
-    r"GET /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
-re_del_actor = re.compile(
-    r"DELETE /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
-re_get_actor_report = re.compile(
-    r"GET /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/report\sHTTP/1")
-re_post_actor_migrate = re.compile(
-    r"POST /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/migrate\sHTTP/1")
-re_post_actor_disable = re.compile(
-    r"POST /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/disable\sHTTP/1")
-re_get_port = re.compile(
-    r"GET /actor/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/port/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /actors
+    Get list of actors on this runtime
+    Response: list of actor ids
+"""
+re_get_actors = re.compile(r"GET /actors\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /actor/{actor-id}
+    Get information on actor
+    Response:
+    {
+        "inports": list inports
+        "node_id": <node-id>,
+        "type": <actor type>,
+        "name": <actor name>,
+        "outports": list of outports
+     }
+"""
+re_get_actor = re.compile(r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    DELETE /actor/{actor-id}
+    Delete actor
+    Response: {"result": "OK"}
+"""
+re_del_actor = re.compile(r"DELETE /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /actor/{actor-id}/report
+    Some actor store statistics on inputs and outputs, this reports these. Not always present.
+    Repsonse: Depends on actor
+"""
+re_get_actor_report = re.compile(r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/report\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /actor/{actor-id}/migrate
+    Migrate actor to (other) node
+    Body: {"peer_node_id": <node-id>}
+    Response: {"result": "ACK"}
+"""
+re_post_actor_migrate = re.compile(r"POST /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/migrate\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /actor/{actor-id}/disable
+    DEPRECATED. Disables an actor
+    Response: {"result": "OK"}
+"""
+re_post_actor_disable = re.compile(r"POST /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/disable\sHTTP/1")
+
+# control_api_doc += \
+"""
+    GET /actor/{actor-id}/port/{port-id}
+    Broken. Get information on port {port-id} of actor {actor-id}
+"""
+re_get_port = re.compile(r"GET /actor/((ACTOR_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/port/((PORT_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /connect
+    Connect actor ports
+    Body:
+    {
+        "actor_id" : <actor-id>,
+        "port_name": <port-name>,
+        "port_dir": <in/out>,
+        "peer_node_id": <node-id>,
+        "peer_actor_id": <actor-id>,
+        "peer_port_name": <port-name>,
+        "peer_port_dir": <out/in>
+    }
+    Response: {"result": "OK"}
+"""
 re_post_connect = re.compile(r"POST /connect\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /set_port_property
+    Sets a property of the port. Currently only fanout on outports is supported.
+    Body:
+    {
+        "actor_id" : <actor-id>,
+        "port_type": <in/out>,
+        "port_name": <port-name>,
+        "port_property": <property-name>
+        "value" : <property value>
+    }
+    Response: {"result": "OK"}
+"""
 re_set_port_property = re.compile(r"POST /set_port_property\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /deploy
+    Compile and deploy a calvin script to this calvin node
+    Body:
+    {
+        "name": <application name>,
+        "script": <calvin script>
+    }
+    Response: {"application_id": <application-id>}
+"""
 re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /disconnect
+    Disconnect a port. If port felds are empty, all ports of the actor are disconnected
+    Body:
+    {
+        "actor_id": <actor-id>,
+        "port_name": <port-name>,
+        "port_dir": <in/out>,
+        "port_id": <port-id>
+    }
+    Response: {"result": "OK"}
+"""
 re_post_disconnect = re.compile(r"POST /disconnect\sHTTP/1")
+
+control_api_doc += \
+"""
+    DELETE /node
+    Stop (this) calvin node
+    Response: {"result": "OK"}
+"""
 re_delete_node = re.compile(r"DELETE /node\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /index/{key}
+    Store value under index key
+    Body:
+    {
+        "value": <string>
+    }
+    Response: {"result": "true"}
+"""
+re_post_index = re.compile(r"POST /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
+
+control_api_doc += \
+"""
+    DELETE /index/{key}
+    Remove value from index key
+    Body:
+    {
+        "value": <string>
+    }
+    Response: {"result": "true"}
+"""
+re_delete_index = re.compile(r"DELETE /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
+
+control_api_doc += \
+"""
+    GET /index/{key}
+    Fetch values under index key
+    Response: {"result": <list of strings>}
+"""
+re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
 
 
 _calvincontrol = None
@@ -115,9 +338,12 @@ class CalvinControl(object):
             (re_set_port_property, self.handle_set_port_property),
             (re_post_deploy, self.handle_deploy),
             (re_delete_node, self.handle_quit),
-            (re_post_disconnect, self.handle_disconnect)
+            (re_post_disconnect, self.handle_disconnect),
+            (re_post_index, self.handle_post_index),
+            (re_delete_index, self.handle_delete_index),
+            (re_get_index, self.handle_get_index)
         ]
-        self.server = server_connection.ServerProtocolFactory(self.node.sched.trigger_loop, "raw")
+        self.server = server_connection.ServerProtocolFactory(self.handle_request, "raw")
         self.server.start(self.host, self.port)
 
     def stop(self):
@@ -125,7 +351,7 @@ class CalvinControl(object):
         """
         self.server.stop()
 
-    def handle_request(self):
+    def handle_request(self, actor_ids=None):
         """ Handle incoming requests
         """
         if self.server.pending_connections:
@@ -171,9 +397,9 @@ class CalvinControl(object):
         """
         if not connection.connection_lost:
             connection.send("HTTP/1.0 200 OK\n"
-                               + "Content-Type: text/event-stream\n"
-                               + "Access-Control-Allow-Origin: *\r\n"
-                               + "\n")
+                            + "Content-Type: text/event-stream\n"
+                            + "Access-Control-Allow-Origin: *\r\n"
+                            + "\n")
 
     def storage_cb(self, key, value, handle, connection):
         self.send_response(handle, connection, json.dumps(value))
@@ -260,11 +486,11 @@ class CalvinControl(object):
     def handle_actor_migrate(self, handle, connection, match, data):
         """ Migrate actor
         """
-        self.node.am.migrate(match.group(1), data['peer_node_id'], 
+        self.node.am.migrate(match.group(1), data['peer_node_id'],
                              callback=CalvinCB(self.actor_migrate_cb, handle, connection))
 
     def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
-        """ Migrate actor respons 
+        """ Migrate actor respons
         """
         self.send_response(handle, connection, json.dumps({'result': status}))
 
@@ -323,6 +549,7 @@ class CalvinControl(object):
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
     def handle_deploy(self, handle, connection, match, data):
+        print "data: ", data
         app_info, errors, warnings = compiler.compile(
             data["script"], filename=data["name"])
         app_info["name"] = data["name"]
@@ -340,6 +567,40 @@ class CalvinControl(object):
         self.node.disconnect(
             data['actor_id'], data['port_name'], data['port_dir'], data['port_id'])
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+
+    def handle_post_index(self, handle, connection, match, data):
+        """ Add to index
+        """
+        self.node.storage.add_index(
+            match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
+
+    def handle_delete_index(self, handle, connection, match, data):
+        """ Remove from index
+        """
+        self.node.storage.remove_index(
+            match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
+
+    def handle_get_index(self, handle, connection, match, data):
+        """ Get from index
+        """
+        self.node.storage.get_index(
+            match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
+
+    def index_cb(self, handle, connection, *args, **kwargs):
+        """ Index operation response
+        """
+        _log.debug("index cb (in control) %s, %s" % (args, kwargs))
+        if 'value' in kwargs:
+            value = kwargs['value']
+        else:
+            value = None
+        self.send_response(handle, connection, json.dumps({'result': value}))
+
+    def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
+        """ Index operation response
+        """
+        _log.debug("get index cb (in control) %s, %s" % (key, value))
+        self.send_response(handle, connection, json.dumps({'result': value}))
 
     def log_firing(self, actor_name, action_method, tokens_produced, tokens_consumed, production):
         """ Trace firing, sends data on log_sock
