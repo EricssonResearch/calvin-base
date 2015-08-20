@@ -18,6 +18,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
+
 class Application(object):
 
     """ Application class """
@@ -43,7 +44,8 @@ class Application(object):
 
     def complete_node_info(self):
         return sum([len(a) for a in self.node_info.itervalues()]) == len(self.actors)
-        
+
+
 class AppManager(object):
 
     """ Manage deployed applications """
@@ -72,7 +74,8 @@ class AppManager(object):
 
     def _destroy_app_info_cb(self, application_id, value):
         _log.debug("Destroy app info %s: %s" % application_id, value)
-        self._destroy(Application(application_id, value['name'], value['actors'], value['origin_node_id']))
+        if value:
+            self._destroy(Application(application_id, value['name'], value['actors'], value['origin_node_id']))
 
     def _destroy(self, application):
         _log.debug("Destroy app w actors: %s" % application.actors)
@@ -95,7 +98,7 @@ class AppManager(object):
     def _destroy_actor_cb(self, actor_id, value, application):
         """ Get actor callback """
         _log.debug("Destroy app peers actor cb %s" % actor_id)
-        if 'node_id' in value:
+        if value and 'node_id' in value:
             application.update_node_info(value['node_id'], actor_id)
         else:
             application.update_node_info(None, actor_id)
