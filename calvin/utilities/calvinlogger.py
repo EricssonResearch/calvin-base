@@ -21,7 +21,7 @@ _name = "calvin"
 _log = None
 _use_color = False
 
-def _create_logger():
+def _create_logger(filename=None):
     global _log
     global _name
     if _log is None:
@@ -29,7 +29,10 @@ def _create_logger():
         _log.setLevel(logging.INFO)
 
         # create console handler and set level to debug
-        ch = logging.StreamHandler()
+        if filename:
+            ch = logging.FileHandler(filename=filename, mode='w')
+        else:
+            ch = logging.StreamHandler()
         ch.setLevel(logging.DEBUG)
 
         # create formatter
@@ -64,6 +67,8 @@ def _create_logger():
 
     return _log
 
+def set_file(filename):
+    _create_logger(filename)
 
 def get_logger(name=None):
     log = _create_logger()
