@@ -23,8 +23,8 @@ detailed information, or continue reading.
      - `csdeploy` is obsolete and has been removed
 
  - Calvin script changes:
-     - JSON types: any valid JSON can be used as values and constants in scripts (and actors) __NOTE__: This introduces reserved word `false`, `true`, `null`.
-     - Constants: use `define` to create constants in scripts, e.g.
+   - JSON types: any valid JSON can be used as values and constants in scripts (and actors) __NOTE__: This introduces reserved word `false`, `true`, `null`.
+   - Constants: use `define` to create constants in scripts, e.g.
 ```
 define DELAY = 1
 
@@ -32,9 +32,9 @@ actor1 : std.Delay(delay=DELAY)
 actor2 : std.Delay(delay=DELAY)
 
 ```
-     - Constant port values: values can be used to send constant values to a port, e.g. `"data.txt" > src.filename`. __NOTE__: There will then _always_ be a token available, so the actor must be able to handle this correctly.
+   - Constant port values: values can be used to send constant values to a port, e.g. `"data.txt" > src.filename`. __NOTE__: There will then _always_ be a token available, so the actor must be able to handle this correctly.
 
-     - Component ports prefixed with '.' when used
+   - Component ports prefixed with '.' when used
 ```
 component DelayedCounter(delay) -> out {
    counter : std.Counter()
