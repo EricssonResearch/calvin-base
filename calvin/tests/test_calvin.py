@@ -678,7 +678,7 @@ class TestCalvinScript(CalvinTestBase):
         app_info, errors, warnings = compiler.compile(script, "simple")
         d = deployer.Deployer(rt, app_info)
         app_id = d.deploy()
-        time.sleep(0.2)
+        time.sleep(1.0)
         src = d.actor_map['simple:src']
         snk = d.actor_map['simple:snk']
 
@@ -694,7 +694,13 @@ class TestCalvinScript(CalvinTestBase):
 
         d.destroy()
 
-        applications = utils.get_applications(rt)
+        for retry in range(1, 5):
+            applications = utils.get_applications(rt)
+            if app_id in applications:
+                print("Retrying in %s" % (retry*0.2, ))
+                time.sleep(0.2 * retry)
+            else :
+                break
         assert app_id not in applications
 
         actors = []
