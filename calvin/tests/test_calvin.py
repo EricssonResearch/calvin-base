@@ -697,15 +697,23 @@ class TestCalvinScript(CalvinTestBase):
         for retry in range(1, 5):
             applications = utils.get_applications(rt)
             if app_id in applications:
-                print("Retrying in %s" % (retry*0.2, ))
+                print("Retrying in %s" % (retry * 0.2, ))
                 time.sleep(0.2 * retry)
             else :
                 break
         assert app_id not in applications
 
-        actors = []
-        actors.extend(utils.get_actors(rt))
-        actors.extend(utils.get_actors(rt1))
-        actors.extend(utils.get_actors(rt2))
+        for retry in range(1, 5):
+            actors = []
+            actors.extend(utils.get_actors(rt))
+            actors.extend(utils.get_actors(rt1))
+            actors.extend(utils.get_actors(rt2))
+            intersection = [a for a in actors if a in d.actor_map.values()]
+            if len(intersection) > 0:
+                print("Retrying in %s" % (retry * 0.2, ))
+                time.sleep(0.2 * retry)
+            else:
+                break
+
         for actor in d.actor_map.values():
             assert actor not in actors
