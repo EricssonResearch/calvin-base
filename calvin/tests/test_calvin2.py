@@ -328,6 +328,10 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         actual = utils.report(self.rt3, snk)
 
+        while len(actual) < 10:
+            time.sleep(0.1)
+            actual = utils.report(self.rt3, snk)
+
         self.assert_lists_equal(range(1, 11), actual)
 
     def test22(self):
