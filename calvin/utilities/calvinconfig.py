@@ -64,7 +64,7 @@ class CalvinConfig(object):
         default = {
             'global':{
                 'comment': 'User definable section',
-                'actor_paths': [self.install_location()+'/sysactors'],
+                'actor_paths': ['systemactors', 'devactors'],
                 'framework': 'twistedimpl',
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json'

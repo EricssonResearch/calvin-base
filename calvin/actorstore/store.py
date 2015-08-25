@@ -89,9 +89,12 @@ class Store(object):
         """
             Subclass must set 'conf_paths_name' before calling superclass init.
         """
-        abs_path = os.path.dirname(__file__)
-        rel_paths = _conf.get(None, self.conf_paths_name)
-        self._MODULE_PATHS = [os.path.join(abs_path, path) for path in rel_paths]
+        base_path = os.path.dirname(__file__)
+        # paths = [p for p in _conf.get('global', self.conf_paths_name) if not os.path.isabs(p)]
+        # abs_paths = [p for p in _conf.get('global', self.conf_paths_name) if os.path.isabs(p)]
+        paths = _conf.get('global', self.conf_paths_name)
+        self._MODULE_PATHS = [os.path.join(base_path, p) if not os.path.isabs(p) else p for p in paths]
+        print self._MODULE_PATHS
         self._MODULE_CACHE = {}
 
 
