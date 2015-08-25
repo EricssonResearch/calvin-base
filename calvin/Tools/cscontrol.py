@@ -136,7 +136,7 @@ def parse_args():
 
     # parser for deploy
     cmd_deploy = cmdparsers.add_parser('deploy', help="deploy script to node")
-    cmd_deploy.add_argument("script", metavar="<calvin script>", type=file,
+    cmd_deploy.add_argument("script", metavar="<calvin script>", type=argparse.FileType('r'),
                             help="script to be deployed")
     cmd_deploy.add_argument('-a', '--attr', metavar="<attribute>", type=str, dest="attr",
                                help="Will deploy script to a random node with the given attribute")
