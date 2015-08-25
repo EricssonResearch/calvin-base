@@ -15,10 +15,10 @@
 # limitations under the License.
 
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
-from calvin.utilities import calconfig
+from calvin.utilities import calvinconfig
 import negotiator_base
 
-_conf = calconfig.get()
+_conf = calvinconfig.get()
 
 
 class StaticNegotiator(negotiator_base.NegotiatorBase):

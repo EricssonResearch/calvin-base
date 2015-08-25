@@ -18,7 +18,7 @@ import os
 import sys
 import imp
 
-from calvin.utilities import calconfig
+from calvin.utilities import calvinconfig
 
 
 # Spec
@@ -34,7 +34,7 @@ if not fw_modules:
         if not os.path.exists(os.path.join(_dirname, fw_module, '__init__.py')):
             del fw_modules[i]
 
-_conf = calconfig.get()
+_conf = calvinconfig.get()
 fw_path = _conf.get(None, 'framework')
 
 if not fw_path in fw_modules:

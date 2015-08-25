@@ -21,7 +21,7 @@
 
 import os
 
-from calvin.utilities import calconfig
+from calvin.utilities import calvinconfig
 
 
 # Spec
@@ -44,7 +44,7 @@ if not _FW_MODULES:
         if "impl" in fw_module:
             _FW_MODULES.append(fw_module)
 
-_CONF = calconfig.get()
+_CONF = calvinconfig.get()
 _FW_PATH = _CONF.get(None, 'framework')
 
 

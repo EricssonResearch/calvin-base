@@ -18,7 +18,7 @@ import unittest
 import tempfile
 import os
 
-from calvin.utilities.calconfig import CalConfig
+from calvin.utilities.calvinconfig import CalvinConfig
 
 
 class TestBase(unittest.TestCase):
@@ -37,7 +37,7 @@ class TestBase(unittest.TestCase):
         os.environ = self._env
 
 
-class CalConfigTests(TestBase):
+class CalvinConfigTests(TestBase):
 
     @unittest.skip("Currently, file is not created automatically")
     def test_create_default_config(self):
@@ -46,7 +46,7 @@ class CalConfigTests(TestBase):
 
         os.environ['CALVIN_CONFIG_PATH'] = self.filepath
 
-        CalConfig()
+        CalvinConfig()
 
         self.assertEqual(os.path.exists(self.filepath), True)
 
@@ -60,7 +60,7 @@ class CalConfigTests(TestBase):
         print os.environ
         os.environ['CALVIN_CONFIG_PATH'] = self.filepath
 
-        _conf = CalConfig()
+        _conf = CalvinConfig()
         _conf.add_section("test")
 
         for a in range(10):
@@ -92,7 +92,7 @@ class CalConfigTests(TestBase):
         self.assertEqual(os.path.exists(self.filepath), False)
         os.environ['CALVIN_CONFIG_PATH'] = self.filepath
 
-        _conf = CalConfig()
+        _conf = CalvinConfig()
         _conf.add_section("test")
 
         for a in range(10):
@@ -104,7 +104,7 @@ class CalConfigTests(TestBase):
         self.assertEqual(os.path.exists(self.filepath), False)
         os.environ['CALVIN_CONFIG_PATH'] = self.filepath
 
-        _conf = CalConfig()
+        _conf = CalvinConfig()
         _conf.add_section("test")
 
         test_item = [str(x) for x in range(10)]
@@ -115,7 +115,7 @@ class CalConfigTests(TestBase):
         self.assertEqual(os.path.exists(self.filepath), False)
         os.environ['CALVIN_CONFIG_PATH'] = self.filepath
 
-        _conf = CalConfig()
+        _conf = CalvinConfig()
         _conf.add_section("test")
 
         test_item = [str(x) for x in range(10)]

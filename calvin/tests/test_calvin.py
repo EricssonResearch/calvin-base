@@ -19,12 +19,12 @@ from calvin.Tools import cscompiler as compiler
 from calvin.Tools import deployer
 import time
 import multiprocessing
-from calvin.utilities import calconfig
+from calvin.utilities import calvinconfig
 from calvin.utilities import utils
 from calvin.utilities.nodecontrol import dispatch_node
 import pytest
 
-_conf = calconfig.get()
+_conf = calvinconfig.get()
 
 
 def actual_tokens(rt, actor_id):
@@ -309,7 +309,7 @@ class TestRemoteConnection(CalvinTestBase):
             for i in range(1,100):
                 yield i
                 yield i
-                
+
         expected = list(_d())
         actual = actual_tokens(rt, snk1)
         assert(len(actual) > 1)
@@ -343,7 +343,7 @@ class TestRemoteConnection(CalvinTestBase):
             for i in range(1,100):
                 yield i
                 yield i
-                
+
         expected = list(_d())
         actual = actual_tokens(rt, snk1)
         assert(len(actual) > 1)
@@ -373,7 +373,7 @@ class TestActorMigration(CalvinTestBase):
         utils.connect(rt, snk, 'token', peer_id, sum_, 'integer')
         utils.connect(peer, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.27)
-        
+
         actual_1 = actual_tokens(rt, snk)
         utils.migrate(rt, src, peer_id)
         time.sleep(0.2)
@@ -402,7 +402,7 @@ class TestActorMigration(CalvinTestBase):
         utils.connect(rt, snk, 'token', peer_id, sum_, 'integer')
         utils.connect(peer, sum_, 'integer', peer_id, src, 'integer')
         time.sleep(0.27)
-        
+
         actual_1 = actual_tokens(rt, snk)
         utils.migrate(peer, src, id_)
         time.sleep(0.2)
@@ -467,7 +467,7 @@ class TestActorMigration(CalvinTestBase):
         utils.connect(rt, snk, 'token', peer_id, sum_, 'integer')
         utils.connect(peer, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.27)
-        
+
         actual_1 = actual_tokens(rt, snk)
         utils.migrate(peer, sum_, id_)
         time.sleep(0.2)
@@ -532,7 +532,7 @@ class TestActorMigration(CalvinTestBase):
         utils.connect(rt, snk, 'token', id_, sum_, 'integer')
         utils.connect(rt, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.27)
-        
+
         actual_1 = actual_tokens(rt, snk)
         utils.migrate(rt, sum_, peer_id)
         time.sleep(0.2)
@@ -564,7 +564,7 @@ class TestActorMigration(CalvinTestBase):
         utils.connect(rt, snk, 'token', peer0_id, sum_, 'integer')
         utils.connect(peer0, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.27)
-        
+
         actual_1 = actual_tokens(rt, snk)
         utils.migrate(peer0, sum_, peer1_id)
         time.sleep(0.2)

@@ -22,11 +22,11 @@ import json
 import re
 from types import ModuleType
 
-from calvin.utilities import calconfig
+from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
-_conf = calconfig.get()
+_conf = calvinconfig.get()
 
 #
 # Helpers
