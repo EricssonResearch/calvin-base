@@ -15,106 +15,220 @@
 # limitations under the License.
 
 import os
-import ConfigParser
 import json
 
 _config = None
 
+class CalvinConfig(object):
 
-class CalConfig(ConfigParser.ConfigParser):
-    dirname = os.path.join(os.path.expanduser("~"), ".calvin")
-    filename = 'calvin.conf'
+    """
+    Handle configuration of Calvin, works similiarly to python's ConfigParser
+    Looks for calvin.conf or .calvin.conf files in:
+    1. Built-ins
+    2. Calvin's install directory
+    3. $HOME
+    4. all directories between $CWD and $HOME
+    5. current working directory ($CWD)
+    If $CWD is outside of $HOME, only (1) through (3) are searched.
 
-    # All default will be written to file at first run
-    defaults = {'unittest_loops': '2',
-                'actor_paths': ["systemactors", "devactors", "demoactors", "appactors"],
-                'remote_coder_negotiator': 'static', 'static_coder': 'json',
-                'framework': 'twistedimpl'}
-    section_name = "Global"
+    Simple values are overridden by later configs, whereas lists are prepended by later configs.
 
+    If the environment variable CALVIN_CONFIG_PATH is set, it will be taken as a path to the ONLY
+    configuration file, overriding even built-ins.
+
+    Finally, wildcard environment variables on the form CALVIN_<SECTION>_<OPTION> may override
+    options read from defaults or config files. <SECTION> must be one of GLOBAL, TESTING, or DEVELOPER,
+    e.g. CALVIN_TESTING_UNITTEST_LOOPS=42
+
+    Printing the config object provides a great deal of information about the configuration.
+    """
     def __init__(self):
-        ConfigParser.ConfigParser.__init__(self)
+        super(CalvinConfig, self).__init__()
 
-        filepath = os.getenv("CALVIN_CONFIG_PATH")
+        self.config = {}
+        self.wildcards = []
+        self.override_path = os.environ.get('CALVIN_CONFIG_PATH', None)
 
-        if filepath:
-            self.filepath = filepath
+        if self.override_path is not None:
+            self.set_config(self.config_at_path(self.override_path))
         else:
-            self.filepath = os.path.join(self.dirname, self.filename)
+            self.set_config(self.default_config())
+            conf_paths = self.config_paths()
+            for p in conf_paths:
+                delta_config = self.config_at_path(p)
+                self.update_config(delta_config)
 
-        # First time start lets create defs
-        if not os.path.exists(self.filepath):
-            self.create_defaults()
-            # Do not write the calvin.conf at the moment.
-            # TODO: Write 'sample' calvin.conf for users to peruse
-            # self.write(open(self.filepath, "w"))
-            pass
+        self.set_wildcards()
+
+    def default_config(self):
+        default = {
+            'global':{
+                'comment': 'User definable section',
+                'actor_paths': [self.install_location()+'/sysactors'],
+                'framework': 'twistedimpl',
+                'remote_coder_negotiator': 'static',
+                'static_coder': 'json'
+            },
+            'testing': {
+                'comment': 'Test settings',
+                'unittest_loops': 2
+            },
+            'developer': {
+                'comment': 'Experimental settings',
+            }
+        }
+        return default
+
+    def add_section(self, section):
+        """Add a named section"""
+        self.config.setdefault(section.lower(), {})
+
+    def get(self, section, option):
+        """Get value of option in named section, if section is None 'global' section is implied."""
+        try:
+            _section = 'global' if section is None else section.lower()
+            _option = option.lower()
+            return self.config[_section][_option]
+        except Exception as e:
+            #FIXME: log
+            print e
+            return None
+
+    def set(self, section, option, value):
+        """Set value of option in named section"""
+        _section = self.config[section.lower()]
+        _section[option.lower()] = value
+
+    def append(self, section, option, value):
+        """Append value (list) of option in named section"""
+        _section = self.config[section.lower()]
+        _option = option.lower()
+        if type(_section[_option]) is not list :
+            raise Exception("Can't append, {}:{} is not a list".format(section, option))
+        if type(value) is not list:
+            raise Exception("Can't append, value is not a list")
+        _section[_option][:0] = value
+
+    def set_config(self, config):
+        """Set complete config"""
+        for section in config:
+            _section = section.lower()
+            self.add_section(_section)
+            for option, value in config[section].iteritems():
+                _option = option.lower()
+                self.set(_section, _option, value)
+
+    def config_at_path(self, path):
+        """Returns config or None if no config at path."""
+        if os.path.exists(path+'/calvin.conf'):
+            confpath = path+'/calvin.conf'
+        elif os.path.exists(path+'/.calvin.conf'):
+            confpath = path+'/.calvin.conf'
         else:
-            self.read(self.filepath)
+            return None
 
-    def intify(self, val):
         try:
-            a = int(val)
-        except:
-            return val
-        return a
+            with open(confpath) as f:
+                conf = json.loads(f.read())
+        except Exception as e:
+            # FIXME: log.exception
+            print e
+            conf = None
+        return conf
 
-    def _get_json(self, value):
-        try:
-            value = json.loads(value)
-        except (ValueError, TypeError) as e:
-            pass
-        return value
+    def update_config(self, delta_config):
+        """
+        Update config using delta_config.
+        If value in delta_config is list, prepend to value in config,
+        otherwise replace value in config.
+        """
+        if not delta_config:
+            return
+        for section in delta_config:
+            for option, value in delta_config[section].iteritems():
+                if option.lower() == 'comment':
+                    continue
+                operation = self.append if type(value) is list else self.set
+                operation(section, option, value)
 
-    # Override get so enviorment overrides configs
-    def get(self, section, option, raw=False, vars=None):
+    def install_location(self):
+        """Return the 'installation dir'."""
+        return '/usr/lib'
 
-        if section is None:
-            section = self.section_name
+    def config_paths(self):
+        """
+        Return the install dir and list of paths from $HOME to the current working directory (CWD),
+        unless CWD is not rooted in $HOME in which case only install dir and $HOME is returned.
+        If install dir is in the path from $HOME to CWD it is not included a second time.
+        """
+        if self.override_path is not None:
+            return [self.override_path]
 
-        val = os.getenv('CALVIN_%s' % option.upper())
-        conf_val = self._get_json(ConfigParser.ConfigParser.get(self, section, option,
-                                                          raw, vars))
-        if val:
-            if not raw and os.pathsep in val:
-                # We have list extend with config
-                val = val.split(os.pathsep)
-            else:
-                val = self._get_json(val)
+        inst_loc = self.install_location()
+        home = os.environ['HOME']
+        curr_loc = os.getcwd()
+        paths = [home, inst_loc]
+        if not curr_loc.startswith(home):
+            return paths
 
-            if isinstance(conf_val, type([])) and isinstance(val, type([])):
-                return val + conf_val
+        dpaths = []
+        while len(curr_loc) > len(home):
+            if curr_loc != inst_loc:
+                dpaths.append(curr_loc)
+            curr_loc, part = curr_loc.rsplit('/', 1)
+        return dpaths + paths
 
-            return val
+    def set_wildcards(self):
+        """
+        Allow environment variables on the form CALVIN_<SECTION>_<OPTION> to override options
+        read from defaults or config files. <SECTION> must be one of GLOBAL, TESTING, or DEVELOPER.
+        """
+        wildcards = [e for e in os.environ if e.startswith('CALVIN_')]
+        for wildcard in wildcards:
+            _, section, option = wildcard.split('_', 2)
+            if section not in ['GLOBAL', 'TESTING', 'DEVELOPER']:
+                # FIXME: log
+                continue
+            value = os.environ[wildcard]
+            try:
+                self.set(section, option, json.loads(value))
+                self.wildcards.append(wildcard)
+            except Exception as e:
+                # FIXME: log.exception
+                print e
 
-        return conf_val
-
-    def create_defaults(self):
-        self.add_section(self.section_name)
-        for k, v in self.defaults.items():
-            self.set(self.section_name, k, v)
-
-    def set(self, section, key, value):
-        value_str = value
-        try:
-            value_str = json.dumps(value)
-        except ValueError as e:
-            pass
-            # _log.warning(e)
-
-        if section is None:
-            section = self.section_name
-
-        ConfigParser.ConfigParser.set(self, section, key, value_str)
+    def __str__(self):
+        d = {}
+        d['config searchpaths'] = self.config_paths(),
+        d['config paths'] = [p for p in self.config_paths() if self.config_at_path(p) is not None],
+        d['config'] = self.config
+        d['CALVIN_CONFIG_PATH'] = self.override_path
+        d['wildcards'] = self.wildcards
+        return self.__class__.__name__ + " : " + json.dumps(d, indent=4, sort_keys=True)
 
 
 def get():
     global _config
     if _config is None:
-        _config = CalConfig()
+        _config = CalvinConfig()
     return _config
 
 
 if __name__ == "__main__":
+    os.environ['CALVIN_CONFIG_PATH'] = '/Users/eperspe/Source/spikes/ConfigParser'
+    os.environ['CALVIN_TESTING_UNITTEST_LOOPS'] = '44'
     a = get()
-    print(a.get(None, 'actor_paths'))
+
+
+    print(a)
+    p = a.get('global', 'actor_paths')
+    print(p, type(p))
+
+    p = a.get(None, 'framework')
+    print(p, type(p))
+    p = a.get(None, 'unittest_loops')
+    print(p, type(p))
+
+    p = a.get('Testing', 'unittest_loops')
+    print(p, type(p))
+
