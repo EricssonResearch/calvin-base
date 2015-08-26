@@ -16,6 +16,10 @@
 
 import os
 import json
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
+
 
 _config = None
 
@@ -49,16 +53,28 @@ class CalvinConfig(object):
         self.wildcards = []
         self.override_path = os.environ.get('CALVIN_CONFIG_PATH', None)
 
+        # Setting CALVIN_CONFIG_PATH takes preceedence over all other configs
         if self.override_path is not None:
-            self.set_config(self.config_at_path(self.override_path))
-        else:
+            config = self.config_at_path(self.override_path)
+            if config is not None:
+                self.set_config(self.config_at_path(self.override_path))
+            else:
+                self.override_path = None
+                _log.info("CALVIN_CONFIG_PATH does not point to a valid config file.")
+
+        # This is the normal config procedure
+        if self.override_path is None:
+            # The next line is guaranteed to work, so we have at least a default config
             self.set_config(self.default_config())
             conf_paths = self.config_paths()
             for p in conf_paths:
                 delta_config = self.config_at_path(p)
                 self.update_config(delta_config)
 
+        # Check if any options were set on the command line
         self.set_wildcards()
+
+        _log.info(self)
 
     def default_config(self):
         default = {
