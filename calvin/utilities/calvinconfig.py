@@ -74,7 +74,7 @@ class CalvinConfig(object):
         # Check if any options were set on the command line
         self.set_wildcards()
 
-        _log.info(self)
+        _log.debug("\n{0}\n{1}\n{0}".format("-"*80, self))
 
     def default_config(self):
         default = {
@@ -106,8 +106,6 @@ class CalvinConfig(object):
             _option = option.lower()
             return self.config[_section][_option]
         except Exception as e:
-            #FIXME: log
-            print e
             return None
 
     def set(self, section, option, value):
