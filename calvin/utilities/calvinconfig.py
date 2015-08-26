@@ -134,6 +134,29 @@ class CalvinConfig(object):
                 _option = option.lower()
                 self.set(_section, _option, value)
 
+    def _case_sensitive_keys(self, section, option, conf):
+        """Return the case sensitive keys for 'secton' and 'option' (or None if not present) in 'conf'."""
+        for _section in conf:
+            if _section.lower() != section.lower():
+                continue
+            for _option in conf[section]:
+                if _option.lower() == option.lower():
+                     return _section, _option
+            return _section, None
+        return None, None
+
+    def _expand_actor_paths(self, conf, conf_dir):
+        """Expand $HOME, $USER etc. and resolve './actors' etc. relative to the config file."""
+        # Get the correct keys to use with the config dict since we allow mixed case, but convert to lower internally
+        _section, _option = self._case_sensitive_keys('global', 'actor_paths', conf)
+        if not _option:
+            return
+        paths = conf[_section][_option]
+        # First handle expansion of env vars
+        expanded = [os.path.expandvars(p) for p in paths]
+        # Normalize and handle './', i.e. relative to config file
+        conf[_section][_option] = [os.path.normpath(os.path.join(conf_dir, p) if p.startswith('./') else p) for p in expanded]
+
     def config_at_path(self, path):
         """Returns config or None if no config at path."""
         if os.path.exists(path+'/calvin.conf'):
@@ -146,9 +169,9 @@ class CalvinConfig(object):
         try:
             with open(confpath) as f:
                 conf = json.loads(f.read())
+                self._expand_actor_paths(conf, path)
         except Exception as e:
-            # FIXME: log.exception
-            print e
+            _log.info("Could not read config at '{}'".format(confpath))
             conf = None
         return conf
 
