@@ -199,19 +199,19 @@ class CalvinConfig(object):
         Allow environment variables on the form CALVIN_<SECTION>_<OPTION> to override options
         read from defaults or config files. <SECTION> must be one of GLOBAL, TESTING, or DEVELOPER.
         """
-        wildcards = [e for e in os.environ if e.startswith('CALVIN_')]
+        wildcards = [e for e in os.environ if e.startswith('CALVIN_') and e != 'CALVIN_CONFIG_PATH']
         for wildcard in wildcards:
-            _, section, option = wildcard.split('_', 2)
-            if section not in ['GLOBAL', 'TESTING', 'DEVELOPER']:
-                # FIXME: log
+            parts = wildcard.split('_')
+            if len(parts) < 3 or parts[1] not in ['GLOBAL', 'TESTING', 'DEVELOPER']:
+                _log.info("Malformed evironment variable {}, skipping.".format(wildcard))
                 continue
+            section, option = parts[1:3]
             value = os.environ[wildcard]
             try:
                 self.set(section, option, json.loads(value))
                 self.wildcards.append(wildcard)
             except Exception as e:
-                # FIXME: log.exception
-                print e
+                _log.info("Value of evironment variable {} is malformed, skipping.".format(wildcard))
 
     def __str__(self):
         d = {}
