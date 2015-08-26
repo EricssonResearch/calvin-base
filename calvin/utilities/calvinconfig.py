@@ -169,7 +169,9 @@ class CalvinConfig(object):
 
     def install_location(self):
         """Return the 'installation dir'."""
-        return '/usr/lib'
+        this_dir = os.path.dirname(os.path.realpath(__file__))
+        install_dir = os.path.abspath(os.path.join(this_dir, '..'))
+        return install_dir
 
     def config_paths(self):
         """
