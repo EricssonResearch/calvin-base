@@ -117,7 +117,8 @@ class CalvinConfig(object):
         """Append value (list) of option in named section"""
         _section = self.config[section.lower()]
         _option = option.lower()
-        if type(_section[_option]) is not list :
+        old_value = _section.setdefault(_option, [])
+        if type(old_value) is not list :
             raise Exception("Can't append, {}:{} is not a list".format(section, option))
         if type(value) is not list:
             raise Exception("Can't append, value is not a list")
