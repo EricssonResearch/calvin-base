@@ -205,8 +205,8 @@ class CalvinConfig(object):
             return [self.override_path]
 
         inst_loc = self.install_location()
-        home = os.environ['HOME']
         curr_loc = os.getcwd()
+        home = os.environ.get('HOME', curr_loc)
         paths = [home, inst_loc]
         if not curr_loc.startswith(home):
             return paths
