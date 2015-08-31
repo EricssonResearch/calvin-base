@@ -238,7 +238,7 @@ class ActorStore(Store):
             elif dest is doctext:
                 line = line.strip()
                 if line:
-                    dest.append(line.strip())
+                    dest.append(line)
                 continue
 
             if dest in [inputs, outputs]:
@@ -378,7 +378,7 @@ class DocumentationStore(ActorStore):
             'ns': namespace, 'name': name,
             'type': 'actor',
             'short_desc': doctext[0],
-            'long_desc': '\n'.join(doctext[2:]),
+            'long_desc': '\n'.join(doctext[1:]),
             'args': self._get_args(actor_class),
             'inputs': inputs,
             'outputs': outputs,
