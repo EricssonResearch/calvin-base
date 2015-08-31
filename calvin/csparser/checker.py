@@ -66,7 +66,13 @@ class Checker(object):
         defs = self.get_definition(comp_def['name'])
         self.check_component_connections(defs, comp_def['structure']['connections'])
         self.check_structure(comp_def['structure'], comp_def['arg_identifiers'])
-        self.check_component_arguments(comp_def)
+        implicits = self._find_implicits(comp_def['structure']['connections'])
+        self.check_component_arguments(comp_def, implicits)
+
+    def _find_implicits(self, connections):
+        implicit = [c['src_port'] for c in connections if not c['src']]
+        arg_names = [value for kind, value in implicit if kind == 'IDENTIFIER']
+        return arg_names
 
     def get_definition(self, actor_type):
         """
@@ -222,19 +228,19 @@ class Checker(object):
         seen.append(value)
         return self.lookup_constant(value, seen)
 
-    def check_component_arguments(self, comp_def):
+    def check_component_arguments(self, comp_def, implicits):
         """
         Warn if component declares parameters that are not used by the actors in the component.
         """
         declared_args = set(comp_def['arg_identifiers'])
-        used_args = set()
+        used_args = set(implicits)
         for actor_def in comp_def['structure']['actors'].values():
             used_args.update({value for kind, value in actor_def['args'].values() if kind == 'IDENTIFIER'})
 
         unused_args = declared_args - used_args
         for u in unused_args:
             fmt = "Unused argument: '{param}'"
-            self.append_warning(fmt, line=comp_def['dbg_line'], param=u)
+            self.append_error(fmt, line=comp_def['dbg_line'], param=u)
 
     def check_arguments(self, definition, declaration, arguments):
         """
@@ -256,7 +262,7 @@ class Checker(object):
         unused = defined - (mandatory | optional)
         for m in unused:
             fmt = "Unused argument: '{param}'"
-            self.append_warning(fmt, line=declaration['dbg_line'], param=m)
+            self.append_error(fmt, line=declaration['dbg_line'], param=m)
 
         # Case 3: value for arg is IDENTIFIER rather than VALUE, and IDENTIFIER is not in constants
         for param, (kind, value) in declaration['args'].iteritems():

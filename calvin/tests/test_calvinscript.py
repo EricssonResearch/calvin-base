@@ -331,8 +331,9 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['reason'], "Missing argument: 'file'")
+        self.assertEqual(len(errors), 2)
+        self.assertEqual(errors[0]['reason'], "Unused argument: 'file'")
+        self.assertEqual(errors[1]['reason'], "Missing argument: 'file'")
 
     def testComponentUnusedArgument(self):
         script = """
@@ -346,9 +347,9 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        self.assertEqual(len(errors), 0)
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['reason'], "Unused argument: 'file'")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(warnings), 0)
+        self.assertEqual(errors[0]['reason'], "Unused argument: 'file'")
 
     def testLocalComponentRecurse(self):
         script = """
