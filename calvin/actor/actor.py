@@ -331,6 +331,7 @@ class Actor(object):
         self._managed = set(('id', 'name'))
         self.calvinsys = None # CalvinSys(node)
         self.control = calvincontrol.get_calvincontrol()
+        self._migrating_to = None  # During migration while on the previous node set to the next node id
 
         self.inports = {p: actorport.InPort(p, self) for p in self.inport_names}
         self.outports = {p: actorport.OutPort(p, self) for p in self.outport_names}
@@ -544,7 +545,8 @@ class Actor(object):
         for port in state['outports']:
             self.outports[port]._set_state(state['outports'][port])
 
-    @verify_status([STATUS.ENABLED])
+    # TODO verify status should only allow reading connections when and after being fully connected (enabled)
+    @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING])
     def connections(self, node_id):
         c = {'actor_id': self.id, 'actor_name': self.name}
         inports = {}

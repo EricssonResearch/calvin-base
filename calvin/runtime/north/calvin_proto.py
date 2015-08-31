@@ -329,8 +329,10 @@ class CalvinProto(CalvinCBClass):
         link = self.network.links[payload['from_rt_uuid']]
         tunnel = link.get_tunnel(payload['type'])
         ok = False
+        _log.analyze(self.rt_id, "+", payload, peer_node_id=payload['from_rt_uuid'])
         if tunnel:
-            _log.debug("GOT TUNNEL NEW request while we already have one pending")
+            _log.debug("%s: GOT TUNNEL NEW request while we already have one pending" % self.node.id)
+            _log.analyze(self.rt_id, "+ PENDING", payload, peer_node_id=payload['from_rt_uuid'])
             # Got tunnel new request while we already have one pending
             # it is not allowed to send new request while a tunnel is working
             if tunnel.status != CalvinTunnel.STATUS.WORKING:
@@ -339,10 +341,28 @@ class CalvinProto(CalvinCBClass):
                 if tunnel.id < payload['tunnel_id']:
                     # Our tunnel has lowest id, change our tunnels id
                     # update status and call proper callbacks
+                    # but send tunnel reply first, to get everything in order
+                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': {'status':'ACK' if ok else 'NACK', 'tunnel_id': payload['tunnel_id']}}
+                    self.network.links[payload['from_rt_uuid']].send(msg)
                     tunnel._setup_ack({'status': 'ACK', 'tunnel_id': payload['tunnel_id']})
+                    _log.analyze(self.rt_id, "+ CHANGE ID", payload, peer_node_id=payload['from_rt_uuid'])
+                else:
+                    # Our tunnel has highest id, keep our id
+                    # update status and call proper callbacks
+                    # but send tunnel reply first, to get everything in order
+                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': {'status':'ACK' if ok else 'NACK', 'tunnel_id': tunnel.id}}
+                    self.network.links[payload['from_rt_uuid']].send(msg)
+                    tunnel._setup_ack({'status': 'ACK', 'tunnel_id': tunnel.id})
+                    _log.analyze(self.rt_id, "+ KEEP ID", payload, peer_node_id=payload['from_rt_uuid'])
+            else:
+                # FIXME if this happens need to decide what to do
+                _log.debug("%s: GOT TUNNEL NEW request while our tunnel is WORKING!!!\n%s" % (self.node.id, payload))
+                _log.analyze(self.rt_id, "+ DROP", payload, peer_node_id=payload['from_rt_uuid'])
+            return
         else:
             # No simultaneous tunnel requests, lets create it...
             tunnel = CalvinTunnel(self.network.links, payload['from_rt_uuid'], payload['type'], payload['policy'], payload['tunnel_id'])
+            _log.analyze(self.rt_id, "+ NO SMASH", payload, peer_node_id=payload['from_rt_uuid'])
             try:
                 # ... and see if the handler wants it
                 ok = self.tunnel_handlers[payload['type']](tunnel)
@@ -362,6 +382,7 @@ class CalvinProto(CalvinCBClass):
             self.network.link_check(to_rt_uuid)
         except:
             raise Exception("ERROR_UNKNOWN_RUNTIME")
+            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
         try:
             tunnel = self.network.links[to_rt_uuid].tunnels[tunnel_uuid]
         except:
@@ -376,6 +397,7 @@ class CalvinProto(CalvinCBClass):
             tunnel = self.network.links[payload['from_rt_uuid']].tunnels[payload['tunnel_id']]
         except:
             raise Exception("ERROR_UNKNOWN_TUNNEL")
+            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
         # We have the tunnel so close it
         tunnel.close(local_only=True)
         ok = False
@@ -393,6 +415,8 @@ class CalvinProto(CalvinCBClass):
         try:
             self.network.links[payload['from_rt_uuid']].tunnels[payload['tunnel_id']].recv_handler(payload['value'])
         except:
+            _log.debug("%s: ERROR_UNKNOWN_TUNNEL %s" %(self.node.id, payload), exc_info=True)
+            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
             raise Exception("ERROR_UNKNOWN_TUNNEL")
 
     #### PORTS ####

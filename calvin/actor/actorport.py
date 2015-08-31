@@ -18,6 +18,7 @@ from calvin.utilities import calvinuuid
 from calvin.runtime.north import fifo
 from calvin.runtime.south import endpoint
 from calvin.utilities.calvinlogger import get_logger
+import copy
 
 _log = get_logger(__name__)
 
@@ -87,6 +88,9 @@ class InPort(Port):
     def is_connected(self):
         return self.endpoint.is_connected()
 
+    def is_connected_to(self, peer_id):
+        return self.endpoint.is_connected() and self.endpoint.get_peer()[1]==peer_id
+
     def attach_endpoint(self, endpoint_):
         old_endpoint = self.endpoint
         if type(old_endpoint) is not endpoint.Endpoint:
@@ -100,12 +104,12 @@ class InPort(Port):
             _log.warning("Inport: No such endpoint")
             return
         self.owner.did_disconnect(self)
-        self.endpoint = endpoint.Endpoint(self)
+        self.endpoint = endpoint.Endpoint(self, former_peer_id=endpoint_.get_peer()[1])
 
     def disconnect(self):
         self.owner.did_disconnect(self)
         endpoints = [self.endpoint]
-        self.endpoint = endpoint.Endpoint(self)
+        self.endpoint = endpoint.Endpoint(self, former_peer_id=self.endpoint.get_peer()[1])
         return endpoints
 
     def read_token(self):
@@ -167,6 +171,12 @@ class OutPort(Port):
                 return False
         return True
 
+    def is_connected_to(self, peer_id):
+        for ep in self.endpoints:
+            if ep.get_peer()[1] == peer_id:
+                return True
+        return False
+
     def attach_endpoint(self, endpoint_):
         peer_id = endpoint_.peer_id
         # Check if this is a reconnect after migration
@@ -220,6 +230,10 @@ class OutPort(Port):
         peers = []
         for ep in self.endpoints:
             peers.append(ep.get_peer())
+        if len(peers) < len(self.fifo.readers):
+            all = copy.copy(self.fifo.readers)
+            all -= set([p[1] for p in peers])
+            peers.extend([(None, p) for p in all])
         return peers
 
 
