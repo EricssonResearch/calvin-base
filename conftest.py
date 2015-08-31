@@ -24,7 +24,7 @@ import sys
 
 def pytest_addoption(parser):
     parser.addoption("--loglevel", action="append", default=[],
-            help="Set log level, levels: CRITICAL, ERROR, WARNING, INFO and DEBUG. To enable on specific modules use 'module:level'")
+            help="Set log level, levels: CRITICAL, ERROR, WARNING, INFO, DEBUG and ANALYZE. To enable on specific modules use 'module:level'")
     parser.addoption("--logfile", action="store", default=None,
             help="Set logging to file, specify filename")
     parser.addoption("--actor", action="store", default="",
@@ -64,6 +64,8 @@ def pytest_configure(config):
             calvinlogger.get_logger(module).setLevel(logging.INFO)
         elif level == "DEBUG":
             calvinlogger.get_logger(module).setLevel(logging.DEBUG)
+        elif level == "ANALYZE":
+            calvinlogger.get_logger(module).setLevel(5)
 
 @pytest.fixture
 def testarg_actor(request):

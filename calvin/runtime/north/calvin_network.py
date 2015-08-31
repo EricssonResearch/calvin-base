@@ -71,6 +71,7 @@ class CalvinLink(object):
         """
         msg['from_rt_uuid'] = self.rt_id
         msg['to_rt_uuid'] = self.peer_id
+        _log.analyze(self.rt_id, "SEND", msg)
         self.transport.send(msg)
 
     def close(self):

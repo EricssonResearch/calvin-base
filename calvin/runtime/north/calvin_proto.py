@@ -174,6 +174,7 @@ class CalvinProto(CalvinCBClass):
     def recv_handler(self, tp_link, payload):
         """ Called by transport when a full payload has been received
         """
+        _log.analyze(self.rt_id, "RECV", payload)
         try:
             self.network.link_check(payload['from_rt_uuid'])
         except:

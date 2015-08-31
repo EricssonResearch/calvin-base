@@ -16,10 +16,27 @@
 
 import logging
 from colorlog import ColoredFormatter
+import json
+import inspect
 
 _name = "calvin"
 _log = None
 _use_color = False
+
+
+def analyze(self, node_id, func, param, peer_node_id=None, *args, **kws):
+    if self.isEnabledFor(5):
+        if func.startswith("+"):
+            f = inspect.currentframe()
+            if f is not None:
+                func = f.f_back.f_code.co_name + func[1:]
+
+        self._log(5, "[[ANALYZE]]" + json.dumps({'node_id': node_id,
+                                                 'peer_node_id': peer_node_id,
+                                                 'func': func,
+                                                 'param':param}), args, **kws) 
+logging.Logger.analyze = analyze
+logging.addLevelName(5, "ANALYZE")
 
 def _create_logger(filename=None):
     global _log
@@ -33,7 +50,8 @@ def _create_logger(filename=None):
             ch = logging.FileHandler(filename=filename, mode='w')
         else:
             ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
+        ch.setLevel(5)
+        
 
         # create formatter
         colored = ColoredFormatter(
