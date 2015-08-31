@@ -51,6 +51,7 @@ class ActorManager(object):
         # When renewing (e.g. after migrate) apply the args from the state
         # instead of any directly supplied
         _log.debug("class: %s args: %s state: %s", actor_type, args, state)
+        _log.analyze(self.node.id, "+", {'actor_type': actor_type, 'state': state})
 
         try:
             if state:
@@ -153,6 +154,7 @@ class ActorManager(object):
             return
 
         actor = self.actors[actor_id]
+        actor._migrating_to = node_id
         actor.will_migrate()
         actor_type = actor._type
         ports = actor.connections(self.node.id)

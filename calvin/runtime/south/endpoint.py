@@ -26,9 +26,10 @@ class Endpoint(object):
 
     """docstring for Endpoint"""
 
-    def __init__(self, port):
+    def __init__(self, port, former_peer_id=None):
         super(Endpoint, self).__init__()
         self.port = port
+        self.former_peer_id = former_peer_id
 
     def __str__(self):
         return self.__class__.__name__
@@ -48,6 +49,9 @@ class Endpoint(object):
 
     def destroy(self):
         pass
+
+    def get_peer(self):
+        return (None, self.former_peer_id)
 
 #
 # Local endpoints
