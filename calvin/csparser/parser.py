@@ -19,6 +19,7 @@ import ply.lex as lex
 import ply.yacc as yacc
 import calvin_rules
 from calvin_rules import tokens
+import astnode as ast
 
 
 class CalvinSyntaxError(Exception):
@@ -34,7 +35,11 @@ class CalvinEOFError(Exception):
 
 def p_script(p):
     """script : constdefs compdefs opt_program"""
-    p[0] = {'constants': p[1], 'components': p[2], 'structure': p[3]}
+    s = ast.ASTNode()
+    s.children.extend(p[1])
+    s.children.extend(p[2])
+    s.children.extend(p[3])
+    p[0] = s
 
 
 def p_constdefs(p):
@@ -42,13 +47,16 @@ def p_constdefs(p):
                  | constdefs constdef
                  | constdef"""
     if len(p) == 3:
-        p[1].update(p[2])
-    p[0] = p[1] if len(p) > 1 else {}
+        p[0] = p[1] + [p[2]]
+    elif len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = []
 
 
 def p_constdef(p):
     """constdef : DEFINE IDENTIFIER EQ argument"""
-    constdef = {p[2]: p[4]}
+    constdef = ast.ConstNode(ast.IdNode(p[2]), p[4])
     p[0] = constdef
 
 
@@ -57,28 +65,32 @@ def p_compdefs(p):
                 | compdefs compdef
                 | compdef"""
     if len(p) == 3:
-        p[1].update(p[2])
-    p[0] = p[1] if len(p) > 1 else {}
+        p[0] = p[1] + [p[2]]
+    elif len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = []
 
 
 def p_compdef(p):
     """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring program RBRACE"""
-    name = p[2]
-    arg_ids = p[4]
-    inputs = p[6]
-    outputs = p[8]
-    docstring = p[10]
-    structure = p[11]
-    comp = {
-        'name': name,
-        'inports': inputs,
-        'outports': outputs,
-        'arg_identifiers': arg_ids,
-        'structure': structure,
-        'docstring': docstring,
-        'dbg_line': p.lineno(2)
-    }
-    p[0] = {name: comp}
+    # name = p[2]
+    # arg_ids = p[4]
+    # inputs = p[6]
+    # outputs = p[8]
+    # docstring = p[10]
+    # structure = p[11]
+    # comp = {
+    #     'name': name,
+    #     'inports': inputs,
+    #     'outports': outputs,
+    #     'arg_identifiers': arg_ids,
+    #     'structure': structure,
+    #     'docstring': docstring,
+    #     'dbg_line':p.lineno(2)
+    # }
+    # p[0] = {name:comp}
+    p[0] = ast.ComponentNode(p[2])
 
 
 def p_docstring(p):
@@ -94,7 +106,7 @@ def p_opt_program(p):
     """opt_program :
                    | program"""
     if len(p) == 1:
-        p[0] = {'connections': [], 'actors': {}}
+        p[0] = []
     else:
         p[0] = p[1]
 
@@ -102,22 +114,10 @@ def p_opt_program(p):
 def p_program(p):
     """program : program statement
                | statement """
-    if len(p) == 3:
-        # Update dict
-        # p[1] is dict and p[2] is tuple (assignment|link, statement)
-        kind, stmt = p[2]
-        if kind is 'link':
-            p[1]['connections'].append(stmt)
-        else:
-            p[1]['actors'].update(stmt)
-        p[0] = p[1]
+    if len(p) == 2:
+        p[0] = [p[1]]
     else:
-        # Create dict, p[1] is tuple (assignment|link, statement)
-        kind, stmt = p[1]
-        if kind is 'link':
-            p[0] = {'connections': [stmt], 'actors': {}}
-        else:
-            p[0] = {'connections': [], 'actors': stmt}
+        p[0] = p[1] + [p[2]]
 
 
 def p_statement(p):
@@ -128,49 +128,50 @@ def p_statement(p):
 
 def p_assignment(p):
     """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
-    p[0] = ('assignment', {p[1]: {'actor_type': p[3], 'args': p[5], 'dbg_line': p.lineno(2)}})
+    p[0] = ast.AssignmentNode(p[1], p[3], p[5])
 
 
 def p_link(p):
-    """link : port GT port
-            | argument GT port"""
-    kind, value = p[1]
-    (src, port) = value if kind == 'PORT' else (None, (kind, value))
-    d = {}
-    d['src'] = src
-    d['src_port'] = port
-    _, (dst, port) = p[3]
-    d['dst'] = dst
-    d['dst_port'] = port
-    d['dbg_line'] = p.lineno(2)
-    p[0] = ('link', d)
+    """link : port GT port"""
+    # FIXME: Add implicit ports
+    p[0] = ast.LinkNode(p[1], p[3])
 
 
 def p_port(p):
     """port : IDENTIFIER DOT IDENTIFIER
             | DOT IDENTIFIER"""
-    p[0] = ('PORT', (p[1], p[2] if len(p) == 3 else p[3]))
+    if len(p) == 3:
+        p[0] = ast.InternalPortNode(p[2])
+    else:
+        p[0] = ast.PortNode(p[1], p[3])
 
 
 def p_named_args(p):
     """named_args :
                   | named_args named_arg COMMA
                   | named_args named_arg"""
-
-    if len(p) > 2:
-        p[1].update(p[2])
-    p[0] = p[1] if len(p) > 1 else {}
+    if len(p) > 1:
+        p[0] = p[1] + [p[2]]
+    else:
+        p[0] = []
 
 
 def p_named_arg(p):
     """named_arg : IDENTIFIER EQ argument"""
-    p[0] = {p[1]: p[3]}
+    p[0] = ast.NamedArgNode(ast.IdNode(p[1]), p[3])
 
 
 def p_argument(p):
     """argument : value
                 | IDENTIFIER"""
-    p[0] = (p.slice[1].type.upper(), p[1])
+    if p.slice[1].type.upper() == 'IDENTIFIER':
+        p[0] = ast.IdNode(p[1])
+    else:
+        p[0] = p[1]
+
+# def p_identifier(p):
+#     """identifier : IDENTIFIER"""
+#     p[0] = ast.IdNode(p[1])
 
 
 def p_value(p):
@@ -180,7 +181,7 @@ def p_value(p):
              | null
              | NUMBER
              | STRING"""
-    p[0] = p[1]
+    p[0] = ast.ValueNode(p[1])
 
 
 def p_bool(p):
@@ -231,19 +232,10 @@ def p_array(p):
     p[0] = p[2]
 
 
-# def p_opt_id_list(p):
-#     """opt_id_list :
-#                    | id_list"""
-#     if len(p) == 1:
-#         p[0] = []
-#     else:
-#         p[0] = p[1]
-
 def p_identifiers(p):
     """identifiers :
                    | identifiers IDENTIFIER COMMA
                    | identifiers IDENTIFIER"""
-
     if len(p) > 2:
         p[1].append(p[2])
     p[0] = p[1] if len(p) > 1 else []
@@ -275,7 +267,7 @@ def _calvin_parser():
     # have to be recreated
     this_file = os.path.realpath(__file__)
     containing_dir = os.path.dirname(this_file)
-    parser = yacc.yacc(debug=False, optimize=True, outputdir=containing_dir)
+    parser = yacc.yacc(optimize=False, outputdir=containing_dir)
     return parser
 
 
@@ -292,9 +284,10 @@ def _find_column(input, token):
 
 def calvin_parser(source_text, source_file=''):
     parser = _calvin_parser()
-    result = {}
+    result = ast.ASTNode()
     # Until there is error recovery, there will only be a single error at a time
     errors = []
+    result.sourcefile = source_file
 
     try:
         result = parser.parse(source_text)
@@ -314,7 +307,7 @@ def calvin_parser(source_text, source_file=''):
         }
         errors.append(error)
 
-    result['sourcefile'] = source_file
+
 
     warnings = []
 
@@ -328,23 +321,18 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         script = 'inline'
         source_text = \
-'''        # Test script
-        define FOO = true
-        define BAR = false
-        # define BAZ = 43
-        component Count(len)  -> a,b,seq {
-            """FOO"""
-            src : std.Constant(data="hup", n=len)
-            src.token > .seq
-        }
-        # component Count2(len) -> seq {
-        #     src : std.Constant(data="hup", n=len)
-        #     src.token > .seq
-        # }
-        #
-        src: Count(len=5)
-        snk : io.StandardOut()
-        42 > snk.token
+'''
+define FOO=1
+define BAR=FOO
+src : std.CountTimer(delay=1, foo=2)
+snk : io.StandardOut()
+src.integer > snk.token
+# component Foo(a) in -> out {
+# """Docs"""
+# i : std.Identity()
+# .in > i.token
+# i.token > .out
+# }
 '''
     else:
         script = sys.argv[1]
@@ -360,4 +348,11 @@ if __name__ == '__main__':
     if errors:
         print "{reason} {script} [{line}:{col}]".format(script=script, **errors[0])
     else:
-        print(json.dumps(result, indent=4, sort_keys=True))
+        import astprint
+        bp = astprint.BracePrinter()
+        bp.visit(result)
+        #print
+        #print result.children
+
+        # print result
+        # print(json.dumps(result, indent=4, sort_keys=True))
