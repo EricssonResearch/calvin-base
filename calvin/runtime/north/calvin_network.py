@@ -46,6 +46,7 @@ class CalvinLink(object):
         if old_link:
             # close old link after a period, since might still receive messages on the transport layer
             # TODO chose the delay based on RTT instead of arbitrary 3 seconds
+            _log.analyze(self.rt_id, "+ DELAYED LINK CLOSE", {})
             async.DelayedCall(3.0, old_link.close)
 
     def reply_handler(self, payload):
@@ -81,6 +82,7 @@ class CalvinLink(object):
 
     def close(self):
         """ Disconnect the transport and hence the link object won't work anymore """
+        _log.analyze(self.rt_id, "+ LINK", {})
         self.transport.disconnect()
 
     def get_tunnel(self, tunnel_type=None):
@@ -324,6 +326,7 @@ class CalvinNetwork(object):
 
     def link_remove(self, peer_id):
         """ Removes a link to peer id """
+        _log.analyze(self.node.id, "+", {'counter': self.links[peer_id].prevent_removal_counter}, peer_node_id=peer_id)
         try:
             self.links.pop(peer_id)
         except:

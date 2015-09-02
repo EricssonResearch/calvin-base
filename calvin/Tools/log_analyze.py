@@ -48,11 +48,20 @@ def main():
         log.append(logline)
 
     nodes = list(set([l['node_id'] for l in log]))
+    try:
+        # We have "TESTRUN" string in node id if logging py.test names
+        nodes.remove("TESTRUN")
+    except:
+        pass
     line = ""
     for n in nodes:
         line += n + " "*(WIDTH-35)
     print line
     for l in log:
+        if l['node_id'] == "TESTRUN":
+            print l['func'] + "%"*(len(nodes)*WIDTH-len(l['func']))
+            continue
+
         ind = nodes.index(l['node_id'])*WIDTH
         if l['func']=="SEND":
             ends = nodes.index(l['param']['to_rt_uuid'])*WIDTH

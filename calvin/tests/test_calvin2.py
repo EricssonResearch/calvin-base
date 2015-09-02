@@ -24,6 +24,8 @@ from calvin.Tools import deployer
 import pytest
 from calvin.utilities import utils
 from calvin.utilities.nodecontrol import dispatch_node
+from calvin.utilities import calvinlogger
+_log = calvinlogger.get_logger(__name__)
 
 def absolute_filename(filename):
     import os.path
@@ -119,6 +121,7 @@ class TestConnections(CalvinTestBase):
 
     @pytest.mark.slow
     def testLocalSourceSink(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
 
@@ -134,6 +137,7 @@ class TestConnections(CalvinTestBase):
         utils.delete_actor(self.rt1, snk)
 
     def testMigrateSink(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
 
@@ -150,6 +154,7 @@ class TestConnections(CalvinTestBase):
         utils.delete_actor(self.rt2, snk)
 
     def testMigrateSource(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
 
@@ -172,6 +177,7 @@ class TestConnections(CalvinTestBase):
         utils.delete_actor(self.rt1, snk)
 
     def testTwoStepMigrateSinkSource(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
 
@@ -190,6 +196,7 @@ class TestConnections(CalvinTestBase):
         utils.delete_actor(self.rt2, snk)
 
     def testTwoStepMigrateSourceSink(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
 
@@ -213,6 +220,7 @@ class TestScripts(CalvinTestBase):
 
     @pytest.mark.slow
     def testInlineScript(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
           snk : io.StandardOut(store_tokens=1, quiet=1)
@@ -231,6 +239,7 @@ class TestScripts(CalvinTestBase):
 
     @pytest.mark.slow
     def testFileScript(self):
+        _log.analyze("TESTRUN", "+", {})
         scriptname = 'test1'
         scriptfile = absolute_filename("scripts/%s.calvin" % (scriptname, ))
         app_info, errors, warnings = compiler.compile_file(scriptfile)
@@ -249,6 +258,7 @@ class TestScripts(CalvinTestBase):
 class TestStateMigration(CalvinTestBase):
 
     def testSimpleState(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
           sum : std.Sum()
@@ -279,6 +289,7 @@ class TestStateMigration(CalvinTestBase):
 class TestAppLifeCycle(CalvinTestBase):
 
     def testAppDestructionOneRemote(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
           sum : std.Sum()
@@ -308,6 +319,7 @@ class TestAppLifeCycle(CalvinTestBase):
         self.assertIsNone(utils.get_application(self.rt1, d.app_id))
 
     def testAppDestructionAllRemote(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
           sum : std.Sum()
@@ -343,6 +355,7 @@ class TestAppLifeCycle(CalvinTestBase):
 class TestEnabledToEnabledBug(CalvinTestBase):
 
     def test10(self):
+        _log.analyze("TESTRUN", "+", {})
         # Two actors, doesn't seem to trigger the bug
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
@@ -359,6 +372,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.delete_actor(self.rt1, snk)
 
     def test11(self):
+        _log.analyze("TESTRUN", "+", {})
         # Same as test10, but scripted
         script = """
             src : std.Counter()
@@ -380,6 +394,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         d.destroy()
 
     def test20(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt1, 'std.Identity', 'ity')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
@@ -398,6 +413,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.delete_actor(self.rt1, snk)
 
     def test21(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt2, 'std.Identity', 'ity')
         snk = utils.new_actor_wargs(self.rt3, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
@@ -420,6 +436,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.delete_actor(self.rt3, snk)
 
     def test22(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt2, 'std.Identity', 'ity')
         snk = utils.new_actor_wargs(self.rt3, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
@@ -448,6 +465,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.delete_actor(self.rt3, snk)
 
     def test25(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt1, 'std.Identity', 'ity')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
@@ -466,6 +484,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.delete_actor(self.rt1, snk)
 
     def test26(self):
+        _log.analyze("TESTRUN", "+", {})
         # Same as test20
         script = """
             src : std.Counter()
@@ -489,6 +508,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         d.destroy()
 
     def test30(self):
+        _log.analyze("TESTRUN", "+", {})
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         snk1 = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
         snk2 = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
@@ -512,6 +532,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
     def test31(self):
         # Verify that fanout defined implicitly in scripts is handled correctly
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src : std.Counter()
             snk1 : io.StandardOut(store_tokens=1, quiet=1)
@@ -542,6 +563,7 @@ class TestNullPorts(CalvinTestBase):
 
     def testVoidActor(self):
         # Verify that the null port of a std.Void actor behaves as expected
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src1 : std.Counter()
             src2 : std.Void()
@@ -568,6 +590,7 @@ class TestNullPorts(CalvinTestBase):
 
     def testTerminatorActor(self):
         # Verify that the null port of a std.Terminator actor behaves as expected
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src  : std.Counter()
             term : std.Terminator()
@@ -594,6 +617,7 @@ class TestNullPorts(CalvinTestBase):
 class TestCompare(CalvinTestBase):
 
     def testBadOp(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
             const : std.Constant(data=5, n=-1)
@@ -619,6 +643,7 @@ class TestCompare(CalvinTestBase):
         d.destroy()
 
     def testEqual(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
             const : std.Constant(data=5, n=-1)
@@ -644,6 +669,7 @@ class TestCompare(CalvinTestBase):
         d.destroy()
 
     def testGreaterThanOrEqual(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
             const : std.Constant(data=5, n=-1)
@@ -673,6 +699,7 @@ class TestCompare(CalvinTestBase):
 class TestSelect(CalvinTestBase):
 
     def testTrue(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
             const : std.Constant(data=1, n=-1)
@@ -700,6 +727,7 @@ class TestSelect(CalvinTestBase):
         d.destroy()
 
     def testFalse(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
             const : std.Constant(data=0, n=-1)
@@ -727,6 +755,7 @@ class TestSelect(CalvinTestBase):
         d.destroy()
 
     def testBadSelect(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
             const : std.Constant(data=2, n=-1)
@@ -758,6 +787,7 @@ class TestSelect(CalvinTestBase):
 class TestDeselect(CalvinTestBase):
 
     def testDeselectTrue(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src     : std.Counter()
             const_5 : std.Constantify(constant=5)
@@ -790,6 +820,7 @@ class TestDeselect(CalvinTestBase):
         d.destroy()
 
     def testDeselectFalse(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src     : std.Counter()
             const_5 : std.Constantify(constant=5)
@@ -822,6 +853,7 @@ class TestDeselect(CalvinTestBase):
         d.destroy()
 
     def testDeselectBadSelect(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src     : std.Counter()
             const_5 : std.Constantify(constant=5)
@@ -854,6 +886,7 @@ class TestDeselect(CalvinTestBase):
 class TestLineJoin(CalvinTestBase):
 
     def testBasicJoin(self):
+        _log.analyze("TESTRUN", "+", {})
         datafile = absolute_filename('data.txt')
         script = """
             fname : std.Constant(data="%s")
@@ -882,6 +915,7 @@ class TestLineJoin(CalvinTestBase):
 
     @pytest.mark.xfail
     def testCustomTriggerJoin(self):
+        _log.analyze("TESTRUN", "+", {})
         datafile = absolute_filename('data.txt')
         script = """
             fname : std.Constant(data="%s")
@@ -910,6 +944,7 @@ class TestLineJoin(CalvinTestBase):
 
     @pytest.mark.xfail
     def testEmptyStringTriggerJoin(self):
+        _log.analyze("TESTRUN", "+", {})
         datafile = absolute_filename('data.txt')
         script = """
             fname : std.Constant(data="%s")
@@ -942,6 +977,7 @@ class TestLineJoin(CalvinTestBase):
 class TestRegex(CalvinTestBase):
 
     def testRegexMatch(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"\d+\.\d+")
@@ -968,6 +1004,7 @@ class TestRegex(CalvinTestBase):
 
 
     def testRegexNoMatch(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Constant(data="x24.1632", n=1)
             regex : text.RegexMatch(regex=!"\d+\.\d+")
@@ -993,6 +1030,7 @@ class TestRegex(CalvinTestBase):
         d.destroy()
 
     def testRegexCapture(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.\d+")
@@ -1018,6 +1056,7 @@ class TestRegex(CalvinTestBase):
         d.destroy()
 
     def testRegexMultiCapture(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.(\d+)")
@@ -1044,6 +1083,7 @@ class TestRegex(CalvinTestBase):
 
 
     def testRegexCaptureNoMatch(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Constant(data="x24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.\d+")
@@ -1072,6 +1112,7 @@ class TestRegex(CalvinTestBase):
 class TestConstantAsArguments(CalvinTestBase):
 
     def testConstant(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             define FOO = 42
             src   : std.Constant(data=FOO, n=10)
@@ -1093,6 +1134,7 @@ class TestConstantAsArguments(CalvinTestBase):
         d.destroy()
 
     def testConstantRecursive(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             define FOO = BAR
             define BAR = 42
@@ -1119,6 +1161,7 @@ class TestConstantAsArguments(CalvinTestBase):
 class TestConstantOnPort(CalvinTestBase):
 
     def testLiteralOnPort(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             42 > snk.token
@@ -1138,6 +1181,7 @@ class TestConstantOnPort(CalvinTestBase):
         d.destroy()
 
     def testConstantOnPort(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             define FOO = "Hello"
             snk   : io.StandardOut(store_tokens=1, quiet=1)
@@ -1158,6 +1202,7 @@ class TestConstantOnPort(CalvinTestBase):
         d.destroy()
 
     def testConstantRecursiveOnPort(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             define FOO = BAR
             define BAR = "yay"
@@ -1183,6 +1228,7 @@ class TestConstantOnPort(CalvinTestBase):
 class TestConstantAndComponents(CalvinTestBase):
 
     def testLiteralOnCompPort(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             component Foo() -> out {
                 i:std.Stringify()
@@ -1208,6 +1254,7 @@ class TestConstantAndComponents(CalvinTestBase):
         d.destroy()
 
     def testConstantOnCompPort(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             define MEANING = 42
             component Foo() -> out {
@@ -1234,6 +1281,7 @@ class TestConstantAndComponents(CalvinTestBase):
         d.destroy()
 
     def testStringConstantOnCompPort(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
             define MEANING = "42"
             component Foo() -> out {
@@ -1263,6 +1311,7 @@ class TestConstantAndComponents(CalvinTestBase):
 class TestConstantAndComponentsArguments(CalvinTestBase):
 
     def testComponentArgument(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
         component Count(len) -> seq {
             src : std.Constant(data="hup", n=len)
@@ -1287,6 +1336,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         d.destroy()
 
     def testComponentConstantArgument(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
         define FOO = 5
         component Count(len) -> seq {
@@ -1314,6 +1364,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
 
     def testComponentConstantArgumentDirect(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
         define FOO = 10
         component Count() -> seq {
@@ -1340,6 +1391,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
 
     def testComponentArgumentAsImplicitActor(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
         component Count(data) -> seq {
             i : std.Identity()
@@ -1366,6 +1418,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
 
     def testComponentConstantArgumentAsImplicitActor(self):
+        _log.analyze("TESTRUN", "+", {})
         script = """
         define FOO = "hup"
         component Count(data) -> seq {

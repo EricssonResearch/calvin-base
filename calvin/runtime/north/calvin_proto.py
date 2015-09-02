@@ -27,7 +27,7 @@ class CalvinTunnel(object):
 
     STATUS = enum('PENDING', 'WORKING', 'TERMINATED')
 
-    def __init__(self, links, peer_node_id, tunnel_type, policy, id=None):
+    def __init__(self, links, peer_node_id, tunnel_type, policy, rt_id=None, id=None):
         """ links: the calvin networks dictionary of links
             peer_node_id: the id of the peer that we use
             tunnel_type: what is the usage of the tunnel
@@ -40,6 +40,7 @@ class CalvinTunnel(object):
         self.peer_node_id = peer_node_id
         self.tunnel_type = tunnel_type
         self.policy = policy
+        self.rt_id = rt_id
         # id may change while status is PENDING, but is fixed in WORKING
         self.id = id if id else calvinuuid.uuid("TUNNEL")
         # If id supplied then we must be the second end and hence working
@@ -96,7 +97,12 @@ class CalvinTunnel(object):
             dict, list, tuple, string, numbers, booleans, etc
         """
         msg = {'cmd': 'TUNNEL_DATA', 'value': payload, 'tunnel_id': self.id}
-        self.links[self.peer_node_id].send(msg)
+        try:
+            self.links[self.peer_node_id].send(msg)
+        except:
+            # FIXME we failed sending should resend after establishing the link if our node is not quiting
+            # so far only seen during node quit
+            _log.analyze(self.rt_id, "+ TUNNEL FAILED", payload, peer_node_id=self.peer_node_id)
 
     def register_recv(self, handler):
         """ Register the handler of incoming messages on this tunnel """
@@ -287,7 +293,7 @@ class CalvinProto(CalvinCBClass):
         except:
             # Need to join the other peer first
             # Create a tunnel object which is not inserted on a link yet
-            tunnel = CalvinTunnel(self.network.links, None, tunnel_type, policy)
+            tunnel = CalvinTunnel(self.network.links, None, tunnel_type, policy, rt_id=self.node.id)
             _log.debug("Request for tunnel on rt to rt (%s) link that is not yet established" % (to_rt_uuid))
             self.network.link_request(to_rt_uuid, CalvinCB(self._tunnel_link_request_finished, tunnel=tunnel, to_rt_uuid=to_rt_uuid, tunnel_type=tunnel_type, policy=policy))
             return tunnel
@@ -298,7 +304,7 @@ class CalvinProto(CalvinCBClass):
             return tunnel
 
         # Create new tunnel and send request to peer
-        tunnel = CalvinTunnel(self.network.links, to_rt_uuid, tunnel_type, policy)
+        tunnel = CalvinTunnel(self.network.links, to_rt_uuid, tunnel_type, policy, rt_id=self.node.id)
         self._tunnel_new_msg(tunnel, to_rt_uuid, tunnel_type, policy)
         return tunnel
 
@@ -361,7 +367,7 @@ class CalvinProto(CalvinCBClass):
             return
         else:
             # No simultaneous tunnel requests, lets create it...
-            tunnel = CalvinTunnel(self.network.links, payload['from_rt_uuid'], payload['type'], payload['policy'], payload['tunnel_id'])
+            tunnel = CalvinTunnel(self.network.links, payload['from_rt_uuid'], payload['type'], payload['policy'], rt_id=self.node.id, id=payload['tunnel_id'])
             _log.analyze(self.rt_id, "+ NO SMASH", payload, peer_node_id=payload['from_rt_uuid'])
             try:
                 # ... and see if the handler wants it
