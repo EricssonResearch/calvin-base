@@ -20,6 +20,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.actor import actorport
+import re
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -430,6 +431,18 @@ class Storage(object):
             if not index_items:
                 org_cb(key=org_key, value=True)
 
+    def _index_strings(self, index, root_prefix_level):
+        # Make the list of index levels that should be used
+        # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
+        items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
+        root = "/".join(items[:root_prefix_level])
+        del items[:root_prefix_level]
+        items.insert(0, root)
+
+        # index strings for all levels
+        indexes = ['/'+'/'.join(items[:l]) for l in range(1,len(items)+1)]
+        return indexes
+
     def add_index(self, index, value, root_prefix_level=2, cb=None):
         """
         Add value (typically a node id) to the storage as a set.
@@ -450,18 +463,8 @@ class Storage(object):
 
         _log.debug("add index %s: %s" % (index, value))
 
-        # Make the list of index levels that should be stored
-        items = index.lstrip("/").split("/")
-        root = "/".join(items[:root_prefix_level])
-        del items[:root_prefix_level]
-        items.insert(0, root)
+        indexes = self._index_strings(index, root_prefix_level)
 
-        # Store index at all levels
-        _str = ""
-        indexes = []
-        for i in items:
-            _str = _str + "/" + i
-            indexes.append(_str)
         # make copy of indexes since altered in callbacks
         for i in indexes[:]:
             self.append(prefix="index-", key=i, value=[value], 
@@ -491,18 +494,8 @@ class Storage(object):
 
         _log.debug("remove index %s: %s" % (index, value))
 
-        # Make the list of index levels that should be removed on
-        items = index.lstrip("/").split("/")
-        root = "/".join(items[:root_prefix_level])
-        del items[:root_prefix_level]
-        items.insert(0, root)
+        indexes = self._index_strings(index, root_prefix_level)
 
-        # Remove index for all levels
-        _str = ""
-        indexes = []
-        for i in items:
-            _str = _str + "/" + i
-            indexes.append(_str)
         # make copy of indexes since altered in callbacks
         for i in indexes[:]:
             self.remove(prefix="index-", key=i, value=[value], 
