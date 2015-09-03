@@ -76,6 +76,14 @@ class BracePrinter(object):
         def g(n): print ")",
         self._visit(node, preorder=f, postorder=g)
 
+    @visitor.when(ast.BlockNode)
+    def visit(self, node):
+        def f(n): print "( PROGRAM",
+        def g(n): print ")",
+        self._visit(node, preorder=f, postorder=g)
+
     @visitor.when(ast.ComponentNode)
     def visit(self, node):
-        print "( COMPONENT {} )".format(node.name),
+        def f(n): print "( COMPONENT {}".format(node.name),
+        def g(n): print ")",
+        self._visit(node, preorder=f, postorder=g)

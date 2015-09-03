@@ -65,11 +65,23 @@ class InternalPortNode(ASTNode):
         super(InternalPortNode, self).__init__()
         self.port = port
 
+class BlockNode(ASTNode):
+    """docstring for ComponentNode"""
+    def __init__(self, program):
+        super(BlockNode, self).__init__()
+        self.children = program
+
+
 class ComponentNode(ASTNode):
     """docstring for ComponentNode"""
-    def __init__(self, name):
+    def __init__(self, name, arg_names, inports, outports, docstring, program):
         super(ComponentNode, self).__init__()
         self.name = name
+        self.arg_names = arg_names
+        self.inports = inports
+        self.outports = outports
+        self.docstring = docstring
+        self.children = [BlockNode(program)]
 
         # name = p[2]
 

@@ -100,7 +100,7 @@ def p_compdef(p):
     #     'dbg_line':p.lineno(2)
     # }
     # p[0] = {name:comp}
-    p[0] = ast.ComponentNode(p[2])
+    p[0] = ast.ComponentNode(p[2], p[4], p[6], p[8], p[10], p[11])
 
 
 def p_docstring(p):
@@ -118,7 +118,7 @@ def p_opt_program(p):
     if len(p) == 1:
         p[0] = []
     else:
-        p[0] = p[1]
+        p[0] = [ast.BlockNode(p[1])]
 
 
 def p_program(p):
