@@ -254,6 +254,17 @@ def p_error(p):
 
 
 def _calvin_parser():
+    # Set up a logging object
+    import logging
+    logging.basicConfig(
+        level = logging.DEBUG,
+        filename = "parselog.txt",
+        filemode = "w",
+        format = "%(filename)10s:%(lineno)4d:%(message)s"
+    )
+    log = logging.getLogger()
+
+
     lexer = lex.lex(module=calvin_rules)
     lexer.zerocol = 0
     # Since the parse may be called from other scripts, we want to have control
@@ -261,7 +272,8 @@ def _calvin_parser():
     # have to be recreated
     this_file = os.path.realpath(__file__)
     containing_dir = os.path.dirname(this_file)
-    parser = yacc.yacc(optimize=False, outputdir=containing_dir)
+    parser = yacc.yacc(write_tables=False, debug=True)
+    # parser = yacc.yacc(debuglog=log, debug=True)
     return parser
 
 
