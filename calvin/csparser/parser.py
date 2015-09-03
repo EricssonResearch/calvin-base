@@ -35,7 +35,7 @@ class CalvinEOFError(Exception):
 
 def p_script(p):
     """script : opt_constdefs opt_compdefs opt_program"""
-    s = ast.ASTNode()
+    s = ast.Node()
     s.children.extend(p[1])
     s.children.extend(p[2])
     s.children.extend(p[3])
@@ -61,7 +61,7 @@ def p_constdefs(p):
 
 def p_constdef(p):
     """constdef : DEFINE IDENTIFIER EQ argument"""
-    constdef = ast.ConstNode(ast.IdNode(p[2]), p[4])
+    constdef = ast.Constant(ast.Id(p[2]), p[4])
     p[0] = constdef
 
 
@@ -100,7 +100,7 @@ def p_compdef(p):
     #     'dbg_line':p.lineno(2)
     # }
     # p[0] = {name:comp}
-    p[0] = ast.ComponentNode(p[2], p[4], p[6], p[8], p[10], p[11])
+    p[0] = ast.Component(p[2], p[4], p[6], p[8], p[10], p[11])
 
 
 def p_docstring(p):
@@ -118,7 +118,7 @@ def p_opt_program(p):
     if len(p) == 1:
         p[0] = []
     else:
-        p[0] = [ast.BlockNode(p[1])]
+        p[0] = [ast.Block(p[1])]
 
 
 def p_program(p):
@@ -138,22 +138,22 @@ def p_statement(p):
 
 def p_assignment(p):
     """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
-    p[0] = ast.AssignmentNode(p[1], p[3], p[5])
+    p[0] = ast.Assignment(p[1], p[3], p[5])
 
 
 def p_link(p):
     """link : port GT port"""
     # FIXME: Add implicit ports
-    p[0] = ast.LinkNode(p[1], p[3])
+    p[0] = ast.Link(p[1], p[3])
 
 
 def p_port(p):
     """port : IDENTIFIER DOT IDENTIFIER
             | DOT IDENTIFIER"""
     if len(p) == 3:
-        p[0] = ast.InternalPortNode(p[2])
+        p[0] = ast.InternalPort(p[2])
     else:
-        p[0] = ast.PortNode(p[1], p[3])
+        p[0] = ast.Port(p[1], p[3])
 
 
 def p_named_args(p):
@@ -168,20 +168,20 @@ def p_named_args(p):
 
 def p_named_arg(p):
     """named_arg : IDENTIFIER EQ argument"""
-    p[0] = ast.NamedArgNode(ast.IdNode(p[1]), p[3])
+    p[0] = ast.NamedArg(ast.Id(p[1]), p[3])
 
 
 def p_argument(p):
     """argument : value
                 | IDENTIFIER"""
     if p.slice[1].type.upper() == 'IDENTIFIER':
-        p[0] = ast.IdNode(p[1])
+        p[0] = ast.Id(p[1])
     else:
         p[0] = p[1]
 
 # def p_identifier(p):
 #     """identifier : IDENTIFIER"""
-#     p[0] = ast.IdNode(p[1])
+#     p[0] = ast.Id(p[1])
 
 
 def p_value(p):
@@ -191,7 +191,7 @@ def p_value(p):
              | null
              | NUMBER
              | STRING"""
-    p[0] = ast.ValueNode(p[1])
+    p[0] = ast.Value(p[1])
 
 
 def p_bool(p):
@@ -294,7 +294,7 @@ def _find_column(input, token):
 
 def calvin_parser(source_text, source_file=''):
     parser = _calvin_parser()
-    result = ast.ASTNode()
+    result = ast.Node()
     # Until there is error recovery, there will only be a single error at a time
     errors = []
     result.sourcefile = source_file
