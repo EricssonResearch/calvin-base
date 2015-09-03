@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import unittest
 import time
 import multiprocessing
@@ -31,31 +32,67 @@ def absolute_filename(filename):
 rt1 = None
 rt2 = None
 rt3 = None
+controlurl = None
 
 def setup_module(module):
     global rt1
     global rt2
     global rt3
-    rt1 = dispatch_node("calvinip://localhost:5000", "http://localhost:5003")
-    rt2 = dispatch_node("calvinip://localhost:5001", "http://localhost:5004")
-    rt3 = dispatch_node("calvinip://localhost:5002", "http://localhost:5005")
-    time.sleep(.4)
-    utils.peer_setup(rt1, ["calvinip://localhost:5001", "calvinip://localhost:5002"])
-    utils.peer_setup(rt2, ["calvinip://localhost:5000", "calvinip://localhost:5002"])
-    utils.peer_setup(rt3, ["calvinip://localhost:5000", "calvinip://localhost:5001"])
-    time.sleep(.4)
+    global controlurl
+
+    try:
+        controlurl = os.environ["CALVIN_CONTROLURL"]
+        rt1 = utils.RT(controlurl)
+        node_id = utils.get_node_id(rt1)
+        if node_id:
+            node = utils.get_node(rt1, node_id)
+            if node:
+                rt1.id = node_id
+                rt1.uri = node["uri"]
+                test_peer2_id = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnode2")["result"][0]
+                if test_peer2_id:
+                    test_peer2 = utils.get_node(rt1, test_peer2_id)
+                    if test_peer2:
+                        rt2 = utils.RT(test_peer2["control_uri"])
+                        rt2.id = test_peer2_id
+                        rt2.uri = test_peer2["uri"]
+                test_peer3_id = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnode3")["result"][0]
+                if test_peer3_id:
+                    test_peer3 = utils.get_node(rt1, test_peer3_id)
+                    if test_peer3:
+                        rt3 = utils.RT(test_peer3["control_uri"])
+                        rt3.id = test_peer3_id
+                        rt3.uri = test_peer3["uri"]
+    except:
+        controlurl = None
+        rt1 = None
+        rt2 = None
+        rt3 = None
+
+    if not rt1 or not rt2 or not rt3:
+        rt1 = dispatch_node("calvinip://localhost:5000", "http://localhost:5003")
+        rt2 = dispatch_node("calvinip://localhost:5001", "http://localhost:5004")
+        rt3 = dispatch_node("calvinip://localhost:5002", "http://localhost:5005")
+        time.sleep(.4)
+        utils.peer_setup(rt1, ["calvinip://localhost:5001", "calvinip://localhost:5002"])
+        utils.peer_setup(rt2, ["calvinip://localhost:5000", "calvinip://localhost:5002"])
+        utils.peer_setup(rt3, ["calvinip://localhost:5000", "calvinip://localhost:5001"])
+        time.sleep(.4)
 
 def teardown_module(module):
     global rt1
     global rt2
     global rt3
-    utils.quit(rt1)
-    utils.quit(rt2)
-    utils.quit(rt3)
-    time.sleep(0.4)
-    for p in multiprocessing.active_children():
-        p.terminate()
-    time.sleep(0.4)
+    global controlurl
+
+    if not controlurl:
+        utils.quit(rt1)
+        utils.quit(rt2)
+        utils.quit(rt3)
+        time.sleep(0.4)
+        for p in multiprocessing.active_children():
+            p.terminate()
+        time.sleep(0.4)
 
 class CalvinTestBase(unittest.TestCase):
 

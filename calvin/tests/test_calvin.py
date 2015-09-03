@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import unittest
 from calvin.Tools import cscompiler as compiler
 from calvin.Tools import deployer
@@ -56,55 +57,98 @@ def expected_tokens(rt, actor_id, src_actor_type):
 runtime = None
 runtimes = []
 peerlist = []
+controlurl = None
 
 def setup_module(module):
     global runtime
     global runtimes
     global peerlist
+    global controlurl
 
-    localhost = "calvinip://127.0.0.1:5000", "http://localhost:5001"
-    remotehosts = [("calvinip://127.0.0.1:%d" % d, "http://localhost:%d" % (d+1)) for d in range(5002, 5005, 2)]
-    # remotehosts = [("calvinip://127.0.0.1:5002", "http://localhost:5003")]
-
-    for host in remotehosts:
-        runtimes += [dispatch_node(host[0], host[1])]
-
-    runtime = dispatch_node(localhost[0], localhost[1])
-
-    time.sleep(.1)
-
-    # FIXME When storage up and running peersetup not needed, but still useful during testing
-    utils.peer_setup(runtime, [i[0] for i in remotehosts])
-
-    time.sleep(0.5)
-    """
-
-    # FIXME Does not yet support peerlist
     try:
-        self.peerlist = peerlist(
-            self.runtime, self.runtime.id, len(remotehosts))
+        controlurl = os.environ["CALVIN_CONTROLURL"]
+        runtime = utils.RT(controlurl)
+        node_id = utils.get_node_id(runtime)
+        if node_id:
+            print "Got local nodeid"
+            node = utils.get_node(runtime, node_id)
+            if node:
+                print "Got local node"
+                runtime.id = node_id
+                runtime.uri = node["uri"]
+                test_peer2_id = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnode2")["result"][0]
+                if test_peer2_id:
+                    print "Got node2 id"
+                    test_peer2 = utils.get_node(runtime, test_peer2_id)
+                    if test_peer2:
+                        print "Got node2"
+                        runtime2 = utils.RT(test_peer2["control_uri"])
+                        runtime2.id = test_peer2_id
+                        runtime2.uri = test_peer2["uri"]
+                        runtimes.append(runtime2)
+                test_peer3_id = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnode3")["result"][0]
+                if test_peer3_id:
+                    print "Got node3 id"
+                    test_peer3 = utils.get_node(runtime, test_peer3_id)
+                    if test_peer3:
+                        print "Got node3"
+                        runtime3 = utils.RT(test_peer3["control_uri"])
+                        runtime3.id = test_peer3_id
+                        runtime3.uri = test_peer3["uri"]
+                        runtimes.append(runtime3)
+    except Exception as e:
+        print "Exception %s" % str(e)
+        controlurl = None
+        runtime = None
+        runtimes = []
 
-        # Make sure all peers agree on network
-        [peerlist(self.runtime, p, len(self.runtimes)) for p in self.peerlist]
-    except:
-        self.peerlist = []
-    """
-    peerlist = [rt.id for rt in runtimes]
+    if not runtime or not runtimes:
+        localhost = "calvinip://127.0.0.1:5000", "http://localhost:5001"
+        remotehosts = [("calvinip://127.0.0.1:%d" % d, "http://localhost:%d" % (d+1)) for d in range(5002, 5005, 2)]
+        # remotehosts = [("calvinip://127.0.0.1:5002", "http://localhost:5003")]
+
+        for host in remotehosts:
+            runtimes += [dispatch_node(host[0], host[1])]
+
+        runtime = dispatch_node(localhost[0], localhost[1])
+
+        time.sleep(.1)
+
+        # FIXME When storage up and running peersetup not needed, but still useful during testing
+        utils.peer_setup(runtime, [i[0] for i in remotehosts])
+
+        time.sleep(0.5)
+        """
+
+        # FIXME Does not yet support peerlist
+        try:
+            self.peerlist = peerlist(
+                self.runtime, self.runtime.id, len(remotehosts))
+
+            # Make sure all peers agree on network
+            [peerlist(self.runtime, p, len(self.runtimes)) for p in self.peerlist]
+        except:
+            self.peerlist = []
+        """
+
+    peerlist = [rt.control_uri for rt in runtimes]
     print "SETUP DONE ***", peerlist
 
 
 def teardown_module(module):
     global runtime
     global runtimes
+    global controlurl
 
-    for peer in runtimes:
-        utils.quit(peer)
+    if not controlurl:
+        for peer in runtimes:
+            utils.quit(peer)
+            time.sleep(0.2)
+        utils.quit(runtime)
         time.sleep(0.2)
-    utils.quit(runtime)
-    time.sleep(0.2)
-    for p in multiprocessing.active_children():
-        p.terminate()
-        time.sleep(0.2)
+        for p in multiprocessing.active_children():
+            p.terminate()
+            time.sleep(0.2)
 
 class CalvinTestBase(unittest.TestCase):
 
