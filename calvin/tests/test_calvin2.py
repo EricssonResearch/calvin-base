@@ -85,6 +85,9 @@ class TestConnections(CalvinTestBase):
 
         self.assert_lists_equal(range(1, 10), actual)
 
+        utils.delete_actor(self.rt1, src)
+        utils.delete_actor(self.rt1, snk)
+
     def testMigrateSink(self):
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
@@ -98,6 +101,9 @@ class TestConnections(CalvinTestBase):
         actual = utils.report(self.rt2, snk)
         self.assert_lists_equal(range(1, 10), actual)
 
+        utils.delete_actor(self.rt1, src)
+        utils.delete_actor(self.rt2, snk)
+
     def testMigrateSource(self):
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
@@ -110,6 +116,9 @@ class TestConnections(CalvinTestBase):
 
         actual = utils.report(self.rt1, snk)
         self.assert_lists_equal(range(1, 10), actual)
+
+        utils.delete_actor(self.rt2, src)
+        utils.delete_actor(self.rt1, snk)
 
     def testTwoStepMigrateSinkSource(self):
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
@@ -126,6 +135,9 @@ class TestConnections(CalvinTestBase):
         actual = utils.report(self.rt2, snk)
         self.assert_lists_equal(range(1,15), actual, min_length=10)
 
+        utils.delete_actor(self.rt2, src)
+        utils.delete_actor(self.rt2, snk)
+
     def testTwoStepMigrateSourceSink(self):
         src = utils.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
@@ -141,6 +153,9 @@ class TestConnections(CalvinTestBase):
 
         actual = utils.report(self.rt2, snk)
         self.assert_lists_equal(range(1,20), actual, min_length=15)
+
+        utils.delete_actor(self.rt2, src)
+        utils.delete_actor(self.rt2, snk)
 
 @pytest.mark.essential
 class TestScripts(CalvinTestBase):
@@ -161,6 +176,8 @@ class TestScripts(CalvinTestBase):
         actual = utils.report(self.rt1, (snk))
         self.assert_lists_equal(range(1, 20), actual)
 
+        d.destroy()
+
     @pytest.mark.slow
     def testFileScript(self):
         scriptname = 'test1'
@@ -174,6 +191,8 @@ class TestScripts(CalvinTestBase):
 
         actual = utils.report(self.rt1, snk)
         self.assert_lists_equal(range(1, 20), actual)
+
+        d.destroy()
 
 
 class TestStateMigration(CalvinTestBase):
@@ -200,6 +219,8 @@ class TestStateMigration(CalvinTestBase):
         expected = [sum(range(i+1)) for i in range(1,10)]
 
         self.assert_lists_equal(expected, actual)
+
+        d.destroy()
 
 
 @pytest.mark.slow
@@ -283,6 +304,9 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(range(1, 10), actual)
 
+        utils.delete_actor(self.rt1, src)
+        utils.delete_actor(self.rt1, snk)
+
     def test11(self):
         # Same as test10, but scripted
         script = """
@@ -302,6 +326,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(range(1, 10), actual)
 
+        d.destroy()
+
     def test20(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt1, 'std.Identity', 'ity')
@@ -315,6 +341,10 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         actual = utils.report(self.rt1, snk)
 
         self.assert_lists_equal(range(1, 11), actual)
+
+        utils.delete_actor(self.rt1, src)
+        utils.delete_actor(self.rt1, ity)
+        utils.delete_actor(self.rt1, snk)
 
     def test21(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
@@ -330,6 +360,10 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(range(1, 11), actual)
 
+        utils.delete_actor(self.rt1, src)
+        utils.delete_actor(self.rt2, ity)
+        utils.delete_actor(self.rt3, snk)
+
     def test22(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt2, 'std.Identity', 'ity')
@@ -344,6 +378,10 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(range(1, 10), actual)
 
+        utils.delete_actor(self.rt1, src)
+        utils.delete_actor(self.rt2, ity)
+        utils.delete_actor(self.rt3, snk)
+
     def test25(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         ity = utils.new_actor(self.rt1, 'std.Identity', 'ity')
@@ -357,6 +395,10 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         actual = utils.report(self.rt1, snk)
 
         self.assert_lists_equal(range(1, 10), actual)
+
+        utils.delete_actor(self.rt1, src)
+        utils.delete_actor(self.rt1, ity)
+        utils.delete_actor(self.rt1, snk)
 
     def test26(self):
         # Same as test20
@@ -379,6 +421,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual)
 
+        d.destroy()
+
     def test30(self):
         src = utils.new_actor(self.rt1, 'std.Counter', 'src')
         snk1 = utils.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
@@ -396,6 +440,10 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(list(range(1, 10)), actual1)
         self.assert_lists_equal(list(range(1, 10)), actual2)
+
+        utils.delete_actor(self.rt1, src)
+        utils.delete_actor(self.rt1, snk1)
+        utils.delete_actor(self.rt1, snk2)
 
     def test31(self):
         # Verify that fanout defined implicitly in scripts is handled correctly
@@ -420,6 +468,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual1)
         self.assert_lists_equal(expected, actual2)
+
+        d.destroy()
 
 
 @pytest.mark.essential
@@ -449,6 +499,8 @@ class TestNullPorts(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual)
 
+        d.destroy()
+
     def testTerminatorActor(self):
         # Verify that the null port of a std.Terminator actor behaves as expected
         script = """
@@ -470,6 +522,8 @@ class TestNullPorts(CalvinTestBase):
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
+
+        d.destroy()
 
 @pytest.mark.essential
 class TestCompare(CalvinTestBase):
@@ -497,6 +551,8 @@ class TestCompare(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual)
 
+        d.destroy()
+
     def testEqual(self):
         script = """
             src   : std.Counter()
@@ -520,6 +576,8 @@ class TestCompare(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual)
 
+        d.destroy()
+
     def testGreaterThanOrEqual(self):
         script = """
             src   : std.Counter()
@@ -542,6 +600,8 @@ class TestCompare(CalvinTestBase):
         expected = [x >= 5 for x in range(1, 10)]
 
         self.assert_lists_equal(expected, actual)
+
+        d.destroy()
 
 
 @pytest.mark.essential
@@ -572,6 +632,8 @@ class TestSelect(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual)
 
+        d.destroy()
+
     def testFalse(self):
         script = """
             src   : std.Counter()
@@ -597,6 +659,8 @@ class TestSelect(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual)
 
+        d.destroy()
+
     def testBadSelect(self):
         script = """
             src   : std.Counter()
@@ -621,6 +685,8 @@ class TestSelect(CalvinTestBase):
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
+
+        d.destroy()
 
 
 @pytest.mark.essential
@@ -656,6 +722,8 @@ class TestDeselect(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
+        d.destroy()
+
     def testDeselectFalse(self):
         script = """
             src     : std.Counter()
@@ -686,6 +754,8 @@ class TestDeselect(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
+        d.destroy()
+
     def testDeselectBadSelect(self):
         script = """
             src     : std.Counter()
@@ -711,6 +781,8 @@ class TestDeselect(CalvinTestBase):
         expected = [0] * 10
 
         self.assert_lists_equal(expected, actual, min_length=10)
+
+        d.destroy()
 
 
 @pytest.mark.essential
@@ -741,6 +813,8 @@ class TestLineJoin(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
+        d.destroy()
+
     @pytest.mark.xfail
     def testCustomTriggerJoin(self):
         datafile = absolute_filename('data.txt')
@@ -767,6 +841,8 @@ class TestLineJoin(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=2)
 
+        d.destroy()
+
     @pytest.mark.xfail
     def testEmptyStringTriggerJoin(self):
         datafile = absolute_filename('data.txt')
@@ -792,6 +868,8 @@ class TestLineJoin(CalvinTestBase):
             expected = ['\n'.join(expected[:10]), '\n'.join(expected[10:])]
 
         self.assert_lists_equal(expected, actual, min_length=2)
+
+        d.destroy()
 
 
 
@@ -821,6 +899,8 @@ class TestRegex(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
+        d.destroy()
+
 
     def testRegexNoMatch(self):
         script = """
@@ -845,6 +925,8 @@ class TestRegex(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
+        d.destroy()
+
     def testRegexCapture(self):
         script = """
             src   : std.Constant(data="24.1632", n=1)
@@ -868,6 +950,8 @@ class TestRegex(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
+        d.destroy()
+
     def testRegexMultiCapture(self):
         script = """
             src   : std.Constant(data="24.1632", n=1)
@@ -890,6 +974,8 @@ class TestRegex(CalvinTestBase):
         expected = ["24"]
 
         self.assert_lists_equal(expected, actual, min_length=1)
+
+        d.destroy()
 
 
     def testRegexCaptureNoMatch(self):
@@ -915,6 +1001,8 @@ class TestRegex(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
+        d.destroy()
+
 @pytest.mark.essential
 class TestConstantAsArguments(CalvinTestBase):
 
@@ -937,6 +1025,8 @@ class TestConstantAsArguments(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
+        d.destroy()
+
     def testConstantRecursive(self):
         script = """
             define FOO = BAR
@@ -956,6 +1046,8 @@ class TestConstantAsArguments(CalvinTestBase):
         expected = [42]*10
 
         self.assert_lists_equal(expected, actual, min_length=10)
+
+        d.destroy()
 
 
 @pytest.mark.essential
@@ -978,6 +1070,8 @@ class TestConstantOnPort(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
+        d.destroy()
+
     def testConstantOnPort(self):
         script = """
             define FOO = "Hello"
@@ -995,6 +1089,8 @@ class TestConstantOnPort(CalvinTestBase):
         expected = ["Hello"]*10
 
         self.assert_lists_equal(expected, actual, min_length=10)
+
+        d.destroy()
 
     def testConstantRecursiveOnPort(self):
         script = """
@@ -1014,6 +1110,8 @@ class TestConstantOnPort(CalvinTestBase):
         expected = ["yay"]*10
 
         self.assert_lists_equal(expected, actual, min_length=10)
+
+        d.destroy()
 
 
 @pytest.mark.essential
@@ -1042,6 +1140,8 @@ class TestConstantAndComponents(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
+        d.destroy()
+
     def testConstantOnCompPort(self):
         script = """
             define MEANING = 42
@@ -1066,6 +1166,8 @@ class TestConstantAndComponents(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
+        d.destroy()
+
     def testStringConstantOnCompPort(self):
         script = """
             define MEANING = "42"
@@ -1089,6 +1191,8 @@ class TestConstantAndComponents(CalvinTestBase):
         expected = ["42"]*10
 
         self.assert_lists_equal(expected, actual, min_length=10)
+
+        d.destroy()
 
 @pytest.mark.essential
 class TestConstantAndComponentsArguments(CalvinTestBase):
@@ -1115,6 +1219,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=5)
 
+        d.destroy()
+
     def testComponentConstantArgument(self):
         script = """
         define FOO = 5
@@ -1137,6 +1243,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         expected = ["hup"]*5
 
         self.assert_lists_equal(expected, actual, min_length=5)
+
+        d.destroy()
 
 
 
@@ -1163,6 +1271,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
+        d.destroy()
+
 
     def testComponentArgumentAsImplicitActor(self):
         script = """
@@ -1186,6 +1296,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         expected = ["hup"]*10
 
         self.assert_lists_equal(expected, actual, min_length=10)
+
+        d.destroy()
 
 
     def testComponentConstantArgumentAsImplicitActor(self):
@@ -1211,3 +1323,5 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         expected = ["hup"]*10
 
         self.assert_lists_equal(expected, actual, min_length=10)
+
+        d.destroy()

@@ -163,6 +163,9 @@ class TestLocalConnectDisconnect(CalvinTestBase):
 
         self.assertListPrefix(expected, actual)
 
+        utils.delete_actor(rt, src)
+        utils.delete_actor(rt, snk)
+
     def testLocalConnectDisconnectSink(self):
         """Testing local connect/disconnect/re-connect on sink"""
 
@@ -182,6 +185,9 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         expected = expected_tokens(rt, src, 'std.CountTimer')
         actual = actual_tokens(rt, snk)
         self.assertListPrefix(expected, actual)
+
+        utils.delete_actor(rt, src)
+        utils.delete_actor(rt, snk)
 
     def testLocalConnectDisconnectSource(self):
         """Testing local connect/disconnect/re-connect on source"""
@@ -203,6 +209,9 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         expected = expected_tokens(rt, src, "std.CountTimer")
         actual = actual_tokens(rt, snk)
         self.assertListPrefix(expected, actual)
+
+        utils.delete_actor(rt, src)
+        utils.delete_actor(rt, snk)
 
     def testLocalConnectDisconnectFilter(self):
         """Testing local connect/disconnect/re-connect on filter"""
@@ -232,6 +241,10 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         self.assertListPrefix(expected, actual)
 
+        utils.delete_actor(rt, src)
+        utils.delete_actor(rt, sum_)
+        utils.delete_actor(rt, snk)
+
     def testTimerLocalSourceSink(self):
         """Testing timer based local source and sink"""
 
@@ -252,6 +265,9 @@ class TestLocalConnectDisconnect(CalvinTestBase):
 
         self.assertListPrefix(expected, actual)
         self.assertTrue(len(actual) > 0)
+
+        utils.delete_actor(rt, src)
+        utils.delete_actor(rt, snk)
 
 
 @pytest.mark.essential
@@ -282,6 +298,10 @@ class TestRemoteConnection(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         self.assertListPrefix(expected, actual)
+
+        utils.delete_actor(rt, snk)
+        utils.delete_actor(peer, sum_)
+        utils.delete_actor(rt, src)
 
     def testRemoteSlowPort(self):
         """Testing remote slow port and that token flow control works"""
@@ -314,6 +334,11 @@ class TestRemoteConnection(CalvinTestBase):
         actual = actual_tokens(rt, snk1)
         assert(len(actual) > 1)
         self.assertListPrefix(expected, actual)
+
+        utils.delete_actor(rt, snk1)
+        utils.delete_actor(peer, alt)
+        utils.delete_actor(rt, src1)
+        utils.delete_actor(rt, src2)
 
     def testRemoteSlowFanoutPort(self):
         """Testing remote slow port with fan out and that token flow control works"""
@@ -353,6 +378,12 @@ class TestRemoteConnection(CalvinTestBase):
         actual = actual_tokens(peer, snk2)
         assert(len(actual) > 1)
         self.assertListPrefix(expected, actual)
+
+        utils.delete_actor(rt, snk1)
+        utils.delete_actor(peer, snk2)
+        utils.delete_actor(peer, alt)
+        utils.delete_actor(rt, src1)
+        utils.delete_actor(rt, src2)
 
 @pytest.mark.essential
 @pytest.mark.slow
