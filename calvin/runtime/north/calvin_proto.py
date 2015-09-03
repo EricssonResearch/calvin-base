@@ -294,7 +294,6 @@ class CalvinProto(CalvinCBClass):
             # Need to join the other peer first
             # Create a tunnel object which is not inserted on a link yet
             tunnel = CalvinTunnel(self.network.links, None, tunnel_type, policy, rt_id=self.node.id)
-            _log.debug("Request for tunnel on rt to rt (%s) link that is not yet established" % (to_rt_uuid))
             self.network.link_request(to_rt_uuid, CalvinCB(self._tunnel_link_request_finished, tunnel=tunnel, to_rt_uuid=to_rt_uuid, tunnel_type=tunnel_type, policy=policy))
             return tunnel
         
@@ -315,7 +314,7 @@ class CalvinProto(CalvinCBClass):
 
     def _tunnel_link_request_finished(self, status, tunnel, to_rt_uuid, tunnel_type, policy, uri=None):
         """ Got a link, now continue with tunnel setup """
-        _log.debug("Request (by a tunnel) for rt to rt (%s) link is established" % (to_rt_uuid))
+        _log.analyze(self.rt_id, "+" , {'status': status.__str__()}, peer_node_id=to_rt_uuid)
         try:
             self.network.link_check(to_rt_uuid)
         except:
@@ -337,7 +336,6 @@ class CalvinProto(CalvinCBClass):
         ok = False
         _log.analyze(self.rt_id, "+", payload, peer_node_id=payload['from_rt_uuid'])
         if tunnel:
-            _log.debug("%s: GOT TUNNEL NEW request while we already have one pending" % self.node.id)
             _log.analyze(self.rt_id, "+ PENDING", payload, peer_node_id=payload['from_rt_uuid'])
             # Got tunnel new request while we already have one pending
             # it is not allowed to send new request while a tunnel is working
@@ -362,8 +360,7 @@ class CalvinProto(CalvinCBClass):
                     _log.analyze(self.rt_id, "+ KEEP ID", payload, peer_node_id=payload['from_rt_uuid'])
             else:
                 # FIXME if this happens need to decide what to do
-                _log.debug("%s: GOT TUNNEL NEW request while our tunnel is WORKING!!!\n%s" % (self.node.id, payload))
-                _log.analyze(self.rt_id, "+ DROP", payload, peer_node_id=payload['from_rt_uuid'])
+                _log.analyze(self.rt_id, "+ DROP FIXME", payload, peer_node_id=payload['from_rt_uuid'])
             return
         else:
             # No simultaneous tunnel requests, lets create it...
@@ -421,7 +418,6 @@ class CalvinProto(CalvinCBClass):
         try:
             self.network.links[payload['from_rt_uuid']].tunnels[payload['tunnel_id']].recv_handler(payload['value'])
         except:
-            _log.debug("%s: ERROR_UNKNOWN_TUNNEL %s" %(self.node.id, payload), exc_info=True)
             _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
             raise Exception("ERROR_UNKNOWN_TUNNEL")
 

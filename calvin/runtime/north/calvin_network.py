@@ -17,7 +17,6 @@
 import os
 import glob
 import importlib
-import pprint
 
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
@@ -76,7 +75,6 @@ class CalvinLink(object):
         """
         msg['from_rt_uuid'] = self.rt_id
         msg['to_rt_uuid'] = self.peer_id
-        _log.debug("SEND(%s)" % pprint.pformat(msg, width=120))
         _log.analyze(self.rt_id, "SEND", msg)
         self.transport.send(msg)
 
@@ -189,7 +187,6 @@ class CalvinNetwork(object):
                                                        else [None]*len(uris)):
             if not (uri in self.pending_joins or peer_id in self.pending_joins_by_id or peer_id in self.links):
                 # No simultaneous join detected
-                _log.debug("%s: Join with %s %s" % (self.node.id, peer_id, uri))
                 _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
                 schema = uri.split(":",1)[0]
                 if schema in self.transports.keys():
@@ -202,8 +199,7 @@ class CalvinNetwork(object):
                     self.transports[schema].join(uri)
             else:
                 # We have simultaneous joins
-                _log.debug("%s: Simultaneous join with %s %s" % (self.node.id, peer_id, uri))
-                _log.analyze(self.node.id, "+ SMASH", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+                _log.analyze(self.node.id, "+ SIMULTANEOUS", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
                 if callback:
                     if peer_id in self.links:
                         # Link was already established, then need to call the callback now
@@ -228,7 +224,6 @@ class CalvinNetwork(object):
         """
         # while a link is pending it is the responsibility of the transport layer, since
         # higher layers don't have any use for it anyway
-        _log.debug("%s: Join finished for (%s, %s) with link: %s" % (self.node.id, peer_id, uri, tp_link))
         _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
         if tp_link is None:
             # This is a failed join lets send it upwards
@@ -243,27 +238,22 @@ class CalvinNetwork(object):
             # Likely simultaneous join requests, use the one requested by the node with highest id
             if is_orginator and self.node.id > peer_id:
                 # We requested it and we have highest node id, hence the one in links is the peer's and we replace it
-                _log.debug("%s: Join finished for (%s, %s) BUT REPLACE since exist" % (self.node.id, peer_id, uri))
                 _log.analyze(self.node.id, "+ REPLACE ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
                 self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self.links[peer_id])
             elif is_orginator and self.node.id < peer_id:
                 # We requested it and peer have highest node id, hence the one in links is peer's and we close this new
-                _log.debug("%s: Join finished for (%s, %s) BUT DROPPED since exist" % (self.node.id, peer_id, uri))
                 _log.analyze(self.node.id, "+ DROP ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
                 tp_link.disconnect()
             elif not is_orginator and self.node.id > peer_id:
                 # Peer requested it and we have highest node id, hence the one in links is ours and we close this new
-                _log.debug("%s: Join finished for (%s, %s) BUT DROPPED since exist" % (self.node.id, peer_id, uri))
                 _log.analyze(self.node.id, "+ DROP", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
                 tp_link.disconnect()
             elif not is_orginator and self.node.id < peer_id:
                 # Peer requested it and peer have highest node id, hence the one in links is ours and we replace it
-                _log.debug("%s: Join finished for (%s, %s) BUT REPLACE since exist" % (self.node.id, peer_id, uri))
                 _log.analyze(self.node.id, "+ REPLACE", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
                 self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self.links[peer_id])
         else:
             # No simultaneous join detected, just add the link
-            _log.debug("%s: Join finished for (%s, %s) inserted in links" % (self.node.id, peer_id, uri))
             _log.analyze(self.node.id, "+ INSERT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
             self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link)
 
@@ -303,14 +293,14 @@ class CalvinNetwork(object):
         """
         if peer_id in self.links:
             return True
-        _log.debug("%s: Request for rt to rt (%s) link need to check storage" % (self.node.id, peer_id))
+        _log.analyze(self.node.id, "+ CHECK STORAGE", {}, peer_node_id=peer_id)
         # We don't have the peer, let's ask for it in storage
         self.node.storage.get_node(peer_id, CalvinCB(self.link_request_finished, callback=callback))
         return False
 
     def link_request_finished(self, key, value, callback):
         """ Called by storage when the node is (not) found """
-        _log.debug("%s: Request for rt to rt link storage returned (%s, %s)" % (self.node.id, key, value))
+        _log.analyze(self.node.id, "+", {'value': value}, peer_node_id=key)
         # Test if value is None or False indicating node does not currently exist in storage
         if not value:
             # the peer_id did not exist in storage
@@ -318,7 +308,6 @@ class CalvinNetwork(object):
             return
 
         # join the peer node
-        _log.debug("%s: Send join request for (%s, %s) CB: %s" % (self.node.id, key, value, callback))
         self.join([value['uri']], callback, [key])
 
     def peer_disconnected(self, link, rt_id, reason):

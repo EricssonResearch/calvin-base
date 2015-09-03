@@ -19,8 +19,6 @@ from calvin.actor.actorport import InPort, OutPort
 from calvin.runtime.south import endpoint
 from calvin.runtime.north.calvin_proto import CalvinTunnel
 from calvin.utilities import calvinlogger
-import inspect
-import pprint
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -130,14 +128,12 @@ class PortManager(object):
 
     def connection_request(self, payload):
         """ A request from a peer to connect a port"""
-        _log.debug("CONNECTION REQUEST received %s" % payload)
-        #_log.analyze(self.node.id, "+", payload, peer_node_id=payload['from_rt_uuid'])
+        _log.analyze(self.node.id, "+", payload, peer_node_id=payload['from_rt_uuid'])
         if not ('peer_port_id' in payload or
                 ('peer_actor_id' in payload and
                 'peer_port_name' in payload and
                 'peer_port_dir' in payload)):
             # Not enough info to find port
-            #_log.debug("CONNECTION REQUEST failed not enough data")
             _log.analyze(self.node.id, "+ NOT ENOUGH DATA", payload, peer_node_id=payload['from_rt_uuid'])
             return {'reply':"NACK"}
         try:
@@ -147,7 +143,6 @@ class PortManager(object):
                                         payload['peer_port_id'])
         except:
             # We don't have the port
-            _log.debug("CONNECTION REQUEST failed not found local")
             _log.analyze(self.node.id, "+ PORT NOT FOUND", payload, peer_node_id=payload['from_rt_uuid'])
             return {'reply':"NACK"}
         else:
@@ -159,7 +154,6 @@ class PortManager(object):
                 # For some reason does the tunnel id not match the one we have to connect to the peer
                 # Likely due to that we have not yet received a tunnel request from the peer that replace our tunnel id
                 # Can happen when race of simultaneous link setup and commands can be received out of order
-                #_log.debug("CONNECTION REQUEST failed not correct tunnel")
                 _log.analyze(self.node.id, "+ WRONG TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
                 return {'reply':"RETRY"}
 
@@ -222,7 +216,6 @@ class PortManager(object):
                     'peer_port_dir': peer_port_dir,
                     'peer_port_id': peer_port_id
                 }
-        _log.debug("%s %s: %s" % (self.node.id, inspect.currentframe().f_code.co_name, pprint.pformat(state)))
         _log.analyze(self.node.id, "+", {k: state[k] for k in state.keys() if k != 'callback'}, peer_node_id=state['peer_node_id'])
         try:
             port = self._get_local_port(actor_id, port_name, port_dir, port_id)
@@ -294,7 +287,6 @@ class PortManager(object):
 
     def _connect_by_peer_port_id(self, key, value, **state):
         """ Gets called when storage responds with peer port information """
-        _log.debug("%s %s: %s, %s, %s" % (self.node.id, inspect.currentframe().f_code.co_name, key, value, pprint.pformat(state)))
         _log.analyze(self.node.id, "+", {k: state[k] for k in state.keys() if k != 'callback'}, peer_node_id=state['peer_node_id'])
         if not isinstance(value, dict):
             if state['callback']:
@@ -316,7 +308,6 @@ class PortManager(object):
 
     def _connect_by_peer_actor_id(self, key, value, **state):
         """ Gets called when storage responds with peer actor information"""
-        _log.debug("%s %s: %s, %s, %s" % (self.node.id, inspect.currentframe().f_code.co_name, key, value, pprint.pformat(state)))
         _log.analyze(self.node.id, "+", {k: state[k] for k in state.keys() if k != 'callback'}, peer_node_id=state['peer_node_id'])
         if not isinstance(value, dict):
             if state['callback']:
@@ -340,11 +331,9 @@ class PortManager(object):
         """ Do the connection of ports, all neccessary information supplied but
             maybe not all pre-requisites for remote connections.
         """
-        _log.debug("%s %s: %s" % (self.node.id, inspect.currentframe().f_code.co_name, pprint.pformat(state)))
         _log.analyze(self.node.id, "+", {k: state[k] for k in state.keys() if k != 'callback'}, peer_node_id=state['peer_node_id'])
         # Local connect
         if self.node.id == state['peer_node_id']:
-            _log.debug("%s Local connect", self.node.id)
             _log.analyze(self.node.id, "+ LOCAL", {k: state[k] for k in state.keys() if k != 'callback'}, peer_node_id=state['peer_node_id'])
             port1 = self._get_local_port(state['actor_id'], state['port_name'], state['port_dir'], state['port_id'])
             port2 = self._get_local_port(state['peer_actor_id'], state['peer_port_name'], state['peer_port_dir'], state['peer_port_id'])
@@ -386,7 +375,6 @@ class PortManager(object):
 
     def _connect_via_tunnel(self, status=None, **state):
         """ All information and hopefully (status=='ACK') a tunnel to the peer is available for a port connect"""
-        _log.debug("%s %s: %s, %s" % (self.node.id, inspect.currentframe().f_code.co_name, status, pprint.pformat(state)))
         port = self._get_local_port(state['actor_id'], state['port_name'], state['port_dir'], state['port_id'])
         _log.analyze(self.node.id, "+ " + status,
                      dict({k: state[k] for k in state.keys() if k != 'callback'},port_is_connected=port.is_connected_to(state['peer_port_id'])),
@@ -420,7 +408,6 @@ class PortManager(object):
 
     def _connected_via_tunnel(self, reply, **state):
         """ Gets called when remote responds to our request for port connection """
-        _log.debug("%s %s: %s, %s" % (self.node.id, inspect.currentframe().f_code.co_name, reply, pprint.pformat(state)))
         _log.analyze(self.node.id, "+ " + reply['reply'], {k: state[k] for k in state.keys() if k != 'callback'}, peer_node_id=state['peer_node_id'])
         if reply['reply']=="NACK":
             # Other end did not accept our port connection request
@@ -480,7 +467,7 @@ class PortManager(object):
 
     def _connect_via_local(self, inport, outport):
         """ Both connecting ports are local, just connect them """
-        _log.debug("%s %s" % (self.node.id, inspect.currentframe().f_code.co_name))
+        _log.analyze(self.node.id, "+", {})
         ein = endpoint.LocalInEndpoint(inport, outport)
         eout = endpoint.LocalOutEndpoint(outport, inport)
 
@@ -551,7 +538,7 @@ class PortManager(object):
                     # Found locally
                     port_ids.append(port.id)
 
-        _log.debug("Disconnect the ports: %s" % port_ids)
+        _log.analyze(self.node.id, "+", {'port_ids': port_ids})
 
         # Run over copy of list of ports since modified inside the loop
         for port_id in port_ids[:]:
@@ -621,7 +608,7 @@ class PortManager(object):
         if not remote_peers or not ok:
             self.disconnecting_ports.pop(state['port_id'])
             if state['callback']:
-                _log.debug("Disconnect local done send callback %s state:%s" % (callback, state))
+                _log.analyze(self.node.id, "+ DONE", {k: state[k] for k in state.keys() if k != 'callback'})
                 state['callback'](status="ACK" if ok else "NACK", **state)
 
     def _disconnected_port(self, reply, **state):
