@@ -26,13 +26,7 @@ class BracePrinter(object):
 
     @visitor.when(ast.ASTNode)
     def visit(self, node):
-        def f(n): print "( AST",
-        def g(n): print ")",
-        self._visit(node, preorder=f, postorder=g)
-
-    @visitor.when(ast.ConstNode)
-    def visit(self, node):
-        def f(n): print "( CONST",
+        def f(n): print "( {}".format(node.__class__.__name__),
         def g(n): print ")",
         self._visit(node, preorder=f, postorder=g)
 
@@ -46,44 +40,20 @@ class BracePrinter(object):
 
     @visitor.when(ast.AssignmentNode)
     def visit(self, node):
-        def f(n): print "( ASSIGNMENT", node.ident, node.actor_type,
-        def g(n): print ")",
-        self._visit(node, preorder=f, postorder=g)
-
-    @visitor.when(ast.NamedArgNode)
-    def visit(self, node):
-        def f(n): print "( NAMED_ARG",
-        def g(n): print ")",
-        self._visit(node, preorder=f, postorder=g)
-
-    @visitor.when(ast.LinkNode)
-    def visit(self, node):
-        def f(n): print "( LINK",
+        def f(n): print "( {} {} {}".format(node.__class__.__name__, node.ident, node.actor_type),
         def g(n): print ")",
         self._visit(node, preorder=f, postorder=g)
 
     @visitor.when(ast.PortNode)
     def visit(self, node):
-        print "( PORT {}.{} )".format(node.actor, node.port),
+        print "( {} {}.{} )".format(node.__class__.__name__, node.actor, node.port),
 
     @visitor.when(ast.InternalPortNode)
     def visit(self, node):
-        print "( INTERNAL_PORT .{} )".format(node.port),
-
-    @visitor.when(ast.ImplicitPortNode)
-    def visit(self, node):
-        def f(n): print "( IMPLICIT_PORT",
-        def g(n): print ")",
-        self._visit(node, preorder=f, postorder=g)
-
-    @visitor.when(ast.BlockNode)
-    def visit(self, node):
-        def f(n): print "( PROGRAM",
-        def g(n): print ")",
-        self._visit(node, preorder=f, postorder=g)
+        print "( {} .{} )".format(node.__class__.__name__, node.port),
 
     @visitor.when(ast.ComponentNode)
     def visit(self, node):
-        def f(n): print "( COMPONENT {}".format(node.name),
+        def f(n): print "( {} {}".format(node.__class__.__name__, node.name),
         def g(n): print ")",
         self._visit(node, preorder=f, postorder=g)
