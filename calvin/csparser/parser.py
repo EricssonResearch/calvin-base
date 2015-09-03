@@ -34,7 +34,7 @@ class CalvinEOFError(Exception):
 
 
 def p_script(p):
-    """script : constdefs compdefs opt_program"""
+    """script : opt_constdefs opt_compdefs opt_program"""
     s = ast.ASTNode()
     s.children.extend(p[1])
     s.children.extend(p[2])
@@ -42,16 +42,21 @@ def p_script(p):
     p[0] = s
 
 
+def p_opt_constdefs(p):
+    """opt_constdefs :
+                     | constdefs"""
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = []
+
 def p_constdefs(p):
-    """constdefs :
-                 | constdefs constdef
+    """constdefs : constdefs constdef
                  | constdef"""
     if len(p) == 3:
         p[0] = p[1] + [p[2]]
-    elif len(p) == 2:
-        p[0] = [p[1]]
     else:
-        p[0] = []
+        p[0] = [p[1]]
 
 
 def p_constdef(p):
@@ -60,16 +65,21 @@ def p_constdef(p):
     p[0] = constdef
 
 
+def p_opt_compdefs(p):
+    """opt_compdefs :
+                     | compdefs"""
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = []
+
 def p_compdefs(p):
-    """compdefs :
-                | compdefs compdef
+    """compdefs : compdefs compdef
                 | compdef"""
     if len(p) == 3:
         p[0] = p[1] + [p[2]]
-    elif len(p) == 2:
-        p[0] = [p[1]]
     else:
-        p[0] = []
+        p[0] = [p[1]]
 
 
 def p_compdef(p):
