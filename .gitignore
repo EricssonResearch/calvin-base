@@ -3,6 +3,8 @@
 *.orig
 *.tmp
 *.testing
+*.png
+*.svg
 *~
 __pycache__
 *-project
