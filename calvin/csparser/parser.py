@@ -84,22 +84,6 @@ def p_compdefs(p):
 
 def p_compdef(p):
     """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring program RBRACE"""
-    # name = p[2]
-    # arg_ids = p[4]
-    # inputs = p[6]
-    # outputs = p[8]
-    # docstring = p[10]
-    # structure = p[11]
-    # comp = {
-    #     'name': name,
-    #     'inports': inputs,
-    #     'outports': outputs,
-    #     'arg_identifiers': arg_ids,
-    #     'structure': structure,
-    #     'docstring': docstring,
-    #     'dbg_line':p.lineno(2)
-    # }
-    # p[0] = {name:comp}
     p[0] = ast.Component(p[2], p[4], p[6], p[8], p[10], p[11])
 
 
