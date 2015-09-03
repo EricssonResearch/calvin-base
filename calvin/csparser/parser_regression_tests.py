@@ -19,10 +19,35 @@ def testit():
     import json
     import difflib
 
-    # from a4 import Analyzer as A2
-    from analyzer import Analyzer as A1
-    from analyzer import Analyzer as A2
-    import calvin.Tools.cscompiler as cscompiler
+    # Old setup
+    import calvin.csparser.parser_old as parser_old
+    import calvin.csparser.checker as checker_old
+    import calvin.csparser.analyzer as analyzer_old
+
+    # New setup
+    import calvin.csparser.parser as parser
+    import calvin.csparser.codegen as codegen
+
+    def old_ir(source_text, filename):
+        ir, errors, warnings = parser_old.calvin_parser(source_text, filename)
+        if not errors:
+            c_errors, c_warnings = checker_old.check(ir)
+            errors.extend(c_errors)
+            warnings.extend(c_warnings)
+        if errors:
+            for error in errors:
+                print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
+            raise Exception("There were errors caught by the old checker...")
+        return ir
+
+    def ast(source_text, filename):
+        ast, errors, warnings = parser.calvin_parser(source_text, source_file=filename)
+        if errors:
+            for error in errors:
+                print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
+            raise Exception("There were errors caught by the new parser...")
+        return ast
+
 
     crashers = []
     expected_diff = []
@@ -44,14 +69,8 @@ def testit():
             print "CRASHER"
             continue
 
-        prg, errors, warnings = cscompiler.compile(source, test)
-        print prg
-        if errors:
-            for error in errors:
-                print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
-            raise Exception("There were errors....")
-        a1 = A1(prg)
-        a2 = A2(prg)
+        a1 = analyzer_old.Analyzer(old_ir(source, test))
+        a2 = codegen.CodeGen(ast(source, test))
 
         # print "======= DONE ========"
 
@@ -76,14 +95,18 @@ def testit():
         print test, res[test][1]
 
 if __name__ == '__main__':
+    # Configure for virtualenv
+    cwd = "/Users/eperspe/Source/calvin-base"
+    env_activate = "/Users/eperspe/.virtualenvs/calvin-dev/bin/activate_this.py"
+    calvin_root = "/Users/eperspe/Source/calvin-base"
+
     import sys
     import os
-    os.chdir("/Users/eperspe/Source/calvin-base")
-    file = "/Users/eperspe/.virtualenvs/calvin-dev/bin/activate_this.py"
-    execfile(file, dict(__file__=file))
-    sys.path[:0] = ["/Users/eperspe/Source/calvin-base"]
-    for p in sys.path:
-        print p
+    os.chdir(cwd)
+    execfile(env_activate, dict(__file__=env_activate))
+    sys.path[:0] = [calvin_root]
+
+    # Run regression checks
     testit()
 
 
