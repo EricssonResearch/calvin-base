@@ -70,13 +70,15 @@ def setup_module(module):
         rt3 = None
 
     if not rt1 or not rt2 or not rt3:
-        rt1,_ = dispatch_node("calvinip://localhost:5000", "http://localhost:5003")
-        rt2,_ = dispatch_node("calvinip://localhost:5001", "http://localhost:5004")
-        rt3,_ = dispatch_node("calvinip://localhost:5002", "http://localhost:5005")
+        import socket
+        ip_addr = socket.gethostbyname(socket.gethostname())
+        rt1,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://localhost:5003")
+        rt2,_ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://localhost:5004")
+        rt3,_ = dispatch_node("calvinip://%s:5002" % (ip_addr,), "http://localhost:5005")
         time.sleep(.4)
-        utils.peer_setup(rt1, ["calvinip://localhost:5001", "calvinip://localhost:5002"])
-        utils.peer_setup(rt2, ["calvinip://localhost:5000", "calvinip://localhost:5002"])
-        utils.peer_setup(rt3, ["calvinip://localhost:5000", "calvinip://localhost:5001"])
+        utils.peer_setup(rt1, ["calvinip://%s:5001" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
+        utils.peer_setup(rt2, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
+        utils.peer_setup(rt3, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5001" % (ip_addr, )])
         time.sleep(.4)
 
 def teardown_module(module):

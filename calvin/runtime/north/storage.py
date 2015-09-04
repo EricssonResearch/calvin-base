@@ -71,10 +71,10 @@ class Storage(object):
             if kwargs["org_cb"]:
                 kwargs["org_cb"](args[0])
 
-    def start(self, cb=None):
+    def start(self, iface='', cb=None):
         """ Start storage
         """
-        self.storage.start(cb=CalvinCB(self.started_cb, org_cb=cb))
+        self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb))
 
     def stop(self, cb=None):
         """ Stop storage

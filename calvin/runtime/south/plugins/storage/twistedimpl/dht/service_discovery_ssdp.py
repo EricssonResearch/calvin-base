@@ -54,6 +54,16 @@ MS_RESP =   'HTTP/1.1 200 OK\r\n' + \
             'DATE: %s\r\n\r\n'
 
 
+def iface_address(dest):
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect((dest, 80))
+    addr = s.getsockname()[0]
+    s.close()
+    _log.info("dest: %s, source: %s" % (dest, addr))
+    return addr
+
+
 def parse_http_response(data):
 
     """ don't try to get the body, there are reponses without """
@@ -94,7 +104,7 @@ class ServerBase(DatagramProtocol):
                         addr = v
                         # Ignore 0.0.0.0, use the ip we where contacted on
                         if addr[0] == "0.0.0.0":
-                            addr = (address[0], addr[1])
+                            addr = (iface_address(address[0]), addr[1])
 
                         response = MS_RESP % ('%s:%d' % addr, str(time.time()),
                                               k, datetimeToString())

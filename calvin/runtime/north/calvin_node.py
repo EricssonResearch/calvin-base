@@ -40,6 +40,12 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
+def addr_from_uri(uri):
+    _, host = uri.split("://")
+    addr, _ = host.split(":")
+    return addr
+
+
 class Node(object):
 
     """A node of calvin
@@ -63,7 +69,7 @@ class Node(object):
         self.control.start(node=self, uri=control_uri)
         self.async_msg_ids = {}
         self.storage = storage.Storage()
-        self.storage.start()
+        self.storage.start(iface=addr_from_uri(uri))
         self.network = CalvinNetwork(self)
         self.proto = CalvinProto(self, self.network)
         self.pm = PortManager(self, self.proto)
