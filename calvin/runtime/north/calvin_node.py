@@ -193,3 +193,4 @@ def start_node(uri, control_uri, trace_exec=False, attributes=None):
     p = Process(target=_create_node, args=(uri, control_uri, attributes))
     p.daemon = True
     p.start()
+    return p
