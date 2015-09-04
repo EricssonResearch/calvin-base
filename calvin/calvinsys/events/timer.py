@@ -39,11 +39,12 @@ class TimerEvent(async.DelayedCall):
         self._triggered = False
 
     def trigger(self):
-        _log.debug("Trigger calvinsys timer on %s" % (self._actor_id))
-        self._triggered = True
-        if self.repeats:
-            self.reset()
-        self.trigger_loop(actor_ids=[self._actor_id])
+        if self.delayedCall.active():
+            _log.debug("Trigger calvinsys timer on %s" % (self._actor_id))
+            self._triggered = True
+            if self.repeats:
+                self.reset()
+            self.trigger_loop(actor_ids=[self._actor_id])
 
 
 class TimerHandler(object):
