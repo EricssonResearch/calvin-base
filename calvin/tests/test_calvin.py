@@ -108,9 +108,9 @@ def setup_module(module):
         # remotehosts = [("calvinip://127.0.0.1:5002", "http://localhost:5003")]
 
         for host in remotehosts:
-            runtimes += [dispatch_node(host[0], host[1])]
+            runtimes += [dispatch_node(host[0], host[1])[0]]
 
-        runtime = dispatch_node(localhost[0], localhost[1])
+        runtime, _ = dispatch_node(localhost[0], localhost[1])
 
         time.sleep(.1)
 

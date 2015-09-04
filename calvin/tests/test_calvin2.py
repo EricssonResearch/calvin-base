@@ -70,9 +70,9 @@ def setup_module(module):
         rt3 = None
 
     if not rt1 or not rt2 or not rt3:
-        rt1 = dispatch_node("calvinip://localhost:5000", "http://localhost:5003")
-        rt2 = dispatch_node("calvinip://localhost:5001", "http://localhost:5004")
-        rt3 = dispatch_node("calvinip://localhost:5002", "http://localhost:5005")
+        rt1,_ = dispatch_node("calvinip://localhost:5000", "http://localhost:5003")
+        rt2,_ = dispatch_node("calvinip://localhost:5001", "http://localhost:5004")
+        rt3,_ = dispatch_node("calvinip://localhost:5002", "http://localhost:5005")
         time.sleep(.4)
         utils.peer_setup(rt1, ["calvinip://localhost:5001", "calvinip://localhost:5002"])
         utils.peer_setup(rt2, ["calvinip://localhost:5000", "calvinip://localhost:5002"])
@@ -147,11 +147,17 @@ class TestConnections(CalvinTestBase):
 
         utils.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(.4)
+        time.sleep(1)
         utils.migrate(self.rt1, src, self.rt2.id)
-        time.sleep(.6)
 
-        actual = utils.report(self.rt1, snk)
+        interval = 0.5
+        for retries in range(1,5):
+            time.sleep(interval * retries)
+            actual = utils.report(self.rt1, snk)
+            if len(actual) > 10 :
+                break
+
+
         self.assert_lists_equal(range(1, 10), actual)
 
         utils.delete_actor(self.rt2, src)
@@ -391,9 +397,13 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         utils.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
         utils.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.1)
+        interval = 0.5
 
-        actual = utils.report(self.rt3, snk)
+        for retries in range(1, 5):
+            time.sleep(retries * interval)
+            actual = utils.report(self.rt3, snk)
+            if len(actual) > 10:
+                break
 
         self.assert_lists_equal(range(1, 11), actual)
 
@@ -408,6 +418,16 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         utils.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
         utils.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
+
+        interval = 0.5
+
+        for retries in range(1, 5):
+            time.sleep(retries * interval)
+            actual = utils.report(self.rt3, snk)
+            if len(actual) > 10:
+                break
+
+        self.assert_lists_equal(range(1, 11), actual)
 
         time.sleep(0.1)
 
