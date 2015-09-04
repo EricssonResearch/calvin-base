@@ -46,6 +46,9 @@ class CountTimer(Actor):
     def did_migrate(self):
         self.setup()
 
+    def will_end(self):
+        self.timer.cancel()
+
     # The counting action, first 3 use non periodic for testing purpose
     # need guard with triggered() since the actor might be fired for other
     # reasons
