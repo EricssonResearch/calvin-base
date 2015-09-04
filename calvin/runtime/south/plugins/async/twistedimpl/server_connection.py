@@ -160,7 +160,6 @@ class HTTPProtocol(LineReceiver):
         if self.data_available:
             command = self._command
             headers = self._header
-            print command
             if command.lower().startswith("get "):
                 data = b""
             else:
