@@ -105,6 +105,75 @@ class LineProtocol(LineReceiver):
             raise Exception("Connection error: no data available")
 
 
+class HTTPProtocol(LineReceiver):
+
+    def __init__(self, factory, actor_id):
+        self.delimiter = '\r\n\r\n'
+        self.data_available = False
+        self.connection_lost = False
+        self._header = None
+        self._data_buffer = b""
+        self._data = None
+        self.factory = factory
+        self._actor_id = actor_id
+        self._expected_length = 0
+
+    def connectionMade(self):
+        self.factory.connections.append(self)
+        self.factory.trigger()
+
+    def connectionLost(self, reason):
+        self.connection_lost = True
+        self.factory.connections.remove(self)
+        self.factory.trigger()
+
+    def rawDataReceived(self, data):
+        self._data_buffer += data
+
+        if self._expected_length - len(self._data_buffer) == 0:
+            self._data = self._data_buffer
+            self._data_buffer = b""
+            self.data_available = True
+            self.factory.trigger()
+
+    def lineReceived(self, line):
+        header = [h.strip() for h in line.split("\r\n")]
+        self._command = header.pop(0)
+        self._header = {}
+        for attr in header:
+            a, v = attr.split(':', 1)
+            self._header[a.strip().lower()] = v.strip()
+        self._expected_length = int(self._header.get('content-length', 0))
+        if self._expected_length != 0:
+            self.setRawMode()
+        else:
+            self.data_available = True
+            self.factory.trigger()
+
+    def send(self, data):
+        LineReceiver.sendLine(self, data)  # LineReceiver is an old style class.
+
+    def close(self):
+        self.transport.loseConnection()
+
+    def data_get(self):
+        if self.data_available:
+            command = self._command
+            headers = self._header
+            print command
+            if command.lower().startswith("get "):
+                data = b""
+            else:
+                data = self._data
+            self._header = None
+            self._data = None
+            self.data_available = False
+            self.setLineMode()
+            self._expected_length = 0
+            return command, headers, data
+        raise Exception("Connection error: no data available")
+
+
 class ServerProtocolFactory(Factory):
     def __init__(self, trigger, mode='line', delimiter='\r\n', max_length=8192, actor_id=None):
         self._trigger             = trigger
@@ -124,6 +193,8 @@ class ServerProtocolFactory(Factory):
             connection = LineProtocol(self, self.delimiter, actor_id=self._actor_id)
         elif self.mode == 'raw':
             connection = RawDataProtocol(self, self.MAX_LENGTH, actor_id=self._actor_id)
+        elif self.mode == 'http':
+            connection = HTTPProtocol(self, actor_id=self._actor_id)
         else:
             raise Exception("ServerProtocolFactory: Protocol not supported")
         self.pending_connections.append((addr, connection))

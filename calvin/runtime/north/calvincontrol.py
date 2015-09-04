@@ -344,7 +344,7 @@ class CalvinControl(object):
             (re_delete_index, self.handle_delete_index),
             (re_get_index, self.handle_get_index)
         ]
-        self.server = server_connection.ServerProtocolFactory(self.handle_request, "raw")
+        self.server = server_connection.ServerProtocolFactory(self.handle_request, "http")
         self.server.start(self.host, self.port)
 
     def stop(self):
@@ -361,16 +361,15 @@ class CalvinControl(object):
 
         for handle, connection in self.connections.items():
             if connection.data_available:
-                data = connection.data_get()
+                command, headers, data = connection.data_get()
                 found = False
                 for route in self.routes:
-                    match = route[0].match(data)
+                    match = route[0].match(command)
                     if match:
-                        http_data = data.split("\r\n\r\n")[1]
-                        if http_data:
-                            http_data = json.loads(http_data)
+                        if data:
+                            data = json.loads(data)
                         _log.debug("Calvin control handles:\n%s\n---------------" % data)
-                        route[1](handle, connection, match, http_data)
+                        route[1](handle, connection, match, data)
                         found = True
                         break
 
