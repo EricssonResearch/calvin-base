@@ -272,7 +272,7 @@ def _calvin_parser():
     # have to be recreated
     this_file = os.path.realpath(__file__)
     containing_dir = os.path.dirname(this_file)
-    parser = yacc.yacc(debug=0, outputdir=containing_dir)
+    parser = yacc.yacc(debug=False, optimize=True, outputdir=containing_dir)
     return parser
 
 # Compute column.
