@@ -549,7 +549,6 @@ class CalvinControl(object):
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
     def handle_deploy(self, handle, connection, match, data):
-        print "data: ", data
         app_info, errors, warnings = compiler.compile(
             data["script"], filename=data["name"])
         app_info["name"] = data["name"]
