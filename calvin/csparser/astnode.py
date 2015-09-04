@@ -44,6 +44,8 @@ class Link(Node):
     def __init__(self, outport, inport):
         super(Link, self).__init__()
         self.children = [outport, inport]
+        self.outport = self.children[0]
+        self.inport = self.children[1]
 
 class Port(Node):
     """docstring for LinkNode"""

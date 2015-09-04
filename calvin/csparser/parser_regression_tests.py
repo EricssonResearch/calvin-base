@@ -40,8 +40,8 @@ def testit():
             raise Exception("There were errors caught by the old checker...")
         return ir
 
-    def ast(source_text, filename):
-        ast, errors, warnings = parser.calvin_parser(source_text, source_file=filename)
+    def ast(source_text):
+        ast, errors, warnings = parser.calvin_parser(source_text)
         if errors:
             for error in errors:
                 print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
@@ -51,7 +51,7 @@ def testit():
 
     crashers = []
     expected_diff = []
-    tests = ['test1']
+    tests = ['test1', 'test2', 'test3']
 
     res = {}
     for test in tests:
@@ -70,7 +70,7 @@ def testit():
             continue
 
         a1 = analyzer_old.Analyzer(old_ir(source, test))
-        a2 = codegen.CodeGen(ast(source, test))
+        a2 = codegen.CodeGen(ast(source), test)
 
         # print "======= DONE ========"
 
@@ -94,7 +94,8 @@ def testit():
     for test in tests:
         print test, res[test][1]
 
-if __name__ == '__main__':
+
+def run_check():
     # Configure for virtualenv
     cwd = "/Users/eperspe/Source/calvin-base"
     env_activate = "/Users/eperspe/.virtualenvs/calvin-dev/bin/activate_this.py"
@@ -108,6 +109,9 @@ if __name__ == '__main__':
 
     # Run regression checks
     testit()
+
+if __name__ == '__main__':
+    run_check()
 
 
 
