@@ -261,7 +261,7 @@ control_api_doc += \
     }
     Response: {"result": "true"}
 """
-re_post_index = re.compile(r"POST /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
+re_post_index = re.compile(r"POST /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
 """
@@ -273,7 +273,7 @@ control_api_doc += \
     }
     Response: {"result": "true"}
 """
-re_delete_index = re.compile(r"DELETE /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
+re_delete_index = re.compile(r"DELETE /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
 """
@@ -281,7 +281,7 @@ control_api_doc += \
     Fetch values under index key
     Response: {"result": <list of strings>}
 """
-re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/]*)\sHTTP/1")
+re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 
 _calvincontrol = None

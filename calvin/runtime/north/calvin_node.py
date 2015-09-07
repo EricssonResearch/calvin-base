@@ -32,11 +32,11 @@ from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
 from calvin.runtime.south.monitor import Event_Monitor
 from calvin.runtime.south.plugins.async import async
+from calvin.utilities.attribute_resolver import AttributeResolver
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvinlogger import get_logger
-
 _log = get_logger(__name__)
 
 
@@ -59,7 +59,11 @@ class Node(object):
         super(Node, self).__init__()
         self.uri = uri
         self.control_uri = control_uri
-        self.attributes = attributes
+        try:
+            self.attributes = AttributeResolver(attributes)
+        except:
+            _log.exception("Attributes not correct, uses empty attribute!")
+            self.attributes = AttributeResolver(None)
         self.id = calvinuuid.uuid("NODE")
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)

@@ -18,6 +18,7 @@
 import argparse
 from calvin.Tools import deployer, cscompiler
 import time
+import json
 import traceback
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import utils
@@ -51,7 +52,7 @@ Start runtime, compile calvinscript and deploy application.
                            help='Start PDB')
 
     argparser.add_argument('-l', '--loglevel', dest='loglevel', action='append', default=[],
-                           help="Set log level, levels: CRITICAL, ERROR, WARNING, INFO and DEBUG. \
+                           help="Set log level, levels: CRITICAL, ERROR, WARNING, INFO, DEBUG and ANALYZE. \
                            To enable on specific modules use 'module:level'")
 
     argparser.add_argument('-w', '--wait', dest='wait', metavar='sec', default=2, type=int,
@@ -61,10 +62,16 @@ Start runtime, compile calvinscript and deploy application.
                            help='run forever (equivalent to -w 0 option).')
 
     argparser.add_argument('--attr', metavar='<attr>', type=str,
-                           help='a comma separated list of attributes for started node '
-                                'e.g. node/affiliation/owner/me,node/affiliation/name/bot',
+                           help='JSON coded attributes for started node '
+                                'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
+                                ', see documentation',
                            dest='attr')
 
+    argparser.add_argument('--attr-file', metavar='<attr>', type=str,
+                           help='File with JSON coded attributes for started node '
+                                'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
+                                ', see documentation',
+                           dest='attr_file')
     return argparser.parse_args()
 
 
@@ -116,10 +123,12 @@ def set_loglevel(levels):
             get_logger(module).setLevel(logging.INFO)
         elif level == "DEBUG":
             get_logger(module).setLevel(logging.DEBUG)
+        elif level == "ANALYZE":
+            get_logger(module).setLevel(logging.ANALYZE)
 
 
-def dispatch_and_deploy(app_info, wait, uri, control_uri, attr_list):
-    rt, process = runtime(uri, control_uri, attr_list, dispatch=True)
+def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
+    rt, process = runtime(uri, control_uri, attr, dispatch=True)
     app_id = None
     app_id = deploy(rt, app_info)
     print "Deployed application", app_id
@@ -153,12 +162,23 @@ def main():
     uri = "calvinip://%s:%d" % (args.host, args.port)
     control_uri = "http://%s:%d" % (args.host, args.controlport)
 
-    attr_list = args.attr.split(",") if args.attr else None
+    attr_ = None
+    if args.attr:
+        try:
+            attr_ = json.loads(args.attr)
+        except Exception as e:
+            print "Attributes not JSON:\n", e
+
+    if args.attr_file:
+        try:
+            attr_ = json.load(open(args.attr_file))
+        except Exception as e:
+            print "Attribute file not JSON:\n", e
 
     if app_info:
-        dispatch_and_deploy(app_info, args.wait, uri, control_uri, attr_list)
+        dispatch_and_deploy(app_info, args.wait, uri, control_uri, attr_)
     else:
-        runtime(uri, control_uri, attr_list, dispatch=False)
+        runtime(uri, control_uri, attr_, dispatch=False)
 
 
 if __name__ == '__main__':

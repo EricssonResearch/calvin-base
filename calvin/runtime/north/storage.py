@@ -271,19 +271,23 @@ class Storage(object):
         """
         Add node to storage
         """
-        self.set(prefix="node-", key=node.id, value={"uri": node.uri, 
-                                                     "control_uri": node.control_uri,
-                                                     "attributes": node.attributes}, cb=cb)
+        self.set(prefix="node-", key=node.id, 
+                  value={"uri": node.uri, 
+                         "control_uri": node.control_uri,
+                         "attributes": {'public': node.attributes.get_public(),
+                                        'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
         # Add to index after a while since storage not up and running anyway
         #async.DelayedCall(1.0, self._add_node_index, node)
         self._add_node_index(node)
 
     def _add_node_index(self, node, cb=None):
+        indexes = node.attributes.get_indexed_public()
         try:
-            for index in node.attributes:
+            for index in indexes:
                 # TODO add callback, but currently no users supply a cb anyway
                 self.add_index(index, node.id)
         except:
+            _log.debug("Add node index failed", exc_info=True)
             pass
 
     def get_node(self, node_id, cb=None):
@@ -301,13 +305,15 @@ class Storage(object):
             self._delete_node_index(node, cb=cb)
 
     def _delete_node_index(self, node, cb=None):
+        indexes = node.attributes.get_indexed_public()
         try:
-            counter = [len(node.attributes)]  # counter value by reference used in callback
-            for index in node.attributes:
+            counter = [len(indexes)]  # counter value by reference used in callback
+            for index in indexes:
                 self.remove_index(index, node.id, cb=CalvinCB(self._delete_node_cb, counter=counter, org_cb=cb))
             # The remove index gets 1 second otherwise we call the callback anyway, i.e. stop the node
             async.DelayedCall(1.0, self._delete_node_timeout_cb, counter=counter, org_cb=cb)
         except:
+            _log.debug("Remove node index failed", exc_info=True)
             if cb:
                 cb()
 
@@ -434,7 +440,10 @@ class Storage(object):
     def _index_strings(self, index, root_prefix_level):
         # Make the list of index levels that should be used
         # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
-        items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
+        if isinstance(index, list):
+            items = index
+        else:
+            items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
         root = "/".join(items[:root_prefix_level])
         del items[:root_prefix_level]
         items.insert(0, root)
@@ -443,13 +452,14 @@ class Storage(object):
         indexes = ['/'+'/'.join(items[:l]) for l in range(1,len(items)+1)]
         return indexes
 
-    def add_index(self, index, value, root_prefix_level=2, cb=None):
+    def add_index(self, index, value, root_prefix_level=3, cb=None):
         """
         Add value (typically a node id) to the storage as a set.
         index: a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
                node/affiliation/owner/com.ericsson/Harald, 
                node/affiliation/name/com.ericsson/laptop
+               OR a list of strings
         value: the value that is to be added to the set stored at each level of the index
         root_prefix_level: the top level of the index that can be searched,
                with =1 then e.g. node/address, node/affiliation

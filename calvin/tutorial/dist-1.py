@@ -20,7 +20,9 @@ import time
 
 # create one node
 node_1 = dispatch_node(uri="calvinip://localhost:5000", control_uri="http://localhost:5001",
-                       attributes=["node/affiliation/owner/me", "node/affiliation/name/node-1"])
+                       attributes={'indexed_public':
+                            {'owner':{'organization': 'org.testexample', 'personOrGroup': 'me'},
+                             'node_name': {'organization': 'org.testexample', 'name': 'node-1'}}})
 
 # send 'new actor' command to node
 counter_id = utils.new_actor(node_1, 'std.Counter', 'counter')

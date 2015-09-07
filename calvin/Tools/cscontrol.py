@@ -50,28 +50,9 @@ def get_node_control_uri(control_uri, node_id):
     return nodeinfo.get("control_uri")
 
 
-def get_node_with_attribute(control_uri, attribute):
-    import random
-    nodes = get_nodes_with_attribute(control_uri, attribute)
-
-    node = None
-    # pick one (with a control uri)
-    while nodes:
-        node_id = random.choice(nodes)
-        nodes.remove(node_id)
-        other_control_uri = get_node_control_uri(control_uri, node_id)
-        if other_control_uri:
-            node = other_control_uri
-            break
-    return node
-
-
 def control_deploy(args):
     data = {"name": args.script.name, "script": args.script.read()}
-    if args.attr:
-        node = get_node_with_attribute(args.node, args.attr)
-    else:
-        node = args.node
+    node = args.node
     return requests.post(node + "/deploy", data=json.dumps(data))
 
 
@@ -138,8 +119,6 @@ def parse_args():
     cmd_deploy = cmdparsers.add_parser('deploy', help="deploy script to node")
     cmd_deploy.add_argument("script", metavar="<calvin script>", type=argparse.FileType('r'),
                             help="script to be deployed")
-    cmd_deploy.add_argument('-a', '--attr', metavar="<attribute>", type=str, dest="attr",
-                               help="Will deploy script to a random node with the given attribute")
     cmd_deploy.set_defaults(func=control_deploy)
 
     # parsers for actor commands

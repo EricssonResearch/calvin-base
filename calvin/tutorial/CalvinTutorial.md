@@ -354,7 +354,9 @@
     import time
     
     node_1 = calvin_node.dispatch_node(uri="calvinip://localhost:5000", contorl_uri="http://localhost:5001",
-                                       attributes=["node/affiliation/owner/me", "node/affiliation/name/bot"])
+                                       attributes={'indexed_public':
+                                            {'owner':{'organization': 'org.testexample', 'personOrGroup': 'me'},
+                                             'node_name': {'organization': 'org.testexample', 'name': 'bot'}}})
     
     counter_id = utils.new_actor(node_1, 'std.Counter', 'counter')
     
@@ -374,9 +376,13 @@
     import time
     
     node_1 = calvin_node.dispatch_node(uri="calvinip://localhost:5000", contorl_uri="http://localhost:5001",
-                                       attributes=["node/affiliation/owner/me", "node/affiliation/name/node-1"])
+                                       attributes={'indexed_public':
+                                            {'owner':{'organization': 'org.testexample', 'personOrGroup': 'me'},
+                                             'node_name': {'organization': 'org.testexample', 'name': 'node-1'}}})
     node_2 = calvin_node.dispatch_node(uri="calvinip://localhost:5002", control_uri="http://localhost:5003",
-                                       attributes=["node/affiliation/owner/me", "node/affiliation/name/node-2"])
+                                       attributes={'indexed_public':
+                                            {'owner':{'organization': 'org.testexample', 'personOrGroup': 'me'},
+                                             'node_name': {'organization': 'org.testexample', 'name': 'node-2'}}})
     
     counter_id = utils.new_actor(node_1, 'std.Counter', 'counter')
 
