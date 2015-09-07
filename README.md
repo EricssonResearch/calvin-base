@@ -56,6 +56,8 @@ The latest version of Calvin can be found on [github](https://github.com/Ericsso
 
 ### Setup
 
+(For more information about installation options, see [the wiki](https://github.com/EricssonResearch/calvin-base/wiki/Installation))
+
 To install Calvin, use the accompanying `setup.py`
 
     $ python setup.py install
