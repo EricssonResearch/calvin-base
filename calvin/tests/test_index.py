@@ -26,6 +26,8 @@ from calvin.utilities.nodecontrol import dispatch_node
 from calvin.utilities import calvinuuid
 from warnings import warn
 from calvin.utilities.attribute_resolver import format_index_string
+import socket
+ip_addr = socket.gethostbyname(socket.gethostname())
 
 def absolute_filename(filename):
     import os.path
@@ -34,12 +36,12 @@ def absolute_filename(filename):
 class CalvinTestBase(unittest.TestCase):
 
     def setUp(self):
-        self.rt1 = dispatch_node("calvinip://localhost:5000", "http://localhost:5003")
-        self.rt2 = dispatch_node("calvinip://localhost:5001", "http://localhost:5004")
-        self.rt3 = dispatch_node("calvinip://localhost:5002", "http://localhost:5005")
-        utils.peer_setup(self.rt1, ["calvinip://localhost:5001", "calvinip://localhost:5002"])
-        utils.peer_setup(self.rt2, ["calvinip://localhost:5000", "calvinip://localhost:5002"])
-        utils.peer_setup(self.rt3, ["calvinip://localhost:5000", "calvinip://localhost:5001"])
+        self.rt1, _ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5003" % ip_addr)
+        self.rt2, _ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://%s:5004" % ip_addr)
+        self.rt3, _ = dispatch_node("calvinip://%s:5002" % (ip_addr,), "http://%s:5005" % ip_addr)
+        utils.peer_setup(self.rt1, ["calvinip://%s:5001" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
+        utils.peer_setup(self.rt2, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
+        utils.peer_setup(self.rt3, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5001" % (ip_addr, )])
 
     def tearDown(self):
         utils.quit(self.rt1)
@@ -186,18 +188,18 @@ class TestIndex(CalvinTestBase):
 class CalvinNodeTestBase(unittest.TestCase):
 
     def setUp(self):
-        self.rt1 = dispatch_node("calvinip://localhost:5000", "http://localhost:5003",
+        self.rt1, _ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5003" % ip_addr,
              attributes={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode1'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}})
 
-        self.rt2 = dispatch_node("calvinip://localhost:5001", "http://localhost:5004",
+        self.rt2, _ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://%s:5004" % ip_addr,
              attributes={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode2'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}})
-        self.rt3 = dispatch_node("calvinip://localhost:5002", "http://localhost:5005",
+        self.rt3, _ = dispatch_node("calvinip://%s:5002" % (ip_addr,), "http://%s:5005" % ip_addr,
              attributes={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner2'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode3'},
@@ -257,8 +259,8 @@ class CalvinNodeTestIndexAll(unittest.TestCase):
             this test is quite loose on its asserts but shows some warnings when
             inconsistent. It is also extremly slow.
         """
-        self.hosts = [("calvinip://127.0.0.1:%d" % d, "http://localhost:%d" % (d+1), "owner%d" % ((d-5000)/2)) for d in range(5000, 5041, 2)]
-        self.rt = [dispatch_node(h[0], h[1], attributes={'indexed_public': {'owner':{'personOrGroup': h[2]}}}) for h in self.hosts]
+        self.hosts = [("calvinip://%s:%d" % (ip_addr, d), "http://%s:%d" % (ip_addr, d+1), "owner%d" % ((d-5000)/2)) for d in range(5000, 5041, 2)]
+        self.rt = [dispatch_node(h[0], h[1], attributes={'indexed_public': {'owner':{'personOrGroup': h[2]}}})[0] for h in self.hosts]
         time.sleep(3)
         owner = []
         for i in range(len(self.hosts)):
@@ -268,8 +270,8 @@ class CalvinNodeTestIndexAll(unittest.TestCase):
 
         owners = utils.get_index(self.rt[0], format_index_string({'owner':{}}))
         assert(set(owners['result']) <= set([r.id for r in self.rt]))
-        if set(owners['result']) == set([r.id for r in self.rt]):
-            warn("Not all nodes manage to reach the index")
+        if not set(owners['result']) >= set([r.id for r in self.rt]):
+            warn("Not all nodes manage to reach the index %d of %d" % (len(owners['result']), len(self.rt)))
         rt = self.rt[:]
         ids = [r.id for r in rt]
         hosts = self.hosts[:]

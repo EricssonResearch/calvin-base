@@ -24,6 +24,7 @@ from calvin.Tools import deployer
 import pytest
 from calvin.utilities import utils
 from calvin.utilities.nodecontrol import dispatch_node
+from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
@@ -55,7 +56,10 @@ def setup_module(module):
         interval = 0.5
         for retries in range(1,5):
             time.sleep(interval * retries)
-            test_peers = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnodes")
+            test_peers = utils.get_index(rt1, format_index_string({'node_name': 
+                                                                             {'organization': 'com.ericsson', 
+                                                                              'purpose': 'testfarm'}
+                                                                         }))
             if not test_peers is None and not test_peers["result"] is None and len(test_peers["result"]) > 1:
                 test_peers = test_peers["result"]
                 break
