@@ -311,11 +311,14 @@ class CalvinNetwork(object):
         self.join([value['uri']], callback, [key])
 
     def peer_disconnected(self, link, rt_id, reason):
-        self.link_remove(rt_id)
+        _log.analyze(self.node.id, "+", {'reason': reason, 
+                                         'links_equal': link == self.links[rt_id].transport}, peer_node_id=rt_id)
+        if rt_id in self.links and link == self.links[rt_id].transport:
+            self.link_remove(rt_id)
 
     def link_remove(self, peer_id):
         """ Removes a link to peer id """
-        _log.analyze(self.node.id, "+", {'counter': self.links[peer_id].prevent_removal_counter}, peer_node_id=peer_id)
+        _log.analyze(self.node.id, "+", {}, peer_node_id=peer_id)
         try:
             self.links.pop(peer_id)
         except:
