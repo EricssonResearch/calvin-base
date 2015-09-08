@@ -32,44 +32,36 @@ def absolute_filename(filename):
 rt1 = None
 rt2 = None
 rt3 = None
-controlurl = None
 
 def setup_module(module):
     global rt1
     global rt2
     global rt3
-    global controlurl
+    ip_addr = None
 
     try:
-        controlurl = os.environ["CALVIN_CONTROLURL"]
-        rt1 = utils.RT(controlurl)
-        node_id = utils.get_node_id(rt1)
-        if node_id:
-            node = utils.get_node(rt1, node_id)
-            if node:
-                rt1.id = node_id
-                rt1.uri = node["uri"]
-                test_peer2_id = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnode2")["result"][0]
-                if test_peer2_id:
-                    test_peer2 = utils.get_node(rt1, test_peer2_id)
-                    if test_peer2:
-                        rt2 = utils.RT(test_peer2["control_uri"])
-                        rt2.id = test_peer2_id
-                        rt2.uri = test_peer2["uri"]
-                test_peer3_id = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnode3")["result"][0]
-                if test_peer3_id:
-                    test_peer3 = utils.get_node(rt1, test_peer3_id)
-                    if test_peer3:
-                        rt3 = utils.RT(test_peer3["control_uri"])
-                        rt3.id = test_peer3_id
-                        rt3.uri = test_peer3["uri"]
-    except:
-        controlurl = None
-        rt1 = None
-        rt2 = None
-        rt3 = None
+        ip_addr = os.environ["CALVIN_TEST_IP"]
+    except KeyError:
+        pass
 
-    if not rt1 or not rt2 or not rt3:
+    if ip_addr:
+        rt1,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5001" % (ip_addr, ))
+        time.sleep(0.5)
+        test_peer2_id = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnode2")["result"][0]
+        if test_peer2_id:
+            test_peer2 = utils.get_node(rt1, test_peer2_id)
+            if test_peer2:
+                rt2 = utils.RT(test_peer2["control_uri"])
+                rt2.id = test_peer2_id
+                rt2.uri = test_peer2["uri"]
+            test_peer3_id = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnode3")["result"][0]
+            if test_peer3_id:
+                test_peer3 = utils.get_node(rt1, test_peer3_id)
+                if test_peer3:
+                    rt3 = utils.RT(test_peer3["control_uri"])
+                    rt3.id = test_peer3_id
+                    rt3.uri = test_peer3["uri"]
+    else:
         import socket
         ip_addr = socket.gethostbyname(socket.gethostname())
         rt1,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://localhost:5003")
@@ -81,20 +73,19 @@ def setup_module(module):
         utils.peer_setup(rt3, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5001" % (ip_addr, )])
         time.sleep(.4)
 
+
 def teardown_module(module):
     global rt1
     global rt2
     global rt3
-    global controlurl
 
-    if not controlurl:
-        utils.quit(rt1)
-        utils.quit(rt2)
-        utils.quit(rt3)
-        time.sleep(0.4)
-        for p in multiprocessing.active_children():
-            p.terminate()
-        time.sleep(0.4)
+    utils.quit(rt1)
+    utils.quit(rt2)
+    utils.quit(rt3)
+    time.sleep(0.4)
+    for p in multiprocessing.active_children():
+        p.terminate()
+    time.sleep(0.4)
 
 class CalvinTestBase(unittest.TestCase):
 

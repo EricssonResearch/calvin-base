@@ -57,52 +57,38 @@ def expected_tokens(rt, actor_id, src_actor_type):
 runtime = None
 runtimes = []
 peerlist = []
-controlurl = None
 
 def setup_module(module):
     global runtime
     global runtimes
     global peerlist
-    global controlurl
+    ip_addr = None
 
     try:
-        controlurl = os.environ["CALVIN_CONTROLURL"]
-        runtime = utils.RT(controlurl)
-        node_id = utils.get_node_id(runtime)
-        if node_id:
-            print "Got local nodeid"
-            node = utils.get_node(runtime, node_id)
-            if node:
-                print "Got local node"
-                runtime.id = node_id
-                runtime.uri = node["uri"]
-                test_peer2_id = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnode2")["result"][0]
-                if test_peer2_id:
-                    print "Got node2 id"
-                    test_peer2 = utils.get_node(runtime, test_peer2_id)
-                    if test_peer2:
-                        print "Got node2"
-                        runtime2 = utils.RT(test_peer2["control_uri"])
-                        runtime2.id = test_peer2_id
-                        runtime2.uri = test_peer2["uri"]
-                        runtimes.append(runtime2)
-                test_peer3_id = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnode3")["result"][0]
-                if test_peer3_id:
-                    print "Got node3 id"
-                    test_peer3 = utils.get_node(runtime, test_peer3_id)
-                    if test_peer3:
-                        print "Got node3"
-                        runtime3 = utils.RT(test_peer3["control_uri"])
-                        runtime3.id = test_peer3_id
-                        runtime3.uri = test_peer3["uri"]
-                        runtimes.append(runtime3)
-    except Exception as e:
-        print "Exception %s" % str(e)
-        controlurl = None
-        runtime = None
-        runtimes = []
+        ip_addr = os.environ["CALVIN_TEST_IP"]
+    except KeyError:
+        pass
 
-    if not runtime or not runtimes:
+    if ip_addr:
+        runtime,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5001" % (ip_addr, ))
+        time.sleep(0.5)
+        test_peer2_id = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnode2")["result"][0]
+        if test_peer2_id:
+            test_peer2 = utils.get_node(runtime, test_peer2_id)
+            if test_peer2:
+                runtime2 = utils.RT(test_peer2["control_uri"])
+                runtime2.id = test_peer2_id
+                runtime2.uri = test_peer2["uri"]
+                runtimes.append(runtime2)
+            test_peer3_id = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnode3")["result"][0]
+            if test_peer3_id:
+                test_peer3 = utils.get_node(runtime, test_peer3_id)
+                if test_peer3:
+                    runtime3 = utils.RT(test_peer3["control_uri"])
+                    runtime3.id = test_peer3_id
+                    runtime3.uri = test_peer3["uri"]
+                    runtimes.append(runtime3)
+    else:
         import socket
         ip_addr = socket.gethostbyname(socket.gethostname())
         localhost = "calvinip://%s:5000" % (ip_addr,), "http://localhost:5001"
@@ -140,17 +126,15 @@ def setup_module(module):
 def teardown_module(module):
     global runtime
     global runtimes
-    global controlurl
 
-    if not controlurl:
-        for peer in runtimes:
-            utils.quit(peer)
-            time.sleep(0.2)
-        utils.quit(runtime)
+    for peer in runtimes:
+        utils.quit(peer)
         time.sleep(0.2)
-        for p in multiprocessing.active_children():
-            p.terminate()
-            time.sleep(0.2)
+    utils.quit(runtime)
+    time.sleep(0.2)
+    for p in multiprocessing.active_children():
+        p.terminate()
+        time.sleep(0.2)
 
 class CalvinTestBase(unittest.TestCase):
 
