@@ -49,6 +49,6 @@ def dispatch_node(uri, control_uri, trace=False, attributes=None):
 
 def start_node(uri, control_uri, trace=False, attributes=None):
     if trace:
-        calvin_node.create_tracing_node(uri, control_uri, trace=False, attributes=None)
+        calvin_node.create_tracing_node(uri, control_uri, trace, attributes)
     else:
-        calvin_node.create_node(uri, control_uri, attributes=None)
+        calvin_node.create_node(uri, control_uri, attributes)
