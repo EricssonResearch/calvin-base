@@ -86,7 +86,11 @@ To format the index search string an attribute resolver function needs to be use
 where the attr_obj should only contain ONE attribute e.g. 
 
     {'owner': {'organization': 'org.testorg', 'role':'admin'}}
-    
+
+alternatively the attr is a tuple e.g.:
+
+    ('owner', {'organization': 'org.testorg', 'role':'admin'})
+
 The trim parameter when true will remove trailing empty keys instead of leaving them empty, this allows the
 prefix search to find nodes based only on the included higher level keys.
 """
@@ -196,10 +200,17 @@ def format_index_string(attr, trim=True):
     """ To format the index search string an attribute resolver function needs to be used:
         where the attr should only contain ONE attribute e.g. 
             {'owner': {'organization': 'org.testorg', 'role':'admin'}}
+        alternatively the attr is a tuple e.g.:
+            ('owner', {'organization': 'org.testorg', 'role':'admin'})
         The trim parameter, when true, will remove trailing empty keys instead of leaving them empty.
         This allows the prefix search to find nodes based only on the included higher level keys.
     """
-    attr_type, attribute = attr.iteritems().next()
+    attr_type = None
+    attribute = None
+    if isinstance(attr, dict):
+        attr_type, attribute = attr.iteritems().next()
+    elif isinstance(attr, (list, tuple)):
+        attr_type, attribute = attr[0], attr[1]
     _attr = attr_resolver[attr_type](attribute)
     if trim:
         _attr = [_attr[i] for i in range(len(_attr)) if any(_attr[i:])]
