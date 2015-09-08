@@ -47,12 +47,8 @@ def main():
         #pprint.pprint(logline)
         log.append(logline)
 
-    nodes = list(set([l['node_id'] for l in log]))
-    try:
-        # We have "TESTRUN" string in node id if logging py.test names
-        nodes.remove("TESTRUN")
-    except:
-        pass
+    # Collect all node ids and remove "TESTRUN" string as node id since it is used when logging py.test name
+    nodes = list(set([l['node_id'] for l in log] + [l.get('peer_node_id', None)  for l in log]) - set([None, "TESTRUN"]))
     line = ""
     for n in nodes:
         line += n + " "*(WIDTH-35)
