@@ -32,11 +32,13 @@ def absolute_filename(filename):
 rt1 = None
 rt2 = None
 rt3 = None
+kill_peers = True
 
 def setup_module(module):
     global rt1
     global rt2
     global rt3
+    global kill_peers
     ip_addr = None
 
     try:
@@ -45,22 +47,29 @@ def setup_module(module):
         pass
 
     if ip_addr:
+        kill_peers = False
         rt1,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5001" % (ip_addr, ))
-        time.sleep(0.5)
-        test_peer2_id = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnode2")["result"][0]
-        if test_peer2_id:
-            test_peer2 = utils.get_node(rt1, test_peer2_id)
-            if test_peer2:
-                rt2 = utils.RT(test_peer2["control_uri"])
-                rt2.id = test_peer2_id
-                rt2.uri = test_peer2["uri"]
-            test_peer3_id = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnode3")["result"][0]
-            if test_peer3_id:
-                test_peer3 = utils.get_node(rt1, test_peer3_id)
-                if test_peer3:
-                    rt3 = utils.RT(test_peer3["control_uri"])
-                    rt3.id = test_peer3_id
-                    rt3.uri = test_peer3["uri"]
+
+        interval = 0.5
+        for retries in range(1,5):
+            time.sleep(interval * retries)
+            test_peers = utils.get_index(rt1, "node/affiliation/owner/com.ericsson/testnodes")["result"]
+            if len(test_peers) > 1 :
+                break
+
+        test_peer2_id = test_peers[0]
+        test_peer2 = utils.get_node(rt1, test_peer2_id)
+        if test_peer2:
+            rt2 = utils.RT(test_peer2["control_uri"])
+            rt2.id = test_peer2_id
+            rt2.uri = test_peer2["uri"]
+        test_peer3_id = test_peers[1]
+        if test_peer3_id:
+            test_peer3 = utils.get_node(rt1, test_peer3_id)
+            if test_peer3:
+                rt3 = utils.RT(test_peer3["control_uri"])
+                rt3.id = test_peer3_id
+                rt3.uri = test_peer3["uri"]
     else:
         import socket
         ip_addr = socket.gethostbyname(socket.gethostname())
@@ -78,10 +87,12 @@ def teardown_module(module):
     global rt1
     global rt2
     global rt3
+    global kill_peers
 
     utils.quit(rt1)
-    utils.quit(rt2)
-    utils.quit(rt3)
+    if kill_peers:
+        utils.quit(rt2)
+        utils.quit(rt3)
     time.sleep(0.4)
     for p in multiprocessing.active_children():
         p.terminate()

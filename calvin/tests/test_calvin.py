@@ -57,11 +57,13 @@ def expected_tokens(rt, actor_id, src_actor_type):
 runtime = None
 runtimes = []
 peerlist = []
+kill_peers = True
 
 def setup_module(module):
     global runtime
     global runtimes
     global peerlist
+    global kill_peers
     ip_addr = None
 
     try:
@@ -70,24 +72,31 @@ def setup_module(module):
         pass
 
     if ip_addr:
+        kill_peers = False
         runtime,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5001" % (ip_addr, ))
-        time.sleep(0.5)
-        test_peer2_id = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnode2")["result"][0]
-        if test_peer2_id:
-            test_peer2 = utils.get_node(runtime, test_peer2_id)
-            if test_peer2:
-                runtime2 = utils.RT(test_peer2["control_uri"])
-                runtime2.id = test_peer2_id
-                runtime2.uri = test_peer2["uri"]
-                runtimes.append(runtime2)
-            test_peer3_id = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnode3")["result"][0]
-            if test_peer3_id:
-                test_peer3 = utils.get_node(runtime, test_peer3_id)
-                if test_peer3:
-                    runtime3 = utils.RT(test_peer3["control_uri"])
-                    runtime3.id = test_peer3_id
-                    runtime3.uri = test_peer3["uri"]
-                    runtimes.append(runtime3)
+
+        interval = 0.5
+        for retries in range(1,5):
+            time.sleep(interval * retries)
+            test_peers = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnodes")["result"]
+            if len(test_peers) > 1 :
+                break
+
+        test_peer2_id = test_peers[0]
+        test_peer2 = utils.get_node(runtime, test_peer2_id)
+        if test_peer2:
+            runtime2 = utils.RT(test_peer2["control_uri"])
+            runtime2.id = test_peer2_id
+            runtime2.uri = test_peer2["uri"]
+            runtimes.append(runtime2)
+        test_peer3_id = test_peers[1]
+        if test_peer3_id:
+            test_peer3 = utils.get_node(runtime, test_peer3_id)
+            if test_peer3:
+                runtime3 = utils.RT(test_peer3["control_uri"])
+                runtime3.id = test_peer3_id
+                runtime3.uri = test_peer3["uri"]
+                runtimes.append(runtime3)
     else:
         import socket
         ip_addr = socket.gethostbyname(socket.gethostname())
@@ -126,10 +135,12 @@ def setup_module(module):
 def teardown_module(module):
     global runtime
     global runtimes
+    global kill_peers
 
-    for peer in runtimes:
-        utils.quit(peer)
-        time.sleep(0.2)
+    if kill_peers:
+        for peer in runtimes:
+            utils.quit(peer)
+            time.sleep(0.2)
     utils.quit(runtime)
     time.sleep(0.2)
     for p in multiprocessing.active_children():
