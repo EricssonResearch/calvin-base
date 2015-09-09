@@ -96,12 +96,15 @@ class TestDHT(object):
             q.put([aa,args])
 
         try:
+
             a = AutoDHTServer()
             d = a.start(iface, cb=CalvinCB(server_started, "1"))
 
             b = AutoDHTServer()
             d = b.start(iface, cb=CalvinCB(server_started, "2"))
 
+            c = AutoDHTServer()
+            c.start(iface, cb=CalvinCB(server_started, "3"))
 
             # Wait for start
             servers = []
@@ -109,10 +112,15 @@ class TestDHT(object):
             servers.append(server)
             server = yield threads.defer_to_thread(q.get, timeout=2)
             servers.append(server)
+            server = yield threads.defer_to_thread(q.get, timeout=2)
+            servers.append(server)
 
-            _log.debug("** servers %s" % repr(servers))
+
             assert ["1", self._sucess_start] in servers
             assert ["2", self._sucess_start] in servers
+            assert ["3", self._sucess_start] in servers
+
+            yield threads.defer_to_thread(time.sleep, 1)
 
             set_def = a.set(key="APA", value="banan")
             set_value = yield threads.defer_to_thread(set_def.wait)
@@ -124,7 +132,7 @@ class TestDHT(object):
 
             yield threads.defer_to_thread(time.sleep, .5)
 
-            get_def = a.get(key="APA")
+            get_def = b.get(key="APA")
             get_value = yield threads.defer_to_thread(get_def.wait)
             assert get_value == "banan"
 
@@ -136,9 +144,44 @@ class TestDHT(object):
                 a.stop()
             if b:
                 b.stop()
+            if c:
+                c.stop()
+            yield threads.defer_to_thread(time.sleep, 1)
 
     @pytest.inlineCallbacks
     def test_service_discovery(self, monkeypatch):
+        q = Queue.Queue()
+
+        def callback(addrs):
+            _log.debug("Callback discovery got %s" % addrs)
+            q.put(addrs)
+
+        iface = "0.0.0.0"
+        network = "test_super_network"
+
+        ip = "192.168.199.199"
+        port = 80
+
+        _sd = SSDPServiceDiscovery(iface, ignore_self=False)
+        server, client = _sd.start()
+
+        _sd.register_service(network, ip, port)
+
+        yield threads.defer_to_thread(time.sleep, .2)
+        _sd.start_search(callback, stop=True)
+
+        try:
+            services = yield threads.defer_to_thread(q.get, timeout=4)
+            assert ("192.168.199.199", 80) in services
+        except:
+            traceback.print_exc()
+            assert False
+
+        _sd.stop()
+        #yield threads.defer_to_thread(_sd.stop)
+
+    @pytest.inlineCallbacks
+    def test_service_discovery_ignore(self, monkeypatch):
         q = Queue.Queue()
 
         def callback(addrs):
@@ -155,14 +198,15 @@ class TestDHT(object):
         server, client = _sd.start()
 
         _sd.register_service(network, ip, port)
+
+        yield threads.defer_to_thread(time.sleep, .2)
         _sd.start_search(callback, stop=True)
 
         try:
             services = yield threads.defer_to_thread(q.get, timeout=4)
-            assert ("192.168.199.199", 80) in services
-        except:
-            traceback.print_exc()
             assert False
+        except:
+            pass
 
         _sd.stop()
         #yield threads.defer_to_thread(_sd.stop)
@@ -180,10 +224,13 @@ class TestDHT(object):
         ip = "192.168.199.200"
         port = 80
 
-        _sd = SSDPServiceDiscovery(iface)
+        _sd = SSDPServiceDiscovery(iface, ignore_self=False)
         _sd.start()
         _sd.register_service("APA", ip, port)
         _sd.set_client_filter("BANAN")
+
+        yield threads.defer_to_thread(time.sleep, .2)
+
         _sd.start_search(callback_filter, stop=True)
 
         try:
@@ -213,6 +260,9 @@ class TestDHT(object):
 
     @pytest.inlineCallbacks
     def test_callback(self, monkeypatch):
+        from twisted.python import log
+        log.startLogging(sys.stdout)
+
         iface = "0.0.0.0"
         a = None
         b = None
@@ -241,29 +291,39 @@ class TestDHT(object):
             b = AutoDHTServer()
             b.start(iface, cb=CalvinCB(server_started, "2"))
 
+            c = AutoDHTServer()
+            c.start(iface, cb=CalvinCB(server_started, "3"))
+
+
             # Wait for start
             servers = []
             server = yield threads.defer_to_thread(q.get, timeout=2)
             servers.append(server)
             server = yield threads.defer_to_thread(q.get, timeout=2)
             servers.append(server)
+            server = yield threads.defer_to_thread(q.get, timeout=2)
+            servers.append(server)
+
 
             assert ["1", self._sucess_start] in servers
             assert ["2", self._sucess_start] in servers
+            assert ["3", self._sucess_start] in servers
+
+            yield threads.defer_to_thread(time.sleep, 1)
 
             a.set(key="APA", value="banan", cb=CalvinCB(set_cb))
-
             set_value = yield threads.defer_to_thread(q.get, timeout=2)
             assert ("APA", True) == set_value
 
-            a.get(key="APA", cb=CalvinCB(get_cb))
+            yield threads.defer_to_thread(time.sleep, 1)
 
+            a.get(key="APA", cb=CalvinCB(get_cb))
             get_value = yield threads.defer_to_thread(q.get, timeout=2)
             assert get_value == ("APA", "banan")
 
-            time.sleep(.5)
-            b.get(key="APA", cb=CalvinCB(get_cb))
+            yield threads.defer_to_thread(time.sleep, 1)
 
+            b.get(key="APA", cb=CalvinCB(get_cb))
             get_value = yield threads.defer_to_thread(q.get, timeout=2)
             assert get_value == ("APA", "banan")
 
@@ -273,7 +333,9 @@ class TestDHT(object):
         finally:
             if a:
                 a.stop()
-                #yield threads.defer_to_thread(a.stop)
             if b:
                 b.stop()
-                #yield threads.defer_to_thread(b.stop)
+            if c:
+                c.stop()
+            yield threads.defer_to_thread(time.sleep, 1)
+

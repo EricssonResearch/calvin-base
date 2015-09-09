@@ -19,6 +19,7 @@ import traceback
 import platform
 import random
 import socket
+import netifaces
 
 from calvin.utilities import calvinlogger
 
@@ -53,17 +54,6 @@ MS_RESP =   'HTTP/1.1 200 OK\r\n' + \
             'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % SERVICE_UUID + \
             'DATE: %s\r\n\r\n'
 
-
-def iface_address(dest):
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect((dest, 80))
-    addr = s.getsockname()[0]
-    s.close()
-    _log.info("dest: %s, source: %s" % (dest, addr))
-    return addr
-
-
 def parse_http_response(data):
 
     """ don't try to get the body, there are reponses without """
@@ -84,6 +74,7 @@ class ServerBase(DatagramProtocol):
     def __init__(self, d=None):
         self._services = {}
         self._dstarted = d
+        self.ignore_list = []
 
     def startProtocol(self):
         if self._dstarted:
@@ -98,13 +89,16 @@ class ServerBase(DatagramProtocol):
             if cmd[0] == 'M-SEARCH' and cmd[1] == '*':
 
                 # Only reply to our requests
-                if SERVICE_UUID in headers['st']:
+                print address, self.ignore_list
+                print address not in self.ignore_list
+                if SERVICE_UUID in headers['st'] and address not in self.ignore_list:
 
                     for k, v in self._services.items():
                         addr = v
+
                         # Ignore 0.0.0.0, use the ip we where contacted on
                         if addr[0] == "0.0.0.0":
-                            addr = (iface_address(address[0]), addr[1])
+                            addr = (address[0], addr[1])
 
                         response = MS_RESP % ('%s:%d' % addr, str(time.time()),
                                               k, datetimeToString())
@@ -121,6 +115,10 @@ class ServerBase(DatagramProtocol):
     def remove_service(self, service):
         if service in self._services:
             del self._services[service]
+
+    def set_ignore_list(self, list_):
+        print "***", list_
+        self.ignore_list = list_
 
     def send_it(self, response, destination):
         try:
@@ -189,27 +187,45 @@ class ClientBase(DatagramProtocol):
 
 
 class SSDPServiceDiscovery(ServiceDiscoveryBase):
-    def __init__(self, iface):
+    def __init__(self, iface='', ignore_self=True):
         super(SSDPServiceDiscovery, self).__init__()
-        self.iface = iface
+
+        self.ignore_self = ignore_self
+        self.iface = '' #iface
         self.ssdp = None
         self.port = None
         self._backoff = .2
+        self.iface_send_list = []
+
+        if self.iface in ["0.0.0.0", ""]:
+            for a in netifaces.interfaces():
+                addrs = netifaces.ifaddresses(a)
+                # Ipv4 for now
+                if netifaces.AF_INET in addrs:
+                    for a in addrs[netifaces.AF_INET]:
+                        self.iface_send_list.append(a['addr'])
+        else:
+            self.iface_send_list.append(iface)
 
     def start(self):
         dserver = defer.Deferred()
         dclient = defer.Deferred()
         try:
             self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(d=dserver),
-                                                listenMultiple=True)
+                                                interface=self.iface, listenMultiple=True)
             self.ssdp.setLoopbackMode(1)
             self.ssdp.joinGroup(SSDP_ADDR, interface=self.iface)
         except:
             _log.exception("Multicast listen join failed!!")
             # Dont start server some one is alerady running locally
 
-        self.port = reactor.listenUDP(0, ClientBase(d=dclient), interface=self.iface)
+        # TODO: Do we need this ?
+        self.port = reactor.listenMulticast(0, ClientBase(d=dclient), interface=self.iface)
         _log.debug("SSDP Host: %s" % repr(self.port.getHost()))
+
+        # Set ignore port and ips
+        if self.ssdp and self.ignore_self:
+            self.ssdp.protocol.set_ignore_list([(x, self.port.getHost().port) for x in self.iface_send_list])
 
         return dserver, dclient
 
@@ -241,11 +257,15 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
     def _send_msearch(self, once=True):
         if self.port:
             _log.debug("Sending M-SEARCH...")
-            self.port.write(MS, (SSDP_ADDR, SSDP_PORT))
-            if not once and self.port is not None and not self.port.protocol.is_stopped():
-                reactor.callLater(self._backoff, self._send_msearch, once=False)
-                self._backoff = min(10, self._backoff * 1.5)
-                _log.debug("backoff %s" % self._backoff)
+
+            for src_ip in self.iface_send_list:
+                print src_ip
+                self.port.protocol.transport.setOutgoingInterface(src_ip)
+                self.port.write(MS, (SSDP_ADDR, SSDP_PORT))
+                if not once and not self.port.protocol.is_stopped():
+                    reactor.callLater(self._backoff, self._send_msearch, once=False)
+                    self._backoff = min(600, self._backoff * 1.5)
+                    _log.debug("backoff %s" % self._backoff)
         else:
             _log.debug(traceback.format_stack())
 

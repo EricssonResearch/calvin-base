@@ -72,8 +72,12 @@ class Node(object):
         self.sched = _scheduler(self, self.am, self.monitor)
         self.control.start(node=self, uri=control_uri)
         self.async_msg_ids = {}
+
+        # Default will multicast and listen on all interfaces
+        # TODO: be able to specify the interfaces
         self.storage = storage.Storage()
-        self.storage.start(iface=addr_from_uri(uri))
+        self.storage.start()
+
         self.network = CalvinNetwork(self)
         self.proto = CalvinProto(self, self.network)
         self.pm = PortManager(self, self.proto)

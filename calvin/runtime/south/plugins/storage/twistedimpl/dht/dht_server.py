@@ -151,7 +151,7 @@ class AutoDHTServer(StorageBase):
         start_cb = defer.Deferred()
 
         def bootstrap_proxy(addrs):
-            _log.debug("** proxy %s" % repr(addrs))
+            _log.debug("Got bootstraped with %s" % repr(addrs))
             self.dht_server.bootstrap(addrs)
             if not self._started:
                 reactor.callLater(.2, start_cb.callback, True)
