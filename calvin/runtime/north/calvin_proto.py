@@ -27,7 +27,7 @@ class CalvinTunnel(object):
 
     STATUS = enum('PENDING', 'WORKING', 'TERMINATED')
 
-    def __init__(self, links, peer_node_id, tunnel_type, policy, rt_id=None, id=None):
+    def __init__(self, links, tunnels, peer_node_id, tunnel_type, policy, rt_id=None, id=None):
         """ links: the calvin networks dictionary of links
             peer_node_id: the id of the peer that we use
             tunnel_type: what is the usage of the tunnel
@@ -37,6 +37,7 @@ class CalvinTunnel(object):
         super(CalvinTunnel, self).__init__()
         # The tunnel only use one link (links[peer_node_id]) at a time but it can switch at any point
         self.links = links
+        self.tunnels = tunnels
         self.peer_node_id = peer_node_id
         self.tunnel_type = tunnel_type
         self.policy = policy
@@ -45,9 +46,12 @@ class CalvinTunnel(object):
         self.id = id if id else calvinuuid.uuid("TUNNEL")
         # If id supplied then we must be the second end and hence working
         self.status = CalvinTunnel.STATUS.WORKING if id else CalvinTunnel.STATUS.PENDING
-        # Add the tunnel to the current link (will be migrated for us if switch link)
-        if self.peer_node_id in self.links:
-            self.links[self.peer_node_id].tunnels[self.id] = self
+        # Add the tunnel to the dictionary
+        if self.peer_node_id:
+            if self.peer_node_id in self.tunnels:
+                self.tunnels[self.peer_node_id][self.id]=self
+            else:
+                self.tunnels[self.peer_node_id] = {self.id: self}
         # The callbacks recv for incoming message, down for tunnel failed or died, up for tunnel working 
         self.recv_handler = None
         self.down_handler = None
@@ -58,8 +62,11 @@ class CalvinTunnel(object):
              This method is called when we have the peer node id.
         """
         self.peer_node_id = peer_node_id
-        if self.peer_node_id in self.links:
-            self.links[self.peer_node_id].tunnels[self.id] = self
+        if self.peer_node_id:
+            if self.peer_node_id in self.tunnels:
+                self.tunnels[self.peer_node_id][self.id]=self
+            else:
+                self.tunnels[self.peer_node_id] = {self.id: self}
 
     def _update_id(self, id):
         """ While status PENDING we might have a simulataneous tunnel setup
@@ -69,8 +76,8 @@ class CalvinTunnel(object):
         """
         old_id = self.id
         self.id = id
-        self.links[self.peer_node_id].tunnels.pop(old_id)
-        self.links[self.peer_node_id].tunnels[self.id] = self
+        self.tunnels[self.peer_node_id].pop(old_id)
+        self.tunnels[self.peer_node_id][self.id]=self
 
     def _setup_ack(self, reply):
         """ Gets called when the tunnel request is acknowledged by the other side """
@@ -123,7 +130,7 @@ class CalvinTunnel(object):
             Currently does not support local_only == False
         """
         self.status = CalvinTunnel.STATUS.TERMINATED
-        self.links[self.peer_node_id].tunnels.pop(self.id)
+        self.tunnels[self.peer_node_id].pop(self.id)
         if not local_only:
             #FIXME use the tunnel_destroy cmd directly instead
             raise NotImplementedError()
@@ -165,6 +172,7 @@ class CalvinProto(CalvinCBClass):
         self.network.register_recv(CalvinCB(self.recv_handler))
         # tunnel_handlers is a dict with key: tunnel_type string e.g. 'token', value: function that get request
         self.tunnel_handlers = tunnel_handlers if isinstance(tunnel_handlers, dict) else {}
+        self.tunnels = {}  # key: peer node id, value: dict with key: tunnel_id, value: tunnel obj
 
     #
     # Reception of incoming payload
@@ -293,19 +301,25 @@ class CalvinProto(CalvinCBClass):
         except:
             # Need to join the other peer first
             # Create a tunnel object which is not inserted on a link yet
-            tunnel = CalvinTunnel(self.network.links, None, tunnel_type, policy, rt_id=self.node.id)
+            tunnel = CalvinTunnel(self.network.links, self.tunnels, None, tunnel_type, policy, rt_id=self.node.id)
             self.network.link_request(to_rt_uuid, CalvinCB(self._tunnel_link_request_finished, tunnel=tunnel, to_rt_uuid=to_rt_uuid, tunnel_type=tunnel_type, policy=policy))
             return tunnel
         
         # Do we have a tunnel already?
-        tunnel = self.network.links[to_rt_uuid].get_tunnel(tunnel_type = tunnel_type)
+        tunnel = self._get_tunnel(to_rt_uuid, tunnel_type = tunnel_type)
         if tunnel != None:
             return tunnel
 
         # Create new tunnel and send request to peer
-        tunnel = CalvinTunnel(self.network.links, to_rt_uuid, tunnel_type, policy, rt_id=self.node.id)
+        tunnel = CalvinTunnel(self.network.links, self.tunnels, to_rt_uuid, tunnel_type, policy, rt_id=self.node.id)
         self._tunnel_new_msg(tunnel, to_rt_uuid, tunnel_type, policy)
         return tunnel
+
+    def _get_tunnel(self, peer_node_id, tunnel_type=None):
+        try:
+            return [t for t in self.tunnels[peer_node_id].itervalues() if t.tunnel_type == tunnel_type][0]
+        except:
+            return None
 
     def _tunnel_new_msg(self, tunnel, to_rt_uuid, tunnel_type, policy):
         """ Create and send the tunnel new message """
@@ -331,8 +345,7 @@ class CalvinProto(CalvinCBClass):
 
     def tunnel_new_handler(self, payload):
         """ Create a new tunnel (response side) """
-        link = self.network.links[payload['from_rt_uuid']]
-        tunnel = link.get_tunnel(payload['type'])
+        tunnel = self._get_tunnel(payload['from_rt_uuid'], payload['type'])
         ok = False
         _log.analyze(self.rt_id, "+", payload, peer_node_id=payload['from_rt_uuid'])
         if tunnel:
@@ -364,7 +377,7 @@ class CalvinProto(CalvinCBClass):
             return
         else:
             # No simultaneous tunnel requests, lets create it...
-            tunnel = CalvinTunnel(self.network.links, payload['from_rt_uuid'], payload['type'], payload['policy'], rt_id=self.node.id, id=payload['tunnel_id'])
+            tunnel = CalvinTunnel(self.network.links, self.tunnels, payload['from_rt_uuid'], payload['type'], payload['policy'], rt_id=self.node.id, id=payload['tunnel_id'])
             _log.analyze(self.rt_id, "+ NO SMASH", payload, peer_node_id=payload['from_rt_uuid'])
             try:
                 # ... and see if the handler wants it
@@ -385,11 +398,11 @@ class CalvinProto(CalvinCBClass):
             self.network.link_check(to_rt_uuid)
         except:
             raise Exception("ERROR_UNKNOWN_RUNTIME")
-            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
         try:
-            tunnel = self.network.links[to_rt_uuid].tunnels[tunnel_uuid]
+            tunnel = self.tunnels[to_rt_uuid][tunnel_uuid]
         except:
             raise Exception("ERROR_UNKNOWN_TUNNEL")
+            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
         # It exist, lets request its destruction
         msg = {'cmd': 'TUNNEL_DESTROY', 'tunnel_id': tunnel.id}
         self.network.links[to_rt_uuid].send_with_reply(CalvinCB(tunnel._destroy_ack), msg)
@@ -397,7 +410,11 @@ class CalvinProto(CalvinCBClass):
     def tunnel_destroy_handler(self, payload):
         """ Destroy tunnel (response side) """
         try:
-            tunnel = self.network.links[payload['from_rt_uuid']].tunnels[payload['tunnel_id']]
+            self.network.link_check(to_rt_uuid)
+        except:
+            raise Exception("ERROR_UNKNOWN_RUNTIME")
+        try:
+            tunnel = self.tunnels[payload['from_rt_uuid']][payload['tunnel_id']]
         except:
             raise Exception("ERROR_UNKNOWN_TUNNEL")
             _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
@@ -416,7 +433,7 @@ class CalvinProto(CalvinCBClass):
     def tunnel_data_handler(self, payload):
         """ Map received data over tunnel to the correct link and tunnel """
         try:
-            self.network.links[payload['from_rt_uuid']].tunnels[payload['tunnel_id']].recv_handler(payload['value'])
+            self.tunnels[payload['from_rt_uuid']][payload['tunnel_id']].recv_handler(payload['value'])
         except:
             _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
             raise Exception("ERROR_UNKNOWN_TUNNEL")

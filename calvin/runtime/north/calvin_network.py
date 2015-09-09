@@ -40,8 +40,9 @@ class CalvinLink(object):
         self.rt_id = rt_id
         self.peer_id = peer_id
         self.transport = transport
+        # FIXME replies should also be made independent on the link object, 
+        # to handle dying transports losing reply callbacks
         self.replies = old_link.replies if old_link else {}
-        self.tunnels = old_link.tunnels if old_link else {}
         if old_link:
             # close old link after a period, since might still receive messages on the transport layer
             # TODO chose the delay based on RTT instead of arbitrary 3 seconds
@@ -83,15 +84,6 @@ class CalvinLink(object):
         _log.analyze(self.rt_id, "+ LINK", {})
         self.transport.disconnect()
 
-    def get_tunnel(self, tunnel_type=None):
-        """get_tunnel return the first tunnel of tunnel_type if exist otherwise None"""
-        if tunnel_type is None:
-            # Currently only support get based on tunnel type
-            return None
-        try:
-            return [t for t in self.tunnels.itervalues() if t.tunnel_type == tunnel_type][0]
-        except:
-            return None
 
 class CalvinNetwork(object):
     """ CalvinNetwork keeps track of and establish all runtime to runtime links, 
