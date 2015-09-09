@@ -79,7 +79,7 @@ def setup_module(module):
         for retries in range(1,5):
             time.sleep(interval * retries)
             test_peers = utils.get_index(runtime, "node/affiliation/owner/com.ericsson/testnodes")
-            if not test_peers is None and len(test_peers["result"]) > 1 :
+            if not test_peers is None and not test_peers["result"] is None and len(test_peers["result"]) > 1:
                 test_peers = test_peers["result"]
                 break
 
