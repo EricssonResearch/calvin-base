@@ -72,8 +72,11 @@ def setup_module(module):
                 rt3.id = test_peer3_id
                 rt3.uri = test_peer3["uri"]
     else:
-        import socket
-        ip_addr = socket.gethostbyname(socket.gethostname())
+        try:
+            ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
+        except:
+            import socket
+            ip_addr = socket.gethostbyname(socket.gethostname())
         rt1,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://localhost:5003")
         rt2,_ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://localhost:5004")
         rt3,_ = dispatch_node("calvinip://%s:5002" % (ip_addr,), "http://localhost:5005")

@@ -99,8 +99,11 @@ def setup_module(module):
                 runtime3.uri = test_peer3["uri"]
                 runtimes.append(runtime3)
     else:
-        import socket
-        ip_addr = socket.gethostbyname(socket.gethostname())
+        try:
+            ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
+        except:
+            import socket
+            ip_addr = socket.gethostbyname(socket.gethostname())
         localhost = "calvinip://%s:5000" % (ip_addr,), "http://localhost:5001"
         remotehosts = [("calvinip://%s:%d" % (ip_addr, d), "http://localhost:%d" % (d+1)) for d in range(5002, 5005, 2)]
         # remotehosts = [("calvinip://127.0.0.1:5002", "http://localhost:5003")]
