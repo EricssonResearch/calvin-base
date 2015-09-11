@@ -20,18 +20,26 @@
 
 import json
 import uuid
+import types
 
 from twisted.internet import defer
 from kademlia.network import Server
 from kademlia.protocol import KademliaProtocol
 from kademlia.crawling import NodeSpiderCrawl, ValueSpiderCrawl, RPCFindResponse
 from kademlia.utils import digest
+from kademlia.storage import ForgetfulStorage
 from kademlia.node import Node
 from collections import Counter
 
 from calvin.utilities import calvinlogger
 import base64
 _log = calvinlogger.get_logger(__name__)
+
+# Fix for None types in storage
+class ForgetfulStorageFix(ForgetfulStorage):
+
+    def get(self, key, default=types.NotImplementedType):
+        return super(ForgetfulStorageFix, self).get(key, default)
 
 class KademliaProtocolAppend(KademliaProtocol):
 
@@ -67,6 +75,15 @@ class KademliaProtocolAppend(KademliaProtocol):
                 else:
                     ds.append(self.callStore(node, key, value))
         return defer.gatherResults(ds)
+
+    # Fix for None in values for delete
+    def rpc_find_value(self, sender, nodeid, key):
+        source = Node(nodeid, sender[0], sender[1])
+        self.router.addContact(source)
+        value = self.storage.get(key, None)
+        if isinstance(value, types.NotImplementedType):
+            return self.rpc_find_node(sender, nodeid, key)
+        return { 'value': value }
 
     def rpc_append(self, sender, nodeid, key, value):
         source = Node(nodeid, sender[0], sender[1])
@@ -123,7 +140,8 @@ class KademliaProtocolAppend(KademliaProtocol):
 class AppendServer(Server):
 
     def __init__(self, ksize=20, alpha=3, id=None, storage=None):
-        Server.__init__(self, ksize, alpha, id, storage)
+        storage = storage or ForgetfulStorageFix()
+        Server.__init__(self, ksize, alpha, id, storage=storage)
         self.protocol = KademliaProtocolAppend(self.node, self.storage, ksize)
 
     def append(self, key, value):

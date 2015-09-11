@@ -317,10 +317,20 @@ class TestAppLifeCycle(CalvinTestBase):
         self.assert_lists_equal(expected, actual)
         utils.delete_application(self.rt1, d.app_id)
         time.sleep(0.5)
+
         self.assertIsNone(utils.get_actor(self.rt1, src))
         self.assertIsNone(utils.get_actor(self.rt1, csum))
         self.assertIsNone(utils.get_actor(self.rt1, snk))
+        self.assertIsNone(utils.get_actor(self.rt2, src))
+        self.assertIsNone(utils.get_actor(self.rt2, csum))
+        self.assertIsNone(utils.get_actor(self.rt2, snk))
+        self.assertIsNone(utils.get_actor(self.rt3, src))
+        self.assertIsNone(utils.get_actor(self.rt3, csum))
+        self.assertIsNone(utils.get_actor(self.rt3, snk))
+
         self.assertIsNone(utils.get_application(self.rt1, d.app_id))
+        self.assertIsNone(utils.get_application(self.rt2, d.app_id))
+        self.assertIsNone(utils.get_application(self.rt3, d.app_id))
 
     def testAppDestructionAllRemote(self):
         _log.analyze("TESTRUN", "+", {})
@@ -349,10 +359,20 @@ class TestAppLifeCycle(CalvinTestBase):
         self.assert_lists_equal(expected, actual)
         utils.delete_application(self.rt1, d.app_id)
         time.sleep(0.5)
+
         self.assertIsNone(utils.get_actor(self.rt1, src))
         self.assertIsNone(utils.get_actor(self.rt1, csum))
         self.assertIsNone(utils.get_actor(self.rt1, snk))
+        self.assertIsNone(utils.get_actor(self.rt2, src))
+        self.assertIsNone(utils.get_actor(self.rt2, csum))
+        self.assertIsNone(utils.get_actor(self.rt2, snk))
+        self.assertIsNone(utils.get_actor(self.rt3, src))
+        self.assertIsNone(utils.get_actor(self.rt3, csum))
+        self.assertIsNone(utils.get_actor(self.rt3, snk))
+
         self.assertIsNone(utils.get_application(self.rt1, d.app_id))
+        self.assertIsNone(utils.get_application(self.rt2, d.app_id))
+        self.assertIsNone(utils.get_application(self.rt3, d.app_id))
 
 
 @pytest.mark.essential

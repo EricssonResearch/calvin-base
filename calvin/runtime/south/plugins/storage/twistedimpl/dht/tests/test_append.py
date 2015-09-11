@@ -254,3 +254,32 @@ class TestKAppend(object):
 
         finally:
             a.stop()
+
+
+    def test_delete(self, monkeypatch):
+
+        a = KNet(self.test_nodes)
+        a.start()
+        try:
+
+            # Make the nodes know each other
+            for _ in range(10):
+                key_str = '%030x' % random.randrange(16 ** random.randint(1, 2000))
+                test_str = '%030x' % random.randrange(16 ** random.randint(1, 2000))
+                do_sync(a.get_rand_node().set, key=key_str, value=test_str, test=normal_test(True))
+                do_sync(a.get_rand_node().get, key=key_str, test=normal_test(test_str))
+
+
+            do_sync(a.get_rand_node().set, key="kalas", value="apa", test=normal_test(True))
+            time.sleep(.7)
+            do_sync(a.get_rand_node().get, key="kalas", test=normal_test("apa"))
+
+            for _ in range(3):
+                test_str = '%030x' % random.randrange(16 ** random.randint(1, 2000))
+                do_sync(a.get_rand_node().set, key="kalas", value=test_str, test=normal_test(True))
+                do_sync(a.get_rand_node().get, key="kalas", test=normal_test(test_str))
+                do_sync(a.get_rand_node().set, key="kalas", value=None, test=normal_test(True))
+                do_sync(a.get_rand_node().get, key="kalas", test=normal_test(None))
+
+        finally:
+            a.stop()

@@ -133,6 +133,7 @@ class ActorManager(object):
         a = self.actors[actor_id]
         a.will_end()
         self.node.pm.remove_ports_of_actor(a)
+        # @TOOD - insert callback here
         self.node.storage.delete_actor(actor_id)
         del self.actors[actor_id]
 

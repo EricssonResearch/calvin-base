@@ -84,6 +84,7 @@ class AppManager(object):
         for actor_id in application.actors[:]:
             if actor_id in self._node.am.list_actors():
                 _log.debug("Destroy app local actor %s" % actor_id)
+                # TODO: Check if it whent ok
                 self._node.am.destroy(actor_id)
                 application.actors.remove(actor_id)
             else:
@@ -107,13 +108,17 @@ class AppManager(object):
 
     def _destroy_final(self, application):
         """ Final destruction of the application on this node and send request to peers to also destroy the app """
+
+        def _callback(*args, **kwargs):
+            _log.debug("Destroyed actor params (%s, %s)" % (args, kwargs))
+
         _log.debug("Destroy final \n%s\n%s" % (application.node_info, application.origin_node_id))
         for node_id, actor_ids in application.node_info.iteritems():
             if not node_id:
                 continue
             # Inform peers to destroy their part of the application
             # FIXME interested in response, use a callback
-            self._node.proto.app_destroy(node_id, None, application.id, actor_ids)
+            self._node.proto.app_destroy(node_id, CalvinCB(_callback, node_id), application.id, actor_ids)
 
         if application.id in self.applications:
             del self.applications[application.id]
