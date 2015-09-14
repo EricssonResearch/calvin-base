@@ -71,10 +71,11 @@ def parse_http_response(data):
 
 
 class ServerBase(DatagramProtocol):
-    def __init__(self, d=None):
+    def __init__(self, ips, d=None):
         self._services = {}
         self._dstarted = d
         self.ignore_list = []
+        self.ips = ips
 
     def startProtocol(self):
         if self._dstarted:
@@ -89,35 +90,37 @@ class ServerBase(DatagramProtocol):
             if cmd[0] == 'M-SEARCH' and cmd[1] == '*':
 
                 # Only reply to our requests
-                print address, self.ignore_list
-                print address not in self.ignore_list
                 if SERVICE_UUID in headers['st'] and address not in self.ignore_list:
 
-                    for k, v in self._services.items():
-                        addr = v
+                    for k, addrs in self._services.items():
+                        for addr in addrs:
+                            # Only tell local about local
+                            if addr[0] == "127.0.0.1" and address[0] != "127.0.0.1":
+                                continue
 
-                        # Ignore 0.0.0.0, use the ip we where contacted on
-                        if addr[0] == "0.0.0.0":
-                            addr = (address[0], addr[1])
-
-                        response = MS_RESP % ('%s:%d' % addr, str(time.time()),
-                                              k, datetimeToString())
-
-                        delay = random.randint(0, min(5, int(headers['mx'])))
-                        reactor.callLater(delay, self.send_it,
-                                          response, address)
+                            response = MS_RESP % ('%s:%d' % addr, str(time.time()),
+                                                  k, datetimeToString())
+                            _log.debug("Response: %s" % repr(response))
+                            delay = random.randint(0, min(5, int(headers['mx'])))
+                            reactor.callLater(delay, self.send_it,
+                                                  response, address)
         except:
             _log.exception("Error datagram received")
 
     def add_service(self, service, ip, port):
-        self._services[service] = (ip, port)
+        # Service on all interfaces
+        if ip in ["0.0.0.0", ""]:
+            self._services[service] = []
+            for a in self.ips:
+                self._services[service].append((a, port))
+        else:
+            self._services[service] = [(ip, port)]
 
     def remove_service(self, service):
         if service in self._services:
             del self._services[service]
 
     def set_ignore_list(self, list_):
-        print "***", list_
         self.ignore_list = list_
 
     def send_it(self, response, destination):
@@ -211,7 +214,7 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         dserver = defer.Deferred()
         dclient = defer.Deferred()
         try:
-            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(d=dserver),
+            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.iface_send_list, d=dserver),
                                                 interface=self.iface, listenMultiple=True)
             self.ssdp.setLoopbackMode(1)
             self.ssdp.joinGroup(SSDP_ADDR, interface=self.iface)
@@ -259,13 +262,13 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
             _log.debug("Sending M-SEARCH...")
 
             for src_ip in self.iface_send_list:
-                print src_ip
                 self.port.protocol.transport.setOutgoingInterface(src_ip)
                 self.port.write(MS, (SSDP_ADDR, SSDP_PORT))
-                if not once and not self.port.protocol.is_stopped():
-                    reactor.callLater(self._backoff, self._send_msearch, once=False)
-                    self._backoff = min(600, self._backoff * 1.5)
-                    _log.debug("backoff %s" % self._backoff)
+
+            if not once and not self.port.protocol.is_stopped():
+                reactor.callLater(self._backoff, self._send_msearch, once=False)
+                _log.debug("Next M-SEARCH in %s seconds" % self._backoff)
+                self._backoff = min(600, self._backoff * 1.5)
         else:
             _log.debug(traceback.format_stack())
 
