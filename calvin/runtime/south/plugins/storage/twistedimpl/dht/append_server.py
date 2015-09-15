@@ -37,9 +37,12 @@ _log = calvinlogger.get_logger(__name__)
 
 # Fix for None types in storage
 class ForgetfulStorageFix(ForgetfulStorage):
+    def get(self, key, default=None):
+        self.cull()
+        if key in self.data:
+            return (True, self[key])
+        return (False, default)
 
-    def get(self, key, default=types.NotImplementedType):
-        return super(ForgetfulStorageFix, self).get(key, default)
 
 class KademliaProtocolAppend(KademliaProtocol):
 
@@ -80,8 +83,8 @@ class KademliaProtocolAppend(KademliaProtocol):
     def rpc_find_value(self, sender, nodeid, key):
         source = Node(nodeid, sender[0], sender[1])
         self.router.addContact(source)
-        value = self.storage.get(key, None)
-        if isinstance(value, types.NotImplementedType):
+        exists, value = self.storage.get(key, None)
+        if not exists:
             return self.rpc_find_node(sender, nodeid, key)
         return { 'value': value }
 
