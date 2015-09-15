@@ -133,16 +133,16 @@ class Storage(object):
         """ Get value for key: prefix+key, first look in localstore
         """
         if cb:
-            if prefix + key in self.localstore:
-                value = self.localstore[prefix + key]
+            if prefix + str(key) in self.localstore:
+                value = self.localstore[prefix + str(key)]
                 if value:
                     value = self.coder.decode(value)
                 cb(key=key, value=value)
             else:
                 try:
-                    self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
+                    self.storage.get(key=prefix + str(key), cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
                 except:
-                    _log.error("Failed to get: %s" % key)
+                    _log.error("Failed to get: %s" % str(key))
                     cb(key=key, value=False)
 
     def get_concat_cb(self, key, value, org_cb, org_key):
