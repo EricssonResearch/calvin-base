@@ -323,7 +323,7 @@ class TestAppLifeCycle(CalvinTestBase):
         expected = [sum(range(i+1)) for i in range(1,10)]
         self.assert_lists_equal(expected, actual)
         utils.delete_application(self.rt1, d.app_id)
-        time.sleep(0.5)
+        time.sleep(1)
 
         self.assertIsNone(utils.get_actor(self.rt1, src))
         self.assertIsNone(utils.get_actor(self.rt1, csum))
@@ -365,7 +365,7 @@ class TestAppLifeCycle(CalvinTestBase):
         expected = [sum(range(i+1)) for i in range(1,10)]
         self.assert_lists_equal(expected, actual)
         utils.delete_application(self.rt1, d.app_id)
-        time.sleep(0.5)
+        time.sleep(1)
 
         self.assertIsNone(utils.get_actor(self.rt1, src))
         self.assertIsNone(utils.get_actor(self.rt1, csum))
