@@ -73,19 +73,26 @@ def setup_module(module):
         pass
 
     if ip_addr:
+        remote_node_count = 2
         kill_peers = False
+        test_peers = None
         runtime,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5001" % (ip_addr, ))
 
         interval = 0.5
-        for retries in range(1,5):
-            time.sleep(interval * retries)
-            test_peers = utils.get_index(runtime, format_index_string({'node_name': 
-                                                                             {'organization': 'com.ericsson', 
-                                                                              'purpose': 'testfarm'}
-                                                                         }))
-            if not test_peers is None and not test_peers["result"] is None and len(test_peers["result"]) > 1:
+        for retries in range(1,20):
+            time.sleep(interval)
+            test_peers = utils.get_index(runtime, format_index_string({'node_name':
+                                                                         {'organization': 'com.ericsson',
+                                                                          'purpose': 'testfarm'}
+                                                                      }))
+            if not test_peers is None and not test_peers["result"] is None and \
+                    len(test_peers["result"]) == remote_node_count:
                 test_peers = test_peers["result"]
-                break
+                if len(test_peers) == remote_node_count:
+                    break
+
+        if test_peers is None or len(test_peers) != remote_node_count:
+            raise Exception("Not all nodes found dont run tests, peers = %s" % test_peers)
 
         test_peer2_id = test_peers[0]
         test_peer2 = utils.get_node(runtime, test_peer2_id)
