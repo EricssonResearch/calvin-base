@@ -112,7 +112,7 @@ class Analyzer(object):
             return compdef, False
         found, is_actor, info = ActorStore().lookup(actor_type)
         if not found:
-            msg = 'Actor "%s" not found. %s' % (actor_def['actor_type'], self.debug_info(actor_def))
+            msg = 'Actor "{}" not found.'.format(actor_type)
             raise Exception(msg)
         return info, True
 
