@@ -1,0 +1,15 @@
+/* Actors */
+button_1 : io.GPIOReader(pin=16, delay=0.2)
+button_2 : io.GPIOReader(pin=16, delay=0.2)
+lock : misc.StopLight(address="192.168.0.101", username="newdeveloper", light=1)
+bell : misc.MediaPlayer(media_file="/root/calvin-base/calvin/examples/doorlock/dingdong.ogg")
+camera : misc.URLImageGenerator(url="http://192.168.0.143/axis-cgi/jpg/image.cgi", user="root", passwd="pass")
+screen : misc.ImageRenderer()
+detect : misc.FaceDetect()
+
+/* Connections */
+button_1.state > camera.trigger
+camera.image > detect.image
+camera.image > screen.image
+detect.faces > bell.play
+button_2.state > lock.state
