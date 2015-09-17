@@ -39,16 +39,34 @@ class Storage(object):
         self.storage = storage_factory.get("dht") # TODO: read storage type from config?
         self.coder = message_coder_factory.get("json")  # TODO: always json? append/remove requires json at the moment
         self.flush_delayedcall = None
-        self.flush_timout = 1
+        self.reset_flush_timeout()
 
     ### Storage life cycle management ###
+
+    def reset_flush_timeout(self):
+        """ Reset flush timeout
+        """
+        self.flush_timeout = 0.2
+
+    def trigger_flush(self, delay=None):
+        """ Trigger a flush of internal data
+        """
+        if self.localstore or self.localstore_sets:
+            if delay is None:
+                delay = self.flush_timeout
+            if self.flush_delayedcall is not None:
+                self.flush_delayedcall.cancel()
+            self.flush_delayedcall = async.DelayedCall(delay, self.flush_localdata)
 
     def flush_localdata(self):
         """ Write data in localstore to storage
         """
         _log.debug("Flush local storage data")
+        if self.flush_timeout < 600:
+            self.flush_timeout = self.flush_timeout * 2
         self.flush_delayedcall = None
         for key in self.localstore:
+            _log.debug("Flush key %s: %s" % (key, self.localstore[key]))
             self.storage.set(key=key, value=self.localstore[key],
                              cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None))
         for key, value in self.localstore_sets.iteritems():
@@ -66,9 +84,10 @@ class Storage(object):
     def started_cb(self, *args, **kwargs):
         """ Called when storage has started, flushes localstore
         """
+        _log.debug("Storage started!!")
         if args[0] == True:
             self.started = True
-            self.flush_localdata()
+            self.trigger_flush(0)
             if kwargs["org_cb"]:
                 kwargs["org_cb"](args[0])
 
@@ -87,13 +106,14 @@ class Storage(object):
     ### Storage operations ###
 
     def set_cb(self, key, value, org_key, org_value, org_cb):
-        """ set callback, on error store in localstore and retry after flush_timout
+        """ set callback, on error store in localstore and retry after flush_timeout
         """
         if value == True:
             if org_cb:
                 org_cb(key=key, value=True)
             if key in self.localstore:
                 del self.localstore[key]
+            self.reset_flush_timeout()
         else:
             _log.error("Failed to store %s" % key)
             if org_key and org_value:
@@ -101,14 +121,13 @@ class Storage(object):
                     self.localstore[key] = org_value
             if org_cb:
                 org_cb(key=key, value=False)
-            if self.flush_delayedcall is None:
-                self.flush_delayedcall = async.DelayedCall(self.flush_timout, self.flush_localdata)
-            else:
-                self.flush_delayedcall.reset()
+
+        self.trigger_flush()
 
     def set(self, prefix, key, value, cb):
         """ Set key: prefix+key value: value
         """
+        _log.debug("Set key %s, value %s" % (prefix + key, value))
         if value:
             value = self.coder.encode(value)
 
@@ -173,7 +192,7 @@ class Storage(object):
                     cb(key=key, value=False)
 
     def append_cb(self, key, value, org_key, org_value, org_cb):
-        """ append callback, on error retry after flush_timout
+        """ append callback, on error retry after flush_timeout
         """
         if value == True:
             if org_cb:
@@ -183,18 +202,18 @@ class Storage(object):
                     self.localstore_sets[key]['+'] = set([])
                 else:
                     del self.localstore_sets[key]
+                self.reset_flush_timeout()
         else:
             _log.error("Failed to update %s" % key)
             if org_cb:
                 org_cb(key=org_key, value=False)
-            if self.flush_delayedcall is None:
-                self.flush_delayedcall = async.DelayedCall(self.flush_timout, self.flush_localdata)
-            else:
-                self.flush_delayedcall.reset()
+
+        self.trigger_flush()
 
     def append(self, prefix, key, value, cb):
         """ set operation append on key: prefix+key value: value is a list of items
         """
+        _log.debug("Append key %s, value %s" % (prefix + key, value))
         # Keep local storage for sets updated until confirmed
         if (prefix + key) in self.localstore_sets:
             # Append value items
@@ -213,7 +232,7 @@ class Storage(object):
                 cb(key=key, value=True)
 
     def remove_cb(self, key, value, org_key, org_value, org_cb):
-        """ remove callback, on error retry after flush_timout
+        """ remove callback, on error retry after flush_timeout
         """
         if value == True:
             if org_cb:
@@ -223,18 +242,18 @@ class Storage(object):
                     self.localstore_sets[key]['-'] = set([])
                 else:
                     del self.localstore_sets[key]
+            self.reset_flush_timeout()
         else:
             _log.error("Failed to update %s" % key)
             if org_cb:
                 org_cb(key=org_key, value=False)
-            if self.flush_delayedcall is None:
-                self.flush_delayedcall = async.DelayedCall(self.flush_timout, self.flush_localdata)
-            else:
-                self.flush_delayedcall.reset()
+
+        self.trigger_flush()
 
     def remove(self, prefix, key, value, cb):
         """ set operation remove on key: prefix+key value: value is a list of items
         """
+        _log.debug("Remove key %s, value %s" % (prefix + key, value))
         # Keep local storage for sets updated until confirmed
         if (prefix + key) in self.localstore_sets:
             # Don't append value items any more
@@ -255,6 +274,7 @@ class Storage(object):
     def delete(self, prefix, key, cb):
         """ Delete key: prefix+key (value set to None)
         """
+        _log.debug("Deleting key %s" % prefix + key)
         if prefix + key in self.localstore:
             del self.localstore[prefix + key]
         if (prefix + key) in self.localstore_sets:
