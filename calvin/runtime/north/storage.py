@@ -35,7 +35,7 @@ class Storage(object):
     def __init__(self):
         self.localstore = {}
         self.localstore_sets = {}
-        self.started = False        
+        self.started = False
         self.storage = storage_factory.get("dht") # TODO: read storage type from config?
         self.coder = message_coder_factory.get("json")  # TODO: always json? append/remove requires json at the moment
         self.flush_delayedcall = None
@@ -55,12 +55,12 @@ class Storage(object):
             if value['+']:
                 _log.debug("Flush append on key %s: %s" % (key, list(value['+'])))
                 coded_value = self.coder.encode(list(value['+']))
-                self.storage.append(key=key, value=coded_value, 
+                self.storage.append(key=key, value=coded_value,
                                     cb=CalvinCB(func=self.append_cb, org_key=None, org_value=None, org_cb=None))
             if value['-']:
                 _log.debug("Flush remove on key %s: %s" % (key, list(value['-'])))
                 coded_value = self.coder.encode(list(value['-']))
-                self.storage.remove(key=key, value=coded_value, 
+                self.storage.remove(key=key, value=coded_value,
                                     cb=CalvinCB(func=self.remove_cb, org_key=None, org_value=None, org_cb=None))
 
     def started_cb(self, *args, **kwargs):
@@ -206,7 +206,7 @@ class Storage(object):
 
         if self.started:
             coded_value = self.coder.encode(list(self.localstore_sets[prefix + key]['+']))
-            self.storage.append(key=prefix + key, value=coded_value, 
+            self.storage.append(key=prefix + key, value=coded_value,
                                 cb=CalvinCB(func=self.append_cb, org_key=key, org_value=value, org_cb=cb))
         else:
             if cb:
@@ -246,7 +246,7 @@ class Storage(object):
 
         if self.started:
             coded_value = self.coder.encode(list(self.localstore_sets[prefix + key]['-']))
-            self.storage.remove(key=prefix + key, value=coded_value, 
+            self.storage.remove(key=prefix + key, value=coded_value,
                                 cb=CalvinCB(func=self.remove_cb, org_key=key, org_value=value, org_cb=cb))
         else:
             if cb:
@@ -271,8 +271,8 @@ class Storage(object):
         """
         Add node to storage
         """
-        self.set(prefix="node-", key=node.id, 
-                  value={"uri": node.uri, 
+        self.set(prefix="node-", key=node.id,
+                  value={"uri": node.uri,
                          "control_uri": node.control_uri,
                          "attributes": {'public': node.attributes.get_public(),
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
@@ -331,6 +331,8 @@ class Storage(object):
         """
         Add application to storage
         """
+        _log.debug("Add application %s id %s" % (application.name, application.id))
+
         self.set(prefix="application-", key=application.id,
                  value={"name": application.name,
                         "actors": application.actors,
@@ -347,12 +349,14 @@ class Storage(object):
         """
         Delete application from storage
         """
+        _log.debug("Delete application %s" % application_id)
         self.delete(prefix="application-", key=application_id, cb=cb)
 
     def add_actor(self, actor, node_id, cb=None):
         """
         Add actor and its ports to storage
         """
+        _log.debug("Add actor %s id %s" % (actor, node_id))
         data = {"name": actor.name, "type": actor._type, "node_id": node_id}
         inports = []
         for p in actor.inports.values():
@@ -378,6 +382,7 @@ class Storage(object):
         """
         Delete actor from storage
         """
+        _log.debug("Delete actor id %s" % (actor_id))
         self.delete(prefix="actor-", key=actor_id, cb=cb)
 
     def add_port(self, port, node_id, actor_id=None, direction=None, cb=None):
@@ -457,7 +462,7 @@ class Storage(object):
         Add value (typically a node id) to the storage as a set.
         index: a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
-               node/affiliation/owner/com.ericsson/Harald, 
+               node/affiliation/owner/com.ericsson/Harald,
                node/affiliation/name/com.ericsson/laptop
                OR a list of strings
         value: the value that is to be added to the set stored at each level of the index
@@ -469,7 +474,7 @@ class Storage(object):
         # TODO this implementation will store the value to each level of the index.
         # When time permits a proper implementation should be done with for example
         # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in. 
+        # prefix search built in.
 
         _log.debug("add index %s: %s" % (index, value))
 
@@ -477,7 +482,7 @@ class Storage(object):
 
         # make copy of indexes since altered in callbacks
         for i in indexes[:]:
-            self.append(prefix="index-", key=i, value=[value], 
+            self.append(prefix="index-", key=i, value=[value],
                         cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
 
     def remove_index(self, index, value, root_prefix_level=2, cb=None):
@@ -485,7 +490,7 @@ class Storage(object):
         Remove value (typically a node id) from the storage as a set.
         index: a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
-               node/affiliation/owner/com.ericsson/Harald, 
+               node/affiliation/owner/com.ericsson/Harald,
                node/affiliation/name/com.ericsson/laptop
         value: the value that is to be removed from the set stored at each level of the index
         root_prefix_level: the top level of the index that can be searched,
@@ -496,10 +501,10 @@ class Storage(object):
         # TODO this implementation will delete the value to each level of the index.
         # When time permits a proper implementation should be done with for example
         # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in. 
+        # prefix search built in.
 
         # TODO Currently we don't go deeper than the specified index for a remove,
-        # e.g. node/affiliation/owner/com.ericsson would remove the value from 
+        # e.g. node/affiliation/owner/com.ericsson would remove the value from
         # all deeper indeces. But no current use case exist either.
 
         _log.debug("remove index %s: %s" % (index, value))
@@ -508,7 +513,7 @@ class Storage(object):
 
         # make copy of indexes since altered in callbacks
         for i in indexes[:]:
-            self.remove(prefix="index-", key=i, value=[value], 
+            self.remove(prefix="index-", key=i, value=[value],
                         cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
 
     def get_index(self, index, cb=None):
@@ -516,12 +521,12 @@ class Storage(object):
         Get index from the storage.
         index: a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
-               node/affiliation/owner/com.ericsson/Harald, 
+               node/affiliation/owner/com.ericsson/Harald,
                node/affiliation/name/com.ericsson/laptop
         cb: will be called when done. Should expect to be called several times with
                partial results. Currently only called once.
-        
-        Since storage might be eventually consistent caller must expect that the 
+
+        Since storage might be eventually consistent caller must expect that the
         list can containe node ids that are removed and node ids have not yet reached
         the storage.
         """

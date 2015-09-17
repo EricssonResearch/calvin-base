@@ -65,11 +65,10 @@ def setup_module(module):
             if not test_peers is None and not test_peers["result"] is None and \
                     len(test_peers["result"]) == remote_node_count:
                 test_peers = test_peers["result"]
-                if len(test_peers) == remote_node_count:
-                    break
+                break
 
         if test_peers is None or len(test_peers) != remote_node_count:
-            raise Exception("Not all nodes found dont run tests, peers = %s" % test_peers)
+            pytest.exit("Not all nodes found dont run tests, peers = %s" % test_peers)
 
         test_peer2_id = test_peers[0]
         test_peer2 = utils.get_node(rt1, test_peer2_id)
@@ -226,6 +225,7 @@ class TestConnections(CalvinTestBase):
         utils.delete_actor(self.rt2, src)
         utils.delete_actor(self.rt2, snk)
 
+
 @pytest.mark.essential
 class TestScripts(CalvinTestBase):
 
@@ -317,23 +317,34 @@ class TestAppLifeCycle(CalvinTestBase):
         snk = d.actor_map['simple:snk']
 
         utils.migrate(self.rt1, csum, self.rt2.id)
-        time.sleep(1)
+        time.sleep(.5)
 
         actual = utils.report(self.rt1, snk)
         expected = [sum(range(i+1)) for i in range(1,10)]
         self.assert_lists_equal(expected, actual)
         utils.delete_application(self.rt1, d.app_id)
-        time.sleep(1)
 
-        self.assertIsNone(utils.get_actor(self.rt1, src))
-        self.assertIsNone(utils.get_actor(self.rt1, csum))
-        self.assertIsNone(utils.get_actor(self.rt1, snk))
-        self.assertIsNone(utils.get_actor(self.rt2, src))
-        self.assertIsNone(utils.get_actor(self.rt2, csum))
-        self.assertIsNone(utils.get_actor(self.rt2, snk))
-        self.assertIsNone(utils.get_actor(self.rt3, src))
-        self.assertIsNone(utils.get_actor(self.rt3, csum))
-        self.assertIsNone(utils.get_actor(self.rt3, snk))
+        for a in range(0, 20):
+            all_removed = None
+            try:
+                self.assertIsNone(utils.get_actor(self.rt1, src))
+                self.assertIsNone(utils.get_actor(self.rt1, csum))
+                self.assertIsNone(utils.get_actor(self.rt1, snk))
+                self.assertIsNone(utils.get_actor(self.rt2, src))
+                self.assertIsNone(utils.get_actor(self.rt2, csum))
+                self.assertIsNone(utils.get_actor(self.rt2, snk))
+                self.assertIsNone(utils.get_actor(self.rt3, src))
+                self.assertIsNone(utils.get_actor(self.rt3, csum))
+                self.assertIsNone(utils.get_actor(self.rt3, snk))
+            except AssertionError as e:
+                print a, e
+                all_removed = e
+            if all_removed is None:
+                break
+            time.sleep(1)
+
+        if all_removed:
+            raise all_removed
 
         self.assertIsNone(utils.get_application(self.rt1, d.app_id))
         self.assertIsNone(utils.get_application(self.rt2, d.app_id))
@@ -348,10 +359,14 @@ class TestAppLifeCycle(CalvinTestBase):
           src.integer > sum.integer
           sum.integer > snk.token
           """
+        import sys
+        from twisted.python import log
+        log.startLogging(sys.stdout)
+ 
         app_info, errors, warnings = compiler.compile(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(1)
+        time.sleep(.2)
         src = d.actor_map['simple:src']
         csum = d.actor_map['simple:sum']
         snk = d.actor_map['simple:snk']
@@ -359,23 +374,33 @@ class TestAppLifeCycle(CalvinTestBase):
         utils.migrate(self.rt1, src, self.rt2.id)
         utils.migrate(self.rt1, csum, self.rt2.id)
         utils.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(1)
+        time.sleep(.5)
 
         actual = utils.report(self.rt2, snk)
         expected = [sum(range(i+1)) for i in range(1,10)]
         self.assert_lists_equal(expected, actual)
         utils.delete_application(self.rt1, d.app_id)
-        time.sleep(1)
 
-        self.assertIsNone(utils.get_actor(self.rt1, src))
-        self.assertIsNone(utils.get_actor(self.rt1, csum))
-        self.assertIsNone(utils.get_actor(self.rt1, snk))
-        self.assertIsNone(utils.get_actor(self.rt2, src))
-        self.assertIsNone(utils.get_actor(self.rt2, csum))
-        self.assertIsNone(utils.get_actor(self.rt2, snk))
-        self.assertIsNone(utils.get_actor(self.rt3, src))
-        self.assertIsNone(utils.get_actor(self.rt3, csum))
-        self.assertIsNone(utils.get_actor(self.rt3, snk))
+        for a in range(20):
+            all_removed = None
+            try:
+                self.assertIsNone(utils.get_actor(self.rt1, csum))
+                self.assertIsNone(utils.get_actor(self.rt1, snk))
+                self.assertIsNone(utils.get_actor(self.rt2, src))
+                self.assertIsNone(utils.get_actor(self.rt2, csum))
+                self.assertIsNone(utils.get_actor(self.rt2, snk))
+                self.assertIsNone(utils.get_actor(self.rt3, src))
+                self.assertIsNone(utils.get_actor(self.rt3, csum))
+                self.assertIsNone(utils.get_actor(self.rt3, snk))
+            except AssertionError as e:
+                print a, e
+                all_removed = e
+            if all_removed is None:
+                break
+            time.sleep(1)
+
+        if all_removed:
+            raise all_removed
 
         self.assertIsNone(utils.get_application(self.rt1, d.app_id))
         self.assertIsNone(utils.get_application(self.rt2, d.app_id))

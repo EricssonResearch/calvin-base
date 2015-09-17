@@ -88,11 +88,10 @@ def setup_module(module):
             if not test_peers is None and not test_peers["result"] is None and \
                     len(test_peers["result"]) == remote_node_count:
                 test_peers = test_peers["result"]
-                if len(test_peers) == remote_node_count:
-                    break
+                break
 
         if test_peers is None or len(test_peers) != remote_node_count:
-            raise Exception("Not all nodes found dont run tests, peers = %s" % test_peers)
+            pytest.exit("Not all nodes found dont run tests, peers = %s" % test_peers)
 
         test_peer2_id = test_peers[0]
         test_peer2 = utils.get_node(runtime, test_peer2_id)
@@ -124,7 +123,7 @@ def setup_module(module):
 
         runtime, _ = dispatch_node(localhost[0], localhost[1])
 
-        time.sleep(.1)
+        time.sleep(1)
 
         # FIXME When storage up and running peersetup not needed, but still useful during testing
         utils.peer_setup(runtime, [i[0] for i in remotehosts])
@@ -644,17 +643,19 @@ class TestActorMigration(CalvinTestBase):
         peer1 = self.runtimes[1]
         peer1_id = peer1.id
 
+        time.sleep(0.5)
         snk = utils.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
         sum_ = utils.new_actor(peer0, 'std.Sum', 'sum')
         src = utils.new_actor(rt, 'std.CountTimer', 'src')
 
         utils.connect(rt, snk, 'token', peer0_id, sum_, 'integer')
+        time.sleep(0.5)
         utils.connect(peer0, sum_, 'integer', id_, src, 'integer')
-        time.sleep(0.27)
+        time.sleep(0.5)
 
         actual_1 = actual_tokens(rt, snk)
         utils.migrate(peer0, sum_, peer1_id)
-        time.sleep(0.2)
+        time.sleep(0.5)
 
         expected = expected_tokens(rt, src, 'std.Sum')
         actual = actual_tokens(rt, snk)
