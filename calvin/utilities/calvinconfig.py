@@ -80,7 +80,7 @@ class CalvinConfig(object):
         default = {
             'global':{
                 'comment': 'User definable section',
-                'actor_paths': ['systemactors', 'devactors'],
+                'actor_paths': ['systemactors'],
                 'framework': 'twistedimpl',
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json'
