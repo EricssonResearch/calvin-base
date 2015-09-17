@@ -168,6 +168,48 @@ re_post_actor_migrate = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid
 
 control_api_doc += \
 """
+    POST /application/{application-id}/migrate
+    Apply deployment requirements to actors of an application and initiate migration of actors accordingly
+    Body:
+    {
+        "reqs": 
+           {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
+            "requirements": {
+                "<actor instance 1 name>": [ {"op": "<mathing rule name>", 
+                                              "kwargs": {<rule param key>: <rule param value>, ...},
+                                              "type": either "+" or "-" for set section operation or set removal, respectively
+                                              }, ...
+                                           ], 
+                ...
+                            }
+           }
+    
+    The matching rules are implemented as plugg-ins, intended to be extended. The type "+" is anding rules togheter or
+    rather taking the section between all rules return possible nodes. The type "-" is explicitly removing the matching
+    rule's returned nodes from the set of possible nodes. Note that only negative rules will result in no possible nodes,
+    i.e. no implied all but these.
+    
+    A special matching rule exist, to first form a union between matching rules, i.e. alternative matches. This is useful
+    for e.g. alternative namings, ownerships or specifying either of two specific nodes.
+    {"op": "union_group",
+     "requirements": [list as above of matching rules but without type key]
+     "type": "+"
+    }
+
+    Other matching rules available is current_node, all_nodes and node_attr_match which takes an index param which is
+    attribute formatted, e.g.
+    
+        {"op": "node_attr_match", 
+         "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
+         "type": "+"
+        }
+
+    Response: {"result": "ACK"/"NACK"}
+"""
+re_post_application_requirements = re.compile(r"POST /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/migrate\sHTTP/1")
+
+control_api_doc += \
+"""
     POST /actor/{actor-id}/disable
     DEPRECATED. Disables an actor
     Response: {"result": "OK"}
@@ -333,6 +375,7 @@ class CalvinControl(object):
             (re_del_actor, self.handle_del_actor),
             (re_get_actor_report, self.handle_get_actor_report),
             (re_post_actor_migrate, self.handle_actor_migrate),
+            (re_post_application_requirements, self.handle_application_requirements),
             (re_post_actor_disable, self.handle_actor_disable),
             (re_get_port, self.handle_get_port),
             (re_post_connect, self.handle_connect),
@@ -495,6 +538,18 @@ class CalvinControl(object):
         self.send_response(handle, connection,
                            json.dumps({'result': str(status) if isinstance(status, Exception) else status}))
 
+    def handle_application_requirements(self, handle, connection, match, data):
+        """ Apply application deployment requirements
+            to actors of an application and initiate migration of actors accordingly
+        """
+        self.node.app_manager.deployment_add_requirements(match.group(1), data['reqs'], 
+                        cb=CalvinCB(func=self.handle_application_requirements_cb, handle=handle, connection=connection))
+
+    def handle_application_requirements_cb(self, handle, connection, *args, **kwargs):
+        self.send_response(handle, connection,
+                           json.dumps({'result': kwargs['status'],
+                                       'placement': kwargs['placement'] if 'placement' in kwargs else {}}))
+
     def handle_actor_disable(self, handle, connection, match, data):
         self.node.am.disable(match.group(1))
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
@@ -557,7 +612,7 @@ class CalvinControl(object):
             runtime=None, deployable=app_info, node_info=None, node=self.node)
         app_id = d.deploy()
         self.send_response(
-            handle, connection, json.dumps({'application_id': app_id}))
+            handle, connection, json.dumps({'application_id': app_id, 'actor_map': d.actor_map}))
 
     def handle_quit(self, handle, connection, match, data):
         self.node.stop()

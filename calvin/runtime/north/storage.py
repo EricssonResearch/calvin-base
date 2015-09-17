@@ -355,7 +355,10 @@ class Storage(object):
 
         self.set(prefix="application-", key=application.id,
                  value={"name": application.name,
-                        "actors": application.actors,
+                        "ns": application.ns,
+                        # FIXME when all users of the actors field is updated, save the full dict only
+                        "actors": application.actors.keys(),
+                        "actors_name_map": application.actors,
                         "origin_node_id": application.origin_node_id},
                  cb=cb)
 

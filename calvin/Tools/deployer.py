@@ -18,6 +18,7 @@ from calvin.actorstore.store import ActorStore
 from calvin.utilities import utils
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinuuid
+import json
 
 _log = get_logger(__name__)
 
@@ -145,3 +146,4 @@ class Deployer(object):
         else:
             result = utils.delete_application(self.runtime, self.app_id)
         return result
+

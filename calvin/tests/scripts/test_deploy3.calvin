@@ -1,0 +1,14 @@
+component TheSource() -> out {
+  first: std.CountTimer()
+  second: std.Identity()
+  
+  first.integer > second.token
+  second.token > .out
+}
+
+src : TheSource()
+sum : std.Sum()
+snk : io.StandardOut()
+
+src.out > sum.integer
+sum.integer > snk.token

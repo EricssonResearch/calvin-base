@@ -143,6 +143,10 @@ class Node(object):
             self.app_manager.add(app_id, app_name, actor_id)
         return actor_id
 
+    def deployment_control(self, app_id, actor_id, deploy_args):
+        """ Updates an actor's deployment """
+        self.am.deployment_control(app_id, actor_id, deploy_args)
+
     def calvinsys(self, actor):
         """Return a CalvinSys instance"""
         # FIXME: We still need to sort out actor requirements vs. node capabilities and user permissions.

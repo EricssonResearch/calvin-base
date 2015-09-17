@@ -145,6 +145,12 @@ def migrate(rt, actor_id, dst_id):
         rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data))
     return json.loads(r.text)
 
+def add_requirements(rt, application_id, reqs):
+    data = {'reqs': reqs}
+    r = requests.post(
+        rt.control_uri + '/application/' + application_id + "/migrate", data=json.dumps(data))
+    return json.loads(r.text)
+
 
 def get_port(rt, actor_id, port_id):
     r = requests.get(

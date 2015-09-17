@@ -328,7 +328,8 @@ class Actor(object):
         self._type = actor_type
         self.name = name  # optional: human_readable_name
         self.id = actor_id or calvinuuid.uuid("ACTOR")
-        self._managed = set(('id', 'name'))
+        self._deployment_requirements = []
+        self._managed = set(('id', 'name', '_deployment_requirements'))
         self.calvinsys = None # CalvinSys(node)
         self.control = calvincontrol.get_calvincontrol()
         self._migrating_to = None  # During migration while on the previous node set to the next node id
@@ -578,3 +579,6 @@ class Actor(object):
 
     def events(self):
         return []
+
+    def deployment_add_requirements(self, deploy_reqs, component=None):
+        self._deployment_requirements.extend([dict(r, component=component) for r in deploy_reqs])

@@ -1,0 +1,20 @@
+src : std.CountTimer()
+sum1 : std.Sum()
+sum2 : std.Sum()
+sum3 : std.Sum()
+sum4 : std.Sum()
+sum5 : std.Sum()
+sum6 : std.Sum()
+sum7 : std.Sum()
+sum8 : std.Sum()
+snk : io.StandardOut()
+
+src.integer > sum1.integer
+sum1.integer > sum2.integer
+sum2.integer > sum3.integer
+sum3.integer > sum4.integer
+sum4.integer > sum5.integer
+sum5.integer > sum6.integer
+sum6.integer > sum7.integer
+sum7.integer > sum8.integer
+sum8.integer > snk.token
