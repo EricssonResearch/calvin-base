@@ -304,7 +304,8 @@ class CalvinNetwork(object):
 
     def peer_disconnected(self, link, rt_id, reason):
         _log.analyze(self.node.id, "+", {'reason': reason, 
-                                         'links_equal': link == self.links[rt_id].transport}, peer_node_id=rt_id)
+                                         'links_equal': link == self.links[rt_id].transport if rt_id in self.links else "Gone"},
+                                         peer_node_id=rt_id)
         if rt_id in self.links and link == self.links[rt_id].transport:
             self.link_remove(rt_id)
 

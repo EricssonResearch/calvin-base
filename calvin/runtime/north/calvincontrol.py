@@ -492,7 +492,8 @@ class CalvinControl(object):
     def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
         """ Migrate actor respons
         """
-        self.send_response(handle, connection, json.dumps({'result': status}))
+        self.send_response(handle, connection,
+                           json.dumps({'result': str(status) if isinstance(status, Exception) else status}))
 
     def handle_actor_disable(self, handle, connection, match, data):
         self.node.am.disable(match.group(1))

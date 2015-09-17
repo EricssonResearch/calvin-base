@@ -212,17 +212,14 @@ class CalvinProto(CalvinCBClass):
             state: see actor manager
             prev_connections: see actor manager
         """
-        if self.network.link_request(to_rt_uuid):
-            # Already have link just continue in _actor_new
-            self._actor_new(to_rt_uuid, callback, actor_type, state, prev_connections)
-        else:
-            # Request link before continue in _actor_new
-            self.node.network.link_request(to_rt_uuid, CalvinCB(self._actor_new,
+        if self.node.network.link_request(to_rt_uuid, CalvinCB(self._actor_new,
                                                         to_rt_uuid=to_rt_uuid,
                                                         callback=callback,
                                                         actor_type=actor_type,
                                                         state=state,
-                                                        prev_connections=prev_connections))
+                                                        prev_connections=prev_connections)):
+            # Already have link just continue in _actor_new
+                self._actor_new(to_rt_uuid, callback, actor_type, state, prev_connections)
 
     def _actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections, status='ACK', uri=None):
         """ Got link? continue actor new """
