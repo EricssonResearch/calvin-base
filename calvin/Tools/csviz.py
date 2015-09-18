@@ -25,7 +25,7 @@ from calvin.csparser.parser import calvin_parser
 
 
 def _refname(name):
-    return name.replace(':', '_') if name else name
+    return "" if name == '.' else name.replace(':', '_')
 
 class Viz(object):
     """docstring for Viz"""
@@ -161,7 +161,7 @@ class CompInternalsViz(ScriptViz):
         self.name = comp_def['name']
         self.inpads = [PadViz(p, 'in') for p in comp_def['inports']]
         self.outpads = [PadViz(p, 'out') for p in comp_def['outports']]
-        self.padlinks = [LinkViz(link) for link in comp_def['structure']['connections'] if not link['src'] or not link['dst']]
+        self.padlinks = [LinkViz(link) for link in comp_def['structure']['connections'] if link['src'] == '.' or link['dst'] == '.']
 
     def render(self):
         viz = ['digraph comp { node [shape=plaintext]; rankdir=LR;']
@@ -197,10 +197,9 @@ def visualize_component_internals(filename, component):
     with open(filename, 'r') as f:
         source_text = f.read()
         ir, errors, warnings = calvin_parser(source_text, 'filename')
-        for comp_def in ir['components']:
-            if comp_def['name'] == component:
-                return CompInternalsViz(comp_def).render()
-                break
+        if component in ir['components']:
+            comp_def = ir['components'][component]
+            return CompInternalsViz(comp_def).render()
 
 def main():
     long_description = """
@@ -236,8 +235,9 @@ def main():
         else:
             res = visualize_script(args.script)
         print(res)
-    except:
-       exit_val = 1
+    except Exception as e:
+        print e
+        exit_val = 1
 
 if __name__ == '__main__':
     sys.exit(main())
