@@ -56,8 +56,8 @@ def setup_module(module):
         interval = 0.5
         for retries in range(1,5):
             time.sleep(interval * retries)
-            test_peers = utils.get_index(rt1, format_index_string({'node_name': 
-                                                                             {'organization': 'com.ericsson', 
+            test_peers = utils.get_index(rt1, format_index_string({'node_name':
+                                                                             {'organization': 'com.ericsson',
                                                                               'purpose': 'testfarm'}
                                                                          }))
             if not test_peers is None and not test_peers["result"] is None and len(test_peers["result"]) > 1:
@@ -580,6 +580,44 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         self.assert_lists_equal(expected, actual2)
 
         d.destroy()
+
+    def test32(self):
+        # Verify that fanout from component inports is handled correctly
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component Foo() in -> a, b{
+              a : std.Identity()
+              b : std.Identity()
+              .in >  a.token
+              .in > b.token
+              a.token > .a
+              b.token > .b
+            }
+
+            snk2 : io.StandardOut(store_tokens=1, quiet=1)
+            snk1 : io.StandardOut(store_tokens=1, quiet=1)
+            foo : Foo()
+            req : std.Counter()
+            req.integer > foo.in
+            foo.a > snk1.token
+            foo.b > snk2.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "test32")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(0.1)
+
+        snk1 = d.actor_map['test32:snk1']
+        snk2 = d.actor_map['test32:snk2']
+        actual1 = utils.report(self.rt1, snk1)
+        actual2 = utils.report(self.rt1, snk2)
+        expected = list(range(1, 10))
+
+        self.assert_lists_equal(expected, actual1)
+        self.assert_lists_equal(expected, actual2)
+
+        d.destroy()
+
 
 
 @pytest.mark.essential

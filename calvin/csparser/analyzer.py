@@ -217,7 +217,8 @@ class Analyzer(object):
         export_out_mappings = {}
         for c in structure['connections']:
             in_mapping, out_mapping = self.create_connection(c, namespace, in_mappings, out_mappings)
-            export_in_mappings.update(in_mapping)
+            for p in in_mapping:
+                export_in_mappings.setdefault(p, []).extend(in_mapping[p])
             export_out_mappings.update(out_mapping)
 
         return export_in_mappings, export_out_mappings
