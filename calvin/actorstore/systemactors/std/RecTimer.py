@@ -17,7 +17,7 @@
 from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
 
 
-class Delay(Actor):
+class RecTimer(Actor):
     """
     Pass input after a given delay
     Input :
@@ -29,31 +29,30 @@ class Delay(Actor):
     @manage(['delay'])
     def init(self, delay=0.1):
         self.delay = delay
-        self.timers = []
         self.setup()
 
     def setup(self):
-      pass
+        self.timer = self.calvinsys.events.timer.repeat(self.delay)
 
     def will_migrate(self):
-      raise Exception("std.Delay can not migrate!")
+        self.timer.cancel()
 
     def did_migrate(self):
-      raise Exception("std.Delay can not migrate!")
+        self.setup()
 
-    @condition(['token'])
-    def tokenAvailable(self, input):
-        self.timers.append({ 'token': input, 'timer': self.calvinsys.events.timer.once(self.delay)})
+    @condition(['token'], ['token'])
+    @guard(lambda self, _: self.timer and self.timer.triggered)
+    def flush(self, input):
+        return ActionResult(production=(input, ))
+
+    @condition()
+    @guard(lambda self: self.timer and self.timer.triggered)
+    def clear(self):
+        self.timer.ack()
         return ActionResult()
 
-    @condition([],['token'])
-    @guard(lambda self: len(self.timers) > 0 and self.timers[0]['timer'].triggered)
-    def timeout(self):
-        o = self.timers.pop(0)
-        o['timer'].ack()
-        return ActionResult(production=(o['token'], ))
 
-    action_priority = (timeout, tokenAvailable)
+    action_priority = (flush, clear)
 
     test_args = []
 

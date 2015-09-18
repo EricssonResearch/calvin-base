@@ -430,7 +430,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         i:std.Identity()
         src:std.CountTimer()
         dst:io.StandardOut()
-        i:std.Delay()
+        i:std.RecTimer()
         src.integer > i.token
         i.token > dst.token
         """
