@@ -22,7 +22,7 @@ import json
 import uuid
 import types
 
-from twisted.internet import defer
+from twisted.internet import defer, task, reactor
 from kademlia.network import Server
 from kademlia.protocol import KademliaProtocol
 from kademlia.crawling import NodeSpiderCrawl, ValueSpiderCrawl, RPCFindResponse
@@ -147,6 +147,20 @@ class AppendServer(Server):
         Server.__init__(self, ksize, alpha, id, storage=storage)
         self.protocol = KademliaProtocolAppend(self.node, self.storage, ksize)
 
+    def bootstrap(self, addrs):
+        """
+        Bootstrap the server by connecting to other known nodes in the network.
+
+        Args:
+            addrs: A `list` of (ip, port) `tuple` pairs.  Note that only IP addresses
+                   are acceptable - hostnames will cause an error.
+        """
+        # if the transport hasn't been initialized yet, wait a second
+        if self.protocol.transport is None:
+            return task.deferLater(reactor, .2, self.bootstrap, addrs)
+        else:
+            return Server.bootstrap(self, addrs)
+
     def append(self, key, value):
         """
         For the given key append the given list values to the set in the network.
@@ -165,6 +179,26 @@ class AppendServer(Server):
 
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(append)
+
+    def get(self, key):
+        """
+        Get a key if the network has it.
+
+        Returns:
+            :class:`None` if not found, the value otherwise.
+        """
+        dkey = digest(key)
+        # if this node has it, return it
+        exists, value = self.storage.get(dkey)
+        if exists:
+            return defer.succeed(value)
+        node = Node(dkey)
+        nearest = self.protocol.router.findNeighbors(node)
+        if len(nearest) == 0:
+            self.log.warning("There are no known neighbors to get key %s" % key)
+            return defer.succeed(None)
+        spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
+        return spider.find()
 
     def remove(self, key, value):
         """
