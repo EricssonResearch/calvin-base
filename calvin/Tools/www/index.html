@@ -270,11 +270,11 @@ function updateNodes(application_id)
                                 if (peer_actor) {
                                     links.push({source:peer_actor, target:actor_node, source_name:peer_port.name, target_name:port.name});
                                 } else {
-                                    console.log("No node with id: " + port.peer[1]);
+                                    console.log("updateNodes - No node with id: " + port.peer[1]);
                                 }
                             }
                         } else {
-                            console.log("No port with id: " + actor.inports[port_index]);
+                            console.log("updateNodes - No port with id: " + actor.inports[port_index]);
                         }
                     }
 
@@ -290,21 +290,21 @@ function updateNodes(application_id)
                                     if (peer_actor) {
                                         links.push({source:actor_node, target:peer_actor, source_name:port.name, target_name:peer_port.name});
                                     } else {
-                                        console.log("No node with id: " + port.peers[peer_index][1]);
+                                        console.log("updateNodes - No node with id: " + port.peers[peer_index][1]);
                                     }
                                 }
                             }
                         } else {
-                            console.log("No port with id: " + actor.outports[port_index]);
+                            console.log("updateNodes - No port with id: " + actor.outports[port_index]);
                         }
                     }
                 }
             } else {
-                console.log("No actor with id: " + application.actors[actor_index]);
+                console.log("updateNodes - No actor with id: " + application.actors[actor_index]);
             }
         }
     } else {
-        console.log("No application with id: " + application_id);
+        console.log("updateNodes - No application with id: " + application_id);
     }
 
     var dist = 150;
@@ -518,11 +518,11 @@ function connect()
     }
     
     getPeerID(connect_uri);
-    getPeers(connect_uri);
 }
 
 function getPeerID(uri)
 {
+    console.log("getPeerID - uri: " + uri);
     $.ajax({
         uri: uri,
         beforeSend: function() {
@@ -534,21 +534,23 @@ function getPeerID(uri)
         dataType: 'json',
         url: uri + '/id',
         type: 'GET',
-        success: function(data) {
-            if (data) {
-                getPeer(this.uri, data.id);
+        success: function(resp_peerid) {
+            if (resp_peerid) {
+                console.log("getPeerID - Response: " + JSON.stringify(resp_peerid));
+                getPeer(this.uri, resp_peerid.id, true);
             } else {
-                console.log("Empty result");
+                console.log("getPeerID - Empty response");
             }
         },
         error: function() {
-            alert("Failed to get id for " + uri);
+            alert("getPeerID - Failed");
         }
     });
 }
 
 function getPeers(uri)
 {
+    console.log("getPeers - uri: " + uri);
     $.ajax({
         uri: uri,
         beforeSend: function() {
@@ -560,25 +562,27 @@ function getPeers(uri)
         dataType: 'json',
         url: uri + '/nodes',
         type: 'GET',
-        success: function(data) {
-            if (data) {
-                for (i = 0; i < data.length; i++) {
-                    if (!findPeer(data[i])) {
-                        getPeer(this.uri, data[i]);
+        success: function(resp_peers) {
+            if (resp_peers) {
+                console.log("getPeers response: " + JSON.stringify(resp_peers));
+                for (index_peers = 0; index_peers < resp_peers.length; index_peers++) {
+                    if (!findPeer(resp_peers[index_peers])) {
+                        getPeer(this.uri, resp_peers[index_peers], false);
                     }
                 }
             } else {
-                console.log("Empty result");
+                console.log("getPeers - Empty response");
             }
         },
         error: function() {
-            console.log("Failed");
+            console.log("getPeers - Failed");
         }
     });
 }
 
-function getPeer(uri, id)
+function getPeer(uri, id, getpeers)
 {
+    console.log("getPeer - uri: " + uri + " id: " + id);
     $.ajax({
         beforeSend: function() {
             startSpin();
@@ -589,32 +593,38 @@ function getPeer(uri, id)
         dataType: 'json',
         url: uri + '/node/' + id,
         type: 'GET',
-        success: function(data) {
-            if (data) {
+        success: function(resp_peer) {
+            if (resp_peer) {
+                console.log("getPeer response: " + JSON.stringify(resp_peer));
                 var peer = new peerObject(id);
-                peer.uri = data.uri;
-                peer.control_uri = data.control_uri;
+                peer.uri = resp_peer.uri;
+                peer.control_uri = resp_peer.control_uri;
                 peers[peers.length] = peer;
                 showPeer(peer);
                 optDeploy = document.getElementById("deploySelector")
                 optDeploy.options.add(new Option(peer.id));
+
+                if (getpeers) {
+                    getPeers(uri);
+                }
             } else {
-                console.log("Empty result");
+                console.log("getPeer - Empty response");
             }
         },
         error: function() {
-            console.log("Error");
+            console.log("getPeer - Failed");
         }
     });
 }
 
 function getApplications()
 {
+    console.log("getApplications");
     clearTable(document.getElementById("applicationsTable"));
     applications = [];
-    for (index = 0; index < peers.length; index++) {
+    for (index_peer = 0; index_peer < peers.length; index_peer++) {
         $.ajax({
-            uri: peers[index].control_uri,
+            uri: peers[index_peer].control_uri,
             beforeSend: function() {
                 startSpin();
             },
@@ -622,19 +632,20 @@ function getApplications()
                 stopSpin();
             },
             dataType: 'json',
-            url: peers[index].control_uri + '/applications',
+            url: peers[index_peer].control_uri + '/applications',
             type: 'GET',
-            success: function(data) {
-                if (data) {
-                    for (application_index = 0; application_index < data.length; application_index++) {
-                        getApplication(this.uri, data[application_index]);
+            success: function(resp_applications) {
+                if (resp_applications) {
+                    console.log("getApplications - Response: " + JSON.stringify(resp_applications));
+                    for (application_index = 0; application_index < resp_applications.length; application_index++) {
+                        getApplication(this.uri, resp_applications[application_index]);
                     }
                 } else {
-                    console.log("Empty result");
+                    console.log("getApplication - Empty result");
                 }
             },
             error: function() {
-                console.log("Error");
+                console.log("getApplication - Failed");
             }
         });
     }
@@ -642,6 +653,7 @@ function getApplications()
 
 function getApplication(uri, id)
 {
+    console.log("getApplication - uri: " + uri + " id: " + id)
     $.ajax({
         uri: uri,
         beforeSend: function() {
@@ -653,36 +665,39 @@ function getApplication(uri, id)
         dataType: 'json',
         url: uri + '/application/' + id,
         type: 'GET',
-        success: function(data) {
-            if (data) {
+        success: function(resp_application) {
+            if (resp_application) {
+                console.log("getApplication - Response: " + JSON.stringify(resp_application));
                 var application = new applicationObject(id);
-                application.name = data.name;
+                application.name = resp_application.name;
                 application.control_uri = this.uri;
-                application.actors = data.actors;
+                application.actors = resp_application.actors;
                 applications[applications.length] = application;
                 showApplication(application);
-                for (index = 0; index < data.actors.length; index++) {
-                    getActor(this.uri, data.actors[index], false);
+                for (index_actor = 0; index_actor < resp_application.actors.length; index_actor++) {
+                    getActor(this.uri, resp_application.actors[index_actor], false);
                 }
             } else {
-                console.log("Empty result");
+                console.log("getApplication - Empty response");
             }
         },
         error: function() {
-            console.log("Error");
+            console.log("getApplication - Failed");
         }
     });
 }
 
+// get actors from all peers
 function getActors()
 {
+    console.log("getActors");
     clearTable(document.getElementById("actorsTable"));
     clearTable(document.getElementById("actorPortsTable"));
     clearTable(document.getElementById("actorPortPeersTable"));
     actors = [];
-    for (index = 0; index < peers.length; index++) {        
+    for (index_peers = 0; index_peers < peers.length; index_peers++) {
         $.ajax({
-            uri: peers[index].control_uri,
+            uri: peers[index_peers].control_uri,
             beforeSend: function() {
                 startSpin();
             },
@@ -690,19 +705,20 @@ function getActors()
                 stopSpin();
             },
             dataType: 'json',
-            url: peers[index].control_uri + '/actors',
+            url: peers[index_peers].control_uri + '/actors',
             type: 'GET',
-            success: function(data) {
-                if (data) {
-                    for (index = 0; index < data.length; index++) {
-                        getActor(this.uri, data[index], true);
+            success: function(resp_actors) {
+                if (resp_actors) {
+                    console.log("getActor - Response: " + JSON.stringify(resp_actors));
+                    for (index_actors = 0; index_actors < resp_actors.length; index_actors++) {
+                        getActor(this.uri, resp_actors[index_actors], true);
                     }
                 } else {
-                    console.log("Empty result");
+                    console.log("getActor - Empty response");
                 }
             },
             error: function() {
-                console.log("Error");
+                console.log("getActor - Failed");
             }
         });
     }
@@ -711,6 +727,7 @@ function getActors()
 // Get actor information
 function getActor(uri, id, show)
 {
+    console.log("getActor - uri: " + uri + " id: " + id)
     $.ajax({
         uri: uri,
         beforeSend: function() {
@@ -722,36 +739,37 @@ function getActor(uri, id, show)
         dataType: 'json',
         url: uri + '/actor/' + id,
         type: 'GET',
-        success: function(data) {
-            if (data) {
+        success: function(resp_actor) {
+            if (resp_actor) {
+                console.log("getActor - Response: " + JSON.stringify(resp_actor));
                 var actor = findActor(id);
                 if (!actor) {
                     actor = new actorObject(id);
                 }
                 actor.id = id;
-                actor.name = data.name;
-                actor.type = data.type;
-                actor.peer_id = data.node_id;
+                actor.name = resp_actor.name;
+                actor.type = resp_actor.type;
+                actor.peer_id = resp_actor.node_id;
                 actor.inports = [];
-                for (index = 0; index < data.inports.length; index++) {
-                    actor.inports[actor.inports.length] = data.inports[index].id;
-                    getPort(this.uri, id, data.inports[index].id);
+                for (index = 0; index < resp_actor.inports.length; index++) {
+                    actor.inports[actor.inports.length] = resp_actor.inports[index].id;
+                    getPort(this.uri, id, resp_actor.inports[index].id);
                 }
                 actor.outports = [];
-                for (index = 0; index < data.outports.length; index++) {
-                    actor.outports[actor.outports.length] = data.outports[index].id;
-                    getPort(this.uri, id, data.outports[index].id);
+                for (index = 0; index < resp_actor.outports.length; index++) {
+                    actor.outports[actor.outports.length] = resp_actor.outports[index].id;
+                    getPort(this.uri, id, resp_actor.outports[index].id);
                 }
                 actors[actors.length] = actor;
                 if (show == true) {
                     showActor(actor);
                 }
             } else {
-                console.log("Empty result");
+                console.log("getActor - Empty response");
             }
         },
         error: function() {
-            console.log("Error");
+            console.log("getActor - Failed");
         }
     });
 }
@@ -759,6 +777,7 @@ function getActor(uri, id, show)
 // Get port information
 function getPort(uri, actor_id, port_id)
 {
+    console.log("getPort - uri: " + uri + " actor_id: " + actor_id + " port_id: " + port_id);
     $.ajax({
         beforeSend: function() {
             startSpin();
@@ -769,30 +788,31 @@ function getPort(uri, actor_id, port_id)
         dataType: 'json',
         url: uri + '/actor/' + actor_id + '/port/' + port_id,
         type: 'GET',
-        success: function(data) {
-            if (data) {
+        success: function(resp_port) {
+            if (resp_port) {
+                console.log("getPort - Response: " + JSON.stringify(resp_port));
                 var port = new portObject(port_id);
-                port.actor_id = data.actor_id;
-                port.direction = data.direction;
-                port.name = data.name;
-                port.connected = data.connected;
-                port.peer_id = data.node_id;
+                port.actor_id = resp_port.actor_id;
+                port.direction = resp_port.direction;
+                port.name = resp_port.name;
+                port.connected = resp_port.connected;
+                port.peer_id = resp_port.node_id;
                 port.peers = []
                 if (port.direction == "out") {
-                    for (index = 0; index < data.peers.length; index++) {
-                        port.peers[port.peers.length] = data.peers[index];
+                    for (index_port = 0; index_port < resp_port.peers.length; index_port++) {
+                        port.peers[port.peers.length] = resp_port.peers[index_port];
                     }
                 }
                 if (port.direction == "in") {
-                    port.peer = data.peer;
+                    port.peer = resp_port.peer;
                 }
                 ports[ports.length] = port;
             } else {
-                console.log("Empty result");
+                console.log("getPort - Empty response");
             }
         },
         error: function() {
-            console.log("Error");
+            console.log("getPort - Failed");
         }
     });
 }
@@ -859,6 +879,8 @@ function showApplication(application)
 // Add actor to actorsTable
 function showActor(actor)
 {
+    peer = findPeer(actor.peer_id);
+
     var tableRef = document.getElementById('actorsTable');
     var newRow = tableRef.insertRow();
     newRow.id = actor.id;
@@ -870,13 +892,13 @@ function showActor(actor)
     cell = newRow.insertCell(2);
     cell.appendChild(document.createTextNode(actor.type));
     cell = newRow.insertCell(3);
-    cell.appendChild(document.createTextNode(actor.peer_id));
+    cell.appendChild(document.createTextNode(peer.control_uri));
     // migrate
     cell = newRow.insertCell(4);
     selectNode = document.createElement("select");
     for (peer_index = 0; peer_index < peers.length; peer_index++) {
         if (peers[peer_index].id != actor.peer_id) {
-            selectNode.options.add(new Option(peers[peer_index].id))
+            selectNode.options.add(new Option(peers[peer_index].control_uri));
         }
     }
     cell.appendChild(selectNode);
@@ -935,7 +957,7 @@ function showActorPortInformation(actor_id)
             }
         }
     } else {
-        console.log("No actor with id: " + actor_id);
+        console.log("showActorPortInformation - No actor with id: " + actor_id);
     }
 }
 
@@ -958,12 +980,12 @@ function showActorPortPeers(port_id)
             cell.appendChild(document.createTextNode(port.peer[1]));
 
         } else if(port.direction == "out") {
-            for (index = 0; index < port.peers.length; index++) {
+            for (index_portpeer = 0; index_portpeer < port.peers.length; index_portpeer++) {
                 var newRow = tableRef.insertRow();
                 var cell = newRow.insertCell(0);
-                cell.appendChild(document.createTextNode(port.peers[index][0]));
+                cell.appendChild(document.createTextNode(port.peers[index_portpeer][0]));
                 cell = newRow.insertCell(1);
-                cell.appendChild(document.createTextNode(port.peers[index][1]));
+                cell.appendChild(document.createTextNode(port.peers[index_portpeer][1]));
             }
         }
     }
@@ -976,12 +998,19 @@ function migrate(actor_id)
     for (var x = 0; x < tableRef.rows.length; x++) {
         if (tableRef.rows[x].cells[0].innerHTML == actor_id) {
             combo = tableRef.rows[x].cells[4].childNodes[0];
-            peer_id = combo.options[combo.selectedIndex].text;
+            peer_control_uri = combo.options[combo.selectedIndex].text;
+
+            for (peer_index = 0; peer_index < peers.length; peer_index++) {
+                if (peers[peer_index].control_uri == peer_control_uri) {
+                    peer_id = peers[peer_index].id;
+                }
+            }
 
             actor = findActor(actor_id);
             if (actor) {
                 node = findPeer(actor.peer_id);
                 if (node) {
+                    console.log("migrate - actor: " + actor_id + " to: " + peer_id);
                     $.ajax({
                         beforeSend: function() {
                             startSpin();
@@ -996,14 +1025,14 @@ function migrate(actor_id)
                             getActors();
                         },
                         error: function() {
-                            console.log("Error");
+                            console.log("migrate - Failed");
                         }
                     });
                 } else {
-                    console.log("No node with id: " + actor.peer_id);
+                    console.log("migrate - No node with id: " + actor.peer_id);
                 }
             } else {
-                console.log("No actor with id: " + actor_id);
+                console.log("migrate - No actor with id: " + actor_id);
             }
             break;
         }
@@ -1029,7 +1058,7 @@ function destroyApplication(application_id)
                 getApplications();
             },
             error: function() {
-                console.log("Error");
+                console.log("destroyApplication - Error");
             }
         });
     }
@@ -1061,7 +1090,7 @@ function destroyPeer(peer_id)
             }
         });
     } else {
-        console.log("No peer with id: " + peer_id);
+        console.log("destroyPeer - No peer with id: " + peer_id);
     }
 }
 
@@ -1084,7 +1113,7 @@ function trace(peer_id)
             }
         }
     } else {
-        console.log("No peer with id: " + peer_id);
+        console.log("trace - No peer with id: " + peer_id);
     }
 }
 
@@ -1137,7 +1166,7 @@ function deployApplication()
             }
         });
     } else {
-        console.log("No node with id: " + node_id);
+        console.log("deployApplication - No node with id: " + node_id);
     }
 }
 
