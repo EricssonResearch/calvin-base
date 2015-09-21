@@ -361,6 +361,7 @@ class AppManager(object):
 
     def _app_requirements(self, app):
         _log.debug("_app_requirements(app=%s)" % (app,))
+        _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': {k: list(v) for k, v in app.actor_placement.iteritems()}})
         if any([not n for n in app.actor_placement.values()]):
             # At least one actor have no possible placement
             app._org_cb(status="NACK")
@@ -369,6 +370,7 @@ class AppManager(object):
 
         # Collect an actor by actor matrix stipulating a weighting 0.0 - 1.0 for their connectivity
         actor_ids, actor_matrix = self._actor_connectivity(app)
+        _log.analyze(self._node.id, "+ ACTOR MATRIX", {'actor_ids': actor_ids, 'actor_matrix': actor_matrix})
 
         # Get list of all possible nodes
         node_ids = set([])
