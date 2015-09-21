@@ -98,11 +98,14 @@ class AppManager(object):
 
     def _destroy_actor_cb(self, actor_id, value, application):
         """ Get actor callback """
-        _log.debug("Destroy app peers actor cb %s" % actor_id)
+        _log.debug("Destroy app peers actor cb %s value %s" % (actor_id, value))
         if value and 'node_id' in value:
             application.update_node_info(value['node_id'], actor_id)
         else:
             application.update_node_info(None, actor_id)
+
+        application.actors.remove(actor_id)
+
         if application.complete_node_info():
             self._destroy_final(application)
 
