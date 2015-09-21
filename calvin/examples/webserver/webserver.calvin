@@ -146,13 +146,22 @@ component HTTPFileReader() filename -> resource, status {
     resource : contents of resource file
     status : OK (200) or File not found (404)
   """
-  read_html : io.FileReader2(status_OK=OK, status_ERR=NOT_FOUND)
+  read_html : io.FileReader()
   concat : text.LineJoin()
+  exception_handler : exception.ExceptionHandler()
+  is_eos : exception.IsEOS()
+  status_mapper : std.Deselect()
+
 
   .filename > read_html.filename
-  read_html.out > concat.line
+  read_html.out > exception_handler.token
+  exception_handler.token > concat.line
   concat.text > .resource
-  read_html.ses > .status
+  exception_handler.status > is_eos.token
+  is_eos.status > status_mapper.select
+  OK > status_mapper.case_true
+  NOT_FOUND > status_mapper.case_false
+  status_mapper.data > .status
 }
 
 tcp_server : net.TCP_Server(delimiter="\r\n\r\n")
