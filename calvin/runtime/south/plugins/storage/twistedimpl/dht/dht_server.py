@@ -145,7 +145,7 @@ class AutoDHTServer(StorageBase):
         self._ssdps = SSDPServiceDiscovery(iface)
         dlist += self._ssdps.start()
 
-        _log.debug("%s %s:%s" % (self, ip, port))
+        _log.debug("Register service %s %s:%s" % (network, ip, port))
         self._ssdps.register_service(network, ip, port)
 
         start_cb = defer.Deferred()
@@ -155,12 +155,18 @@ class AutoDHTServer(StorageBase):
                 _log.debug("DHT Started %s" % (args))
                 if not self._started:
                     reactor.callLater(.2, start_cb.callback, True)
+                if cb:
+                    reactor.callLater(.2, cb, True)
                 self._started = True
 
-            _log.debug("%s got bootstraped with %s" % (self, repr(addrs)))
+            def failed(args):
+                _log.debug("DHT failed to bootstrap %s" % (args))
+                #reactor.callLater(.5, bootstrap_proxy, addrs)
+
+            _log.debug("Trying to bootstrap with %s" % (repr(addrs)))
             d = self.dht_server.bootstrap(addrs)
-            if not self._started:
-                d.addCallback(started)
+            d.addCallback(started)
+            d.addErrback(failed)
 
         def start_msearch(args):
             _log.debug("** msearch %s args: %s" % (self, repr(args)))
@@ -169,9 +175,6 @@ class AutoDHTServer(StorageBase):
         # Wait until servers all listen
         dl = defer.DeferredList(dlist)
         dl.addBoth(start_msearch)
-
-        if cb:
-            start_cb.addBoth(cb)
 
         return start_cb
 

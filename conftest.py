@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import pytest
+import uuid
 import logging
 from calvin.utilities import calvinlogger
 
@@ -66,6 +67,12 @@ def pytest_configure(config):
             calvinlogger.get_logger(module).setLevel(logging.DEBUG)
         elif level == "ANALYZE":
             calvinlogger.get_logger(module).setLevel(5)
+
+    # TODO: add func to set any argument from here also
+    from calvin.utilities import calvinconfig
+    _conf = calvinconfig.get()
+    _conf.add_section('ARGUMENTS')
+    _conf.set('ARGUMENTS', 'DHT_NETWORK_FILTER', str(uuid.uuid4()))
 
 @pytest.fixture
 def testarg_actor(request):
