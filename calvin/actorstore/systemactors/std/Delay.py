@@ -55,27 +55,23 @@ class Delay(Actor):
 
     action_priority = (timeout, tokenAvailable)
 
-    test_args = []
+    test_args = [1]
 
+    # Test that two tokens are consumed without any output
     test_set = [
-        {
-            'in': {'token': [r]},
-            'out': {'token': []}
-        } for r in range(3)
+      {
+        'in': {'token': [r]},
+        'out': {'token': []}
+      } for r in range(3)
     ]
 
+    # Trigger the timers one at a time and check that the previously inserted tokens
+    # are genererated in order, one at a time.
     test_set += [
-        {
-            'setup': [lambda self: self.timer.trigger()],
-            'in': {'token': []},
-            'out': {'token': [r]}
-        } for r in range(3)
-    ]
+      {
+        'setup': [lambda self: self.timers[0]['timer'].trigger()],
+        'in': {'token': []},
+        'out': {'token': [r]},
+      } for r in range(3)
+   ]
 
-    test_set += [
-        {
-            'setup': [lambda self: self.timer.trigger()],
-            'in': {'token': ['a']},
-            'out': {'token': ['a']}
-        }
-    ]

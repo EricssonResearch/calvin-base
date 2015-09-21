@@ -54,27 +54,29 @@ class RecTimer(Actor):
 
     action_priority = (flush, clear)
 
-    test_args = []
+    test_args = [1]
 
+    # Trigger a timer then add tokens. The tokens shall wait for the next trigger.
     test_set = [
         {
-            'in': {'token': [r]},
-            'out': {'token': []}
-        } for r in range(3)
-    ]
-
-    test_set += [
-        {
             'setup': [lambda self: self.timer.trigger()],
-            'in': {'token': []},
-            'out': {'token': [r]}
-        } for r in range(3)
-    ]
-
-    test_set += [
-        {
-            'setup': [lambda self: self.timer.trigger()],
-            'in': {'token': ['a']},
-            'out': {'token': ['a']}
+            'in': {'token': []}, 'out': {'token': []}
         }
     ]
+
+    # Add tokens, nothing returned since timer not triggered above shall have cleared.
+    test_set += [
+        { 'in': {'token': [r]}, 'out': {'token': []} } for r in range(3)
+    ]
+
+    # Trigger the timer once then fetch three tokens.
+    # All tokens shall be flushed.
+    test_set += [
+        {
+            'setup': [lambda self: self.timer.trigger()],
+            'in': {'token': []}, 'out': {'token': [0]}
+        },
+        { 'in': {'token': []}, 'out': {'token': [1]} },
+        { 'in': {'token': []}, 'out': {'token': [2]} }
+    ]
+
