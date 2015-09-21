@@ -152,6 +152,14 @@ class ActorManager(object):
     def migrate(self, actor_id, node_id, callback = None):
         """ Migrate an actor actor_id to peer node node_id """
         if actor_id not in self.actors:
+            # Can only migrate actors from our node
+            if callback:
+                callback(status="NACK")
+            return
+        if node_id == self.node.id:
+            # No need to migrate to ourself
+            if callback:
+                callback(status="ACK")
             return
 
         actor = self.actors[actor_id]
