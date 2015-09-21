@@ -55,7 +55,7 @@ def _create_logger(filename=None):
 
         # create formatter
         colored = ColoredFormatter(
-            "%(asctime)-15s %(log_color)s%(levelname)-8s %(name)s%(reset)s: %(message)s",
+            "%(asctime)-15s %(log_color)s%(levelname)-8s %(process)d-%(name)s%(reset)s: %(message)s",
             datefmt=None,
             reset=True,
             log_colors={
@@ -68,7 +68,7 @@ def _create_logger(filename=None):
         )
 
         plain = ColoredFormatter(
-            "%(asctime)-15s %(levelname)-8s %(name)s: %(message)s",
+            "%(asctime)-15s %(levelname)-8s %(process)d-%(name)s: %(message)s",
             datefmt=None,
             reset=False,
             log_colors={}
