@@ -141,7 +141,7 @@ component HTTPFileReader() filename -> resource, status {
     resource : contents of resource file
     status : OK (200) or File not found (404)
   """
-  read_html : usr.FileReader2(status_OK=200, status_ERR=404)
+  read_html : io.FileReader2(status_OK=200, status_ERR=404)
   concat : text.LineJoin()
 
   .filename > read_html.filename
