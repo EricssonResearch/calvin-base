@@ -29,10 +29,11 @@ class RecTimer(Actor):
     @manage(['delay'])
     def init(self, delay=0.1):
         self.delay = delay
+        self.calvinsys.use('calvinsys.events.timer', shorthand='timer')
         self.setup()
 
     def setup(self):
-        self.timer = self.calvinsys.events.timer.repeat(self.delay)
+        self.timer = self.calvinsys['timer'].repeat(self.delay)
 
     def will_migrate(self):
         self.timer.cancel()
@@ -51,8 +52,8 @@ class RecTimer(Actor):
         self.timer.ack()
         return ActionResult()
 
-
     action_priority = (flush, clear)
+    requires = ['calvinsys.events.timer']
 
     test_args = [1]
 
@@ -66,7 +67,7 @@ class RecTimer(Actor):
 
     # Add tokens, nothing returned since timer not triggered above shall have cleared.
     test_set += [
-        { 'in': {'token': [r]}, 'out': {'token': []} } for r in range(3)
+        {'in': {'token': [r]}, 'out': {'token': []}} for r in range(3)
     ]
 
     # Trigger the timer once then fetch three tokens.
@@ -76,7 +77,6 @@ class RecTimer(Actor):
             'setup': [lambda self: self.timer.trigger()],
             'in': {'token': []}, 'out': {'token': [0]}
         },
-        { 'in': {'token': []}, 'out': {'token': [1]} },
-        { 'in': {'token': []}, 'out': {'token': [2]} }
+        {'in': {'token': []}, 'out': {'token': [1]}},
+        {'in': {'token': []}, 'out': {'token': [2]}}
     ]
-
