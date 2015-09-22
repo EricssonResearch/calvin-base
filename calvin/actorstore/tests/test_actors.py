@@ -16,7 +16,7 @@
 
 import pytest
 import sys
-# from calvin.calvinsys import Sys as CalvinSys
+import argparse
 from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.south.endpoint import Endpoint
@@ -205,37 +205,50 @@ class ActorTester(object):
 
         self.actor_names = actors
 
+    def instantiate_actor(self, actorclass, actorname):
+        try:
+            actor = actorclass(actorname, disable_state_checks=True)
+            if not hasattr(actor, 'test_set'):
+                self.actors[actorname] = 'no_test'
+                return
+            actor.attach_API("calvinsys", lambda actorname: CalvinSys(actorname, None))
+            actor.calvinsys = CalvinSysMock()
+            actor.calvinsys['file'] = CalvinSysFileMock()
+            actor.calvinsys['timer'] = CalvinSysTimerMock()
+            actor.init(*actorclass.test_args, **actorclass.test_kwargs)
+            actor.setup_complete()
+        except Exception as e:
+            self.illegal_actors[actorname] = "Failed to instantiate"
+            sys.stderr.write("Actor %s: %s" % (actorname, e))
+            import traceback
+            sys.stderr.write(''.join(traceback.format_exc()))
+            raise e
+
+        for inport in actor.inports.values():
+            inport.endpoint = DummyInEndpoint(inport)
+        for outport in actor.outports.values():
+            outport.fifo.add_reader(actor.id)
+
+        self.actors[actorname] = actor
+
+
     def instantiate_actors(self):
         for a in self.actor_names:
             found, primitive, actorclass = self.store.lookup(a)
             if found and primitive:
-                try:
-                    actor = actorclass(a, disable_state_checks=True)
-                    if not hasattr(actor, 'test_set'):
-                        self.actors[a] = 'no_test'
-                        continue
-                    actor.calvinsys = CalvinSysMock()
-                    actor.calvinsys['file'] = CalvinSysFileMock()
-                    actor.calvinsys['timer'] = CalvinSysTimerMock()
-                    actor.init(*actorclass.test_args, **actorclass.test_kwargs)
-                    actor.setup_complete()
-                except Exception as e:
-                    self.illegal_actors[a] = "Failed to instantiate"
-                    sys.stderr.write("Actor %s: %s" % (a, e))
-                    import traceback
-                    sys.stderr.write(''.join(traceback.format_exc()))
-                    raise e
-
-                for inport in actor.inports.values():
-                    inport.endpoint = DummyInEndpoint(inport)
-                for outport in actor.outports.values():
-                    outport.fifo.add_reader(actor.id)
-
-                self.actors[a] = actor
+                self.instantiate_actor(actorclass, a)
             elif found and not primitive:
                 self.components[a] = "TODO: Cannot test components (%s)" % (a,)
             else:
                 self.illegal_actors[a] = "Unknown actor - probably parsing issues"
+
+
+    def load_actor(self, path):
+        actorclass = self.store.load_from_path(path)
+        if actorclass:
+            self.instantiate_actor(actorclass, path)
+        else:
+            self.illegal_actors[path] = "Unknown actor - probably parsing issues"
 
     def test_actor(self, actor, aut):
         for idx in range(len(aut.test_set)):
@@ -325,10 +338,13 @@ def show_results(results):
 
 
 @pytest.mark.essential
-def test_actors(actor="", show=False):
+def test_actors(actor="", show=False, path=None):
     t = ActorTester()
-    t.collect_actors(actor)
-    t.instantiate_actors()
+    if path:
+        t.load_actor(path)
+    else:
+        t.collect_actors(actor)
+        t.instantiate_actors()
     results = t.test_actors()
 
     if not any(results.values()):
@@ -350,7 +366,18 @@ def test_actors(actor="", show=False):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        show_results(test_actors(actor=sys.argv[1], show=True))
+
+    argparser = argparse.ArgumentParser(description="Run actor unittests")
+    group = argparser.add_mutually_exclusive_group()
+    group.add_argument('--path', '-p', type=str,
+                           help='path to actor to test')
+    group.add_argument('filter', type=str, nargs='?',
+                       help='test actors matching filter')
+    args = argparser.parse_args()
+
+    if args.path:
+        show_results(test_actors(path=args.path, show=True))
+    elif args.filter:
+        show_results(test_actors(actor=args.filter, show=True))
     else:
         show_results(test_actors(show=True))
