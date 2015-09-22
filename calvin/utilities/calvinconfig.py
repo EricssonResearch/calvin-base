@@ -225,7 +225,7 @@ class CalvinConfig(object):
         """
         wildcards = [e for e in os.environ if e.startswith('CALVIN_') and e != 'CALVIN_CONFIG_PATH']
         for wildcard in wildcards:
-            parts = wildcard.split('_')
+            parts = wildcard.split('_', 2)
             if len(parts) < 3 or parts[1] not in ['GLOBAL', 'TESTING', 'DEVELOPER']:
                 _log.info("Malformed evironment variable {}, skipping.".format(wildcard))
                 continue
