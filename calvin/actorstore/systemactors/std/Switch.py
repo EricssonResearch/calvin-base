@@ -37,9 +37,16 @@ class Switch(Actor):
 
     @condition(['switch', 'a', 'b'], ['a', 'b'])
     def action(self, switch, a, b):
-        # Default to false if select value is not 0 or 1
-        if bool(switch):
+        # Default to false if select value is not true or false
+        if switch is True:
             a, b = b, a
         return ActionResult(production=(a, b ))
 
     action_priority = (action,)
+
+    test_set = [
+        {
+            'in': {'switch': [True, False, 0, 1], 'a':[1,2,3,4], 'b':['a','b','c','d']},
+            'out': {'a':['a',2,3,4], 'b':[1,'b','c','d']},
+        },
+    ]

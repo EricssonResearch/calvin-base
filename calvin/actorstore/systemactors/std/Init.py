@@ -46,3 +46,12 @@ class Init(Actor):
         return ActionResult(production=(data,))
 
     action_priority = (passthrough, initial_action)
+
+    test_args = [0]
+
+    test_set = [
+        {
+            'in': {'in': [1,2,3]},
+            'out': {'out': [0,1,2,3]},
+        },
+    ]

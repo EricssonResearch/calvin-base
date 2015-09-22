@@ -21,7 +21,7 @@ class Deselect(Actor):
     """
     Route token from 'case_true' or 'case_false' to 'data' port depending on 'select'
 
-    Deselect assumes 0 (false) or 1 (true) as input, values outside that
+    Deselect assumes 'false' or 'true' as input, values outside that
     range will default to 'case_false'.
 
     Inputs:
@@ -48,9 +48,19 @@ class Deselect(Actor):
     @condition(['select', 'case_false'], ['data'])
     @guard(lambda self, select, data : select not in [True, False])
     def invalid_select_action(self, select, data):
-        # Default to false if select value is not 0 or 1
+        # Default to false if select value is not true or false
         return ActionResult(production=(data, ))
 
 
     action_priority = (false_action, true_action, invalid_select_action)
 
+    test_set = [
+        {
+            'in': {
+                'case_false': ['a', 'b', 'c'],
+                'case_true':['A', 'B', 'C'],
+                'select': [True, False]*3
+            },
+            'data': {'port': ['A', 'a', 'B', 'b', 'C', 'c']},
+        },
+    ]

@@ -39,3 +39,9 @@ class Void(Actor):
         return ActionResult(production=(0, ))
 
     action_priority = (null, )
+
+    test_set = [
+        {
+            'out': {'void': []},
+        },
+    ]

@@ -25,7 +25,7 @@ class SampleHold(Actor):
     Assumes 'false' or 'true' as input to 'sample', other values are considered 'false'.
 
     Inputs:
-      sample : Switch data paths a->b, b->a if 'true, else a->a, b->b
+      sample : Sample 'in' if true.
       in     : A token
     Outputs:
       out    : The currently held token, or the 'default' argument if not sampled yet.
@@ -37,9 +37,17 @@ class SampleHold(Actor):
 
     @condition(['sample', 'in'], ['out'])
     def action(self, sample, tok):
-        # FIXME: Default to false if select value is not 0 or 1
-        if bool(sample):
+        if sample is True:
             self.held = copy(tok)
         return ActionResult(production=(self.held, ))
 
     action_priority = (action,)
+
+    test_args = [-1]
+
+    test_set = [
+        {
+            'in': {'in': [0, 1, 2, 3], 'sample': [False, True, 1, True]},
+            'out': {'out': [-1, 1, 1, 3]},
+        },
+    ]

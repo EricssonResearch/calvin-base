@@ -20,6 +20,7 @@ from calvin.actor.actor import Actor, ActionResult, manage, condition
 class Stringify(Actor):
     """
     Consume a token and stringify its value
+
     Input:
       in
     Output:

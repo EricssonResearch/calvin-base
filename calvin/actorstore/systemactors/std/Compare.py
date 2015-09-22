@@ -60,3 +60,20 @@ class Compare(Actor):
         return ActionResult(production=(0, ))
 
     action_priority = (test, fail)
+
+    test_args = ['=']
+
+    test_set = [
+        {
+            'setup': [lambda self: self.init('=')],
+            'in': {'a': [1, 1, 0, 0], 'b':[1, 0, 1, 0]},
+            'out': {'result': [1, 0, 0, 1]},
+        },
+        {
+            'setup': [lambda self: self.init('!=')],
+            'in': {'a': [1, 1, 0, 0], 'b':[1, 0, 1, 0]},
+            'out': {'result': [0, 1, 1, 0]},
+        },
+
+    ]
+
