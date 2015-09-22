@@ -49,13 +49,7 @@ class Append(Actor):
 
     def gen_path(self, base, append):
         base = self.calvinsys['path'].abspath(base)
-
-        if self.calvinsys['path'].isabs(append):
-            # concatenate
-            path = base + append
-        else:
-            # joine
-            path = self.calvinsys['path'].join(base, append)
+        path = self.calvinsys['path'].join(base, append)
         path = self.calvinsys['path'].abspath(path)
         invalid_path = 0
         if self.inside_base:
