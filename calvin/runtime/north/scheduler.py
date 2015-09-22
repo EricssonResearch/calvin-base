@@ -16,7 +16,6 @@
 
 import sys
 import time
-import logging
 
 from calvin.actor.actor import ActionResult
 from calvin.runtime.south.plugins.async import async
@@ -43,7 +42,6 @@ class Scheduler(object):
         self._heartbeat = 1
 
     def run(self):
-        #async.DelayedCall(0, self.loop_once)
         async.run_ioloop()
 
     def stop(self):
@@ -65,9 +63,9 @@ class Scheduler(object):
         self._trigger_set = set()
 
         activity = total.did_fire or activity
-        #self.node.control.handle_request()
 
-        _log.debug("looped_once for %s at %s again in %s" % ("ALL" if all_ else local_trigger_set, time.time(), 0 if activity else self._heartbeat))
+        _log.debug("looped_once for %s at %s again in %s" %
+                   ("ALL" if all_ else local_trigger_set, time.time(), 0 if activity else self._heartbeat))
 
         if activity:
             # Something happened - run again
@@ -132,7 +130,8 @@ class DebugScheduler(Scheduler):
         super(DebugScheduler, self).__init__(node, actor_mgr, monitor)
 
     def trigger_loop(self, delay=0, actor_ids=None):
-        import inspect, traceback
+        import inspect
+        import traceback
         super(DebugScheduler, self).trigger_loop(delay, actor_ids)
         (frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
         _log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
@@ -146,4 +145,3 @@ class DebugScheduler(Scheduler):
         from infi.traceback import traceback_context
         traceback_context()
         return super(DebugScheduler, self).fire_actors(actor_ids)
-
