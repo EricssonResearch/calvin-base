@@ -89,8 +89,8 @@ class ActorManager(object):
         try:
             # Create a 'bare' instance of the actor
             a = class_(actor_type, actor_id)
-            # Hand over a CalvinSys factory method to the actor.
-            a.attach_API("calvinsys", self.node.calvinsys)
+            a.calvinsys = self.node.calvinsys(a)
+            a.check_requirements()
         except Exception as e:
             _log.exception("")
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
@@ -109,7 +109,7 @@ class ActorManager(object):
             a.init(**args)
             a.setup_complete()
         except Exception as e:
-            #_log.exception(e)
+            _log.exception(e)
             raise(e)
         return a
 

@@ -59,16 +59,14 @@ class TimerHandler(object):
     def repeat(self, delay):
         return TimerEvent(self._actor.id, delay, self.node.sched.trigger_loop, repeats=True)
 
-    def _trigger_loop(self):
-        return self.node.sched.trigger_loop(actor_ids=[self._actor.id])
-
-def register(node, actor, events):
+def register(node, actor, events=None):
     """
         Registers is called when the Event-system object is created.
         Place an object in the event object - in this case the
         nodes only timer object.
 
         Also register any hooks for actor migration.
+        @TODO: Handle migration (automagically and otherwise.)
     """
 
-    events.timer = TimerHandler(node, actor)
+    return TimerHandler(node=node, actor=actor)

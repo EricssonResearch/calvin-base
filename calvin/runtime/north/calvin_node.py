@@ -20,7 +20,7 @@ import sys
 import trace
 import logging
 
-from calvin.calvinsys import CalvinSys
+from calvin.calvinsys import Sys as CalvinSys
 
 from calvin.runtime.north import actormanager
 from calvin.runtime.north import appmanager
@@ -150,7 +150,9 @@ class Node(object):
     def calvinsys(self, actor):
         """Return a CalvinSys instance"""
         # FIXME: We still need to sort out actor requirements vs. node capabilities and user permissions.
-        return CalvinSys(actor, self)
+        # @TODO: Use same CalvinSys for entire node - should be possible
+        # @TODO: Write node capabilities to storage
+        return CalvinSys(node=self, actor=actor)
 
     #
     # Event loop

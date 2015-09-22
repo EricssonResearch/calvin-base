@@ -16,7 +16,7 @@
 
 import pytest
 import sys
-from calvin.calvinsys import CalvinSys
+# from calvin.calvinsys import Sys as CalvinSys
 from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.south.endpoint import Endpoint
@@ -170,6 +170,25 @@ class CalvinSysFileMock(object):
         fdmock.close()
 
 
+def load_python_requirement(req):
+    import importlib
+    loaded = importlib.import_module("calvin.calvinsys.native." + req)
+    return loaded.register
+
+requirements = \
+    {
+        'calvinsys.io.filehandler': CalvinSysFileMock,
+        'calvinsys.events.timer': CalvinSysTimerMock,
+        'calvinsys.native.python-os-path': load_python_requirement('python-os-path'),
+        'calvinsys.native.python-re': load_python_requirement('python-re')
+    }
+
+
+class CalvinSysMock(dict):
+    def use(self, req, shorthand):
+        self[shorthand] = requirements[req]()
+
+
 class ActorTester(object):
 
     def __init__(self):
@@ -195,9 +214,9 @@ class ActorTester(object):
                     if not hasattr(actor, 'test_set'):
                         self.actors[a] = 'no_test'
                         continue
-                    actor.attach_API("calvinsys", lambda a: CalvinSys(a, None))
-                    actor.calvinsys.io.file = CalvinSysFileMock()
-                    actor.calvinsys.events.timer = CalvinSysTimerMock()
+                    actor.calvinsys = CalvinSysMock()
+                    actor.calvinsys['file'] = CalvinSysFileMock()
+                    actor.calvinsys['timer'] = CalvinSysTimerMock()
                     actor.init(*actorclass.test_args, **actorclass.test_kwargs)
                     actor.setup_complete()
                 except Exception as e:
@@ -243,9 +262,9 @@ class ActorTester(object):
             for port, values in outputs.iteritems():
                 try:
                     vals = pread(aut, port, len(values))
-                    assert vals == values
+                    assert vals == values, "Expected output '%s' does not match '%s'" % (vals, values)
                 except AssertionError as e:
-                    print str(e)
+                    print "Error:", str(e)
                     raise AssertionError("Failed test %d" % (test_index,))
 
             if not all(f(aut) for f in postconds):

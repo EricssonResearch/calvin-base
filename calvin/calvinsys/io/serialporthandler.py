@@ -77,8 +77,8 @@ class SerialPortHandler(object):
         port.close()
 
 
-def register(node, actor, io):
+def register(node, actor):
     """
         Called when the system object is first created.
     """
-    io.serialport = SerialPortHandler(node, actor)
+    return SerialPortHandler(node, actor)

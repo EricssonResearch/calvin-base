@@ -14,8 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+# import os
+from calvin.actor.actor import Actor, ActionResult, manage, condition
+
+
+def test_helper_join(*args):
+    import os.path
+    return os.path.join(*args)
+
+
+def test_helper_abspath(path):
+    import os.path
+    return os.path.abspath(path)
 
 
 class Append(Actor):
@@ -35,13 +45,18 @@ class Append(Actor):
     @manage()
     def init(self, inside_base):
         self.inside_base = bool(inside_base)
+        self.calvinsys.use('calvinsys.native.python-os-path', shorthand='path')
 
     def gen_path(self, base, append):
-        base = os.path.abspath(base)
-        path = base +'/'+ append
-        path = os.path.abspath(path)
-        inside = int(self.inside_base and not (base in path))
-        return (path, inside)
+        base = self.calvinsys['path'].abspath(base)
+        path = self.calvinsys['path'].join(base, append)
+        path = self.calvinsys['path'].abspath(path)
+        invalid_path = 0
+        if self.inside_base:
+            if not path.startswith(base):
+                path = base
+                invalid_path = 1
+        return (path, invalid_path)
 
     @condition(['base', 'append'], ['path', 'error'])
     def path(self, base, append):
@@ -49,4 +64,25 @@ class Append(Actor):
         return ActionResult(production=prod)
 
     action_priority = (path, )
+    require = ['calvinsys.native.python-os-path']
 
+    def test_set_inside_base(self):
+        self.inside_base = 1
+
+    def test_clear_inside_base(self):
+        self.inside_base = 0
+
+    test_args = [0]
+
+    test_set = [
+        {'in': {'base': ["./path"], 'append': ["relpath"]},
+         'out': {'path': ["%s" % (test_helper_abspath(test_helper_join("./path", "relpath")),)], 'error': [0]}
+         }
+    ]
+
+    test_set += [
+        {'setup': [test_set_inside_base],
+         'in': {'base': ["./path"], 'append': ["relpath/../../../"]},
+         'out': {'path': ["%s" % (test_helper_abspath("./path"),)], 'error': [1]}
+         }
+    ]

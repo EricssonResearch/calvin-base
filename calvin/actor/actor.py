@@ -374,11 +374,12 @@ class Actor(object):
         pass
 
     @verify_status([STATUS.LOADED])
-    def attach_API(self, api_name, api_factory):
-        """Called during creation of actor with a callable api_factory."""
-        # FIXME: Resolve the required (calvin) APIs and attach them to the actor
-        #        See calvin_node::calvinsys
-        self.calvinsys = api_factory(self)
+    def check_requirements(self):
+        """ Checks that all requirements are available in calvinsys """
+        if hasattr(self, "requires"):
+            for req in self.requires:
+                if not self.calvinsys.has_capability(req):
+                    raise Exception("%s requires %s" % (self.id, req))
 
     def __str__(self):
         ip = ""
@@ -432,11 +433,9 @@ class Actor(object):
 
         # If we made it here, all ports are connected
         self.fsm.transition_to(Actor.STATUS.ENABLED)
-        self.calvinsys.events.timer._trigger_loop()
 
-        # # Trigger us
-        # _log.debug("Connected trigger %s" % self._type)
-        # self.calvinsys._node.sched.trigger_loop(actor_ids=[self.id] + self.local_neighbors)
+        # Actor enabled, inform scheduler
+        self.calvinsys.scheduler_wakeup()
 
     @verify_status([STATUS.ENABLED, STATUS.PENDING])
     def did_disconnect(self, port):

@@ -33,20 +33,20 @@ class Delay(Actor):
         self.setup()
 
     def setup(self):
-      pass
+        self.calvinsys.use('calvinsys.events.timer', shorthand='timer')
 
     def will_migrate(self):
-      raise Exception("std.Delay can not migrate!")
+        raise Exception("std.Delay can not migrate!")
 
     def did_migrate(self):
-      raise Exception("std.Delay can not migrate!")
+        raise Exception("std.Delay can not migrate!")
 
     @condition(['token'])
     def tokenAvailable(self, input):
-        self.timers.append({ 'token': input, 'timer': self.calvinsys.events.timer.once(self.delay)})
+        self.timers.append({'token': input, 'timer': self.calvinsys['timer'].once(self.delay)})
         return ActionResult()
 
-    @condition([],['token'])
+    @condition([], ['token'])
     @guard(lambda self: len(self.timers) > 0 and self.timers[0]['timer'].triggered)
     def timeout(self):
         o = self.timers.pop(0)
@@ -54,24 +54,24 @@ class Delay(Actor):
         return ActionResult(production=(o['token'], ))
 
     action_priority = (timeout, tokenAvailable)
+    requires = ['calvinsys.events.timer']
 
     test_args = [1]
 
     # Test that two tokens are consumed without any output
     test_set = [
-      {
-        'in': {'token': [r]},
-        'out': {'token': []}
-      } for r in range(3)
+        {
+            'in': {'token': [r]},
+            'out': {'token': []}
+        } for r in range(3)
     ]
 
     # Trigger the timers one at a time and check that the previously inserted tokens
     # are genererated in order, one at a time.
     test_set += [
-      {
-        'setup': [lambda self: self.timers[0]['timer'].trigger()],
-        'in': {'token': []},
-        'out': {'token': [r]},
-      } for r in range(3)
-   ]
-
+        {
+            'setup': [lambda self: self.timers[0]['timer'].trigger()],
+            'in': {'token': []},
+            'out': {'token': [r]},
+        } for r in range(3)
+    ]

@@ -28,7 +28,9 @@ file_data = ['this is line 1', 'this is line 2']
 
 
 def absolute_basename(base):
-    """Test helper - get absolute name of file"""
+    """Test helper - get absolute name of file
+        @TODO: Not a good way of doing this.
+    """
     import os.path
     return os.path.join(os.path.dirname(__file__), base)
 
@@ -61,12 +63,13 @@ class FileWriter(Actor):
         self.setup()
 
     def setup(self):
+        self.calvinsys.use('calvinsys.io.filehandler', shorthand='file')
         fname = new_filename(self.basename, self.counter, self.suffix)
         self.counter += 1
-        self.file = self.calvinsys.io.file.open(fname, "w")
+        self.file = self.calvinsys['file'].open(fname, "w")
 
     def exception_handler(self, action, args, exceptions):
-        self.calvinsys.io.file.close(self.file)
+        self.calvinsys['file'].close(self.file)
         self.file = None
 
         return ActionResult(production=())
@@ -85,6 +88,7 @@ class FileWriter(Actor):
         return ActionResult(production=())
 
     action_priority = (write, open)
+    requires = ['calvinsys.io.filehandler']
 
     test_args = [absolute_basename('test_file'), 'testing']
 
