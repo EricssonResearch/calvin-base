@@ -192,6 +192,20 @@ class ActorStore(Store):
         self.update()
 
 
+    def load_from_path(self, path):
+        actor_type, _  = os.path.splitext(os.path.basename(path))
+        return self.load_actor(actor_type, path)
+
+
+    def load_actor(self, actor_type, actor_path):
+        actor_class = self._load_pyclass(actor_type, actor_path)
+        if actor_class:
+            inports, outports = self._gather_ports(actor_class)
+            actor_class.inport_names = inports
+            actor_class.outport_names = outports
+        return actor_class
+
+
     def lookup(self, qualified_name):
         """
         Look up actor using qualified_name, e.g. foo.bar.Actor
@@ -207,11 +221,8 @@ class ActorStore(Store):
         for path in self.paths_for_module(namespace):
             # Primitives has precedence over components
             actor_path = os.path.join(path, actor_type + '.py')
-            actor_class = self._load_pyclass(actor_type, actor_path)
+            actor_class = self.load_actor(actor_type, actor_path)
             if actor_class:
-                inports, outports = self._gather_ports(actor_class)
-                actor_class.inport_names = inports
-                actor_class.outport_names = outports
                 return (True, True, actor_class)
         for path in self.paths_for_module(namespace):
             actor_path = os.path.join(path, actor_type + '.comp')
