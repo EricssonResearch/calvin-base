@@ -325,6 +325,13 @@ control_api_doc += \
 """
 re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
+control_api_doc += \
+"""
+    OPTIONS /url
+    Request for information about the communication options available on url
+    Response: Available communication options
+"""
+re_options = re.compile(r"OPTIONS /[0-9a-z/-]+\sHTTP/1.1")
 
 _calvincontrol = None
 
@@ -385,7 +392,8 @@ class CalvinControl(object):
             (re_post_disconnect, self.handle_disconnect),
             (re_post_index, self.handle_post_index),
             (re_delete_index, self.handle_delete_index),
-            (re_get_index, self.handle_get_index)
+            (re_get_index, self.handle_get_index),
+            (re_options, self.handle_options)
         ]
         self.server = server_connection.ServerProtocolFactory(self.handle_request, "http")
         self.server.start(self.host, self.port)
@@ -412,7 +420,7 @@ class CalvinControl(object):
                         if data:
                             data = json.loads(data)
                         _log.debug("Calvin control handles:\n%s\n---------------" % data)
-                        route[1](handle, connection, match, data)
+                        route[1](handle, connection, match, data, headers)
                         found = True
                         break
 
@@ -447,53 +455,53 @@ class CalvinControl(object):
     def storage_cb(self, key, value, handle, connection):
         self.send_response(handle, connection, json.dumps(value))
 
-    def handle_get_log(self, handle, connection, match, data):
+    def handle_get_log(self, handle, connection, match, data, hdr):
         """ Get log stream
         """
         self.log_connection = connection
         self.send_streamheader(connection)
 
-    def handle_get_node_id(self, handle, connection, match, data):
+    def handle_get_node_id(self, handle, connection, match, data, hdr):
         """ Get node id from this node
         """
         self.send_response(
             handle, connection, json.dumps({'id': self.node.id}))
 
-    def handle_peer_setup(self, handle, connection, match, data):
+    def handle_peer_setup(self, handle, connection, match, data, hdr):
         self.node.peersetup(data['peers'])
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
-    def handle_get_nodes(self, handle, connection, match, data):
+    def handle_get_nodes(self, handle, connection, match, data, hdr):
         """ Get active nodes
         """
         self.send_response(
             handle, connection, json.dumps(self.node.network.list_links()))
 
-    def handle_get_node(self, handle, connection, match, data):
+    def handle_get_node(self, handle, connection, match, data, hdr):
         """ Get node information from id
         """
         self.node.storage.get_node(match.group(1), CalvinCB(
             func=self.storage_cb, handle=handle, connection=connection))
 
-    def handle_get_applications(self, handle, connection, match, data):
+    def handle_get_applications(self, handle, connection, match, data, hdr):
         """ Get applications
         """
         self.send_response(
             handle, connection, json.dumps(self.node.app_manager.list_applications()))
 
-    def handle_get_application(self, handle, connection, match, data):
+    def handle_get_application(self, handle, connection, match, data, hdr):
         """ Get application from id
         """
         self.node.storage.get_application(match.group(1), CalvinCB(
             func=self.storage_cb, handle=handle, connection=connection))
 
-    def handle_del_application(self, handle, connection, match, data):
+    def handle_del_application(self, handle, connection, match, data, hdr):
         """ Delete application from id
         """
         self.node.app_manager.destroy(match.group(1))
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
-    def handle_new_actor(self, handle, connection, match, data):
+    def handle_new_actor(self, handle, connection, match, data, hdr):
         """ Create actor
         """
         actor_id = self.node.new(actor_type=data['actor_type'], args=data[
@@ -501,32 +509,32 @@ class CalvinControl(object):
         self.send_response(
             handle, connection, json.dumps({'actor_id': actor_id}))
 
-    def handle_get_actors(self, handle, connection, match, data):
+    def handle_get_actors(self, handle, connection, match, data, hdr):
         """ Get actor list
         """
         actors = self.node.am.list_actors()
         self.send_response(
             handle, connection, json.dumps(actors))
 
-    def handle_get_actor(self, handle, connection, match, data):
+    def handle_get_actor(self, handle, connection, match, data, hdr):
         """ Get actor from id
         """
         self.node.storage.get_actor(match.group(1), CalvinCB(
             func=self.storage_cb, handle=handle, connection=connection))
 
-    def handle_del_actor(self, handle, connection, match, data):
+    def handle_del_actor(self, handle, connection, match, data, hdr):
         """ Delete actor from id
         """
         self.node.am.destroy(match.group(1))
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
-    def handle_get_actor_report(self, handle, connection, match, data):
+    def handle_get_actor_report(self, handle, connection, match, data, hdr):
         """ Get report from actor
         """
         self.send_response(
             handle, connection, json.dumps(self.node.am.report(match.group(1))))
 
-    def handle_actor_migrate(self, handle, connection, match, data):
+    def handle_actor_migrate(self, handle, connection, match, data, hdr):
         """ Migrate actor
         """
         self.node.am.migrate(match.group(1), data['peer_node_id'],
@@ -550,17 +558,17 @@ class CalvinControl(object):
                            json.dumps({'result': kwargs['status'],
                                        'placement': kwargs['placement'] if 'placement' in kwargs else {}}))
 
-    def handle_actor_disable(self, handle, connection, match, data):
+    def handle_actor_disable(self, handle, connection, match, data, hdr):
         self.node.am.disable(match.group(1))
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
-    def handle_get_port(self, handle, connection, match, data):
+    def handle_get_port(self, handle, connection, match, data, hdr):
         """ Get port from id
         """
         self.node.storage.get_port(match.group(2), CalvinCB(
             func=self.storage_cb, handle=handle, connection=connection))
 
-    def handle_connect(self, handle, connection, match, data):
+    def handle_connect(self, handle, connection, match, data, hdr):
         """ Connect port
         """
         if "actor_id" not in data:
@@ -595,7 +603,7 @@ class CalvinControl(object):
 
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
-    def handle_set_port_property(self, handle, connection, match, data):
+    def handle_set_port_property(self, handle, connection, match, data, hdr):
         self.node.am.set_port_property(
             actor_id=data["actor_id"],
             port_type=data["port_type"],
@@ -604,7 +612,7 @@ class CalvinControl(object):
             value=data["value"])
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
-    def handle_deploy(self, handle, connection, match, data):
+    def handle_deploy(self, handle, connection, match, data, hdr):
         app_info, errors, warnings = compiler.compile(
             data["script"], filename=data["name"])
         app_info["name"] = data["name"]
@@ -614,28 +622,28 @@ class CalvinControl(object):
         self.send_response(
             handle, connection, json.dumps({'application_id': app_id, 'actor_map': d.actor_map}))
 
-    def handle_quit(self, handle, connection, match, data):
+    def handle_quit(self, handle, connection, match, data, hdr):
         self.node.stop()
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
-    def handle_disconnect(self, handle, connection, match, data):
+    def handle_disconnect(self, handle, connection, match, data, hdr):
         self.node.disconnect(
             data['actor_id'], data['port_name'], data['port_dir'], data['port_id'])
         self.send_response(handle, connection, json.dumps({'result': 'OK'}))
 
-    def handle_post_index(self, handle, connection, match, data):
+    def handle_post_index(self, handle, connection, match, data, hdr):
         """ Add to index
         """
         self.node.storage.add_index(
             match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
 
-    def handle_delete_index(self, handle, connection, match, data):
+    def handle_delete_index(self, handle, connection, match, data, hdr):
         """ Remove from index
         """
         self.node.storage.remove_index(
             match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
 
-    def handle_get_index(self, handle, connection, match, data):
+    def handle_get_index(self, handle, connection, match, data, hdr):
         """ Get from index
         """
         self.node.storage.get_index(
@@ -672,3 +680,21 @@ class CalvinControl(object):
             data['produced'] = tokens_produced
             data['consumed'] = tokens_consumed
             self.log_connection.send("data: %s\n\n" % json.dumps(data))
+
+    def handle_options(self, handle, connection, match, data, hdr):
+        """ Handle HTTP OPTIONS requests
+        """
+        response = "HTTP/1.1 200 OK\n"
+
+        """ Copy the content of Access-Control-Request-Headers to the response
+        """
+        if 'access-control-request-headers' in hdr:
+            response += "Access-Control-Allow-Headers: "+ \
+                        hdr['access-control-request-headers']+"\n"
+
+        response += "Content-Length: 0\n" \
+                    "Access-Control-Allow-Origin: *\n" \
+                    "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" \
+                    "\n\r\n"
+
+        connection.send(response)

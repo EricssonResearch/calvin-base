@@ -18,6 +18,7 @@ import os
 import SimpleHTTPServer
 import SocketServer
 import argparse
+import socket
 
 def parse_arguments():
     long_description = """
@@ -27,13 +28,23 @@ def parse_arguments():
     argparser = argparse.ArgumentParser(description=long_description)
     argparser.add_argument('-p', '--port', metavar='<port>', type=int, dest='port',
                            help='port# of tcp server', default=8000)
+    argparser.add_argument('-a', '--address', metavar='<address>', dest='address',
+                           help='address of tcp server', default="")
     return argparser.parse_args()
 
 def main():
     os.chdir(os.path.dirname(__file__))
     args = parse_arguments()
     Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-    httpd = SocketServer.TCPServer(("", args.port), Handler)
+    SocketServer.TCPServer.allow_reuse_address = True
+
+    try:
+        socket.inet_pton(socket.AF_INET6, args.address)
+        SocketServer.TCPServer.address_family = socket.AF_INET6
+    except socket.error:
+        SocketServer.TCPServer.address_family = socket.AF_INET
+
+    httpd = SocketServer.TCPServer((args.address, args.port), Handler)
     httpd.serve_forever()
 
 if __name__ == '__main__':
