@@ -25,8 +25,8 @@ class Deselect(Actor):
     range will default to 'case_false'.
 
     Inputs:
-      case_false  : Token to output 'data' if select token is 0
-      case_true   : Token to output 'data' if select token is 1
+      case_false  : Token to output 'data' if select token is 'false'
+      case_true   : Token to output 'data' if select token is 'true'
       select : Select which inport will propagate to 'data' port
     Outputs:
       data  : Token from 'case_true' or 'case_false' port
@@ -36,17 +36,17 @@ class Deselect(Actor):
         pass
 
     @condition(['select', 'case_false'], ['data'])
-    @guard(lambda self, select, data : select == 0)
+    @guard(lambda self, select, data : select == False)
     def false_action(self, select, data):
         return ActionResult(production=(data, ))
 
     @condition(['select', 'case_true'], ['data'])
-    @guard(lambda self, select, data : select == 1)
+    @guard(lambda self, select, data : select == True)
     def true_action(self, select, data):
         return ActionResult(production=(data, ))
 
     @condition(['select', 'case_false'], ['data'])
-    @guard(lambda self, select, data : select not in [0, 1])
+    @guard(lambda self, select, data : select not in [True, False])
     def invalid_select_action(self, select, data):
         # Default to false if select value is not 0 or 1
         return ActionResult(production=(data, ))
