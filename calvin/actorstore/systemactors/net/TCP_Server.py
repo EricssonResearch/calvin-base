@@ -17,7 +17,7 @@
 # encoding: utf-8
 
 from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
-from calvin.runtime.north.calvin_token import EOSToken
+# from calvin.runtime.north.calvin_token import EOSToken
 
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
@@ -47,9 +47,10 @@ class TCP_Server(Actor):
         self.delimiter           = delimiter.encode('utf-8')
         self.max_length          = max_length
         self.connections = {}
+        self.calvinsys.use("calvinsys.network.serverhandler", shorthand="server")
 
     def will_migrate(self):
-        self.calvinsys.network.tcp_server.stop()
+        self.calvinsys['server'].stop()
 
     def did_migrate(self):
         self.server = None
@@ -65,7 +66,7 @@ class TCP_Server(Actor):
     @guard(lambda self: self.host and self.port and not self.server)
     def start(self):
         try:
-            self.server = self.calvinsys.network.tcp_server.start(self.host, self.port, self.mode, self.delimiter, self.max_length)
+            self.server = self.calvinsys['server'].start(self.host, self.port, self.mode, self.delimiter, self.max_length)
         except Exception as e:
             _log.exception(e)
         return ActionResult()
@@ -105,3 +106,4 @@ class TCP_Server(Actor):
         return ActionResult()
 
     action_priority = (accept, receive, send, close, setup, start)
+    requires = ['calvinsys.network.serverhandler']

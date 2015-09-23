@@ -14,32 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition
+import os.path
+import types
 
 
-class Stringify(Actor):
-    """
-    Consume a token and stringify its value
+class OSPath(object):
 
-    Input:
-      in
-    Output:
-      out
-    """
+    _os_path = {
+        name: getattr(os.path, name)
+        for name in dir(os.path) if not name.startswith('_') and isinstance(getattr(os.path, name), types.FunctionType)
+    }
 
-    @manage()
-    def init(self):
-        pass
+    def __getattr__(self, attr):
+        if attr in self._os_path:
+            return self._os_path[attr]
+        raise AttributeError(attr)
 
-    @condition(['in'], ['out'])
-    def stringify(self, input):
-        return ActionResult(production=(str(input), ))
 
-    action_priority = (stringify, )
-
-    test_set = [
-        {
-            'in': {'in': [1, 2, 'test']},
-            'out': {'out': ['1', '2', 'test']}
-        }
-    ]
+def register(node=None, actor=None):
+    return OSPath()

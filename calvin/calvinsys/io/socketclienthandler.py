@@ -118,8 +118,8 @@ class ClientConnection(object):
             raise AttributeError
 
 
-def register(node, actor, io):
+def register(node, actor):
     """
         Called when the system object is first created.
     """
-    io.socket_client = ClientHandler(node, actor)
+    return ClientHandler(node, actor)

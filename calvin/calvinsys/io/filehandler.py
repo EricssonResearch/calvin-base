@@ -72,8 +72,8 @@ class FileHandler(object):
         fp.close()
 
 
-def register(node, actor, io):
+def register(node, actor, io=None):
     """
         Called when the system object is first created.
     """
-    io.file = FileHandler(node)
+    return FileHandler(node)

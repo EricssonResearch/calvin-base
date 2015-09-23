@@ -796,7 +796,7 @@ class TestSelect(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
-            const : std.Constant(data=1, n=-1)
+            const : std.Constant(data=true, n=-1)
             route : std.Select()
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             term  : std.Terminator()

@@ -17,31 +17,36 @@
 from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
 
 
-class Void(Actor):
+class Switch(Actor):
     """
-    Acts like a source but will never generate tokens.
+    Switch data paths depending on 'switch'
 
-    This behaviour is useful if an actor has inputs that will never be used
-    in a particular application. Because of how the runtime works, all input
-    ports must be connected before the application can run, so leaving a port
-    unconnected is not an option.
+    Switch assumes 'false' or 'true' as input to 'switch', other values are considered 'false'.
 
+    Inputs:
+      switch : Switch data paths a->b, b->a if 'true, else a->a, b->b
+      a : token
+      b : token
     Outputs:
-      void : A port that will never produce tokens
+      a : token
+      b : token
     """
-    @manage()
+    @manage([])
     def init(self):
         pass
 
-    @condition([], ['void'])
-    @guard(lambda self: False)
-    def null(self):
-        return ActionResult(production=(0, ))
+    @condition(['switch', 'a', 'b'], ['a', 'b'])
+    def action(self, switch, a, b):
+        # Default to false if select value is not true or false
+        if switch is True:
+            a, b = b, a
+        return ActionResult(production=(a, b ))
 
-    action_priority = (null, )
+    action_priority = (action,)
 
     test_set = [
         {
-            'out': {'void': []},
+            'in': {'switch': [True, False, 0, 1], 'a':[1,2,3,4], 'b':['a','b','c','d']},
+            'out': {'a':['a',2,3,4], 'b':[1,'b','c','d']},
         },
     ]

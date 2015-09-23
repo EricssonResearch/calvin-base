@@ -20,6 +20,7 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 def absolute_filename(filename):
     """Test helper - get absolute name of file"""
+    # @TODO: Could be done better
     import os.path
     return os.path.join(os.path.dirname(__file__), filename)
 
@@ -49,12 +50,13 @@ class FileReader2(Actor):
         self.status_ERR = status_ERR
         self.file_not_found = False
         self.file = None
+        self.calvinsys.use('calvinsys.io.filehandler', shorthand="file")
 
     @condition(['filename'], [])
     @guard(lambda self, filename: not self.file)
     def open_file(self, filename):
         try:
-            self.file = self.calvinsys.io.file.open(filename, "r")
+            self.file = self.calvinsys['file'].open(filename, "r")
         except:
             self.file = None
             self.file_not_found = True
@@ -75,11 +77,12 @@ class FileReader2(Actor):
     @condition([], ['out', 'ses'])
     @guard(lambda self: self.file and self.file.eof())
     def eof(self):
-        self.calvinsys.io.file.close(self.file)
+        self.calvinsys['file'].close(self.file)
         self.file = None
         return ActionResult(production=(EOSToken(), self.status_OK))
 
     action_priority = (readline, eof, open_file, file_not_found)
+    requires = ['calvinsys.io.filehandler']
 
     # Assumes file contains "A\nB\nC\nD\nE\nF\nG\nH\nI"
 

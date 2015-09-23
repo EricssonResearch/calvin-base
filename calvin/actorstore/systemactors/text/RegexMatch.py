@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
+# import re
 from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
 
 
@@ -41,9 +41,10 @@ class RegexMatch(Actor):
         self.regex = regex
         self.result = None
         self.did_match = False
+        self.calvinsys.use('calvinsys.native.python-re', shorthand='re')
 
     def perform_match(self, text):
-        m = re.match(self.regex, text)
+        m = self.calvinsys['re'].match(self.regex, text)
         self.did_match = m is not None
         self.result = m.groups()[0] if m and m.groups() else text
 
@@ -68,3 +69,15 @@ class RegexMatch(Actor):
         return ActionResult(production=(result,))
 
     action_priority = (match, output_match, output_no_match)
+    requires = ['calvinsys.native.python-re']
+
+    test_args = [".* (FLERP).* "]
+
+    test_set = [
+        {'in': {'text': ["This is a test FLERP please ignore"]},
+         'out': {'match': ['FLERP'], 'no_match':[]}
+         },
+        {'in': {'text': ["This is a test please ignore"]},
+         'out': {'match': [], 'no_match':["This is a test please ignore"]}
+         }
+    ]

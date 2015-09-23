@@ -35,3 +35,13 @@ class Constantify(Actor):
         return ActionResult(production=(self.constant, ))
 
     action_priority = (constantify, )
+
+    test_args = [42]
+
+    test_set = [
+        {
+            'in': {'in': [1, 2, 3]},
+            'out': {'out': [42, 42, 42]},
+        },
+    ]
+

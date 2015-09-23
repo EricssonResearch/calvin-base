@@ -18,52 +18,73 @@ from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
-class FileNotFoundHandler(Actor):
+class ExceptionHandler(Actor):
 
     """
-    Scan tokens for Exceptions other than EOS.
+    Scan tokens for Exceptions.
 
-    Any non-exception or EOS is simply passed on. Exceptions are replaced with EOS token.
-    The 'status' outport indicates when an exception occurs by producing 1 instead of 0.
+    Any non-exception or EOS is simply passed on. Exceptions other than EOS are replaced
+    with an EOS token on the ouput 'token' port.
+    Any exception (including EOS) are replicated on the 'status' output port.
 
     Inputs:
       token  : any token
     Outputs:
       token  : input token or EOS on exception
-      status : for each input token, indicate exception (1) or normal (0) token
+      status : any exception tokens encountered (including EOS)
     """
 
-    def exception_handler(self, action, args, exceptions):
+    def exception_handler(self, action, args, context):
+        try:
+            e = args[context['exceptions']['token'][0]]
+        except:
+            e = ExceptionToken()
+        self.status = e
         self.token = EOSToken()
-        self.status = 1
         return ActionResult()
 
     @manage([])
     def init(self):
+        self.status = None
         self.token = None
 
     @condition([], ['token', 'status'])
-    @guard(lambda self: self.token)
+    @guard(lambda self: self.token and self.status)
+    def produce_with_exception(self):
+        tok = self.token
+        status = self.status
+        self.token = None
+        self.status = None
+        return ActionResult(production=(tok, status))
+
+    @condition([], ['token'])
+    @guard(lambda self: self.token and not self.status)
     def produce(self):
         tok = self.token
         self.token = None
-        return ActionResult(production=(tok, self.status))
+        return ActionResult(production=(tok,))
 
     @condition(['token'])
+    @guard(lambda self, tok: not self.status)
     def consume(self, tok):
         self.token = tok
-        self.status = 0
+        self.status = None
         return ActionResult()
 
-    action_priority = (produce, consume)
+    action_priority = (produce_with_exception, produce, consume)
 
     test_set = [
         {  # normal token
             'in': {'token': 42},
-            'out': {'token': [42], 'status':[0]}
+            'out': {'token': [42], 'status':[]}
         },
         {  # Exception
             'in': {'token': ExceptionToken()},
-            'out': {'token': ['End of stream'], 'status':[1]}
+            'out': {'token': ['End of stream'], 'status':['Exception']}
         },
+        {  # Exception
+            'in': {'token': EOSToken()},
+            'out': {'token': ['End of stream'], 'status':['End of stream']}
+        },
+
     ]

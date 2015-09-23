@@ -62,7 +62,7 @@ setup(name='calvin',
           "Topic :: Software Development",
       ],
       extras_require={
-          'testing': ['pytest', 'mock']
+          'testing': ['pytest', 'mock', 'pyserial', 'pytest-twisted']
       },
       entry_points={
           'console_scripts': [

@@ -21,34 +21,35 @@ class Select(Actor):
     """
     Route 'data' token to 'case_true' or 'case_false' port depending on 'select'
 
-    Select assumes 0 (false) or 1 (true) as input, values outside that
+    Select assumes false or true as input, values outside that
     range will default to 'case_false'.
 
     Inputs:
       select : Select output for token on 'data' port
-      data  : Token to send to 'case_true' or 'case_false' port
+      data   : Token to send to 'case_true' or 'case_false' port
     Outputs:
-      case_false  : Token from input 'data' if select token is 0
-      case_true   : Token from input 'data' if select token is 1
+      case_false  : Token from input 'data' if select token is false
+      case_true   : Token from input 'data' if select token is true
     """
     @manage([])
     def init(self):
         pass
 
     @condition(['select', 'data'], ['case_false'])
-    @guard(lambda self, select, data: select == 0)
+    @guard(lambda self, select, data: select is not True)
     def false_action(self, select, data):
         return ActionResult(production=(data, ))
 
     @condition(['select', 'data'], ['case_true'])
-    @guard(lambda self, select, data: select == 1)
+    @guard(lambda self, select, data: select is True)
     def true_action(self, select, data):
         return ActionResult(production=(data, ))
 
-    @condition(['select', 'data'], ['case_false'])
-    @guard(lambda self, select, data: select not in [0, 1])
-    def invalid_select_action(self, select, data):
-        # Default to false if select value is not 0 or 1
-        return ActionResult(production=(data, ))
+    action_priority = (false_action, true_action)
 
-    action_priority = (false_action, true_action, invalid_select_action)
+    test_set = [
+        {
+            'in': {'select': [True, False, 0, 1], 'data':[1,2,3,4]},
+            'out': {'case_false': [2,3,4], 'case_true':[1]},
+        },
+    ]

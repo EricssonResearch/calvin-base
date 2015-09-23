@@ -14,32 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition
+import re as regexp
+import types
 
 
-class Stringify(Actor):
-    """
-    Consume a token and stringify its value
+class Re(object):
 
-    Input:
-      in
-    Output:
-      out
-    """
+    _re = {
+        name: getattr(regexp, name)
+        for name in dir(regexp) if not name.startswith('_') and isinstance(getattr(regexp, name), types.FunctionType)
+    }
 
-    @manage()
-    def init(self):
-        pass
+    def __getattr__(self, attr):
+        if attr in self._re:
+            return self._re[attr]
+        raise AttributeError(attr)
 
-    @condition(['in'], ['out'])
-    def stringify(self, input):
-        return ActionResult(production=(str(input), ))
+    def show_module(self):
+        import inspect
+        print inspect.getsource(regexp)
 
-    action_priority = (stringify, )
 
-    test_set = [
-        {
-            'in': {'in': [1, 2, 'test']},
-            'out': {'out': ['1', '2', 'test']}
-        }
-    ]
+def register(node=None, actor=None):
+    return Re()

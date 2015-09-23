@@ -38,3 +38,4 @@ class Terminator(Actor):
         return ActionResult()
 
     action_priority = (null, )
+

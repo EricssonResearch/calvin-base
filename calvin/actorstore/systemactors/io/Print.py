@@ -14,18 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import events as calvin_events
-import io as calvin_io
-import network as calvin_network
+from calvin.actor.actor import Actor, ActionResult, manage, condition
 
-class CalvinSys(object):
+class Print(Actor):
+    """
+    Print tokens to suitable device
 
-    """CalvinSys is the interface to the calvin runtime for the actor"""
+    Input:
+      token : Any token
+    """
 
-    def __init__(self, actor, node):
-        super(CalvinSys, self).__init__()
-        self._node = node
-        self.events = calvin_events.Events(actor, node)
-        self.io = calvin_io.Io(actor, node)
-        self.network = calvin_network.Network(actor, node)
-        # TODO add the storage subsystems
+    def exception_handler(self, action, args, context):
+        # Check args to verify that it is EOSToken
+        return action(self, *args)
+
+    @manage()
+    def init(self):
+        pass
+
+    @condition(action_input=['token'])
+    def action(self, token):
+        print str(token).strip()
+        return ActionResult()
+
+    action_priority = (action, )
+
