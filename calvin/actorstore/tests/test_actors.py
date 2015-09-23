@@ -211,7 +211,6 @@ class ActorTester(object):
             if not hasattr(actor, 'test_set'):
                 self.actors[actorname] = 'no_test'
                 return
-            actor.attach_API("calvinsys", lambda actorname: CalvinSys(actorname, None))
             actor.calvinsys = CalvinSysMock()
             actor.calvinsys['file'] = CalvinSysFileMock()
             actor.calvinsys['timer'] = CalvinSysTimerMock()
@@ -231,7 +230,6 @@ class ActorTester(object):
 
         self.actors[actorname] = actor
 
-
     def instantiate_actors(self):
         for a in self.actor_names:
             found, primitive, actorclass = self.store.lookup(a)
@@ -241,7 +239,6 @@ class ActorTester(object):
                 self.components[a] = "TODO: Cannot test components (%s)" % (a,)
             else:
                 self.illegal_actors[a] = "Unknown actor - probably parsing issues"
-
 
     def load_actor(self, path):
         actorclass = self.store.load_from_path(path)
@@ -370,7 +367,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description="Run actor unittests")
     group = argparser.add_mutually_exclusive_group()
     group.add_argument('--path', '-p', type=str,
-                           help='path to actor to test')
+                       help='path to actor to test')
     group.add_argument('filter', type=str, nargs='?',
                        help='test actors matching filter')
     args = argparser.parse_args()
