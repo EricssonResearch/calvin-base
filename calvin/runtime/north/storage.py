@@ -95,7 +95,7 @@ class Storage(object):
             self.started = True
             self.trigger_flush(0)
             if kwargs["org_cb"]:
-                kwargs["org_cb"](args[0])
+                async.DelayedCall(0, kwargs["org_cb"], args[0])
 
     def start(self, iface='', cb=None):
         """ Start storage
@@ -155,13 +155,14 @@ class Storage(object):
         if prefix + key in self.localstore_sets:
             del self.localstore_sets[prefix + key]
 
+        # Always save locally
+        self.localstore[prefix + key] = value
+
         if self.started:
             self.storage.set(key=prefix + key, value=value, cb=CalvinCB(func=self.set_cb, org_key=key, org_value=value, org_cb=cb))
         else:
-            if value:
-                self.localstore[prefix + key] = value
             if cb:
-                cb(key=key, value=True)
+                async.DelayedCall(0, cb, key=key, value=True)
 
     def get_cb(self, key, value, org_cb, org_key):
         """ get callback
@@ -178,13 +179,13 @@ class Storage(object):
                 value = self.localstore[prefix + key]
                 if value:
                     value = self.coder.decode(value)
-                cb(key=key, value=value)
+                async.DelayedCall(0, cb, key=key, value=value)
             else:
                 try:
                     self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
                 except:
                     _log.error("Failed to get: %s" % key)
-                    cb(key=key, value=None)
+                    async.DelayedCall(0, cb, key=key, value=False)
 
     def get_concat_cb(self, key, value, org_cb, org_key):
         """ get callback
