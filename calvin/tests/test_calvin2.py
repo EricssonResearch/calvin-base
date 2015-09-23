@@ -46,21 +46,37 @@ def setup_module(module):
 
     try:
         ip_addr = os.environ["CALVIN_TEST_IP"]
+        purpose = os.environ["CALVIN_TEST_UUID"]
+        _log.debug("Running remote tests")
     except KeyError:
+        _log.debug("Running lcoal test")
         pass
 
     if ip_addr:
         remote_node_count = 2
         kill_peers = False
         test_peers = None
-        rt1,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5001" % (ip_addr, ))
+
+        import socket
+        ports=[]
+        for a in range(2):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(('', 0))
+            addr = s.getsockname()
+            ports.append(addr[1])
+            s.close()
+
+        rt1,_ = dispatch_node("calvinip://%s:%s" % (ip_addr, ports[0]), "http://%s:%s" % (ip_addr, ports[1]))
+
+        _log.debug("First runtime started, control http://%s:%s, calvinip://%s:%s" % (ip_addr, ports[1], ip_addr, ports[0]))
 
         interval = 0.5
         for retries in range(1,20):
             time.sleep(interval)
+            _log.debug("Trying to get test nodes for 'purpose' %s" % purpose)
             test_peers = utils.get_index(rt1, format_index_string({'node_name':
                                                                     {'organization': 'com.ericsson',
-                                                                     'purpose': 'testfarm'}
+                                                                     'purpose': purpose}
                                                                   }))
             if not test_peers is None and not test_peers["result"] is None and \
                     len(test_peers["result"]) == remote_node_count:
@@ -68,7 +84,10 @@ def setup_module(module):
                 break
 
         if test_peers is None or len(test_peers) != remote_node_count:
-            pytest.exit("Not all nodes found dont run tests, peers = %s" % test_peers)
+            _log.debug("Failed to find all remote nodes within time, peers = %s" % test_peers)
+            raise Exception("Not all nodes found dont run tests, peers = %s" % test_peers)
+
+        _log.debug("All remote nodes found!")
 
         test_peer2_id = test_peers[0]
         test_peer2 = utils.get_node(rt1, test_peer2_id)
@@ -362,7 +381,7 @@ class TestAppLifeCycle(CalvinTestBase):
         import sys
         from twisted.python import log
         log.startLogging(sys.stdout)
- 
+
         app_info, errors, warnings = compiler.compile(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()

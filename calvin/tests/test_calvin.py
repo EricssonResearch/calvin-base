@@ -25,9 +25,11 @@ from calvin.utilities import utils
 from calvin.utilities.nodecontrol import dispatch_node
 from calvin.utilities.attribute_resolver import format_index_string
 import pytest
+from calvin.utilities import calvinlogger
 
+
+_log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
-
 
 def actual_tokens(rt, actor_id):
     return utils.report(rt, actor_id)
@@ -69,6 +71,7 @@ def setup_module(module):
 
     try:
         ip_addr = os.environ["CALVIN_TEST_IP"]
+        purpose = os.environ["CALVIN_TEST_UUID"]
     except KeyError:
         pass
 
@@ -76,14 +79,28 @@ def setup_module(module):
         remote_node_count = 2
         kill_peers = False
         test_peers = None
-        runtime,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5001" % (ip_addr, ))
+
+
+        import socket
+        ports=[]
+        for a in range(2):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(('', 0))
+            addr = s.getsockname()
+            ports.append(addr[1])
+            s.close()
+
+        runtime,_ = dispatch_node("calvinip://%s:%s" % (ip_addr, ports[0]), "http://%s:%s" % (ip_addr, ports[1]))
+
+        _log.debug("First runtime started, control http://%s:%s, calvinip://%s:%s" % (ip_addr, ports[1], ip_addr, ports[0]))
 
         interval = 0.5
         for retries in range(1,20):
             time.sleep(interval)
+            _log.debug("Trying to get test nodes for 'purpose' %s" % purpose)
             test_peers = utils.get_index(runtime, format_index_string({'node_name':
                                                                          {'organization': 'com.ericsson',
-                                                                          'purpose': 'testfarm'}
+                                                                          'purpose': purpose}
                                                                       }))
             if not test_peers is None and not test_peers["result"] is None and \
                     len(test_peers["result"]) == remote_node_count:
@@ -91,7 +108,8 @@ def setup_module(module):
                 break
 
         if test_peers is None or len(test_peers) != remote_node_count:
-            pytest.exit("Not all nodes found dont run tests, peers = %s" % test_peers)
+            _log.debug("Failed to find all remote nodes within time, peers = %s" % test_peers)
+            raise Exception("Not all nodes found dont run tests, peers = %s" % test_peers)
 
         test_peer2_id = test_peers[0]
         test_peer2 = utils.get_node(runtime, test_peer2_id)
