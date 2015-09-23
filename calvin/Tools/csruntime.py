@@ -65,13 +65,13 @@ Start runtime, compile calvinscript and deploy application.
                            help='JSON coded attributes for started node '
                                 'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
                                 ', see documentation',
-                           dest='attr')
+                           dest='attr', default=None)
 
     argparser.add_argument('--attr-file', metavar='<attr>', type=str,
                            help='File with JSON coded attributes for started node '
                                 'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
                                 ', see documentation',
-                           dest='attr_file')
+                           dest='attr_file', default=None)
     return argparser.parse_args()
 
 
@@ -143,6 +143,8 @@ def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
 
 
 def main():
+    import sys
+
     args = parse_arguments()
 
     if args.debug:
@@ -168,18 +170,21 @@ def main():
             attr_ = json.loads(args.attr)
         except Exception as e:
             print "Attributes not JSON:\n", e
+            return -1
 
     if args.attr_file:
         try:
             attr_ = json.load(open(args.attr_file))
         except Exception as e:
             print "Attribute file not JSON:\n", e
+            return -1
 
     if app_info:
         dispatch_and_deploy(app_info, args.wait, uri, control_uri, attr_)
     else:
         runtime(uri, control_uri, attr_, dispatch=False)
-
+    return 0
 
 if __name__ == '__main__':
-    main()
+    import sys
+    sys.exit(main())
