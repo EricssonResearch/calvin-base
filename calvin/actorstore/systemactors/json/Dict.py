@@ -24,39 +24,51 @@ class Dict(Actor):
     """
     Create a dict
 
+    Consume 'n' key/value pairs to produce a dictionary, 'n' defaults to 1.
+    If 'n' is zero or negative, consume key/value pairs until EOS encountered
+    on both input ports. If EOS is only encountered on one port, produce an execption.
+
     Inputs:
-      key:
-      value:
+      key: key must be string
+      value: can be any token
     Outputs:
-      dict:
+      dict: dictionary or Exception
     """
 
 
     @manage(['n', '_dict', 'done'])
-    def init(self, n=None):
-        assert(n>0)
-        self.n = n
+    def init(self, n=1):
+        self.n = n if n > 0 else 0
         self._dict = {}
         self.done = False
 
-    @condition(['key', 'value'], [])
-    @guard(lambda self, key, value: not self.n and not self.done)
-    def add_entry_EOS(self, item):
-        if isinstance(key, EOSToken) and isinstance(value, EOSToken):
-            self.done = True
-        elif isinstance(key, EOSToken) or isinstance(value, EOSToken):
-            raise Exception("Bad key/value pair (%s/%s)" % (key, value))
-        else:
-            self._dict[key]=value
+    def _bail(self):
+        self._dict = ExceptionToken()
+        self.done = True
+
+    def exception_handler(self, action, args, context):
+        if self.n or not ('key' in context['exceptions'] and 'value' in context['exceptions']):
+            self._bail()
+        self.done = True
         return ActionResult()
 
+    @condition(['key', 'value'], [])
+    @guard(lambda self, key, value: not self.n and not self.done)
+    def add_entry_EOS(self, key, value):
+        if type(key) is str:
+            self._dict[key]=value
+        else:
+            self._bail()
+        return ActionResult()
 
     @condition(['key', 'value'], [])
     @guard(lambda self, key, value: self.n and not self.done)
     def add_entry(self, key, value):
-        self._dict[key]=value
-        if len(self._dict) == self.n:
-            self.done = True
+        if type(key) is str:
+            self._dict[key]=value
+            self.done = bool(len(self._dict) == self.n)
+        else:
+            self._bail()
         return ActionResult()
 
     @condition([], ['dict'])
@@ -68,3 +80,33 @@ class Dict(Actor):
         return ActionResult(production=(res, ))
 
     action_priority = (produce_dict, add_entry, add_entry_EOS)
+
+
+    test_set = [
+        {
+            'in': {'key': ["a", "b"], 'value': [1, 2]},
+            'out': {'dict': [{"a":1}, {"b":2}]},
+        },
+        {
+            'setup':[lambda self: self.init(n=2)],
+            'in': {'key': ["a", "b"], 'value': [1, 2]},
+            'out': {'dict': [{"a":1, "b":2}]},
+        },
+        {
+            'setup':[lambda self: self.init(n=0)],
+            'in': {'key': ["a", "b", EOSToken()], 'value': [1, 2, EOSToken()]},
+            'out': {'dict': [{"a":1, "b":2}]},
+        },
+        # Error conditions
+        {
+            'setup':[lambda self: self.init(n=0)],
+            'in': {'key': ["a", EOSToken()], 'value': [1, 2]},
+            'out': {'dict': ['Exception']},
+        },
+        {
+            'setup':[lambda self: self.init(n=2)],
+            'in': {'key': ["a", 1, "b", "c"], 'value': [10, 20, 30, 40]},
+            'out': {'dict': ['Exception', {"b":30, "c":40}]},
+        },
+
+    ]

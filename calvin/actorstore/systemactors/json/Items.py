@@ -17,14 +17,15 @@
 # encoding: utf-8
 
 from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 from copy import copy
 
 class Items(Actor):
 
     """
-    Extract all items from a JSON list
+    Produce all items from a list as a sequence of tokens.
 
-    FIXME: Should we produce an exception token in case of invalid JSON?
+    Produce an exception token if data is not a list.
 
     Inputs:
       list:  a list
@@ -41,6 +42,13 @@ class Items(Actor):
     @condition(['list'], [])
     @guard(lambda self, data: not self.has_data)
     def consume_list(self, data):
+        if type(data) is not list:
+            self.data = [ExceptionToken()]
+            self.has_data = True
+            return ActionResult()
+        if not data:
+            # Empty list => no output
+            return ActionResult()
         try:
             self.data = copy(data)
             self.has_data = True
@@ -49,7 +57,7 @@ class Items(Actor):
         return ActionResult()
 
     @condition([], ['item'])
-    @guard(lambda self: self.has_data and len(self.data))
+    @guard(lambda self: self.has_data)
     def produce_item(self):
         res = self.data.pop(0)
         if not self.data:
@@ -59,3 +67,24 @@ class Items(Actor):
 
 
     action_priority = (produce_item, consume_list)
+
+    test_args = []
+    test_kwargs = {}
+
+    test_set = [
+        {
+            'in': {'list': [[1,2,3]]},
+            'out': {'item': [1,2,3]},
+        },
+        {
+            'in': {'list': [[], [], [1,2,3]]},
+            'out': {'item': [1,2,3]},
+        },
+
+        # Error conditions
+        {
+            'in': {'list': [1]},
+            'out': {'item': ['Exception']},
+        },
+
+    ]

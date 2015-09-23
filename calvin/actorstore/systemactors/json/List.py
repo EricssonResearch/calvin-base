@@ -22,31 +22,37 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 class List(Actor):
 
     """
-    Create a list
+    Create a list.
+
+    Consumes 'n' tokens  to produce a list, 'n' defaults to 1. If 'n' is zero or negative,
+    consumes tokens until EOS encountered (variable list length).
+    Will produce an ExceptionToken if EOS is encountered when n > 0, or if an ExceptionToken is
+    encountered regardless of value of 'n'.
 
     Inputs:
-      item: new value of item at index
+      item: items to append to list
     Outputs:
-      list: JSON string rep of list.
+      list: a list of consumed items
     """
 
+    def exception_handler(self, action, args, context):
+        exception = args[context['exceptions']['item'][0]]
+        if self.n or type(exception) is not EOSToken:
+            self._list = ExceptionToken()
+        self.done = True
+        return ActionResult()
 
     @manage(['n', '_list', 'done'])
-    def init(self, n=None):
-        assert(n>0)
-        self.n = n
+    def init(self, n=1):
+        self.n = n if n > 0 else 0
         self._list = []
         self.done = False
 
     @condition(['item'], [])
     @guard(lambda self, item: not self.n and not self.done)
     def add_item_EOS(self, item):
-        if isinstance(item, EOSToken):
-            self.done = True
-        else:
-            self._list.append(item)
+        self._list.append(item)
         return ActionResult()
-
 
     @condition(['item'], [])
     @guard(lambda self, item: self.n and not self.done)
@@ -65,3 +71,35 @@ class List(Actor):
         return ActionResult(production=(res, ))
 
     action_priority = (produce_list, add_item, add_item_EOS)
+
+    test_args = []
+    test_kwargs = {}
+
+    test_set = [
+        {
+            'in': {'item': [1, 2]},
+            'out': {'list': [[1], [2]]},
+        },
+        {
+            'setup': [lambda self: self.init(n=2)],
+            'in': {'item': [1, 2]},
+            'out': {'list': [[1, 2]]},
+        },
+        {
+            'setup': [lambda self: self.init(n=0)],
+            'in': {'item': [1, 2, EOSToken()]},
+            'out': {'list': [[1, 2]]},
+        },
+        # Error conditions
+        {
+            'setup': [lambda self: self.init(n=2)],
+            'in': {'item': [1, EOSToken(), 3, 4]},
+            'out': {'list': ['Exception', [3, 4]]},
+        },
+        {
+            'setup': [lambda self: self.init(n=0)],
+            'in': {'item': [1, ExceptionToken(), 3, EOSToken()]},
+            'out': {'list': ['Exception', [3]]},
+        },
+
+    ]
