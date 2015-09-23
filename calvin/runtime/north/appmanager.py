@@ -155,7 +155,7 @@ class AppManager(object):
         else:
             application.update_node_info(None, actor_id)
 
-        application.actors.remove(actor_id)
+        application.remove_actor(actor_id)
 
         if application.complete_node_info():
             self._destroy_final(application)
