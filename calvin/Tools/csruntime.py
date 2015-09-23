@@ -124,7 +124,7 @@ def set_loglevel(levels):
         elif level == "DEBUG":
             get_logger(module).setLevel(logging.DEBUG)
         elif level == "ANALYZE":
-            get_logger(module).setLevel(logging.ANALYZE)
+            get_logger(module).setLevel(5)
 
 
 def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
