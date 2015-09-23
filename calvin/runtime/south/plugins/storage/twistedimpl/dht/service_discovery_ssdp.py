@@ -89,6 +89,7 @@ class ServerBase(DatagramProtocol):
 
             if cmd[0] == 'M-SEARCH' and cmd[1] == '*':
 
+                _log.debug("Ignore list %s ignore %s" % (self.ignore_list, address not in self.ignore_list))
                 # Only reply to our requests
                 if SERVICE_UUID in headers['st'] and address not in self.ignore_list:
 
@@ -100,7 +101,7 @@ class ServerBase(DatagramProtocol):
 
                             response = MS_RESP % ('%s:%d' % addr, str(time.time()),
                                                   k, datetimeToString())
-                            _log.debug("Response: %s" % repr(response))
+                            _log.debug("Sending response: %s" % repr(response))
                             delay = random.randint(0, min(5, int(headers['mx'])))
                             reactor.callLater(delay, self.send_it,
                                                   response, address)
@@ -112,8 +113,10 @@ class ServerBase(DatagramProtocol):
         if ip in ["0.0.0.0", ""]:
             self._services[service] = []
             for a in self.ips:
+                _log.debug("Add service %s, %s:%s" % (service, a, port))
                 self._services[service].append((a, port))
         else:
+            _log.debug("Add service %s, %s:%s" % (service, ip, port))
             self._services[service] = [(ip, port)]
 
     def remove_service(self, service):
@@ -259,10 +262,9 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
 
     def _send_msearch(self, once=True):
         if self.port:
-            _log.debug("Sending M-SEARCH...")
-
             for src_ip in self.iface_send_list:
                 self.port.protocol.transport.setOutgoingInterface(src_ip)
+                _log.debug("Sending  M-SEARCH... on %s", src_ip)
                 self.port.write(MS, (SSDP_ADDR, SSDP_PORT))
 
             if not once and not self.port.protocol.is_stopped():
