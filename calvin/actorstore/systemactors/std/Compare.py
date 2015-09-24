@@ -33,7 +33,7 @@ class Compare(Actor):
       a : a token
       b : a token
     Outputs:
-      result : 1 or 0 (true or false) according to result of 'a' OP 'b'
+      result : true or false according to result of 'a' OP 'b'
     """
     @manage(['op'])
     def init(self, op):
@@ -51,15 +51,12 @@ class Compare(Actor):
             self.op = None
 
     @condition(['a', 'b'], ['result'])
-    @guard(lambda self, a, b: self.op is not None)
     def test(self, a, b):
-        return ActionResult(production=(1 if self.op(a, b) else 0, ))
+        res = bool(self.op(a, b)) if self.op else False
+        return ActionResult(production=(res, ))
 
-    @condition(['a', 'b'], ['result'])
-    def fail(self, a, b):
-        return ActionResult(production=(0, ))
 
-    action_priority = (test, fail)
+    action_priority = ( test, )
 
     test_args = ['=']
 
@@ -67,12 +64,12 @@ class Compare(Actor):
         {
             'setup': [lambda self: self.init('=')],
             'in': {'a': [1, 1, 0, 0], 'b':[1, 0, 1, 0]},
-            'out': {'result': [1, 0, 0, 1]},
+            'out': {'result': [True, False, False, True]},
         },
         {
             'setup': [lambda self: self.init('!=')],
             'in': {'a': [1, 1, 0, 0], 'b':[1, 0, 1, 0]},
-            'out': {'result': [0, 1, 1, 0]},
+            'out': {'result': [False, True, True, False]},
         },
 
     ]
