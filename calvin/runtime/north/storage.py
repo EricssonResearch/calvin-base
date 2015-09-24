@@ -184,7 +184,7 @@ class Storage(object):
                     self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
                 except:
                     _log.error("Failed to get: %s" % key)
-                    cb(key=key, value=False)
+                    cb(key=key, value=None)
 
     def get_concat_cb(self, key, value, org_cb, org_key):
         """ get callback
@@ -210,7 +210,7 @@ class Storage(object):
                     self.storage.get_concat(key=prefix + key, cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key))
                 except:
                     _log.error("Failed to get: %s" % key)
-                    cb(key=key, value=False)
+                    cb(key=key, value=None)
 
     def append_cb(self, key, value, org_key, org_value, org_cb):
         """ append callback, on error retry after flush_timeout
