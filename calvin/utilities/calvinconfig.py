@@ -101,6 +101,14 @@ class CalvinConfig(object):
         """Add a named section"""
         self.config.setdefault(section.lower(), {})
 
+    def get_in_order(self, option, default=None):
+        v = self.get('ARGUMENTS', option)
+        if v is None:
+            v = self.get('GLOBAL', option)
+        if v is None:
+            v = default
+        return v
+
     def get(self, section, option):
         """Get value of option in named section, if section is None 'global' section is implied."""
         try:
@@ -228,7 +236,7 @@ class CalvinConfig(object):
         wildcards = [e for e in os.environ if e.startswith('CALVIN_') and e != 'CALVIN_CONFIG_PATH']
         for wildcard in wildcards:
             parts = wildcard.split('_', 2)
-            if len(parts) < 3 or parts[1] not in ['GLOBAL', 'TESTING', 'DEVELOPER']:
+            if len(parts) < 3 or parts[1] not in ['GLOBAL', 'TESTING', 'DEVELOPER', 'ARGUMENTS']:
                 _log.info("Malformed evironment variable {}, skipping.".format(wildcard))
                 continue
             section, option = parts[1:3]
@@ -237,7 +245,7 @@ class CalvinConfig(object):
                 self.set(section, option, json.loads(value))
                 self.wildcards.append(wildcard)
             except Exception as e:
-                _log.info("Value of evironment variable {} is malformed, skipping.".format(wildcard))
+                _log.warning("Value {} of evironment variable {} is malformed, skipping.".format(repr(value), wildcard))
 
     def __str__(self):
         d = {}
