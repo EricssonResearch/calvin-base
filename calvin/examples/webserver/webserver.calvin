@@ -119,7 +119,7 @@ component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
 
   const_base : std.Constantify(constant=base_path)
   status : std.Deselect()
-  abs_path : path.Append(inside_base=1)
+  abs_path : path.Append(inside_base=true)
 
   .rel_path > const_base.in
   const_base.out > abs_path.base
@@ -127,8 +127,8 @@ component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
   # Partially successful path
   abs_path.path > .abs_path
   # Update status based on error
-  # 0 => OK
-  # 1 => FILE NOT FOUND
+  # false => OK
+  # true => FILE NOT FOUND
   abs_path.error > status.select
   OK > status.case_false
   NOT_FOUND > status.case_true
