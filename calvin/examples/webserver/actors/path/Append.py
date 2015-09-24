@@ -31,7 +31,7 @@ def test_helper_abspath(path):
 class Append(Actor):
     """Append 'append' to 'base'.
 
-    If inside_base is non-zero, generate an error status if
+    If inside_base is true, generate an error status if
     resulting path is not inside 'base' directory.
 
     Inputs:
@@ -39,7 +39,7 @@ class Append(Actor):
       append : Relative path
     Outputs:
       path : Absolute path formed from 'base' + 'append', or 'base' on error
-      error : 1 if checking enabled and not inside 'base' (error), 0 otherwise
+      error : True if checking enabled and not inside 'base' (error), false otherwise
     """
 
     @manage()
@@ -57,11 +57,11 @@ class Append(Actor):
             # joine
             path = self.calvinsys['path'].join(base, append)
         path = self.calvinsys['path'].abspath(path)
-        invalid_path = 0
+        invalid_path = False
         if self.inside_base:
             if not path.startswith(base):
                 path = base
-                invalid_path = 1
+                invalid_path = True
         return (path, invalid_path)
 
     @condition(['base', 'append'], ['path', 'error'])
