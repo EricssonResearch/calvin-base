@@ -142,8 +142,8 @@ class AppManager(object):
                 _log.debug("Destroy app peers actor %s" % actor_id)
                 self.storage.get_actor(actor_id, CalvinCB(func=self._destroy_actor_cb, application=application))
 
-        if not application.actors:
-            # Actors list already empty, all actors were local
+        if not application.actors or application.complete_node_info():
+            # Actors list already empty, all actors were local or the storage was calling the cb in-loop
             _log.debug("Destroy app all actors local")
             self._destroy_final(application)
 
@@ -154,8 +154,6 @@ class AppManager(object):
             application.update_node_info(value['node_id'], actor_id)
         else:
             application.update_node_info(None, actor_id)
-
-        application.remove_actor(actor_id)
 
         if application.complete_node_info():
             self._destroy_final(application)
