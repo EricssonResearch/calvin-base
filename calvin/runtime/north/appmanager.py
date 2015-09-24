@@ -117,43 +117,50 @@ class AppManager(object):
     def destroy(self, application_id):
         """ Destroy an application and its actors """
         # FIXME should take callback and wait for finalization of app destruction
-        _log.debug("Destroy %s" % application_id)
+        _log.analyze(self._node.id, "+", {'application_id': application_id})
         if application_id in self.applications:
             self._destroy(self.applications[application_id])
         else:
             self.storage.get_application(application_id, CalvinCB(self._destroy_app_info_cb))
 
     def _destroy_app_info_cb(self, application_id, value):
-        _log.debug("Destroy app info %s: %s" % application_id, value)
+        _log.analyze(self._node.id, "+", {'application_id': application_id, 'value': value})
         if value:
             self._destroy(Application(application_id, value['name'], value['actors'], value['origin_node_id']))
 
     def _destroy(self, application):
-        _log.debug("Destroy app w actors: %s" % application.actors)
+        _log.analyze(self._node.id, "+", {'actors': application.actors})
         application.clear_node_info()
         # Loop over copy of app's actors, since modified inside loop
         for actor_id in application.actors.keys()[:]:
             if actor_id in self._node.am.list_actors():
-                _log.debug("Destroy app local actor %s" % actor_id)
+                _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id})
                 # TODO: Check if it whent ok
                 self._node.am.destroy(actor_id)
                 application.remove_actor(actor_id)
             else:
-                _log.debug("Destroy app peers actor %s" % actor_id)
+                _log.analyze(self._node.id, "+ REMOTE ACTOR", {'actor_id': actor_id})
                 self.storage.get_actor(actor_id, CalvinCB(func=self._destroy_actor_cb, application=application))
 
         if not application.actors or application.complete_node_info():
             # Actors list already empty, all actors were local or the storage was calling the cb in-loop
-            _log.debug("Destroy app all actors local")
+            _log.analyze(self._node.id, "+ DONE", {})
             self._destroy_final(application)
 
-    def _destroy_actor_cb(self, actor_id, value, application):
+    def _destroy_actor_cb(self, actor_id, value, application, retries=0):
         """ Get actor callback """
-        _log.debug("Destroy app peers actor cb %s value %s" % (actor_id, value))
+        _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'value': value, 'retries': retries})
         if value and 'node_id' in value:
             application.update_node_info(value['node_id'], actor_id)
         else:
-            application.update_node_info(None, actor_id)
+            if retries<10:
+                # FIXME add backoff time
+                _log.analyze(self._node.id, "+ RETRY", {'actor_id': actor_id, 'value': value, 'retries': retries})
+                self.storage.get_actor(actor_id, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries+1)))
+            else:
+                # FIXME report failure
+                _log.analyze(self._node.id, "+ GIVE UP", {'actor_id': actor_id, 'value': value, 'retries': retries})
+                application.update_node_info(None, actor_id)
 
         if application.complete_node_info():
             self._destroy_final(application)
@@ -163,10 +170,12 @@ class AppManager(object):
 
         def _callback(*args, **kwargs):
             _log.debug("Destroyed actor params (%s, %s)" % (args, kwargs))
+            _log.analyze(self._node.id, "+ CALLBACK DESTROYED ACTOR", {'args': args, 'kwargs': kwargs})
 
-        _log.debug("Destroy final \n%s\n%s" % (application.node_info, application.origin_node_id))
+        _log.analyze(self._node.id, "+", {'node_info': application.node_info, 'origin_node_id': application.origin_node_id})
         for node_id, actor_ids in application.node_info.iteritems():
             if not node_id:
+                _log.analyze(self._node.id, "+ UNKNOWN NODE", {})
                 continue
             # Inform peers to destroy their part of the application
             # FIXME interested in response, use a callback
@@ -176,6 +185,7 @@ class AppManager(object):
             del self.applications[application.id]
         elif application.origin_node_id not in application.node_info:
             # All actors migrated from the original node, inform it also
+            _log.analyze(self._node.id, "+ SEP APP NODE", {})
             self._node.proto.app_destroy(application.origin_node_id, None, application.id, [])
 
         self.storage.delete_application(application.id)
@@ -183,6 +193,7 @@ class AppManager(object):
     def destroy_request(self, application_id, actor_ids):
         """ Request from peer of local application parts destruction and related actors """
         _log.debug("Destroy request, app: %s, actors: %s" % (application_id, actor_ids))
+        _log.analyze(self._node.id, "+", {'application_id': application_id, 'actor_ids': actor_ids})
         reply = "ACK"
         for actor_id in actor_ids:
             if actor_id in self._node.am.list_actors():
@@ -192,11 +203,11 @@ class AppManager(object):
         if application_id in self.applications:
             del self.applications[application_id]
         _log.debug("Destroy request reply %s" % reply)
+        _log.analyze(self._node.id, "+ RESPONSE", {'reply': reply})
         return reply
 
     def list_applications(self):
         """ Returns list of applications """
-        print self.applications.keys()
         return list(self.applications.keys())
 
 
