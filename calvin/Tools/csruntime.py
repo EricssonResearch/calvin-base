@@ -24,7 +24,9 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import utils
 from calvin.utilities.nodecontrol import dispatch_node, start_node
 import logging
+from calvin.utilities import calvinconfig
 
+_conf = calvinconfig.get()
 _log = get_logger(__name__)
 
 
@@ -72,6 +74,11 @@ Start runtime, compile calvinscript and deploy application.
                                 'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
                                 ', see documentation',
                            dest='attr_file', default=None)
+
+    argparser.add_argument('--dht-network-filter', type=str,
+                           help='Any string for filtering your dht clients, use same for all nodes in the network.',
+                           default=None)
+
     return argparser.parse_args()
 
 
@@ -141,6 +148,12 @@ def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
     else:
         process.join()
 
+def set_config_from_args(args):
+        _conf.add_section("ARGUMENTS")
+        for arg in vars(args):
+            if getattr(args, arg) is not None:
+                _log.debug("Adding ARGUMENTS to config {}={}".format(arg, getattr(args, arg)))
+                _conf.set("ARGUMENTS", arg, getattr(args, arg))
 
 def main():
     import sys
@@ -152,6 +165,8 @@ def main():
         pdb.set_trace()
 
     set_loglevel(args.loglevel)
+
+    set_config_from_args(args)
 
     app_info = None
 
