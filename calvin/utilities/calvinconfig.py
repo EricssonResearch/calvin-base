@@ -83,6 +83,7 @@ class CalvinConfig(object):
                 'actor_paths': ['systemactors', 'devactors'],
                 'framework': 'twistedimpl',
                 'storage_proxy': None,
+                'storage_start': True,
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json'
             },

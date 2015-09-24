@@ -41,7 +41,8 @@ class Storage(object):
         proxy = _conf.get(None, 'storage_proxy')
         _log.analyze(self.node.id, "+", {'proxy': proxy})
         self.tunnel = {}
-        self.storage = storage_factory.get("proxy" if proxy else "dht", node)
+        starting = _conf.get(None, 'storage_start')
+        self.storage = storage_factory.get("proxy" if proxy else "dht", node) if starting else None
         self.coder = message_coder_factory.get("json")  # TODO: always json? append/remove requires json at the moment
         self.flush_delayedcall = None
         self.reset_flush_timeout()
@@ -100,7 +101,9 @@ class Storage(object):
         """ Start storage
         """
         _log.analyze(self.node.id, "+", None)
-        self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb))
+        starting = _conf.get(None, 'storage_start')
+        if starting:
+            self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb))
         proxy = _conf.get(None, 'storage_proxy')
         if not proxy:
             _log.analyze(self.node.id, "+ SERVER", None)
