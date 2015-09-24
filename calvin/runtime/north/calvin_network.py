@@ -179,8 +179,8 @@ class CalvinNetwork(object):
                                                        else [None]*len(uris)):
             if not (uri in self.pending_joins or peer_id in self.pending_joins_by_id or peer_id in self.links):
                 # No simultaneous join detected
-                _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
                 schema = uri.split(":",1)[0]
+                _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id, 'schema': schema, 'transports': self.transports.keys()}, peer_node_id=peer_id)
                 if schema in self.transports.keys():
                     # store we have a pending join and its callback
                     if peer_id:
@@ -188,6 +188,7 @@ class CalvinNetwork(object):
                     if callback:
                         self.pending_joins[uri] = [callback]
                     # Ask the transport plugin to do the join
+                    _log.analyze(self.node.id, "+ TRANSPORT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
                     self.transports[schema].join(uri)
             else:
                 # We have simultaneous joins
@@ -223,7 +224,7 @@ class CalvinNetwork(object):
                 cbs = self.pending_joins.pop(uri)
                 if cbs:
                     for cb in cbs:
-                        cb(status="NACK", uri=uri)
+                        cb(status="NACK", uri=uri, peer_node_id=peer_id)
             return
         # Only support for one RT to RT communication link per peer 
         if peer_id in self.links:
@@ -260,13 +261,13 @@ class CalvinNetwork(object):
                 cbs = self.pending_joins.pop(peer_uri)
                 if cbs:
                     for cb in cbs:
-                        cb(status="ACK", uri=peer_uri)
+                        cb(status="ACK", uri=peer_uri, peer_node_id=peer_id)
 
         if uri in self.pending_joins:
             cbs = self.pending_joins.pop(uri)
             if cbs:
                 for cb in cbs:
-                    cb(status="ACK", uri=uri)
+                    cb(status="ACK", uri=uri, peer_node_id=peer_id)
 
         return
 

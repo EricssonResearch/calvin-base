@@ -20,10 +20,11 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.actor import actorport
+from calvin.utilities import calvinconfig
 import re
 
 _log = calvinlogger.get_logger(__name__)
-
+_conf = calvinconfig.get()
 
 class Storage(object):
 
@@ -32,11 +33,16 @@ class Storage(object):
     All functions in this class should be async and never block.
     """
 
-    def __init__(self):
+    def __init__(self, node):
         self.localstore = {}
         self.localstore_sets = {}
         self.started = False
-        self.storage = storage_factory.get("dht") # TODO: read storage type from config?
+        self.node = node
+        proxy = _conf.get(None, 'storage_proxy')
+        _log.analyze(self.node.id, "+", {'proxy': proxy})
+        self.tunnel = {}
+        starting = _conf.get(None, 'storage_start')
+        self.storage = storage_factory.get("proxy" if proxy else "dht", node) if starting else None
         self.coder = message_coder_factory.get("json")  # TODO: always json? append/remove requires json at the moment
         self.flush_delayedcall = None
         self.reset_flush_timeout()
@@ -94,7 +100,22 @@ class Storage(object):
     def start(self, iface='', cb=None):
         """ Start storage
         """
-        self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb))
+        _log.analyze(self.node.id, "+", None)
+        starting = _conf.get(None, 'storage_start')
+        if starting:
+            self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb))
+        proxy = _conf.get(None, 'storage_proxy')
+        if not proxy:
+            _log.analyze(self.node.id, "+ SERVER", None)
+            # We are not proxy client, so we can be proxy bridge/master
+            self._proxy_cmds = {'GET': self.get,
+                                'SET': self.set,
+                                'GET_CONCAT': self.get_concat,
+                                'APPEND': self.append,
+                                'REMOVE': self.remove,
+                                'DELETE': self.delete,
+                                'REPLY': self._proxy_reply}
+            self.node.proto.register_tunnel_handler('storage', CalvinCB(self.tunnel_request_handles))
 
     def stop(self, cb=None):
         """ Stop storage
@@ -163,7 +184,7 @@ class Storage(object):
                     self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
                 except:
                     _log.error("Failed to get: %s" % key)
-                    cb(key=key, value=False)
+                    cb(key=key, value=None)
 
     def get_concat_cb(self, key, value, org_cb, org_key):
         """ get callback
@@ -189,7 +210,7 @@ class Storage(object):
                     self.storage.get_concat(key=prefix + key, cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key))
                 except:
                     _log.error("Failed to get: %s" % key)
-                    cb(key=key, value=False)
+                    cb(key=key, value=None)
 
     def append_cb(self, key, value, org_key, org_value, org_cb):
         """ append callback, on error retry after flush_timeout
@@ -567,3 +588,60 @@ class Storage(object):
         _log.debug("get index %s" % (index))
         self.get_concat(prefix="index-", key=index, cb=cb)
 
+    ### Storage proxy server ###
+    
+    def tunnel_request_handles(self, tunnel):
+        """ Incoming tunnel request for storage proxy server"""
+        # TODO check if we want a tunnel first
+        _log.analyze(self.node.id, "+ SERVER", {'tunnel_id': tunnel.id})
+        self.tunnel[tunnel.peer_node_id] = tunnel
+        tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
+        tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
+        tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
+        # We accept it by returning True
+        return True
+
+    def tunnel_down(self, tunnel):
+        """ Callback that the tunnel is not accepted or is going down """
+        _log.analyze(self.node.id, "+ SERVER", {'tunnel_id': tunnel.id})
+        # We should always return True which sends an ACK on the destruction of the tunnel
+        return True
+
+    def tunnel_up(self, tunnel):
+        """ Callback that the tunnel is working """
+        _log.analyze(self.node.id, "+ SERVER", {'tunnel_id': tunnel.id})
+        # We should always return True which sends an ACK on the destruction of the tunnel
+        return True
+
+    def _proxy_reply(self, cb, *args, **kwargs):
+        # Should not get any replies to the server but log it just in case
+        _log.analyze(self.node.id, "+ SERVER", {args: args, 'kwargs': kwargs})
+
+    def tunnel_recv_handler(self, tunnel, payload):
+        """ Gets called when a storage client request"""
+        _log.info("Storage proxy request %s" % payload)
+        _log.analyze(self.node.id, "+ SERVER", {'payload': payload})
+        if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
+            if 'value' in payload:
+                if payload['cmd'] == 'SET' and payload['value'] is None:
+                    # We detected a delete operation, since a set op with unencoded None is a delete
+                    payload['cmd'] = 'DELETE'
+                    payload.pop('value')
+                else:
+                    # Normal set op, but it will be encoded again in the set func when external storage, hence decode
+                    payload['value']=self.coder.decode(payload['value'])
+            # Call this nodes storage methods, which could be local or DHT, 
+            # prefix is empty since that is already in the key (due to these calls come from the storage plugin level).
+            # If we are doing a get or get_concat then the result needs to be encoded, to correspond with what the
+            # client's higher level expect from storage plugin level.
+            self._proxy_cmds[payload['cmd']](cb=CalvinCB(self._proxy_send_reply, tunnel=tunnel, 
+                                                        encode=True if payload['cmd'] in ('GET', 'GET_CONCAT') else False,
+                                                        msgid=payload['msg_uuid']),
+                                             prefix="", 
+                                             **{k: v for k, v in payload.iteritems() if k in ('key', 'value')})
+        else:
+            _log.error("Unknown storage proxy request %s" % payload['cmd'] if 'cmd' in payload else "")
+
+    def _proxy_send_reply(self, key, value, tunnel, encode, msgid):
+        _log.analyze(self.node.id, "+ SERVER", {'msgid': msgid, 'key': key, 'value': value})
+        tunnel.send({'cmd': 'REPLY', 'msg_uuid': msgid, 'key': key, 'value': self.coder.encode(value) if encode else value})

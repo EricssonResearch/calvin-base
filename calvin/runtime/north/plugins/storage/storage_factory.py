@@ -17,9 +17,12 @@
 
 # Parsers
 from calvin.runtime.south.plugins.storage import dht
+from calvin.runtime.north.plugins.storage.proxy import StorageProxy
 
-def get(type_):
+def get(type_, node=None):
     if type_ == "dht":
         return dht.AutoDHTServer()
+    elif type_ == "proxy":
+        return StorageProxy(node)
 
     raise Exception("Parser {} requested is not supported".format(type_))

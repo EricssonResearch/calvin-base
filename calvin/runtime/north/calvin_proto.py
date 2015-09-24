@@ -158,11 +158,6 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_NEW': [CalvinCB(self.tunnel_new_handler)],
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
-            'STORE_GET': [CalvinCB(self.not_impl_handler)],
-            'STORE_PUT': [CalvinCB(self.not_impl_handler)],
-            'STORE_SET_APPEND': [CalvinCB(self.not_impl_handler)],
-            'STORE_SET_REMOVE': [CalvinCB(self.not_impl_handler)],
-            'STORE_DELETE': [CalvinCB(self.not_impl_handler)],
             'REPLY': [CalvinCB(self.reply_handler)]})
 
         self.rt_id = node.id
@@ -221,7 +216,7 @@ class CalvinProto(CalvinCBClass):
             # Already have link just continue in _actor_new
                 self._actor_new(to_rt_uuid, callback, actor_type, state, prev_connections)
 
-    def _actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections, status='ACK', uri=None):
+    def _actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections, peer_node_id=None, status='ACK', uri=None):
         """ Got link? continue actor new """
         if status=='ACK':
             msg = {'cmd': 'ACTOR_NEW',
@@ -261,7 +256,7 @@ class CalvinProto(CalvinCBClass):
                                                         callback=callback,
                                                         app_id=app_id,
                                                         actor_ids=actor_ids))
-    def _app_destroy(self, to_rt_uuid, callback, app_id, actor_ids, status='ACK', uri=None):
+    def _app_destroy(self, to_rt_uuid, callback, app_id, actor_ids, peer_node_id=None, status='ACK', uri=None):
         """ Got link? continue app destruction """
         if status=='ACK':
             msg = {'cmd': 'APP_DESTROY', 'app_uuid': app_id, 'actor_uuids': actor_ids}
@@ -323,7 +318,7 @@ class CalvinProto(CalvinCBClass):
         msg = {'cmd': 'TUNNEL_NEW', 'type': tunnel_type, 'tunnel_id': tunnel.id, 'policy': policy}
         self.network.links[to_rt_uuid].send_with_reply(CalvinCB(tunnel._setup_ack), msg)
 
-    def _tunnel_link_request_finished(self, status, tunnel, to_rt_uuid, tunnel_type, policy, uri=None):
+    def _tunnel_link_request_finished(self, status, tunnel, to_rt_uuid, tunnel_type, policy, peer_node_id=None, uri=None):
         """ Got a link, now continue with tunnel setup """
         _log.analyze(self.rt_id, "+" , {'status': status.__str__()}, peer_node_id=to_rt_uuid)
         try:

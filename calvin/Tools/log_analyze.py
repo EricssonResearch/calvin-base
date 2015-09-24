@@ -29,6 +29,9 @@ Analyze calvin log.
     argparser.add_argument('file', metavar='<filename>', type=str, nargs='?',
                            help='source file to compile')
 
+    argparser.add_argument('-i', '--interleaved', dest='interleave', action='store_true',
+                           help='The none analyze log messages are printed interleaved')
+
     return argparser.parse_args()
 
 def main():
@@ -42,6 +45,8 @@ def main():
 
     for line in file:
         if line.find('[[ANALYZE]]')==-1:
+            if args.interleave:
+                log.append({'func': 'OTHER', 'param': line, 'node_id': None})
             continue
         logline = json.loads(line.split('[[ANALYZE]]',1)[1])
         #pprint.pprint(logline)
@@ -56,6 +61,9 @@ def main():
     for l in log:
         if l['node_id'] == "TESTRUN":
             print l['func'] + "%"*(len(nodes)*WIDTH-len(l['func']))
+            continue
+        if l['func'] == "OTHER" and l['node_id'] is None:
+            print l['param'].rstrip()
             continue
 
         ind = nodes.index(l['node_id'])*WIDTH
