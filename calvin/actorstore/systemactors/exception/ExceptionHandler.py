@@ -24,14 +24,15 @@ class ExceptionHandler(Actor):
     Scan tokens for Exceptions.
 
     Any non-exception or EOS is simply passed on. Exceptions other than EOS are replaced
-    with an EOS token on the ouput 'token' port.
-    Any exception (including EOS) are replicated on the 'status' output port.
+    with an EOS token on the ouput 'token' port unless optional 'replace' argument is true,
+    in which case 'replacement' argument (defaults to null) is produced.
+    Any exception (including EOS) are produces its reason on the 'status' output port.
 
     Inputs:
       token  : any token
     Outputs:
-      token  : input token or EOS on exception
-      status : any exception tokens encountered (including EOS)
+      token  : input token or EOS/replacement on exception
+      status : reason for any exception tokens encountered (including EOS)
     """
 
     def exception_handler(self, action, args, context):
@@ -43,19 +44,21 @@ class ExceptionHandler(Actor):
         self.token = EOSToken()
         return ActionResult()
 
-    @manage([])
-    def init(self):
+    @manage(['status', 'token', 'replace', 'replacement'])
+    def init(self, replace=False, replacement=None):
+        self.replace = replace
+        self.replacement = replacement
         self.status = None
         self.token = None
 
     @condition([], ['token', 'status'])
     @guard(lambda self: self.token and self.status)
     def produce_with_exception(self):
-        tok = self.token
+        tok = self.replacement if self.replace else self.token
         status = self.status
         self.token = None
         self.status = None
-        return ActionResult(production=(tok, status))
+        return ActionResult(production=(tok, status.value))
 
     @condition([], ['token'])
     @guard(lambda self: self.token and not self.status)
@@ -86,5 +89,19 @@ class ExceptionHandler(Actor):
             'in': {'token': EOSToken()},
             'out': {'token': ['End of stream'], 'status':['End of stream']}
         },
-
+        {  # Exception with replace (default)
+            'setup': [lambda self: self.init(replace=True)],
+            'in': {'token': EOSToken()},
+            'out': {'token': [None], 'status':['End of stream']}
+        },
+        {  # Exception with replace
+            'setup': [lambda self: self.init(replace=True, replacement={})],
+            'in': {'token': EOSToken()},
+            'out': {'token': [{}], 'status':['End of stream']}
+        },
+        {  # Exception with replace
+            'setup': [lambda self: self.init(replace=True, replacement={})],
+            'in': {'token': ExceptionToken()},
+            'out': {'token': [{}], 'status':['Exception']}
+        },
     ]
