@@ -47,7 +47,7 @@ class GetValue(Actor):
     def _type_mismatch(self, container, key):
         t_cont = type(container)
         t_key = type(key)
-        return (t_cont is list and t_key is not int) or (t_cont is dict and t_key is not str)
+        return (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
 
     @condition(['container', 'key'], ['value'])
     def get_value(self, data, key):
