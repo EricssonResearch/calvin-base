@@ -1,0 +1,123 @@
+define URL = "https://api.github.com/repos/EricssonResearch/calvin-base/commits"
+define DELAY = 60
+define NO_CHANGE = 304
+
+component LatestCommitDate() body -> date {
+  """
+  Extract the latest commit date from github server response body.
+
+  The body may be empty [] on 304 responses
+
+  Inputs:
+    body : github server response body
+  Outputs:
+    date : date of most recent commit
+  """
+
+  getdate  : json.GetValue()
+  compare  : std.Compare(op="!=")
+  sampler  : std.SampleHold(default="")
+  exc_handler : exception.ExceptionHandler(replace=true, replacement="")
+  term : std.Terminator()
+
+  .body > getdate.container
+  # What we get is a list of commits, each with nested dicts.
+  # Pick the first commit and drill down to its date
+  [0, "commit", "author", "date"] > getdate.key
+  getdate.value > exc_handler.token
+  exc_handler.token > compare.a
+  exc_handler.status > term.void
+  "" > compare.b
+  compare.result > sampler.sample
+  exc_handler.token > sampler.in
+  sampler.out > .date
+}
+
+component ExtractETag() header -> tag {
+  """
+  Retrieve the latest ETag from github server response header.
+
+  Inputs:
+    header : github response header
+  Outputs:
+    tag : header 'ETag' value
+  """
+
+  gettag : json.GetValue()
+
+  .header > gettag.container
+  "etag" > gettag.key
+  gettag.value > .tag
+}
+
+component ExtractCommit() dict -> commit_info {
+  """
+  Produce nicely a formatted string from a commit.
+
+  Extracts date, committer, and commit message from a github commit.
+
+  Inputs:
+    dict : a github commit
+  Outputs:
+    commit_info : formatted string
+  """
+
+  get_commit : json.GetValue()
+  fmt: text.Format(fmt="{author.date} {author.name} '{message}'")
+
+  .dict > get_commit.container
+  "commit" > get_commit.key
+  get_commit.value > fmt.dict
+  fmt.text > .commit_info
+}
+
+request : http.Request()
+commit_date : LatestCommitDate()
+etag : ExtractETag()
+
+init_url : std.Init(data=URL)
+init_params : std.Init(data={"sha":"develop", "per_page":1})
+init_header : std.Init(data={})
+
+commitlist : json.Items()
+extract : ExtractCommit()
+
+params : json.SetValue()
+header : json.Dict(n=1)
+delay : std.Delay(delay=DELAY)
+printout : io.Print()
+cmp : std.Compare(op="=")
+route : std.Switch()
+drop : std.Terminator()
+
+
+URL > delay.token
+delay.token > init_url.in
+
+init_url.out > request.URL
+init_params.out > request.params
+init_header.out > request.header
+
+request.data > commit_date.body
+request.header > etag.header
+
+request.data > commitlist.list
+commitlist.item > extract.dict
+extract.commit_info > printout.token
+
+{"sha":"develop"} > params.container
+commit_date.date > params.value
+"since" > params.key
+
+etag.tag > header.value
+"If-None-Match" > header.key
+
+request.status > cmp.a
+NO_CHANGE > cmp.b
+cmp.result > route.switch
+
+header.dict > init_header.in
+params.container > route.a
+init_params.out > route.b
+route.a > init_params.in
+route.b > drop.void
