@@ -40,7 +40,7 @@ class StorageBase(object):
                 status: List of True and/or false:s
 
     """
-    def __init__(self):
+    def __init__(self, node=None):
         pass
 
     def start(self, iface='', network='', bootstrap=[], cb=None):

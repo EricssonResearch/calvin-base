@@ -75,17 +75,14 @@ class Node(object):
 
         # Default will multicast and listen on all interfaces
         # TODO: be able to specify the interfaces
-        self.storage = storage.Storage()
-        self.storage.start()
+        self.storage = storage.Storage(self)
 
         self.network = CalvinNetwork(self)
         self.proto = CalvinProto(self, self.network)
         self.pm = PortManager(self, self.proto)
         self.app_manager = appmanager.AppManager(self)
         # The initialization that requires the main loop operating is deferred to start function
-        # FIXME: Don't use delayed call in calvin-tiny
         async.DelayedCall(0, self.start)
-        # self.start()
 
     def insert_local_reply(self):
         msg_id = calvinuuid.uuid("LMSG")
@@ -165,6 +162,8 @@ class Node(object):
         # FIXME hardcoded which transport and encoder plugin we use, should be based on
         self.network.register(['calvinip'], ['json'])
         self.network.start_listeners([self.uri])
+        # Start storage after network, proto etc since storage proxy expects them
+        self.storage.start()
         self.storage.add_node(self)
 
     def stop(self, callback=None):

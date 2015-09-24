@@ -82,6 +82,7 @@ class CalvinConfig(object):
                 'comment': 'User definable section',
                 'actor_paths': ['systemactors', 'devactors'],
                 'framework': 'twistedimpl',
+                'storage_proxy': None,
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json'
             },
