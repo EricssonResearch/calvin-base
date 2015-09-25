@@ -72,9 +72,11 @@ class Node(object):
         self.sched = _scheduler(self, self.am, self.monitor)
         self.control.start(node=self, uri=control_uri)
         self.async_msg_ids = {}
+        self._calvinsys = CalvinSys(self)
 
         # Default will multicast and listen on all interfaces
         # TODO: be able to specify the interfaces
+        # @TODO: Store capabilities
         self.storage = storage.Storage(self)
 
         self.network = CalvinNetwork(self)
@@ -144,12 +146,11 @@ class Node(object):
         """ Updates an actor's deployment """
         self.am.deployment_control(app_id, actor_id, deploy_args)
 
-    def calvinsys(self, actor):
+    def calvinsys(self):
         """Return a CalvinSys instance"""
         # FIXME: We still need to sort out actor requirements vs. node capabilities and user permissions.
-        # @TODO: Use same CalvinSys for entire node - should be possible
         # @TODO: Write node capabilities to storage
-        return CalvinSys(node=self, actor=actor)
+        return self._calvinsys
 
     #
     # Event loop
@@ -173,6 +174,7 @@ class Node(object):
             _log.debug(args)
             self.sched.stop()
             self.control.stop()
+
         def deleted_node(*args, **kwargs):
             self.storage.stop(stopped)
         self.storage.delete_node(self, cb=deleted_node)
@@ -182,6 +184,7 @@ def create_node(uri, control_uri, attributes=None):
     n = Node(uri, control_uri, attributes)
     n.run()
     _log.info('Quitting node "%s"' % n.uri)
+
 
 def create_tracing_node(uri, control_uri, attributes=None):
     """

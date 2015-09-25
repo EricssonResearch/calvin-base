@@ -34,11 +34,11 @@ class CountTimer(Actor):
         self.setup()
 
     def setup(self):
-        self.calvinsys.use("calvinsys.events.timer", shorthand="timer")
+        self.use("calvinsys.events.timer", shorthand="timer")
         if self.count < 3:
-            self.timer = self.calvinsys['timer'].once(self.sleep)
+            self.timer = self['timer'].once(self.sleep)
         else:
-            self.timer = self.calvinsys['timer'].repeat(self.sleep)
+            self.timer = self['timer'].repeat(self.sleep)
 
     def will_migrate(self):
         self.timer.cancel()
@@ -67,9 +67,9 @@ class CountTimer(Actor):
         self.timer.ack()
         if self.count == 2:
             # now continue with periodic timer events
-            self.timer = self.calvinsys['timer'].repeat(self.sleep)
+            self.timer = self['timer'].repeat(self.sleep)
         else:
-            self.timer = self.calvinsys['timer'].once(self.sleep)
+            self.timer = self['timer'].once(self.sleep)
         self.count += 1
         return ActionResult(production=(self.count, ))
 

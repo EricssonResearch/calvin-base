@@ -47,10 +47,10 @@ class TCP_Server(Actor):
         self.delimiter           = delimiter.encode('utf-8')
         self.max_length          = max_length
         self.connections = {}
-        self.calvinsys.use("calvinsys.network.serverhandler", shorthand="server")
+        self.use("calvinsys.network.serverhandler", shorthand="server")
 
     def will_migrate(self):
-        self.calvinsys['server'].stop()
+        self['server'].stop()
 
     def did_migrate(self):
         self.server = None
@@ -66,7 +66,7 @@ class TCP_Server(Actor):
     @guard(lambda self: self.host and self.port and not self.server)
     def start(self):
         try:
-            self.server = self.calvinsys['server'].start(self.host, self.port, self.mode, self.delimiter, self.max_length)
+            self.server = self['server'].start(self.host, self.port, self.mode, self.delimiter, self.max_length)
         except Exception as e:
             _log.exception(e)
         return ActionResult()

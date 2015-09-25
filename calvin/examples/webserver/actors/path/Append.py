@@ -45,18 +45,18 @@ class Append(Actor):
     @manage()
     def init(self, inside_base):
         self.inside_base = bool(inside_base)
-        self.calvinsys.use('calvinsys.native.python-os-path', shorthand='path')
+        self.use('calvinsys.native.python-os-path', shorthand='path')
 
     def gen_path(self, base, append):
-        base = self.calvinsys['path'].abspath(base)
+        base = self['path'].abspath(base)
 
-        if self.calvinsys['path'].isabs(append):
+        if self['path'].isabs(append):
             # concatenate
             path = base + append
         else:
             # joine
-            path = self.calvinsys['path'].join(base, append)
-        path = self.calvinsys['path'].abspath(path)
+            path = self['path'].join(base, append)
+        path = self['path'].abspath(path)
         invalid_path = False
         if self.inside_base:
             if not path.startswith(base):

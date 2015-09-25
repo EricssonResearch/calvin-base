@@ -323,14 +323,15 @@ class Actor(object):
     # What are the arguments, really?
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
                  disable_state_checks=False, actor_id=None):
-        """Should normally _not_ be overridden in subclasses."""
+        """Should _not_ be overridden in subclasses."""
         super(Actor, self).__init__()
         self._type = actor_type
         self.name = name  # optional: human_readable_name
         self.id = actor_id or calvinuuid.uuid("ACTOR")
         self._deployment_requirements = []
         self._managed = set(('id', 'name', '_deployment_requirements'))
-        self.calvinsys = None # CalvinSys(node)
+        self._calvinsys = None
+        self._using = {}
         self.control = calvincontrol.get_calvincontrol()
         self._migrating_to = None  # During migration while on the previous node set to the next node id
 
@@ -378,8 +379,16 @@ class Actor(object):
         """ Checks that all requirements are available in calvinsys """
         if hasattr(self, "requires"):
             for req in self.requires:
-                if not self.calvinsys.has_capability(req):
+                if not self._calvinsys.has_capability(req):
                     raise Exception("%s requires %s" % (self.id, req))
+
+    def __getitem__(self, attr):
+        if attr in self._using:
+            return self._using[attr]
+        raise KeyError(attr)
+
+    def use(self, requirement, shorthand):
+        self._using[shorthand] = self._calvinsys.use_requirement(self, requirement)
 
     def __str__(self):
         ip = ""
@@ -435,7 +444,7 @@ class Actor(object):
         self.fsm.transition_to(Actor.STATUS.ENABLED)
 
         # Actor enabled, inform scheduler
-        self.calvinsys.scheduler_wakeup()
+        self._calvinsys.scheduler_wakeup()
 
     @verify_status([STATUS.ENABLED, STATUS.PENDING])
     def did_disconnect(self, port):

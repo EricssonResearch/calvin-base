@@ -89,7 +89,7 @@ class ActorManager(object):
         try:
             # Create a 'bare' instance of the actor
             a = class_(actor_type, actor_id)
-            a.calvinsys = self.node.calvinsys(a)
+            a._calvinsys = self.node.calvinsys()
             a.check_requirements()
         except Exception as e:
             _log.exception("")

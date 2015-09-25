@@ -33,7 +33,7 @@ class Delay(Actor):
         self.setup()
 
     def setup(self):
-        self.calvinsys.use('calvinsys.events.timer', shorthand='timer')
+        self.use('calvinsys.events.timer', shorthand='timer')
 
     def will_migrate(self):
         raise Exception("std.Delay can not migrate!")
@@ -43,7 +43,7 @@ class Delay(Actor):
 
     @condition(['token'])
     def tokenAvailable(self, input):
-        self.timers.append({'token': input, 'timer': self.calvinsys['timer'].once(self.delay)})
+        self.timers.append({'token': input, 'timer': self['timer'].once(self.delay)})
         return ActionResult()
 
     @condition([], ['token'])

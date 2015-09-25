@@ -44,14 +44,14 @@ class SocketClient(Actor):
         self.delimiter = delimiter
         self.EOST_token_received = False
         self.cc = None
+        self.use('calvinsys.io.socketclienthandler', shorthand='socket')
 
         # Connect
         if address is not None:
             self.connect()
 
     def connect(self):
-        self.cc = self.calvinsys.io.socket_client.connect(self.address, self.port,
-                                                          self.protocol, self.type_, self.delimiter)
+        self.cc = self['socket'].connect(self.address, self.port, self.protocol, self.type_, self.delimiter)
 
     def will_migrate(self):
         self.cc.disconnect()
@@ -98,3 +98,4 @@ class SocketClient(Actor):
         return ActionResult(production=())
 
     action_priority = (receive_control, receive, send, send_control)
+    requires = ['calvinsys.io.socketclienthandler']

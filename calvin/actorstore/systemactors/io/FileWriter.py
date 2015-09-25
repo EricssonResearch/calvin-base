@@ -63,13 +63,13 @@ class FileWriter(Actor):
         self.setup()
 
     def setup(self):
-        self.calvinsys.use('calvinsys.io.filehandler', shorthand='file')
+        self.use('calvinsys.io.filehandler', shorthand='file')
         fname = new_filename(self.basename, self.counter, self.suffix)
         self.counter += 1
-        self.file = self.calvinsys['file'].open(fname, "w")
+        self.file = self['file'].open(fname, "w")
 
     def exception_handler(self, action, args, exceptions):
-        self.calvinsys['file'].close(self.file)
+        self['file'].close(self.file)
         self.file = None
 
         return ActionResult(production=())

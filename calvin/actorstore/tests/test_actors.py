@@ -185,8 +185,8 @@ requirements = \
 
 
 class CalvinSysMock(dict):
-    def use(self, req, shorthand):
-        self[shorthand] = requirements[req]()
+    def use_requirement(self, actor, requirement):
+        return requirements[requirement]()
 
 
 class ActorTester(object):
@@ -211,9 +211,9 @@ class ActorTester(object):
             if not hasattr(actor, 'test_set'):
                 self.actors[actorname] = 'no_test'
                 return
-            actor.calvinsys = CalvinSysMock()
-            actor.calvinsys['file'] = CalvinSysFileMock()
-            actor.calvinsys['timer'] = CalvinSysTimerMock()
+            actor._calvinsys = CalvinSysMock()
+            actor._calvinsys['file'] = CalvinSysFileMock()
+            actor._calvinsys['timer'] = CalvinSysTimerMock()
             actor.init(*actorclass.test_args, **actorclass.test_kwargs)
             actor.setup_complete()
         except Exception as e:

@@ -3,8 +3,8 @@ cnt : std.CountTimer()
 str : std.Stringify()
 void : std.Void()
 client : usr.SocketClient(address="127.0.0.1", port=12345, protocol="raw", type_="UDP")
-sink : io.StandardOut(store_tokens=1)
-dummysink : io.StandardOut(store_tokens=1)
+sink : io.StandardOut(store_tokens=true)
+dummysink : io.StandardOut(store_tokens=true)
 
 /* Connections */
 // Data
@@ -13,5 +13,5 @@ str.out > client.inData
 client.outData > sink.token
 
 // Control
-void.null > client.inControl
+void.void > client.inControl
 client.outControl > dummysink.token

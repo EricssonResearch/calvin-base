@@ -26,7 +26,7 @@ class DummyNode:
         self.pm = mock.Mock()
         self.storage = mock.Mock()
 
-    def calvinsys(self, actor):
+    def calvinsys(self):
         return None
 
 

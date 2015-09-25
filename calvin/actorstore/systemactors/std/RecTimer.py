@@ -29,11 +29,11 @@ class RecTimer(Actor):
     @manage(['delay'])
     def init(self, delay=0.1):
         self.delay = delay
-        self.calvinsys.use('calvinsys.events.timer', shorthand='timer')
+        self.use('calvinsys.events.timer', shorthand='timer')
         self.setup()
 
     def setup(self):
-        self.timer = self.calvinsys['timer'].repeat(self.delay)
+        self.timer = self['timer'].repeat(self.delay)
 
     def will_migrate(self):
         self.timer.cancel()

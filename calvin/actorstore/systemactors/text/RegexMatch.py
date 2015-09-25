@@ -41,10 +41,10 @@ class RegexMatch(Actor):
         self.regex = regex
         self.result = None
         self.did_match = False
-        self.calvinsys.use('calvinsys.native.python-re', shorthand='re')
+        self.use('calvinsys.native.python-re', shorthand='re')
 
     def perform_match(self, text):
-        m = self.calvinsys['re'].match(self.regex, text)
+        m = self['re'].match(self.regex, text)
         self.did_match = m is not None
         self.result = m.groups()[0] if m and m.groups() else text
 

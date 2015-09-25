@@ -42,13 +42,13 @@ class FileReader(Actor):
         self.did_read = False
         self.file_not_found = False
         self.file = None
-        self.calvinsys.use('calvinsys.io.filehandler', shorthand='file')
+        self.use(requirement='calvinsys.io.filehandler', shorthand='file')
 
     @condition(['filename'], [])
     @guard(lambda self, filename: not self.file)
     def open_file(self, filename):
         try:
-            self.file = self.calvinsys['file'].open(filename, "r")
+            self.file = self['file'].open(filename, "r")
         except:
             self.file = None
             self.file_not_found = True
@@ -70,7 +70,7 @@ class FileReader(Actor):
     @condition([], ['out'])
     @guard(lambda self: self.file and self.file.eof())
     def eof(self):
-        self.calvinsys['file'].close(self.file)
+        self['file'].close(self.file)
         self.file = None
         return ActionResult(production=(EOSToken(), ))
 
