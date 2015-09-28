@@ -22,6 +22,7 @@ _log = calvinlogger.get_logger(__name__)
 from calvin.runtime.north.plugins.requirements import req_operations
 
 
+
 class Application(object):
 
     """ Application class """
@@ -125,6 +126,7 @@ class AppManager(object):
 
     def _destroy_app_info_cb(self, application_id, value):
         _log.analyze(self._node.id, "+", {'application_id': application_id, 'value': value})
+        _log.debug("Destroy app info %s: %s" % application_id, value)
         if value:
             self._destroy(Application(application_id, value['name'], value['actors'], value['origin_node_id']))
 
@@ -150,6 +152,7 @@ class AppManager(object):
     def _destroy_actor_cb(self, actor_id, value, application, retries=0):
         """ Get actor callback """
         _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'value': value, 'retries': retries})
+        _log.debug("Destroy app peers actor cb %s" % actor_id)
         if value and 'node_id' in value:
             application.update_node_info(value['node_id'], actor_id)
         else:

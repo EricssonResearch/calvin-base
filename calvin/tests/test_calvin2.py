@@ -504,6 +504,10 @@ class TestEnabledToEnabledBug(CalvinTestBase):
             if len(actual) > 10:
                 break
 
+        while len(actual) < 10:
+            time.sleep(0.1)
+            actual = utils.report(self.rt3, snk)
+
         self.assert_lists_equal(range(1, 11), actual)
 
         utils.delete_actor(self.rt1, src)

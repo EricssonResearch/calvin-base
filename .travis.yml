@@ -9,5 +9,3 @@ script:
   - tox
 env:
   - TOXENV=py27
-  - TOXENV=pep8
-  - TOXENV=pylint-errors
