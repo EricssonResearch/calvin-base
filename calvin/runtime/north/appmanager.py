@@ -20,6 +20,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 from calvin.runtime.north.plugins.requirements import req_operations
+import calvin.utilities.calvinresponse as response
 
 
 
@@ -197,12 +198,12 @@ class AppManager(object):
         """ Request from peer of local application parts destruction and related actors """
         _log.debug("Destroy request, app: %s, actors: %s" % (application_id, actor_ids))
         _log.analyze(self._node.id, "+", {'application_id': application_id, 'actor_ids': actor_ids})
-        reply = "ACK"
+        reply = response.CalvinResponse(True)
         for actor_id in actor_ids:
             if actor_id in self._node.am.list_actors():
                 self._node.am.destroy(actor_id)
             else:
-                reply = "NACK"
+                reply = response.CalvinResponse(False)
         if application_id in self.applications:
             del self.applications[application_id]
         _log.debug("Destroy request reply %s" % reply)
@@ -222,7 +223,7 @@ class AppManager(object):
             app = self.applications[application_id]
         except:
             _log.debug("deployment_add_requirements did not find app %s" % (application_id,))
-            cb(status="NACK")
+            cb(status=response.CalvinResponse(False))
             return
         _log.debug("deployment_add_requirements(app=%s,\n reqs=%s)" % (self.applications[application_id], reqs))
 
@@ -230,12 +231,12 @@ class AppManager(object):
 
         if "requirements" not in reqs:
             # No requirements then we are happy
-            cb(status="ACK")
+            cb(status=response.CalvinResponse(True))
             return
 
         if hasattr(app, '_org_cb'):
             # application deployment requirements ongoing, abort
-            cb(status="ACK")
+            cb(status=response.CalvinResponse(True))
             return
         app._org_cb = cb
         name_map = app.get_actor_name_map(ns=app.ns)
@@ -376,7 +377,7 @@ class AppManager(object):
         _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': {k: list(v) for k, v in app.actor_placement.iteritems()}})
         if any([not n for n in app.actor_placement.values()]):
             # At least one actor have no possible placement
-            app._org_cb(status="NACK")
+            app._org_cb(status=response.CalvinResponse(False))
             del app._org_cb
             return
 
@@ -410,7 +411,7 @@ class AppManager(object):
             _log.debug("Actor deployment %s \t-> %s" % (app.actors[actor_id], node_id))
             self._node.am.migrate(actor_id, node_id)
 
-        app._org_cb(status="ACK", placement=weighted_actor_placement)
+        app._org_cb(status=response.CalvinResponse(True), placement=weighted_actor_placement)
         del app._org_cb
 
     def _actor_connectivity(self, app):
