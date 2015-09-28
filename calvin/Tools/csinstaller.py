@@ -77,13 +77,13 @@ def main():
         return 1
 
     errors = []
-    for comp in ir['components']:
-        if args.component and comp['name'] not in args.component:
+    for comp_name, comp_def in ir['components'].items():
+        if args.component and comp_name not in args.component:
             continue
-        ok = install_component(args.namespace, comp['name'], comp, args.overwrite)
+        ok = install_component(args.namespace, comp_name, comp_def, args.overwrite)
         if not ok:
-            errors.append({'reason': 'Failed to install "{0}"'.format(comp['name']),
-                          'line': comp['dbg_line'], 'col': 0})
+            errors.append({'reason': 'Failed to install "{0}"'.format(comp_name),
+                          'line': comp_def['dbg_line'], 'col': 0})
 
     if errors:
         report_issues(errors, 'Error', args.script)
