@@ -19,7 +19,7 @@ from calvin.utilities.attribute_resolver import format_index_string
 # A cache of attribute lockups for actors in components
 _cache={}
 
-def _req_op_cb(key, value, cb, cache_key, actor_id):
+def _req_op_cb(key, value, cb, cache_key, actor_id, component):
     if cache_key:
         _cache[cache_key] = (_cache[cache_key][0], True, value)
         for c in _cache[cache_key][0].values():
@@ -57,4 +57,4 @@ def req_op(node, cb, index, actor_id=None, component=None):
         cache_key = None
 
     node.storage.get_index(index_str, CalvinCB(_req_op_cb, cache_key=cache_key,
-                                                                actor_id=actor_id, cb=cb))
+                                                                actor_id=actor_id, cb=cb, component=component))
