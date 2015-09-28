@@ -116,32 +116,18 @@ component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
   status : std.Deselect()
   abs_path : path.Append(inside_base=1)
 
-<<<<<<< HEAD
-  rel_path > const_base.in
-  const_base.out > abs_path.base
-  rel_path > abs_path.append
-  # Partially successful path
-  abs_path.path > abs_path
-=======
   .rel_path > const_base.in
   const_base.out > abs_path.base
   .rel_path > abs_path.append
   # Partially successful path
   abs_path.path > .abs_path
->>>>>>> develop
   # Update status based on error
   # 0 => OK
   # 1 => FILE NOT FOUND
   abs_path.error > status.select
-<<<<<<< HEAD
-  const_FILE_OK.token > status.false
-  const_FILE_NOT_FOUND.token > status.true
-  status.data > status
-=======
   const_FILE_OK.token > status.case_false
   const_FILE_NOT_FOUND.token > status.case_true
   status.data > .status
->>>>>>> develop
 }
 
 
@@ -158,17 +144,10 @@ component HTTPFileReader() filename -> resource, status {
   read_html : usr.FileReader2(status_OK=200, status_ERR=404)
   concat : text.LineJoin()
 
-<<<<<<< HEAD
-  filename > read_html.filename
-  read_html.out > concat.line
-  concat.text > resource
-  read_html.ses > status
-=======
   .filename > read_html.filename
   read_html.out > concat.line
   concat.text > .resource
   read_html.ses > .status
->>>>>>> develop
 }
 
 const_host : std.Constant(data="127.0.0.1", n=1)
