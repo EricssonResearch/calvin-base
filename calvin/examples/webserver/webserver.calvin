@@ -164,7 +164,7 @@ component HTTPFileReader() filename -> resource, status {
   status_mapper.data > .status
 }
 
-tcp_server : net.TCP_Server(delimiter="\r\n\r\n")
+tcp_server : net.TCPServer(delimiter="\r\n\r\n")
 daisy_GET : DaisyAdapter(status_OK=OK)
 daisy_path : DaisyAdapter(status_OK=OK)
 daisy_resource : DaisyAdapter(status_OK=OK)
