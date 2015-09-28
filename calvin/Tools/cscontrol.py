@@ -21,6 +21,7 @@ import json
 import calvin.utilities.utils as utils
 import os
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities import calvinresponse
 import logging
 
 _log = get_logger(__name__)
@@ -81,7 +82,7 @@ def control_deploy(args):
         reqs = requirements_file(args.reqs)
         if reqs:
             result = utils.add_requirements(utils.RT(node), response["application_id"], reqs)
-        if result and 'result' in result and result['result'] == 'NACK':
+        if result and 'result' in result and not calvinresponse.CalvinResponse(encoded=result['result']):
             _log.error("Applying deployment requirement from file %s failed" % args.reqs)
             print ("Applying deployment requirement from file %s failed" % args.reqs)
         elif result and 'placement' in result:

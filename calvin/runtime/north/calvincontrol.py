@@ -544,7 +544,7 @@ class CalvinControl(object):
         """ Migrate actor respons
         """
         self.send_response(handle, connection,
-                           json.dumps({'result': str(status) if isinstance(status, Exception) else status}))
+                           json.dumps({'result': "ACK" if status else "NACK"}))
 
     def handle_application_requirements(self, handle, connection, match, data):
         """ Apply application deployment requirements
@@ -555,7 +555,7 @@ class CalvinControl(object):
 
     def handle_application_requirements_cb(self, handle, connection, *args, **kwargs):
         self.send_response(handle, connection,
-                           json.dumps({'result': kwargs['status'],
+                           json.dumps({'result': kwargs['status'].encode(),
                                        'placement': kwargs['placement'] if 'placement' in kwargs else {}}))
 
     def handle_actor_disable(self, handle, connection, match, data, hdr):

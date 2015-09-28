@@ -17,6 +17,7 @@
 from calvin.actorstore.store import ActorStore
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
+import calvin.utilities.calvinresponse as response
 
 _log = get_logger(__name__)
 
@@ -76,7 +77,7 @@ class ActorManager(object):
         else:
             # Nothing to connect then we are OK
             if callback:
-                callback(status='ACK', actor_id=a.id)
+                callback(status=response.CalvinResponse(True), actor_id=a.id)
             else:
                 return a.id
 
@@ -154,12 +155,12 @@ class ActorManager(object):
         if actor_id not in self.actors:
             # Can only migrate actors from our node
             if callback:
-                callback(status="NACK")
+                callback(status=response.CalvinResponse(False))
             return
         if node_id == self.node.id:
             # No need to migrate to ourself
             if callback:
-                callback(status="ACK")
+                callback(status=response.CalvinResponse(True))
             return
 
         actor = self.actors[actor_id]
@@ -176,9 +177,9 @@ class ActorManager(object):
                                                   callback=callback),
                                 actor_id=actor_id)
 
-    def _migrate_disconnected(self, actor, actor_type, ports, node_id, status=None, callback = None, **state):
+    def _migrate_disconnected(self, actor, actor_type, ports, node_id, status, callback = None, **state):
         """ Actor disconnected, continue migration """
-        if status == 'ACK':
+        if status:
             state = actor.state()
             self.destroy(actor.id)
             self.node.proto.actor_new(node_id, callback, actor_type, state, ports)
@@ -227,23 +228,23 @@ class ActorManager(object):
 
     def _actor_connected(self, status, peer_port_id, actor_id, peer_port_ids, _callback, **kwargs):
         """ Get called for each of the actor's ports when connecting, but callback should only be called once
-            status: 'ACK'/'NACK'
+            status: success or not
             _callback: original callback
             peer_port_ids: list of port ids kept in context between calls when *changed* by this function,
                            do not replace it
         """
-        # Send NACK if not already done it
-        if status == "NACK" and peer_port_ids:
+        # Send negative response if not already done it
+        if not status and peer_port_ids:
             if _callback:
                 del peer_port_ids[:]
-                _callback(status="NACK", actor_id=actor_id)
+                _callback(status=response.CalvinResponse(False), actor_id=actor_id)
         if peer_port_id in peer_port_ids:
             # Remove this port from list
             peer_port_ids.remove(peer_port_id)
-            # If all ports done send ACK
+            # If all ports done send OK
             if not peer_port_ids:
                 if _callback:
-                    _callback(status="ACK", actor_id=actor_id)
+                    _callback(status=response.CalvinResponse(True), actor_id=actor_id)
 
     def connections(self, actor_id):
         return self.actors.get(actor_id, None).connections(self.node.id)

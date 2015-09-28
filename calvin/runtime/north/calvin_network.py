@@ -20,6 +20,7 @@ import importlib
 
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
+import calvin.utilities.calvinresponse as response
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
@@ -53,7 +54,7 @@ class CalvinLink(object):
         """ Gets called when a REPLY messages arrives on this link """
         try:
             # Call the registered callback,for the reply message id, with the reply data as argument
-            self.replies.pop(payload['msg_uuid'])(payload['value'])
+            self.replies.pop(payload['msg_uuid'])(response.CalvinResponse(encoded=payload['value']))
         except:
             # We ignore unknown replies
             return
@@ -165,12 +166,12 @@ class CalvinNetwork(object):
             or pending peer's connections.
             URI can't be used for matching since not neccessarily the same if peer connect to us
             uris: list of uris
-            callback: will get called for each uri with arguments status='ACK'/'NACK' and uri
+            callback: will get called for each uri with arguments status, peer_node_id and uri
             corresponding_peer_ids: list of node ids matching the list of uris
 
             TODO: If corresponding_peer_ids is not specified it is possible that the callback is never called
             when a simultaneous join happens due to that it is not possible to detect by URI only.
-            Should add a timeout that cleans out callbacks with NACK replies and let client retry.
+            Should add a timeout that cleans out callbacks with failed status replies and let client retry.
         """
         # For each URI and when available a peer id
         for uri, peer_id in zip(uris,
@@ -196,7 +197,7 @@ class CalvinNetwork(object):
                 if callback:
                     if peer_id in self.links:
                         # Link was already established, then need to call the callback now
-                        callback(status="ACK", uri=uri)
+                        callback(status=response.CalvinResponse(True), uri=uri)
                         continue
                     # Otherwise also want to be called when the ongoing link setup finishes
                     if uri in self.pending_joins:
@@ -224,7 +225,7 @@ class CalvinNetwork(object):
                 cbs = self.pending_joins.pop(uri)
                 if cbs:
                     for cb in cbs:
-                        cb(status="NACK", uri=uri, peer_node_id=peer_id)
+                        cb(status=response.CalvinResponse(response.SERVICE_UNAVAILABLE), uri=uri, peer_node_id=peer_id)
             return
         # Only support for one RT to RT communication link per peer 
         if peer_id in self.links:
@@ -261,13 +262,13 @@ class CalvinNetwork(object):
                 cbs = self.pending_joins.pop(peer_uri)
                 if cbs:
                     for cb in cbs:
-                        cb(status="ACK", uri=peer_uri, peer_node_id=peer_id)
+                        cb(status=response.CalvinResponse(True), uri=peer_uri, peer_node_id=peer_id)
 
         if uri in self.pending_joins:
             cbs = self.pending_joins.pop(uri)
             if cbs:
                 for cb in cbs:
-                    cb(status="ACK", uri=uri, peer_node_id=peer_id)
+                    cb(status=response.CalvinResponse(True), uri=uri, peer_node_id=peer_id)
 
         return
 
@@ -279,7 +280,7 @@ class CalvinNetwork(object):
         """ Request that a link is established. This is the prefered way
             of joining other nodes.
             peer_id: the node id that the link should be establieshed to
-            callback: will get called with arguments status='ACK'/'NACK'/Exception and uri used
+            callback: will get called with arguments status and uri used
                       if the link needs to be established
             
             returns: True when link already exist, False when link needs to be established
@@ -297,7 +298,7 @@ class CalvinNetwork(object):
         # Test if value is None or False indicating node does not currently exist in storage
         if not value:
             # the peer_id did not exist in storage
-            callback(status=Exception("Peer id %s could not be found in storage" % key))
+            callback(status=response.CalvinResponse(response.NOT_FOUND, {'peer_node_id': key}))
             return
 
         # join the peer node
