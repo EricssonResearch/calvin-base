@@ -15,8 +15,7 @@
 # limitations under the License.
 
 from calvin.actor.actor import Actor, manage, condition, ActionResult
-import re
-import json
+
 
 def value_for_key(d, keypath):
     keylist = keypath.split('.')
@@ -24,7 +23,6 @@ def value_for_key(d, keypath):
     for key in keylist:
         res = res[key]
     return res
-
 
 
 class Format(Actor):
@@ -45,8 +43,8 @@ class Format(Actor):
     @manage(['fmt', 'fmtkeys'])
     def init(self, fmt):
         self.fmt = fmt
-        self.fmtkeys = re.findall(Format.REGEX, fmt)
-
+        self.use('calvinsys.native.python-re', shorthand="regex")
+        self.fmtkeys = self['regex'].findall(Format.REGEX, fmt)
 
     @condition(['dict'], ['text'])
     def action(self, d):
@@ -54,12 +52,19 @@ class Format(Actor):
         try:
             for fmtkey in self.fmtkeys:
                 res[fmtkey] = value_for_key(d, fmtkey)
-        except Exception as e:
+        except Exception:
             res = {}
         retval = self.fmt
         for key, value in res.iteritems():
-            retval = retval.replace('{'+key+'}', str(value))
+            retval = retval.replace('{' + key + '}', str(value))
 
         return ActionResult(production=(retval, ))
 
     action_priority = (action, )
+    requires = ['calvinsys.native.python-re']
+
+    test_args = ["{huey.dewey.louie}"]
+    test_set = [
+        {'in': {'dict': [{'huey': {'dewey': {'louie': 'gotcha!'}}}]}},
+        {'out': {'text': ['gotcha!']}}
+    ]
