@@ -16,18 +16,13 @@
 # limitations under the License.
 
 import argparse
-from calvin.Tools import deployer, cscompiler
 import time
 import json
 import traceback
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities import utils
-from calvin.utilities.nodecontrol import dispatch_node, start_node
 import logging
-from calvin.utilities import calvinconfig
-
-_conf = calvinconfig.get()
-_log = get_logger(__name__)
+# Calvin related imports must be in functions, to be able to set logfile before imports
+_conf = None
+_log = None
 
 
 def parse_arguments():
@@ -57,6 +52,9 @@ Start runtime, compile calvinscript and deploy application.
                            help="Set log level, levels: CRITICAL, ERROR, WARNING, INFO, DEBUG and ANALYZE. \
                            To enable on specific modules use 'module:level'")
 
+    argparser.add_argument('-f', '--logfile', dest='logfile', action="store", default=None, type=str,
+                           help="Set logging to file, specify filename")
+
     argparser.add_argument('-w', '--wait', dest='wait', metavar='sec', default=2, type=int,
                            help='wait for sec seconds before quitting (0 means forever).')
 
@@ -83,6 +81,7 @@ Start runtime, compile calvinscript and deploy application.
 
 
 def runtime(uri, control_uri, attributes=None, dispatch=False):
+    from calvin.utilities.nodecontrol import dispatch_node, start_node
     kwargs = {'attributes': attributes} if attributes else {}
     if dispatch:
         return dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
@@ -92,6 +91,7 @@ def runtime(uri, control_uri, attributes=None, dispatch=False):
 
 def compile_script(scriptfile):
     _log.debug("Compiling %s ..." % file)
+    from calvin.Tools import cscompiler
     app_info, errors, _ = cscompiler.compile_file(scriptfile)
     if errors:
         _log.error("{reason} {script} [{line}:{col}]".format(script=file, **errors[0]))
@@ -100,18 +100,28 @@ def compile_script(scriptfile):
 
 
 def deploy(rt, app_info):
+    from calvin.Tools import deployer
     d = {}
     try:
         d = deployer.Deployer(rt, app_info)
         d.deploy()
     except:
+        from calvin.utilities.calvinlogger import get_logger
         time.sleep(0.1)
         if get_logger().getEffectiveLevel <= logging.DEBUG:
             traceback.print_exc()
     return d.app_id
 
 
-def set_loglevel(levels):
+def set_loglevel(levels, filename):
+    from calvin.utilities.calvinlogger import get_logger, set_file
+    global _log
+
+    if filename:
+        set_file(filename)
+
+    _log = get_logger(__name__)
+
     if not levels:
         get_logger().setLevel(logging.INFO)
         return
@@ -135,6 +145,7 @@ def set_loglevel(levels):
 
 
 def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
+    from calvin.utilities import utils
     rt, process = runtime(uri, control_uri, attr, dispatch=True)
     app_id = None
     app_id = deploy(rt, app_info)
@@ -149,11 +160,14 @@ def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
         process.join()
 
 def set_config_from_args(args):
-        _conf.add_section("ARGUMENTS")
-        for arg in vars(args):
-            if getattr(args, arg) is not None:
-                _log.debug("Adding ARGUMENTS to config {}={}".format(arg, getattr(args, arg)))
-                _conf.set("ARGUMENTS", arg, getattr(args, arg))
+    from calvin.utilities import calvinconfig
+    global _conf
+    _conf = calvinconfig.get()
+    _conf.add_section("ARGUMENTS")
+    for arg in vars(args):
+        if getattr(args, arg) is not None:
+            _log.debug("Adding ARGUMENTS to config {}={}".format(arg, getattr(args, arg)))
+            _conf.set("ARGUMENTS", arg, getattr(args, arg))
 
 def main():
     import sys
@@ -164,7 +178,8 @@ def main():
         import pdb
         pdb.set_trace()
 
-    set_loglevel(args.loglevel)
+    # Need to be before other calvin calls to set the common log file
+    set_loglevel(args.loglevel, args.logfile)
 
     set_config_from_args(args)
 
