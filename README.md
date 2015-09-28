@@ -16,37 +16,29 @@ detailed information, or continue reading.
 
 ## New in this version
 
- - New command line commands:
-   - `csruntime` to start runtime
-   - `cscontrol` to send commands and deploy applications to runtime
-   - `csviz` to generate a graphical representation of an application
-   - `csdeploy` is obsolete and has been removed
+### Application Deployment Requirement
 
- - Calvin script changes:
-   - JSON types: any valid JSON can be used as values and constants in scripts (and actors) __NOTE__: This introduces reserved word `false`, `true`, `null`.
-   - Constants: use `define` to create constants in scripts, e.g.
-```
-define DELAY = 1
+A Calvin application (calvin script) can now have an optional deployment requirement specification which, for each actor in the application, gives a list of attributes a runtime *must* have or *cannot* have in order to host this actor. Typical attributes include name, ownership, or geographical location. The specification is then handed over to a solver which provides a mapping between actors and runtimes.
 
-actor1 : std.Delay(delay=DELAY)
-actor2 : std.Delay(delay=DELAY)
+### Actor requirements and runtime capabilities
 
-```
-   - Constant port values: values can be used to send constant values to a port, e.g. `"data.txt" > src.filename`. __NOTE__: There will then _always_ be a token available, so the actor must be able to handle this correctly.
+In order for an actor to be platform independent and migratable, it is necessary to limit external dependencies and only use functionality exposed by the Calvin runtime (rather than, e.g. importing python packages.) The first version of such a framework is included in this release.
 
-   - Component ports prefixed with '.' when used
-```
-component DelayedCounter(delay) -> out {
-   counter : std.Counter()
-   delay : std.Delay(delay=delay)
+### Added new use cases - News ticker and door lock
 
-   counter.integer > delay.token
-   delay.token > .out
-}
-```
+The news ticker is a small utilitiy which watches on the Calvin repository on Github, and displays the latest commits as they occur. The door lock is a sample smart home application which utilises an IP-camera, buttons, speakers and a face detection algorithm to build a small home surveillance application.
 
- - Internal changes:
-   - Extended storage with set operations & index.
+### Storage proxy
+
+Runtimes can now serve as storage proxies to other runtimes. This gives the option of e.g. having runtimes with limited resources being served by more complete ones.
+
+### IPv6 support in csweb
+
+Thanks to terror96, csweb should now handle IPv6 addresses correctly.
+
+### Improved stability and robustness.
+
+Networking and storage have been seen quite a bit of stability and robustness work. Tests should now pass much more frequently.
 
 ## Quick start
 
