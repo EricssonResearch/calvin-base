@@ -81,12 +81,12 @@ def control_deploy(args):
     if "application_id" in response and args.reqs:
         reqs = requirements_file(args.reqs)
         if reqs:
-            result = utils.add_requirements(utils.RT(node), response["application_id"], reqs)
-        if result and 'result' in result and not calvinresponse.CalvinResponse(encoded=result['result']):
-            _log.error("Applying deployment requirement from file %s failed" % args.reqs)
-            print ("Applying deployment requirement from file %s failed" % args.reqs)
-        elif result and 'placement' in result:
-            _log.debug("Succeeded with applying deployment requirements %s\n" % result['placement'])
+            try:
+                result = utils.add_requirements(utils.RT(node), response["application_id"], reqs)
+                _log.debug("Succeeded with applying deployment requirements %s\n" % result['placement'])
+            except:
+                _log.error("Applying deployment requirement from file %s failed" % args.reqs)
+                print ("Applying deployment requirement from file %s failed" % args.reqs)
     return response_http
 
 def control_actors(args):

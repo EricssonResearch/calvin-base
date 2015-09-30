@@ -22,7 +22,7 @@ RESPONSE_CODES = {  # Information
                   # Success
                   200: 'OK',  # Preferred
                   201: 'Created',
-                  202: 'Accepted',
+                  202: 'Accepted', #  Preferred
                   203: 'Non-Authoritative Information',
                   204: 'No Content',
                   205: 'Reset Content',
@@ -65,6 +65,7 @@ RESPONSE_CODES = {  # Information
                   }
 
 OK = 200
+ACCEPTED = 202
 BAD_REQUEST = 400
 NOT_FOUND = 404
 GONE = 410
@@ -99,14 +100,54 @@ class CalvinResponse(object):
     def __eq__(self, other):
         """ When need to check if response is equal to specific code
             other can be another CalvinResponse object,
-            a status code or a list of accepted status codes 
+            a status code 
         """
         if isinstance(other, CalvinResponse):
             return self.status == other.status
         elif isinstance(other, numbers.Number):
             return self.status == other
-        elif isinstance(other, (list, tuple)):
-            return self.status in other
+        else:
+            return False
+
+    def __lt__(self, other):
+        if isinstance(other, CalvinResponse):
+            return self.status < other.status
+        elif isinstance(other, numbers.Number):
+            return self.status < other
+        else:
+            return False
+
+    def __le__(self, other):
+        if isinstance(other, CalvinResponse):
+            return self.status <= other.status
+        elif isinstance(other, numbers.Number):
+            return self.status <= other
+        else:
+            return False
+
+    def __ne__(self, other):
+        if isinstance(other, CalvinResponse):
+            return self.status != other.status
+        elif isinstance(other, numbers.Number):
+            return self.status != other
+        else:
+            return False
+
+    def __gt__(self, other):
+        if isinstance(other, CalvinResponse):
+            return self.status > other.status
+        elif isinstance(other, numbers.Number):
+            return self.status > other
+        else:
+            return False
+
+    def __ge__(self, other):
+        if isinstance(other, CalvinResponse):
+            return self.status >= other.status
+        elif isinstance(other, numbers.Number):
+            return self.status >= other
+        else:
+            return False
 
     def set_status(self, status):
         if isinstance(status, bool):
@@ -121,18 +162,47 @@ class CalvinResponse(object):
 
 if __name__ == '__main__':
     r = CalvinResponse(OK)
+    r2 = CalvinResponse(OK)
+    r3 = CalvinResponse(BAD_REQUEST)
     r.data = {'foo': 42}
     if r:
-        print "TRUE", r
+        print "CORRECT", r
     else:
-        print "FALSE", r
+        print "INCORRECT", r
+    
+    if r3:
+        print "INCORRECT", r3
+    else:
+        print "CORRECT", r3
     
     if r == OK:
         print "EQ CORRECT1"
     else:
         print "EQ INCORRECT1"
 
-    if r == [OK, BAD_REQUEST]:
+    if r in [OK, BAD_REQUEST]:
         print "EQ CORRECT2"
     else:
         print "EQ INCORRECT2"
+
+    if r == r2:
+        print "EQ CORRECT3"
+    else:
+        print "EQ INCORRECT3"
+
+    if r == r3:
+        print "EQ INCORRECT4"
+    else:
+        print "EQ CORRECT4"
+
+    if min([r, r2, r3]):
+        print "EQ CORRECT5"
+    else:
+        print "EQ INCORRECT5"
+
+    if max([r, r2, r3]):
+        print "EQ INCORRECT6"
+    else:
+        print "EQ CORRECT6"
+
+    print max([r, r2, r3])

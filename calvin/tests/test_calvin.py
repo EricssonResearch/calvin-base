@@ -762,7 +762,7 @@ class TestCalvinScript(CalvinTestBase):
         applications = utils.get_applications(rt)
         assert app_id in applications
 
-        assert d.destroy()['result'] == 'OK'
+        d.destroy()
 
         applications = utils.get_applications(rt)
         assert app_id not in applications

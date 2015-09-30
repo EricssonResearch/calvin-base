@@ -58,23 +58,32 @@ class RT():
         self.control_uri = control_uri
 
 
+def check_response(response, success=range(200, 207)):
+    if response.status_code in success:
+        try:
+            return json.loads(response.text)
+        except:
+            return None
+    # When failed raise exception
+    raise Exception("%d" % response.status_code)
+
 def get_node_id(rt):
     r = requests.get(rt.control_uri + '/id')
-    return json.loads(r.text)["id"]
+    return check_response(r)["id"]
 
 
 def get_node(rt, node_id):
     r = requests.get(rt.control_uri + '/node/' + node_id)
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def quit(rt):
     r = requests.delete(rt.control_uri + '/node')
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def get_nodes(rt):
-    return json.loads(requests.get(rt.control_uri + '/nodes').text)
+    return check_response(requests.get(rt.control_uri + '/nodes'))
 
 
 def peer_setup(rt, *peers):
@@ -82,14 +91,14 @@ def peer_setup(rt, *peers):
         peers = peers[0]
     r = requests.post(
         rt.control_uri + '/peer_setup', data=json.dumps({'peers': peers}))
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def new_actor(rt, actor_type, actor_name):
     data = {'actor_type': actor_type, 'args': {
         'name': actor_name}, 'deploy_args': None}
     r = requests.post(rt.control_uri + '/actor', data=json.dumps(data))
-    result = json.loads(r.text)['actor_id']
+    result = check_response(r)['actor_id']
     return result
 
 
@@ -101,61 +110,61 @@ def new_actor_wargs(rt, actor_type, actor_name, args=None, deploy_args=None, **k
     else:
         r = requests.post(rt.control_uri + '/actor', data=json.dumps(
             {'actor_type': actor_type, 'deploy_args': deploy_args, 'args': args}))
-    result = json.loads(r.text)['actor_id']
+    result = check_response(r)['actor_id']
     return result
 
 
 def get_actor(rt, actor_id):
     r = requests.get(rt.control_uri + '/actor/' + actor_id)
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def get_actors(rt):
     r = requests.get(rt.control_uri + '/actors')
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def delete_actor(rt, actor_id):
     r = requests.delete(rt.control_uri + '/actor/' + actor_id)
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def connect(rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name):
     data = {'actor_id': actor_id, 'port_name': port_name, 'port_dir': 'in', 'peer_node_id': peer_node_id,
             'peer_actor_id': peer_actor_id, 'peer_port_name': peer_port_name, 'peer_port_dir': 'out'}
     r = requests.post(rt.control_uri + '/connect', data=json.dumps(data))
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def disconnect(rt, actor_id=None, port_name=None, port_dir=None, port_id=None):
     data = {'actor_id': actor_id, 'port_name': port_name,
             'port_dir': port_dir, 'port_id': port_id}
     r = requests.post(rt.control_uri + '/disconnect', json.dumps(data))
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def disable(rt, actor_id):
     r = requests.post(rt.control_uri + '/actor/' + actor_id + '/disable')
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def migrate(rt, actor_id, dst_id):
     data = {'peer_node_id': dst_id}
     r = requests.post(
         rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data))
-    return json.loads(r.text)
+    return check_response(r)
 
 def add_requirements(rt, application_id, reqs):
     data = {'reqs': reqs}
     r = requests.post(
         rt.control_uri + '/application/' + application_id + "/migrate", data=json.dumps(data))
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def get_port(rt, actor_id, port_id):
     r = requests.get(
         rt.control_uri + "/actor/" + actor_id + '/port/' + port_id)
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def set_port_property(rt, actor_id, port_type, port_name, port_property, value):
@@ -163,41 +172,41 @@ def set_port_property(rt, actor_id, port_type, port_name, port_property, value):
             port_name, 'port_property': port_property, 'value': value}
     r = requests.post(
         rt.control_uri + '/set_port_property', data=json.dumps(data))
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def report(rt, actor_id):
     r = requests.get(rt.control_uri + '/actor/' + actor_id + '/report')
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def get_applications(rt):
     r = requests.get(rt.control_uri + '/applications')
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def get_application(rt, application_id):
     r = requests.get(rt.control_uri + '/application/' + application_id)
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def delete_application(rt, application_id):
     r = requests.delete(rt.control_uri + '/application/' + application_id)
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def add_index(rt, index, value):
     data = {'value': value}
     r = requests.post(rt.control_uri + '/index/' + index, data=json.dumps(data))
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def remove_index(rt, index, value):
     data = {'value': value}
     r = requests.delete(rt.control_uri + '/index/' + index, data=json.dumps(data))
-    return json.loads(r.text)
+    return check_response(r)
 
 
 def get_index(rt, index):
     r = requests.get(rt.control_uri + '/index/' + index)
-    return json.loads(r.text)
+    return check_response(r)
