@@ -410,7 +410,7 @@ class PortManager(object):
     def _connected_via_tunnel(self, reply, **state):
         """ Gets called when remote responds to our request for port connection """
         _log.analyze(self.node.id, "+ " + str(reply), {k: state[k] for k in state.keys() if k != 'callback'}, peer_node_id=state['peer_node_id'])
-        if reply == [response.BAD_REQUEST, response.NOT_FOUND]:
+        if reply in [response.BAD_REQUEST, response.NOT_FOUND]:
             # Other end did not accept our port connection request
             if state['retries']==0 and state['peer_node_id']:
                 # Maybe it is on another node now lets retry and lookup the port

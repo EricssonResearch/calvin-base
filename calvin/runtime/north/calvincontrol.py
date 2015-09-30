@@ -24,6 +24,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection
 from urlparse import urlparse
+from calvin.utilities import calvinresponse
 
 _log = get_logger(__name__)
 
@@ -427,19 +428,19 @@ class CalvinControl(object):
                 if not found:
                     _log.error("No route found for: %s" % data)
                     self.send_response(
-                        handle, connection, "HTTP/1.0 404 Not Found\r\n")
+                        handle, connection, None, status=404)
 
-    def send_response(self, handle, connection, data):
+    def send_response(self, handle, connection, data, status=200):
         """ Send response header text/html
         """
         if not connection.connection_lost:
-            connection.send("HTTP/1.0 200 OK\n"
-                            + "Content-Type: application/json\n"
-                            +
-                            "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
+            connection.send("HTTP/1.0 " + str(status) + " " + calvinresponse.RESPONSE_CODES[status] + "\n"
+                            + ("" if data is None else "Content-Type: application/json\n")
+                            + "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
                             + "Access-Control-Allow-Origin: *\r\n"
                             + "\n")
-            connection.send(data)
+            if data:
+                connection.send(data)
             connection.close()
         del self.connections[handle]
 
@@ -453,7 +454,8 @@ class CalvinControl(object):
                             + "\n")
 
     def storage_cb(self, key, value, handle, connection):
-        self.send_response(handle, connection, json.dumps(value))
+        self.send_response(handle, connection, None if value is None else json.dumps(value), 
+                           status=calvinresponse.NOT_FOUND if None else calvinresponse.OK)
 
     def handle_get_log(self, handle, connection, match, data, hdr):
         """ Get log stream
@@ -468,8 +470,14 @@ class CalvinControl(object):
             handle, connection, json.dumps({'id': self.node.id}))
 
     def handle_peer_setup(self, handle, connection, match, data, hdr):
-        self.node.peersetup(data['peers'])
-        self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+        _log.analyze(self.node.id, "+", data)
+        self.node.peersetup(data['peers'], cb=CalvinCB(self.handle_peer_setup_cb, handle, connection))
+
+    def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=None):
+        _log.analyze(self.node.id, "+", status.encode())
+        self.send_response(handle, connection,
+            None if peer_node_ids is None else json.dumps({k: (v[0], v[1].status) for k, v in peer_node_ids.items()}),
+            status=status.status)
 
     def handle_get_nodes(self, handle, connection, match, data, hdr):
         """ Get active nodes
@@ -498,16 +506,22 @@ class CalvinControl(object):
     def handle_del_application(self, handle, connection, match, data, hdr):
         """ Delete application from id
         """
+        # FIXME add callback, for now just say we got the request
         self.node.app_manager.destroy(match.group(1))
-        self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+        self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
     def handle_new_actor(self, handle, connection, match, data, hdr):
         """ Create actor
         """
-        actor_id = self.node.new(actor_type=data['actor_type'], args=data[
-                                 'args'], deploy_args=data['deploy_args'])
+        try:
+            actor_id = self.node.new(actor_type=data['actor_type'], args=data[
+                                     'args'], deploy_args=data['deploy_args'])
+            status = calvinresponse.OK
+        except:
+            actor_id = None
+            status = calvinresponse.INTERNAL_ERROR
         self.send_response(
-            handle, connection, json.dumps({'actor_id': actor_id}))
+            handle, connection, None if actor_id is None else json.dumps({'actor_id': actor_id}), status=status)
 
     def handle_get_actors(self, handle, connection, match, data, hdr):
         """ Get actor list
@@ -525,14 +539,24 @@ class CalvinControl(object):
     def handle_del_actor(self, handle, connection, match, data, hdr):
         """ Delete actor from id
         """
-        self.node.am.destroy(match.group(1))
-        self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+        try:
+            self.node.am.destroy(match.group(1))
+            status = calvinresponse.OK
+        except:
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, None, status=status)
 
     def handle_get_actor_report(self, handle, connection, match, data, hdr):
         """ Get report from actor
         """
+        try:
+            report = self.node.am.report(match.group(1))
+            status = calvinresponse.OK
+        except:
+            report = None
+            status = calvinresponse.NOT_FOUND
         self.send_response(
-            handle, connection, json.dumps(self.node.am.report(match.group(1))))
+            handle, connection, None if report is None else json.dumps(report), status=status)
 
     def handle_actor_migrate(self, handle, connection, match, data, hdr):
         """ Migrate actor
@@ -544,7 +568,7 @@ class CalvinControl(object):
         """ Migrate actor respons
         """
         self.send_response(handle, connection,
-                           json.dumps({'result': "ACK" if status else "NACK"}))
+                           None, status=status.status)
 
     def handle_application_requirements(self, handle, connection, match, data):
         """ Apply application deployment requirements
@@ -555,12 +579,16 @@ class CalvinControl(object):
 
     def handle_application_requirements_cb(self, handle, connection, *args, **kwargs):
         self.send_response(handle, connection,
-                           json.dumps({'result': kwargs['status'].encode(),
-                                       'placement': kwargs['placement'] if 'placement' in kwargs else {}}))
+                           json.dumps({'placement': kwargs['placement'] if 'placement' in kwargs else {}}), 
+                                       status=kwargs['status'].status)
 
     def handle_actor_disable(self, handle, connection, match, data, hdr):
-        self.node.am.disable(match.group(1))
-        self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+        try:
+            self.node.am.disable(match.group(1))
+            status = calvinresponse.OK
+        except:
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, None, status)
 
     def handle_get_port(self, handle, connection, match, data, hdr):
         """ Get port from id
@@ -599,37 +627,58 @@ class CalvinControl(object):
             peer_actor_id=data["peer_actor_id"],
             peer_port_name=data["peer_port_name"],
             peer_port_dir=data["peer_port_dir"],
-            peer_port_id=data["peer_port_id"])
+            peer_port_id=data["peer_port_id"],
+            cb=CalvinCB(self.handle_connect_cb, handle, connection))
 
-        self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+
+    def handle_connect_cb(self, handle, connection, **kwargs):
+        status = kwargs.get('status', None)
+        peer_port_id = kwargs.get('peer_port_id', None)
+        self.send_response(handle, connection, json.dumps({'peer_port_id': peer_port_id}) if status else None,
+                           status=status.status)
 
     def handle_set_port_property(self, handle, connection, match, data, hdr):
-        self.node.am.set_port_property(
-            actor_id=data["actor_id"],
-            port_type=data["port_type"],
-            port_name=data["port_name"],
-            port_property=data["port_property"],
-            value=data["value"])
-        self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+        try:
+            self.node.am.set_port_property(
+                actor_id=data["actor_id"],
+                port_type=data["port_type"],
+                port_name=data["port_name"],
+                port_property=data["port_property"],
+                value=data["value"])
+            status = calvinresponse.OK
+        except:
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, None, status=status)
 
     def handle_deploy(self, handle, connection, match, data, hdr):
-        app_info, errors, warnings = compiler.compile(
-            data["script"], filename=data["name"])
-        app_info["name"] = data["name"]
-        d = deployer.Deployer(
-            runtime=None, deployable=app_info, node_info=None, node=self.node)
-        app_id = d.deploy()
+        try:
+            app_info, errors, warnings = compiler.compile(
+                data["script"], filename=data["name"])
+            app_info["name"] = data["name"]
+            d = deployer.Deployer(
+                runtime=None, deployable=app_info, node_info=None, node=self.node)
+            app_id = d.deploy()
+            status = calvinresponse.OK
+        except:
+            app_id = None
+            status = calvinresponse.NOT_FOUND
+
         self.send_response(
-            handle, connection, json.dumps({'application_id': app_id, 'actor_map': d.actor_map}))
+            handle, connection, json.dumps({'application_id': app_id, 'actor_map': d.actor_map}) if app_id else None,
+            status=status)
 
     def handle_quit(self, handle, connection, match, data, hdr):
         self.node.stop()
-        self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+        self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
     def handle_disconnect(self, handle, connection, match, data, hdr):
         self.node.disconnect(
-            data['actor_id'], data['port_name'], data['port_dir'], data['port_id'])
-        self.send_response(handle, connection, json.dumps({'result': 'OK'}))
+            data['actor_id'], data['port_name'], data['port_dir'], data['port_id'],
+            cb=CalvinCB(self.handle_disconnect_cb, handle, connection))
+
+    def handle_disconnect_cb(self, handle, connection, **kwargs):
+        status = kwargs.get('status', None)
+        self.send_response(handle, connection, None, status=status.status)
 
     def handle_post_index(self, handle, connection, match, data, hdr):
         """ Add to index
@@ -657,13 +706,15 @@ class CalvinControl(object):
             value = kwargs['value']
         else:
             value = None
-        self.send_response(handle, connection, json.dumps({'result': value}))
+        self.send_response(handle, connection, None, 
+                           status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
 
     def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
         """ Index operation response
         """
         _log.debug("get index cb (in control) %s, %s" % (key, value))
-        self.send_response(handle, connection, json.dumps({'result': value}))
+        self.send_response(handle, connection, None if value is None else json.dumps({'result': value}),
+                           status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
 
     def log_firing(self, actor_name, action_method, tokens_produced, tokens_consumed, production):
         """ Trace firing, sends data on log_sock

@@ -97,8 +97,7 @@ class Node(object):
 
     def connect(self, actor_id=None, port_name=None, port_dir=None, port_id=None,
                 peer_node_id=None, peer_actor_id=None, peer_port_name=None,
-                peer_port_dir=None, peer_port_id=None):
-        # FIXME callback needed to send back a proper reply !!!!!
+                peer_port_dir=None, peer_port_id=None, cb=None):
         self.pm.connect(actor_id=actor_id,
                         port_name=port_name,
                         port_dir=port_dir,
@@ -108,24 +107,35 @@ class Node(object):
                         peer_port_name=peer_port_name,
                         peer_port_dir=peer_port_dir,
                         peer_port_id=peer_port_id,
-                        callback=CalvinCB(self.logging_callback, preamble="connect cb"))
+                        callback=CalvinCB(self.logging_callback, preamble="connect cb")  if cb is None else cb)
 
-    def disconnect(self, actor_id=None, port_name=None, port_dir=None, port_id=None):
-        # FIXME callback needed to send back a proper reply !!!!!
+    def disconnect(self, actor_id=None, port_name=None, port_dir=None, port_id=None, cb=None):
         _log.debug("disconnect(actor_id=%s, port_name=%s, port_dir=%s, port_id=%s)" %
                    (actor_id if actor_id else "", port_name if port_name else "",
                     port_dir if port_dir else "", port_id if port_id else ""))
         self.pm.disconnect(actor_id=actor_id, port_name=port_name,
                            port_dir=port_dir, port_id=port_id,
-                           callback=CalvinCB(self.logging_callback, preamble="disconnect cb"))
+                           callback=CalvinCB(self.logging_callback, preamble="disconnect cb") if cb is None else cb)
 
-    def peersetup(self, peers):
+    def peersetup(self, peers, cb=None):
         """ Sets up a RT to RT communication channel, only needed if the peer can't be found in storage.
             peers: a list of peer uris, e.g. ["calvinip://127.0.0.1:5001"]
         """
-        # FIXME callback needed to send back a proper reply !!!!!
         _log.debug("peersetup(%s)" % (peers))
-        self.network.join(peers, callback=CalvinCB(self.logging_callback, preamble="peersetup cb"))
+        peers_copy = peers[:]
+        peer_node_ids = {}
+        self.network.join(peers,
+            callback=CalvinCB(self.logging_callback, preamble="peersetup cb") if cb is None else
+                     CalvinCB(self.peersetup_collect_cb, peers=peers_copy, peer_node_ids=peer_node_ids, org_cb=cb))
+
+    def peersetup_collect_cb(self, status, uri, peer_node_id, peer_node_ids, peers, org_cb):
+        if uri in peers:
+            peers.remove(uri)
+            peer_node_ids[uri] = (peer_node_id, status)
+        if not peers:
+            # Get highest status, i.e. any error
+            comb_status = max([s for _, s in peer_node_ids.values()])
+            org_cb(peer_node_ids=peer_node_ids, status=comb_status)
 
     def logging_callback(self, preamble=None, *args, **kwargs):
         _log.debug("\n%s# NODE: %s \n# %s %s %s \n%s" %
