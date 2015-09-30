@@ -42,6 +42,7 @@ control_api_doc += \
 """
     GET /id
     Get id of this calvin node
+    Response status code: OK
     Response: node-id
 """
 re_get_node_id = re.compile(r"GET /id\sHTTP/1")
@@ -49,7 +50,8 @@ re_get_node_id = re.compile(r"GET /id\sHTTP/1")
 control_api_doc += \
 """
     GET /nodes
-    List nodes in network (excluding self)
+    List nodes in network (excluding self) known to self
+    Response status code: OK
     Response: List of node-ids
 """
 re_get_nodes = re.compile(r"GET /nodes\sHTTP/1")
@@ -58,9 +60,10 @@ control_api_doc += \
 """
     GET /node/{node-id}
     Get information on node node-id
+    Response status code: OK or NOT_FOUND
     Response:
     {
-        "attributes": null,
+        "attributes": {...},
         "control_uri": "http://<address>:<controlport>",
         "uri": "calvinip://<address>:<port>"
     }
@@ -72,7 +75,8 @@ control_api_doc += \
     POST /peer_setup
     Add calvin nodes to network
     Body: {"peers: ["calvinip://<address>:<port>", ...] }
-    Response: {"result": "OK"}
+    Response status code: OK or SERVICE_UNAVAILABLE
+    Response: {<peer control uri>: [<peer node id>, <per peer status>], ...}
 """
 re_post_peer_setup = re.compile(r"POST /peer_setup\sHTTP/1")
 
@@ -80,6 +84,7 @@ control_api_doc += \
 """
     GET /applications
     Get applications launched from this node
+    Response status code: OK
     Response: List of application ids
 """
 re_get_applications = re.compile(r"GET /applications\sHTTP/1")
@@ -88,6 +93,7 @@ control_api_doc += \
 """
     GET /application/{application-id}
     Get information on application application-id
+    Response status code: OK or NOT_FOUND
     Response:
     {
          "origin_node_id": <node id>,
@@ -101,7 +107,8 @@ control_api_doc += \
 """
     DELETE /application/{application-id}
     Stop application (only applications launched from this node)
-    Response: {"result: "OK"}
+    Response status code: ACCEPTED
+    Response: none
 """
 re_del_application = re.compile(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
@@ -115,6 +122,7 @@ control_api_doc += \
         "args" : { "name": <name of actor>, <actor argument>:<value>, ... }
         "deploy_args" : {"app_id": <application id>, "app_name": <application name>} (optional)
     }
+    Response status code: OK or INTERNAL_ERROR
     Response: {"actor_id": <actor-id>}
 """
 re_post_new_actor = re.compile(r"POST /actor\sHTTP/1")
@@ -123,6 +131,7 @@ control_api_doc += \
 """
     GET /actors
     Get list of actors on this runtime
+    Response status code: OK
     Response: list of actor ids
 """
 re_get_actors = re.compile(r"GET /actors\sHTTP/1")
@@ -131,6 +140,7 @@ control_api_doc += \
 """
     GET /actor/{actor-id}
     Get information on actor
+    Response status code: OK or NOT_FOUND
     Response:
     {
         "inports": list inports
@@ -146,7 +156,8 @@ control_api_doc += \
 """
     DELETE /actor/{actor-id}
     Delete actor
-    Response: {"result": "OK"}
+    Response status code: OK or NOT_FOUND
+    Response: none
 """
 re_del_actor = re.compile(r"DELETE /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
@@ -154,6 +165,7 @@ control_api_doc += \
 """
     GET /actor/{actor-id}/report
     Some actor store statistics on inputs and outputs, this reports these. Not always present.
+    Response status code: OK or NOT_FOUND
     Repsonse: Depends on actor
 """
 re_get_actor_report = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report\sHTTP/1")
@@ -163,7 +175,8 @@ control_api_doc += \
     POST /actor/{actor-id}/migrate
     Migrate actor to (other) node
     Body: {"peer_node_id": <node-id>}
-    Response: {"result": "ACK"}
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
+    Response: none
 """
 re_post_actor_migrate = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
 
@@ -205,7 +218,8 @@ control_api_doc += \
          "type": "+"
         }
 
-    Response: {"result": "ACK"/"NACK"}
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
+    Response: {"placement": {<actor_id>: <node_id>, ...}}
 """
 re_post_application_requirements = re.compile(r"POST /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/migrate\sHTTP/1")
 
@@ -213,7 +227,8 @@ control_api_doc += \
 """
     POST /actor/{actor-id}/disable
     DEPRECATED. Disables an actor
-    Response: {"result": "OK"}
+    Response status code: OK or NOT_FOUND
+    Response: none
 """
 re_post_actor_disable = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/disable\sHTTP/1")
 
@@ -221,6 +236,7 @@ re_post_actor_disable = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid
 """
     GET /actor/{actor-id}/port/{port-id}
     Broken. Get information on port {port-id} of actor {actor-id}
+    Response status code: OK or NOT_FOUND
 """
 re_get_port = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
@@ -238,7 +254,8 @@ control_api_doc += \
         "peer_port_name": <port-name>,
         "peer_port_dir": <out/in>
     }
-    Response: {"result": "OK"}
+    Response status code: OK, BAD_REQUEST, INTERNAL_ERROR or NOT_FOUND
+    Response: {"peer_port_id": <peer port id>}
 """
 re_post_connect = re.compile(r"POST /connect\sHTTP/1")
 
@@ -254,7 +271,8 @@ control_api_doc += \
         "port_property": <property-name>
         "value" : <property value>
     }
-    Response: {"result": "OK"}
+    Response status code: OK or NOT_FOUND
+    Response: none
 """
 re_set_port_property = re.compile(r"POST /set_port_property\sHTTP/1")
 
@@ -267,7 +285,9 @@ control_api_doc += \
         "name": <application name>,
         "script": <calvin script>
     }
-    Response: {"application_id": <application-id>}
+    Response status code: OK or INTERNAL_ERROR
+    Response: {"application_id": <application-id>,
+               "actor_map": {<actor id>: <actor name with namespace>, ...}}
 """
 re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
 
@@ -282,7 +302,8 @@ control_api_doc += \
         "port_dir": <in/out>,
         "port_id": <port-id>
     }
-    Response: {"result": "OK"}
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
+    Response: none
 """
 re_post_disconnect = re.compile(r"POST /disconnect\sHTTP/1")
 
@@ -290,7 +311,8 @@ control_api_doc += \
 """
     DELETE /node
     Stop (this) calvin node
-    Response: {"result": "OK"}
+    Response status code: ACCEPTED
+    Response: none
 """
 re_delete_node = re.compile(r"DELETE /node\sHTTP/1")
 
@@ -302,7 +324,8 @@ control_api_doc += \
     {
         "value": <string>
     }
-    Response: {"result": "true"}
+    Response status code: OK or INTERNAL_ERROR
+    Response: none
 """
 re_post_index = re.compile(r"POST /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
@@ -314,7 +337,8 @@ control_api_doc += \
     {
         "value": <string>
     }
-    Response: {"result": "true"}
+    Response status code: OK or INTERNAL_ERROR
+    Response: none
 """
 re_delete_index = re.compile(r"DELETE /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
@@ -322,6 +346,7 @@ control_api_doc += \
 """
     GET /index/{key}
     Fetch values under index key
+    Response status code: OK or NOT_FOUND
     Response: {"result": <list of strings>}
 """
 re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
@@ -330,6 +355,7 @@ control_api_doc += \
 """
     OPTIONS /url
     Request for information about the communication options available on url
+    Response status code: OK
     Response: Available communication options
 """
 re_options = re.compile(r"OPTIONS /[0-9a-z/-]+\sHTTP/1.1")
@@ -661,7 +687,7 @@ class CalvinControl(object):
             status = calvinresponse.OK
         except:
             app_id = None
-            status = calvinresponse.NOT_FOUND
+            status = calvinresponse.INTERNAL_ERROR
 
         self.send_response(
             handle, connection, json.dumps({'application_id': app_id, 'actor_map': d.actor_map}) if app_id else None,
@@ -707,7 +733,7 @@ class CalvinControl(object):
         else:
             value = None
         self.send_response(handle, connection, None, 
-                           status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
+                           status=calvinresponse.INTERNAL_ERROR if value is None else calvinresponse.OK)
 
     def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
         """ Index operation response
