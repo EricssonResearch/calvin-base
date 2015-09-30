@@ -18,6 +18,7 @@ import logging
 from colorlog import ColoredFormatter
 import json
 import inspect
+import os
 
 _name = "calvin"
 _log = None
@@ -29,7 +30,7 @@ def analyze(self, node_id, func, param, peer_node_id=None, *args, **kws):
         if func.startswith("+"):
             f = inspect.currentframe()
             if f is not None:
-                func = f.f_back.f_code.co_name + func[1:]
+                func = os.path.basename(f.f_back.f_code.co_filename) + ":" + f.f_back.f_code.co_name + func[1:]
 
         self._log(5, "[[ANALYZE]]" + json.dumps({'node_id': node_id,
                                                  'peer_node_id': peer_node_id,
