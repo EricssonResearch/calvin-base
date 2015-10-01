@@ -181,12 +181,18 @@ class Node(object):
 
     def stop(self, callback=None):
         def stopped(*args):
+            _log.analyze(self.id, "+", {'args': args})
             _log.debug(args)
             self.sched.stop()
+            _log.analyze(self.id, "+ SCHED STOPPED", {'args': args})
             self.control.stop()
+            _log.analyze(self.id, "+ CONTROL STOPPED", {'args': args})
 
         def deleted_node(*args, **kwargs):
+            _log.analyze(self.id, "+", {'args': args, 'kwargs': kwargs})
             self.storage.stop(stopped)
+
+        _log.analyze(self.id, "+", {})
         self.storage.delete_node(self, cb=deleted_node)
 
 
