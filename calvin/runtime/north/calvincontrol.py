@@ -197,27 +197,23 @@ control_api_doc += \
                 ...
                             }
            }
-    
+    }
     The matching rules are implemented as plugg-ins, intended to be extended. The type "+" is anding rules togheter or
     rather taking the section between all rules return possible nodes. The type "-" is explicitly removing the matching
     rule's returned nodes from the set of possible nodes. Note that only negative rules will result in no possible nodes,
     i.e. no implied all but these.
-    
     A special matching rule exist, to first form a union between matching rules, i.e. alternative matches. This is useful
     for e.g. alternative namings, ownerships or specifying either of two specific nodes.
-    {"op": "union_group",
-     "requirements": [list as above of matching rules but without type key]
-     "type": "+"
-    }
-
+        {"op": "union_group",
+         "requirements": [list as above of matching rules but without type key]
+         "type": "+"
+        }
     Other matching rules available is current_node, all_nodes and node_attr_match which takes an index param which is
     attribute formatted, e.g.
-    
         {"op": "node_attr_match", 
          "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
          "type": "+"
         }
-
     Response status code: OK, INTERNAL_ERROR or NOT_FOUND
     Response: {"placement": {<actor_id>: <node_id>, ...}}
 """
