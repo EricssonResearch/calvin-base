@@ -102,12 +102,17 @@ def control_applications(args):
 
 
 def control_nodes(args):
+    from requests.exceptions import ConnectionError
     if args.cmd == 'list':
         return utils.get_nodes(args.node)
     elif args.cmd == 'add':
         return utils.peer_setup(args.node, *args.peerlist)
     elif args.cmd == 'stop':
-        return utils.quit(args.node)
+        try:
+            return utils.quit(args.node)
+        except ConnectionError as e:
+            # If the connection goes down before response that is OK
+            return None
 
 
 def parse_args():

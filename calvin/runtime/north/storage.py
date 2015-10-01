@@ -122,6 +122,8 @@ class Storage(object):
         """
         if self.started:
             self.storage.stop(cb=cb)
+        elif cb:
+            cb()
         self.started = False
 
     ### Storage operations ###
@@ -342,12 +344,13 @@ class Storage(object):
         """
         Delete node from storage
         """
-        self.delete(prefix="node-", key=node.id, cb=None if node.attributes else cb)
-        if node.attributes:
+        self.delete(prefix="node-", key=node.id, cb=None if node.attributes.get_indexed_public() else cb)
+        if node.attributes.get_indexed_public():
             self._delete_node_index(node, cb=cb)
 
     def _delete_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()
+        _log.analyze(self.node.id, "+", {'indexes': indexes})
         try:
             counter = [len(indexes)]  # counter value by reference used in callback
             for index in indexes:
@@ -360,11 +363,13 @@ class Storage(object):
                 cb()
 
     def _delete_node_cb(self, counter, org_cb, *args, **kwargs):
+        _log.analyze(self.node.id, "+", {'counter': counter[0]})
         counter[0] = counter[0] - 1
         if counter[0] == 0:
             org_cb(*args, **kwargs)
 
     def _delete_node_timeout_cb(self, counter, org_cb):
+        _log.analyze(self.node.id, "+", {'counter': counter[0]})
         if counter[0] > 0:
             _log.debug("Delete node index not finished but call callback anyway")
             org_cb()
