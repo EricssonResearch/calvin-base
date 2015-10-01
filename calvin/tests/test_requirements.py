@@ -86,10 +86,9 @@ class TestDeployScript(CalvinNodeTestBase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(self.test_script_dir+"test_deploy1.calvin"), attr=None,
                                 reqs=self.test_script_dir+"test_deploy1.deployjson")
-        response = deploy_app(args)
         result = {}
         try:
-            result = json.loads(response.text)
+            result = deploy_app(args)
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
@@ -110,10 +109,9 @@ class TestDeployScript(CalvinNodeTestBase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(self.test_script_dir+"test_deploy2.calvin"), attr=None,
                                 reqs=self.test_script_dir+"test_deploy2.deployjson")
-        response = deploy_app(args)
         result = {}
         try:
-            result = json.loads(response.text)
+            result = deploy_app(args)
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
@@ -137,10 +135,9 @@ class TestDeployScript(CalvinNodeTestBase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(self.test_script_dir+"test_deploy3.calvin"), attr=None,
                                 reqs=self.test_script_dir+"test_deploy3.deployjson")
-        response = deploy_app(args)
         result = {}
         try:
-            result = json.loads(response.text)
+            result = deploy_app(args)
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
