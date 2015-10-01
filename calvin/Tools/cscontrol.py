@@ -16,7 +16,6 @@
 # limitations under the License.
 
 import argparse
-import requests
 import json
 import calvin.utilities.utils as utils
 import os
@@ -27,30 +26,15 @@ import logging
 _log = get_logger(__name__)
 
 
-def jsonprint(s):
-    print(json.dumps(json.loads(s), indent=2))
-
-
 def control_id(args):
-    return requests.get(args.node + "/id")
-
-
-def get_nodes_with_attribute(control_uri, attribute):
-    req = requests.get(control_uri + "/index/" + attribute)
-    print("reply: %s" % (req.text))
-    nodes = json.loads(req.text)
-    if not nodes or not isinstance(nodes.get("result"), list):
-        raise Exception("No node with attribute {} found".format(attribute))
-    return nodes.get("result")
+    return utils.get_node_id(args.node)
 
 
 def get_node_info(control_uri, node_id):
-    req = requests.get(control_uri + "/node/" + node_id)
-    nodeinfo = json.loads(req.text)
-    if isinstance(nodeinfo, dict):
-        return nodeinfo
-    raise Exception("No node with id {} found".format(node_id))
-
+    try:
+        return utils.get_node(control_uri, node_id)
+    except:
+        raise Exception("No node with id {} found".format(node_id))
 
 def get_node_control_uri(control_uri, node_id):
     nodeinfo = get_node_info(control_uri, node_id)
@@ -74,56 +58,56 @@ def requirements_file(path):
     return reqs
 
 def control_deploy(args):
-    data = {"name": args.script.name, "script": args.script.read()}
-    node = args.node
-    response_http = requests.post(node + "/deploy", data=json.dumps(data))
-    response = json.loads(response_http.text)
-    if "application_id" in response and args.reqs:
+    response = None
+    print args
+    try:
+        response = utils.deploy_application(args.node, args.script.name, args.script.read())
+    except Exception as e:
+        print e
+    if isinstance(response, dict) and "application_id" in response and args.reqs:
         reqs = requirements_file(args.reqs)
         if reqs:
             try:
-                result = utils.add_requirements(utils.RT(node), response["application_id"], reqs)
+                result = utils.add_requirements(args.node, response["application_id"], reqs)
                 _log.debug("Succeeded with applying deployment requirements %s\n" % result['placement'])
             except:
                 _log.error("Applying deployment requirement from file %s failed" % args.reqs)
                 print ("Applying deployment requirement from file %s failed" % args.reqs)
-    return response_http
+    return response
 
 def control_actors(args):
     if args.cmd == 'list':
-        return requests.get(args.node + "/actors")
+        return utils.get_actors(args.node)
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No actor id given")
-        return requests.get(args.node + "/actor/" + args.id)
+        return utils.get_actor(args.node, args.id)
     elif args.cmd == 'delete':
         if not args.id:
             raise Exception("No actor id given")
-        return requests.delete(args.node + "/actor/" + args.id)
+        return utils.delete_actor(args.node, args.id)
     elif args.cmd == 'migrate':
         if not args.id or not args.peer_node:
             raise Exception("No actor or peer given")
-        data = {"peer_node_id": args.peer_node}
-        return requests.post(args.node + "/actor/" + args.id + "/migrate", data=json.dumps(data))
+        return utils.migrate(args.node, args.id, args.peer_node)
 
 
 def control_applications(args):
     if args.cmd == 'list':
-        return requests.get(args.node + "/applications")
+        return utils.get_applications(args.node)
     elif args.cmd == 'delete':
         if not args.id:
             raise Exception("No application id given")
-        return requests.delete(args.node + "/application/" + args.id)
+        return utils.delete_application(args.node, args.id)
 
 
 def control_nodes(args):
     if args.cmd == 'list':
-        return requests.get(args.node + "/nodes")
+        return utils.get_nodes(args.node)
     elif args.cmd == 'add':
-        data = {"peers": args.peerlist}
-        return requests.post(args.node + "/peer_setup", data=json.dumps(data))
+        return utils.peer_setup(args.node, *args.peerlist)
     elif args.cmd == 'stop':
-        return requests.delete(args.node + "/node")
+        return utils.quit(args.node)
 
 
 def parse_args():
@@ -181,7 +165,10 @@ def parse_args():
 
 def main():
     args = parse_args()
-    jsonprint(args.func(args).text)
-
+    try:
+        r =  args.func(args)
+        print "OK" if r is None else r
+    except Exception as e:
+        print "Error {}".format(e)
 if __name__ == '__main__':
     main()
