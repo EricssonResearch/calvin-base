@@ -596,7 +596,7 @@ class CalvinControl(object):
         self.send_response(handle, connection,
                            None, status=status.status)
 
-    def handle_application_requirements(self, handle, connection, match, data):
+    def handle_application_requirements(self, handle, connection, match, data, hdr):
         """ Apply application deployment requirements
             to actors of an application and initiate migration of actors accordingly
         """
