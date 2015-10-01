@@ -22,6 +22,8 @@ from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
+#default timeout
+TIMEOUT=5
 
 def get_local_ip():
     import socket
@@ -57,6 +59,11 @@ class RT():
     def __init__(self, control_uri):
         self.control_uri = control_uri
 
+def get_RT(value):
+    if isinstance(value, basestring):
+        return RT(value)
+    else:
+        return value
 
 def check_response(response, success=range(200, 207)):
     if response.status_code in success:
@@ -67,146 +74,177 @@ def check_response(response, success=range(200, 207)):
     # When failed raise exception
     raise Exception("%d" % response.status_code)
 
-def get_node_id(rt):
-    r = requests.get(rt.control_uri + '/id')
+def get_node_id(rt, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/id', timeout=timeout)
     return check_response(r)["id"]
 
 
-def get_node(rt, node_id):
-    r = requests.get(rt.control_uri + '/node/' + node_id)
+def get_node(rt, node_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/node/' + node_id, timeout=timeout)
     return check_response(r)
 
 
-def quit(rt):
-    r = requests.delete(rt.control_uri + '/node')
+def quit(rt, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.delete(rt.control_uri + '/node', timeout=timeout)
     return check_response(r)
 
 
-def get_nodes(rt):
-    return check_response(requests.get(rt.control_uri + '/nodes'))
+def get_nodes(rt, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    return check_response(requests.get(rt.control_uri + '/nodes', timeout=timeout))
 
 
-def peer_setup(rt, *peers):
+def peer_setup(rt, *peers, **kwargs):
+    rt = get_RT(rt)
+    timeout = kwargs.get('timeout', TIMEOUT)
     if not isinstance(peers[0], type("")):
         peers = peers[0]
     r = requests.post(
-        rt.control_uri + '/peer_setup', data=json.dumps({'peers': peers}))
+        rt.control_uri + '/peer_setup', data=json.dumps({'peers': peers}), timeout=timeout)
     return check_response(r)
 
 
-def new_actor(rt, actor_type, actor_name):
+def new_actor(rt, actor_type, actor_name, timeout=TIMEOUT):
+    rt = get_RT(rt)
     data = {'actor_type': actor_type, 'args': {
         'name': actor_name}, 'deploy_args': None}
-    r = requests.post(rt.control_uri + '/actor', data=json.dumps(data))
+    r = requests.post(rt.control_uri + '/actor', data=json.dumps(data), timeout=timeout)
     result = check_response(r)['actor_id']
     return result
 
 
-def new_actor_wargs(rt, actor_type, actor_name, args=None, deploy_args=None, **kwargs):
+def new_actor_wargs(rt, actor_type, actor_name, args=None, deploy_args=None, timeout=TIMEOUT, **kwargs):
+    rt = get_RT(rt)
     if args is None:
         kwargs['name'] = actor_name
         r = requests.post(rt.control_uri + '/actor', data=json.dumps(
             {'actor_type': actor_type, 'deploy_args': deploy_args, 'args': kwargs}))
     else:
         r = requests.post(rt.control_uri + '/actor', data=json.dumps(
-            {'actor_type': actor_type, 'deploy_args': deploy_args, 'args': args}))
+            {'actor_type': actor_type, 'deploy_args': deploy_args, 'args': args}), timeout=timeout)
     result = check_response(r)['actor_id']
     return result
 
 
-def get_actor(rt, actor_id):
-    r = requests.get(rt.control_uri + '/actor/' + actor_id)
+def get_actor(rt, actor_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/actor/' + actor_id, timeout=timeout)
     return check_response(r)
 
 
-def get_actors(rt):
-    r = requests.get(rt.control_uri + '/actors')
+def get_actors(rt, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/actors', timeout=timeout)
     return check_response(r)
 
 
-def delete_actor(rt, actor_id):
-    r = requests.delete(rt.control_uri + '/actor/' + actor_id)
+def delete_actor(rt, actor_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.delete(rt.control_uri + '/actor/' + actor_id, timeout=timeout)
     return check_response(r)
 
 
-def connect(rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name):
+def connect(rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name, timeout=TIMEOUT):
+    rt = get_RT(rt)
     data = {'actor_id': actor_id, 'port_name': port_name, 'port_dir': 'in', 'peer_node_id': peer_node_id,
             'peer_actor_id': peer_actor_id, 'peer_port_name': peer_port_name, 'peer_port_dir': 'out'}
-    r = requests.post(rt.control_uri + '/connect', data=json.dumps(data))
+    r = requests.post(rt.control_uri + '/connect', data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
 
-def disconnect(rt, actor_id=None, port_name=None, port_dir=None, port_id=None):
+def disconnect(rt, actor_id=None, port_name=None, port_dir=None, port_id=None, timeout=TIMEOUT):
+    rt = get_RT(rt)
     data = {'actor_id': actor_id, 'port_name': port_name,
             'port_dir': port_dir, 'port_id': port_id}
-    r = requests.post(rt.control_uri + '/disconnect', json.dumps(data))
+    r = requests.post(rt.control_uri + '/disconnect', json.dumps(data), timeout=timeout)
     return check_response(r)
 
 
-def disable(rt, actor_id):
-    r = requests.post(rt.control_uri + '/actor/' + actor_id + '/disable')
+def disable(rt, actor_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.post(rt.control_uri + '/actor/' + actor_id + '/disable', timeout=timeout)
     return check_response(r)
 
 
-def migrate(rt, actor_id, dst_id):
+def migrate(rt, actor_id, dst_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
     data = {'peer_node_id': dst_id}
     r = requests.post(
-        rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data))
+        rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
-def add_requirements(rt, application_id, reqs):
+def add_requirements(rt, application_id, reqs, timeout=TIMEOUT):
+    rt = get_RT(rt)
     data = {'reqs': reqs}
     r = requests.post(
-        rt.control_uri + '/application/' + application_id + "/migrate", data=json.dumps(data))
+        rt.control_uri + '/application/' + application_id + "/migrate", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
 
-def get_port(rt, actor_id, port_id):
+def get_port(rt, actor_id, port_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
     r = requests.get(
-        rt.control_uri + "/actor/" + actor_id + '/port/' + port_id)
+        rt.control_uri + "/actor/" + actor_id + '/port/' + port_id, timeout=timeout)
     return check_response(r)
 
 
-def set_port_property(rt, actor_id, port_type, port_name, port_property, value):
+def set_port_property(rt, actor_id, port_type, port_name, port_property, value, timeout=TIMEOUT):
+    rt = get_RT(rt)
     data = {'actor_id': actor_id, 'port_type': port_type, 'port_name':
             port_name, 'port_property': port_property, 'value': value}
     r = requests.post(
-        rt.control_uri + '/set_port_property', data=json.dumps(data))
+        rt.control_uri + '/set_port_property', data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
 
-def report(rt, actor_id):
-    r = requests.get(rt.control_uri + '/actor/' + actor_id + '/report')
+def report(rt, actor_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/actor/' + actor_id + '/report', timeout=timeout)
     return check_response(r)
 
 
-def get_applications(rt):
-    r = requests.get(rt.control_uri + '/applications')
+def get_applications(rt, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/applications', timeout=timeout)
     return check_response(r)
 
 
-def get_application(rt, application_id):
-    r = requests.get(rt.control_uri + '/application/' + application_id)
+def get_application(rt, application_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/application/' + application_id, timeout=timeout)
     return check_response(r)
 
 
-def delete_application(rt, application_id):
-    r = requests.delete(rt.control_uri + '/application/' + application_id)
+def delete_application(rt, application_id, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.delete(rt.control_uri + '/application/' + application_id, timeout=timeout)
+    return check_response(r)
+
+def deploy_application(rt, name, script, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    data = {"name": name, "script": script}
+    r = requests.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
 
-def add_index(rt, index, value):
+def add_index(rt, index, value, timeout=TIMEOUT):
+    rt = get_RT(rt)
     data = {'value': value}
-    r = requests.post(rt.control_uri + '/index/' + index, data=json.dumps(data))
+    r = requests.post(rt.control_uri + '/index/' + index, data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
 
-def remove_index(rt, index, value):
+def remove_index(rt, index, value, timeout=TIMEOUT):
+    rt = get_RT(rt)
     data = {'value': value}
-    r = requests.delete(rt.control_uri + '/index/' + index, data=json.dumps(data))
+    r = requests.delete(rt.control_uri + '/index/' + index, data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
 
-def get_index(rt, index):
-    r = requests.get(rt.control_uri + '/index/' + index)
+def get_index(rt, index, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/index/' + index, timeout=timeout)
     return check_response(r)
