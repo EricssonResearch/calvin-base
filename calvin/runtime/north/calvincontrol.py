@@ -22,7 +22,7 @@ from calvin.Tools import cscompiler as compiler
 from calvin.Tools import deployer
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.south.plugins.async import server_connection
+from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
 from calvin.utilities import calvinresponse
 
@@ -186,14 +186,14 @@ control_api_doc += \
     Apply deployment requirements to actors of an application and initiate migration of actors accordingly
     Body:
     {
-        "reqs": 
+        "reqs":
            {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
             "requirements": {
-                "<actor instance 1 name>": [ {"op": "<mathing rule name>", 
+                "<actor instance 1 name>": [ {"op": "<mathing rule name>",
                                               "kwargs": {<rule param key>: <rule param value>, ...},
                                               "type": either "+" or "-" for set section operation or set removal, respectively
                                               }, ...
-                                           ], 
+                                           ],
                 ...
                             }
            }
@@ -210,7 +210,7 @@ control_api_doc += \
         }
     Other matching rules available is current_node, all_nodes and node_attr_match which takes an index param which is
     attribute formatted, e.g.
-        {"op": "node_attr_match", 
+        {"op": "node_attr_match",
          "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
          "type": "+"
         }
@@ -476,7 +476,7 @@ class CalvinControl(object):
                             + "\n")
 
     def storage_cb(self, key, value, handle, connection):
-        self.send_response(handle, connection, None if value is None else json.dumps(value), 
+        self.send_response(handle, connection, None if value is None else json.dumps(value),
                            status=calvinresponse.NOT_FOUND if None else calvinresponse.OK)
 
     def handle_get_log(self, handle, connection, match, data, hdr):
@@ -596,12 +596,12 @@ class CalvinControl(object):
         """ Apply application deployment requirements
             to actors of an application and initiate migration of actors accordingly
         """
-        self.node.app_manager.deployment_add_requirements(match.group(1), data['reqs'], 
+        self.node.app_manager.deployment_add_requirements(match.group(1), data['reqs'],
                         cb=CalvinCB(func=self.handle_application_requirements_cb, handle=handle, connection=connection))
 
     def handle_application_requirements_cb(self, handle, connection, *args, **kwargs):
         self.send_response(handle, connection,
-                           json.dumps({'placement': kwargs['placement'] if 'placement' in kwargs else {}}), 
+                           json.dumps({'placement': kwargs['placement'] if 'placement' in kwargs else {}}),
                                        status=kwargs['status'].status)
 
     def handle_actor_disable(self, handle, connection, match, data, hdr):
@@ -690,7 +690,7 @@ class CalvinControl(object):
             status=status)
 
     def handle_quit(self, handle, connection, match, data, hdr):
-        self.node.stop()
+        async.DelayedCall(.2, self.node.stop)
         self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
     def handle_disconnect(self, handle, connection, match, data, hdr):
@@ -728,7 +728,7 @@ class CalvinControl(object):
             value = kwargs['value']
         else:
             value = None
-        self.send_response(handle, connection, None, 
+        self.send_response(handle, connection, None,
                            status=calvinresponse.INTERNAL_ERROR if value is None else calvinresponse.OK)
 
     def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
