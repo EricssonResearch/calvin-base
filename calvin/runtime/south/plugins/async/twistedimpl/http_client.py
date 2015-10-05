@@ -64,16 +64,6 @@ class HTTPRequest(object):
         return self._handle
 
 
-def listify(headers):
-    if not headers:
-        return {'User-Agent': ['Calvin-Twisted Webclient']}
-        return None
-    for k, v in headers.items():
-        if not isinstance(v, list):
-            headers[k] = list(v)
-    return headers
-
-
 class HTTPClient(CalvinCBClass):
 
     class WebClientContextFactory(ClientContextFactory):
@@ -101,8 +91,14 @@ class HTTPClient(CalvinCBClass):
         else:
             params = ""
         url += params
-        headers = listify(headers)
-        deferred = self._agent.request('GET', url, Headers(headers))
+
+        twisted_headers = Headers()
+        for k, v in headers.items():
+            key = k.encode('ascii', 'ignore')
+            val = v.encode('ascii', 'ignore')
+            twisted_headers.addRawHeader(key, val)
+
+        deferred = self._agent.request('GET', url, twisted_headers)
         request = HTTPRequest(handle)
         deferred.addCallback(self._receive_headers, request)
         return request
