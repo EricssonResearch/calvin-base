@@ -36,9 +36,15 @@ class HTTPClient(Actor):
 
     @manage()
     def init(self):
-        self.use('calvinsys.network.httpclienthandler', shorthand='http')
+        self.setup()
+
+    def did_migrate(self):
+        self.setup()
+
+    def setup(self):
         self.request = None
         self.received_headers = False
+        self.use('calvinsys.network.httpclienthandler', shorthand='http')
 
     @condition(action_input=['URL', 'params', 'header'])
     @guard(lambda self, url, params, header: self.request is None)
