@@ -71,7 +71,7 @@ component ExtractCommit() dict -> commit_info {
   fmt.text > .commit_info
 }
 
-request : http.Request()
+request : net.HTTPClient()
 commit_date : LatestCommitDate()
 etag : ExtractETag()
 
@@ -89,6 +89,7 @@ printout : io.Print()
 cmp : std.Compare(op="=")
 route : std.Switch()
 drop : std.Terminator()
+body_to_json : json.FromString()
 
 
 URL > delay.token
@@ -98,10 +99,12 @@ init_url.out > request.URL
 init_params.out > request.params
 init_header.out > request.header
 
-request.data > commit_date.body
+request.data > body_to_json.string
+
+body_to_json.data > commit_date.body
 request.header > etag.header
 
-request.data > commitlist.list
+body_to_json.data > commitlist.list
 commitlist.item > extract.dict
 extract.commit_info > printout.token
 
@@ -121,3 +124,4 @@ params.container > route.a
 init_params.out > route.b
 route.a > init_params.in
 route.b > drop.void
+

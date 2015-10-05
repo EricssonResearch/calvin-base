@@ -52,23 +52,21 @@ class ClientHandler(object):
         self._trigger_sched()
 
     # External API
-    def connect(self, addr, port, protocol="raw", type_="TCP", delimiter="\r\n"):
+    def connect(self, addr, port, mode="raw", connection_type="TCP", delimiter="\r\n"):
         handle = "%s:%s:%s" % (self._actor.id, addr, port)
 
-        if type_ == "TCP":
-            connection_factory = client_connection.ClientProtocolFactory(protocol=protocol, type_=type_,
-                                                                         delimiter=delimiter,
-                                                                         callbacks={'data_received':
-                                                                                    [CalvinCB(self._push_data, handle)]})
+        if connection_type == "TCP":
+            connection_factory = client_connection.TCPClientProtocolFactory(mode=mode, delimiter=delimiter,
+                                                                            callbacks={'data_received':
+                                                                                       [CalvinCB(self._push_data, handle)]})
 
-        elif type_ == "UDP":
+        elif connection_type == "UDP":
             connection_factory = client_connection.UDPClientProtocolFactory(callbacks={'data_received': [CalvinCB(self._push_data, handle)]})
 
         connection_factory.callback_register('connected', CalvinCB(self._connected, handle, connection_factory))
         connection_factory.callback_register('disconnected', CalvinCB(self._disconnected, handle))
         connection_factory.callback_register('connection_failed', CalvinCB(self._connection_failed, handle,
                                                                            connection_factory))
-
         connection_factory.connect(addr, port)
         self._connections[handle] = {'data': [], 'control': [], 'connection': None}
         return ClientConnection(self, handle)

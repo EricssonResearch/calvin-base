@@ -56,7 +56,7 @@ class Dict(Actor):
     @guard(lambda self, key, value: not self.n and not self.done)
     def add_entry_EOS(self, key, value):
         if isinstance(key, basestring):
-            self._dict[key]=value
+            self._dict[key] = value
         else:
             self._bail()
         return ActionResult()
