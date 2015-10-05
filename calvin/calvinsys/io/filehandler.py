@@ -54,6 +54,9 @@ class File(object):
         return self.fd.read()
 
 
+def access_allowed(filename):
+    return os.access(os.path.dirname(os.path.realpath(filename)), os.W_OK | os.X_OK)
+
 class FileHandler(object):
     def __init__(self, node):
         super(FileHandler, self).__init__()
@@ -63,7 +66,7 @@ class FileHandler(object):
         if 'r' in mode and not os.path.exists(fname):
             raise Exception("File not found")
 
-        if 'w' in mode and not os.access(os.path.realpath(fname), os.W_OK | os.X_OK):
+        if 'w' in mode and not access_allowed(fname):
             raise Exception("Cannot create file")
 
         return File(self.node, fname, mode)
