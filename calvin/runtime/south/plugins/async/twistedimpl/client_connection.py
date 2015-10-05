@@ -63,6 +63,12 @@ class RawProtocol(CalvinCBClass, Protocol):
     def dataReceived(self, data):
         self._callback_execute('data_received', data)
 
+    def send(self, data):
+        self.transport.write(data)
+
+    def close(self):
+        self.transport.loseConnection()
+
 
 class StringRecieverProtocol(CalvinCBClass, basic.Int16StringReceiver):
     def __init__(self, callbacks=None, **kwargs):
@@ -85,57 +91,23 @@ class DelimiterProtocol(CalvinCBClass, basic.LineReceiver):
         self._callback_execute('data_received', data)
 
 
-class ClientProtocolFactory(CalvinCBClass, ClientFactory):
-    def __init__(self, protocol, type_="TCP", delimiter="\r\n", callbacks=None):
-        super(ClientProtocolFactory, self).__init__(callbacks)
+class BaseClientProtocolFactory(CalvinCBClass, ClientFactory):
+    def __init__(self, callbacks=None):
+        super(BaseClientProtocolFactory, self).__init__(callbacks)
         self._callbacks = callbacks
-        self._proto = None
-        self._type = type_
-        self._protocol_type = protocol
-        self.protocol = None
-        self._connector = None
-        self._delimiter = delimiter
         self._addr = ""
         self._port = 0
-
-        if type_ == "UDP":
-            if protocol == "raw":
-                self._proto = UDPRawProtocol
-            else:
-                _log.error("Trying use non existing protocol %s !" % self._protocol_type)
-                raise Exception("Trying use non existing protocol %s !" % self._protocol_type)
-        elif type_ == "TCP":
-            if protocol == "raw":
-                self._proto = RawProtocol
-            elif protocol == "string":
-                self._proto = StringRecieverProtocol
-            elif protocol == "delimiter":
-                self._proto = DelimiterProtocol
-            else:
-                _log.error("Trying use non existing protocol %s !" % self._protocol_type)
-                raise Exception("Trying use non existing protocol %s !" % self._protocol_type)
-        else:
-            _log.error("Trying use non existing protocol %s !" % self._protocol_type)
-            raise Exception("Trying use non existing protocol %s !" % self._protocol_type)
+        self._delimiter = None
 
     def startedConnecting(self, connector):
         pass
 
     def buildProtocol(self, addr):
-        self.protocol = self._proto({'data_received': self._callbacks['data_received']},
-                                    delimiter=self._delimiter, host=self._addr, port=self._port, factory=self)
+        self.protocol = self._protocol_factory({'data_received': self._callbacks['data_received']},
+                                               delimiter=self._delimiter, host=self._addr, port=self._port,
+                                               factory=self)
         reactor.callLater(0, self._callback_execute, 'connected', addr)
         return self.protocol
-
-    def connect(self, addr, port):
-        self._addr = addr
-        self._port = port
-
-        if self._type == "TCP":
-            self._connector = reactor.connectTCP(addr, port, self)
-        elif self._type == "UDP":
-            self._connector = reactor.listenUDP(0, self.buildProtocol((addr, port)))
-        return self._connector
 
     def disconnect(self):
         if self._connector:
@@ -144,17 +116,7 @@ class ClientProtocolFactory(CalvinCBClass, ClientFactory):
         self.protocol = None
 
     def send(self, data):
-        if self.protocol:
-            if self._protocol_type == "raw":
-                self.protocol.send(data)
-            elif self._protocol_type == "string":
-                self.protocol.sendString(data)
-            elif self._protocol_type == "delimiter":
-                self.protocol.sendLine(data)
-            else:
-                _log.error("Trying use non existing protocol %s !" % self._protocol_type)
-        else:
-            _log.warning("Trying to wrote to non connected socket!")
+        self.protocol.send(data)
 
     def clientConnectionLost(self, connector, reason):
         self._callback_execute('connection_lost', connector, reason)
@@ -163,3 +125,55 @@ class ClientProtocolFactory(CalvinCBClass, ClientFactory):
     # TODO: returns defered ?!?
     def clientConnectionFailed(self, connector, reason):
         self._callback_execute('connection_failed', (self._addr, self._port), reason.getErrorMessage())
+
+
+class UDPClientProtocolFactory(BaseClientProtocolFactory):
+    def __init__(self, callbacks=None):
+        super(UDPClientProtocolFactory, self).__init__(callbacks)
+        self._addr = ""
+        self._port = 0
+        self._protocol_factory = UDPRawProtocol
+
+    def connect(self, addr, port):
+        self._addr = addr
+        self._port = port
+        self._connector = reactor.listenUDP(0, self.buildProtocol((addr, port)))
+        return self._connector
+
+
+class TCPClientProtocolFactory(BaseClientProtocolFactory):
+    def __init__(self, mode, delimiter="\r\n", callbacks=None):
+        super(TCPClientProtocolFactory, self).__init__(callbacks)
+        self._protocol_factory = None
+        self._protocol_type = mode
+        self.protocol = None
+        self._connector = None
+        self._delimiter = delimiter
+        self._addr = ""
+        self._port = 0
+
+        if mode == "raw":
+            self._protocol_factory = RawProtocol
+        elif mode == "string":
+            self._protocol_factory = StringRecieverProtocol
+        elif mode == "delimiter":
+            self._protocol_factory = DelimiterProtocol
+        else:
+            _log.error("Trying use non existing protocol %s !" % (mode, ))
+            raise Exception("Trying use non existing protocol %s !" % (mode, ))
+
+    def connect(self, addr, port):
+        self._addr = addr
+        self._port = port
+
+        return reactor.connectTCP(addr, port, self)
+
+    def send(self, data):
+        if self._protocol_type == "raw":
+            self.protocol.send(data)
+        elif self._protocol_type == "string":
+            self.protocol.sendString(data)
+        elif self._protocol_type == "delimiter":
+            self.protocol.sendLine(data)
+        else:
+            _log.error("Trying use non existing protocol %s !" % self._protocol_type)
