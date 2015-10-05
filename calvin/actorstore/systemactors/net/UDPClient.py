@@ -15,7 +15,6 @@
 # limitations under the License.
 
 from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
-from calvin.runtime.north.calvin_token import EOSToken
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -40,10 +39,8 @@ class UDPClient(Actor):
         self.port = None
         self.EOST_token_received = False
         self.cc = None
-        self.use('calvinsys.network.socketclienthandler', shorthand='socket')
-        self.use('calvinsys.native.python-re', shorthand='regexp')
+        self.setup()
 
-        # Connect
         if self.address is not None:
             self.connect()
 
@@ -55,8 +52,13 @@ class UDPClient(Actor):
             self.cc.disconnect()
 
     def did_migrate(self):
+        self.setup()
         if self.address is not None:
             self.connect()
+
+    def setup(self):
+        self.use('calvinsys.network.socketclienthandler', shorthand='socket')
+        self.use('calvinsys.native.python-re', shorthand='regexp')
 
     @condition(action_input=['data_in'])
     @guard(lambda self, token: self.cc and self.cc.is_connected())
