@@ -1,0 +1,19 @@
+/* Actors */
+client : net.HTTPClient()
+header : std.Terminator()
+status : io.Print()
+pacer  : std.RecTimer(delay=0.5)
+seq    : std.Sequencer()
+image  : io.FileWriter(basename="image", suffix="jpg")
+
+/* Connections */
+"http://192.168.0.143/axis-cgi/jpg/image.cgi" > pacer.token
+pacer.token > client.URL
+{"Authorization" : "Basic cm9vdDpwYXNz"} > client.header
+{} > client.params
+
+client.status > status.token
+client.data > seq.data_in
+seq.data_out > image.data
+client.header > header.void
+
