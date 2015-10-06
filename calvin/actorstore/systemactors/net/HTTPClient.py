@@ -54,7 +54,7 @@ class HTTPClient(Actor):
         return ActionResult()
 
     @condition(action_output=['status', 'header'])
-    @guard(lambda self: self.request and self['http'].received_headers(self.request))
+    @guard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     def handle_headers(self):
         self.received_headers = True
         status = self['http'].status(self.request)

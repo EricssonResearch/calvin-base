@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
-from calvin.runtime.north.calvin_token import EOSToken
+from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -71,7 +71,6 @@ class FileWriter(Actor):
     def exception_handler(self, action, args, exceptions):
         self['file'].close(self.file)
         self.file = None
-
         return ActionResult(production=())
 
     @condition(action_input=['data'])
