@@ -85,7 +85,8 @@ class CalvinConfig(object):
                 'storage_proxy': None,
                 'storage_start': True,
                 'remote_coder_negotiator': 'static',
-                'static_coder': 'json'
+                'static_coder': 'json',
+                'media_framework': 'defaultimpl'
             },
             'testing': {
                 'comment': 'Test settings',
