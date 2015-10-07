@@ -42,7 +42,7 @@ class Analyzer(object):
     #          for f in actor_def.action_priority:
     #              print f.__name__, [x.cell_contents for x in f.__closure__]
     #
-    def __init__(self, cs_info):
+    def __init__(self, cs_info, verify=True):
         super(Analyzer, self).__init__()
         self.cs_info = cs_info
         self.local_components = cs_info['components'] if 'components' in cs_info else {}
@@ -50,6 +50,7 @@ class Analyzer(object):
         self.app_info = {}
         self.connections = {}
         self.actors = {}
+        self.verify = verify
         self.analyze()
 
 
@@ -111,7 +112,7 @@ class Analyzer(object):
             compdef = self.local_components[actor_type]
             return compdef, False
         found, is_actor, info = ActorStore().lookup(actor_type)
-        if not found:
+        if self.verify and not found:
             msg = 'Actor "{}" not found.'.format(actor_type)
             raise Exception(msg)
         return info, True
@@ -223,8 +224,8 @@ class Analyzer(object):
 
         return export_in_mappings, export_out_mappings
 
-def generate_app_info(cs_info):
-    a = Analyzer(cs_info)
+def generate_app_info(cs_info, verify=True):
+    a = Analyzer(cs_info, verify=verify)
     return a.app_info
 
 

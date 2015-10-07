@@ -343,7 +343,7 @@ class AppManager(object):
                                         reqs=state['reqs'])
 
     def _actor_requirements_cb(self, node_ids, app, req, actor_id, possible_nodes, impossible_nodes, reqs):
-        _log.analyze(self._node.id, "+", {'node_ids': list(node_ids)}, tb=True)
+        _log.analyze(self._node.id, "+", {'node_ids': list(node_ids) if isinstance(node_ids, set) else node_ids}, tb=True)
         if req['type']=='+' and node_ids:
             # Positive rule, collect in possible nodes
             if None in possible_nodes:

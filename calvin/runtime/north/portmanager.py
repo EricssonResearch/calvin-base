@@ -20,6 +20,7 @@ from calvin.runtime.south import endpoint
 from calvin.runtime.north.calvin_proto import CalvinTunnel
 import calvin.utilities.calvinresponse as response
 from calvin.utilities import calvinlogger
+from calvin.actor.actor import ShadowActor
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -699,5 +700,15 @@ class PortManager(object):
         if port_name and actor_id and port_dir:
             for port in self.ports.itervalues():
                 if port.name == port_name and port.owner and port.owner.id == actor_id and isinstance(port, InPort if port_dir == "in" else OutPort):
+                    return port
+            # For new shadow actors we create the port
+            _log.analyze(self.node.id, "+ SHADOW PORT?", {'actor_id': actor_id, 'port_name': port_name, 'port_dir': port_dir, 'port_id': port_id})
+            actor = self.node.am.actors.get(actor_id, None)
+            _log.debug("SHADOW ACTOR: %s, %s, %s" % (("SHADOW" if isinstance(actor, ShadowActor) else "NOT SHADOW"), type(actor), actor))
+            if isinstance(actor, ShadowActor):
+                port = actor.create_shadow_port(port_name, port_dir, port_id)
+                _log.analyze(self.node.id, "+ CREATED SHADOW PORT", {'actor_id': actor_id, 'port_name': port_name, 'port_dir': port_dir, 'port_id': port.id if port else None})
+                if port:
+                    self.ports[port.id] = port
                     return port
         raise Exception("Port '%s' not found locally" % (port_id if port_id else str(actor_id)+"/"+str(port_name)+":"+str(port_dir)))

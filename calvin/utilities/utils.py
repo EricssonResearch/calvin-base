@@ -223,9 +223,9 @@ def delete_application(rt, application_id, timeout=TIMEOUT):
     r = requests.delete(rt.control_uri + '/application/' + application_id, timeout=timeout)
     return check_response(r)
 
-def deploy_application(rt, name, script, timeout=TIMEOUT):
+def deploy_application(rt, name, script, check=True, timeout=TIMEOUT):
     rt = get_RT(rt)
-    data = {"name": name, "script": script}
+    data = {"name": name, "script": script, "check": check}
     r = requests.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 

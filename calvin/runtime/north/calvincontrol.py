@@ -674,12 +674,17 @@ class CalvinControl(object):
 
     def handle_deploy(self, handle, connection, match, data, hdr):
         try:
+            _log.analyze(self.node.id, "+", {})
             app_info, errors, warnings = compiler.compile(
-                data["script"], filename=data["name"])
+                data["script"], filename=data["name"], verify=data["check"] if "check" in data else True)
+            _log.analyze(self.node.id, "+ COMPILED", {'app_info': app_info, 'errors': errors, 'warnings': warnings})
             app_info["name"] = data["name"]
             d = deployer.Deployer(
-                runtime=None, deployable=app_info, node_info=None, node=self.node)
+                runtime=None, deployable=app_info, node_info=None, node=self.node,
+                verify=data["check"] if "check" in data else True)
+            _log.analyze(self.node.id, "+ Deployer instanciated", {})
             app_id = d.deploy()
+            _log.analyze(self.node.id, "+ DEPLOYED", {})
             status = calvinresponse.OK
         except:
             app_id = None

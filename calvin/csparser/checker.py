@@ -28,7 +28,7 @@ class Checker(object):
     #          for f in actor_def.action_priority:
     #              print f.__name__, [x.cell_contents for x in f.__closure__]
     #
-    def __init__(self, cs_info):
+    def __init__(self, cs_info, verify=True):
         super(Checker, self).__init__()
         self.ds = DocumentationStore()
         self.cs_info = cs_info
@@ -36,6 +36,7 @@ class Checker(object):
         self.comp_defs = self.cs_info['components']
         self.errors = []
         self.warnings = []
+        self.verify = verify
         self.check()
 
     def issue(self, fmt, **info):
@@ -323,9 +324,10 @@ class Checker(object):
 
         # Check if actor definition exists
         unknown_actors = self.unknown_actors(actor_declarations)
-        for actor in unknown_actors:
-            fmt = "Unknown actor type: '{type}'"
-            self.append_error(fmt, type=actor_declarations[actor]['actor_type'], line=actor_declarations[actor]['dbg_line'])
+        if self.verify:
+            for actor in unknown_actors:
+                fmt = "Unknown actor type: '{type}'"
+                self.append_error(fmt, type=actor_declarations[actor]['actor_type'], line=actor_declarations[actor]['dbg_line'])
 
         # Check the validity of the known actors
         known_actors = set(declared_actors) - set(unknown_actors)
@@ -335,8 +337,8 @@ class Checker(object):
             self.check_arguments(definition, actor_declarations[actor], arguments)
 
 
-def check(cs_info):
-    clint = Checker(cs_info)
+def check(cs_info, verify=True):
+    clint = Checker(cs_info, verify=verify)
     return clint.errors, clint.warnings
 
 

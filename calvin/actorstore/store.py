@@ -94,6 +94,7 @@ class Store(object):
         # abs_paths = [p for p in _conf.get('global', self.conf_paths_name) if os.path.isabs(p)]
         paths = _conf.get('global', self.conf_paths_name)
         self._MODULE_PATHS = [os.path.join(base_path, p) if not os.path.isabs(p) else p for p in paths]
+        _log.debug("Actor store paths: %s" % self._MODULE_PATHS)
         self._MODULE_CACHE = {}
 
 

@@ -22,23 +22,29 @@ import argparse
 from calvin.csparser.parser import calvin_parser
 from calvin.csparser.checker import check
 from calvin.csparser.analyzer import generate_app_info
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
 
 
-def compile(source_text, filename=''):
+def compile(source_text, filename='', verify=True):
     # Steps taken:
     # 1) parser .calvin file -> IR. May produce syntax errors/warnings
     # 2) checker IR -> IR. May produce syntax errors/warnings
     # 3) analyzer IR -> app. Should not fail. Sets 'valid' property of IR to True/False
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
+    _log.debug("Parsing...")
     ir, errors, warnings = calvin_parser(source_text, filename)
+    _log.debug("Parsed %s, %s, %s" % (ir, errors, warnings))
     # If there were errors during parsing no IR will be generated
     if not errors:
-        c_errors, c_warnings = check(ir)
+        c_errors, c_warnings = check(ir, verify=verify)
         errors.extend(c_errors)
         warnings.extend(c_warnings)
-        deployable = generate_app_info(ir)
+        deployable = generate_app_info(ir, verify=verify)
         if errors:
             deployable['valid'] = False
+    _log.debug("Compiled %s, %s, %s" % (deployable, errors, warnings))
     return deployable, errors, warnings
 
 
