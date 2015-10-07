@@ -174,13 +174,13 @@ class AppendServer(Server):
                 try:
                     pvalue = json.loads(value)
                     if dkey not in self.storage:
-                        _log.debug("%s local append key: %s not in storage set value: %s" % (base64.b64encode(nodeid), base64.b64encode(key), pvalue))
+                        _log.debug("%s local append key: %s not in storage set value: %s" % (base64.b64encode(node.id), base64.b64encode(key), pvalue))
                         self.storage[dkey] = value
                     else:
                         old_value_ = self.storage[dkey]
                         old_value = json.loads(old_value_)
                         new_value = list(set(old_value + pvalue))
-                        _log.debug("%s local append key: %s old: %s add: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
+                        _log.debug("%s local append key: %s old: %s add: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(key), old_value, pvalue, new_value))
                         self.storage[dkey] = json.dumps(new_value)
                 except:
                     _log.debug("Trying to append somthing not a JSON coded list %s" % value, exc_info=True)
@@ -231,7 +231,7 @@ class AppendServer(Server):
                         old_value = json.loads(self.storage[dkey])
                         new_value = list(set(old_value) - set(pvalue))
                         self.storage[dkey] = json.dumps(new_value)
-                        _log.debug("%s local remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
+                        _log.debug("%s local remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(key), old_value, pvalue, new_value))
                 except:
                     _log.debug("Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
             ds = [self.protocol.callRemove(n, dkey, value) for n in nodes]
