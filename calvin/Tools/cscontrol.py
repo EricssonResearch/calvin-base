@@ -61,7 +61,7 @@ def control_deploy(args):
     response = None
     print args
     try:
-        response = utils.deploy_application(args.node, args.script.name, args.script.read())
+        response = utils.deploy_application(args.node, args.script.name, args.script.read(), args.check)
     except Exception as e:
         print e
     if isinstance(response, dict) and "application_id" in response and args.reqs:
@@ -115,6 +115,18 @@ def control_nodes(args):
             return None
 
 
+def control_storage(args):
+    from calvin.utilities.attribute_resolver import format_index_string
+    import json
+    if args.cmd == 'get_index':
+        try:
+            index = json.loads(args.index)
+        except:
+            raise Exception("Malformed JSON index string:\n%s" % args.index)
+        formated_index = format_index_string(index)
+        return utils.get_index(args.node, formated_index)
+
+
 def parse_args():
     long_desc = """Send control commands to calvin runtime"""
     # top level arguments
@@ -141,6 +153,10 @@ def parse_args():
     cmd_deploy = cmdparsers.add_parser('deploy', help="deploy script to node")
     cmd_deploy.add_argument("script", metavar="<calvin script>", type=argparse.FileType('r'),
                             help="script to be deployed")
+    cmd_deploy.add_argument('-c', '--no-check', dest='check', action='store_false', default=True,
+                           help='Don\'t verify if actors or components are correct, ' + 
+                                'allows deployment of actors not known on the node')
+
     cmd_deploy.add_argument('--reqs', metavar='<reqs>', type=str,
                            help='deploy script, currently JSON coded data file',
                            dest='reqs')
@@ -164,6 +180,15 @@ def parse_args():
                           help="one of %s" % (", ".join(app_commands)))
     cmd_apps.add_argument("id", metavar="<app id>", type=str, nargs='?')
     cmd_apps.set_defaults(func=control_applications)
+
+    # parser for applications
+    storage_commands = ['get_index']
+    cmd_storage = cmdparsers.add_parser('storage', help="handle storage")
+    cmd_storage.add_argument("cmd", metavar="<command>", choices=storage_commands, type=str,
+                          help="one of %s" % (", ".join(storage_commands)))
+    cmd_storage.add_argument("index", metavar="<index>",
+                             help="An index e.g. '[\"owner\", {\"personOrGroup\": \"Me\"}}]'", type=str, nargs='?')
+    cmd_storage.set_defaults(func=control_storage)
 
     return argparser.parse_args()
 

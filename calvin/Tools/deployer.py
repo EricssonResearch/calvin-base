@@ -30,7 +30,7 @@ class Deployer(object):
     produce a running calvin application.
     """
 
-    def __init__(self, runtime, deployable, node_info=None, node=None):
+    def __init__(self, runtime, deployable, node_info=None, node=None, verify=True):
         super(Deployer, self).__init__()
         self.runtime = runtime
         self.deployable = deployable
@@ -39,6 +39,7 @@ class Deployer(object):
         self.actor_connections = {}
         self.app_id = calvinuuid.uuid("APP")
         self.node = node
+        self.verify = verify
         if "name" in self.deployable:
             self.name = self.deployable["name"]
         else:
@@ -52,9 +53,9 @@ class Deployer(object):
           - 'argd' is a dictionary with <actor_name>:<argdict> pairs
         """
         found, is_primitive, actor_def = ActorStore().lookup(actor_type)
-        if not found:
+        if self.verify and not found:
             raise Exception("Unknown actor type: %s" % actor_type)
-        if not is_primitive:
+        if self.verify and not is_primitive:
             raise Exception("Non-primitive type: %s" % actor_type)
 
         instance_id = self.instantiate_primitive(actor_name, actor_type, argd)

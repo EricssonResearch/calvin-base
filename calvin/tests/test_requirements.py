@@ -29,6 +29,12 @@ from calvin.utilities.attribute_resolver import format_index_string
 import socket
 import os
 import json
+from calvin.utilities import calvinlogger
+from calvin.utilities import calvinconfig
+
+_conf = calvinconfig.get()
+_log = calvinlogger.get_logger(__name__)
+
 try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
 except:
@@ -79,13 +85,14 @@ class TestDeployScript(CalvinNodeTestBase):
 
     @pytest.mark.slow
     def testDeploySimple(self):
+        _log.analyze("TESTRUN", "+", {})
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         time.sleep(2)
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(self.test_script_dir+"test_deploy1.calvin"), attr=None,
-                                reqs=self.test_script_dir+"test_deploy1.deployjson")
+                                reqs=self.test_script_dir+"test_deploy1.deployjson", check=True)
         result = {}
         try:
             result = deploy_app(args)
@@ -102,13 +109,14 @@ class TestDeployScript(CalvinNodeTestBase):
 
     @pytest.mark.slow
     def testDeployLongActorChain(self):
+        _log.analyze("TESTRUN", "+", {})
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         time.sleep(2)
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(self.test_script_dir+"test_deploy2.calvin"), attr=None,
-                                reqs=self.test_script_dir+"test_deploy2.deployjson")
+                                reqs=self.test_script_dir+"test_deploy2.deployjson", check=True)
         result = {}
         try:
             result = deploy_app(args)
@@ -128,13 +136,14 @@ class TestDeployScript(CalvinNodeTestBase):
 
     @pytest.mark.slow
     def testDeployComponent(self):
+        _log.analyze("TESTRUN", "+", {})
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         time.sleep(2)
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(self.test_script_dir+"test_deploy3.calvin"), attr=None,
-                                reqs=self.test_script_dir+"test_deploy3.deployjson")
+                                reqs=self.test_script_dir+"test_deploy3.deployjson", check=True)
         result = {}
         try:
             result = deploy_app(args)
@@ -147,5 +156,75 @@ class TestDeployScript(CalvinNodeTestBase):
         assert result['actor_map']['test_deploy3:src:second'] in actors[0]
         assert result['actor_map']['test_deploy3:sum'] in actors[1]
         assert result['actor_map']['test_deploy3:snk'] in actors[2]
+        utils.delete_application(self.rt1, result['application_id'])
+        time.sleep(0.5)
+
+class CalvinNodeTestShadowBase(unittest.TestCase):
+
+    def setUp(self):
+        self.rt1, _ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5003" % ip_addr,
+             attributes={'indexed_public':
+                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
+                   'node_name': {'organization': 'org.testexample', 'name': 'testNode1'},
+                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}})
+
+        # Hack to get different config actorpath in actor store for each runtime
+        # (since dispatch will use the same global)
+        # FIXME do it properly
+        import calvin.actorstore.store
+        import copy
+        calvin.actorstore.store._conf = copy.deepcopy(calvin.actorstore.store._conf)
+        calvin.actorstore.store._conf.config['global']['actor_paths'] = [absolute_filename('test_store')]
+
+        self.rt2, _ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://%s:5004" % ip_addr,
+             attributes={'indexed_public':
+                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
+                   'node_name': {'organization': 'org.testexample', 'name': 'testNode2'},
+                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}})
+
+    def tearDown(self):
+        utils.quit(self.rt1)
+        utils.quit(self.rt2)
+        time.sleep(0.2)
+        for p in multiprocessing.active_children():
+            p.terminate()
+        time.sleep(0.2)
+
+
+@pytest.mark.slow
+class TestDeployShadow(CalvinNodeTestShadowBase):
+
+    def setUp(self):
+        super(TestDeployShadow, self).setUp()
+        self.test_script_dir = absolute_filename('scripts/')
+    @pytest.mark.slow
+    def testDeployShadow(self):
+        _log.analyze("TESTRUN", "+", {})
+        from calvin.Tools.cscontrol import control_deploy as deploy_app
+        from collections import namedtuple
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        time.sleep(2)
+        args = DeployArgs(node='http://%s:5003' % ip_addr,
+                          script=open(self.test_script_dir+"test_shadow1.calvin"), attr=None,
+                                reqs=self.test_script_dir+"test_shadow1.deployjson", check=False)
+        result = {}
+        try:
+            result = deploy_app(args)
+        except:
+            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
+        time.sleep(2)
+
+        # To verify storage is working
+        node2 = utils.get_index(self.rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        assert node2
+
+        actors = [utils.get_actors(self.rt1), utils.get_actors(self.rt2)]
+        # src -> rt1, sum -> rt2, snk -> rt1
+        assert result['actor_map']['test_shadow1:src'] in actors[0]
+        assert result['actor_map']['test_shadow1:sum'] in actors[1]
+        assert result['actor_map']['test_shadow1:snk'] in actors[0]
+        
+        actual = utils.report(self.rt1, result['actor_map']['test_shadow1:snk'])
+        assert len(actual) > 5
         utils.delete_application(self.rt1, result['application_id'])
         time.sleep(0.5)

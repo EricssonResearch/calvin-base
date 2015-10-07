@@ -18,6 +18,7 @@ from calvin.actorstore.store import ActorStore
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.utilities.calvinresponse as response
+from calvin.actor.actor import ShadowActor
 
 _log = get_logger(__name__)
 
@@ -49,8 +50,6 @@ class ActorManager(object):
           2) a mangled list of tuples with (in_node_id, in_port_id, out_node_id, out_port_id) supplied as
              connection_list
         """
-        # When renewing (e.g. after migrate) apply the args from the state
-        # instead of any directly supplied
         _log.debug("class: %s args: %s state: %s", actor_type, args, state)
         _log.analyze(self.node.id, "+", {'actor_type': actor_type, 'state': state})
 
@@ -84,18 +83,28 @@ class ActorManager(object):
     def _new_actor(self, actor_type, actor_id=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         (found, is_primitive, class_) = ActorStore().lookup(actor_type)
+        if not found:
+            # Here assume a primtive actor, now become shadow actor
+            _log.analyze(self.node.id, "+ NOT FOUND CREATE SHADOW ACTOR", {'class': class_})
+            found = True
+            is_primitive = True
+            class_ = ShadowActor
         if not found or not is_primitive:
             _log.error("Requested actor %s is not available" % (actor_type))
             raise Exception("ERROR_NOT_FOUND")
         try:
             # Create a 'bare' instance of the actor
             a = class_(actor_type, actor_id)
-            a._calvinsys = self.node.calvinsys()
-            a.check_requirements()
         except Exception as e:
             _log.exception("")
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
             raise(e)
+        try:
+            a._calvinsys = self.node.calvinsys()
+            a.check_requirements()
+        except Exception as e:
+            _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
+            a = ShadowActor(actor_type, actor_id)
         return a
 
 
@@ -116,13 +125,23 @@ class ActorManager(object):
 
 
     def _new_from_state(self, actor_type, state):
-        """Return an restored actor in PENDING state, raises an exception on failure."""
+        """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
-            print repr(state)
+            _log.analyze(self.node.id, "+", state)
             a = self._new_actor(actor_type, actor_id=state['id'])
+            if '_shadow_args' in state:
+                # We were a shadow, do a full init
+                args = state.pop('_shadow_args')
+                state['_managed'].remove('_shadow_args')
+                a.init(**args)
+                shadow_migrate = True
+            else:
+                shadow_migrate = False
+            # Always do a set_state for the port's state
             a.set_state(state)
             self.node.pm.add_ports_of_actor(a)
-            a.did_migrate()
+            if not shadow_migrate:
+                a.did_migrate()
             a.setup_complete()
         except Exception as e:
             raise(e)
