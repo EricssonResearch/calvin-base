@@ -18,6 +18,9 @@
 import argparse
 import json
 import pprint
+import traceback
+from datetime import datetime
+
 WIDTH = 80
 def parse_arguments():
     long_description = """
@@ -26,31 +29,49 @@ Analyze calvin log.
 
     argparser = argparse.ArgumentParser(description=long_description)
 
-    argparser.add_argument('file', metavar='<filename>', type=str, nargs='?',
-                           help='source file to compile')
+    argparser.add_argument('files', metavar='<filenames>', type=str, nargs='+',
+                           default=[], help='logfiles to display')
 
     argparser.add_argument('-i', '--interleaved', dest='interleave', action='store_true',
                            help='The none analyze log messages are printed interleaved')
+
+    argparser.add_argument('-l', '--limit', dest='limit', type=int, default=0,
+                           help='Limit stack trace print to specified nbr of frames')
 
     return argparser.parse_args()
 
 def main():
     args = parse_arguments()
-    print "Analyze", args.file
-    file = None
-    if args.file:
-        file = open(args.file, 'r')
+    print "Analyze", args.files
+    files = []
+    for name in args.files:
+        files.append(open(name, 'r'))
 
     log = []
 
-    for line in file:
-        if line.find('[[ANALYZE]]')==-1:
-            if args.interleave:
-                log.append({'func': 'OTHER', 'param': line, 'node_id': None})
-            continue
-        logline = json.loads(line.split('[[ANALYZE]]',1)[1])
-        #pprint.pprint(logline)
-        log.append(logline)
+    for file in files:
+        for line in file:
+            try:
+                t=datetime.strptime(line[:23], "%Y-%m-%d %H:%M:%S,%f")
+            except:
+                t=None
+            if line.find('[[ANALYZE]]')==-1:
+                if args.interleave:
+                    # None ANALYZE log lines might contain line breaks, then following lines (without time) need to 
+                    # be sorted under the first line, hence combine them
+                    if t:
+                        log.append({'time': t, 
+                                    'func': 'OTHER', 'param': line, 'node_id': None})
+                    else:
+                        log[-1]['param'] += line
+                continue
+            logline = json.loads(line.split('[[ANALYZE]]',1)[1])
+            logline['time'] = t
+            #pprint.pprint(logline)
+            log.append(logline)
+
+    if len(files)>1:
+        log = sorted(log, key=lambda k: k['time'])
 
     # Collect all node ids and remove "TESTRUN" string as node id since it is used when logging py.test name
     nodes = list(set([l['node_id'] for l in log] + [l.get('peer_node_id', None)  for l in log]) - set([None, "TESTRUN"]))
@@ -93,6 +114,12 @@ def main():
             pp = pprint.pformat(l['param'], indent=1, width=WIDTH)
             for p in pp.split("\n"):
                 print " "*ind + p
+            if l['stack'] and args.limit >= 0:
+                tb = traceback.format_list(l['stack'][-(args.limit+2):-1])
+                for s in tb:
+                    for sl in s.split("\n"):
+                        if sl:
+                            print " "*ind + ">" + sl.rstrip()
 
 if __name__ == '__main__':
     main()

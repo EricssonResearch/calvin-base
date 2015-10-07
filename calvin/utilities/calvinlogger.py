@@ -19,23 +19,28 @@ from colorlog import ColoredFormatter
 import json
 import inspect
 import os
+import traceback
 
 _name = "calvin"
 _log = None
 _use_color = False
 
 
-def analyze(self, node_id, func, param, peer_node_id=None, *args, **kws):
+def analyze(self, node_id, func, param, peer_node_id=None, tb=False, *args, **kws):
     if self.isEnabledFor(5):
         if func.startswith("+"):
             f = inspect.currentframe()
             if f is not None:
                 func = os.path.basename(f.f_back.f_code.co_filename) + ":" + f.f_back.f_code.co_name + func[1:]
-
+        if tb:
+            stack = traceback.extract_stack()
+        else:
+            stack = None
         self._log(5, "[[ANALYZE]]" + json.dumps({'node_id': node_id,
                                                  'peer_node_id': peer_node_id,
                                                  'func': func,
-                                                 'param':param}), args, **kws) 
+                                                 'param':param,
+                                                 'stack': stack}), args, **kws) 
 logging.Logger.analyze = analyze
 logging.addLevelName(5, "ANALYZE")
 
