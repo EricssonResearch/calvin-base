@@ -166,19 +166,34 @@ class AppendServer(Server):
         For the given key append the given list values to the set in the network.
         """
         dkey = digest(key)
+        node = Node(dkey)
 
-        def append(nodes):
-            ds = [self.protocol.callAppend(node, dkey, value) for node in nodes]
+        def append_(nodes):
+            # if this node is close too, then store here as well
+            if self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+                try:
+                    pvalue = json.loads(value)
+                    if dkey not in self.storage:
+                        _log.debug("%s local append key: %s not in storage set value: %s" % (base64.b64encode(nodeid), base64.b64encode(key), pvalue))
+                        self.storage[dkey] = value
+                    else:
+                        old_value_ = self.storage[dkey]
+                        old_value = json.loads(old_value_)
+                        new_value = list(set(old_value + pvalue))
+                        _log.debug("%s local append key: %s old: %s add: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
+                        self.storage[dkey] = json.dumps(new_value)
+                except:
+                    _log.debug("Trying to append somthing not a JSON coded list %s" % value, exc_info=True)
+            ds = [self.protocol.callAppend(n, dkey, value) for n in nodes]
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
 
-        node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
             self.log.warning("There are no known neighbors to set key %s" % key)
             return defer.succeed(False)
 
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
-        return spider.find().addCallback(append)
+        return spider.find().addCallback(append_)
 
     def get(self, key):
         """
@@ -205,19 +220,30 @@ class AppendServer(Server):
         For the given key remove the given list values from the set in the network.
         """
         dkey = digest(key)
+        node = Node(dkey)
 
-        def remove(nodes):
-            ds = [self.protocol.callRemove(node, dkey, value) for node in nodes]
+        def remove_(nodes):
+            # if this node is close too, then store here as well
+            if self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+                try:
+                    pvalue = json.loads(value)
+                    if dkey in self.storage:
+                        old_value = json.loads(self.storage[dkey])
+                        new_value = list(set(old_value) - set(pvalue))
+                        self.storage[dkey] = json.dumps(new_value)
+                        _log.debug("%s local remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
+                except:
+                    _log.debug("Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
+            ds = [self.protocol.callRemove(n, dkey, value) for n in nodes]
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
 
-        node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
             self.log.warning("There are no known neighbors to set key %s" % key)
             return defer.succeed(False)
 
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
-        return spider.find().addCallback(remove)
+        return spider.find().addCallback(remove_)
 
     def get_concat(self, key):
         """
@@ -225,7 +251,12 @@ class AppendServer(Server):
 
         @return: C{None} if not found, the value otherwise.
         """
-        node = Node(digest(key))
+        dkey = digest(key)
+        # if this node has it, return it
+        exists, value = self.storage.get(dkey)
+        if exists:
+            return defer.succeed(value)
+        node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
             self.log.warning("There are no known neighbors to get key %s" % key)
