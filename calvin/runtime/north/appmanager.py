@@ -242,7 +242,9 @@ class AppManager(object):
         name_map = app.get_actor_name_map(ns=app.ns)
         app._track_actor_cb = app.get_actors()[:]  # take copy of app's actor list, to remove each when done
         app.actor_placement = {}  # Clean placement slate
-        for actor_name, req in reqs["requirements"].iteritems():
+        _log.analyze(self._node.id, "+ APP REQ", {'requirements': reqs["requirements"]}, tb=True)
+        rr=reqs["requirements"].copy()
+        for actor_name, req in rr.iteritems():
             # Component returns list of actor ids, actors returns list with single id
             actor_ids = name_map.get((app.ns + ":" if app.ns else "") + actor_name, None)
             # Apply same rule to all actors in a component, rule get component information and can act accordingly
@@ -252,7 +254,10 @@ class AppManager(object):
                     continue
                 actor = self._node.am.actors[actor_id]
                 actor.deployment_add_requirements(req, component=(actor_ids if len(actor_ids)>1 else None))
+                _log.analyze(self._node.id, "+ ACTOR REQ", {'actor_id': actor_id, 'actor_ids': actor_ids}, tb=True)
                 self.actor_requirements(app, actor_id)
+            _log.analyze(self._node.id, "+ ACTOR REQ DONE", {'actor_ids': actor_ids}, tb=True)
+        _log.analyze(self._node.id, "+ DONE", {'application_id': application_id}, tb=True)
 
     def actor_requirements(self, app, actor_id):
         if actor_id not in self._node.am.list_actors():
@@ -290,10 +295,11 @@ class AppManager(object):
                 except:
                     _log.error("actor_requirements one req failed for %s!!!" % actor_id, exc_info=True)
                     reqs.remove(req)
-        if not reqs:
-            _log.error("actor_requirements all req failed for %s!!!" % actor_id)
+        if not reqs and actor_id in app._track_actor_cb:
+            _log.analyze(self._node.id, "+ LOOP DONE", {'actor_id': actor_id, '_track_actor_cb': app._track_actor_cb}, tb=True)
             app._track_actor_cb.remove(actor_id)
             self._actor_requirements_combined(app, actor_id, possible_nodes, impossible_nodes)
+        _log.analyze(self._node.id, "+ DONE", {'actor_id': actor_id}, tb=True)
 
     def _union_requirements(self, **state):
         state['union_nodes'] = set([])
@@ -337,7 +343,7 @@ class AppManager(object):
                                         reqs=state['reqs'])
 
     def _actor_requirements_cb(self, node_ids, app, req, actor_id, possible_nodes, impossible_nodes, reqs):
-        _log.debug("_actor_requirements_cb(node_ids=%s)", node_ids)
+        _log.analyze(self._node.id, "+", {'node_ids': list(node_ids)}, tb=True)
         if req['type']=='+' and node_ids:
             # Positive rule, collect in possible nodes
             if None in possible_nodes:
@@ -362,34 +368,40 @@ class AppManager(object):
             # Collected all rules for actor, 
             app._track_actor_cb.remove(actor_id)
             self._actor_requirements_combined(app, actor_id, possible_nodes, impossible_nodes)
+        _log.analyze(self._node.id, "+ DONE", {'node_ids': node_ids}, tb=True)
 
     def _actor_requirements_combined(self, app, actor_id, possible_nodes, impossible_nodes):
         possible_nodes -= set([None])
         impossible_nodes -= set([None])
         possible_nodes -= impossible_nodes
         app.actor_placement[actor_id] = possible_nodes
+        _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'possible_nodes': list(possible_nodes),
+                     'track_actor_cb': app._track_actor_cb}, tb=True)
         if not app._track_actor_cb:
             # Done collecting possible actor placement for all actors in application
+            _log.analyze(self._node.id, "+ ALL ACTORS FINISHED", {'app_id': app.id}, tb=True)
             self._app_requirements(app)
+        _log.analyze(self._node.id, "+ DONE", {'actor_id': actor_id}, tb=True)
 
     def _app_requirements(self, app):
         _log.debug("_app_requirements(app=%s)" % (app,))
-        _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': {k: list(v) for k, v in app.actor_placement.iteritems()}})
+        _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': {k: list(v) for k, v in app.actor_placement.iteritems()}}, tb=True)
         if any([not n for n in app.actor_placement.values()]):
             # At least one actor have no possible placement
             app._org_cb(status=response.CalvinResponse(False))
             del app._org_cb
+            _log.analyze(self._node.id, "+ NO PLACEMENT", {'app_id': app.id}, tb=True)
             return
 
         # Collect an actor by actor matrix stipulating a weighting 0.0 - 1.0 for their connectivity
         actor_ids, actor_matrix = self._actor_connectivity(app)
-        _log.analyze(self._node.id, "+ ACTOR MATRIX", {'actor_ids': actor_ids, 'actor_matrix': actor_matrix})
 
         # Get list of all possible nodes
         node_ids = set([])
         for possible_nodes in app.actor_placement.values():
             node_ids |= possible_nodes
         node_ids = list(node_ids)
+        _log.analyze(self._node.id, "+ ACTOR MATRIX", {'actor_ids': actor_ids, 'actor_matrix': actor_matrix, 'node_ids': node_ids}, tb=True)
 
         # Weight the actors possible placement with their connectivity matrix
         weighted_actor_placement = {}
@@ -398,12 +410,13 @@ class AppManager(object):
             actor_weights = actor_matrix[actor_ids.index(actor_id)]
             # Sum the actor weights for each actors possible nodes, matrix mult AA * AN,
             # AA actor weights, AN actor * node with 1 when possible
-            weights = [sum([actor_weights[actor_ids.index(_id)] if node_id in app.actor_placement[_id] else 0
+            weights = [sum([actor_weights[actor_ids.index(_id)] if node_id in app.actor_placement[actor_id] else 0
                              for _id in actor_ids])
                              for node_id in node_ids]
             # Get first node with highest weight
             # FIXME should verify that the node actually exist also
             # TODO should select from a resource sharing perspective also, instead of picking first max
+            _log.analyze(self._node.id, "+ WEIGHTS", {'actor_id': actor_id, 'weights': weights})
             weighted_actor_placement[actor_id] = node_ids[weights.index(max(weights))]
 
         for actor_id, node_id in weighted_actor_placement.iteritems():
@@ -413,6 +426,7 @@ class AppManager(object):
 
         app._org_cb(status=response.CalvinResponse(True), placement=weighted_actor_placement)
         del app._org_cb
+        _log.analyze(self._node.id, "+ DONE", {'app_id': app.id}, tb=True)
 
     def _actor_connectivity(self, app):
         """ Matrix of weights between actors how close they want to be

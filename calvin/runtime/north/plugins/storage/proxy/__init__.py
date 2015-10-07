@@ -43,7 +43,7 @@ class StorageProxy(StorageBase):
         self.node.network.join([self.master_uri], CalvinCB(self._start_link_cb, org_cb=cb))
 
     def _start_link_cb(self, status, uri, peer_node_id, org_cb):
-        _log.analyze(self.node.id, "+", {'status': status}, peer_node_id=peer_node_id)
+        _log.analyze(self.node.id, "+", {'status': str(status)}, peer_node_id=peer_node_id)
         if status == "NACK":
             if org_cb:
                 org_cb(False)
