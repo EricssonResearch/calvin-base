@@ -71,7 +71,7 @@ component ExtractCommit() dict -> commit_info {
   fmt.text > .commit_info
 }
 
-request : net.HTTPClient()
+request : net.HTTPGet()
 commit_date : LatestCommitDate()
 etag : ExtractETag()
 

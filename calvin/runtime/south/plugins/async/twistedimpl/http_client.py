@@ -19,7 +19,9 @@ from twisted.internet import reactor
 from twisted.web.client import Agent, readBody
 from twisted.web.http_headers import Headers
 from twisted.internet.ssl import ClientContextFactory
+from twisted.web.client import FileBodyProducer
 
+from StringIO import StringIO
 from urllib import urlencode
 
 # from calvin.utilities.calvinlogger import get_logger
@@ -29,9 +31,8 @@ from calvin.utilities.calvin_callback import CalvinCBClass
 
 
 class HTTPRequest(object):
-    def __init__(self, handle):
+    def __init__(self):
         self._response = {}
-        self._handle = handle
 
     def parse_headers(self, response):
         self._response = {}
@@ -60,8 +61,28 @@ class HTTPRequest(object):
     def phrase(self):
         return self._response.get('phrase', None)
 
-    def handle(self):
-        return self._handle
+
+def encode_params(params):
+    if params:
+        return "?" + urlencode(params)
+    return ""
+
+
+def encode_headers(headers):
+    twisted_headers = Headers()
+    for k, v in headers.items():
+        key = k.encode('ascii', 'ignore')
+        val = v.encode('ascii', 'ignore')
+        twisted_headers.addRawHeader(key, val)
+    return twisted_headers
+
+
+def encode_body(data):
+    if not data:
+        return None
+    if not isinstance(data, str):
+        return None
+    return FileBodyProducer(StringIO(data))
 
 
 class HTTPClient(CalvinCBClass):
@@ -85,20 +106,11 @@ class HTTPClient(CalvinCBClass):
         request.parse_body(response)
         self._callback_execute('receive-body', request)
 
-    def get(self, url, params=None, headers=None, handle=None):
-        if params:
-            params = "?" + urlencode(params)
-        else:
-            params = ""
-        url += params
-
-        twisted_headers = Headers()
-        for k, v in headers.items():
-            key = k.encode('ascii', 'ignore')
-            val = v.encode('ascii', 'ignore')
-            twisted_headers.addRawHeader(key, val)
-
-        deferred = self._agent.request('GET', url, twisted_headers)
-        request = HTTPRequest(handle)
+    def request(self, command, url, params, headers, data):
+        url += encode_params(params)
+        twisted_headers = encode_headers(headers)
+        body = encode_body(data)
+        deferred = self._agent.request(command, url, headers=twisted_headers, bodyProducer=body)
+        request = HTTPRequest()
         deferred.addCallback(self._receive_headers, request)
         return request

@@ -31,10 +31,19 @@ class HTTPClientHandler(object):
         self._client = http_client.HTTPClient(callbacks)
         self._requests = {}
 
-    def get(self, url, params=None, headers=None):
-        handle = "%s:%s" % (self._actor.id, url)
-        self._requests[handle] = self._client.get(url, params, headers)
+    def _issue_request(self, cmd, url, params, headers, data):
+        handle = "%s:%s:%s" % (self._actor.id, cmd, url)
+        self._requests[handle] = self._client.request(cmd, url, params, headers, data)
         return handle
+
+    def post(self, url, params=None, headers=None, data=None):
+        return self._issue_request('POST', url, params, headers, data)
+
+    def put(self, url, params=None, headers=None, data=None):
+        return self._issue_request('PUT', url, params, headers, data)
+
+    def get(self, url, params=None, headers=None):
+        return self._issue_request('GET', url, params, headers, None)
 
     def _receive_headers(self, dummy=None):
         self._node.sched.trigger_loop()
