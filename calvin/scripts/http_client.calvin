@@ -1,6 +1,5 @@
 /* Actors */
-# client : net.Request()
-client : net.HTTPClient()
+client : net.HTTPGet()
 status : io.Print()
 data : std.Terminator()
 header : std.Terminator()

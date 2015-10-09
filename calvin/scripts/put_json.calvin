@@ -1,0 +1,18 @@
+/* Actors */
+client : net.HTTPPut()
+status : io.Print()
+data : std.Terminator()
+header : std.Terminator()
+to_string: json.ToString()
+
+/* Connections */
+"http://localhost:8000" > client.URL
+{"Content-type": "application/json"} > client.header
+{} > client.params
+{"data": "This is some data"} > to_string.data
+to_string.string > client.data
+
+client.status > status.token
+client.data > data.void
+client.header > header.void
+

@@ -20,14 +20,15 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-class HTTPClient(Actor):
+class HTTPPut(Actor):
     """
-    Get contents of URL
+    PUT data to URL, retrieving reply
 
     Input:
       URL : URL to get
       params : Optional parameters to request as a JSON dictionary
       header: JSON dictionary with headers to include in request
+      data : data to send to URL
     Output:
       status: 200/404/whatever
       header: JSON dictionary of incoming headers
@@ -45,12 +46,13 @@ class HTTPClient(Actor):
         self.request = None
         self.received_headers = False
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
+        self.use('calvinsys.native.python-json', shorthand='json')
 
-    @condition(action_input=['URL', 'params', 'header'])
-    @guard(lambda self, url, params, header: self.request is None)
-    def new_request(self, url, params, header):
+    @condition(action_input=['URL', 'params', 'header', 'data'])
+    @guard(lambda self, url, params, header, data: self.request is None)
+    def new_request(self, url, params, header, data):
         url = url.encode('ascii', 'ignore')
-        self.request = self['http'].get(url, params, header)
+        self.request = self['http'].put(url, params, header, data)
         return ActionResult()
 
     @condition(action_output=['status', 'header'])
@@ -70,4 +72,4 @@ class HTTPClient(Actor):
         return ActionResult(production=(body,))
 
     action_priority = (handle_body, handle_headers, new_request)
-    requires = ['calvinsys.network.httpclienthandler']
+    requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-json']
