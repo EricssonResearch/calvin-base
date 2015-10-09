@@ -16,9 +16,9 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
-import json
+
 
 class ToString(Actor):
     """
@@ -34,18 +34,25 @@ class ToString(Actor):
     """
 
     def exception_handler(self, action, args, context):
-        return ActionResult(production=(json.dumps(self.default),))
-
+        return ActionResult(production=(self['json'].dumps(self.default),))
 
     @manage(['default'])
     def init(self, exception_output=None):
         self.default = exception_output
+        self.setup()
+
+    def did_migrate(self):
+        self.setup()
+
+    def setup(self):
+        self.use('calvinsys.native.python-json', shorthand="json")
 
     @condition(['data'], ['string'])
     def dump(self, value):
-        return ActionResult(production=(json.dumps(value),))
+        return ActionResult(production=(self['json'].dumps(value),))
 
     action_priority = (dump,)
+    requires = ['calvinsys.native.python-json']
 
     test_set = [
         {
@@ -53,7 +60,7 @@ class ToString(Actor):
             'out': {'string': ['1']},
         },
         {
-            'in': {'data': [{"a":1}]},
+            'in': {'data': [{"a": 1}]},
             'out': {'string': ['{"a": 1}']},
         },
         {
@@ -70,4 +77,3 @@ class ToString(Actor):
             'out': {'string': ['{}']},
         },
     ]
-
