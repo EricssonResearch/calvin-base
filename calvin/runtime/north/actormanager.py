@@ -105,6 +105,7 @@ class ActorManager(object):
         except Exception as e:
             _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
             a = ShadowActor(actor_type, actor_id)
+            a._calvinsys = self.node.calvinsys()
         return a
 
 
