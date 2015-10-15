@@ -37,7 +37,8 @@ class ActorManager(object):
         self.actors = {}
         self.node = node
 
-    def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None):
+    def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None,
+            signature=None):
         """
         Instantiate an actor of type 'actor_type'. Parameters are passed in 'args',
         'name' is an optional parameter in 'args', specifying a human readable name.
@@ -61,6 +62,9 @@ class ActorManager(object):
         except Exception as e:
             _log.exception("Actor creation failed")
             raise(e)
+
+        # Store the actor signature to enable GlobalStore lookup
+        a._signature = signature
 
         self.actors[a.id] = a
 

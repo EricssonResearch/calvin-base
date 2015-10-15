@@ -1,0 +1,21 @@
+{
+    "requirements": {
+        "src": [{"op": "union_group", 
+                 "requirements": [{"op": "node_attr_match", 
+                                   "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
+                                   }, 
+                                  {"op": "node_attr_match", 
+                                   "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode2"}]}
+                                   }],
+                 "type": "+"
+                }], 
+        "sum": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode2"}]},
+                 "type": "+"
+                }], 
+        "snk": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]},
+                 "type": "+"
+                }]
+            }
+}

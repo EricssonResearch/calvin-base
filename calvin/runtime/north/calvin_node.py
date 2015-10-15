@@ -33,7 +33,6 @@ from calvin.runtime.north.portmanager import PortManager
 from calvin.runtime.south.monitor import Event_Monitor
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
-
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvinlogger import get_logger
@@ -142,7 +141,8 @@ class Node(object):
                    ('#' * 40, self.id, preamble if preamble else "*", args, kwargs, '#' * 40))
 
     def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None):
-        actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list)
+        actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
+                               signature=deploy_args['signature'] if 'signature' in deploy_args else None)
         if deploy_args:
             app_id = deploy_args['app_id']
             if 'app_name' not in deploy_args:
