@@ -21,6 +21,7 @@ from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.actor import actorport
 from calvin.utilities import calvinconfig
+from calvin.actorstore.store import GlobalStore
 import re
 
 _log = calvinlogger.get_logger(__name__)
@@ -320,9 +321,9 @@ class Storage(object):
                          "control_uri": node.control_uri,
                          "attributes": {'public': node.attributes.get_public(),
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
-        # Add to index after a while since storage not up and running anyway
-        #async.DelayedCall(1.0, self._add_node_index, node)
         self._add_node_index(node)
+        # Store all actors on this node in storage
+        GlobalStore(node=node).export()
 
     def _add_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()
@@ -588,6 +589,9 @@ class Storage(object):
         # since might get index from several levels of index trie, and instead of building a complete
         # list before returning better to return iteratively for nodes with less memory
         # or system with large number of nodes, might also need a timeout.
+
+        if isinstance(index, list):
+            index = "/".join(index)
 
         if not index.startswith("/"):
             index = "/" + index
