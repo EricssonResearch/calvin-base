@@ -65,7 +65,11 @@ def main():
                     else:
                         log[-1]['param'] += line
                 continue
-            logline = json.loads(line.split('[[ANALYZE]]',1)[1])
+            try:
+                logline = json.loads(line.split('[[ANALYZE]]',1)[1])
+            except:
+                # For some reason could not handle it, treat it as a normal other log level line
+                logline = {'func': 'OTHER', 'param': line, 'node_id': None}
             logline['time'] = t
             #pprint.pprint(logline)
             log.append(logline)
