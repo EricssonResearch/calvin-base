@@ -174,7 +174,7 @@ class AppManager(object):
 
         def _callback(*args, **kwargs):
             _log.debug("Destroyed actor params (%s, %s)" % (args, kwargs))
-            _log.analyze(self._node.id, "+ CALLBACK DESTROYED ACTOR", {'args': args, 'kwargs': kwargs})
+            _log.analyze(self._node.id, "+ CALLBACK DESTROYED ACTOR", {'args': str(args), 'kwargs': str(kwargs)})
 
         _log.analyze(self._node.id, "+", {'node_info': application.node_info, 'origin_node_id': application.origin_node_id})
         for node_id, actor_ids in application.node_info.iteritems():
@@ -207,7 +207,7 @@ class AppManager(object):
         if application_id in self.applications:
             del self.applications[application_id]
         _log.debug("Destroy request reply %s" % reply)
-        _log.analyze(self._node.id, "+ RESPONSE", {'reply': reply})
+        _log.analyze(self._node.id, "+ RESPONSE", {'reply': str(reply)})
         return reply
 
     def list_applications(self):
@@ -265,11 +265,11 @@ class AppManager(object):
             return
 
         actor = self._node.am.actors[actor_id]
-        _log.debug("actor_requirements(actor_id=%s), reqs=%s" % (actor_id, actor._deployment_requirements))
+        _log.debug("actor_requirements(actor_id=%s), reqs=%s" % (actor_id, actor.get_deployment_requirements()))
         possible_nodes = set([None])  # None to mark no real response
         impossible_nodes = set([None])  # None to mark no real response
-        reqs = actor._deployment_requirements[:]
-        for req in actor._deployment_requirements:
+        reqs = actor.get_deployment_requirements()[:]
+        for req in actor.get_deployment_requirements():
             if req['op']=='union_group':
                 # Special operation that first forms a union of a requirement's list response set
                 # To allow alternative requirements options
@@ -333,6 +333,7 @@ class AppManager(object):
             state['union_nodes'] |= set(node_ids)
         state['union_reqs'].remove(state['union_req'])
         if not state['union_reqs']:
+            state['union_reqs'].append(None)  # To prevent _union_requirements from also calling _actor_requirements_cb
             _log.debug("_union_requirements_cb req done union nodes: %s" % (state['union_nodes'],))
             self._actor_requirements_cb(node_ids=state['union_nodes'], 
                                         app=state['app'], 
@@ -343,8 +344,10 @@ class AppManager(object):
                                         reqs=state['reqs'])
 
     def _actor_requirements_cb(self, node_ids, app, req, actor_id, possible_nodes, impossible_nodes, reqs):
-        _log.analyze(self._node.id, "+", {'node_ids': list(node_ids) if isinstance(node_ids, set) else node_ids}, tb=True)
-        if req['type']=='+' and node_ids:
+        _log.analyze(self._node.id, "+", {'actor_id': actor_id,
+                     'node_ids': list(node_ids) if isinstance(node_ids, set) else node_ids,
+                     'req': req}, tb=True)
+        if req['type']=='+' and node_ids is not None:
             # Positive rule, collect in possible nodes
             if None in possible_nodes:
                 # Possible set starts empty hence fill it with first response
@@ -353,7 +356,7 @@ class AppManager(object):
             else:
                 # Possible set is section between all individual req's sets
                 possible_nodes &= set(node_ids)
-        elif req['type']=='-' and node_ids:
+        elif req['type']=='-' and node_ids is not None:
             # Negative rule, collect in impossible nodes
             if None in impossible_nodes:
                 # Impossible set starts empty hence fill it with first response
@@ -368,7 +371,7 @@ class AppManager(object):
             # Collected all rules for actor, 
             app._track_actor_cb.remove(actor_id)
             self._actor_requirements_combined(app, actor_id, possible_nodes, impossible_nodes)
-        _log.analyze(self._node.id, "+ DONE", {'node_ids': node_ids}, tb=True)
+        _log.analyze(self._node.id, "+ DONE", {'node_ids': list(node_ids) if isinstance(node_ids, set) else node_ids}, tb=True)
 
     def _actor_requirements_combined(self, app, actor_id, possible_nodes, impossible_nodes):
         possible_nodes -= set([None])

@@ -4,6 +4,11 @@ import importlib
 import pkgutil
 import os
 import inspect
+from calvin.utilities import calvinconfig
+from calvin.utilities.calvinlogger import get_logger
+
+_conf = calvinconfig.get()
+_log = get_logger(__name__)
 
 
 class Sys(object):
@@ -19,12 +24,14 @@ class Sys(object):
         self.modules = {}
 
         packages = pkgutil.walk_packages(path, name + '.')
-
+        blacklist = _conf.get(None, 'capabilities_blacklist') or []
+        _log.analyze(node.id, "+ BLACKLIST", {'blacklist': blacklist})
         for package in packages:
             if not package[2]:
                 (_, _, package_name) = package[1].partition(".")
                 # this is a loadable module
-                self.modules[package_name] = {'name': package[1], 'module': None, 'error': None}
+                if package_name not in blacklist:
+                    self.modules[package_name] = {'name': package[1], 'module': None, 'error': None}
             else:
                 # This is a package, ignore it
                 pass

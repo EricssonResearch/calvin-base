@@ -125,6 +125,12 @@ def control_storage(args):
             raise Exception("Malformed JSON index string:\n%s" % args.index)
         formated_index = format_index_string(index)
         return utils.get_index(args.node, formated_index)
+    elif args.cmd == 'raw_get_index':
+        try:
+            index = json.loads(args.index)
+        except:
+            raise Exception("Malformed JSON index string:\n%s" % args.index)
+        return utils.get_index(args.node, index)
 
 
 def parse_args():
@@ -182,7 +188,7 @@ def parse_args():
     cmd_apps.set_defaults(func=control_applications)
 
     # parser for applications
-    storage_commands = ['get_index']
+    storage_commands = ['get_index', 'raw_get_index']
     cmd_storage = cmdparsers.add_parser('storage', help="handle storage")
     cmd_storage.add_argument("cmd", metavar="<command>", choices=storage_commands, type=str,
                           help="one of %s" % (", ".join(storage_commands)))

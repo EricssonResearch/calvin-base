@@ -45,12 +45,13 @@ class Deployer(object):
         else:
             self.name = self.app_id
 
-    def instantiate(self, actor_name, actor_type, argd):
+    def instantiate(self, actor_name, actor_type, argd, signature=None):
         """
         Instantiate an actor.
           - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
           - 'actor_type' is the actor class to instatiate
           - 'argd' is a dictionary with <actor_name>:<argdict> pairs
+          - 'signature' is the GlobalStore actor-signature to lookup the actor
         """
         found, is_primitive, actor_def = ActorStore().lookup(actor_type)
         if self.verify and not found:
@@ -58,28 +59,29 @@ class Deployer(object):
         if self.verify and not is_primitive:
             raise Exception("Non-primitive type: %s" % actor_type)
 
-        instance_id = self.instantiate_primitive(actor_name, actor_type, argd)
+        instance_id = self.instantiate_primitive(actor_name, actor_type, argd, signature)
         if not instance_id:
             raise Exception(
                 "Could not instantiate actor of type: %s" % actor_type)
         self.actor_map[actor_name] = instance_id
 
-    def instantiate_primitive(self, actor_name, actor_type, args):
+    def instantiate_primitive(self, actor_name, actor_type, args, signature=None):
         # name is <namespace>:<identifier>, e.g. app:src, or app:component:src
         # args is a **dictionary** of key-value arguments for this instance
+        # signature is the GlobalStore actor-signature to lookup the actor
         args['name'] = actor_name
         if self.node is not None:
             instance_id = self.node.new(
                 actor_type=actor_type,
                 args=args,
-                deploy_args={'app_id': self.app_id, 'app_name': self.name})
+                deploy_args={'app_id': self.app_id, 'app_name': self.name, 'signature': signature})
         else:
             instance_id = utils.new_actor_wargs(
                 rt=self.runtime,
                 actor_type=actor_type,
                 actor_name=actor_name,
                 args=args,
-                deploy_args={'app_id': self.app_id})
+                deploy_args={'app_id': self.app_id, 'signature': signature})
         return instance_id
 
     def connectid(self, connection):
@@ -124,7 +126,7 @@ class Deployer(object):
             raise Exception("Deploy information is not valid")
 
         for actor_name, info in self.deployable['actors'].iteritems():
-            self.instantiate(actor_name, info['actor_type'], info['args'])
+            self.instantiate(actor_name, info['actor_type'], info['args'], info['signature'])
 
         # FIXME: Move to analyzer
         for src, dst_list in self.deployable['connections'].iteritems():

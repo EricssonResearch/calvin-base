@@ -16,7 +16,7 @@
 
 import os
 
-from calvin.actorstore.store import ActorStore
+from calvin.actorstore.store import ActorStore, GlobalStore
 from calvin.utilities.calvinlogger import get_logger
 
 
@@ -205,8 +205,20 @@ class Analyzer(object):
             qualified_name = namespace+':'+actor_name
 
             if is_actor:
+                # Create the actor signature to be able to look it up in the GlobalStore if neccessary
+                signature_desc={'is_primitive': True,
+                                'actor_type':actor_def['actor_type'],
+                                'inports': [],
+                                'outports': []}
+                for c in structure['connections']:
+                    if actor_name == c['src'] and c['src_port'] not in signature_desc['inports']:
+                        signature_desc['inports'].append(c['src_port'])
+                    elif actor_name == c['dst'] and c['dst_port'] not in signature_desc['outports']:
+                        signature_desc['outports'].append(c['dst_port'])
+                signature = GlobalStore.actor_signature(signature_desc)
                 # Add actor and its arguments to the list of actor instances
-                self.actors[qualified_name] = {'actor_type':actor_def['actor_type'], 'args':args}
+                self.actors[qualified_name] = {'actor_type':actor_def['actor_type'], 'args':args,
+                                               'signature': signature, 'signature_desc': signature_desc}
             else:
                 # Recurse into components
                 # qualified_name constitutes a namespace here

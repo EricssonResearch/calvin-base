@@ -84,6 +84,7 @@ class CalvinConfig(object):
                 'framework': 'twistedimpl',
                 'storage_proxy': None,
                 'storage_start': True,
+                'capabilities_blacklist': [],
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json',
                 'media_framework': 'defaultimpl'

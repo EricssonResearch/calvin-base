@@ -591,6 +591,14 @@ class Actor(object):
     def deployment_add_requirements(self, deploy_reqs, component=None):
         self._deployment_requirements.extend([dict(r, component=component) for r in deploy_reqs])
 
+    def get_deployment_requirements(self):
+        return self._deployment_requirements + (
+                [{'op': 'actor_reqs_match',
+                  'kwargs': {'requires': self.requires},
+                  'type': '+',
+                  'component': self._deployment_requirements[0]['component'] if self._deployment_requirements else None}]
+                if hasattr(self, 'requires') else [])
+
 class ShadowActor(Actor):
     """A shadow actor try to behave as another actor but don't have any implementation"""
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
@@ -619,3 +627,10 @@ class ShadowActor(Actor):
 
     def enabled(self):
         return False
+
+    def get_deployment_requirements(self):
+        return self._deployment_requirements + [{'op': 'shadow_actor_reqs_match',
+                                                 'kwargs': {'signature': self._signature,
+                                                            'shadow_params': self._shadow_args.keys()},
+                                                 'type': '+',
+                                                 'component': None}]
