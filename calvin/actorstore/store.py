@@ -21,6 +21,7 @@ import inspect
 import json
 import re
 from types import ModuleType
+import hashlib
 
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
@@ -266,6 +267,19 @@ class ActorStore(Store):
         return ([p for (p, _) in inputs], [p for (p, _) in outputs])
 
 
+    def _get_args(self, actor_class):
+        """
+        Return a dict with a list of mandatory arguments, and a dictionary of optional arguments.
+        Either one may be empty.
+        """
+        a = inspect.getargspec(actor_class.init)
+        defaults = [] if not a.defaults else a.defaults
+        n_mandatory = len(a.args) - len(defaults)
+        mandatory = a.args[1:n_mandatory]
+        optional = {arg:default for arg, default in zip(a.args[n_mandatory:], defaults)}
+        return {'mandatory':mandatory, 'optional':optional}
+
+
     def load_component(self, name, path):
         if not os.path.isfile(path):
             return None
@@ -325,20 +339,6 @@ class ActorStore(Store):
 
 class DocumentationStore(ActorStore):
     """Interface to documentation"""
-
-
-    def _get_args(self, actor_class):
-        """
-        Return a dict with a list of mandatory arguments, and a dictionary of optional arguments.
-        Either one may be empty.
-        """
-        a = inspect.getargspec(actor_class.init)
-        defaults = [] if not a.defaults else a.defaults
-        n_mandatory = len(a.args) - len(defaults)
-        mandatory = a.args[1:n_mandatory]
-        optional = {arg:default for arg, default in zip(a.args[n_mandatory:], defaults)}
-        return {'mandatory':mandatory, 'optional':optional}
-
 
     def module_docs(self, namespace):
         """
@@ -576,6 +576,115 @@ class DocumentationStore(ActorStore):
             doc = self._format_compact(raw) if compact else self._format_detailed(raw)
         return doc
 
+
+class GlobalStore(ActorStore):
+    """ Interface to distributed global actor store
+        Currently supports meta information on actors and full components
+    """
+
+    def __init__(self, node=None, runtime=None):
+        super(GlobalStore, self).__init__()
+        self.node = node  # Used inside runtime
+        self.rt = runtime  # Use Control API from outside runtime
+
+    def _collect(self, ns=None):
+        for a in [] if ns is None else self.actors(ns):
+            self.qualified_actor_list.append(ns + "." + a if ns else a)
+        for m in self.modules(ns):
+            self._collect(ns + "." + m if ns else m)
+
+    @staticmethod
+    def actor_signature(desc):
+        """ Takes actor/component description and
+            generates a signature string
+        """
+        if desc['is_primitive']:
+            signature = {'actor_type': desc['actor_type'],
+                         'inports': sorted(desc['inports']),
+                         'outports': sorted(desc['outports'])}
+        else:
+            signature = {'actor_type': desc['actor_type'],
+                         'inports': sorted(desc['component']['inports']),
+                         'outports': sorted(desc['component']['outports'])}
+        return hashlib.sha256(json.dumps(signature, separators=(',', ':'), sort_keys=True)).hexdigest()
+
+    @staticmethod
+    def list_sort(obj):
+        if isinstance(obj, dict):
+            for k, v in obj.iteritems():
+                obj[k] = GlobalStore.list_sort(v)
+            return obj
+        elif isinstance(obj, (set, list, tuple)):
+            _obj=[]
+            for v in obj:
+                _obj.append(GlobalStore.list_sort(v))
+            return sorted(_obj)
+        else:
+            return obj
+
+    @staticmethod
+    def actor_hash(desc):
+        """ Takes actor/component description and
+            generates one hash of the complete info
+        """
+        return hashlib.sha256(json.dumps(GlobalStore.list_sort(desc), separators=(',', ':'), sort_keys=True)).hexdigest()
+
+    def export_actor(self, desc):
+        signature = self.actor_signature(desc)
+        hash = self.actor_hash(desc)
+        if self.node:
+            # FIXME should have callback to verify OK
+            self.node.storage.add_index(['actor', 'signature', signature], hash, root_prefix_level=3)
+            # FIXME should have callback to verify OK
+            self.node.storage.set('actor_type-', hash, desc, None)
+        else:
+            print "global store index %s -> %s" %(signature, hash)
+
+    def export(self):
+        self.qualified_actor_list = []
+        self._collect()
+        for a in self.qualified_actor_list:
+            found, is_primitive, actor = self.lookup(a)
+            if not found:
+                continue
+            # Currently only args and requires differences that would generate multiple hits
+            if is_primitive:
+                inputs, outputs, _ = self._parse_docstring(actor)
+                args = self._get_args(actor)
+                desc = {'is_primitive': is_primitive, 
+                        'actor_type': a,
+                        'args': args,
+                        'inports': [p[0] for p in inputs],
+                        'outports': [p[0] for p in outputs],
+                        'requires': actor.requires if hasattr(actor, 'requires') else []}
+            else:
+                desc = {'is_primitive': is_primitive, 
+                        'actor_type': a,
+                        'component': actor}
+            self.export_actor(desc)
+
+    def global_lookup(self, desc, cb):
+        """ Lookup the described actor
+            desc is a dict with keys: actor_type, inports and outports
+            cb is callback with signature and list of full descriptions
+        """
+        signature = GlobalStore.actor_signature(desc)
+        self.node.storage.get_index(['actor', 'signature', signature],
+                                    CalvinCB(self._global_lookup_cb, signature=signature, org_cb=cb))
+
+    def _global_lookup_cb(self, key, value, signature, org_cb):
+        if value:
+            nbr = [len(value)]
+            actors = []
+            for a in value:
+                self.node.storage.get('actor_type-', a, 
+                            CalvinCB(self._global_lookup_collect, nbr, actors, signature=signature, org_cb=org_cb))
+
+    def _global_lookup_collect(self, key, value, nbr, actors, signature, org_cb):
+        actors.append(value)
+        nbr[0] -= 1
+        if nbr[0] == 0:
+            org_cb(signature=signature, description=actors)
 
 if __name__ == '__main__':
     import json
