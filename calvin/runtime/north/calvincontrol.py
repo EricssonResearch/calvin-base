@@ -245,10 +245,18 @@ re_post_actor_disable = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid
 # control_api_doc += \
 """
     GET /actor/{actor-id}/port/{port-id}
-    Broken. Get information on port {port-id} of actor {actor-id}
+    Get information on port {port-id} of actor {actor-id}
     Response status code: OK or NOT_FOUND
 """
 re_get_port = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+
+# control_api_doc += \
+"""
+    GET /actor/{actor-id}/port/{port-id}/state
+    Get port state {port-id} of actor {actor-id}
+    Response status code: OK or NOT_FOUND
+"""
+re_get_port_state = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")/state\sHTTP/1")
 
 control_api_doc += \
 """
@@ -445,6 +453,7 @@ class CalvinControl(object):
             (re_post_application_requirements, self.handle_application_requirements),
             (re_post_actor_disable, self.handle_actor_disable),
             (re_get_port, self.handle_get_port),
+            (re_get_port_state, self.handle_get_port_state),
             (re_post_connect, self.handle_connect),
             (re_set_port_property, self.handle_set_port_property),
             (re_post_deploy, self.handle_deploy),
@@ -665,6 +674,17 @@ class CalvinControl(object):
         """
         self.node.storage.get_port(match.group(2), CalvinCB(
             func=self.storage_cb, handle=handle, connection=connection))
+
+    def handle_get_port_state(self, handle, connection, match, data, hdr):
+        """ Get port from id
+        """
+        state = {}
+        try:
+            state = self.node.am.get_port_state(match.group(1), match.group(2))
+            status = calvinresponse.OK
+        except Exception as e:
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, json.dumps(state), status)
 
     def handle_connect(self, handle, connection, match, data, hdr):
         """ Connect port
