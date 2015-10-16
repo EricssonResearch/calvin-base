@@ -290,6 +290,21 @@ class ActorManager(object):
         success = actor.set_port_property(port_type, port_name, port_property, value)
         return 'OK' if success else 'FAILURE'
 
+    def get_port_state(self, actor_id, port_id):
+        try:
+            actor = self.actors[actor_id]
+        except Exception as e:
+            _log.exception("Actor '%s' not found" % (actor_id,))
+            raise e
+
+        for port in actor.inports.values():
+            if port.id == port_id:
+                return port.fifo._state()
+        for port in actor.outports.values():
+            if port.id == port_id:
+                return port.fifo._state()
+        raise Exception("No port with id: %s" % port_id)
+
     def actor_type(self, actor_id):
         actor = self.actors.get(actor_id, None)
         return actor._type if actor else 'BAD ACTOR'
