@@ -18,7 +18,6 @@ from twisted.internet.abstract import FileDescriptor
 from twisted.internet import fdesc
 from twisted.internet import reactor
 import os
-import select
 
 
 class GPIOPin(FileDescriptor):
@@ -32,7 +31,7 @@ class GPIOPin(FileDescriptor):
         self.pin = pin
         self.direction = direction
         self.delay = delay
-        self.data = None
+        self.data = 0
         self.last_read = None
 
         # export pin
@@ -73,7 +72,10 @@ class GPIOPin(FileDescriptor):
             fp.close()
 
     def dataRead(self, data):
-        self.data = data
+        if "1" in data:
+            self.data = 1
+        else:
+            self.data = 0
         self.fp.seek(0)
         self.delayedCall = reactor.callLater(self.delay, self.doRead)
 
@@ -100,7 +102,7 @@ class GPIOPin(FileDescriptor):
 
     def get_state(self):
         """
-        Get state of pin
+        Get state of pin, 1/0 for state high/low
         """
         if self.direction == "in":
             self.last_read = self.data
