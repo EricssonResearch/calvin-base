@@ -29,6 +29,7 @@ from kademlia.crawling import NodeSpiderCrawl, ValueSpiderCrawl, RPCFindResponse
 from kademlia.utils import digest
 from kademlia.storage import ForgetfulStorage
 from kademlia.node import Node
+from kademlia import version as kademlia_version
 from collections import Counter
 
 from calvin.utilities import calvinlogger
@@ -47,8 +48,58 @@ class ForgetfulStorageFix(ForgetfulStorage):
 class KademliaProtocolAppend(KademliaProtocol):
 
     def __init__(self, *args, **kwargs):
+        self.set_keys = kwargs.pop('set_keys', set([]))
         KademliaProtocol.__init__(self, *args, **kwargs)
-        self.set_keys=set([])
+
+    ###############################################################################
+    # TODO remove this when kademlia v0.6 available, bug fixes, see upstream Kademlia
+    def handleCallResponse(self, result, node):
+         """
+         If we get a response, add the node to the routing table.  If
+         we get no response, make sure it's removed from the routing table.
+         """
+         if result[0]:
+             self.log.info("got response from %s, adding to router" % node)
+             _log.debug("got response from %s, adding to router" % node)
+             if self.router.isNewNode(node):
+                 self.transferKeyValues(node)
+             self.router.addContact(node)
+         else:
+             self.log.debug("no response from %s, removing from router" % node)
+             _log.debug("no response from %s, removing from router" % node)
+             self.router.removeContact(node)
+         return result
+
+    def maybeTransferKeyValues(self, node):
+        if self.router.isNewNode(node):
+            self.transferKeyValues(node)
+
+    def rpc_ping(self, sender, nodeid):
+        source = Node(nodeid, sender[0], sender[1])
+        _log.debug("rpc_ping sender=%s, source=%s" % (sender, source))
+        self.maybeTransferKeyValues(source)
+        self.router.addContact(source)
+        return self.sourceNode.id
+
+    def rpc_store(self, sender, nodeid, key, value):
+        source = Node(nodeid, sender[0], sender[1])
+        _log.debug("rpc_store sender=%s, source=%s, key=%s, value=%s" % (sender, source, base64.b64encode(key), str(value)))
+        self.maybeTransferKeyValues(source)
+        self.router.addContact(source)
+        self.log.debug("got a store request from %s, storing value" % str(sender))
+        self.storage[key] = value
+        return True
+
+    def rpc_find_node(self, sender, nodeid, key):
+        self.log.info("finding neighbors of %i in local table" % long(nodeid.encode('hex'), 16))
+        source = Node(nodeid, sender[0], sender[1])
+        _log.debug("rpc_find_node sender=%s, source=%s, key=%s" % (sender, source, base64.b64encode(key)))
+        self.maybeTransferKeyValues(source)
+        self.router.addContact(source)
+        node = Node(key)
+        return map(tuple, self.router.findNeighbors(node, exclude=source))
+    #
+    ###############################################################################
 
     def transferKeyValues(self, node):
         """
@@ -63,8 +114,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         is closer than the closest in that list, then store the key/value
         on the new node (per section 2.5 of the paper)
         """
-        _log.debug("**** transfer key values ****")
-        # FIXME is this correct have not managed to trigger it!
+        _log.debug("**** transfer key values %s ****" % node)
         ds = []
         for key, value in self.storage.iteritems():
             keynode = Node(digest(key))
@@ -74,14 +124,18 @@ class KademliaProtocolAppend(KademliaProtocol):
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
             if len(neighbors) == 0 or (newNodeClose and thisNodeClosest):
                 if key in self.set_keys:
+                    _log.debug("transfer append key value key=%s, value=%s" % (base64.b64encode(key), str(value)))
                     ds.append(self.callAppend(node, key, value))
                 else:
+                    _log.debug("transfer store key value key=%s, value=%s" % (base64.b64encode(key), str(value)))
                     ds.append(self.callStore(node, key, value))
         return defer.gatherResults(ds)
 
     # Fix for None in values for delete
     def rpc_find_value(self, sender, nodeid, key):
         source = Node(nodeid, sender[0], sender[1])
+        _log.debug("rpc_find_value sender=%s, source=%s, key=%s" % (sender, source, base64.b64encode(key)))
+        self.maybeTransferKeyValues(source)
         self.router.addContact(source)
         exists, value = self.storage.get(key, None)
         if not exists:
@@ -90,6 +144,8 @@ class KademliaProtocolAppend(KademliaProtocol):
 
     def rpc_append(self, sender, nodeid, key, value):
         source = Node(nodeid, sender[0], sender[1])
+        _log.debug("rpc_append sender=%s, source=%s, key=%s, value=%s" % (sender, source, base64.b64encode(key), str(value)))
+        self.maybeTransferKeyValues(source)
         self.router.addContact(source)
 
         try:
@@ -117,6 +173,8 @@ class KademliaProtocolAppend(KademliaProtocol):
 
     def rpc_remove(self, sender, nodeid, key, value):
         source = Node(nodeid, sender[0], sender[1])
+        _log.debug("rpc_remove sender=%s, source=%s, key=%s, value=%s" % (sender, source, base64.b64encode(key), str(value)))
+        self.maybeTransferKeyValues(source)
         self.router.addContact(source)
 
         try:
@@ -145,7 +203,12 @@ class AppendServer(Server):
     def __init__(self, ksize=20, alpha=3, id=None, storage=None):
         storage = storage or ForgetfulStorageFix()
         Server.__init__(self, ksize, alpha, id, storage=storage)
-        self.protocol = KademliaProtocolAppend(self.node, self.storage, ksize)
+        self.set_keys=set([])
+        self.protocol = KademliaProtocolAppend(self.node, self.storage, ksize, set_keys=self.set_keys)
+        if kademlia_version != '0.5':
+            _log.error("#################################################")
+            _log.error("### EXPECTING VERSION 0.5 of kademlia package ###")
+            _log.error("#################################################")
 
     def bootstrap(self, addrs):
         """
@@ -173,14 +236,15 @@ class AppendServer(Server):
             if self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
                 try:
                     pvalue = json.loads(value)
+                    self.set_keys.add(dkey)
                     if dkey not in self.storage:
-                        _log.debug("%s local append key: %s not in storage set value: %s" % (base64.b64encode(node.id), base64.b64encode(key), pvalue))
+                        _log.debug("%s local append key: %s not in storage set value: %s" % (base64.b64encode(node.id), base64.b64encode(dkey), pvalue))
                         self.storage[dkey] = value
                     else:
                         old_value_ = self.storage[dkey]
                         old_value = json.loads(old_value_)
                         new_value = list(set(old_value + pvalue))
-                        _log.debug("%s local append key: %s old: %s add: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(key), old_value, pvalue, new_value))
+                        _log.debug("%s local append key: %s old: %s add: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(dkey), old_value, pvalue, new_value))
                         self.storage[dkey] = json.dumps(new_value)
                 except:
                     _log.debug("Trying to append somthing not a JSON coded list %s" % value, exc_info=True)
@@ -190,6 +254,7 @@ class AppendServer(Server):
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
             self.log.warning("There are no known neighbors to set key %s" % key)
+            _log.debug("There are no known neighbors to set key %s" % key)
             return defer.succeed(False)
 
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
@@ -203,6 +268,7 @@ class AppendServer(Server):
             :class:`None` if not found, the value otherwise.
         """
         dkey = digest(key)
+        _log.debug("Server:get %s" % base64.b64encode(dkey))
         # if this node has it, return it
         exists, value = self.storage.get(dkey)
         if exists:
@@ -221,17 +287,19 @@ class AppendServer(Server):
         """
         dkey = digest(key)
         node = Node(dkey)
+        _log.debug("Server:remove %s" % base64.b64encode(dkey))
 
         def remove_(nodes):
             # if this node is close too, then store here as well
             if self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
                 try:
                     pvalue = json.loads(value)
+                    self.set_keys.add(dkey)
                     if dkey in self.storage:
                         old_value = json.loads(self.storage[dkey])
                         new_value = list(set(old_value) - set(pvalue))
                         self.storage[dkey] = json.dumps(new_value)
-                        _log.debug("%s local remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(key), old_value, pvalue, new_value))
+                        _log.debug("%s local remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(dkey), old_value, pvalue, new_value))
                 except:
                     _log.debug("Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
             ds = [self.protocol.callRemove(n, dkey, value) for n in nodes]
@@ -252,6 +320,7 @@ class AppendServer(Server):
         @return: C{None} if not found, the value otherwise.
         """
         dkey = digest(key)
+        _log.debug("Server:get_concat %s" % base64.b64encode(dkey))
         # if this node has it, return it
         exists, value = self.storage.get(dkey)
         if exists:
@@ -321,6 +390,7 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
 
         peerToSaveTo = self.nearestWithoutValue.popleft()
         if peerToSaveTo is not None:
+            _log.debug("nearestWithoutValue %d" % (len(self.nearestWithoutValue)+1))
             if _set_op:
                 d = self.protocol.callAppend(peerToSaveTo, self.node.id, value)
             else:
