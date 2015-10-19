@@ -45,8 +45,9 @@ class Scheduler(object):
         async.run_ioloop()
 
     def stop(self):
+        if not self.done:
+            async.DelayedCall(0, async.stop_ioloop)
         self.done = True
-        async.DelayedCall(0, async.stop_ioloop)
 
     def loop_once(self, all_=False):
         activity = self.monitor.loop(self)
