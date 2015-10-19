@@ -20,6 +20,8 @@ import json
 import pprint
 import traceback
 from datetime import datetime
+import re
+import textwrap
 
 WIDTH = 80
 def parse_arguments():
@@ -40,6 +42,8 @@ Analyze calvin log.
 
     return argparser.parse_args()
 
+re_pid = re.compile("^[0-9,\-,\,, ,:]*[A-Z]* *([0-9]*)-.*")
+
 def main():
     args = parse_arguments()
     print "Analyze", args.files
@@ -48,6 +52,7 @@ def main():
         files.append(open(name, 'r'))
 
     log = []
+    pid_to_node_id = {}
 
     for file in files:
         for line in file:
@@ -70,9 +75,17 @@ def main():
             except:
                 # For some reason could not handle it, treat it as a normal other log level line
                 logline = {'func': 'OTHER', 'param': line, 'node_id': None}
+            if logline['node_id']:
+                try:
+                    pid = re.match(re_pid, line).group(1)
+                    pid_to_node_id[pid] = logline['node_id']
+                except:
+                    pass
             logline['time'] = t
             #pprint.pprint(logline)
             log.append(logline)
+
+    pprint.pprint(pid_to_node_id)
 
     if len(files)>1:
         log = sorted(log, key=lambda k: k['time'])
@@ -88,7 +101,19 @@ def main():
             print l['func'] + "%"*(len(nodes)*WIDTH-len(l['func']))
             continue
         if l['func'] == "OTHER" and l['node_id'] is None:
-            print l['param'].rstrip()
+            try:
+                ind = nodes.index(pid_to_node_id[re.match(re_pid, l['param']).group(1)])*WIDTH
+            except Exception as e:
+                ind = 0
+                pass
+            lines = str.splitlines(l['param'].rstrip())
+            pre = "<>"
+            for line in lines:
+                wrapped_lines = textwrap.wrap(line, width=WIDTH + 20,
+                                              replace_whitespace=False, drop_whitespace=False)
+                for wl in wrapped_lines:
+                    print " "*ind + pre + wl
+                    pre = ""
             continue
 
         ind = nodes.index(l['node_id'])*WIDTH
