@@ -248,3 +248,14 @@ def get_index(rt, index, timeout=TIMEOUT):
     rt = get_RT(rt)
     r = requests.get(rt.control_uri + '/index/' + index, timeout=timeout)
     return check_response(r)
+
+def get_storage(rt, key, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    r = requests.get(rt.control_uri + '/storage/' + key, timeout=timeout)
+    return check_response(r)
+
+def set_storage(rt, key, value, timeout=TIMEOUT):
+    rt = get_RT(rt)
+    data = {'value': value}
+    r = requests.post(rt.control_uri + '/storage/' + key, data=json.dumps(data), timeout=timeout)
+    return check_response(r)

@@ -349,6 +349,28 @@ re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
 """
+    GET /storage/{prefix-key}
+    Fetch value under prefix-key
+    Response status code: OK or NOT_FOUND
+    Response: {"result": <value>}
+"""
+re_get_storage = re.compile(r"GET /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+
+control_api_doc += \
+"""
+    POST /storage/{prefix-key}
+    Store value under prefix-key
+    Body:
+    {
+        "value": <string>
+    }
+    Response status code: OK or INTERNAL_ERROR
+    Response: none
+"""
+re_post_storage = re.compile(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+
+control_api_doc += \
+"""
     OPTIONS /url
     Request for information about the communication options available on url
     Response status code: OK
@@ -416,6 +438,8 @@ class CalvinControl(object):
             (re_post_index, self.handle_post_index),
             (re_delete_index, self.handle_delete_index),
             (re_get_index, self.handle_get_index),
+            (re_get_storage, self.handle_get_storage),
+            (re_post_storage, self.handle_post_storage),
             (re_options, self.handle_options)
         ]
         self.server = server_connection.ServerProtocolFactory(self.handle_request, "http")
@@ -742,6 +766,16 @@ class CalvinControl(object):
         _log.debug("get index cb (in control) %s, %s" % (key, value))
         self.send_response(handle, connection, None if value is None else json.dumps({'result': value}),
                            status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
+
+    def handle_post_storage(self, handle, connection, match, data, hdr):
+        """ Store in storage
+        """
+        self.node.storage.set("", match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
+
+    def handle_get_storage(self, handle, connection, match, data, hdr):
+        """ Get from storage
+        """
+        self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
 
     def log_firing(self, actor_name, action_method, tokens_produced, tokens_consumed, production):
         """ Trace firing, sends data on log_sock
