@@ -25,12 +25,26 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
 from calvin.utilities import calvinresponse
+from calvin.actorstore.store import DocumentationStore
 
 _log = get_logger(__name__)
 
 uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
 control_api_doc = ""
+
+control_api_doc += \
+"""
+    GET /actor_doc {path}
+    Get documentation in 'raw' format for actor or module at {path}, where path
+    is formatted as '/{module}/{submodule}/ ... /{actor}'.
+    If {path} is empty return top-level documentation.
+    See DocumentStore help_raw() for details on data format.
+    Response status code: OK
+    Response: dictionary with documentation
+"""
+re_get_actor_doc = re.compile(r"GET /actor_doc(\S*)\sHTTP/1")
+
 # control_api_doc += \
 """
     GET /log
@@ -413,6 +427,7 @@ class CalvinControl(object):
 
         # Set routes for requests
         self.routes = [
+            (re_get_actor_doc, self.handle_get_actor_doc),
             (re_get_log, self.handle_get_log),
             (re_get_node_id, self.handle_get_node_id),
             (re_get_nodes, self.handle_get_nodes),
@@ -502,6 +517,15 @@ class CalvinControl(object):
     def storage_cb(self, key, value, handle, connection):
         self.send_response(handle, connection, None if value is None else json.dumps(value),
                            status=calvinresponse.NOT_FOUND if None else calvinresponse.OK)
+
+    def handle_get_actor_doc(self, handle, connection, match, data, hdr):
+        """ Query ActorStore for documentation
+        """
+        path = match.group(1)
+        what = '.'.join(path.strip('/').split('/'))
+        ds = DocumentationStore()
+        data = ds.help_raw(what)
+        self.send_response(handle, connection, json.dumps(data))
 
     def handle_get_log(self, handle, connection, match, data, hdr):
         """ Get log stream
