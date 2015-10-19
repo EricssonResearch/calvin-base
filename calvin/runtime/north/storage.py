@@ -116,7 +116,11 @@ class Storage(object):
                                 'REMOVE': self.remove,
                                 'DELETE': self.delete,
                                 'REPLY': self._proxy_reply}
-            self.node.proto.register_tunnel_handler('storage', CalvinCB(self.tunnel_request_handles))
+            try:
+                self.node.proto.register_tunnel_handler('storage', CalvinCB(self.tunnel_request_handles))
+            except:
+                # OK, then skip being a proxy server
+                pass
 
     def stop(self, cb=None):
         """ Stop storage

@@ -77,6 +77,9 @@ Start runtime, compile calvinscript and deploy application.
                            help='Any string for filtering your dht clients, use same for all nodes in the network.',
                            default=None)
 
+    argparser.add_argument('-s', '--storage-only', dest='storage', action='store_true', default=False,
+                           help='Start storage only runtime')
+
     return argparser.parse_args()
 
 
@@ -87,6 +90,15 @@ def runtime(uri, control_uri, attributes=None, dispatch=False):
         return dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
     else:
         start_node(uri, control_uri, **kwargs)
+
+
+def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
+    from calvin.utilities.nodecontrol import dispatch_storage_node, start_storage_node
+    kwargs = {}
+    if dispatch:
+        return dispatch_storage_node(uri=uri, control_uri=control_uri, **kwargs)
+    else:
+        start_storage_node(uri, control_uri, **kwargs)
 
 
 def compile_script(scriptfile):
@@ -212,7 +224,10 @@ def main():
     if app_info:
         dispatch_and_deploy(app_info, args.wait, uri, control_uri, attr_)
     else:
-        runtime(uri, control_uri, attr_, dispatch=False)
+        if args.storage:
+            storage_runtime(uri, control_uri, attr_, dispatch=False)
+        else:
+            runtime(uri, control_uri, attr_, dispatch=False)
     return 0
 
 if __name__ == '__main__':
