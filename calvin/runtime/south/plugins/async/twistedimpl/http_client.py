@@ -16,10 +16,12 @@
 
 # from twisted.internet.task import react
 from twisted.internet import reactor
-from twisted.web.client import Agent, readBody
+from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
 from twisted.internet.ssl import ClientContextFactory
 from twisted.web.client import FileBodyProducer
+from twisted.internet.defer import Deferred
+from twisted.internet.protocol import Protocol
 
 from StringIO import StringIO
 from urllib import urlencode
@@ -85,6 +87,22 @@ def encode_body(data):
     return FileBodyProducer(StringIO(data))
 
 
+class BodyReader(Protocol):
+
+    def __init__(self, deferred, cb, request):
+        self.deferred = deferred
+        self.data = ""
+        self.cb = cb
+        self.request = request
+
+    def dataReceived(self, bytes):
+        self.data += bytes
+
+    def connectionLost(self, reason):
+        self.deferred.callback(None)
+        self.cb(self.data, self.request)
+
+
 class HTTPClient(CalvinCBClass):
 
     class WebClientContextFactory(ClientContextFactory):
@@ -99,8 +117,9 @@ class HTTPClient(CalvinCBClass):
     def _receive_headers(self, response, request):
         request.parse_headers(response)
         self._callback_execute('receive-headers', request)
-        deferred = readBody(response)
-        deferred.addCallback(self._receive_body, request)
+        finished = Deferred()
+        response.deliverBody(BodyReader(finished, self._receive_body, request))
+        return finished
 
     def _receive_body(self, response, request):
         request.parse_body(response)
