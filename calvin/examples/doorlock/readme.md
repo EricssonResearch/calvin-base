@@ -18,26 +18,15 @@ The devices used to mimic this scenario is:
 - One network camera used get an image of the person at the door
 - One Philips Hue lamp representing the state of the doorlock (green light=unlocked, red light=locked)
 
-`doorlock.calvin` contains the Calvin script and the subdirectory `devactors` contains the actors:
-
-- io.GPIOReader, reads state of a GPIO pin on Raspberry PI
-- misc.ImageRender, shows an image
-- misc.MediaPlayer, plays a sound file
-- misc.StopLight, a Philips Hue lamp representing the door lock
-- misc.URLImageGenerator, get an image from URL
-- misc.FaceDetect, face detection in image
-
-Dependencies on external packages:
-- pygame
-- opencv
+`doorlock.calvin` contains the Calvin script.
 
 ## Running the example
 
-In the doorlock example folder, add a file named calvin.conf with the following content to include the actors in this example:
+In the doorlock example folder on 192.168.0.111, add a file named calvin.conf with the following content to blacklist gpio actors on the laptop:
 
     {
       "global": {
-        "actor_paths": ["./devactors"]
+        "capabilities_blacklist" : ["calvinsys.io.gpiohandler"]
       }
     }
 
@@ -45,7 +34,7 @@ Start a Calvin runtime on both Raspberry Pis with their respective IP addresses:
 
     doorlock$ csruntime --host IP_ADDRESS --keep-alive
 
-Next, deploy the application and connect the runtimes:
+Next, on 192.168.0.111 deploy the application and connect the runtimes:
 
     doorlock$ csruntime doorlock.calvin --host 192.168.0.111 --keep-alive &
     doorlock$ cscontrol http://192.168.0.111:5001 nodes add calvinip://192.168.0.146:5000
