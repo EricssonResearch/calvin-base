@@ -321,10 +321,7 @@ class AppendServer(Server):
         """
         dkey = digest(key)
         _log.debug("Server:get_concat %s" % base64.b64encode(dkey))
-        # if this node has it, return it
-        exists, value = self.storage.get(dkey)
-        if exists:
-            return defer.succeed(value)
+        # Always do a find even if we have it, due to the concatenation of all results
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
         if len(nearest) == 0:
