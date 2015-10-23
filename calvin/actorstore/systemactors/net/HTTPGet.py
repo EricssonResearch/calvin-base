@@ -42,9 +42,12 @@ class HTTPGet(Actor):
         self.setup()
 
     def setup(self):
+        self.reset_request()
+        self.use('calvinsys.network.httpclienthandler', shorthand='http')
+
+    def reset_request(self):
         self.request = None
         self.received_headers = False
-        self.use('calvinsys.network.httpclienthandler', shorthand='http')
 
     @condition(action_input=['URL', 'params', 'header'])
     @guard(lambda self, url, params, header: self.request is None)
@@ -65,9 +68,14 @@ class HTTPGet(Actor):
     @guard(lambda self: self.received_headers and self['http'].received_body(self.request))
     def handle_body(self):
         body = self['http'].body(self.request)
-        self.request = None
-        self.received_headers = False
+        self.reset_request()
         return ActionResult(production=(body,))
 
-    action_priority = (handle_body, handle_headers, new_request)
+    @condition()
+    @guard(lambda self: self.received_headers and self['http'].received_empty_body(self.request))
+    def handle_empty_body(self):
+        self.reset_request()
+        return ActionResult()
+
+    action_priority = (handle_body, handle_empty_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler']

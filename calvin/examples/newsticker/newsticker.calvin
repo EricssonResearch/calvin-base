@@ -84,7 +84,7 @@ extract : ExtractCommit()
 
 params : json.SetValue()
 header : json.Dict(n=1)
-delay : std.Delay(delay=DELAY)
+delay : std.ClassicDelay(delay=DELAY)
 printout : io.Print()
 cmp : std.Compare(op="=")
 route : std.Switch()
