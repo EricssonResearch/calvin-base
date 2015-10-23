@@ -33,6 +33,8 @@ class HTTPClientHandler(object):
 
     def _issue_request(self, cmd, url, params, headers, data):
         handle = "%s:%s:%s" % (self._actor.id, cmd, url)
+        if not headers.get("User-Agent", None):
+            headers["User-Agent"] = "Calvin-Base"
         self._requests[handle] = self._client.request(cmd, url, params, headers, data)
         return handle
 
@@ -55,7 +57,12 @@ class HTTPClientHandler(object):
         return self._requests[handle].headers() is not None
 
     def received_body(self, handle):
-        return self._requests[handle].body() is not None
+        body = self._requests[handle].body()
+        return bool(body)
+
+    def received_empty_body(self, handle):
+        body = self._requests[handle].body()
+        return body is not None and not bool(body)
 
     def headers(self, handle):
         return self._requests[handle].headers()

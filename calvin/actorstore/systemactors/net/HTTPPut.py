@@ -43,10 +43,13 @@ class HTTPPut(Actor):
         self.setup()
 
     def setup(self):
-        self.request = None
-        self.received_headers = False
+        self.reset_request()
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
         self.use('calvinsys.native.python-json', shorthand='json')
+
+    def reset_request(self):
+        self.request = None
+        self.received_headers = False
 
     @condition(action_input=['URL', 'params', 'header', 'data'])
     @guard(lambda self, url, params, header, data: self.request is None)
@@ -67,9 +70,14 @@ class HTTPPut(Actor):
     @guard(lambda self: self.received_headers and self['http'].received_body(self.request))
     def handle_body(self):
         body = self['http'].body(self.request)
-        self.request = None
-        self.received_headers = False
+        self.reset_request()
         return ActionResult(production=(body,))
 
-    action_priority = (handle_body, handle_headers, new_request)
+    @condition()
+    @guard(lambda self: self.received_headers and self['http'].received_empty_body(self.request))
+    def handle_empty_body(self):
+        self.reset_request()
+        return ActionResult()
+
+    action_priority = (handle_body, handle_empty_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-json']
