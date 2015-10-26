@@ -11,6 +11,9 @@ class Image(object):
     Image object
     """
 
+    def __init__(self):
+        self.display = None
+
     def show_image(self, image, width, height):
         """
         Show image
@@ -53,4 +56,4 @@ class Image(object):
         Close display
         """
         if not self.display is None:
-            self.display.stop()
+            pygame.display.quit()
