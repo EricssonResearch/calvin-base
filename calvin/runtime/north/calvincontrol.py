@@ -398,7 +398,8 @@ control_api_doc += \
     Response status code: OK
     Response: Available communication options
 """
-re_options = re.compile(r"OPTIONS /[0-9a-z/-]+\sHTTP/1.1")
+# re_options = re.compile(r"OPTIONS /[0-9a-z/-_.]*\sHTTP/1.1")
+re_options = re.compile(r"OPTIONS /[^\s]*\sHTTP/1.1")
 
 _calvincontrol = None
 
@@ -851,6 +852,7 @@ class CalvinControl(object):
         response += "Content-Length: 0\n" \
                     "Access-Control-Allow-Origin: *\n" \
                     "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" \
+                    "Content-Type: *\n" \
                     "\n\r\n"
 
         connection.send(response)
