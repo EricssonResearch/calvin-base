@@ -12,17 +12,17 @@ The scenario is:
 
 The devices used to mimic this scenario is:
 
-- Laptop (192.168.0.111 in this example) running a Calvin node.
-- Raspberry PI (192.168.0.146 in this example) running a Calvin node and with a push button connected to GPIO pin 16 (used to trigger the camera)
-- Raspberry PI (192.168.0.134 in this example) running a Calvin node with a push button connected to GPIO pin 16 (used to unlock the door) and a speaker connected to the 3.5mm jack (acting as the doorbell)
+- Laptop, with hostname "laptop" and ip address 192.168.0.111 in this example, running a Calvin node.
+- Raspberry PI, with hostname "raspi3" and ip address 192.168.0.146 in this example, running a Calvin node and with a push button connected to GPIO pin 16 (used to trigger the camera)
+- Raspberry PI, with hostname "raspi2" and ip address 192.168.0.134 in this example, running a Calvin node with a push button connected to GPIO pin 16 (used to unlock the door) and a speaker connected to the 3.5mm jack (acting as the doorbell)
 - One network camera used get an image of the person at the door
 - One Philips Hue lamp representing the state of the doorlock (green light=unlocked, red light=locked)
 
-`doorlock.calvin` contains the Calvin script.
+`doorlock.calvin` contains the Calvin script and 'doorlock.deployjson' contains the deployment requirements.
 
 ## Running the example
 
-In the doorlock example folder on 192.168.0.111, add a file named calvin.conf with the following content to blacklist gpio actors on the laptop:
+In the doorlock example folder on the laptop, add a file named calvin.conf with the following content to blacklist gpio actors on the laptop:
 
     {
       "global": {
@@ -30,18 +30,18 @@ In the doorlock example folder on 192.168.0.111, add a file named calvin.conf wi
       }
     }
 
-Start a Calvin runtime on both Raspberry Pis with their respective IP addresses:
+Start a Calvin runtime on the laptop and both the Raspberry Pis with their respective IP_ADDRESS and HOSTNAME:
 
-    doorlock$ csruntime --host IP_ADDRESS --keep-alive
+    doorlock$ csruntime --host IP_ADDRESS --keep-alive --attr '{"indexed_public": {"node_name": {"organization": "com.ericsson", "name": "HOSTNAME"}}}'
 
-Next, on 192.168.0.111 deploy the application and connect the runtimes:
+Next, on the laptop deploy the application and apply the deployment requirements:
 
-    doorlock$ csruntime doorlock.calvin --host 192.168.0.111 --keep-alive &
-    doorlock$ cscontrol http://192.168.0.111:5001 nodes add calvinip://192.168.0.146:5000
-    doorlock$ cscontrol http://192.168.0.111:5001 nodes add calvinip://192.168.0.134:5000
+    doorlock$ cscontrol http://192.168.0.111:5001 deploy doorlock.calvin --reqs doorlock.deployjson
 
-Next, start the web server and migrate actor `button_1` to Raspberry PI with ip 192.168.0.146 and `button_2` and `bell` to Raspberry PI with ip 192.168.0.136:
+Next, on the laptop start a calvin web server:
 
     doorlock$ csweb
 
-Next, push the button on Raspberry PI with ip 192.168.0.146 and a picture should be shown and if a face was detected in the image the doorbell should trigger. Then, push button on Raspberry PI with ip 192.168.0.134 to unlock the door (lamp should turn green).
+Next, verify the actor deployment by opening a web browser go to http://192.168.0.111:8000 (In the Connect dialog, enter "http://192.168.0.111:5001" in the Control URI field and "node/attribute/node_name/com.ericsson" as the Peers index search field).
+
+Next, push the button on raspi3 and a picture should be shown and if a face was detected in the image the doorbell should trigger. Then, push button on raspi2 to unlock the door (lamp should turn green).
