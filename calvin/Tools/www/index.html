@@ -1247,6 +1247,7 @@ function showMigrateApplication(application_id)
                     var script = $("#migrate_reqs").val();
                     migrateApplication(application, script);
                     $(this).dialog("close");
+                    getApplications();
                 },
                 "Cancel": function() {
                     $(this).dialog("close");
