@@ -1,0 +1,22 @@
+component FlashStopLight(interval) -> {
+    """Use StopLight component to flash PhilipsHue red/green at intervals"""
+    light : hue.StopLight(address="192.168.0.101", username="newdeveloper", lightno="1")
+    on : std.Constantify(constant=true)
+    off : std.Constantify(constant=false)
+    alternate : std.Alternate()
+    c_1 : std.Counter()
+    c_2 : std.Counter()
+    pacer : std.ClassicDelay(delay=interval)
+    void : std.Terminator()
+
+    c_1.integer > on.in
+    c_2.integer > off.in
+    on.out > alternate.token_1
+    off.out > alternate.token_2
+    alternate.token > pacer.token
+    pacer.token > light.state
+    light.status > void.void
+}
+
+flash : FlashStopLight(interval=2.0)
+

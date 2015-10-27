@@ -1,39 +1,3 @@
-component StopLight() in -> {
-  client : net.HTTPPut()
-  status : io.Print()
-  data   : io.Print()
-  headers: io.Print()
-  const_red : std.Constantify(constant={"on": true, "sat": 255, "bri": 100, "hue": 1000})
-  const_green : std.Constantify(constant={"on": true, "sat": 255, "bri": 100, "hue": 26000})
-  const_params : std.Constantify(constant={})
-  const_header : std.Constantify(constant={"Content-type": "application/json"})
-  const_url : std.Constantify(constant="http://192.168.0.101/api/newdeveloper/lights/1/state")
-  select : std.Deselect()
-  jsonToString : json.ToString()
-
-  .in > const_red.in
-  .in > const_green.in
-  .in > select.select
-  const_red.out > select.case_false
-  const_green.out > select.case_true
-
-  select.data > const_params.in
-  const_params.out > client.params
-
-  select.data > const_header.in
-  const_header.out > client.header
-
-  select.data > const_url.in
-  const_url.out > client.URL
-
-  select.data > jsonToString.data
-  jsonToString.string > client.data
-
-  client.status > status.token
-  client.data > data.token
-  client.header > headers.token
-}
-
 component Camera() trigger -> image {
   /* Actors */
   const_url : std.Constantify(constant="http://192.168.0.143/axis-cgi/jpg/image.cgi")
@@ -58,7 +22,8 @@ component Camera() trigger -> image {
 /* Actors */
 button_1 : io.GPIOReader(gpio_pin=23)
 button_2 : io.GPIOReader(gpio_pin=23)
-lock : StopLight()
+lock : hue.StopLight(address="192.168.0.101", username="newdeveloper", lightno="1")
+term : std.Terminator()
 bell : media.MediaPlayer(media_file="calvin/examples/doorlock/dingdong.ogg")
 /*camera : media.Camera()*/
 camera : Camera()
@@ -70,4 +35,5 @@ button_1.state > camera.trigger
 camera.image > detect.image
 camera.image > screen.image
 detect.faces > bell.play
-button_2.state > lock.in
+button_2.state > lock.state
+lock.status > term.void
