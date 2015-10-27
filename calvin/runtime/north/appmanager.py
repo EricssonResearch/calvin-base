@@ -150,21 +150,21 @@ class AppManager(object):
             _log.analyze(self._node.id, "+ DONE", {})
             self._destroy_final(application)
 
-    def _destroy_actor_cb(self, actor_id, value, application, retries=0):
+    def _destroy_actor_cb(self, key, value, application, retries=0):
         """ Get actor callback """
-        _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'value': value, 'retries': retries})
-        _log.debug("Destroy app peers actor cb %s" % actor_id)
+        _log.analyze(self._node.id, "+", {'actor_id': key, 'value': value, 'retries': retries})
+        _log.debug("Destroy app peers actor cb %s" % key)
         if value and 'node_id' in value:
-            application.update_node_info(value['node_id'], actor_id)
+            application.update_node_info(value['node_id'], key)
         else:
             if retries<10:
                 # FIXME add backoff time
-                _log.analyze(self._node.id, "+ RETRY", {'actor_id': actor_id, 'value': value, 'retries': retries})
-                self.storage.get_actor(actor_id, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries+1)))
+                _log.analyze(self._node.id, "+ RETRY", {'actor_id': key, 'value': value, 'retries': retries})
+                self.storage.get_actor(key, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries+1)))
             else:
                 # FIXME report failure
-                _log.analyze(self._node.id, "+ GIVE UP", {'actor_id': actor_id, 'value': value, 'retries': retries})
-                application.update_node_info(None, actor_id)
+                _log.analyze(self._node.id, "+ GIVE UP", {'actor_id': key, 'value': value, 'retries': retries})
+                application.update_node_info(None, key)
 
         if application.complete_node_info():
             self._destroy_final(application)
