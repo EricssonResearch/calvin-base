@@ -20,6 +20,7 @@ import time
 import json
 import traceback
 import logging
+import os
 # Calvin related imports must be in functions, to be able to set logfile before imports
 _conf = None
 _log = None
@@ -229,6 +230,24 @@ def main():
         else:
             runtime(uri, control_uri, attr_, dispatch=False)
     return 0
+
+
+def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False):
+    """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
+        runtimes from the same python script, since some objects otherwise gets unexceptedly shared.
+    """
+    call = "csruntime -n %s -p %d -c %d" % (host, port, controlport)
+    call += (" --attr %s" % (attr, )) if attr else ""
+    call += " -s" if storage else ""
+    call += (" --logfile %s" % (logfile, )) if logfile else ""
+    if loglevel:
+        for l in loglevel:
+            call += " --loglevel %s" % (l, )
+    call += " -w 0"
+    call += (" &> %s" % (logfile + "out", )) if logfile else ""
+    call += " &"
+    return os.system(call)
+
 
 if __name__ == '__main__':
     import sys
