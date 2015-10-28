@@ -22,6 +22,8 @@ import os
 
 from calvin.utilities import calvinlogger
 
+_config_pytest = None
+
 # pytest_plugins = "pytest_twisted"
 
 def pytest_addoption(parser):
@@ -47,6 +49,8 @@ def pytest_runtest_setup(item):
 
 
 def pytest_configure(config):
+    global _config_pytest
+    _config_pytest = config
     filename = config.getoption("logfile")
     if filename:
         calvinlogger.set_file(filename)
