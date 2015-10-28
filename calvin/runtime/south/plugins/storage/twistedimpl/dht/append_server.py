@@ -119,6 +119,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         for key, value in self.storage.iteritems():
             keynode = Node(digest(key))
             neighbors = self.router.findNeighbors(keynode)
+            _log.debug("transfer? nbr neighbors=%d, key=%s, value=%s" % (len(neighbors), base64.b64encode(key), str(value)))
             if len(neighbors) > 0:
                 newNodeClose = node.distanceTo(keynode) < neighbors[-1].distanceTo(keynode)
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
@@ -163,7 +164,7 @@ class KademliaProtocolAppend(KademliaProtocol):
             return True
 
         except:
-            _log.debug("Trying to append somthing not a JSON coded list %s" % value, exc_info=True)
+            _log.debug("Trying to append something not a JSON coded list %s" % value, exc_info=True)
             return False
 
     def callAppend(self, nodeToAsk, key, value):
@@ -247,7 +248,7 @@ class AppendServer(Server):
                         _log.debug("%s local append key: %s old: %s add: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(dkey), old_value, pvalue, new_value))
                         self.storage[dkey] = json.dumps(new_value)
                 except:
-                    _log.debug("Trying to append somthing not a JSON coded list %s" % value, exc_info=True)
+                    _log.debug("Trying to append something not a JSON coded list %s" % value, exc_info=True)
             ds = [self.protocol.callAppend(n, dkey, value) for n in nodes]
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
 
@@ -320,17 +321,26 @@ class AppendServer(Server):
         @return: C{None} if not found, the value otherwise.
         """
         dkey = digest(key)
-        _log.debug("Server:get_concat %s" % base64.b64encode(dkey))
-        # Always do a find even if we have it, due to the concatenation of all results
+        # Always try to do a find even if we have it, due to the concatenation of all results
+        exists, value = self.storage.get(dkey)
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
+        _log.debug("Server:get_concat key=%s, exists=%s, nbr nearest=%d" % (base64.b64encode(dkey), exists, len(nearest)))
         if len(nearest) == 0:
+            # No neighbors but we had it, return that value
+            if exists:
+                return defer.succeed(value)
             self.log.warning("There are no known neighbors to get key %s" % key)
             return defer.succeed(None)
-        spider = ValueListSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
+        spider = ValueListSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha,
+                                      local_value=value if exists else None)
         return spider.find()
 
 class ValueListSpiderCrawl(ValueSpiderCrawl):
+
+    def __init__(self, *args, **kwargs):
+        self.local_value = kwargs.pop('local_value', None)
+        super(ValueListSpiderCrawl, self).__init__(*args, **kwargs)
 
     def _nodesFound(self, responses):
         """
@@ -348,6 +358,8 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
                 peer = self.nearest.getNodeById(peerid)
                 self.nearestWithoutValue.push(peer)
                 self.nearest.push(response.getNodeList())
+        _log.debug("_nodesFound nearestWithoutValue: %s, nearest: %s, toremove: %s" %
+                    (self.nearestWithoutValue, self.nearest, toremove))
         self.nearest.remove(toremove)
 
         if len(foundValues) > 0:
@@ -366,6 +378,8 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
         # TODO figure out if we could be more cleaver in what values are combined
         value = None
         _set_op = True
+        if self.local_value:
+            jvalues.append((None, self.local_value))
         if len(jvalues) != 1:
             args = (self.node.long_id, str(jvalues))
             _log.debug("Got multiple values for key %i: %s" % args)
