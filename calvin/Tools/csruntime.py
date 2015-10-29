@@ -232,7 +232,8 @@ def main():
     return 0
 
 
-def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False, outfile=None):
+def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False, 
+              outfile=None, configfile=None):
     """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
         runtimes from the same python script, since some objects otherwise gets unexceptedly shared.
     """
@@ -249,6 +250,8 @@ def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, at
     call += " -w 0"
     call += (" &> %s" % outfile) if outfile else ""
     call += " &"
+    if configfile:
+        call = "CALVIN_CONFIG_PATH=%s " % configfile + call
     return os.system(call)
 
 

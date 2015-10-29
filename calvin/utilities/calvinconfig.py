@@ -174,6 +174,8 @@ class CalvinConfig(object):
             confpath = path+'/calvin.conf'
         elif os.path.exists(path+'/.calvin.conf'):
             confpath = path+'/.calvin.conf'
+        elif os.path.exists(path) and os.path.isfile(path):
+            confpath = path
         else:
             return None
 
@@ -248,6 +250,9 @@ class CalvinConfig(object):
                 self.wildcards.append(wildcard)
             except Exception as e:
                 _log.warning("Value {} of evironment variable {} is malformed, skipping.".format(repr(value), wildcard))
+
+    def save(self, path, skip_arguments=True):
+        json.dump({k: v for k, v in self.config.iteritems() if k != "arguments" or not skip_arguments}, open(path, 'w'))
 
     def __str__(self):
         d = {}
