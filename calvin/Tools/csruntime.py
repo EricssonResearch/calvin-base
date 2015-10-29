@@ -232,19 +232,22 @@ def main():
     return 0
 
 
-def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False):
+def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False, outfile=None):
     """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
         runtimes from the same python script, since some objects otherwise gets unexceptedly shared.
     """
     call = "csruntime -n %s -p %d -c %d" % (host, port, controlport)
-    call += (" --attr %s" % (attr, )) if attr else ""
+    try:
+        call += (" --attr \"%s\"" % (json.dumps(attr).replace('"',"\\\""), )) if attr else ""
+    except:
+        pass
     call += " -s" if storage else ""
     call += (" --logfile %s" % (logfile, )) if logfile else ""
     if loglevel:
         for l in loglevel:
             call += " --loglevel %s" % (l, )
     call += " -w 0"
-    call += (" &> %s" % (logfile + "out", )) if logfile else ""
+    call += (" &> %s" % outfile) if outfile else ""
     call += " &"
     return os.system(call)
 
