@@ -194,12 +194,14 @@ class Storage(object):
                     _log.error("Failed to get: %s" % key)
                     async.DelayedCall(0, cb, key=key, value=False)
 
-    def get_concat_cb(self, key, value, org_cb, org_key):
+    def get_concat_cb(self, key, value, org_cb, org_key, local_list):
         """ get callback
         """
         if value:
             value = self.coder.decode(value)
-        org_cb(org_key, value)
+            org_cb(org_key, list(set(value + local_list)))
+        else:
+            org_cb(org_key, local_list if local_list else None)
 
     def get_concat(self, prefix, key, cb):
         """ Get value for key: prefix+key, first look in localstore
@@ -213,13 +215,15 @@ class Storage(object):
                 _log.analyze(self.node.id, "+ GET LOCAL", None)
                 value = self.localstore_sets[prefix + key]
                 # Return the set that we intended to append since that's all we have until it is synced
-                cb(key=key, value=list(value['+']))
+                local_list = list(value['+'])
             else:
-                try:
-                    self.storage.get_concat(key=prefix + key, cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key))
-                except:
-                    _log.error("Failed to get: %s" % key, exc_info=True)
-                    cb(key=key, value=None)
+                local_list = []
+            try:
+                self.storage.get_concat(key=prefix + key,
+                                cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
+            except:
+                _log.error("Failed to get: %s" % key, exc_info=True)
+                async.DelayedCall(0, cb, key=key, value=local_list if local_list else None)
 
     def append_cb(self, key, value, org_key, org_value, org_cb):
         """ append callback, on error retry after flush_timeout

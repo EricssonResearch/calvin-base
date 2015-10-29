@@ -325,7 +325,8 @@ class AppendServer(Server):
         exists, value = self.storage.get(dkey)
         node = Node(dkey)
         nearest = self.protocol.router.findNeighbors(node)
-        _log.debug("Server:get_concat key=%s, exists=%s, nbr nearest=%d" % (base64.b64encode(dkey), exists, len(nearest)))
+        _log.debug("Server:get_concat key=%s, value=%s, exists=%s, nbr nearest=%d" % (base64.b64encode(dkey), value, 
+                                                                                      exists, len(nearest)))
         if len(nearest) == 0:
             # No neighbors but we had it, return that value
             if exists:
@@ -359,14 +360,18 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
                 self.nearestWithoutValue.push(peer)
                 self.nearest.push(response.getNodeList())
         _log.debug("_nodesFound nearestWithoutValue: %s, nearest: %s, toremove: %s" %
-                    (self.nearestWithoutValue, self.nearest, toremove))
+                    (self.nearestWithoutValue.getIDs(), self.nearest.getIDs(), toremove))
         self.nearest.remove(toremove)
 
         if len(foundValues) > 0:
             return self._handleFoundValues(foundValues)
         if self.nearest.allBeenContacted():
-            # not found!
-            return None
+            # not found at neighbours!
+            if self.local_value:
+                # but we had it
+                return self.local_value
+            else:
+                return None
         return self.find()
 
     def _handleFoundValues(self, jvalues):
@@ -380,6 +385,7 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
         _set_op = True
         if self.local_value:
             jvalues.append((None, self.local_value))
+        _log.debug("_handleFoundValues %s" % str(jvalues))
         if len(jvalues) != 1:
             args = (self.node.long_id, str(jvalues))
             _log.debug("Got multiple values for key %i: %s" % args)
