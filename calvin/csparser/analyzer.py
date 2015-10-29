@@ -115,7 +115,7 @@ class Analyzer(object):
         if self.verify and not found:
             msg = 'Actor "{}" not found.'.format(actor_type)
             raise Exception(msg)
-        return info, is_actor
+        return info, is_actor or not found
 
     def add_connection(self, src_actor_port, dst_actor_port):
         if type(dst_actor_port) is list:
