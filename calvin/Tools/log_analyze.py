@@ -99,6 +99,8 @@ def main():
     for l in log:
         if l['node_id'] == "TESTRUN":
             print l['func'] + "%"*(len(nodes)*WIDTH-len(l['func']))
+            if 'param' in l and l['param']:
+                pprint.pprint(l['param'])
             continue
         if l['func'] == "OTHER" and l['node_id'] is None:
             try:
