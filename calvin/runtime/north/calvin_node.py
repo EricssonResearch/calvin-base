@@ -141,6 +141,7 @@ class Node(object):
                    ('#' * 40, self.id, preamble if preamble else "*", args, kwargs, '#' * 40))
 
     def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None):
+        # TODO requirements should be input to am.new
         actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
                         signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None)
         if deploy_args:
@@ -149,7 +150,8 @@ class Node(object):
                 app_name = app_id
             else:
                 app_name = deploy_args['app_name']
-            self.app_manager.add(app_id, app_name, actor_id)
+            self.app_manager.add(app_id, actor_id,
+                                 deploy_info = deploy_args['deploy_info'] if 'deploy_info' in deploy_args else None)
         return actor_id
 
     def deployment_control(self, app_id, actor_id, deploy_args):

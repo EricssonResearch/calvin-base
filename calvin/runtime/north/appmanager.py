@@ -21,20 +21,19 @@ from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.utilities.calvinresponse as response
-
-
+from calvin.utilities import calvinuuid
+from calvin.actorstore.store import ActorStore
 
 class Application(object):
 
     """ Application class """
 
-    def __init__(self, id, name, actor_id, origin_node_id, actor_manager):
+    def __init__(self, id, name, origin_node_id, actor_manager):
         self.id = id
-        self.name = name
+        self.name = name or id
         self.ns = os.path.splitext(os.path.basename(name))[0]
         self.am = actor_manager
         self.actors = {}
-        self.add_actor(actor_id)
         self.origin_node_id = origin_node_id
         self._track_actor_cb = None
         self.actor_placement = None
@@ -107,14 +106,28 @@ class AppManager(object):
         self.storage = node.storage
         self.applications = {}
 
-    def add(self, application_id, application_name, actor_id):
+    def new(self, name):
+        application_id = calvinuuid.uuid("APP")
+        self.applications[application_id] = Application(application_id, name, self._node.id, self._node.am)
+        return application_id
+
+    def add(self, application_id, actor_id):
         """ Add an actor """
         if application_id in self.applications:
             self.applications[application_id].add_actor(actor_id)
         else:
-            self.applications[application_id] = Application(application_id, application_name, actor_id, 
-                                                            self._node.id, self._node.am)
+            _log.error("Non existing application id (%s) specified" % application_id)
+            return
+
+    def req_done(self, status, placement=None):
+        _log.analyze(self._node.id, "+", {'status': str(status), 'placement': placement}, tb=True)
+
+    def finalize(self, application_id):
+        if application_id not in self.applications:
+            _log.error("Non existing application id (%s) specified" % application_id)
+            return
         self.storage.add_application(self.applications[application_id])
+        self.execute_requirements(application_id, self.req_done)
 
     def destroy(self, application_id):
         """ Destroy an application and its actors """
@@ -217,22 +230,17 @@ class AppManager(object):
 
     ### DEPLOYMENT ###
     
-    def deployment_add_requirements(self, application_id, reqs, cb):
+    def execute_requirements(self, application_id, cb):
         app = None
         try:
             app = self.applications[application_id]
         except:
-            _log.debug("deployment_add_requirements did not find app %s" % (application_id,))
+            _log.debug("execute_requirements did not find app %s" % (application_id,))
             cb(status=response.CalvinResponse(False))
             return
-        _log.debug("deployment_add_requirements(app=%s,\n reqs=%s)" % (self.applications[application_id], reqs))
+        _log.debug("execute_requirements(app=%s)" % (self.applications[application_id],))
 
         # TODO extract groups
-
-        if "requirements" not in reqs:
-            # No requirements then we are happy
-            cb(status=response.CalvinResponse(True))
-            return
 
         if hasattr(app, '_org_cb'):
             # application deployment requirements ongoing, abort
@@ -242,21 +250,14 @@ class AppManager(object):
         name_map = app.get_actor_name_map(ns=app.ns)
         app._track_actor_cb = app.get_actors()[:]  # take copy of app's actor list, to remove each when done
         app.actor_placement = {}  # Clean placement slate
-        _log.analyze(self._node.id, "+ APP REQ", {'requirements': reqs["requirements"]}, tb=True)
-        rr=reqs["requirements"].copy()
-        for actor_name, req in rr.iteritems():
-            # Component returns list of actor ids, actors returns list with single id
-            actor_ids = name_map.get((app.ns + ":" if app.ns else "") + actor_name, None)
-            # Apply same rule to all actors in a component, rule get component information and can act accordingly
-            for actor_id in actor_ids:
-                if actor_id not in self._node.am.actors.keys():
-                    _log.debug("Only apply requirements to local actors")
-                    continue
-                actor = self._node.am.actors[actor_id]
-                actor.deployment_add_requirements(req, component=(actor_ids if len(actor_ids)>1 else None))
-                _log.analyze(self._node.id, "+ ACTOR REQ", {'actor_id': actor_id, 'actor_ids': actor_ids}, tb=True)
-                self.actor_requirements(app, actor_id)
-            _log.analyze(self._node.id, "+ ACTOR REQ DONE", {'actor_ids': actor_ids}, tb=True)
+        _log.analyze(self._node.id, "+ APP REQ", {}, tb=True)
+        for actor_id in app.get_actors():
+            if actor_id not in self._node.am.actors.keys():
+                _log.debug("Only apply requirements to local actors")
+                continue
+            _log.analyze(self._node.id, "+ ACTOR REQ", {'actor_id': actor_id}, tb=True)
+            self.actor_requirements(app, actor_id)
+            _log.analyze(self._node.id, "+ ACTOR REQ DONE", {'actor_id': actor_id}, tb=True)
         _log.analyze(self._node.id, "+ DONE", {'application_id': application_id}, tb=True)
 
     def actor_requirements(self, app, actor_id):
@@ -265,11 +266,11 @@ class AppManager(object):
             return
 
         actor = self._node.am.actors[actor_id]
-        _log.debug("actor_requirements(actor_id=%s), reqs=%s" % (actor_id, actor.get_deployment_requirements()))
+        _log.debug("actor_requirements(actor_id=%s), reqs=%s" % (actor_id, actor.requirements_get()))
         possible_nodes = set([None])  # None to mark no real response
         impossible_nodes = set([None])  # None to mark no real response
-        reqs = actor.get_deployment_requirements()[:]
-        for req in actor.get_deployment_requirements():
+        reqs = actor.requirements_get()[:]
+        for req in actor.requirements_get():
             if req['op']=='union_group':
                 # Special operation that first forms a union of a requirement's list response set
                 # To allow alternative requirements options
@@ -278,7 +279,8 @@ class AppManager(object):
                                             actor_id=actor_id,
                                             possible_nodes=possible_nodes,
                                             impossible_nodes=impossible_nodes,
-                                            reqs=reqs)
+                                            reqs=reqs,
+                                            component=actor.component_members())
             else:
                 try:
                     req_operations[req['op']].req_op(self._node, 
@@ -290,7 +292,7 @@ class AppManager(object):
                                                     impossible_nodes=impossible_nodes,
                                                     reqs=reqs),
                                             actor_id=actor_id,
-                                            component=req['component'],
+                                            component=actor.component_members(),
                                             **req['kwargs'])
                 except:
                     _log.error("actor_requirements one req failed for %s!!!" % actor_id, exc_info=True)
@@ -312,7 +314,7 @@ class AppManager(object):
                                                 union_req=union_req,
                                                 **state),
                                         actor_id=state['actor_id'],
-                                        component=state['req']['component'],
+                                        component=state['component'],
                                         **union_req['kwargs'])
             except:
                 _log.error("union_requirements one req failed for %s!!!" % state['actor_id'], exc_info=True)
@@ -456,3 +458,142 @@ class AppManager(object):
         for i in range(l):
             actor_matrix[i][i] = 1
         return (list_actors, actor_matrix)
+
+
+class Deployer(object):
+
+    """
+    Process an app_info dictionary (output from calvin parser) to
+    produce a running calvin application.
+    """
+
+    def __init__(self, deployable, node, name=None, deploy_info=None, verify=True):
+        super(Deployer, self).__init__()
+        self.deployable = deployable
+        self.deploy_info = deploy_info
+        self.actor_map = {}
+        self.actor_connections = {}
+        self.node = node
+        self.verify = verify
+        if name:
+            self.name = name
+            self.app_id = self.node.app_manager.new(self.name)
+            self.ns = os.path.splitext(os.path.basename(self.name))[0]
+        elif "name" in self.deployable:
+            self.name = self.deployable["name"]
+            self.app_id = self.node.app_manager.new(self.name)
+            self.ns = os.path.splitext(os.path.basename(self.name))[0]
+        else:
+            self.app_id = self.node.app_manager.new(None)
+            self.name = self.app_id
+            self.ns = ""
+
+        self.components = {}
+        l = (len(self.ns)+1) if self.ns else 0 
+        for name in self.deployable['actors']:
+             if name.find(':',l)> -1:
+                # This is part of a component
+                # component name including optional namespace
+                component = ':'.join(name.split(':')[0:(2 if self.ns else 1)])
+                if component in self.components:
+                    self.components[component].append(name)
+                else:
+                    self.components[component] = [name]
+
+    def component_name(self, name):
+        l = (len(self.ns)+1) if self.ns else 0 
+        if name.find(':',l)> -1:
+            return ':'.join(name.split(':')[0:(2 if self.ns else 1)])
+        else:
+            return None
+
+    def get_req(self, actor_name):
+        name = self.component_name(actor_name) or actor_name
+        name = name.split(':', 1)[1] if self.ns else name
+        return self.deploy_info['requirements'][name] if (self.deploy_info and 'requirements' in self.deploy_info
+                                                            and name in self.deploy_info['requirements']) else []
+        
+    def instantiate(self, actor_name, actor_type, argd, signature=None):
+        """
+        Instantiate an actor.
+          - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
+          - 'actor_type' is the actor class to instatiate
+          - 'argd' is a dictionary with <actor_name>:<argdict> pairs
+          - 'signature' is the GlobalStore actor-signature to lookup the actor
+        """
+        req = self.get_req(actor_name)
+        found, is_primitive, actor_def = ActorStore().lookup(actor_type)
+        if self.verify and not found:
+            raise Exception("Unknown actor type: %s" % actor_type)
+        if self.verify and not is_primitive:
+            raise Exception("Non-primitive type: %s" % actor_type)
+
+        actor_id = self.instantiate_primitive(actor_name, actor_type, argd, req, signature)
+        if not actor_id:
+            raise Exception(
+                "Could not instantiate actor of type: %s" % actor_type)
+        self.actor_map[actor_name] = actor_id
+        self.node.app_manager.add(self.app_id, actor_id)
+
+    def instantiate_primitive(self, actor_name, actor_type, args, req=None, signature=None):
+        # name is <namespace>:<identifier>, e.g. app:src, or app:component:src
+        # args is a **dictionary** of key-value arguments for this instance
+        # signature is the GlobalStore actor-signature to lookup the actor
+        args['name'] = actor_name
+        actor_id = self.node.am.new(actor_type=actor_type, args=args, signature=signature)
+        if req:
+            self.node.am.actors[actor_id].requirements_add(req)
+        return actor_id
+
+    def connectid(self, connection):
+        src_actor, src_port, dst_actor, dst_port = connection
+        # connect from dst to src
+        # use node info if exists, otherwise assume local node
+
+        dst_actor_id = self.actor_map[dst_actor]
+        src_actor_id = self.actor_map[src_actor]
+        src_node = self.node.id
+        result = self.node.connect(
+            actor_id=dst_actor_id,
+            port_name=dst_port,
+            port_dir='in',
+            peer_node_id=src_node,
+            peer_actor_id=src_actor_id,
+            peer_port_name=src_port,
+            peer_port_dir='out')
+        return result
+
+    def set_port_property(self, actor, port_type, port_name, port_property, value):
+        self.node.am.set_port_property(self.actor_map[actor], port_type, port_name, port_property, value)
+
+    def deploy(self):
+        """
+        Instantiate actors and link them together.
+        """
+        if not self.deployable['valid']:
+            raise Exception("Deploy information is not valid")
+
+        for actor_name, info in self.deployable['actors'].iteritems():
+            self.instantiate(actor_name, info['actor_type'], info['args'], signature=info['signature'])
+
+        for component_name, actor_names in self.components.iteritems():
+            actor_ids = [self.actor_map[n] for n in actor_names]
+            for actor_id in actor_ids:
+                self.node.am.actors[actor_id].component_add(actor_ids)
+
+        for src, dst_list in self.deployable['connections'].iteritems():
+            if len(dst_list) > 1:
+                src_name, src_port = src.split('.')
+                self.set_port_property(src_name, 'out', src_port, 'fanout', len(dst_list))
+
+        for src, dst_list in self.deployable['connections'].iteritems():
+            src_actor, src_port = src.split('.')
+            for dst in dst_list:
+                dst_actor, dst_port = dst.split('.')
+                c = (src_actor, src_port, dst_actor, dst_port)
+                self.connectid(c)
+
+        self.node.app_manager.finalize(self.app_id)
+
+        return self.app_id
+

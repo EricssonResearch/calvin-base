@@ -19,7 +19,7 @@ import time
 import datetime
 import json
 from calvin.Tools import cscompiler as compiler
-from calvin.Tools import deployer
+from calvin.runtime.north.appmanager import Deployer
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection, async
@@ -196,51 +196,6 @@ re_post_actor_migrate = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid
 
 control_api_doc += \
 """
-    POST /application/{application-id}/migrate
-    Apply deployment requirements to actors of an application and initiate migration of actors accordingly
-    Body:
-    {
-        "reqs":
-           {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
-            "requirements": {
-                "<actor instance 1 name>": [ {"op": "<matching rule name>",
-                                              "kwargs": {<rule param key>: <rule param value>, ...},
-                                              "type": "+" or "-" for set intersection or set removal, respectively
-                                              }, ...
-                                           ],
-                ...
-                            }
-           }
-    }
-    
-    The matching rules are implemented as plug-ins, intended to be extended.
-    The type "+" is "and"-ing rules together (actually the intersection of all
-    possible nodes returned by the rules.) The type "-" is explicitly removing
-    the nodes returned by this rule from the set of possible nodes. Note that
-    only negative rules will result in no possible nodes, i.e. there is no
-    implied "all but these."
-    
-    A special matching rule exist, to first form a union between matching
-    rules, i.e. alternative matches. This is useful for e.g. alternative
-    namings, ownerships or specifying either of two specific nodes.
-        {"op": "union_group",
-         "requirements": [list as above of matching rules but without type key]
-         "type": "+"
-        }
-    Other matching rules available is current_node, all_nodes and
-    node_attr_match which takes an index param which is attribute formatted,
-    e.g.
-        {"op": "node_attr_match",
-         "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
-         "type": "+"
-        }
-    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
-    Response: {"placement": {<actor_id>: <node_id>, ...}}
-"""
-re_post_application_requirements = re.compile(r"POST /application/((APP_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/migrate\sHTTP/1")
-
-control_api_doc += \
-"""
     POST /actor/{actor-id}/disable
     DEPRECATED. Disables an actor
     Response status code: OK or NOT_FOUND
@@ -305,14 +260,52 @@ control_api_doc += \
 """
     POST /deploy
     Compile and deploy a calvin script to this calvin node
+    Apply deployment requirements to actors of an application
+    and initiate migration of actors accordingly
     Body:
     {
         "name": <application name>,
-        "script": <calvin script>
+        "script": <calvin script>  # alternativly app_info
+        "app_info": <compiled script as app_info>  # alternativly script
+        "deploy_info":
+           {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
+            "requirements": {
+                "<actor instance 1 name>": [ {"op": "<matching rule name>",
+                                              "kwargs": {<rule param key>: <rule param value>, ...},
+                                              "type": "+" or "-" for set intersection or set removal, respectively
+                                              }, ...
+                                           ],
+                ...
+                            }
+           }
     }
+    Note that either a script or app_info must be supplied.
+    
+    The matching rules are implemented as plug-ins, intended to be extended.
+    The type "+" is "and"-ing rules together (actually the intersection of all
+    possible nodes returned by the rules.) The type "-" is explicitly removing
+    the nodes returned by this rule from the set of possible nodes. Note that
+    only negative rules will result in no possible nodes, i.e. there is no
+    implied "all but these."
+    
+    A special matching rule exist, to first form a union between matching
+    rules, i.e. alternative matches. This is useful for e.g. alternative
+    namings, ownerships or specifying either of two specific nodes.
+        {"op": "union_group",
+         "requirements": [list as above of matching rules but without type key]
+         "type": "+"
+        }
+    Other matching rules available is current_node, all_nodes and
+    node_attr_match which takes an index param which is attribute formatted,
+    e.g.
+        {"op": "node_attr_match",
+         "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
+         "type": "+"
+        }
     Response status code: OK or INTERNAL_ERROR
     Response: {"application_id": <application-id>,
-               "actor_map": {<actor id>: <actor name with namespace>, ...}}
+               "actor_map": {<actor id>: <actor name with namespace>, ...}
+               "placement": {<actor_id>: <node_id>, ...}}
 """
 re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
 
@@ -459,7 +452,6 @@ class CalvinControl(object):
             (re_del_actor, self.handle_del_actor),
             (re_get_actor_report, self.handle_get_actor_report),
             (re_post_actor_migrate, self.handle_actor_migrate),
-            (re_post_application_requirements, self.handle_application_requirements),
             (re_post_actor_disable, self.handle_actor_disable),
             (re_get_port, self.handle_get_port),
             (re_get_port_state, self.handle_get_port_state),
@@ -658,18 +650,6 @@ class CalvinControl(object):
         self.send_response(handle, connection,
                            None, status=status.status)
 
-    def handle_application_requirements(self, handle, connection, match, data, hdr):
-        """ Apply application deployment requirements
-            to actors of an application and initiate migration of actors accordingly
-        """
-        self.node.app_manager.deployment_add_requirements(match.group(1), data['reqs'],
-                        cb=CalvinCB(func=self.handle_application_requirements_cb, handle=handle, connection=connection))
-
-    def handle_application_requirements_cb(self, handle, connection, *args, **kwargs):
-        self.send_response(handle, connection,
-                           json.dumps({'placement': kwargs['placement'] if 'placement' in kwargs else {}}),
-                                       status=kwargs['status'].status)
-
     def handle_actor_disable(self, handle, connection, match, data, hdr):
         try:
             self.node.am.disable(match.group(1))
@@ -752,23 +732,29 @@ class CalvinControl(object):
     def handle_deploy(self, handle, connection, match, data, hdr):
         try:
             _log.analyze(self.node.id, "+", {})
-            app_info, errors, warnings = compiler.compile(
-                data["script"], filename=data["name"], verify=data["check"] if "check" in data else True)
+            if 'app_info' not in data:
+                app_info, errors, warnings = compiler.compile(
+                    data["script"], filename=data["name"], verify=data["check"] if "check" in data else True)
+            else:
+                app_info = data['app_info']
+                errors = ""
+                warnings = ""
             _log.analyze(self.node.id, "+ COMPILED", {'app_info': app_info, 'errors': errors, 'warnings': warnings})
-            app_info["name"] = data["name"]
-            d = deployer.Deployer(
-                runtime=None, deployable=app_info, node_info=None, node=self.node,
-                verify=data["check"] if "check" in data else True)
+            d = Deployer(deployable=app_info, deploy_info=data["deploy_info"] if "deploy_info" in data else None,
+                         node=self.node, name=data["name"] if "name" in data else None,
+                         verify=data["check"] if "check" in data else True)
             _log.analyze(self.node.id, "+ Deployer instanciated", {})
             app_id = d.deploy()
             _log.analyze(self.node.id, "+ DEPLOYED", {})
             status = calvinresponse.OK
         except:
+            _log.exception("Deployer failed")
             app_id = None
             status = calvinresponse.INTERNAL_ERROR
 
+        # TODO async response and placement
         self.send_response(
-            handle, connection, json.dumps({'application_id': app_id, 'actor_map': d.actor_map}) if app_id else None,
+            handle, connection, json.dumps({'application_id': app_id, 'actor_map': d.actor_map, 'placement': None}) if app_id else None,
             status=status)
 
     def handle_quit(self, handle, connection, match, data, hdr):

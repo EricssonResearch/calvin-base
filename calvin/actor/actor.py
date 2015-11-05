@@ -329,6 +329,7 @@ class Actor(object):
         self.name = name  # optional: human_readable_name
         self.id = actor_id or calvinuuid.uuid("ACTOR")
         self._deployment_requirements = []
+        self._component_members = set([self.id])  # We are only part of component if this is extended
         self._managed = set(('id', 'name', '_deployment_requirements'))
         self._calvinsys = None
         self._using = {}
@@ -522,6 +523,7 @@ class Actor(object):
                             for port in self.inports}
         state['outports'] = {
             port: self.outports[port]._state() for port in self.outports}
+        state['_component_members'] = list(self._component_members)
 
         # Managed state handling
         for key in self._managed:
@@ -553,6 +555,7 @@ class Actor(object):
             self.inports[port]._set_state(state['inports'][port])
         for port in state['outports']:
             self.outports[port]._set_state(state['outports'][port])
+        self._component_members= set(state['_component_members'])
 
     # TODO verify status should only allow reading connections when and after being fully connected (enabled)
     @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING])
@@ -588,15 +591,30 @@ class Actor(object):
     def events(self):
         return []
 
-    def deployment_add_requirements(self, deploy_reqs, component=None):
-        self._deployment_requirements.extend([dict(r, component=component) for r in deploy_reqs])
+    def component_add(self, actor_ids):
+        if not isinstance(actor_ids, (set, list, tuple)):
+            actor_ids = [actor_ids]
+        self._component_members.update(actor_ids)
 
-    def get_deployment_requirements(self):
+    def component_remove(self, actor_ids):
+        if not isinstance(actor_ids, (set, list, tuple)):
+            actor_ids = [actor_ids]
+        self._component_members -= set(actor_ids)
+        
+    def part_of_component(self):
+        return len(self._component_members - set([self.id]))>0
+
+    def component_members(self):
+        return self._component_members
+
+    def requirements_add(self, deploy_reqs):
+        self._deployment_requirements.extend(deploy_reqs)
+
+    def requirements_get(self):
         return self._deployment_requirements + (
                 [{'op': 'actor_reqs_match',
                   'kwargs': {'requires': self.requires},
-                  'type': '+',
-                  'component': self._deployment_requirements[0]['component'] if self._deployment_requirements else None}]
+                  'type': '+'}]
                 if hasattr(self, 'requires') else [])
 
 class ShadowActor(Actor):
@@ -628,9 +646,8 @@ class ShadowActor(Actor):
     def enabled(self):
         return False
 
-    def get_deployment_requirements(self):
+    def requirements_get(self):
         return self._deployment_requirements + [{'op': 'shadow_actor_reqs_match',
                                                  'kwargs': {'signature': self._signature,
                                                             'shadow_params': self._shadow_args.keys()},
-                                                 'type': '+',
-                                                 'component': None}]
+                                                 'type': '+'}]
