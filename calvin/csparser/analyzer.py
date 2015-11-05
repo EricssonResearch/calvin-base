@@ -80,6 +80,8 @@ class Analyzer(object):
             _log.exception(e)
             valid = False
         self.app_info = {'valid':valid, 'actors': self.actors, 'connections':self.connections}
+        if self.script_name:
+            self.app_info['name'] = self.script_name
 
     def debug_info(self, d):
         file = 'File "%s"' % self.script_name

@@ -60,19 +60,11 @@ def requirements_file(path):
 def control_deploy(args):
     response = None
     print args
+    reqs = requirements_file(args.reqs) if args.reqs else None
     try:
-        response = utils.deploy_application(args.node, args.script.name, args.script.read(), args.check)
+        response = utils.deploy_application(args.node, args.script.name, args.script.read(), reqs, args.check)
     except Exception as e:
         print e
-    if isinstance(response, dict) and "application_id" in response and args.reqs:
-        reqs = requirements_file(args.reqs)
-        if reqs:
-            try:
-                result = utils.add_requirements(args.node, response["application_id"], reqs)
-                _log.debug("Succeeded with applying deployment requirements %s\n" % result['placement'])
-            except:
-                _log.error("Applying deployment requirement from file %s failed" % args.reqs)
-                print ("Applying deployment requirement from file %s failed" % args.reqs)
     return response
 
 def control_actors(args):

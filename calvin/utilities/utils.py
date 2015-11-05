@@ -226,15 +226,6 @@ def migrate(rt, actor_id, dst_id, timeout=TIMEOUT, async=False):
         rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
-def add_requirements(rt, application_id, reqs, timeout=TIMEOUT, async=False):
-    rt = get_RT(rt)
-    data = {'reqs': reqs}
-    req = session if async else requests
-    r = req.post(
-        rt.control_uri + '/application/' + application_id + "/migrate", data=json.dumps(data), timeout=timeout)
-    return check_response(r)
-
-
 def get_port(rt, actor_id, port_id, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
     req = session if async else requests
@@ -280,9 +271,17 @@ def delete_application(rt, application_id, timeout=TIMEOUT, async=False):
     r = req.delete(rt.control_uri + '/application/' + application_id, timeout=timeout)
     return check_response(r)
 
-def deploy_application(rt, name, script, check=True, timeout=TIMEOUT, async=False):
+def deploy_application(rt, name, script, deploy_info=None, check=True, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
-    data = {"name": name, "script": script, "check": check}
+    data = {"name": name, "script": script, 'deploy_info': deploy_info, "check": check}
+    req = session if async else requests
+    r = req.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
+    return check_response(r)
+
+
+def deploy_app_info(rt, name, app_info, deploy_info=None, check=True, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    data = {"name": name, "app_info": app_info, 'deploy_info': deploy_info, "check": check}
     req = session if async else requests
     r = req.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
     return check_response(r)
