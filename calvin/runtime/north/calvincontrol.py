@@ -304,7 +304,7 @@ control_api_doc += \
         }
     Response status code: OK or INTERNAL_ERROR
     Response: {"application_id": <application-id>,
-               "actor_map": {<actor id>: <actor name with namespace>, ...}
+               "actor_map": {<actor name with namespace>: <actor id>, ...}
                "placement": {<actor_id>: <node_id>, ...}}
 """
 re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
@@ -742,20 +742,26 @@ class CalvinControl(object):
             _log.analyze(self.node.id, "+ COMPILED", {'app_info': app_info, 'errors': errors, 'warnings': warnings})
             d = Deployer(deployable=app_info, deploy_info=data["deploy_info"] if "deploy_info" in data else None,
                          node=self.node, name=data["name"] if "name" in data else None,
-                         verify=data["check"] if "check" in data else True)
+                         verify=data["check"] if "check" in data else True,
+                         cb=CalvinCB(self.handle_deploy_cb, handle, connection))
             _log.analyze(self.node.id, "+ Deployer instanciated", {})
-            app_id = d.deploy()
-            _log.analyze(self.node.id, "+ DEPLOYED", {})
+            d.deploy()
+            _log.analyze(self.node.id, "+ DEPLOYING", {})
             status = calvinresponse.OK
         except:
             _log.exception("Deployer failed")
-            app_id = None
-            status = calvinresponse.INTERNAL_ERROR
+            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
 
-        # TODO async response and placement
-        self.send_response(
-            handle, connection, json.dumps({'application_id': app_id, 'actor_map': d.actor_map, 'placement': None}) if app_id else None,
-            status=status)
+    def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
+        _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})
+        if status:
+            self.send_response(handle, connection,
+                json.dumps({'application_id': deployer.app_id,
+                            'actor_map': deployer.actor_map,
+                            'placement': kwargs.get('placement', None)}) if deployer.app_id else None,
+                status=status.status)
+        else:
+            self.send_response(handle, connection, None, status=status.status)
 
     def handle_quit(self, handle, connection, match, data, hdr):
         async.DelayedCall(.2, self.node.stop)
