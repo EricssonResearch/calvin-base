@@ -122,12 +122,15 @@ class AppManager(object):
     def req_done(self, status, placement=None):
         _log.analyze(self._node.id, "+", {'status': str(status), 'placement': placement}, tb=True)
 
-    def finalize(self, application_id):
+    def finalize(self, application_id, migrate=False, cb=None):
         if application_id not in self.applications:
             _log.error("Non existing application id (%s) specified" % application_id)
             return
         self.storage.add_application(self.applications[application_id])
-        self.execute_requirements(application_id, self.req_done)
+        if migrate:
+            self.execute_requirements(application_id, cb if cb else self.req_done)
+        elif cb:
+            cb(status=response.CalvinResponse(True))
 
     def destroy(self, application_id):
         """ Destroy an application and its actors """
@@ -467,7 +470,7 @@ class Deployer(object):
     produce a running calvin application.
     """
 
-    def __init__(self, deployable, node, name=None, deploy_info=None, verify=True):
+    def __init__(self, deployable, node, name=None, deploy_info=None, verify=True, cb=None):
         super(Deployer, self).__init__()
         self.deployable = deployable
         self.deploy_info = deploy_info
@@ -475,6 +478,7 @@ class Deployer(object):
         self.actor_connections = {}
         self.node = node
         self.verify = verify
+        self.cb = cb
         if name:
             self.name = name
             self.app_id = self.node.app_manager.new(self.name)
@@ -593,7 +597,6 @@ class Deployer(object):
                 c = (src_actor, src_port, dst_actor, dst_port)
                 self.connectid(c)
 
-        self.node.app_manager.finalize(self.app_id)
-
-        return self.app_id
+        self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False, 
+                                       cb=CalvinCB(self.cb, deployer=self))
 
