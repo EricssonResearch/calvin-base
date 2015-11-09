@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import ConfigParser
+import os
 import subprocess
 import sys
 
@@ -31,12 +32,19 @@ class Config():
                       "organizationName", "organizationalUnitName", \
                       "commonName", "emailAddress"], \
         "req":["default_bits", "default_keyfile", "distinguished_name", \
-               "attributes", "prompt"]
+               "attributes", "prompt"], \
+        "req_distinguished_name":["0.organizationName","commonName"], \
+        "usr_cert": ["basicConstraints", "subjectKeyIdentifier", \
+                     "authorityKeyIdentifier"], \
+        "v3_req": ["subjectAltName"], \
+        "v3_ca": ["subjectKeyIdentifier", "authorityKeyIdentifier", \
+                  "basicConstraints"]
     }
 
     def __init__(self, configfile="./openssl.conf"):
         self.configfile = configfile
-        print self.parse_opensslconf()
+        self.configuration = self.parse_opensslconf()
+        print self.configuration
 
     def parse_opensslconf(self):
         """
@@ -49,15 +57,22 @@ class Config():
             for item in self.__class__.SECTIONS[section]:
                 raw = config.get(section, item)
                 entry = raw.split("#")[0].strip()
+
+                if "$" in entry: # Manage openssl variables
+                    variable = "".join(entry.split("$")[1:])
+                    variable = variable.split("/")[0]
+                    path = "/" + "/".join(entry.split("/")[1:])
+                    #if entry in configuration[section]:
+                    entry = configuration[section][variable] + path
                 try:
-                   configuration[section].append({item: entry})
+                    configuration[section].update({item: entry})
                 except KeyError:
-                   configuration[section] = []
-                   configuration[section].append({item: entry})
+                    configuration[section] = {} # New section
+                    configuration[section].update({item: entry})
         return configuration
 
 
-def new_runtime():
+def new_runtime(conf):
     """
     Create new runtime certificate.
 
@@ -65,7 +80,8 @@ def new_runtime():
     mkdir -p $new_certs_dir
     openssl req -config $OPENSSL_CONF -new -newkey rsa:2048 -nodes -out $new_certs_dir/runtime.csr -keyout $private_dir/runtime.key
     """
-    pass
+    path = conf.configuration["CA_default"]["new_certs_dir"]
+    os.mkdir(path, 0755);
 
 def new_domain():
     """
