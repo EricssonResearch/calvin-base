@@ -20,6 +20,13 @@ import subprocess
 import sys
 
 class Config():
+    """
+    A openssl.conf configuration parser class.
+    Create this object by pointing at the configuration file
+    to be parsed.
+
+    myconf = Config("/tmp/openssl.conf")
+    """
     SECTIONS = {
         "CA_default":["dir", "certs", "crl_dir", "database", \
                       "new_certs_dir", "certificate", "serial", \
@@ -80,10 +87,32 @@ def new_runtime(conf):
     mkdir -p $new_certs_dir
     openssl req -config $OPENSSL_CONF -new -newkey rsa:2048 -nodes -out $new_certs_dir/runtime.csr -keyout $private_dir/runtime.key
     """
-    path = conf.configuration["CA_default"]["new_certs_dir"]
-    os.mkdir(path, 0755);
+    outpath = conf.configuration["CA_default"]["new_certs_dir"]
+    out = outpath + "/runtime.csr"
+    private = conf.configuration["CA_default"]["dir"] + "/private/"
+    private_key = private + "newnode.key"
+    os.umask(0077)
 
-def new_domain():
+    try:
+        os.mkdir(outpath, 0755)
+    except OSError:
+        pass
+
+    try:
+        os.mkdir(private, 0700)
+    except OSError:
+        pass
+
+    f = open('./openssl.log', 'w')
+    log = subprocess.Popen(["openssl", "req", "-config", \
+                            "./openssl.conf", "-new", \
+                            "-newkey", "rsa:2048", "-nodes", \
+                            "-out", out, "-keyout", private_key], \
+             stdout=f, stderr=f, stdin=subprocess.PIPE)
+    #print log.read()
+    f.close()
+
+def new_domain(conf):
     """
     Create new domain Certificate Authority Cert.
 
@@ -97,9 +126,40 @@ def new_domain():
     openssl rand -out $private_dir/ca_password 20
     openssl req -new -x509 -config $OPENSSL_CONF -keyout $private_key -out $certificate -passout file:$private_dir/ca_password
     """
-    pass
+    outpath = conf.configuration["CA_default"]["new_certs_dir"]
+    out = outpath + "/runtime.csr"
+    private = conf.configuration["CA_default"]["dir"] + "/private/"
+    crlpath = conf.configuration["CA_default"]["dir"] + "/crl/"
+    private_key = private + "cakey.pem"
+    password_file = private + "ca_password"
+    os.umask(0077)
+    try:
+        os.mkdir(crlpath, 0700)
+    except OSError:
+        pass
 
-def sign_req():
+    try:
+        os.mkdir(outpath, 0700)
+    except OSError:
+        pass
+
+    try:
+        os.mkdir(private, 0700)
+    except OSError:
+        pass
+
+    f = open('./openssl.log', 'w')
+    log = subprocess.Popen(["openssl", "rand", "-out", password_file, "20"], \
+             stdout=f, stderr=f)
+    log = subprocess.Popen(["openssl", "req", "-new","-config", \
+                            "./openssl.conf", "-x509", \
+                            "-passout", "file:" + password_file, \
+                            "-out", out, "-keyout", private_key], \
+             stdout=f, stderr=f, stdin=subprocess.PIPE)
+    f.close()
+
+
+def sign_req(conf, req):
     """
     Sign a certificate request.
 
@@ -107,4 +167,27 @@ def sign_req():
     mkdir -p $certs
     openssl ca -in $new_certs_dir/$SIGN_REQ -config $OPENSSL_CONF -out $certs/runtime.pem -passin file:$private_dir/ca_password
     """
-    pass
+
+    private = conf.configuration["CA_default"]["dir"] + "/private/"
+    password_file = private + "ca_password"
+    request = conf.configuration["CA_default"]["new_certs_dir"] + req
+    certspath = conf.configuration["CA_default"]["dir"] + "/certs/"
+    new_cert = certspath + req  # Dangerous! The req name should be set to fingerprint!
+
+    os.umask(0077)
+    try:
+        os.mkdir(private, 0700)
+    except OSError:
+        pass
+
+    try:
+        os.mkdir(certspath, 0700)
+    except OSError:
+        pass
+
+    f = open('./openssl.log', 'w')
+    log = subprocess.Popen(["openssl", "ca", "-in", request, \
+                           "-config", "./openssl.conf", "-out", new_cert, \
+                           "-passin", "file:" + password_file], \
+                           stdout=f, stderr=f, stdin=subprocess.PIPE)
+    f.close()
