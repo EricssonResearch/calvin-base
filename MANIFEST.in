@@ -7,7 +7,6 @@ recursive-include calvin *.py
 recursive-include calvin *.calvin
 include calvin/actorstore/systemactors/io/data.txt
 include calvin/tests/data.txt
-include calvin/Tools/www/index.html
-include calvin/Tools/www/spin.js
+recursive-include calvin/Tools/www *.html *.js *.css *.png
 include setup.cfg
 include tox.ini
