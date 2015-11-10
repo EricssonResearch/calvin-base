@@ -81,6 +81,21 @@ class Config():
         return configuration
 
 
+def fingerprint(filename):
+    """
+    Return the sha256 fingerprint of a certificate `filename`.
+    Equivalent to:
+    openssl x509 -sha256 -in ./runtime.csr -noout -fingerprint
+    """
+    f = open('./openssl.log', 'a')
+    log = subprocess.Popen(["openssl", "x509", "-sha256", \
+                           "-in", filename, "-noout", \
+                           "-fingerprint"], \
+          stdout=subprocess.PIPE, stderr=f, stdin=subprocess.PIPE)
+    f.close()
+    fingerprint = log.stdout.readline().split("=")[1].strip()
+    return fingerprint
+
 def new_runtime(conf):
     """
     Create new runtime certificate.
@@ -110,7 +125,7 @@ def new_runtime(conf):
     except OSError:
         pass
 
-    f = open('./openssl.log', 'w')
+    f = open('./openssl.log', 'a')
     log = subprocess.Popen(["openssl", "req", "-config", \
                             conf.configfile, "-new", \
                             "-newkey", "rsa:2048", "-nodes", \
@@ -157,7 +172,7 @@ def new_domain(conf):
     except OSError:
         pass
 
-    f = open('./openssl.log', 'w')
+    f = open('./openssl.log', 'a')
     log = subprocess.Popen(["openssl", "rand", "-out", password_file, "20"], \
              stdout=f, stderr=f)
     log = subprocess.Popen(["openssl", "req", "-new","-config", \
