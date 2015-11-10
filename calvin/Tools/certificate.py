@@ -18,6 +18,7 @@ import ConfigParser
 import os
 import subprocess
 import sys
+import tempfile
 
 class Config():
     """
@@ -28,32 +29,30 @@ class Config():
     myconf = Config("/tmp/openssl.conf")
     """
     SECTIONS = {
-        "CA_default":["dir", "certs", "crl_dir", "database", \
-                      "new_certs_dir", "certificate", "serial", \
-                      "crl", "private_dir", "RANDFILE", \
-                      "x509_extensions", "default_days", \
-                      "default_crl_days", "default_md", "preserve", "policy", \
-                      "email_in_dn", "name_opt", "cert_opt", \
-                      "copy_extensions"], \
-        "policy_any":["countryName", "stateOrProvinceName", \
-                      "organizationName", "organizationalUnitName", \
-                      "commonName", "emailAddress"], \
-        "req":["default_bits", "default_keyfile", "distinguished_name", \
-               "attributes", "prompt"], \
-        "req_distinguished_name":["0.organizationName","commonName"], \
-        "usr_cert": ["basicConstraints", "subjectKeyIdentifier", \
-                     "authorityKeyIdentifier"], \
-        "v3_req": ["subjectAltName"], \
-        "v3_ca": ["subjectKeyIdentifier", "authorityKeyIdentifier", \
+        "CA_default":["dir", "certs", "crl_dir", "database",
+                      "new_certs_dir", "certificate", "serial",
+                      "crl", "private_dir", "RANDFILE",
+                      "x509_extensions", "default_days",
+                      "default_crl_days", "default_md", "private_key",
+                      "preserve", "policy", "email_in_dn",
+                      "name_opt", "cert_opt", "copy_extensions"],
+        "policy_any":["countryName", "stateOrProvinceName",
+                      "organizationName", "organizationalUnitName",
+                      "commonName", "emailAddress"],
+        "req":["default_bits", "default_keyfile",
+               "distinguished_name", "attributes", "prompt"],
+        "req_distinguished_name":["0.organizationName", 
+                                  "commonName"],
+        "usr_cert": ["basicConstraints", "subjectKeyIdentifier",
+                     "authorityKeyIdentifier"],
+        "v3_req": ["subjectAltName"],
+        "v3_ca": ["subjectKeyIdentifier", "authorityKeyIdentifier",
                   "basicConstraints"]
     }
 
-    #TODO: Add all files and paths as variables.
-    #TODO: Name certificates after fingerprints. Make a fingerprint function.
     def __init__(self, configfile="./openssl.conf"):
         self.configfile = configfile
         self.configuration = self.parse_opensslconf()
-        print self.configuration
 
     def parse_opensslconf(self):
         """
@@ -71,7 +70,6 @@ class Config():
                     variable = "".join(entry.split("$")[1:])
                     variable = variable.split("/")[0]
                     path = "/" + "/".join(entry.split("/")[1:])
-                    #if entry in configuration[section]:
                     entry = configuration[section][variable] + path
                 try:
                     configuration[section].update({item: entry})
@@ -81,24 +79,41 @@ class Config():
         return configuration
 
 
+def touch(fname, times=None):
+    fhandle = open(fname, 'a')
+    try:
+        os.utime(fname, times)
+    finally:
+        fhandle.close()
+
 def fingerprint(filename):
     """
     Return the sha256 fingerprint of a certificate `filename`.
+    Can only be run on trusted/signed certificates.
     Equivalent to:
     openssl x509 -sha256 -in ./runtime.csr -noout -fingerprint
     """
-    f = open('./openssl.log', 'a')
-    log = subprocess.Popen(["openssl", "x509", "-sha256", \
-                           "-in", filename, "-noout", \
-                           "-fingerprint"], \
-          stdout=subprocess.PIPE, stderr=f, stdin=subprocess.PIPE)
-    f.close()
-    fingerprint = log.stdout.readline().split("=")[1].strip()
+    #f = open('./openssl.log', 'a')
+    #e, errlog = tempfile.mkstemp()
+    log = subprocess.Popen(["openssl", "x509", "-sha256",
+                           "-in", filename, "-noout",
+                           "-fingerprint"],
+          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    #f.close()
+    stdout, stderr = log.communicate()
+    try:
+        fingerprint = stdout.split("=")[1].strip()
+    except (IndexError, AttributeError):
+        errormsg = "Error fingerprinting " \
+                   "certificate file. {}".format(stderr)
+        raise OSError(errormsg)
+
     return fingerprint
 
 def new_runtime(conf):
     """
     Create new runtime certificate.
+    Return name of certificate signing request file.
 
     Equivalent of:
     mkdir -p $new_certs_dir
@@ -106,12 +121,9 @@ def new_runtime(conf):
     """
     outpath = conf.configuration["CA_default"]["new_certs_dir"]
     private = conf.configuration["CA_default"]["private_dir"]
-    #private_key = conf.configuration["CA_default"]["private_key"]
 
-    out = os.path.join(outpath, "/runtime.csr")
-    #TODO: Replace runtime with fingerprint
+    out = os.path.join(outpath, "runtime.csr")
     private_key = os.path.join(private, "newnode.key")
-    #TODO: Replace newnode with fingerprint
 
     os.umask(0077)
 
@@ -126,22 +138,36 @@ def new_runtime(conf):
         pass
 
     f = open('./openssl.log', 'a')
-    log = subprocess.Popen(["openssl", "req", "-config", \
-                            conf.configfile, "-new", \
-                            "-newkey", "rsa:2048", "-nodes", \
-                            "-out", out, "-keyout", private_key], \
+    log = subprocess.Popen(["openssl", "req", "-config",
+                            conf.configfile, "-new",
+                            "-newkey", "rsa:2048", "-nodes",
+                            "-out", out, "-keyout", private_key],
              stdout=f, stderr=f, stdin=subprocess.PIPE)
     f.close()
+
+    # I would have liked to name the CSR as its fingerprint
+    # but openss does not fingerprint unsigned certificates.
+    #certfingerprint = fingerprint(out)
+
+    #csrname = "{}.csr".format(certfingerprint)
+    #csrpath = os.path.join(outpath, csrname)
+    #os.rename(out, csrpath)
+    #keyname = "{}.key".format(certfingerprint)
+    #keypath = os.path.join(private, keyname)
+    #os.rename(private_key, keypath)
+    #return csrpath
+    return out
 
 def new_domain(conf):
     """
     Create new domain Certificate Authority Cert.
+    Return path and filename of new domain certificate.
 
     Equivalent of:
     echo "Creating a certificate authority for a new domain."
     mkdir -p -m 700 $private_dir
     mkdir -p -m 700 $crl_dir
-    chmod 700 $private_dir #Because chmod -m is not recursive
+    chmod 700 $private_dir #Because mkdir -p -m is not recursive
     echo 1000 > $dir/serial
     touch $dir/index.txt
     openssl rand -out $private_dir/ca_password 20
@@ -150,10 +176,10 @@ def new_domain(conf):
     outpath = conf.configuration["CA_default"]["new_certs_dir"]
     private = conf.configuration["CA_default"]["private_dir"]
     crlpath = conf.configuration["CA_default"]["crl_dir"]
+    private_key = conf.configuration["CA_default"]["private_key"]
+    out = conf.configuration["CA_default"]["certificate"]
+    dirpath = conf.configuration["CA_default"]["dir"]
 
-    #TODO: replace runtime with fingerprint.
-    out = os.path.join(outpath, "runtime.csr")
-    private_key = os.path.join(private, "cakey.pem")
     password_file = os.path.join(private, "ca_password")
 
     os.umask(0077)
@@ -172,24 +198,44 @@ def new_domain(conf):
     except OSError:
         pass
 
-    f = open('./openssl.log', 'a')
-    log = subprocess.Popen(["openssl", "rand", "-out", password_file, "20"], \
-             stdout=f, stderr=f)
-    log = subprocess.Popen(["openssl", "req", "-new","-config", \
-                            conf.configfile, "-x509", \
-                            "-passout", "file:" + password_file, \
-                            "-out", out, "-keyout", private_key], \
-             stdout=f, stderr=f, stdin=subprocess.PIPE)
-    f.close()
+    touch(os.path.join(dirpath, "index.txt"))
+    serialfd = open(os.path.join(dirpath, "serial"), 'w')
+    serialfd.write("1000")
+    serialfd.close()
 
+    #f = open('./openssl.log', 'a')
+    log = subprocess.Popen(["openssl", "rand", "-out",
+             password_file, "20"],
+             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = log.communicate()
+    print stdout, stderr
+
+    log = subprocess.Popen(["openssl", "req", "-new","-config",
+                            conf.configfile, "-x509",
+                            "-passout", "file:" + password_file,
+                            "-out", out, "-keyout", private_key],
+             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = log.communicate()
+    print stdout, stderr
+    #f.close()
+    #TODO: Rename certificate to the current domain name.
+    #newkey = "{}.key".format(fingerprint(out))
+    #newkeyname = os.path.join(private, newkey)
+    #os.rename(private_key, newkeyname)
+    return out
 
 def sign_req(conf, req):
     """
     Sign a certificate request.
+    Conf is a Config object with a loaded openssl.conf configuration.
+    Req is the name of a Certificate Signing Request in $new_certs_dir.
 
     Equivalent of:
     mkdir -p $certs
-    openssl ca -in $new_certs_dir/$SIGN_REQ -config $OPENSSL_CONF -out $certs/runtime.pem -passin file:$private_dir/ca_password
+    openssl ca -in $new_certs_dir/$SIGN_REQ
+               -config $OPENSSL_CONF
+               -out $certs/runtime.pem
+               -passin file:$private_dir/ca_password
     """
 
     private = conf.configuration["CA_default"]["private_dir"]
@@ -198,9 +244,8 @@ def sign_req(conf, req):
     certspath = conf.configuration["CA_default"]["certs"]
 
     password_file = os.path.join(private, "ca_password")
-    signed = os.path.join(certspath, req)
+    signed = os.path.join(certspath, "signed.pem")
     request = os.path.join(requestpath, req)
-    #TODO: The req name should be set to fingerprint!
 
     os.umask(0077)
     try:
@@ -213,9 +258,17 @@ def sign_req(conf, req):
     except OSError:
         pass
 
-    f = open('./openssl.log', 'w')
-    log = subprocess.Popen(["openssl", "ca", "-in", request, \
-                           "-config", conf.configfile, "-out", signed, \
-                           "-passin", "file:" + password_file], \
-                           stdout=f, stderr=f, stdin=subprocess.PIPE)
-    f.close()
+    log = subprocess.Popen(["openssl", "ca", "-in", request,
+                           "-config", conf.configfile, "-out", signed,
+                           "-passin", "file:" + password_file],
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           stdin=subprocess.PIPE)
+
+    log.stdin.write("y\r\n")
+    stdout, stderr = log.communicate("y\r\n")
+    print stdout, stderr
+    fp = fingerprint(signed)
+    newcert = "{}.pem".format(fp)
+    newkeyname = os.path.join(certspath, newcert)
+    os.rename(signed, newkeyname)
