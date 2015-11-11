@@ -13,6 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Openssl wrapper used to generate and sign certificates.
+This module depends on openssl.
+"""
 
 import ConfigParser
 import os
@@ -26,7 +30,14 @@ class Config():
     Create this object by pointing at the configuration file
     to be parsed.
 
-    myconf = Config("/tmp/openssl.conf")
+    To access a previously known openssl configuration file.
+    myconf = Config(configfile="/tmp/openssl.conf")
+
+    or to create a new domain:
+    myconf = Config(domain="mydomain")
+
+    to access an existing known domain configuration use:
+    myconf = Config(domain="myolddomain")
     """
     DEFAULT = {'v3_req': {'subjectAltName': 'email:move'},
                'req': {'distinguished_name': 'req_distinguished_name',
@@ -64,18 +75,23 @@ class Config():
                'usr_cert': {'subjectKeyIdentifier': 'hash',
                             'authorityKeyIdentifier': 'keyid,issuer',
                             'basicConstraints': 'CA:false'},
-               'policy_any': {'countryName': 'optional',
+               'policy_any': {'string_mask': 'utf8only',
+                              'countryName': 'optional',
                               'organizationalUnitName': 'optional',
-                              'organizationName': 'optional', # match
+                              'organizationName': 'supplied', # match
                               'emailAddress': 'optional',
                               'commonName': 'supplied',
                               'stateOrProvinceName': 'optional'}
               }
-
+    # TODO Add function to reorder configuration file to put variables on top.
+    # TODO Add additional documentation in docstrings.
+    # TODO Clean up pep8 compatability.
+    # TODO Find out why the policy does not match equal org names.
     def __init__(self, configfile=None, domain=None):
         self.configfile = configfile
         self.config = ConfigParser.SafeConfigParser()
         self.config.optionxform = str
+        os.umask(0077)
 
         if configfile != None: # Open existing config file
             self.configuration = self.parse_opensslconf()
@@ -116,7 +132,7 @@ class Config():
                 print "\t{}={}".format(option, value)
 
         try:
-            os.makedirs(directory)
+            os.makedirs(directory, 0700)
         except OSError, e:
             print e
         with open(self.configfile, 'wb') as configfd:
@@ -191,6 +207,14 @@ def fingerprint(filename):
 
     return fingerprint
 
+# TODO Add better exception management for errors in subprocesses.
+# For instance if an Error type 2 occurs on signing it is vital to
+# revoke the previous certificate and renew the certificate.
+# Error type two means that all certificates must have a unique
+# subject.
+# How ever this procedure is a catch 22 as it will not provide any
+# secure channels to transmit the new certificate to the requester.
+
 def new_runtime(conf, name):
     """
     Create new runtime certificate.
@@ -226,6 +250,7 @@ def new_runtime(conf, name):
                             "-subj", subject,
                             "-newkey", "rsa:2048", 
                             "-nodes",
+                            "-utf8",
                             "-out", out,
                             "-keyout", private_key],
              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -289,17 +314,13 @@ def new_domain(conf):
     print stdout, stderr
 
     log = subprocess.Popen(["openssl", "req", "-new","-config",
-                            conf.configfile, "-x509", 
+                            conf.configfile, "-x509", "-utf8",
                             "-subj", subject, "-passout",
                             "file:{}".format(password_file),
                             "-out", out, "-keyout", private_key],
              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
     print stdout, stderr
-    #f.close()
-    #newkey = "{}.key".format(fingerprint(out))
-    #newkeyname = os.path.join(private, newkey)
-    #os.rename(private_key, newkeyname)
     return out
 
 def sign_req(conf, req):
@@ -317,7 +338,6 @@ def sign_req(conf, req):
     """
 
     private = conf.configuration["CA_default"]["private_dir"]
-    password_file = private + "ca_password"
     requestpath = conf.configuration["CA_default"]["new_certs_dir"]
     certspath = conf.configuration["CA_default"]["certs"]
 
@@ -338,7 +358,7 @@ def sign_req(conf, req):
 
     serial = incr(conf.configuration["CA_default"]["serial"])
     print "Using serial {}".format(serial)
-    log = subprocess.Popen(["openssl", "ca", "-in", request,
+    log = subprocess.Popen(["openssl", "ca", "-in", request, "-utf8",
                             "-config", conf.configfile, "-out", signed,
                             "-passin", "file:" + password_file],
                             stdout=subprocess.PIPE,
