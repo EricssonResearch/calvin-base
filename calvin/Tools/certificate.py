@@ -28,54 +28,122 @@ class Config():
 
     myconf = Config("/tmp/openssl.conf")
     """
-    SECTIONS = {
-        "CA_default":["dir", "certs", "crl_dir", "database",
-                      "new_certs_dir", "certificate", "serial",
-                      "crl", "private_dir", "RANDFILE",
-                      "x509_extensions", "default_days",
-                      "default_crl_days", "default_md", "private_key",
-                      "preserve", "policy", "email_in_dn",
-                      "name_opt", "cert_opt", "copy_extensions"],
-        "policy_any":["countryName", "stateOrProvinceName",
-                      "organizationName", "organizationalUnitName",
-                      "commonName", "emailAddress"],
-        "req":["default_bits", "default_keyfile",
-               "distinguished_name", "attributes", "prompt"],
-        "req_distinguished_name":["0.organizationName", 
-                                  "commonName"],
-        "usr_cert": ["basicConstraints", "subjectKeyIdentifier",
-                     "authorityKeyIdentifier"],
-        "v3_req": ["subjectAltName"],
-        "v3_ca": ["subjectKeyIdentifier", "authorityKeyIdentifier",
-                  "basicConstraints"]
-    }
+    DEFAULT = {'v3_req': {'subjectAltName': 'email:move'},
+               'req': {'distinguished_name': 'req_distinguished_name',
+                       'attributes': 'req_attributes',
+                       'prompt': 'no', 'default_keyfile': 'privkey.pem',
+                       'default_bits': '2048'},
+               'req_attributes': {},
+               'req_distinguished_name': {'commonName': 'runtime',
+                                          '0.organizationName': 'domain'},
+               'ca': {'default_ca': 'CA_default'},
+               'CA_default': {'adir': '~/.calvin/security/',
+                              'preserve': 'no',
+                              'crl_dir': '$adir/crl',
+                              'RANDFILE': '$adir/private/.rand',
+                              'certificate': '$adir/cacert.pem',
+                              'database': '$adir/index.txt',
+                              'private_dir': '$adir/private/',
+                              'new_certs_dir': '$adir/newcerts',
+                              'private_key': '$adir/private/ca.key',
+                              'email_in_dn': 'no',
+                              'x509_extensions': 'usr_cert',
+                              'copy_extensions': 'none',
+                              'certs': '$adir/certs',
+                              'default_days': '365',
+                              'policy': 'policy_any',
+                              'cert_opt': 'ca_default',
+                              'serial': '$adir/serial',
+                              'default_crl_days': '30',
+                              'name_opt': 'ca_default',
+                              'crl': '$adir/crl.pem',
+                              'default_md': 'sha256'},
+               'v3_ca': {'subjectKeyIdentifier': 'hash',
+                         'authorityKeyIdentifier': 'keyid:always,issuer:always',
+                         'basicConstraints': 'CA:true'},
+               'usr_cert': {'subjectKeyIdentifier': 'hash',
+                            'authorityKeyIdentifier': 'keyid,issuer',
+                            'basicConstraints': 'CA:false'},
+               'policy_any': {'countryName': 'optional',
+                              'organizationalUnitName': 'optional',
+                              'organizationName': 'match',
+                              'emailAddress': 'optional',
+                              'commonName': 'supplied',
+                              'stateOrProvinceName': 'optional'}
+              }
 
-    def __init__(self, configfile="./openssl.conf"):
+    def __init__(self, configfile=None, domain=None):
         self.configfile = configfile
-        self.configuration = self.parse_opensslconf()
+        self.config = ConfigParser.SafeConfigParser()
+        self.config.optionxform = str
+
+        if configfile != None: # Open existing config file
+            self.configuration = self.parse_opensslconf()
+
+        elif configfile == None and domain != None:
+            self.domain = domain
+            homefolder = os.getenv("HOME")
+            self.configfile = os.path.join(homefolder, ".calvin",
+                                           "security", domain,
+                                           "openssl.conf")
+            if os.path.isfile(self.configfile):
+                self.configuration = self.parse_opensslconf()
+                print "Configuration already exists " \
+                      "using {}".format(self.configfile)
+            else:
+                self.new_opensslconf()
+                self.configuration = self.parse_opensslconf()
+                print "Made new configuration at " \
+                      "{}".format(self.configfile)
+
+    def new_opensslconf(self):
+        """
+        Create new openssl.conf configuration file.
+        """
+        directory = os.path.dirname(self.configfile)
+
+        for section in self.__class__.DEFAULT.keys():
+            self.config.add_section(section)
+            print "[{}]".format(section)
+            for option in self.__class__.DEFAULT[section]:
+                if option == "0.organizationName":
+                    value = self.domain
+                elif option == "adir":
+                    value = directory
+                else:
+                    value = self.__class__.DEFAULT[section][option]
+                self.config.set(section, option, value)
+                print "\t{}={}".format(option, value)
+
+        try:
+            os.makedirs(directory)
+        except OSError, e:
+            print e
+        with open(self.configfile, 'wb') as configfd:
+            self.config.write(configfd)
 
     def parse_opensslconf(self):
         """
         Parse the openssl.conf file to find relevant paths.
         """
-        config = ConfigParser.SafeConfigParser()
-        config.read(self.configfile)
+        self.config.read(self.configfile)
         configuration = {}
-        for section in self.__class__.SECTIONS.keys():
-            for item in self.__class__.SECTIONS[section]:
-                raw = config.get(section, item)
-                entry = raw.split("#")[0].strip()
+        for section in self.__class__.DEFAULT.keys():
+            for option in self.__class__.DEFAULT[section].keys():
+                raw = self.config.get(section, option)
+                value = raw.split("#")[0].strip() # Remove comments
 
-                if "$" in entry: # Manage openssl variables
-                    variable = "".join(entry.split("$")[1:])
+                if "$" in value: # Manage openssl variables
+                    variable = "".join(value.split("$")[1:])
                     variable = variable.split("/")[0]
-                    path = "/" + "/".join(entry.split("/")[1:])
-                    entry = configuration[section][variable] + path
+                    path = "/" + "/".join(value.split("/")[1:])
+                    varvalue = self.config.get(section, variable)
+                    value = varvalue.split("#")[0].strip() + path
                 try:
-                    configuration[section].update({item: entry})
+                    configuration[section].update({option: value})
                 except KeyError:
                     configuration[section] = {} # New section
-                    configuration[section].update({item: entry})
+                    configuration[section].update({option: value})
         return configuration
 
 
@@ -93,13 +161,10 @@ def fingerprint(filename):
     Equivalent to:
     openssl x509 -sha256 -in ./runtime.csr -noout -fingerprint
     """
-    #f = open('./openssl.log', 'a')
-    #e, errlog = tempfile.mkstemp()
     log = subprocess.Popen(["openssl", "x509", "-sha256",
                            "-in", filename, "-noout",
                            "-fingerprint"],
           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    #f.close()
     stdout, stderr = log.communicate()
     try:
         fingerprint = stdout.split("=")[1].strip()
@@ -142,20 +207,9 @@ def new_runtime(conf):
                             conf.configfile, "-new",
                             "-newkey", "rsa:2048", "-nodes",
                             "-out", out, "-keyout", private_key],
-             stdout=f, stderr=f, stdin=subprocess.PIPE)
-    f.close()
-
-    # I would have liked to name the CSR as its fingerprint
-    # but openss does not fingerprint unsigned certificates.
-    #certfingerprint = fingerprint(out)
-
-    #csrname = "{}.csr".format(certfingerprint)
-    #csrpath = os.path.join(outpath, csrname)
-    #os.rename(out, csrpath)
-    #keyname = "{}.key".format(certfingerprint)
-    #keypath = os.path.join(private, keyname)
-    #os.rename(private_key, keypath)
-    #return csrpath
+             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = log.communicate()
+    print stdout, stderr
     return out
 
 def new_domain(conf):
@@ -178,7 +232,7 @@ def new_domain(conf):
     crlpath = conf.configuration["CA_default"]["crl_dir"]
     private_key = conf.configuration["CA_default"]["private_key"]
     out = conf.configuration["CA_default"]["certificate"]
-    dirpath = conf.configuration["CA_default"]["dir"]
+    dirpath = conf.configuration["CA_default"]["adir"]
 
     password_file = os.path.join(private, "ca_password")
 
@@ -218,7 +272,6 @@ def new_domain(conf):
     stdout, stderr = log.communicate()
     print stdout, stderr
     #f.close()
-    #TODO: Rename certificate to the current domain name.
     #newkey = "{}.key".format(fingerprint(out))
     #newkeyname = os.path.join(private, newkey)
     #os.rename(private_key, newkeyname)
