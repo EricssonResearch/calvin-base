@@ -34,8 +34,8 @@ class Config():
                        'prompt': 'no', 'default_keyfile': 'privkey.pem',
                        'default_bits': '2048'},
                'req_attributes': {},
-               'req_distinguished_name': {'commonName': 'runtime',
-                                          '0.organizationName': 'domain'},
+               'req_distinguished_name': {'0.organizationName': 'domain',
+                                          'commonName': 'runtime'},
                'ca': {'default_ca': 'CA_default'},
                'CA_default': {'adir': '~/.calvin/security/',
                               'preserve': 'no',
@@ -66,7 +66,7 @@ class Config():
                             'basicConstraints': 'CA:false'},
                'policy_any': {'countryName': 'optional',
                               'organizationalUnitName': 'optional',
-                              'organizationName': 'match',
+                              'organizationName': 'optional', # match
                               'emailAddress': 'optional',
                               'commonName': 'supplied',
                               'stateOrProvinceName': 'optional'}
@@ -146,8 +146,24 @@ class Config():
                     configuration[section].update({option: value})
         return configuration
 
+def incr(fname):
+    """
+    Open a file read an integer from the first line.
+    Increment by one and save.
+    """
+    fhandle = open(fname, 'r+')
+    current = int(fhandle.readline())
+    current = current + 1
+    fhandle.seek(0)
+    fhandle.write(str(current))
+    fhandle.truncate()
+    fhandle.close()
+    return current
 
 def touch(fname, times=None):
+    """
+    Touch a file to update the file timestamp.
+    """
     fhandle = open(fname, 'a')
     try:
         os.utime(fname, times)
@@ -175,7 +191,7 @@ def fingerprint(filename):
 
     return fingerprint
 
-def new_runtime(conf):
+def new_runtime(conf, name):
     """
     Create new runtime certificate.
     Return name of certificate signing request file.
@@ -187,8 +203,8 @@ def new_runtime(conf):
     outpath = conf.configuration["CA_default"]["new_certs_dir"]
     private = conf.configuration["CA_default"]["private_dir"]
 
-    out = os.path.join(outpath, "runtime.csr")
-    private_key = os.path.join(private, "newnode.key")
+    out = os.path.join(outpath, "{}.csr".format(name))
+    private_key = os.path.join(private, "{}.key".format(name))
 
     os.umask(0077)
 
@@ -202,11 +218,16 @@ def new_runtime(conf):
     except OSError:
         pass
 
-    f = open('./openssl.log', 'a')
-    log = subprocess.Popen(["openssl", "req", "-config",
-                            conf.configfile, "-new",
-                            "-newkey", "rsa:2048", "-nodes",
-                            "-out", out, "-keyout", private_key],
+    organization = conf.domain
+    commonname = name
+    subject = "/O={}/CN={}".format(organization, commonname)
+    log = subprocess.Popen(["openssl", "req", "-new",
+                            #"-config", conf.configfile,
+                            "-subj", subject,
+                            "-newkey", "rsa:2048", 
+                            "-nodes",
+                            "-out", out,
+                            "-keyout", private_key],
              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
     print stdout, stderr
@@ -252,12 +273,15 @@ def new_domain(conf):
     except OSError:
         pass
 
-    touch(os.path.join(dirpath, "index.txt"))
-    serialfd = open(os.path.join(dirpath, "serial"), 'w')
+    touch(conf.configuration["CA_default"]["database"])
+    serialfd = open(conf.configuration["CA_default"]["serial"], 'w')
     serialfd.write("1000")
     serialfd.close()
 
-    #f = open('./openssl.log', 'a')
+    organization = conf.domain
+    commonname = conf.domain
+    subject = "/O={}/CN={}".format(organization, commonname)
+
     log = subprocess.Popen(["openssl", "rand", "-out",
              password_file, "20"],
              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -265,8 +289,9 @@ def new_domain(conf):
     print stdout, stderr
 
     log = subprocess.Popen(["openssl", "req", "-new","-config",
-                            conf.configfile, "-x509",
-                            "-passout", "file:" + password_file,
+                            conf.configfile, "-x509", 
+                            "-subj", subject, "-passout",
+                            "file:{}".format(password_file),
                             "-out", out, "-keyout", private_key],
              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
@@ -311,12 +336,14 @@ def sign_req(conf, req):
     except OSError:
         pass
 
+    serial = incr(conf.configuration["CA_default"]["serial"])
+    print "Using serial {}".format(serial)
     log = subprocess.Popen(["openssl", "ca", "-in", request,
-                           "-config", conf.configfile, "-out", signed,
-                           "-passin", "file:" + password_file],
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
-                           stdin=subprocess.PIPE)
+                            "-config", conf.configfile, "-out", signed,
+                            "-passin", "file:" + password_file],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            stdin=subprocess.PIPE)
 
     log.stdin.write("y\r\n")
     stdout, stderr = log.communicate("y\r\n")
