@@ -24,6 +24,8 @@ import subprocess
 import sys
 import tempfile
 
+import confsort
+
 class Config():
     """
     A openssl.conf configuration parser class.
@@ -48,26 +50,26 @@ class Config():
                'req_distinguished_name': {'0.organizationName': 'domain',
                                           'commonName': 'runtime'},
                'ca': {'default_ca': 'CA_default'},
-               'CA_default': {'adir': '~/.calvin/security/',
+               'CA_default': {'dir': '~/.calvin/security/',
                               'preserve': 'no',
-                              'crl_dir': '$adir/crl',
-                              'RANDFILE': '$adir/private/.rand',
-                              'certificate': '$adir/cacert.pem',
-                              'database': '$adir/index.txt',
-                              'private_dir': '$adir/private/',
-                              'new_certs_dir': '$adir/newcerts',
-                              'private_key': '$adir/private/ca.key',
+                              'crl_dir': '$dir/crl',
+                              'RANDFILE': '$dir/private/.rand',
+                              'certificate': '$dir/cacert.pem',
+                              'database': '$dir/index.txt',
+                              'private_dir': '$dir/private/',
+                              'new_certs_dir': '$dir/newcerts',
+                              'private_key': '$dir/private/ca.key',
                               'email_in_dn': 'no',
                               'x509_extensions': 'usr_cert',
                               'copy_extensions': 'none',
-                              'certs': '$adir/certs',
+                              'certs': '$dir/certs',
                               'default_days': '365',
                               'policy': 'policy_any',
                               'cert_opt': 'ca_default',
-                              'serial': '$adir/serial',
+                              'serial': '$dir/serial',
                               'default_crl_days': '30',
                               'name_opt': 'ca_default',
-                              'crl': '$adir/crl.pem',
+                              'crl': '$dir/crl.pem',
                               'default_md': 'sha256'},
                'v3_ca': {'subjectKeyIdentifier': 'hash',
                          'authorityKeyIdentifier': 'keyid:always,issuer:always',
@@ -75,15 +77,13 @@ class Config():
                'usr_cert': {'subjectKeyIdentifier': 'hash',
                             'authorityKeyIdentifier': 'keyid,issuer',
                             'basicConstraints': 'CA:false'},
-               'policy_any': {'string_mask': 'utf8only',
-                              'countryName': 'optional',
+               'policy_any': {'countryName': 'optional',
                               'organizationalUnitName': 'optional',
                               'organizationName': 'supplied', # match
                               'emailAddress': 'optional',
                               'commonName': 'supplied',
                               'stateOrProvinceName': 'optional'}
               }
-    # TODO Add function to reorder configuration file to put variables on top.
     # TODO Add additional documentation in docstrings.
     # TODO Clean up pep8 compatability.
     # TODO Find out why the policy does not match equal org names.
@@ -124,7 +124,7 @@ class Config():
             for option in self.__class__.DEFAULT[section]:
                 if option == "0.organizationName":
                     value = self.domain
-                elif option == "adir":
+                elif option == "dir":
                     value = directory
                 else:
                     value = self.__class__.DEFAULT[section][option]
@@ -137,6 +137,8 @@ class Config():
             print e
         with open(self.configfile, 'wb') as configfd:
             self.config.write(configfd)
+            configfd.close()
+        confsort.reorder(self.configfile)
 
     def parse_opensslconf(self):
         """
@@ -278,7 +280,7 @@ def new_domain(conf):
     crlpath = conf.configuration["CA_default"]["crl_dir"]
     private_key = conf.configuration["CA_default"]["private_key"]
     out = conf.configuration["CA_default"]["certificate"]
-    dirpath = conf.configuration["CA_default"]["adir"]
+    dirpath = conf.configuration["CA_default"]["dir"]
 
     password_file = os.path.join(private, "ca_password")
 
