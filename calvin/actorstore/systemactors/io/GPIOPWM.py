@@ -17,36 +17,47 @@
 from calvin.actor.actor import Actor, ActionResult, manage, condition
 
 
-class GPIOWriter(Actor):
+class GPIOPWM(Actor):
 
     """
-    Set state of GPIO pin <pin>.
+    GPIO pulse width modulation on <pin>.
     Input:
-      state : 1/0 for state high/low
+      dutycycle : change dutycycle
+      frequency : change frequency
     """
 
-    @manage(["gpio_pin"])
-    def init(self, gpio_pin):
+    @manage(["gpio_pin", "frequency", "dutycycle"])
+    def init(self, gpio_pin, frequency, dutycycle):
         self.gpio_pin = gpio_pin
+        self.frequency = frequency
+        self.dutycycle = dutycycle
         self.setup()
 
     def setup(self):
         self.use("calvinsys.io.gpiohandler", shorthand="gpiohandler")
         self.gpio = self["gpiohandler"].open(self.gpio_pin, "o")
+        self.gpio.pwm_start(self.frequency, self.dutycycle)
 
     def will_migrate(self):
+        self.gpio.pwm_stop()
         self.gpio.close()
 
     def will_end(self):
+        self.gpio.pwm_stop()
         self.gpio.close()
 
     def did_migrate(self):
         self.setup()
 
-    @condition(action_input=("state",))
-    def set_state(self, state):
-        self.gpio.set_state(state)
+    @condition(action_input=("dutycycle",))
+    def set_dutycycle(self, dutycycle):
+        self.gpio.pwm_set_dutycycle(dutycycle)
         return ActionResult()
 
-    action_priority = (set_state, )
+    @condition(action_input=("frequency",))
+    def set_frequency(self, frequency):
+        self.gpio.pwm_set_frequency(frequency)
+        return ActionResult()
+
+    action_priority = (set_dutycycle, set_frequency)
     requires = ["calvinsys.io.gpiohandler"]

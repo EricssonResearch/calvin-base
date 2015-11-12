@@ -20,8 +20,8 @@ component Camera() trigger -> image {
 }
 
 /* Actors */
-button_1 : io.GPIOReader(gpio_pin=23)
-button_2 : io.GPIOReader(gpio_pin=23)
+button_1 : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+button_2 : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
 lock : hue.StopLight(address="192.168.0.101", username="newdeveloper", lightno="1")
 term : std.Terminator()
 bell : media.MediaPlayer(media_file="calvin/examples/doorlock/dingdong.ogg")

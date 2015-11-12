@@ -26,7 +26,10 @@ __all__ = [os.path.basename(f)[:-3] for f in modules if not os.path.basename(
     f).startswith('_') and os.path.isfile(f) and os.path.basename(f) != (SYSGROUP + ".py")]
 subsys = {}
 for m in __all__:
-    subsys[m] = importlib.import_module("calvin.calvinsys." + SYSGROUP + "." + m)
+    try:
+        subsys[m] = importlib.import_module("calvin.calvinsys." + SYSGROUP + "." + m)
+    except:
+        pass
 
 # The class is instanciated per Actor
 

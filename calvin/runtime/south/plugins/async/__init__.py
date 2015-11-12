@@ -33,8 +33,7 @@ _MODULES = {'async': ['DelayedCall', 'run_ioloop', 'stop_ioloop'],
             'threads': [],
             'server_connection': ['ServerProtocolFactory', 'LineProtocol', 'RawDataProtocol'],
             'client_connection': ['ClientProtocolFactory'],
-            'http_client': ['HTTPClient'],
-            'gpiopin': ['GPIOPin']}
+            'http_client': ['HTTPClient']}
 
 _FW_MODULES = []
 __all__ = []
