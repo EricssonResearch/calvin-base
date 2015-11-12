@@ -5,6 +5,7 @@ Testcases for confsort module.
 """
 import confsort
 
+
 def test_setup():
     """
     Setup arguments for testcase.
@@ -20,6 +21,7 @@ def test_setup():
     fp = open("test.ini", 'w')
     fp.write(config)
     fp.close()
+
 
 def test():
     """

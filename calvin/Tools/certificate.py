@@ -26,6 +26,7 @@ import tempfile
 
 import confsort
 
+
 class Config():
     """
     A openssl.conf configuration parser class.
@@ -44,7 +45,8 @@ class Config():
     DEFAULT = {'v3_req': {'subjectAltName': 'email:move'},
                'req': {'distinguished_name': 'req_distinguished_name',
                        'attributes': 'req_attributes',
-                       'prompt': 'no', 'default_keyfile': 'privkey.pem',
+                       'prompt': 'no',
+                       'default_keyfile': 'privkey.pem',
                        'default_bits': '2048'},
                'req_attributes': {},
                'req_distinguished_name': {'0.organizationName': 'domain',
@@ -72,31 +74,31 @@ class Config():
                               'crl': '$dir/crl.pem',
                               'default_md': 'sha256'},
                'v3_ca': {'subjectKeyIdentifier': 'hash',
-                         'authorityKeyIdentifier': 'keyid:always,issuer:always',
+                         'authorityKeyIdentifier':
+                         'keyid:always,issuer:always',
                          'basicConstraints': 'CA:true'},
                'usr_cert': {'subjectKeyIdentifier': 'hash',
                             'authorityKeyIdentifier': 'keyid,issuer',
                             'basicConstraints': 'CA:false'},
                'policy_any': {'countryName': 'optional',
                               'organizationalUnitName': 'optional',
-                              'organizationName': 'supplied', # match
+                              'organizationName': 'supplied',  # match
                               'emailAddress': 'optional',
                               'commonName': 'supplied',
-                              'stateOrProvinceName': 'optional'}
-              }
+                              'stateOrProvinceName': 'optional'}}
     # TODO Add additional documentation in docstrings.
-    # TODO Clean up pep8 compatability.
     # TODO Find out why the policy does not match equal org names.
+
     def __init__(self, configfile=None, domain=None):
         self.configfile = configfile
         self.config = ConfigParser.SafeConfigParser()
         self.config.optionxform = str
         os.umask(0077)
 
-        if configfile != None: # Open existing config file
+        if configfile is not None:  # Open existing config file
             self.configuration = self.parse_opensslconf()
 
-        elif configfile == None and domain != None:
+        elif configfile is None and domain is not None:
             self.domain = domain
             homefolder = os.getenv("HOME")
             self.configfile = os.path.join(homefolder, ".calvin",
@@ -149,9 +151,9 @@ class Config():
         for section in self.__class__.DEFAULT.keys():
             for option in self.__class__.DEFAULT[section].keys():
                 raw = self.config.get(section, option)
-                value = raw.split("#")[0].strip() # Remove comments
+                value = raw.split("#")[0].strip()  # Remove comments
 
-                if "$" in value: # Manage openssl variables
+                if "$" in value:  # Manage openssl variables
                     variable = "".join(value.split("$")[1:])
                     variable = variable.split("/")[0]
                     path = "/" + "/".join(value.split("/")[1:])
@@ -160,9 +162,10 @@ class Config():
                 try:
                     configuration[section].update({option: value})
                 except KeyError:
-                    configuration[section] = {} # New section
+                    configuration[section] = {}  # New section
                     configuration[section].update({option: value})
         return configuration
+
 
 def incr(fname):
     """
@@ -178,6 +181,7 @@ def incr(fname):
     fhandle.close()
     return current
 
+
 def touch(fname, times=None):
     """
     Touch a file to update the file timestamp.
@@ -187,6 +191,7 @@ def touch(fname, times=None):
         os.utime(fname, times)
     finally:
         fhandle.close()
+
 
 def fingerprint(filename):
     """
@@ -200,7 +205,8 @@ def fingerprint(filename):
                             "-in", filename,
                             "-noout",
                             "-fingerprint"],
-          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
     if log.returncode != 0:
         raise IOError(stderr)
@@ -213,13 +219,6 @@ def fingerprint(filename):
 
     return fingerprint
 
-# TODO Add better exception management for errors in subprocesses.
-# For instance if an Error type 2 occurs on signing it is vital to
-# revoke the previous certificate and renew the certificate.
-# Error type two means that all certificates must have a unique
-# subject.
-# How ever this procedure is a catch 22 as it will not provide any
-# secure channels to transmit the new certificate to the requester.
 
 def new_runtime(conf, name):
     """
@@ -228,7 +227,10 @@ def new_runtime(conf, name):
 
     Equivalent of:
     mkdir -p $new_certs_dir
-    openssl req -config $OPENSSL_CONF -new -newkey rsa:2048 -nodes -out $new_certs_dir/runtime.csr -keyout $private_dir/runtime.key
+    openssl req -config $OPENSSL_CONF -new \
+                -newkey rsa:2048 -nodes \
+                -out $new_certs_dir/runtime.csr \
+                -keyout $private_dir/runtime.key
     """
     outpath = conf.configuration["CA_default"]["new_certs_dir"]
     private = conf.configuration["CA_default"]["private_dir"]
@@ -252,18 +254,19 @@ def new_runtime(conf, name):
     commonname = name
     subject = "/O={}/CN={}".format(organization, commonname)
     log = subprocess.Popen(["openssl", "req", "-new",
-                            #"-config", conf.configfile,
                             "-subj", subject,
-                            "-newkey", "rsa:2048", 
+                            "-newkey", "rsa:2048",
                             "-nodes",
                             "-utf8",
                             "-out", out,
                             "-keyout", private_key],
-             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
     if log.returncode != 0:
         raise IOError(stderr)
     return out
+
 
 def new_domain(conf):
     """
@@ -278,7 +281,9 @@ def new_domain(conf):
     echo 1000 > $dir/serial
     touch $dir/index.txt
     openssl rand -out $private_dir/ca_password 20
-    openssl req -new -x509 -config $OPENSSL_CONF -keyout $private_key -out $certificate -passout file:$private_dir/ca_password
+    openssl req -new -x509 -config $OPENSSL_CONF \
+            -keyout $private_key -out $certificate \
+            -passout file:$private_dir/ca_password
     """
     outpath = conf.configuration["CA_default"]["new_certs_dir"]
     private = conf.configuration["CA_default"]["private_dir"]
@@ -314,23 +319,31 @@ def new_domain(conf):
     commonname = conf.domain
     subject = "/O={}/CN={}".format(organization, commonname)
 
-    log = subprocess.Popen(["openssl", "rand", "-out",
-             password_file, "20"],
-             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    log = subprocess.Popen(["openssl", "rand",
+                            "-out", password_file, "20"],
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
     if log.returncode != 0:
         raise IOError(stderr)
 
-    log = subprocess.Popen(["openssl", "req", "-new","-config",
-                            conf.configfile, "-x509", "-utf8",
-                            "-subj", subject, "-passout",
+    log = subprocess.Popen(["openssl", "req",
+                            "-new",
+                            "-config", conf.configfile,
+                            "-x509",
+                            "-utf8",
+                            "-subj", subject,
+                            "-passout",
                             "file:{}".format(password_file),
-                            "-out", out, "-keyout", private_key],
-             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            "-out", out,
+                            "-keyout", private_key],
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
     if log.returncode != 0:
         raise IOError(stderr)
     return out
+
 
 def sign_req(conf, req):
     """
@@ -373,9 +386,9 @@ def sign_req(conf, req):
                             "-config", conf.configfile,
                             "-out", signed,
                             "-passin", "file:" + password_file],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            stdin=subprocess.PIPE)
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           stdin=subprocess.PIPE)
 
     log.stdin.write("y\r\n")
     stdout, stderr = log.communicate("y\r\n")
