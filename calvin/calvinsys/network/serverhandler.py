@@ -17,8 +17,31 @@
 from calvin.runtime.south.plugins.async import server_connection
 
 
+class MessageServer(object):
+    def __init__(self, node, actor_id):
+        super(MessageServer, self).__init__()
+        self._trigger = node.sched.trigger_loop
+        self._listener = server_connection.UDPServerProtocol(self.trigger, actor_id)
+
+    def trigger(self, actor_ids):
+        self._trigger(actor_ids=actor_ids)
+
+    def have_data(self):
+        return self._listener.have_data()
+
+    def data_get(self):
+        return self._listener.data_get()
+
+    def start(self, host, port):
+        self._listener.start(host, port)
+
+    def stop(self):
+        self._listener.stop()
+
+
 class Server(object):
     def __init__(self, node, mode, delimiter, max_length, actor_id=None):
+        super(Server, self).__init__()
         self.connection_factory = server_connection.ServerProtocolFactory(node.sched.trigger_loop, mode,
                                                                           delimiter, max_length, actor_id)
 
@@ -50,8 +73,11 @@ class ServerHandler(object):
         self.server = None
         self._actor = actor
 
-    def start(self, host, port, mode, delimiter, max_length):
-        self.server = Server(self.node, mode, delimiter, max_length, actor_id=self._actor.id)
+    def start(self, host, port, mode, delimiter=None, max_length=None):
+        if mode == "udp":
+            self.server = MessageServer(self.node, actor_id=self._actor.id)
+        else:
+            self.server = Server(self.node, mode, delimiter, max_length, actor_id=self._actor.id)
         self.server.start(host, port)
         return self.server
 
