@@ -15,26 +15,26 @@
 # limitations under the License.
 
 
-class EnvironmentalBase(object):
+class DisplayBase(object):
 
     """
-    Base class for environmental sensor
+    Base class for display
     """
 
-    def get_temperature(self):
+    def enable(self, enable):
         """
-        returns: float with current temperature in degress Celsius
+        Enable/disable display
         """
         pass
 
-    def get_humidity(self):
+    def show_text(self, text):
         """
-        returns: float with percentage of relative humidity
+        Display text
         """
-        pass
+        raise NotImplementedError()
 
-    def get_pressure(self):
+    def clear(self):
         """
-        returns: float with pressure in millibars
+        Clear display
         """
         pass

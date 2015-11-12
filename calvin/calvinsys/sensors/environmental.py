@@ -14,27 +14,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from calvin.runtime.south.plugins.io.sensors.environmental import environmental
 
-class DisplayBase(object):
+
+class Environmental(object):
 
     """
-    Base class for display
+    Environmental sensor
     """
 
-    def enable(self, enable):
-        """
-        Enable/disable display
-        """
-        pass
+    def __init__(self):
+        self.sensor = environmental.Environmental()
 
-    def show_text(self, text):
+    def get_temperature(self):
         """
-        Display text
+        Get temperature from sensor
         """
-        pass
+        return self.sensor.get_temperature()
 
-    def clear(self):
+    def get_humidity(self):
         """
-        Clear display
+        Get humidity from sensor
         """
-        pass
+        return self.sensor.get_humidity()
+
+    def get_pressure(self):
+        """
+        Get pressure from sensor
+        """
+        return self.sensor.get_temperature()
+
+
+def register(node=None, actor=None):
+    """
+        Called when the system object is first created.
+    """
+    return Environmental()

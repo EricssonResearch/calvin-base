@@ -14,56 +14,107 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.plugins.async import gpiopin
+from calvin.runtime.south.plugins.io.gpio import gpiopin
 
 
 class GPIOPin(object):
 
     """
-    Set/get state of GPIO pin
+    GPIO pin
     """
 
-    def __init__(self, node, pin, direction, delay):
+    def __init__(self, node, pin, direction, pull):
         """
-        Export gpio pin and set direction and read delay
+        Init gpio pin
+        Parameters:
+          node - calvin node
+          pin - gpio pin
+          direction - pin direction (i=in, o=out)
+          pull - pull resistor (u=up, d=down)
         """
-        self.fd = gpiopin.GPIOPin(node.sched.trigger_loop, pin, direction, delay)
+        self.gpio = gpiopin.GPIOPin(node.sched.trigger_loop, pin, direction, pull)
+
+    def detect_edge(self, edge):
+        """
+        Detect falling/rising edges, use edge_detected/edge_value to get changes
+        Parameters
+          edge - Edge to trigger on (r=rising, f=falling, b=both)
+        """
+        if edge == "f" or edge == "r" or edge == "b":
+            self.gpio.detect_edge(edge)
+        else:
+            raise Exception("Edge must be f, r or b (falling, rising or both)")
+
+    def edge_detected(self):
+        """
+        Return True if edge has been detected
+        """
+        return self.gpio.edge_detected()
+
+    def edge_value(self):
+        """
+        Return value from last rising or falling edge
+        """
+        return self.gpio.edge_value()
 
     def set_state(self, state):
         """
         Set state of pin
+        Parameters:
+          state - 1/0 for high/low
         """
-        self.fd.set_state(state)
-
-    def has_changed(self):
-        """
-        Returns True if value has changed since last call to get_state().
-        """
-        return self.fd.has_changed()
+        self.gpio.set_state(state)
 
     def get_state(self):
         """
-        Get state of pin
-        Returns value read, None if no value read
+        Return state of pin, 1/0 for high/low
         """
-        return self.fd.get_state()
+        return self.gpio.get_state()
+
+    def pwm_start(self, frequency, dutycycle):
+        """
+        Start pwm with frequency and dutycycle
+        """
+        self.gpio.pwm_start(frequency, dutycycle)
+
+    def pwm_set_frequency(self, frequency):
+        """
+        Set pwm frequency
+        """
+        self.gpio.pwm_set_frequency(frequency)
+
+    def pwm_set_dutycycle(self, dutycycle):
+        """
+        Set pwm duty cycle
+        """
+        self.gpio.pwm_set_dutycycle(dutycycle)
+
+    def pwm_stop(self):
+        """
+        Stop pwm
+        """
+        self.gpio.pwm_stop()
 
     def close(self):
         """
         Unexport pin
         """
-        self.fd.close()
+        self.gpio.close()
 
 
 class GPIOHandler(object):
+
     def __init__(self, node):
         super(GPIOHandler, self).__init__()
         self.node = node
 
-    def open(self, pin, direction, delay=0.2):
-        if direction == "in" or direction == "out":
-            return GPIOPin(self.node, pin, direction, delay)
-        raise Exception("Pin direction must be in or out")
+    def open(self, pin, direction, pull=None):
+        if direction != "i" and direction != "o":
+            raise Exception("Pin direction must be i or o (in or out)")
+        if pull is not None:
+            if pull != "u" and pull != "d":
+                raise Exception("Pull configuration must be u or d (up or down)")
+        return GPIOPin(self.node, pin, direction, pull)
 
     def close(self, gpio):
         gpio.close()

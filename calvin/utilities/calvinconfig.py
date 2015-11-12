@@ -78,7 +78,7 @@ class CalvinConfig(object):
 
     def default_config(self):
         default = {
-            'global':{
+            'global': {
                 'comment': 'User definable section',
                 'actor_paths': ['systemactors'],
                 'framework': 'twistedimpl',
@@ -87,7 +87,8 @@ class CalvinConfig(object):
                 'capabilities_blacklist': [],
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json',
-                'media_framework': 'defaultimpl'
+                'media_framework': 'defaultimpl',
+                'display_plugin': 'stdout_impl'
             },
             'testing': {
                 'comment': 'Test settings',

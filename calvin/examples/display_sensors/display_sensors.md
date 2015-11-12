@@ -41,7 +41,7 @@ calvin.conf to use stdout as display:
 
     {
       "global": {
-        "display_plugin": "stdout",
+        "display_plugin": "stdout_impl",
         "actor_paths": ["./devactors"]
       }
     }

@@ -14,39 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.plugins.io.display import display
 
-
-class Display(object):
+class EnvironmentalBase(object):
 
     """
-    Control a display
+    Base class for environmental sensor
     """
 
-    def __init__(self):
-        self.display = display.Display()
+    def get_temperature(self):
+        """
+        returns: float with current temperature in degress Celsius
+        """
+        raise NotImplementedError()
 
-    def enable(self, enable):
+    def get_humidity(self):
         """
-        Enable/disable display
+        returns: float with percentage of relative humidity
         """
-        self.display.enable(enable)
+        raise NotImplementedError()
 
-    def show_text(self, text):
+    def get_pressure(self):
         """
-        Display text
+        returns: float with pressure in millibars
         """
-        self.display.show_text(text)
-
-    def clear(self):
-        """
-        Clear display
-        """
-        self.display.clear()
-
-
-def register(node=None, actor=None):
-    """
-        Called when the system object is first created.
-    """
-    return Display()
+        raise NotImplementedError()

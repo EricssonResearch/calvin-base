@@ -14,24 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sense_hat import SenseHat
-from calvin.runtime.south.plugins.sensor.environmental import base_environmental
+from calvin.runtime.south.plugins.io.display import base_display
 
 
-class Environmental(base_environmental.EnvironmentalBase):
+class Display(base_display.DisplayBase):
 
     """
-    Raspberry Pi Sense HAT environmental sensors
+    Print text to stdout
     """
 
-    def __init__(self):
-        self.sense = SenseHat()
-
-    def get_temperature(self):
-        return self.sense.get_temperature()
-
-    def get_humidity(self):
-        return self.sense.get_humidity()
-
-    def get_pressure(self):
-        return self.sense.get_pressure()
+    def show_text(self, text):
+        print text

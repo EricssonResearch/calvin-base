@@ -15,29 +15,33 @@
 # limitations under the License.
 
 from calvin.runtime.south.plugins.async import threads
-from calvin.runtime.south.plugins.display import base_display
-from sense_hat import SenseHat
+from calvin.runtime.south.plugins.io.display import base_display
+import Adafruit_CharLCD as LCD
 
 
 class Display(base_display.DisplayBase):
 
     """
-    Control Raspberry Pi Sense Hat LED Matrix
+    Control Raspberry Pi Adafruit 16x2 LCD plate
     """
 
     def __init__(self):
-        self.sense = SenseHat()
+        self.lcd = LCD.Adafruit_CharLCDPlate()
         self.defer = None
+
+    def enable(self, enable):
+        self.lcd.set_backlight(enable)
+        self.clear()
 
     def cb_show_text(self, *args, **kwargs):
         self.defer = None
 
     def show_text(self, text):
         if self.defer is None:
-            self.sense.set_rotation(90, False)
-            self.defer = threads.defer_to_thread(self.sense.show_message, text)
+            self.clear()
+            self.defer = threads.defer_to_thread(self.lcd.message, text)
             self.defer.addCallback(self.cb_show_text)
             self.defer.addErrback(self.cb_show_text)
 
     def clear(self):
-        self.sense.clear()
+        self.lcd.clear()
