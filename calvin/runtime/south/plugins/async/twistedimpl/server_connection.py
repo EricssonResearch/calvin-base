@@ -16,11 +16,39 @@
 
 from twisted.internet.protocol import Protocol
 from twisted.internet.protocol import Factory
+from twisted.internet.protocol import DatagramProtocol
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
+
+
+class UDPServerProtocol(DatagramProtocol):
+    def __init__(self, trigger, actor_id):
+        self._trigger = trigger
+        self._actor_id = actor_id
+        self._data = []
+
+    def datagramReceived(self, data, (host, port)):
+        message = {"host": host, "port": port, "data": data}
+        self._data.append(message)
+        self._trigger(actor_ids=[self._actor_id])
+
+    def have_data(self):
+        return len(self._data) > 0
+
+    def data_get(self):
+        if len(self._data) > 0:
+            return self._data.pop(0)
+        else:
+            raise Exception("No data available")
+
+    def start(self, interface, port):
+        self._port = reactor.listenUDP(port, self, interface=interface)
+
+    def stop(self):
+        self._port.close()
 
 
 class RawDataProtocol(Protocol):
@@ -212,3 +240,4 @@ class ServerProtocolFactory(Factory):
         if not self.pending_connections:
             self.connection_pending = False
         return addr, conn
+
