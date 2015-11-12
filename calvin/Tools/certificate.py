@@ -195,17 +195,21 @@ def fingerprint(filename):
     Equivalent to:
     openssl x509 -sha256 -in ./runtime.csr -noout -fingerprint
     """
-    log = subprocess.Popen(["openssl", "x509", "-sha256",
-                           "-in", filename, "-noout",
-                           "-fingerprint"],
+    log = subprocess.Popen(["openssl", "x509",
+                            "-sha256",
+                            "-in", filename,
+                            "-noout",
+                            "-fingerprint"],
           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
+    if log.returncode != 0:
+        raise IOError(stderr)
     try:
         fingerprint = stdout.split("=")[1].strip()
     except (IndexError, AttributeError):
         errormsg = "Error fingerprinting " \
                    "certificate file. {}".format(stderr)
-        raise OSError(errormsg)
+        raise IOError(errormsg)
 
     return fingerprint
 
@@ -257,7 +261,8 @@ def new_runtime(conf, name):
                             "-keyout", private_key],
              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
-    print stdout, stderr
+    if log.returncode != 0:
+        raise IOError(stderr)
     return out
 
 def new_domain(conf):
@@ -313,7 +318,8 @@ def new_domain(conf):
              password_file, "20"],
              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
-    print stdout, stderr
+    if log.returncode != 0:
+        raise IOError(stderr)
 
     log = subprocess.Popen(["openssl", "req", "-new","-config",
                             conf.configfile, "-x509", "-utf8",
@@ -322,7 +328,8 @@ def new_domain(conf):
                             "-out", out, "-keyout", private_key],
              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
-    print stdout, stderr
+    if log.returncode != 0:
+        raise IOError(stderr)
     return out
 
 def sign_req(conf, req):
@@ -359,9 +366,12 @@ def sign_req(conf, req):
         pass
 
     serial = incr(conf.configuration["CA_default"]["serial"])
-    print "Using serial {}".format(serial)
-    log = subprocess.Popen(["openssl", "ca", "-in", request, "-utf8",
-                            "-config", conf.configfile, "-out", signed,
+
+    log = subprocess.Popen(["openssl", "ca",
+                            "-in", request,
+                            "-utf8",
+                            "-config", conf.configfile,
+                            "-out", signed,
                             "-passin", "file:" + password_file],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE,
@@ -369,7 +379,9 @@ def sign_req(conf, req):
 
     log.stdin.write("y\r\n")
     stdout, stderr = log.communicate("y\r\n")
-    print stdout, stderr
+    if log.returncode != 0:
+        raise IOError(stderr)
+
     fp = fingerprint(signed)
     newcert = "{}.pem".format(fp)
     newkeyname = os.path.join(certspath, newcert)
