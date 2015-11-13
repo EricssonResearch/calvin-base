@@ -23,19 +23,6 @@ def read_description(fname):
         return fp.read()
 
 
-missing_packages = []
-
-
-def optional_requirement(package, version):
-    import pkg_resources
-    requirement = "{package}=={version}".format(package=package, version=version)
-    try:
-        pkg_resources.require(requirement)
-        return [requirement]
-    except pkg_resources.DistributionNotFound:
-        missing_packages.append((package, version))
-    return []
-
 setup(name='calvin',
       version='0.3',
       url="http://github.com/EricssonResearch/calvin-base",
@@ -57,7 +44,7 @@ setup(name='calvin',
           'wrapt==1.10.2',
           'pyserial>=2.6',
           'netifaces>=0.10.4'
-      ] + optional_requirement("pyOpenSSL", "0.15.1"),
+      ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
       long_description=read_description('README.md'),
@@ -77,7 +64,7 @@ setup(name='calvin',
           "Topic :: Software Development",
       ],
       extras_require={
-          'testing': ['pytest', 'mock', 'pyserial', 'pytest-twisted']
+          'crypto': 'pyOpenSSL==0.15.1'
       },
       entry_points={
           'console_scripts': [
@@ -91,11 +78,3 @@ setup(name='calvin',
           ]
       }
       )
-
-if missing_packages:
-    print("\n" + 50 * "=")
-    print("Note: The following (optional) packages are unavailable\n")
-    for (package, version) in missing_packages:
-        print("{package} ({version})".format(package=package, version=version))
-    print("\nSome features may be disabled")
-    print(50 * "=")
