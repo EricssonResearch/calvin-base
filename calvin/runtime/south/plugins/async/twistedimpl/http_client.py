@@ -18,7 +18,13 @@
 from twisted.internet import reactor
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
-from twisted.internet.ssl import ClientContextFactory
+try:
+    from twisted.internet.ssl import ClientContextFactory
+    HAS_OPENSSL = True
+except:
+    # Probably no OpenSSL available.
+    HAS_OPENSSL = False
+
 from twisted.web.client import FileBodyProducer
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
@@ -105,14 +111,19 @@ class BodyReader(Protocol):
 
 class HTTPClient(CalvinCBClass):
 
-    class WebClientContextFactory(ClientContextFactory):
-        """TODO: enable certificate verification, hostname checking"""
-        def getContext(self, hostname, port):
-            return ClientContextFactory.getContext(self)
+    def create_agent(self):
+        if HAS_OPENSSL:
+            class WebClientContextFactory(ClientContextFactory):
+                """TODO: enable certificate verification, hostname checking"""
+                def getContext(self, hostname, port):
+                    return ClientContextFactory.getContext(self)
+            return Agent(reactor, WebClientContextFactory())
+        else:
+            return Agent(reactor)
 
     def __init__(self, callbacks=None):
         super(HTTPClient, self).__init__(callbacks)
-        self._agent = Agent(reactor, self.WebClientContextFactory())
+        self._agent = self.create_agent()
 
     def _receive_headers(self, response, request):
         request.parse_headers(response)
