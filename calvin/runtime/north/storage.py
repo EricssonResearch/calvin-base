@@ -198,10 +198,13 @@ class Storage(object):
     def get_iter_cb(self, key, value, it, org_key, include_key=False):
         """ get callback
         """
+        _log.analyze(self.node.id, "+ BEGIN", {'value': value, 'key': org_key})
         if value:
             value = self.coder.decode(value)
             it.append((key, value) if include_key else value)
+            _log.analyze(self.node.id, "+", {'value': value, 'key': org_key})
         else:
+            _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': org_key})
             it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
 
     def get_iter(self, prefix, key, it, include_key=False):
@@ -213,12 +216,14 @@ class Storage(object):
                 value = self.localstore[prefix + key]
                 if value:
                     value = self.coder.decode(value)
+                _log.analyze(self.node.id, "+", {'value': value, 'key': key})
                 it.append((key, value) if include_key else value)
             else:
                 try:
                     self.storage.get(key=prefix + key,
                                      cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
                 except:
+                    _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': org_key})
                     _log.error("Failed to get: %s" % key)
                     it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
 
@@ -256,10 +261,13 @@ class Storage(object):
     def get_concat_iter_cb(self, key, value, org_key, include_key, it):
         """ get callback
         """
+        _log.analyze(self.node.id, "+ BEGIN", {'key': org_key, 'value': value, 'iter': str(it)})
         if value:
             value = self.coder.decode(value)
+            _log.analyze(self.node.id, "+ VALUE", {'value': value, 'key': org_key})
             it.extend([(org_key, v) for v in value] if include_key else value)
-            it.final()
+        it.final()
+        _log.analyze(self.node.id, "+ END", {'key': org_key, 'iter': str(it)})
 
     def get_concat_iter(self, prefix, key, include_key=False):
         """ Get value for key: prefix+key, first look in localstore
@@ -268,11 +276,13 @@ class Storage(object):
             storage and hence the return iterable might contain removed items,
             but also missing items.
         """
+        _log.analyze(self.node.id, "+ BEGIN", {'key': key})
         if prefix + key in self.localstore_sets:
             _log.analyze(self.node.id, "+ GET LOCAL", None)
             value = self.localstore_sets[prefix + key]
             # Return the set that we intended to append since that's all we have until it is synced
             local_list = list(value['+'])
+            _log.analyze(self.node.id, "+", {'value': local_list, 'key': key})
         else:
             local_list = []
         if include_key:
@@ -285,6 +295,7 @@ class Storage(object):
         except:
             _log.error("Failed to get: %s" % key, exc_info=True)
             it.final()
+        _log.analyze(self.node.id, "+ END", {'key': key, 'iter': str(it)})
         return it
 
     def append_cb(self, key, value, org_key, org_value, org_cb):
