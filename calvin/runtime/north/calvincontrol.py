@@ -36,8 +36,8 @@ control_api_doc = ""
 control_api_doc += \
 """
     GET /actor_doc {path}
-    Get documentation in 'raw' format for actor or module at {path}, where path
-    is formatted as '/{module}/{submodule}/ ... /{actor}'.
+    Get documentation in 'raw' format for actor or module at {path}
+    Path is formatted as '/{module}/{submodule}/ ... /{actor}'.
     If {path} is empty return top-level documentation.
     See DocumentStore help_raw() for details on data format.
     Response status code: OK
@@ -180,7 +180,7 @@ control_api_doc += \
     GET /actor/{actor-id}/report
     Some actor store statistics on inputs and outputs, this reports these. Not always present.
     Response status code: OK or NOT_FOUND
-    Repsonse: Depends on actor
+    Response: Depends on actor
 """
 re_get_actor_report = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report\sHTTP/1")
 
@@ -203,27 +203,33 @@ control_api_doc += \
         "reqs":
            {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
             "requirements": {
-                "<actor instance 1 name>": [ {"op": "<mathing rule name>",
+                "<actor instance 1 name>": [ {"op": "<matching rule name>",
                                               "kwargs": {<rule param key>: <rule param value>, ...},
-                                              "type": either "+" or "-" for set section operation or set removal, respectively
+                                              "type": "+" or "-" for set intersection or set removal, respectively
                                               }, ...
                                            ],
                 ...
                             }
            }
     }
-    The matching rules are implemented as plugg-ins, intended to be extended. The type "+" is anding rules togheter or
-    rather taking the section between all rules return possible nodes. The type "-" is explicitly removing the matching
-    rule's returned nodes from the set of possible nodes. Note that only negative rules will result in no possible nodes,
-    i.e. no implied all but these.
-    A special matching rule exist, to first form a union between matching rules, i.e. alternative matches. This is useful
-    for e.g. alternative namings, ownerships or specifying either of two specific nodes.
+    
+    The matching rules are implemented as plug-ins, intended to be extended.
+    The type "+" is "and"-ing rules together (actually the intersection of all
+    possible nodes returned by the rules.) The type "-" is explicitly removing
+    the nodes returned by this rule from the set of possible nodes. Note that
+    only negative rules will result in no possible nodes, i.e. there is no
+    implied "all but these."
+    
+    A special matching rule exist, to first form a union between matching
+    rules, i.e. alternative matches. This is useful for e.g. alternative
+    namings, ownerships or specifying either of two specific nodes.
         {"op": "union_group",
          "requirements": [list as above of matching rules but without type key]
          "type": "+"
         }
-    Other matching rules available is current_node, all_nodes and node_attr_match which takes an index param which is
-    attribute formatted, e.g.
+    Other matching rules available is current_node, all_nodes and
+    node_attr_match which takes an index param which is attribute formatted,
+    e.g.
         {"op": "node_attr_match",
          "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
          "type": "+"
@@ -280,7 +286,8 @@ re_post_connect = re.compile(r"POST /connect\sHTTP/1")
 control_api_doc += \
 """
     POST /set_port_property
-    Sets a property of the port. Currently only fanout on outports is supported.
+    Sets a property of the port.
+    Currently only fanout on outports is supported.
     Body:
     {
         "actor_id" : <actor-id>,
@@ -312,7 +319,8 @@ re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
 control_api_doc += \
 """
     POST /disconnect
-    Disconnect a port. If port felds are empty, all ports of the actor are disconnected
+    Disconnect a port.
+    If port fields are empty, all ports of the actor are disconnected
     Body:
     {
         "actor_id": <actor-id>,
