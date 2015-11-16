@@ -1,7 +1,7 @@
 component DelayCounter(delay) -> integer {
 	"""An actor which counts from one, with a delay of delay """
   source : std.Counter()
-  delay : std.Delay(delay=delay)
+  delay : std.ClassicDelay(delay=delay)
 
   source.integer > delay.token
   delay.token > .integer
@@ -9,7 +9,7 @@ component DelayCounter(delay) -> integer {
 
 src : DelayCounter(delay=0.5)
 join : std.Join()
-output : io.StandardOut()
+output : io.Print()
 
 src.integer > join.token_1
 src.integer > join.token_2

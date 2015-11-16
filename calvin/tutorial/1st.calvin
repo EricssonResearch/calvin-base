@@ -1,6 +1,6 @@
 # File 1st.calvin
 # A small calvin example
 source : std.Counter()
-output : io.StandardOut()
+output : io.Print()
 
 source.integer > output.token
