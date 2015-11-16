@@ -188,3 +188,10 @@ The output should be identical to the earlier example.
 
 Several
 
+### HTTPS
+
+In order to use https with the HTTP-actors, it is necessary to include the
+pyOpenSSL requirement. There have been reports of problems installing this
+dependency on some platforms: See the corresponding [installation instructions](https://github.com/pyca/pyopenssl/blob/master/INSTALL.rst).
+
+For this reason, the cryptography requirements are not included by default, but kept separately in the file `crypto-requirements.txt`.
