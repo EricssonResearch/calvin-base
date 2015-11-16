@@ -1,0 +1,9 @@
+src:std.CountTimer()
+id:std.Identity()
+snk:io.Print()
+
+src.integer > id.token
+id.token > snk.token
+
+
+

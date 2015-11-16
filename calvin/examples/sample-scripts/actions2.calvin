@@ -1,0 +1,8 @@
+src:std.Counter()
+id:std.Identity()
+del:std.ClassicDelay()
+snk:io.Print()
+
+src.integer > dmy.token
+dmy.token > del.token
+del.token > snk.token

@@ -1,0 +1,7 @@
+/* Actors */
+src : std.Constant(data="test", n=10)
+delay : std.ClassicDelay(delay=1)
+snk : io.Print()
+/* Connections */
+src.token > delay.token
+delay.token > snk.token

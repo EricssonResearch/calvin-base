@@ -1,0 +1,15 @@
+/* Actors */
+client : net.HTTPGet()
+status : io.Print()
+data : std.Terminator()
+header : std.Terminator()
+
+/* Connections */
+"http://www.example.com" > client.URL
+{} > client.header
+{} > client.params
+
+client.status > status.token
+client.data > data.void
+client.header > header.void
+

@@ -1,0 +1,8 @@
+src:std.Counter()
+delay : std.ClassicDelay(delay=0.5)
+sum : std.Sum()
+snk : io.Print()
+
+src.integer > delay.token
+delay.token > sum.integer
+sum.integer > snk.token

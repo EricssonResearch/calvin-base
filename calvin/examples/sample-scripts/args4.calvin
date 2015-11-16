@@ -1,0 +1,14 @@
+component PrefixFile(prefix, file) -> out {
+  filename : std.Constant(data=file)
+  file : io.FileReader()
+  prep : text.PrefixString(prefix=prefix)
+
+  filename.token > file.filename
+  file.out > prep.in
+  prep.out > .out
+}
+
+src : PrefixFile(prefix="?--- ", file="data.txt")
+snk : io.Print()
+
+src.out>snk.token

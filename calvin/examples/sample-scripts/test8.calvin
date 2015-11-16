@@ -1,0 +1,24 @@
+component E() in -> out {
+  f:std.Identity()
+  g:std.Identity()
+
+  .in > f.token
+  f.token > g.token
+  g.token > .out
+}
+
+component B() in -> out {
+  d:std.Identity()
+  e:E()
+
+  .in > d.token
+  d.token > e.in
+  e.out > .out
+}
+
+a:std.Counter()
+b:B()
+c:io.Print()
+
+a.integer > b.in
+b.out > c.token
