@@ -7,7 +7,7 @@ component Wrapper() In -> Out {
 
 src : std.Counter()
 wsum : Wrapper()
-snk : io.StandardOut()
+snk : io.Print()
 
 src.integer > wsum.In
 wsum.Out > snk.token

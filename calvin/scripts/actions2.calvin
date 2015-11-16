@@ -1,7 +1,7 @@
 src:std.Counter()
-dmy:std.DummyAction()
-del:std.Delay()
-snk:io.StandardOut()
+id:std.Identity()
+del:std.ClassicDelay()
+snk:io.Print()
 
 src.integer > dmy.token
 dmy.token > del.token

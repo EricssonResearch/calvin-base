@@ -2,7 +2,7 @@
 client : net.HTTPGet()
 header : std.Terminator()
 status : io.Print()
-pacer  : std.RecTimer(delay=0.5)
+pacer  : std.ClassicDelay(delay=0.5)
 seq    : std.Sequencer()
 image  : io.FileWriter(basename="image", suffix="jpg")
 auth   : net.BasicAuthHeader()

@@ -5,7 +5,7 @@ data : std.Terminator()
 header : std.Terminator()
 
 /* Connections */
-"https://www.example.com" > client.URL
+"http://www.example.com" > client.URL
 {} > client.header
 {} > client.params
 
