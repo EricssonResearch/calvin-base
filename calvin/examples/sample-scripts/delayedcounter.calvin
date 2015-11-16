@@ -1,0 +1,8 @@
+component DelayedCounter(delay) -> integer {
+   """ Counts from 0 and up, waiting 'delay' seconds between numbers """
+    counter : std.Counter()
+    delay : std.ClassicDelay(delay=delay)
+
+    counter.integer > delay.token
+    delay.token > .integer
+}

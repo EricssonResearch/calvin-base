@@ -1,0 +1,13 @@
+/* Actors */
+cnt : std.CountTimer()
+stringify : std.Stringify()
+client : net.TCPClient(mode="raw")
+control : std.Constant(data={"control": "connect", "uri": "tcp://localhost:8124"})
+sink : io.Print()
+
+/* Connections */
+cnt.integer > stringify.in
+stringify.out > client.data_in
+control.token > client.control_in
+client.data_out > sink.token
+

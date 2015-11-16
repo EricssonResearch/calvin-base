@@ -1,0 +1,10 @@
+define FILE = "data.txt"
+
+/* Actors */
+f : std.Constant(data=FILE)
+src : io.FileReader()
+snk : io.Print()
+
+/* Connections */
+f.token > src.filename
+src.out>snk.token

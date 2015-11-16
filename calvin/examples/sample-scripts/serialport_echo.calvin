@@ -1,0 +1,7 @@
+/* Actors */
+device : io.SerialPort(devicename="/dev/pts/29", baudrate=9600)
+forward : std.Identity()
+
+/* Connections */
+device.out > forward.token
+forward.token > device.in

@@ -1,0 +1,13 @@
+/* actors */
+timer : std.RecTimer(delay=1)
+camera : media.Camera()
+screen : media.ImageRenderer()
+player : media.MediaPlayer(media_file="calvin/examples/doorlock/dingdong.ogg")
+detect : media.FaceDetect()
+
+/* Connections */
+1 > timer.token
+timer.token  > camera.trigger
+camera.image > screen.image
+camera.image > detect.image
+detect.faces > player.play

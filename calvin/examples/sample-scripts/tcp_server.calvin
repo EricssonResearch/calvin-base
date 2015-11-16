@@ -1,0 +1,12 @@
+/* Actors */
+host   : std.Constant(data="localhost")
+port   : std.Constant(data=8124)
+server : net.TCPServer()
+output : io.Print()
+
+/* Connections */
+host.token > server.host
+port.token > server.port
+server.handle > server.handle
+server.token  > server.token
+server.token  > output.token

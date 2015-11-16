@@ -1,0 +1,17 @@
+component ArgWrapper(sourcefile) -> out {
+  """
+  This component wraps an actor and passes an instantiation parameter to the wrapped actor
+  """
+  /* FileReader needs a filenane */
+  f:std.Constant(data=sourcefile)
+  s:io.FileReader()
+
+  f.token > s.filename
+  s.out > .out
+}
+
+src:ArgWrapper(sourcefile="data.txt")
+snk:io.Print()
+
+src.out > snk.token
+

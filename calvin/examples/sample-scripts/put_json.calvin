@@ -1,0 +1,21 @@
+/* Actors */
+client : net.HTTPPut()
+status : io.Print()
+data_sink : std.Terminator()
+header_sink : std.Terminator()
+body_to_string: json.ToString()
+body_data : std.Constant(data={"data" : "This is some data"})
+url : std.Constant(data="http://localhost:6789")
+header : std.Constant(data={"Content-type": "application/json"})
+
+/* Connections */
+url.token > client.URL
+header.token > client.header
+{} > client.params
+body_data.token > body_to_string.data
+body_to_string.string > client.data
+
+client.status > status.token
+client.data > data_sink.void
+client.header > header_sink.void
+

@@ -1,0 +1,39 @@
+
+/* Declare local identity with a delay */
+component Identity(delay) token -> token {
+  /* Use identity from standard lib */
+  id: std.Identity()
+  /* Use old style delay from standard lib */
+  delay: std.ClassicDelay(delay=delay)
+
+  .token > id.token
+  id.token > delay.token
+  delay.token > .token
+}
+
+component E() in -> out {
+  /* Use Identity from standard lib */
+  f: std.Identity()
+  g: std.Identity()
+
+  .in > f.token
+  f.token > g.token
+  g.token > .out
+}
+
+component B() in -> out {
+  /* Use local identity */
+  d: Identity(delay=0.5)
+  e: E()
+
+  .in > e.in
+  e.out > d.token
+  d.token > .out
+}
+
+a: std.Counter()
+b: B()
+c: io.Print()
+
+a.integer > b.in
+b.out > c.token

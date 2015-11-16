@@ -1,0 +1,13 @@
+component Wrapper() A -> B {
+  sum: std.Sum()
+
+  .A > sum.integer
+  sum.integer > .B
+}
+
+src: std.Counter()
+wsum: Wrapper()
+snk: io.Print()
+
+src.integer > wsum.A
+wsum.B > snk.token

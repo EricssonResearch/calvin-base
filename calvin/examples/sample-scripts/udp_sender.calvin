@@ -1,0 +1,17 @@
+component UDPSend(uri) -> {
+    set_uri : json.SetValue()
+    cnt : std.CountTimer()
+    stringify : std.Stringify()
+    sender : net.UDPSender()
+
+    {"command" : "connect" } > set_uri.container
+    "uri" > set_uri.key
+    uri > set_uri.value
+    set_uri.container > sender.control_in
+    cnt.integer > stringify.in
+    stringify.out > sender.data_in
+}
+
+send : UDPSend(uri="udp://127.0.0.1:6001")
+
+
