@@ -4,11 +4,14 @@ to_string : json.ToString()
 status : io.Print()
 data   : io.Print()
 headers: io.Print()
+format_data : std.Constant(data={"address": "192.168.0.101", "username": "newdeveloper", "light": "1"})
+header_data : std.Constant(data={"Content-type" : "application/json"})
 
-{"address": "192.168.0.101", "username": "newdeveloper", "light": "1"} > format.dict
+format_string.token > format.dict
 format.text > client.URL
-{"Content-type": "application/json"} > client.header
+header_data.token > client.header
 {} > client.params
+
 # Set light to a reddish hue
 {"on": true, "sat": 255, "bri": 100, "hue": 1000} > to_string.data
 to_string.string > client.data

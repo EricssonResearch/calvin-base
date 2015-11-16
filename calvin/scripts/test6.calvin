@@ -13,7 +13,7 @@ counter:std.Counter()
 fname:std.Constant(data="data.txt")
 file:io.FileReader()
 wrap:Wrapper()
-snk:io.StandardOut()
+snk:io.Print()
 
 counter.integer > wrap.A
 fname.token > file.filename

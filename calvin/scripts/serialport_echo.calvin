@@ -1,5 +1,5 @@
 /* Actors */
-device : usr.SerialPort(devicename="/dev/pts/29", baudrate=9600)
+device : io.SerialPort(devicename="/dev/pts/29", baudrate=9600)
 forward : std.Identity()
 
 /* Connections */
