@@ -16,29 +16,44 @@ detailed information, or continue reading.
 
 ## New in this version
 
-### Application Deployment Requirement
+### New runtime capabilities
 
-A Calvin application (calvin script) can now have an optional deployment requirement specification which, for each actor in the application, gives a list of attributes a runtime *must* have or *cannot* have in order to host this actor. Typical attributes include name, ownership, or geographical location. The specification is then handed over to a solver which provides a mapping between actors and runtimes.
+The runtime now has interfaces for reading temperature, humidity, pressure, as
+well as displays with limited functionality (typically LCD with just a few rows
+of text.) Sample implementations of the interfaces are also included, with actors and
+examples showing their use.
 
-### Actor requirements and runtime capabilities
+The GPIO interface has been extended with support for pule-width
+modulation together with an example application for controlling a micro servo.
 
-In order for an actor to be platform independent and migratable, it is necessary to limit external dependencies and only use functionality exposed by the Calvin runtime (rather than, e.g. importing python packages.) The first version of such a framework is included in this release.
 
-### Added new use cases - News ticker and door lock
+### New actors
 
-The news ticker is a small utilitiy which watches on the Calvin repository on Github, and displays the latest commits as they occur. The door lock is a sample smart home application which utilises an IP-camera, buttons, speakers and a face detection algorithm to build a small home surveillance application.
+The actorstore has been extended with actors for handling UDP and HTTP traffic,
+which makes it easier to use other services and frameworks in Calvin (and vice
+versa.)
 
-### Storage proxy
+### Application Deployment
 
-Runtimes can now serve as storage proxies to other runtimes. This gives the option of e.g. having runtimes with limited resources being served by more complete ones.
+It is now possible to deploy an application where some actors have unresolved
+requirements, or even lacking implementation on the runtime handling
+deployment. These actors cannot execute, but are instantiated as 'shadows' that
+can be migrated to suitable runtimes as and when they become available.
 
-### IPv6 support in csweb
+### CSWeb and Control API
 
-Thanks to terror96, csweb should now handle IPv6 addresses correctly.
+The REST API has been updated to use HTTP status codes consistently, as well as
+some new functions. It is now possible to retrieve documentation on all actors a
+runtime is aware of using the API.
 
-### Improved stability and robustness.
+CSWeb has been updated with application migration as per application deployment
+specifications. The vizualisation is now more in line with the tool chain (csviz) to
+avoid confusion.
 
-Networking and storage have been seen quite a bit of stability and robustness work. Tests should now pass much more frequently.
+
+### Under the hood
+
+A fair number of patches to increase stability and robustness.
 
 ## Quick start
 
@@ -64,22 +79,22 @@ To verify a working installation, try
 
 This should produced an output similar to this:
 
-    [Time INFO] StandardOut<[Actor UUID]>: 1
-    [Time INFO] StandardOut<[Actor UUID]>: 2
-    [Time INFO] StandardOut<[Actor UUID]>: 3
-    [Time INFO] StandardOut<[Actor UUID]>: 4
-    [Time INFO] StandardOut<[Actor UUID]>: 5
-    [Time INFO] StandardOut<[Actor UUID]>: 6
-    [Time INFO] StandardOut<[Actor UUID]>: 7
-    [Time INFO] StandardOut<[Actor UUID]>: 8
-    [Time INFO] StandardOut<[Actor UUID]>: 9
+    1
+    2
+    3
+    4
+    5
+    6
+    7
+    8
+    9
     [ ... ]
 
-The exact output may vary; the number of lines and the UUID of the actor will most likely be different between runs.
+The exact output may vary; the number of lines will most likely be different between runs.
 
 It is also possible to start a runtime without deploying an application to it,
 
-    $ csruntime --host <address> --controlport <controlport> --port <port> --keep-alive
+    $ csruntime --host <address> --controlport <controlport> --port <port>
 
 Applications can then be deployed remotely using
 
@@ -96,7 +111,7 @@ Alternatively, a nicer way of doing it is using the web interface, described nex
 
 Start a runtime
 
-    $ csruntime --host localhost --controlport 5001 --port 5000 --keep-alive
+    $ csruntime --host localhost --controlport 5001 --port 5000
 
 Start web server
 
@@ -158,7 +173,7 @@ Using your favorite editor, create a file named `myfirst.calvin` containing the 
 
     # myfirst.calvin
     source : std.Counter()
-    output : io.StandardOut()
+    output : io.Print()
 
     source.integer > output.token
 
@@ -168,13 +183,8 @@ Save the file, and deploy and run the program (assuming you have a runtime runni
 
 The output should be identical to the earlier example.
 
+
 ## Open issues
 
 Several
-
-
-
-
-
-
 
