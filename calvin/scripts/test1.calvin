@@ -1,6 +1,0 @@
-/* Actors */
-src : std.CountTimer()
-snk : io.Print()
-/* Connections */
-src.integer > snk.token
-
