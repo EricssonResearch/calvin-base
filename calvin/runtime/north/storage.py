@@ -744,7 +744,7 @@ class Storage(object):
 
     def tunnel_recv_handler(self, tunnel, payload):
         """ Gets called when a storage client request"""
-        _log.info("Storage proxy request %s" % payload)
+        _log.debug("Storage proxy request %s" % payload)
         _log.analyze(self.node.id, "+ SERVER", {'payload': payload})
         if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
             if 'value' in payload:
