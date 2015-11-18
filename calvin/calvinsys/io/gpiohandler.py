@@ -95,6 +95,15 @@ class GPIOPin(object):
         """
         self.gpio.pwm_stop()
 
+    def shift_out(self, data, repeat):
+        """
+        Shift out data
+        Parameters:
+          data - list of tuples with state and time in microseconds
+          repeat - number of times to repeat
+        """
+        self.gpio.shift_out(data, repeat)
+
     def close(self):
         """
         Unexport pin

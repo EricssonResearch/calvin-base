@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 import RPi.GPIO as GPIO
 from calvin.runtime.south.plugins.io.gpio import base_gpiopin
 
@@ -89,6 +90,12 @@ class GPIOPin(base_gpiopin.GPIOPinBase):
 
     def pwm_stop(self):
         self.pwm.stop()
+
+    def shift_out(self, data, repeat):
+        for x in range(0, repeat):
+            for bit in data:
+                GPIO.output(self.pin, bit[0])
+                time.sleep(bit[1]/1000000.0)
 
     def close(self):
         GPIO.Cleanup(self.pin)

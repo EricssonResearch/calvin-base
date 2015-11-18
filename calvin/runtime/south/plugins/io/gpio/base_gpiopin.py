@@ -71,6 +71,14 @@ class GPIOPinBase(object):
         """
         raise NotImplementedError()
 
+    def shift_out(self, data, repeat):
+        """
+        Shift out data repeat number of times
+        Parameters:
+          data - list of tuples with state and time in microseconds
+        """
+        raise NotImplementedError()
+
     def close(self):
         """
         Clean up
