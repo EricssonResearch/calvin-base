@@ -14,12 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCB
+from calvin.utilities import dynops
 from calvin.utilities.attribute_resolver import format_index_string
 
-def _req_op_cb(key, value, cb):
-    cb(value if value else None)
-
-def req_op(node, cb, actor_id=None, component=None):
-    """ Lockup all nodes that have registered a node_name """
-    node.storage.get_index(format_index_string(("node_name", {})), CalvinCB(_req_op_cb, cb=cb))
+def req_op(node, actor_id=None, component=None):
+    """ Returns an infinite dynamic iterable """
+    index_str = format_index_string(("node_name", {}))
+    it = node.storage.get_index_iter(index_str)
+    it.set_name("all_match")
+    return it
+    
+    #return dynops.Infinite()
