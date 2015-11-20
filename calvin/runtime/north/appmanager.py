@@ -17,6 +17,7 @@
 import os
 import random
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.utilities import dynops
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 from calvin.runtime.north.plugins.requirements import req_operations
@@ -79,8 +80,10 @@ class Application(object):
         s += "name: " + self.name + "\n"
         for _id, name in self.actors.iteritems():
             s += "actor: " + _id + ", " + (name if name else "<UNKNOWN>") + "\n"
-            if self.actor_placement and _id in self.actor_placement:
+            if self.actor_placement and _id in self.actor_placement and self.actor_placement[_id]:
                 s += "\t" + str(list(self.actor_placement[_id])) + "\n"
+            elif self.actor_placement and _id in self.actor_placement:
+                s += "\t" + str(self.actor_placement[_id]) + "\n"
         return s
 
     def clear_node_info(self):
@@ -233,6 +236,49 @@ class AppManager(object):
 
     ### DEPLOYMENT ###
     
+    def key_actor_id(self, out_iter, kwargs, final, node_id):
+        _log.analyze(self._node.id, "+ BEGIN", {'actor_id': kwargs['actor_id'], 'node_id': str(node_id)}, tb=True)
+        if final[0]:
+            _log.analyze(self._node.id, "+ STOP", {'actor_id': kwargs['actor_id']}, tb=True)
+            out_iter.final()
+        elif node_id:
+            _log.analyze(self._node.id, "+ VALUE", {'actor_id': kwargs['actor_id'], 'node_id': str(node_id)}, tb=True)
+            out_iter.append((kwargs['actor_id'], node_id))
+        _log.analyze(self._node.id, "+ END", {}, tb=True)
+
+    def save_placement(self, out_iter, kwargs, final, actor_node_id):
+        _log.analyze(self._node.id, "+ BEGIN", {'placements': kwargs['app'].actor_placement, 'final': final, 'actor_node_id': str(actor_node_id)}, tb=True)
+        if final[0]:
+            _log.analyze(self._node.id, "+ STOP", {}, tb=True)
+            out_iter.final()
+        else:
+            if actor_node_id[0] in kwargs['app'].actor_placement:
+                kwargs['app'].actor_placement[actor_node_id[0]].add(actor_node_id[1])
+            else:
+                kwargs['app'].actor_placement[actor_node_id[0]] = set([actor_node_id[1]])
+        _log.analyze(self._node.id, "+ END", {'placements': kwargs['app'].actor_placement, 'actor_node_id': str(actor_node_id)}, tb=True)
+
+    def more_placement(self, it, app, counter=0):
+        _log.analyze(self._node.id, "+ BEGIN", {}, tb=True)
+        try:
+            while True:
+                _log.analyze(self._node.id, "+ ITER", {})
+                it.next()
+        except dynops.PauseIteration:
+            _log.analyze(self._node.id, "+ PAUSED", {})
+            if counter < 3:
+                self.more_placement(it, app, counter=counter+1)
+            return
+        except StopIteration:
+            if not app.done_final:
+                app.done_final = True
+                # all possible actor placements derived
+                _log.analyze(self._node.id, "+ ALL", {})
+                self._app_requirements(app)
+                _log.analyze(self._node.id, "+ END", {})
+        except:
+            _log.exception("appmanager:more_placement")
+
     def execute_requirements(self, application_id, cb):
         app = None
         try:
@@ -247,11 +293,11 @@ class AppManager(object):
 
         if hasattr(app, '_org_cb'):
             # application deployment requirements ongoing, abort
-            cb(status=response.CalvinResponse(True))
+            cb(status=response.CalvinResponse(False))
             return
         app._org_cb = cb
-        name_map = app.get_actor_name_map(ns=app.ns)
-        app._track_actor_cb = app.get_actors()[:]  # take copy of app's actor list, to remove each when done
+        app.done_final = False
+        actor_placement_it = dynops.List()
         app.actor_placement = {}  # Clean placement slate
         _log.analyze(self._node.id, "+ APP REQ", {}, tb=True)
         for actor_id in app.get_actors():
@@ -259,8 +305,17 @@ class AppManager(object):
                 _log.debug("Only apply requirements to local actors")
                 continue
             _log.analyze(self._node.id, "+ ACTOR REQ", {'actor_id': actor_id}, tb=True)
-            self.actor_requirements(app, actor_id)
+            key_node_iter = dynops.Map(self.key_actor_id, self.actor_requirements(app, actor_id).set_name("Actor"+actor_id), 
+                                      actor_id=actor_id)
+            key_node_iter.set_name("KActor" + actor_id)
+            key_node_iter.out_iter.set_name("KActor_OUT"+actor_id)
+            actor_placement_it.append(key_node_iter)
             _log.analyze(self._node.id, "+ ACTOR REQ DONE", {'actor_id': actor_id}, tb=True)
+        actor_placement_it.final()
+        chain_iter = dynops.Chain(actor_placement_it)
+        final_iter = dynops.Map(self.save_placement, chain_iter, app=app).set_name("App")
+        final_iter.set_cb(self.more_placement, final_iter, app)
+        self.more_placement(final_iter, app)
         _log.analyze(self._node.id, "+ DONE", {'application_id': application_id}, tb=True)
 
     def actor_requirements(self, app, actor_id):
@@ -270,130 +325,53 @@ class AppManager(object):
 
         actor = self._node.am.actors[actor_id]
         _log.debug("actor_requirements(actor_id=%s), reqs=%s" % (actor_id, actor.requirements_get()))
-        possible_nodes = set([None])  # None to mark no real response
-        impossible_nodes = set([None])  # None to mark no real response
-        reqs = actor.requirements_get()[:]
+        intersection_iters = []
+        difference_iters = []
         for req in actor.requirements_get():
             if req['op']=='union_group':
                 # Special operation that first forms a union of a requirement's list response set
                 # To allow alternative requirements options
-                self._union_requirements(req=req,
-                                            app=app,
-                                            actor_id=actor_id,
-                                            possible_nodes=possible_nodes,
-                                            impossible_nodes=impossible_nodes,
-                                            reqs=reqs,
-                                            component=actor.component_members())
-            else:
-                try:
-                    req_operations[req['op']].req_op(self._node, 
-                                           CalvinCB(self._actor_requirements_cb,
-                                                    req=req,
+                intersection_iters.append(self._union_requirements(req=req,
                                                     app=app,
                                                     actor_id=actor_id,
-                                                    possible_nodes=possible_nodes,
-                                                    impossible_nodes=impossible_nodes,
-                                                    reqs=reqs),
+                                                    component=actor.component_members()).set_name("SActor"+actor_id))
+            else:
+                try:
+                    _log.analyze(self._node.id, "+ REQ OP", {'op': req['op'], 'kwargs': req['kwargs']})
+                    it = req_operations[req['op']].req_op(self._node, 
                                             actor_id=actor_id,
                                             component=actor.component_members(),
-                                            **req['kwargs'])
+                                            **req['kwargs']).set_name(req['op']+",SActor"+actor_id)
+                    if req['type']=='+':
+                        intersection_iters.append(it)
+                    elif req['type']=='-':
+                        difference_iters.append(it)
+                    else:
+                        _log.error("actor_requirements unknown req type %s for %s!!!" % (req['type'], actor_id),
+                                   exc_info=True)
                 except:
                     _log.error("actor_requirements one req failed for %s!!!" % actor_id, exc_info=True)
-                    reqs.remove(req)
-        if not reqs and actor_id in app._track_actor_cb:
-            _log.analyze(self._node.id, "+ LOOP DONE", {'actor_id': actor_id, '_track_actor_cb': app._track_actor_cb}, tb=True)
-            app._track_actor_cb.remove(actor_id)
-            self._actor_requirements_combined(app, actor_id, possible_nodes, impossible_nodes)
-        _log.analyze(self._node.id, "+ DONE", {'actor_id': actor_id}, tb=True)
+                    # FIXME how to handle failed requirements, now we drop it
+        return_iter = dynops.Intersection(*intersection_iters).set_name("SActor"+actor_id)
+        if difference_iters:
+            return_iter = dynops.Difference(return_iter, *difference_iters).set_name("SActor"+actor_id)
+        return return_iter
 
     def _union_requirements(self, **state):
-        state['union_nodes'] = set([])
-        union_reqs = state['req']['requirements'][:]
+        union_iters = []
         for union_req in state['req']['requirements']:
             try:
-                req_operations[union_req['op']].req_op(self._node, 
-                                       CalvinCB(self._union_requirements_cb,
-                                                union_reqs=union_reqs,
-                                                union_req=union_req,
-                                                **state),
+                union_iters.append(req_operations[union_req['op']].req_op(self._node, 
                                         actor_id=state['actor_id'],
                                         component=state['component'],
-                                        **union_req['kwargs'])
+                                        **union_req['kwargs']).set_name(union_req['op']+",UActor"+state['actor_id']))
             except:
                 _log.error("union_requirements one req failed for %s!!!" % state['actor_id'], exc_info=True)
-                union_reqs.remove(union_req)
-        if not union_reqs:
-            _log.error("union_requirements all req failed for %s!!!" % state['actor_id'])
-            self._actor_requirements_cb(node_ids=state['union_nodes'], 
-                                        app=state['app'], 
-                                        req=state['req'],
-                                        actor_id=state['actor_id'],
-                                        possible_nodes=state['possible_nodes'],
-                                        impossible_nodes=state['impossible_nodes'],
-                                        reqs=state['reqs'])
-
-    def _union_requirements_cb(self, node_ids, **state):
-        _log.debug("_union_requirements_cb(node_ids=%s)", node_ids)
-        if node_ids:
-            state['union_nodes'] |= set(node_ids)
-        state['union_reqs'].remove(state['union_req'])
-        if not state['union_reqs']:
-            state['union_reqs'].append(None)  # To prevent _union_requirements from also calling _actor_requirements_cb
-            _log.debug("_union_requirements_cb req done union nodes: %s" % (state['union_nodes'],))
-            self._actor_requirements_cb(node_ids=state['union_nodes'], 
-                                        app=state['app'], 
-                                        req=state['req'],
-                                        actor_id=state['actor_id'],
-                                        possible_nodes=state['possible_nodes'],
-                                        impossible_nodes=state['impossible_nodes'],
-                                        reqs=state['reqs'])
-
-    def _actor_requirements_cb(self, node_ids, app, req, actor_id, possible_nodes, impossible_nodes, reqs):
-        _log.analyze(self._node.id, "+", {'actor_id': actor_id,
-                     'node_ids': list(node_ids) if isinstance(node_ids, set) else node_ids,
-                     'req': req}, tb=True)
-        if req['type']=='+' and node_ids is not None:
-            # Positive rule, collect in possible nodes
-            if None in possible_nodes:
-                # Possible set starts empty hence fill it with first response
-                possible_nodes -= set([None])
-                possible_nodes |= set(node_ids)
-            else:
-                # Possible set is section between all individual req's sets
-                possible_nodes &= set(node_ids)
-        elif req['type']=='-' and node_ids is not None:
-            # Negative rule, collect in impossible nodes
-            if None in impossible_nodes:
-                # Impossible set starts empty hence fill it with first response
-                impossible_nodes -= set([None])
-                impossible_nodes |= set(node_ids)
-            else:
-                # Impossible set is section between all individual req's sets
-                impossible_nodes &= set(node_ids)
-        reqs.remove(req)
-        if not reqs:
-            _log.debug("_actor_requirements_cb req done possible: %s, impossible: %s" % (possible_nodes, impossible_nodes))
-            # Collected all rules for actor, 
-            app._track_actor_cb.remove(actor_id)
-            self._actor_requirements_combined(app, actor_id, possible_nodes, impossible_nodes)
-        _log.analyze(self._node.id, "+ DONE", {'node_ids': list(node_ids) if isinstance(node_ids, set) else node_ids}, tb=True)
-
-    def _actor_requirements_combined(self, app, actor_id, possible_nodes, impossible_nodes):
-        possible_nodes -= set([None])
-        impossible_nodes -= set([None])
-        possible_nodes -= impossible_nodes
-        app.actor_placement[actor_id] = possible_nodes
-        _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'possible_nodes': list(possible_nodes),
-                     'track_actor_cb': app._track_actor_cb}, tb=True)
-        if not app._track_actor_cb:
-            # Done collecting possible actor placement for all actors in application
-            _log.analyze(self._node.id, "+ ALL ACTORS FINISHED", {'app_id': app.id}, tb=True)
-            self._app_requirements(app)
-        _log.analyze(self._node.id, "+ DONE", {'actor_id': actor_id}, tb=True)
+        return dynops.Union(*union_iters)
 
     def _app_requirements(self, app):
         _log.debug("_app_requirements(app=%s)" % (app,))
-        _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': {k: list(v) for k, v in app.actor_placement.iteritems()}}, tb=True)
+        _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': app.actor_placement}, tb=True)
         if any([not n for n in app.actor_placement.values()]):
             # At least one actor have no possible placement
             app._org_cb(status=response.CalvinResponse(False))
@@ -409,7 +387,11 @@ class AppManager(object):
         for possible_nodes in app.actor_placement.values():
             node_ids |= possible_nodes
         node_ids = list(node_ids)
-        _log.analyze(self._node.id, "+ ACTOR MATRIX", {'actor_ids': actor_ids, 'actor_matrix': actor_matrix, 'node_ids': node_ids}, tb=True)
+        node_ids = [n for n in node_ids if not isinstance(n, dynops.InfiniteElement)]
+        for actor_id, possible_nodes in app.actor_placement.iteritems():
+            if any([isinstance(n, dynops.InfiniteElement) for n in possible_nodes]):
+                app.actor_placement[actor_id] = node_ids
+        _log.analyze(self._node.id, "+ ACTOR MATRIX", {'actor_ids': actor_ids, 'actor_matrix': actor_matrix, 'node_ids': node_ids, 'placement': app.actor_placement}, tb=True)
 
         # Weight the actors possible placement with their connectivity matrix
         weighted_actor_placement = {}
@@ -461,7 +443,6 @@ class AppManager(object):
         for i in range(l):
             actor_matrix[i][i] = 1
         return (list_actors, actor_matrix)
-
 
 class Deployer(object):
 
