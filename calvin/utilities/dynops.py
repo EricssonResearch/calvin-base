@@ -27,6 +27,28 @@ class FailedElement(Exception):
     def __init__(self):
         super(FailedElement, self).__init__()
 
+    def __str__(self):
+        return "FailedElement"
+
+class FinalElement(Exception):
+    """ Used as an element indicating reached end, only used during special circumstances
+    """
+    def __init__(self):
+        super(FinalElement, self).__init__()
+
+    def __str__(self):
+        return "FinalElement"
+
+class InfiniteElement(Exception):
+    """ Used as an element indicating that the set drawn from is infinite
+    """
+    def __init__(self):
+        super(InfiniteElement, self).__init__()
+
+    def __str__(self):
+        return "InfiniteElement"
+
+
 class DynOps(object):
     """
     Dynamic operations built around hiraki of iterables.
@@ -43,6 +65,7 @@ class DynOps(object):
         super(DynOps, self).__init__()
         self._trigger = None
         self.infinite_set = False
+        self.infinite_sent = False
         self.cb_args = []
         self.cb_kwargs = {}
         self.name = ""
@@ -58,6 +81,7 @@ class DynOps(object):
         self._trigger = trigger
 
     def trig(self):
+        _log.debug("%s TRIG BEGIN" % (self.__str__()))
         if self._trigger:
             self._trigger(*self.cb_args, **self.cb_kwargs)
 
@@ -74,6 +98,17 @@ class DynOps(object):
         return self
 
     def next(self):
+        if self.infinite_set:
+            _log.debug("%s INFINITE" % self.__str__())
+            if self.infinite_sent:
+                _log.debug("%s INFINITE STOP" % self.__str__())
+                raise StopIteration
+            else:
+                _log.debug("%s INFINITE SEND" % self.__str__())
+                self.infinite_sent = True
+                # FIXME Need to trig?
+                #self.trig()
+                return InfiniteElement
         return self.op()
 
     def __next__(self):
@@ -100,8 +135,6 @@ class Union(DynOps):
             return
 
     def op(self):
-        if self.infinite_set:
-            raise PauseIteration
         paused = False
         for v in self.iters:
             try:
@@ -129,8 +162,11 @@ class Union(DynOps):
     def __str__(self):
         s = ""
         for i in self.iters:
-            s += i.__str__() + ", "
-        return "Union%s%s%s(%s)" % (("<" + self.name + ">") if self.name else "",
+            sub = i.__str__()
+            for line in sub.splitlines():
+                s += "\n\t" + line
+            s += ", "
+        return "Union%s%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "",
                                     "<Inf>" if self.infinite_set else "",
                                     "#" if self.final else "-", s[:-2])
 
@@ -148,6 +184,7 @@ class Intersection(DynOps):
         self.candidates = set([])
         self.drawn = {id(k): set([]) for k in self.iters}
         self.final = {id(k): False for k in self.iters}
+        self.infs = {id(k): False for k in self.iters}
         self.trigger_add(self.iters)
         self._final = False
         if len(self.iters) == 0 and len(iters) > 0:
@@ -156,8 +193,6 @@ class Intersection(DynOps):
             self.trig()
 
     def op(self):
-        if self.infinite_set:
-            raise PauseIteration
         if self.candidates:
             e = self.candidates.pop()
             self.set.add(e)
@@ -167,14 +202,33 @@ class Intersection(DynOps):
             for v in self.iters:
                 if not self.final[id(v)]:
                     try:
-                        self.drawn[id(v)].add(v.next())
+                        n = v.next()
+                        if isinstance(n, InfiniteElement):
+                            self.infs[id(v)] = True
+                            self.final[id(v)] = True
+                        self.drawn[id(v)].add(n)
                         active = True
                     except PauseIteration:
                         pass
                     except StopIteration:
                         self.final[id(v)] = True
+            if all(self.infs.values()):
+                self.infinite_set = True
+                if self.infinite_sent:
+                    _log.debug("%s INFINITE STOP" % self.__str__())
+                    raise StopIteration
+                else:
+                    _log.debug("%s INFINITE SEND" % self.__str__())
+                    self.infinite_sent = True
+                    # FIXME Need to trig?
+                    #self.trig()
+                    return InfiniteElement
+                
             # Current seen intersection
-            self.candidates.update(set.intersection(*[v for v in self.drawn.values()]))
+            self.candidates.update(set.intersection(*[self.drawn[id(v)] for v in self.iters if not self.infs[id(v)]]))
+            _log.debug("Intersection%s%s%s candidates: %s drawn: %s infs: %s"  % (("<" + self.name + ">") if self.name else "",
+                                           "<Inf>" if self.infinite_set else "",
+                                           "#" if self._final else "-", self.candidates, self.drawn.values(), self.infs.values()))
             # remove from individual iterables
             for v in self.drawn.values():
                 v.difference_update(self.candidates)
@@ -195,10 +249,13 @@ class Intersection(DynOps):
     def __str__(self):
         s = ""
         for i in self.iters:
-            s += i.__str__() + ", "
-        return "Intersection%s%s%s(%s)" % (("<" + self.name + ">") if self.name else "",
+            sub = i.__str__()
+            for line in sub.splitlines():
+                s += "\n\t" + line
+            s += ", "
+        return "Intersection%s%s%s(%s\n) out=%s, candidates=%s" % (("<" + self.name + ">") if self.name else "",
                                            "<Inf>" if self.infinite_set else "",
-                                           "#" if self._final else "-", s[:-2])
+                                           "#" if self._final else "-", s[:-2], self.set, self.candidates)
 
 
 class Difference(DynOps):
@@ -211,7 +268,7 @@ class Difference(DynOps):
         # To allow lists etc to be arguments directly always take the iter
         self.first = iter(first)
         if getattr(self.first.infinite_set, 'infinite_set', False):
-            # TODO implemnetation of infinte set that we remove from. Negative set???
+            # TODO implementation of infinite set that we remove from. Negative set???
             raise NotImplemented
         self.iters = [iter(v) for v in iters]
         self.zero_set = any([True for v in self.iters if getattr(v, 'infinite_set', False)])
@@ -254,9 +311,16 @@ class Difference(DynOps):
     def __str__(self):
         s = ""
         for i in self.iters:
-            s += i.__str__() + ", "
-        return "Difference%s%s(first=%s, %s)" % (("<" + self.name + ">") if self.name else "", "<Inf>" if self.infinite_set else "", 
-                                               self.first.__str__(), s[:-2])
+            sub = i.__str__()
+            for line in sub.splitlines():
+                s += "\n\t" + line
+            s += ", "
+        f = ""
+        sub = self.first.__str__()
+        for line in sub.splitlines():
+            f += "\n\t" + line
+        return "Difference%s%s(first=%s, %s\n)" % (("<" + self.name + ">") if self.name else "", "<Inf>" if self.infinite_set else "", 
+                                               f, s[:-2])
         
 
 class Map(DynOps):
@@ -288,21 +352,24 @@ class Map(DynOps):
         self.final = {id(k): False for k in self.iters}
         self.trigger_add(self.iters)
         self.out_iter = List()
+        self.during_next = False
 
     def get_kwargs(self):
         return self.kwargs
+
+    def out_trig(self):
+        if not self.during_next:
+            self.trig()
 
     def set_cb(self, trigger, *args, **kwargs):
         self.cb_args = args
         self.cb_kwargs = kwargs
         self._trigger = trigger
         # Also trigger when adding to out list (since could be async appended, e.g. by storage)
-        self.out_iter.cb_args = args
-        self.out_iter.cb_kwargs = kwargs
-        self.out_iter._trigger = trigger
+        self.out_iter._trigger = self.out_trig
 
     def trig(self):
-        _log.debug("Map%s(func=%s) trig BEGIN" % (("<" + self.name + ">") if self.name else "", self.func.__name__))
+        _log.debug("%s trig BEGIN" % (self.__str__()))
         if self.eager:
             # Execute map function until Stop- or PauseIteration exception
             try:
@@ -310,11 +377,11 @@ class Map(DynOps):
                     self._op(True)
             except:
                 pass
-        _log.debug("Map%s(func=%s) trig ACT %s" % (("<" + self.name + ">") if self.name else "", self.func.__name__, self._trigger))
         if self._trigger:
             self._trigger(*self.cb_args, **self.cb_kwargs)
 
     def _op(self, eager=False):
+        self.during_next = True
         while True:
             active = False
             for v in self.iters:
@@ -354,22 +421,29 @@ class Map(DynOps):
                 except StopIteration:
                     _log.debug("Map%s(func=%s) GOT STOP" % (("<" + self.name + ">") if self.name else "", 
                                                          self.func.__name__))
+                    self.during_next = False
                     raise StopIteration
                 except PauseIteration:
                     _log.debug("Map%s(func=%s) GOT PAUSE" % (("<" + self.name + ">") if self.name else "", 
                                                          self.func.__name__))
+                    self.during_next = False
                     raise PauseIteration
                 _log.debug("Map%s(func=%s) GOT OUT %s" % (("<" + self.name + ">") if self.name else "", 
                                                          self.func.__name__, e))
+                self.during_next = False
                 return e
             if not active or all(self.final.values()):
                 # Reach here only when eager, any exception will do to break loop in trig method
+                self.during_next = False
                 raise Exception()
 
     def op(self):
+        self.during_next = True
         try:
             # Deliver any already mapped results
-            return self.out_iter.next()
+            n = self.out_iter.next()
+            self.during_next = False
+            return n
         except PauseIteration:
             # Try to get more results
             return self._op()
@@ -377,10 +451,13 @@ class Map(DynOps):
     def __str__(self):
         s = ""
         for i in self.iters:
-            s += i.__str__() + ", "
-        return "Map%s%s(func=%s, %s)" % (("<" + self.name + ">") if self.name else "",
+            sub = i.__str__()
+            for line in sub.splitlines():
+                s += "\n\t" + line
+            s += ", "
+        return "Map%s%s(func=%s, %s\n) out=%s" % (("<" + self.name + ">") if self.name else "",
                                         "#" if self.out_iter._final else "-",
-                                        self.func.__name__, s[:-2])
+                                        self.func.__name__, s[:-2], self.out_iter.__str__())
 
 
 class Chain(DynOps):
@@ -392,7 +469,7 @@ class Chain(DynOps):
         super(Chain, self).__init__()
         # To allow lists etc to be arguments directly always take the iter
         self.it = iter(it)
-        _log.debug("Chain.__init__(%s)" % str(self.it))
+        _log.debug("%s.__init__()" % self.__str__())
         self.elem_it = iter([])
         self.trigger_add([self.it])
 
@@ -421,7 +498,11 @@ class Chain(DynOps):
 
 
     def __str__(self):
-        return "Chain%s(%s)" % (("<" + self.name + ">") if self.name else "", self.it.__str__())
+        f = ""
+        sub = self.it.__str__()
+        for line in sub.splitlines():
+            f += "\n\t" + line
+        return "Chain%s(%s\n)" % (("<" + self.name + ">") if self.name else "", f)
 
 class List(DynOps):
     """ A Dynamic Operations List
@@ -486,12 +567,17 @@ class List(DynOps):
         s = ""
         c = 0
         for i in self.list:
-            s += "-> " if c==self.index else ""
+            sub = i.__str__()
+            p = True
+            for line in sub.splitlines():
+                s += "\n\t-> " if c==self.index and p else "\n\t   "
+                p = False
+                s += line
+            s += ", "
             c += 1
-            s += i.__str__() + ", "
         s = s[:-2]
         s += ">>>" if c==self.index else ""
-        return "List%s%s(%s)" % (("<" + self.name + ">") if self.name else "", "#" if self._final else "-", s)
+        return "List%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", "#" if self._final else "-", s)
 
 
 class Infinite(DynOps):
@@ -502,7 +588,7 @@ class Infinite(DynOps):
         self.infinite_set = True
 
     def op(self):
-        raise PauseIteration
+        raise StopIteration
 
     def __str__(self):
         return "Infinite%s()" % (("<" + self.name + ">") if self.name else "")
