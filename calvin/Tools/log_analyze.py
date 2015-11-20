@@ -40,12 +40,28 @@ Analyze calvin log.
     argparser.add_argument('-l', '--limit', dest='limit', type=int, default=0,
                            help='Limit stack trace print to specified nbr of frames')
 
+    argparser.add_argument('-w', '--width', dest='width', type=int, default=80,
+                           help='Width of node column')
+
+    argparser.add_argument('-f', '--first', dest='first', type=str, default=None,
+                           help='A node id that should be in first column')
+
     return argparser.parse_args()
 
 re_pid = re.compile("^[0-9,\-,\,, ,:]*[A-Z]* *([0-9]*)-.*")
 
+
+class MyPrettyPrinter(pprint.PrettyPrinter):
+    def format(self, object, context, maxlevels, level):
+        # Pretty print strings unescaped
+        if isinstance(object, basestring):
+            return (object.decode('string_escape'), True, False)
+        return pprint.PrettyPrinter.format(self, object, context, maxlevels, level)
+
 def main():
+    global WIDTH
     args = parse_arguments()
+    WIDTH = args.width or WIDTH
     print "Analyze", args.files
     files = []
     for name in args.files:
@@ -92,6 +108,9 @@ def main():
 
     # Collect all node ids and remove "TESTRUN" string as node id since it is used when logging py.test name
     nodes = list(set([l['node_id'] for l in log] + [l.get('peer_node_id', None)  for l in log]) - set([None, "TESTRUN"]))
+    if args.first in nodes:
+        nodes.remove(args.first)
+        nodes.insert(0, args.first)
     line = ""
     for n in nodes:
         line += n + " "*(WIDTH-35)
@@ -142,7 +161,7 @@ def main():
                     print " "*ends + "*" + "="*(ind - ends-1) + "# " + l['func'] + " #"
             else:
                 print " "*ind + "# " + l['func'] + " #"
-            pp = pprint.pformat(l['param'], indent=1, width=WIDTH)
+            pp = MyPrettyPrinter(indent=1, width=WIDTH).pformat(l['param'])
             for p in pp.split("\n"):
                 print " "*ind + p
             if l['stack'] and args.limit >= 0:
