@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, guard
+from calvin.actor.actor import Actor, ActionResult, condition, guard, manage
 
 
 class Alternate3(Actor):
@@ -28,6 +28,7 @@ class Alternate3(Actor):
         token : resulting token stream
     """
 
+    @manage(['next_port'])
     def init(self):
         self.next_port = 1
 
