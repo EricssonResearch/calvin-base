@@ -31,7 +31,7 @@ class ImageRenderer(Actor):
 
     @condition(action_input=('image',))
     def render_image(self, image):
-        if not image is None:
+        if image is not None:
             self.image.show_image(image, self.width, self.height)
         return ActionResult(production=())
 
