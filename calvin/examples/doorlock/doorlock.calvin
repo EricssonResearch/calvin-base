@@ -4,7 +4,6 @@ component Camera() trigger -> image {
   client : net.HTTPGet()
   header : std.Terminator()
   status : io.Print()
-  seq    : std.Sequencer()
   auth   : net.BasicAuthHeader()
 
   {"username": "root", "password": "pass"} > auth.credential
@@ -14,8 +13,7 @@ component Camera() trigger -> image {
   {} > client.params
 
   client.status > status.token
-  client.data > seq.data_in
-  seq.data_out > .image
+  client.data > .image
   client.header > header.void
 }
 
