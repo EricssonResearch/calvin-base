@@ -143,7 +143,7 @@ class ActorManager(object):
             else:
                 shadow_migrate = False
             # Always do a set_state for the port's state
-            a.set_state(state)
+            a._set_state(state)
             self.node.pm.add_ports_of_actor(a)
             if not shadow_migrate:
                 a.did_migrate()
