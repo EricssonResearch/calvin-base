@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
+
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
@@ -113,6 +115,11 @@ class DynOps(object):
 
     def __next__(self):
         return self.next()
+
+    def __repr__(self):
+        # Force to use the str, good e.g. when adding tuple elements for Collect.
+        # Since otherwise it is just stating an instance of ...
+        return self.__str__()
 
 
 class Union(DynOps):
@@ -504,6 +511,63 @@ class Chain(DynOps):
             f += "\n\t" + line
         return "Chain%s(%s\n)" % (("<" + self.name + ">") if self.name else "", f)
 
+class Collect(DynOps):
+    """ A Dynamic Operations Collect iterable operation
+        Collect iterables into one iterable unordered,
+        with optional tuple (key, value) for each value
+    """
+
+    def __init__(self, it, keyed=True):
+        super(Collect, self).__init__()
+        # To allow lists etc to be arguments directly always take the iter
+        self.it = iter(it)
+        self.it_final = False
+        self.keyed = keyed
+        self.iters = []
+        self.trigger_add([self.it])
+
+    def fill_iters(self):
+        if self.it_final:
+            return
+        while True:
+            try:
+                self.iters.append(self.it.next())
+            except StopIteration:
+                self.it_final = True
+                break
+            except:
+                break
+
+    def op(self):
+        # Fill up with any new iterables
+        self.fill_iters()
+        if self.it_final and not self.iters:
+            # Done
+            raise StopIteration
+        # Make shuffled copy of iterables, need copy anyway due to iters modification inside loop
+        iters_copy = self.iters
+        random.shuffle(iters_copy)
+        for elem in iters_copy:
+            key, it = elem if self.keyed else (None, elem)
+            try:
+                e = it.next()
+                return (key, e) if self.keyed else e
+            except PauseIteration:
+                continue
+            except StopIteration:
+                self.iters.remove(elem)
+                continue
+        raise PauseIteration
+
+
+    def __str__(self):
+        f = ""
+        sub = self.it.__str__()
+        for line in sub.splitlines():
+            f += "\n\t" + line
+        return "Collect%s(%s\n)" % (("<" + self.name + ">") if self.name else "", f)
+
+
 class List(DynOps):
     """ A Dynamic Operations List
         The list grows dynamically and will trigger higher set operations
@@ -518,20 +582,28 @@ class List(DynOps):
         self.index = 0
         self.max_length = float("inf")
 
-    def append(self, elem):
+    def append(self, elem, trigger_iter=None):
+        """ Append elem to dynamic list
+            Optinally specify what dynops iterable should trigger this instance
+            this is useful when having (key, iter) tuples for Collect
+        """
         _log.debug("%s.append(%s)" % (self.__str__(), elem))
         if not self._final:
             self.list.append(elem)
             # Potentially an interable
-            self.trigger_add([elem])
+            self.trigger_add([trigger_iter if trigger_iter else elem])
             self.trig()
 
-    def extend(self, elems):
+    def extend(self, elems, trigger_iters=None):
+        """ Extend elems to dynamic list
+            Optinally specify what dynops iterables should trigger this instance
+            this is useful when having (key, iter) tuples for Collect
+        """
         _log.debug("%s.extend(%s)" % (self.__str__(), elems))
         if not self._final:
             self.list.extend(elems)
             # Potentially an interable
-            self.trigger_add(elems)
+            self.trigger_add(trigger_iters if trigger_iters else elems)
             self.trig()
 
     def final(self):
