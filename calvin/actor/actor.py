@@ -536,7 +536,7 @@ class Actor(object):
         return state
 
     @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING])
-    def set_state(self, state):
+    def _set_state(self, state):
         # Managed state handling
         self._managed = set(state['_managed'])
 
@@ -580,7 +580,7 @@ class Actor(object):
         return self.state()
 
     def deserialize(self, data):
-        self.set_state(data)
+        self._set_state(data)
 
     def exception_handler(self, action, args, context):
         """Defult handler when encountering ExceptionTokens"""
