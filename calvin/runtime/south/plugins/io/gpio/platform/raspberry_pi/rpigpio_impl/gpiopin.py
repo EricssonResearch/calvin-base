@@ -98,4 +98,4 @@ class GPIOPin(base_gpiopin.GPIOPinBase):
                 time.sleep(bit[1]/1000000.0)
 
     def close(self):
-        GPIO.Cleanup(self.pin)
+        GPIO.cleanup(self.pin)
