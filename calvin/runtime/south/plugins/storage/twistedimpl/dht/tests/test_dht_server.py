@@ -96,7 +96,7 @@ class TestDHT(object):
             q.put([aa,args])
 
         try:
-
+            amount_of_servers = 3
             a = AutoDHTServer()
             d = a.start(iface, cb=CalvinCB(server_started, "1"))
 
@@ -108,17 +108,20 @@ class TestDHT(object):
 
             # Wait for start
             servers = []
-            server = yield threads.defer_to_thread(q.get, timeout=2)
-            servers.append(server)
-            server = yield threads.defer_to_thread(q.get, timeout=2)
-            servers.append(server)
-            server = yield threads.defer_to_thread(q.get, timeout=2)
-            servers.append(server)
+            while servers.__len__() < amount_of_servers:
+	        try:
+                    server = yield threads.defer_to_thread(q.get, timeout=2)
+                except Queue.Empty:
+                    _log.debug("Queue empty!")
+                    break
+                if server not in servers:
+                    servers.append(server)
+                    _log.debug("DHT Servers added: {}".format(servers))
+                else:
+                    _log.debug("Server: {} already started.".format(server))
 
-
-            assert ["1", self._sucess_start] in servers
-            assert ["2", self._sucess_start] in servers
-            assert ["3", self._sucess_start] in servers
+            for server in range(1, amount_of_servers + 1):
+                assert [str(server), self._sucess_start] in servers
 
             yield threads.defer_to_thread(time.sleep, 1)
 
@@ -285,6 +288,7 @@ class TestDHT(object):
             q.put(args)
 
         try:
+            amount_of_servers = 3
             a = AutoDHTServer()
             a.start(iface, cb=CalvinCB(server_started, "1"))
 
@@ -294,34 +298,38 @@ class TestDHT(object):
             c = AutoDHTServer()
             c.start(iface, cb=CalvinCB(server_started, "3"))
 
-
-            # Wait for start
             servers = []
-            server = yield threads.defer_to_thread(q.get, timeout=2)
-            servers.append(server)
-            server = yield threads.defer_to_thread(q.get, timeout=2)
-            servers.append(server)
-            server = yield threads.defer_to_thread(q.get, timeout=2)
-            servers.append(server)
+            while servers.__len__() < amount_of_servers:
+                try:
+                    server = yield threads.defer_to_thread(q.get, timeout=2)
+                except Queue.Empty:
+                    _log.debug("Queue empty!")
+                    break
+                if server not in servers:
+                    servers.append(server)
+                    _log.debug("Servers added: {}.".format(servers))
+                else:
+                    _log.debug("Server: {} already started.".format(server))
 
-
-            assert ["1", self._sucess_start] in servers
-            assert ["2", self._sucess_start] in servers
-            assert ["3", self._sucess_start] in servers
+            for server in range(1, amount_of_servers + 1):
+                assert [str(server), self._sucess_start] in servers
 
             yield threads.defer_to_thread(time.sleep, 1)
+            yield threads.defer_to_thread(q.queue.clear)
 
             a.set(key="APA", value="banan", cb=CalvinCB(set_cb))
             set_value = yield threads.defer_to_thread(q.get, timeout=2)
             assert ("APA", True) == set_value
 
             yield threads.defer_to_thread(time.sleep, 1)
+            yield threads.defer_to_thread(q.queue.clear)
 
             a.get(key="APA", cb=CalvinCB(get_cb))
             get_value = yield threads.defer_to_thread(q.get, timeout=2)
             assert get_value == ("APA", "banan")
 
             yield threads.defer_to_thread(time.sleep, 1)
+            yield threads.defer_to_thread(q.queue.clear)
 
             b.get(key="APA", cb=CalvinCB(get_cb))
             get_value = yield threads.defer_to_thread(q.get, timeout=2)
