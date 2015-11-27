@@ -24,6 +24,7 @@ from types import ModuleType
 import hashlib
 
 from calvin.utilities import calvinconfig
+from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -585,6 +586,7 @@ class GlobalStore(ActorStore):
     def __init__(self, node=None, runtime=None):
         super(GlobalStore, self).__init__()
         self.node = node  # Used inside runtime
+        # FIXME this is not implemented
         self.rt = runtime  # Use Control API from outside runtime
 
     def _collect(self, ns=None):
@@ -598,7 +600,7 @@ class GlobalStore(ActorStore):
         """ Takes actor/component description and
             generates a signature string
         """
-        if desc['is_primitive']:
+        if 'is_primitive' not in desc or desc['is_primitive']:
             signature = {'actor_type': desc['actor_type'],
                          'inports': sorted(desc['inports']),
                          'outports': sorted(desc['outports'])}
@@ -685,6 +687,49 @@ class GlobalStore(ActorStore):
         nbr[0] -= 1
         if nbr[0] == 0:
             org_cb(signature=signature, description=actors)
+
+    def global_lookup_actor(self, out_iter, kwargs, final, actor_type_id):
+        _log.analyze(self.node.id, "+", {'actor_type_id': actor_type_id})
+        if final[0]:
+            _log.analyze(self.node.id, "+ FINAL", {'actor_type_id': actor_type_id, 'counter': kwargs['counter']})
+            out_iter.auto_final(kwargs['counter'])
+        else:
+            kwargs['counter'] += 1
+            self.node.storage.get_iter('actor_type-', actor_type_id, it=out_iter)
+            _log.analyze(self.node.id, "+ GET", {'actor_type_id': actor_type_id, 'counter': kwargs['counter']})
+
+    def filter_actor_on_params(self, out_iter, kwargs, final, desc):
+        param_names = kwargs.get('param_names', [])
+        if not final[0] and desc != dynops.FailedElement:
+            if desc['is_primitive']:
+                mandatory = desc['args']['mandatory']
+                optional = desc['args']['optional'].keys()
+            else:
+                mandatory = desc['component']['arg_identifiers']
+                optional = []
+            # To be valid actor type all mandatory params need to be supplied and only valid params
+            if all([p in param_names for p in mandatory]) and all([p in (mandatory + optional) for p in param_names]):
+                _log.analyze(self.node.id, "+ FOUND DESC", {'desc': desc})
+                out_iter.append(desc)
+        if final[0]:
+            out_iter.final()
+
+    def global_lookup_iter(self, signature, param_names=None):
+        """ Lookup the described actor type
+            signature is the actor/component signature
+            param_names is optional list argument to filter out any descriptions which does not support the params
+            returns a dynops iterator with all found matching descriptions
+        """
+        sign_iter = self.node.storage.get_index_iter(['actor', 'signature', signature]).set_name("signature")
+        actor_type_iter = dynops.Map(self.global_lookup_actor, sign_iter, counter=0, eager=True)
+        if param_names is None:
+            actor_type_iter.set_name("global_lookup")
+            return actor_type_iter
+        filtered_actor_type_iter = dynops.Map(self.filter_actor_on_params, actor_type_iter, param_names=param_names, 
+                                              eager=True)
+        actor_type_iter.set_name("unfiltered_global_lookup")
+        filtered_actor_type_iter.set_name("global_lookup")
+        return filtered_actor_type_iter
 
 if __name__ == '__main__':
     import json
