@@ -23,7 +23,7 @@ _log = calvinlogger.get_logger(__name__)
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.utilities.calvinresponse as response
 from calvin.utilities import calvinuuid
-from calvin.actorstore.store import ActorStore
+from calvin.actorstore.store import ActorStore, GlobalStore
 
 class Application(object):
 
@@ -457,6 +457,7 @@ class Deployer(object):
         self.node = node
         self.verify = verify
         self.cb = cb
+        self._deploy_cont_done = False
         if name:
             self.name = name
             self.app_id = self.node.app_manager.new(self.name)
@@ -469,7 +470,9 @@ class Deployer(object):
             self.app_id = self.node.app_manager.new(None)
             self.name = self.app_id
             self.ns = ""
+        self.group_components()
 
+    def group_components(self):
         self.components = {}
         l = (len(self.ns)+1) if self.ns else 0 
         for name in self.deployable['actors']:
@@ -505,10 +508,8 @@ class Deployer(object):
         """
         req = self.get_req(actor_name)
         found, is_primitive, actor_def = ActorStore().lookup(actor_type)
-        if self.verify and not found:
-            raise Exception("Unknown actor type: %s" % actor_type)
-        if self.verify and not is_primitive:
-            raise Exception("Non-primitive type: %s" % actor_type)
+        if not found or not is_primitive:
+            raise Exception("Not known actor type: %s" % actor_type)
 
         actor_id = self.instantiate_primitive(actor_name, actor_type, argd, req, signature)
         if not actor_id:
@@ -548,6 +549,123 @@ class Deployer(object):
     def set_port_property(self, actor, port_type, port_name, port_property, value):
         self.node.am.set_port_property(self.actor_map[actor], port_type, port_name, port_property, value)
 
+    def select_actor(self, out_iter, kwargs, final, comp_name_desc):
+        _log.analyze(self.node.id, "+", {'comp_name_desc': comp_name_desc}, tb=True)
+        if final[0] and not kwargs['done']:
+            kwargs['done'] = True
+            for name, desc_list in kwargs['priority'].iteritems():
+                if desc_list:
+                    out_iter.append(desc_list[0])
+            out_iter.final()
+            return
+        desc = comp_name_desc[1]
+        try:
+            # List of (found, is_primitive, info)
+            actor_types = [ActorStore().lookup(actor['actor_type']) for actor in desc['component']['structure']['actors']]
+        except KeyError:
+            actor_types = []
+            # Not a component, shadow actor candidate, likely
+            kwargs['priority'][comp_name_desc[0]].insert(0, comp_name_desc)
+            comp_name_desc[1]['shadow_actor'] = True
+            return
+        if all([a[0] and a[1] for a in actor_types]):
+            # All found and primitive (quite unlikely), insert after any primitive shadow actors in priority
+            index = len([1 for a in kwargs['priority'][comp_name_desc[0]] if 'shadow_actor' in a[1]])
+            kwargs['priority'][comp_name_desc[0]].insert(index, comp_name_desc)
+            comp_name_desc[1]['shadow_component'] = actor_types
+            return
+        # A component containing shadow actors
+        # TODO Dig deeper to priorities between shadow components, now just insert in order
+        kwargs['priority'][comp_name_desc[0]].append(comp_name_desc)
+        comp_name_desc[1]['shadow_component'] = actor_types
+
+    def resolve_remote(self, deployables):
+        all_desc_iters = dynops.List()
+        for actor_name, info in deployables.iteritems():
+            desc_iter = GlobalStore(node=self.node).global_lookup_iter(info['signature'], info['args'].keys())
+            all_desc_iters.append((actor_name, desc_iter), trigger_iter=desc_iter)
+        all_desc_iters.final()
+        collect_desc_iter = dynops.Collect(all_desc_iters).set_name("collected_desc")
+        select_iter = dynops.Map(self.select_actor, collect_desc_iter, done=False,
+                                                         priority={k:[] for k in self.deployable['actors'].keys()},
+                                                         eager=True).set_name("select_actor")
+        select_iter.set_cb(self.deploy_unhandled_actors, select_iter)
+        self.deploy_unhandled_actors(select_iter)
+
+    def deploy_unhandled_actors(self, comp_name_desc):
+        while True:
+            try:
+                name, desc = comp_name_desc.next()
+                _log.analyze(self.node.id, "+", {'name': name, 'desc': desc}, tb=True)
+            except StopIteration:
+                # Done
+                if self._deploy_cont_done:
+                    return
+                self._deploy_cont_done = True
+                self.group_components()
+                self._deploy_cont()
+                return
+            except dynops.PauseIteration:
+                return
+            if 'shadow_actor' in desc:
+                _log.analyze(self.node.id, "+ SHADOW ACTOR", {'name': name})
+                # It was a normal primitive shadow actor, just instanciate
+                req = self.get_req(name)
+                info = self.deployable['actors'][name]
+                actor_id = self.instantiate_primitive(name, info['actor_type'], info['args'], req, info['signature'])
+                if not actor_id:
+                    _log.error("Second phase, could not make shadow actor %s!" % actor_type)
+                self.actor_map[name] = actor_id
+                self.node.app_manager.add(self.app_id, actor_id)
+            elif 'shadow_component' in desc:
+                _log.analyze(self.node.id, "+ SHADOW COMPONENT", {'name': name})
+                # A component that needs to be broken up into individual primitive actors
+                # First get the info and remove the component
+                req = self.get_req(name)
+                info = self.deployable['actors'][name]
+                self.deployable['actors'].remove(name)
+                # Then add the new primitive actors
+                for actor_name, actor_desc in desc['component']['actors'].iteritems():
+                    args = {k: v[1] if v[0] == 'VALUE' else info['args'][v[1]] for k, v in actor_desc['args'].iteritems()}
+                    inports = [c['dstport'] for c in desc['component']['connections'] if c['dst'] == actor_name]
+                    outports = [c['srcport'] for c in desc['component']['connections'] if c['src'] == actor_name]
+                    sign_desc = {'is_primitive': True,
+                                 'actor_type': actor_desc['actor_type'],
+                                 'inports': inports[:],
+                                 'outports': outports[:]}
+                    sign = GlobalStore.actor_signature(sign_desc)
+                    self.deployable['actors'][name + ":" + actor_name] = {'args': args,
+                                                                          'actor_type': actor_desc['actor_type'],
+                                                                          'signature_desc': sign_desc,
+                                                                          'signature': sign}
+                    # Replace component connections with actor connection
+                    #   outports
+                    for port in outports[:]:
+                        if (name + "." + port) in self.deployable['connections']:
+                            outports.remove(port)
+                            self.deployable['connections'][name + ":" + actor_name + "." + port] = \
+                                self.deployable['connections'].pop(name + "." + port)
+                    #   inports
+                    for outport, ports in self.deployable['connections'].iteritems():
+                        for inport in inports:
+                            if (name + "." + inport) in ports:
+                                inports.remove(inport)
+                                ports.remove(name + "." + inport)
+                                ports.append(name + ":" + actor_name + "." + inport)
+                    # Add any new component internal connections (enough with outports)
+                    for connection in desc['component']['connections']:
+                        if connection['src'] == actor_name and connection['srcport'] in outports:
+                            self.deployable['connections'].setdefault(
+                                name + ":" + actor_name + "." + connection['srcport'], []).append(
+                                    name + ":" + connection['dst'] + "." + connection['dstport'])
+                    # Instanciate it
+                    actor_id = self.instantiate_primitive(name, actor_desc['actor_type'], args, req, sign)
+                    if not actor_id:
+                        _log.error("Third phase, could not make shadow actor %s!" % actor_type)
+                    self.actor_map[name + ":" + actor_name] = actor_id
+                    self.node.app_manager.add(self.app_id, actor_id)
+
+
     def deploy(self):
         """
         Instantiate actors and link them together.
@@ -555,9 +673,21 @@ class Deployer(object):
         if not self.deployable['valid']:
             raise Exception("Deploy information is not valid")
 
-        for actor_name, info in self.deployable['actors'].iteritems():
-            self.instantiate(actor_name, info['actor_type'], info['args'], signature=info['signature'])
+        unhandled = {}
 
+        for actor_name, info in self.deployable['actors'].iteritems():
+            try:
+                self.instantiate(actor_name, info['actor_type'], info['args'], signature=info['signature'])
+            except:
+                unhandled[actor_name] = info
+
+        if unhandled:
+            self.resolve_remote(unhandled)
+            return
+
+        self._deploy_cont()
+
+    def _deploy_cont(self):
         for component_name, actor_names in self.components.iteritems():
             actor_ids = [self.actor_map[n] for n in actor_names]
             for actor_id in actor_ids:

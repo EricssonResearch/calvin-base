@@ -246,12 +246,43 @@ class TestDeployShadow(unittest.TestCase):
     def verify_storage(self):
         global rt1
         global rt2
-        rt1_id = utils.get_node_id(rt1)
-        rt2_id = utils.get_node_id(rt2)
+        rt1_id = None
+        rt2_id = None
+        failed = True
+        # Try 10 times waiting for control API to be up and running
+        for i in range(10):
+            try:
+                rt1_id = rt1_id or utils.get_node_id(rt1)
+                rt2_id = rt2_id or utils.get_node_id(rt2)
+                failed = False
+                break
+            except:
+                time.sleep(0.1)
+        assert not failed
         assert rt1_id
         assert rt2_id
         print "RUNTIMES:", rt1_id, rt2_id
-        _log.analyze("TESTRUN", "+ IDS", {})
+        _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
+        failed = True
+        # Try 20 times waiting for storage to be connected
+        caps1 = []
+        caps2 = []
+        for i in range(20):
+            try:
+                if len(caps1) != 2:
+                    caps1 = utils.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
+                if len(caps2) != 2:
+                    caps2 = utils.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
+                if len(caps1) == 2 and len(caps2) == 2:
+                    failed = False
+                    break
+                else:
+                    time.sleep(0.1)
+            except:
+                time.sleep(0.1)
+        assert not failed
+        _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
+        # Now check for the values needed by this specific test
         caps = utils.get_index(rt1, 'node/capabilities/calvinsys.events.timer')
         assert rt1_id in caps['result']
         _log.analyze("TESTRUN", "+ RT1 CAPS", {})
