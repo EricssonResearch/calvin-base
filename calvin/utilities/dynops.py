@@ -82,6 +82,9 @@ class DynOps(object):
         self.cb_kwargs = kwargs
         self._trigger = trigger
 
+    def miss_cb_str(self):
+        return "" if self._trigger else "<NoCB>" 
+
     def trig(self):
         _log.debug("%s TRIG BEGIN" % (self.__str__()))
         if self._trigger:
@@ -173,9 +176,9 @@ class Union(DynOps):
             for line in sub.splitlines():
                 s += "\n\t" + line
             s += ", "
-        return "Union%s%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "",
+        return "Union%s%s%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "",
                                     "<Inf>" if self.infinite_set else "",
-                                    "#" if self.final else "-", s[:-2])
+                                    "#" if self.final else "-", self.miss_cb_str(), s[:-2])
 
 class Intersection(DynOps):
     """ A Dynamic Operations Intersection set operation
@@ -260,9 +263,9 @@ class Intersection(DynOps):
             for line in sub.splitlines():
                 s += "\n\t" + line
             s += ", "
-        return "Intersection%s%s%s(%s\n) out=%s, candidates=%s" % (("<" + self.name + ">") if self.name else "",
+        return "Intersection%s%s%s%s(%s\n) out=%s, candidates=%s" % (("<" + self.name + ">") if self.name else "",
                                            "<Inf>" if self.infinite_set else "",
-                                           "#" if self._final else "-", s[:-2], self.set, self.candidates)
+                                           "#" if self._final else "-", self.miss_cb_str(), s[:-2], self.set, self.candidates)
 
 
 class Difference(DynOps):
@@ -326,8 +329,8 @@ class Difference(DynOps):
         sub = self.first.__str__()
         for line in sub.splitlines():
             f += "\n\t" + line
-        return "Difference%s%s(first=%s, %s\n)" % (("<" + self.name + ">") if self.name else "", "<Inf>" if self.infinite_set else "", 
-                                               f, s[:-2])
+        return "Difference%s%s%s(first=%s, %s\n)" % (("<" + self.name + ">") if self.name else "", "<Inf>" if self.infinite_set else "", 
+                                               f, self.miss_cb_str(), s[:-2])
         
 
 class Map(DynOps):
@@ -403,6 +406,9 @@ class Map(DynOps):
                         pass
                     except StopIteration:
                         self.final[id(v)] = True
+                    except Exception as e:
+                        _log.exception("Map function failed")
+                        raise e
             try:
                 l = min([len(self.drawn[id(i)]) for i in self.iters if not self.final[id(i)]])
             except ValueError:
@@ -413,12 +419,25 @@ class Map(DynOps):
                 try:
                     self.func(self.out_iter, self.kwargs, [self.final[id(i)] for i in self.iters],
                               *[None if self.final[id(i)] else self.drawn[id(i)].pop(0) for i in self.iters])
+                except PauseIteration:
+                    break
                 except StopIteration:
                     self.final = {id(k): True for k in self.iters}
+                except Exception as e:
+                    _log.exception("Map function failed")
+                    raise e
             # If no more elements to apply map on, then one final map execution to allow the map function to finalize
             if all(self.final.values()):
-                self.func(self.out_iter, self.kwargs, self.final.values(),
-                          *([None]*len(self.iters)))
+                try:
+                    self.func(self.out_iter, self.kwargs, self.final.values(),
+                              *([None]*len(self.iters)))
+                except PauseIteration:
+                    pass
+                except StopIteration:
+                    pass
+                except Exception as e:
+                    _log.exception("Map function failed")
+                    raise e
             # If lazy break out of while True with the return value (or exception) otherwise break when no progress
             if not eager:
                 _log.debug("Map%s(func=%s) TRY OUT %s" % (("<" + self.name + ">") if self.name else "", 
@@ -462,8 +481,8 @@ class Map(DynOps):
             for line in sub.splitlines():
                 s += "\n\t" + line
             s += ", "
-        return "Map%s%s(func=%s, %s\n) out=%s" % (("<" + self.name + ">") if self.name else "",
-                                        "#" if self.out_iter._final else "-",
+        return "Map%s%s%s(func=%s, %s\n) out=%s" % (("<" + self.name + ">") if self.name else "",
+                                        "#" if self.out_iter._final else "-", self.miss_cb_str(),
                                         self.func.__name__, s[:-2], self.out_iter.__str__())
 
 
@@ -509,7 +528,7 @@ class Chain(DynOps):
         sub = self.it.__str__()
         for line in sub.splitlines():
             f += "\n\t" + line
-        return "Chain%s(%s\n)" % (("<" + self.name + ">") if self.name else "", f)
+        return "Chain%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", self.miss_cb_str(), f)
 
 class Collect(DynOps):
     """ A Dynamic Operations Collect iterable operation
@@ -565,7 +584,7 @@ class Collect(DynOps):
         sub = self.it.__str__()
         for line in sub.splitlines():
             f += "\n\t" + line
-        return "Collect%s(%s\n)" % (("<" + self.name + ">") if self.name else "", f)
+        return "Collect%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", self.miss_cb_str(), f)
 
 
 class List(DynOps):
@@ -649,7 +668,8 @@ class List(DynOps):
             c += 1
         s = s[:-2]
         s += ">>>" if c==self.index else ""
-        return "List%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", "#" if self._final else "-", s)
+        return "List%s%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", "#" if self._final else "-", 
+                                    self.miss_cb_str(), s)
 
 
 class Infinite(DynOps):
@@ -663,7 +683,7 @@ class Infinite(DynOps):
         raise StopIteration
 
     def __str__(self):
-        return "Infinite%s()" % (("<" + self.name + ">") if self.name else "")
+        return "Infinite%s%s()" % (("<" + self.name + ">") if self.name else "", self.miss_cb_str(), )
 
 import pprint
 if __name__ == '__main__':
