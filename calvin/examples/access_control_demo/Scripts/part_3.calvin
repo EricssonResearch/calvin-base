@@ -1,0 +1,6 @@
+button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+camera : media.IPCamera()
+screen : media.ImageRenderer()
+
+button.state > camera.trigger
+camera.image > screen.image
