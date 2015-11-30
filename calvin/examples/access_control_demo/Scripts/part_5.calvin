@@ -1,0 +1,10 @@
+button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+bell: media.MediaPlayer(media_file="dingdong.ogg")
+camera : media.IPCamera()
+screen : media.ImageRenderer()
+fd : media.FaceDetect()
+
+button.state > camera.trigger
+camera.image > fd.image
+camera.image > screen.image
+fd.faces > bell.play

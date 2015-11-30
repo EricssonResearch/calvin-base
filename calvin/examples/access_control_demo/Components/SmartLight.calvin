@@ -1,0 +1,27 @@
+component RedGreenLight() select -> {
+    light : net.HTTPPut()
+    to_string : json.ToString()
+    reply_header : std.Terminator()
+    reply_data: std.Terminator()
+    reply_status: std.Terminator()
+    set_color : std.Deselect()
+
+
+    .select > set_color.select
+    {"on": true, "bri": 100, "sat": 255, "hue": 26000} > set_color.case_true
+    {"on": true, "bri": 100, "sat": 255, "hue": 1000} > set_color.case_false
+    set_color.data > to_string.data
+    to_string.string > light.data
+    "http://192.168.0.101/api/newdeveloper/lights/1/state" > light.URL
+    {"Content-Type": "application/json"} > light.header
+    {} > light.params
+
+    light.status  > reply_status.void
+    light.header > reply_header.void
+    light.data > reply_data.void
+}
+
+
+green: hue.RedGreenLight()
+
+true > green.select
