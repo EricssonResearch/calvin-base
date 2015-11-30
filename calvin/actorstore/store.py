@@ -601,13 +601,13 @@ class GlobalStore(ActorStore):
             generates a signature string
         """
         if 'is_primitive' not in desc or desc['is_primitive']:
-            signature = {'actor_type': desc['actor_type'],
-                         'inports': sorted(desc['inports']),
-                         'outports': sorted(desc['outports'])}
+            signature = {u'actor_type': unicode(desc['actor_type']),
+                         u'inports': sorted([unicode(i) for i in desc['inports']]),
+                         u'outports': sorted([unicode(i) for i in desc['outports']])}
         else:
-            signature = {'actor_type': desc['actor_type'],
-                         'inports': sorted(desc['component']['inports']),
-                         'outports': sorted(desc['component']['outports'])}
+            signature = {u'actor_type': unicode(desc['actor_type']),
+                         u'inports': sorted([unicode(i) for i in desc['component']['inports']]),
+                         u'outports': sorted([unicode(i) for i in desc['component']['outports']])}
         return hashlib.sha256(json.dumps(signature, separators=(',', ':'), sort_keys=True)).hexdigest()
 
     @staticmethod
