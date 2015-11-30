@@ -1,0 +1,17 @@
+{
+    "groups": {"firstgroup": ["src", "sum"]},
+    "requirements": {
+        "src": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode2"}]},
+                 "type": "+"
+                }], 
+        "sum": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]},
+                 "type": "+"
+                }], 
+        "snk": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]},
+                 "type": "+"
+                }]
+            }
+}
