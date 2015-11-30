@@ -360,6 +360,31 @@ class TestDeployShadow(unittest.TestCase):
         assert len(actual) > 5
         utils.delete_application(rt1, result['application_id'])
 
+    @pytest.mark.slow
+    def testDeployShadowComponent(self):
+        _log.analyze("TESTRUN", "+", {})
+        self.verify_storage()
+
+        from calvin.Tools.cscontrol import control_deploy as deploy_app
+        from collections import namedtuple
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        args = DeployArgs(node='http://%s:5003' % ip_addr,
+                          script=open(test_script_dir+"test_shadowcomponent1.calvin"), attr=None,
+                                reqs=test_script_dir+"test_shadowcomponent1.deployjson", check=False)
+        result = {}
+        try:
+            result = deploy_app(args)
+        except:
+            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
+        time.sleep(2)
+        actors = [utils.get_actors(rt1), utils.get_actors(rt2)]
+        # src:(first, second) -> rt1, sum -> rt2, snk -> rt1
+        assert result['actor_map']['test_shadowcomponent1:src:first'] in actors[1]
+        assert result['actor_map']['test_shadowcomponent1:src:second'] in actors[1]
+        assert result['actor_map']['test_shadowcomponent1:sum'] in actors[0]
+        assert result['actor_map']['test_shadowcomponent1:snk'] in actors[0]
+        utils.delete_application(rt1, result['application_id'])
+
 
 @pytest.mark.slow
 class TestSepDeployShadow(unittest.TestCase):
