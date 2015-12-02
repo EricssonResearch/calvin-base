@@ -17,19 +17,21 @@
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
 from calvin.runtime.south.plugins.transports.lib.twisted import base_transport
+from calvin.runtime.south.plugins.transports.calvinbt.twisted import bt
 
 from twisted.protocols.basic import Int32StringReceiver
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol, reactor
 
 _log = calvinlogger.get_logger(__name__)
 
 
-def create_uri(ip, port):
-    return "%s://%s:%s" % ("calvinip", ip, port)
+def create_uri(id, port):
+    return "%s://%s:%s" % ("calvinbt", id, port)
 
 
 # Server
 class TwistedCalvinServer(base_transport.CalvinServerBase):
+
     """
     """
 
@@ -45,8 +47,9 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
         callbacks = {'connected': [CalvinCB(self._connected)]}
         tcp_f = TCPServerFactory(callbacks)
 
-        self._tcp_server = reactor.listenTCP(self._port, tcp_f, interface=self._iface)
-        self._port = self._tcp_server.getHost().port
+        self._tcp_server = bt.BtPort(port=int(self._port), factory=tcp_f, interface=self._iface)
+        self._tcp_server.startListening()
+        self._port = self._tcp_server.getHost()[1]
         self._callback_execute('server_started', self._port)
         return self._port
 
@@ -62,11 +65,12 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
         return self._tcp_server is not None
 
     def _connected(self, proto):
-        self._callback_execute('client_connected', create_uri(proto.transport.getPeer().host,
-                                                              proto.transport.getPeer().port), proto)
+        self._callback_execute('client_connected', create_uri(proto.transport.getPeer()[0],
+                                                              proto.transport.getPeer()[1]), proto)
 
 
 class StringProtocol(CalvinCBClass, Int32StringReceiver):
+
     def __init__(self, callbacks):
         super(StringProtocol, self).__init__(callbacks)
         self._callback_execute('set_proto', self)
@@ -97,6 +101,7 @@ class TCPServerFactory(protocol.ServerFactory):
 
 # Client
 class TwistedCalvinTransport(base_transport.CalvinTransportBase):
+
     def __init__(self, host, port, callbacks=None, proto=None, *args, **kwargs):
         super(TwistedCalvinTransport, self).__init__(host, port, callbacks=callbacks)
         self._host_ip = host
@@ -134,7 +139,9 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
                      'set_proto': [CalvinCB(self._set_proto)]}
 
         self._factory = TCPClientFactory(callbacks)
-        reactor.connectTCP(self._host_ip, int(self._host_port), self._factory)
+        c = bt.BtConnector(host=self._host_ip, port=int(self._host_port),
+                           factory=self._factory, timeout=30, bindAddress=None, reactor=reactor)
+        c.connect()
 
     def _set_proto(self, proto):
         _log.debug("%s, %s, %s" % (self, '_set_proto', proto))

@@ -20,8 +20,29 @@ from calvin.runtime.north.plugins.coders.messages import message_coder_factory
 from urlparse import urlparse
 
 
+class URI(object):
+    def __init__(self, uri):
+        self.uri = uri
+        self.port = None
+        schema, peer_addr = uri.split(':', 1)
+        if schema == 'calvinbt':
+            data = uri.split(":")
+            self.scheme = data[0]
+            self.port = data[7]
+            hostname = "%s:%s:%s:%s:%s:%s" % (data[1], data[2], data[3], data[4], data[5], data[6])
+            self.hostname = hostname.replace("//", "")
+        else:
+            url = urlparse(uri)
+            self.scheme = url.scheme
+            self.port = url.port
+            self.hostname = url.hostname
+
+    def geturl(self):
+        return self.uri
+
+
 def split_uri(uri):
-    return urlparse(uri)
+    return URI(uri)
 
 
 class BaseTransport(CalvinCBClass):
@@ -37,7 +58,7 @@ class BaseTransport(CalvinCBClass):
         self._coder = None                     # Active coder set for transport
         self._rtt = 2000                       # round trip time on ms
         self._timeout = self._rtt * 2          # Time out for connect and replys
-        self._uri = split_uri(remote_uri)      # get a urlparse object
+        self._uri = split_uri(remote_uri)      # get a URI object
         self._rt_id = local_id
         self._remote_rt_id = None
 

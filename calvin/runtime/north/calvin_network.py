@@ -302,7 +302,7 @@ class CalvinNetwork(object):
             return
 
         # join the peer node
-        self.join([value['uri']], callback, [key])
+        self.join(value['uri'], callback, [key])
 
     def peer_disconnected(self, link, rt_id, reason):
         _log.analyze(self.node.id, "+", {'reason': reason, 

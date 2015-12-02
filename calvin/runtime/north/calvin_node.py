@@ -36,7 +36,9 @@ from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities import calvinconfig
 _log = get_logger(__name__)
+_conf = calvinconfig.get()
 
 
 def addr_from_uri(uri):
@@ -48,7 +50,7 @@ def addr_from_uri(uri):
 class Node(object):
 
     """A node of calvin
-       the uri is used as server connection point
+       the uri is a list of server connection points
        the control_uri is the local console
        attributes is a supplied list of external defined attributes that will be used as the key when storing index
        such as name of node
@@ -69,7 +71,6 @@ class Node(object):
         self.control = calvincontrol.get_calvincontrol()
         _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         self.sched = _scheduler(self, self.am, self.monitor)
-        self.control.start(node=self, uri=control_uri)
         self.async_msg_ids = {}
         self._calvinsys = CalvinSys(self)
 
@@ -82,6 +83,7 @@ class Node(object):
         self.proto = CalvinProto(self, self.network)
         self.pm = PortManager(self, self.proto)
         self.app_manager = appmanager.AppManager(self)
+
         # The initialization that requires the main loop operating is deferred to start function
         async.DelayedCall(0, self.start)
 
@@ -174,12 +176,20 @@ class Node(object):
 
     def start(self):
         """ Run once when main loop is started """
-        # FIXME hardcoded which transport and encoder plugin we use, should be based on
-        self.network.register(['calvinip'], ['json'])
-        self.network.start_listeners([self.uri])
+        interfaces = _conf.get(None, 'transports')
+        self.network.register(interfaces, ['json'])
+        self.network.start_listeners(self.uri)
         # Start storage after network, proto etc since storage proxy expects them
         self.storage.start()
         self.storage.add_node(self)
+
+        # Start control api
+        proxy_control_uri = _conf.get(None, 'control_proxy')
+        if proxy_control_uri is not None:
+            self.control.start(node=self, uri=proxy_control_uri, tunnel=True)
+        else:
+            if self.control_uri is not None:
+                self.control.start(node=self, uri=self.control_uri)
 
     def stop(self, callback=None):
         def stopped(*args):

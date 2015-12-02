@@ -36,7 +36,7 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
     def join(self, uri):
         """docstring for join"""
         schema, peer_addr = uri.split(':', 1)
-        if schema != 'calvinip':
+        if schema != 'calvinbt':
             raise Exception("Cant handle schema %s!!" % schema)
 
         try:
@@ -51,17 +51,8 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
             raise
 
     def listen(self, uri):
-        if uri == "calvinip:default":
-            # Need to form a proper default uri
-            try:
-                portnbrs = [int(urit.split(':')[-1]) for urit in self._servers.keys()]
-                port = max(portnbrs) + 1 if portnbrs else 50000
-            except:
-                port = 50000
-            uri = "calvinip:0.0.0.0:" + str(port)
-
-        schema, _peer_addr = uri.split(':', 1)
-        if schema != 'calvinip':
+        schema, port = uri.split(':', 1)
+        if schema != 'calvinbt':
             raise Exception("Cant handle schema %s!!" % schema)
 
         if uri in self._servers:

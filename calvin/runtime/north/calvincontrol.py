@@ -18,6 +18,7 @@ import re
 import time
 import datetime
 import json
+from random import randint
 from calvin.Tools import cscompiler as compiler
 from calvin.runtime.north.appmanager import Deployer
 from calvin.utilities.calvinlogger import get_logger
@@ -26,6 +27,7 @@ from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
 from calvin.utilities import calvinresponse
 from calvin.actorstore.store import DocumentationStore
+from calvin.utilities import calvinuuid
 
 _log = get_logger(__name__)
 
@@ -34,7 +36,7 @@ uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 control_api_doc = ""
 
 control_api_doc += \
-"""
+    """
     GET /actor_doc {path}
     Get documentation in 'raw' format for actor or module at {path}
     Path is formatted as '/{module}/{submodule}/ ... /{actor}'.
@@ -53,7 +55,7 @@ re_get_actor_doc = re.compile(r"GET /actor_doc(\S*)\sHTTP/1")
 re_get_log = re.compile(r"GET /log\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /id
     Get id of this calvin node
     Response status code: OK
@@ -62,7 +64,7 @@ control_api_doc += \
 re_get_node_id = re.compile(r"GET /id\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /nodes
     List nodes in network (excluding self) known to self
     Response status code: OK
@@ -71,7 +73,7 @@ control_api_doc += \
 re_get_nodes = re.compile(r"GET /nodes\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /node/{node-id}
     Get information on node node-id
     Response status code: OK or NOT_FOUND
@@ -85,7 +87,7 @@ control_api_doc += \
 re_get_node = re.compile(r"GET /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /peer_setup
     Add calvin nodes to network
     Body: {"peers: ["calvinip://<address>:<port>", ...] }
@@ -95,7 +97,7 @@ control_api_doc += \
 re_post_peer_setup = re.compile(r"POST /peer_setup\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /applications
     Get applications launched from this node
     Response status code: OK
@@ -104,7 +106,7 @@ control_api_doc += \
 re_get_applications = re.compile(r"GET /applications\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /application/{application-id}
     Get information on application application-id
     Response status code: OK or NOT_FOUND
@@ -118,7 +120,7 @@ control_api_doc += \
 re_get_application = re.compile(r"GET /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     DELETE /application/{application-id}
     Stop application (only applications launched from this node)
     Response status code: ACCEPTED
@@ -127,7 +129,7 @@ control_api_doc += \
 re_del_application = re.compile(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /actor
     Create a new actor
     Body:
@@ -142,7 +144,7 @@ control_api_doc += \
 re_post_new_actor = re.compile(r"POST /actor\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /actors
     Get list of actors on this runtime
     Response status code: OK
@@ -151,7 +153,7 @@ control_api_doc += \
 re_get_actors = re.compile(r"GET /actors\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /actor/{actor-id}
     Get information on actor
     Response status code: OK or NOT_FOUND
@@ -167,7 +169,7 @@ control_api_doc += \
 re_get_actor = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     DELETE /actor/{actor-id}
     Delete actor
     Response status code: OK or NOT_FOUND
@@ -176,7 +178,7 @@ control_api_doc += \
 re_del_actor = re.compile(r"DELETE /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /actor/{actor-id}/report
     Some actor store statistics on inputs and outputs, this reports these. Not always present.
     Response status code: OK or NOT_FOUND
@@ -185,7 +187,7 @@ control_api_doc += \
 re_get_actor_report = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /actor/{actor-id}/migrate
     Migrate actor to (other) node
     Body: {"peer_node_id": <node-id>}
@@ -195,7 +197,7 @@ control_api_doc += \
 re_post_actor_migrate = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /actor/{actor-id}/disable
     DEPRECATED. Disables an actor
     Response status code: OK or NOT_FOUND
@@ -209,7 +211,8 @@ re_post_actor_disable = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid
     Get information on port {port-id} of actor {actor-id}
     Response status code: OK or NOT_FOUND
 """
-re_get_port = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+re_get_port = re.compile(
+    r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 # control_api_doc += \
 """
@@ -217,10 +220,11 @@ re_get_port = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/po
     Get port state {port-id} of actor {actor-id}
     Response status code: OK or NOT_FOUND
 """
-re_get_port_state = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")/state\sHTTP/1")
+re_get_port_state = re.compile(
+    r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")/state\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /connect
     Connect actor ports
     Body:
@@ -239,7 +243,7 @@ control_api_doc += \
 re_post_connect = re.compile(r"POST /connect\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /set_port_property
     Sets a property of the port.
     Currently only fanout on outports is supported.
@@ -257,7 +261,7 @@ control_api_doc += \
 re_set_port_property = re.compile(r"POST /set_port_property\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /deploy
     Compile and deploy a calvin script to this calvin node
     Apply deployment requirements to actors of an application
@@ -310,7 +314,7 @@ control_api_doc += \
 re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /disconnect
     Disconnect a port.
     If port fields are empty, all ports of the actor are disconnected
@@ -327,7 +331,7 @@ control_api_doc += \
 re_post_disconnect = re.compile(r"POST /disconnect\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     DELETE /node
     Stop (this) calvin node
     Response status code: ACCEPTED
@@ -336,7 +340,7 @@ control_api_doc += \
 re_delete_node = re.compile(r"DELETE /node\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /index/{key}
     Store value under index key
     Body:
@@ -349,7 +353,7 @@ control_api_doc += \
 re_post_index = re.compile(r"POST /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     DELETE /index/{key}
     Remove value from index key
     Body:
@@ -362,7 +366,7 @@ control_api_doc += \
 re_delete_index = re.compile(r"DELETE /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /index/{key}
     Fetch values under index key
     Response status code: OK or NOT_FOUND
@@ -371,7 +375,7 @@ control_api_doc += \
 re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     GET /storage/{prefix-key}
     Fetch value under prefix-key
     Response status code: OK or NOT_FOUND
@@ -380,7 +384,7 @@ control_api_doc += \
 re_get_storage = re.compile(r"GET /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     POST /storage/{prefix-key}
     Store value under prefix-key
     Body:
@@ -393,7 +397,7 @@ control_api_doc += \
 re_post_storage = re.compile(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
-"""
+    """
     OPTIONS /url
     Request for information about the communication options available on url
     Response status code: OK
@@ -425,15 +429,10 @@ class CalvinControl(object):
         self.routes = None
         self.server = None
         self.connections = {}
-
-    def start(self, node, uri):
-        """ Start listening and handle request on uri
-        """
-        self.port = int(urlparse(uri).port)
-        self.host = urlparse(uri).hostname
-        _log.info("Listening on: %s:%s" % (self.host, self.port))
-
-        self.node = node
+        self.tunnel = None
+        self.host = None
+        self.tunnel_server = None
+        self.tunnel_client = None
 
         # Set routes for requests
         self.routes = [
@@ -467,16 +466,38 @@ class CalvinControl(object):
             (re_post_storage, self.handle_post_storage),
             (re_options, self.handle_options)
         ]
-        self.server = server_connection.ServerProtocolFactory(self.handle_request, "http")
-        self.server.start(self.host, self.port)
+
+    def start(self, node, uri, tunnel=False):
+        """ If not tunnel, start listening on uri and handle http requests.
+            If tunnel, setup a tunnel to uri and handle requests.
+        """
+        self.node = node
+        schema, _ = uri.split(':', 1)
+        if tunnel:
+            # Connect to tunnel server
+            self.tunnel_client = CalvinControlTunnelClient(uri, self)
+        else:
+            url = urlparse(uri)
+            self.port = int(url.port)
+            self.host = url.hostname
+            _log.info("Control API listening on: %s:%s" % (self.host, self.port))
+
+            self.server = server_connection.ServerProtocolFactory(self.handle_request, "http")
+            self.server.start(self.host, self.port)
+
+            # Create tunnel server
+            self.tunnel_server = CalvinControlTunnelServer(self.node)
 
     def stop(self):
-        """ Stop
-        """
+        """ Stop """
         self.server.stop()
+        if self.tunnel_server is not None:
+            self.tunnel_server.stop()
+        if self.tunnel_client is not None:
+            self.tunnel_client.stop()
 
     def handle_request(self, actor_ids=None):
-        """ Handle incoming requests
+        """ Handle incoming requests on socket
         """
         if self.server.pending_connections:
             addr, conn = self.server.accept()
@@ -485,44 +506,52 @@ class CalvinControl(object):
         for handle, connection in self.connections.items():
             if connection.data_available:
                 command, headers, data = connection.data_get()
-                found = False
-                for route in self.routes:
-                    match = route[0].match(command)
-                    if match:
-                        if data:
-                            data = json.loads(data)
-                        _log.debug("Calvin control handles:\n%s\n---------------" % data)
-                        route[1](handle, connection, match, data, headers)
-                        found = True
-                        break
+                self.route_request(handle, connection, command, headers, data)
 
-                if not found:
-                    _log.error("No route found for: %s" % data)
-                    self.send_response(
-                        handle, connection, None, status=404)
+    def route_request(self, handle, connection, command, headers, data):
+        found = False
+        for route in self.routes:
+            match = route[0].match(command)
+            if match:
+                if data:
+                    data = json.loads(data)
+                _log.debug("Calvin control handles:\n%s\n---------------" % data)
+                route[1](handle, connection, match, data, headers)
+                found = True
+                break
+
+        if not found:
+            _log.error("No route found for: %s" % data)
+            self.send_response(handle, connection, None, status=404)
 
     def send_response(self, handle, connection, data, status=200):
         """ Send response header text/html
         """
-        if not connection.connection_lost:
-            connection.send("HTTP/1.0 " + str(status) + " " + calvinresponse.RESPONSE_CODES[status] + "\n"
-                            + ("" if data is None else "Content-Type: application/json\n")
-                            + "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
-                            + "Access-Control-Allow-Origin: *\r\n"
-                            + "\n")
-            if data:
-                connection.send(data)
-            connection.close()
-        del self.connections[handle]
+        header = "HTTP/1.0 " + \
+            str(status) + " " + calvinresponse.RESPONSE_CODES[status] + \
+            "\n" + ("" if data is None else "Content-Type: application/json\n") + \
+            "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" + \
+            "Access-Control-Allow-Origin: *\r\n" + "\n"
+
+        if connection is None:
+            msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
+            self.tunnel_client.send(msg)
+        else:
+            if not connection.connection_lost:
+                connection.send(header)
+                if data:
+                    connection.send(data)
+                connection.close()
+            del self.connections[handle]
 
     def send_streamheader(self, connection):
         """ Send response header for text/event-stream
         """
+        response = "HTTP/1.0 200 OK\n" + "Content-Type: text/event-stream\n" + \
+            "Access-Control-Allow-Origin: *\r\n" + "\n"
+
         if not connection.connection_lost:
-            connection.send("HTTP/1.0 200 OK\n"
-                            + "Content-Type: text/event-stream\n"
-                            + "Access-Control-Allow-Origin: *\r\n"
-                            + "\n")
+            connection.send(response)
 
     def storage_cb(self, key, value, handle, connection):
         self.send_response(handle, connection, None if value is None else json.dumps(value),
@@ -540,8 +569,11 @@ class CalvinControl(object):
     def handle_get_log(self, handle, connection, match, data, hdr):
         """ Get log stream
         """
-        self.log_connection = connection
-        self.send_streamheader(connection)
+        if connection is None:
+            self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
+        else:
+            self.log_connection = connection
+            self.send_streamheader(connection)
 
     def handle_get_node_id(self, handle, connection, match, data, hdr):
         """ Get node id from this node
@@ -556,8 +588,9 @@ class CalvinControl(object):
     def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=None):
         _log.analyze(self.node.id, "+", status.encode())
         self.send_response(handle, connection,
-            None if peer_node_ids is None else json.dumps({k: (v[0], v[1].status) for k, v in peer_node_ids.items()}),
-            status=status.status)
+                           None if peer_node_ids is None else json.dumps(
+                               {k: (v[0], v[1].status) for k, v in peer_node_ids.items()}),
+                           status=status.status)
 
     def handle_get_nodes(self, handle, connection, match, data, hdr):
         """ Get active nodes
@@ -671,7 +704,7 @@ class CalvinControl(object):
         try:
             state = self.node.am.get_port_state(match.group(1), match.group(2))
             status = calvinresponse.OK
-        except Exception as e:
+        except:
             status = calvinresponse.NOT_FOUND
         self.send_response(handle, connection, json.dumps(state), status)
 
@@ -708,7 +741,6 @@ class CalvinControl(object):
             peer_port_dir=data["peer_port_dir"],
             peer_port_id=data["peer_port_id"],
             cb=CalvinCB(self.handle_connect_cb, handle, connection))
-
 
     def handle_connect_cb(self, handle, connection, **kwargs):
         status = kwargs.get('status', None)
@@ -756,10 +788,10 @@ class CalvinControl(object):
         _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})
         if status:
             self.send_response(handle, connection,
-                json.dumps({'application_id': deployer.app_id,
-                            'actor_map': deployer.actor_map,
-                            'placement': kwargs.get('placement', None)}) if deployer.app_id else None,
-                status=status.status)
+                               json.dumps({'application_id': deployer.app_id,
+                                           'actor_map': deployer.actor_map,
+                                           'placement': kwargs.get('placement', None)}) if deployer.app_id else None,
+                               status=status.status)
         else:
             self.send_response(handle, connection, None, status=status.status)
 
@@ -846,8 +878,8 @@ class CalvinControl(object):
         """ Copy the content of Access-Control-Request-Headers to the response
         """
         if 'access-control-request-headers' in hdr:
-            response += "Access-Control-Allow-Headers: "+ \
-                        hdr['access-control-request-headers']+"\n"
+            response += "Access-Control-Allow-Headers: " + \
+                        hdr['access-control-request-headers'] + "\n"
 
         response += "Content-Length: 0\n" \
                     "Access-Control-Allow-Origin: *\n" \
@@ -855,4 +887,186 @@ class CalvinControl(object):
                     "Content-Type: *\n" \
                     "\n\r\n"
 
-        connection.send(response)
+        if connection is None:
+            msg = {"cmd": "httpresp", "msgid": handle, "header": response, "data": None}
+            self.tunnel_client.send(msg)
+        else:
+            connection.send(response)
+
+
+class CalvinControlTunnelServer(object):
+
+    """ A Calvin control tunnel server
+    """
+
+    def __init__(self, node):
+        self.node = node
+        self.tunnels = {}
+        self.controltunnels = {}
+        # Register for incomming control proxy requests
+        self.node.proto.register_tunnel_handler("control", CalvinCB(self.tunnel_request_handles))
+
+    def stop(self):
+        for _, control in self.controltunnels.items():
+            control.close()
+
+    def tunnel_request_handles(self, tunnel):
+        """ Incoming tunnel request for storage proxy server
+            Start a socket server and update peer node with control uri
+        """
+        # Register tunnel
+        self.tunnels[tunnel.peer_node_id] = tunnel
+        self.controltunnels[tunnel.peer_node_id] = CalvinControlTunnel(tunnel)
+        tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
+        tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
+        tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
+        # We accept it by returning True
+        return True
+
+    def tunnel_down(self, tunnel):
+        """ Callback that the tunnel is not accepted or is going down """
+        self.controltunnels[tunnel.peer_node_id].close()
+        del self.tunnels[tunnel.peer_node_id]
+        del self.controltunnels[tunnel.peer_node_id]
+        # We should always return True which sends an ACK on the destruction of the tunnel
+        return True
+
+    def tunnel_up(self, tunnel):
+        """ Callback that the tunnel is working """
+        _log.analyze(self.node.id, "+ SERVER", {"tunnel_id": tunnel.id})
+        # We should always return True which sends an ACK on the destruction of the tunnel
+        return True
+
+    def tunnel_recv_handler(self, tunnel, payload):
+        """ Gets called when a storage client request"""
+        self.controltunnels[tunnel.peer_node_id].handle_response(payload)
+
+
+class CalvinControlTunnel(object):
+
+    """ A Calvin control socket to tunnel proxy
+    """
+
+    def __init__(self, tunnel):
+        self.tunnel = tunnel
+        self.connections = {}
+        self.messages = {}
+
+        # Start a socket server on same interface as calvincontrol
+        self.host = get_calvincontrol().host
+
+        for x in range(0, 10):
+            try:
+                self.port = randint(5100, 5200)
+                self.server = server_connection.ServerProtocolFactory(self.handle_request, "http")
+                self.server.start(self.host, self.port)
+                _log.info("Control proxy for %s listening on: %s:%s" % (tunnel.peer_node_id, self.host, self.port))
+                break
+            except:
+                pass
+
+        # Tell peer node that we a listening and on what uri
+        msg = {"cmd": "started",
+               "controluri": "http://" + self.host + ":" + str(self.port)}
+        self.tunnel.send(msg)
+
+    def close(self):
+        self.server.stop()
+
+    def handle_request(self, actor_ids=None):
+        """ Tunnel incomming requests
+        """
+        if self.server.pending_connections:
+            addr, conn = self.server.accept()
+            self.connections[addr] = conn
+
+        for handle, connection in self.connections.items():
+            if connection.data_available:
+                command, headers, data = connection.data_get()
+                msg_id = calvinuuid.uuid("MSGID")
+                self.messages[msg_id] = handle
+                msg = {"cmd": "httpreq",
+                       "msgid": msg_id,
+                       "command": command,
+                       "headers": headers,
+                       "data": data}
+                self.tunnel.send(msg)
+
+    def handle_response(self, payload):
+        if "cmd" in payload and payload["cmd"] == "httpresp":
+            msg_id = payload["msgid"]
+            handle = self.messages[msg_id]
+            del self.messages[msg_id]
+            connection = self.connections[handle]
+            self.send_response(handle, connection, payload["header"], payload["data"])
+        else:
+            _log.error("Unknown control proxy response %s" % payload['cmd'] if 'cmd' in payload else "")
+
+    def send_response(self, handle, connection, header, data):
+        """ Send response header text/html
+        """
+        if not connection.connection_lost:
+            if header is not None:
+                connection.send(str(header))
+            if data is not None:
+                connection.send(str(data))
+            connection.close()
+            del self.connections[handle]
+        else:
+            _log.debug("Connection lost")
+
+
+class CalvinControlTunnelClient(object):
+
+    """ A Calvin control tunnel client
+    """
+
+    def __init__(self, uri, calvincontrol):
+        self.uri = uri
+        self.calvincontrol = calvincontrol
+        self.tunnel = None
+        self.calvincontrol.node.network.join([uri], CalvinCB(self._start_link_cb))
+
+    def stop(self):
+        pass
+
+    def _start_link_cb(self, status, uri, peer_node_id):
+        if status == "NACK":
+            return
+        # Got link set up tunnel
+        master_id = peer_node_id
+        self.tunnel = self.calvincontrol.node.proto.tunnel_new(master_id, 'control', {})
+        self.tunnel.register_tunnel_down(CalvinCB(self.tunnel_down))
+        self.tunnel.register_tunnel_up(CalvinCB(self.tunnel_up))
+        self.tunnel.register_recv(self.tunnel_recv_handler)
+
+    def tunnel_down(self):
+        """ Callback that the tunnel is not accepted or is going down """
+        if not self.tunnel:
+            return True
+        self.tunnel = None
+        # We should always return True which sends an ACK on the destruction of the tunnel
+        return True
+
+    def tunnel_up(self):
+        """ Callback that the tunnel is working """
+        if not self.tunnel:
+            return True
+        # We should always return True which sends an ACK on the destruction of the tunnel
+        return True
+
+    def tunnel_recv_handler(self, payload):
+        """ Gets called when a storage master replies"""
+        if "cmd" in payload:
+            if payload["cmd"] == "httpreq":
+                self.calvincontrol.route_request(
+                    payload["msgid"], None, payload["command"], payload["headers"], payload["data"])
+            elif payload["cmd"] == "started":
+                self.calvincontrol.node.control_uri = payload["controluri"]
+                self.calvincontrol.node.storage.add_node(self.calvincontrol.node)
+
+    def send(self, msg):
+        if self.tunnel:
+            self.tunnel.send(msg)
+        else:
+            _log.error("No tunnel connected")

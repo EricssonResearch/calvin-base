@@ -43,14 +43,24 @@ def setup_module(module):
     global rt3
     global kill_peers
     ip_addr = None
+    bt_master_controluri = None
 
     try:
         ip_addr = os.environ["CALVIN_TEST_IP"]
         purpose = os.environ["CALVIN_TEST_UUID"]
         _log.debug("Running remote tests")
     except KeyError:
-        _log.debug("Running lcoal test")
+        _log.debug("Running local test")
         pass
+
+    if ip_addr is None:
+        # Bluetooth tests assumes one master runtime with two connected peers
+        # CALVIN_TEST_BT_MASTERCONTROLURI is the control uri of the master runtime
+        try:
+            bt_master_controluri = os.environ["CALVIN_TEST_BT_MASTERCONTROLURI"]
+            _log.debug("Running Bluetooth tests")
+        except KeyError:
+            pass
 
     if ip_addr:
         remote_node_count = 2
@@ -66,7 +76,7 @@ def setup_module(module):
             ports.append(addr[1])
             s.close()
 
-        rt1,_ = dispatch_node("calvinip://%s:%s" % (ip_addr, ports[0]), "http://%s:%s" % (ip_addr, ports[1]))
+        rt1,_ = dispatch_node(["calvinip://%s:%s" % (ip_addr, ports[0])], "http://%s:%s" % (ip_addr, ports[1]))
 
         _log.debug("First runtime started, control http://%s:%s, calvinip://%s:%s" % (ip_addr, ports[1], ip_addr, ports[0]))
 
@@ -102,15 +112,36 @@ def setup_module(module):
                 rt3 = utils.RT(test_peer3["control_uri"])
                 rt3.id = test_peer3_id
                 rt3.uri = test_peer3["uri"]
+    elif bt_master_controluri:
+        rt1 = utils.RT(bt_master_controluri)
+        bt_master_id = utils.get_node_id(rt1)
+        data = utils.get_node(rt1, bt_master_id)
+        if data:
+            rt1.id = bt_master_id
+            rt1.uri = data["uri"]
+            test_peers = utils.get_nodes(rt1)
+            test_peer2_id = test_peers[0]
+            test_peer2 = utils.get_node(rt1, test_peer2_id)
+            if test_peer2:
+                rt2 = utils.RT(test_peer2["control_uri"])
+                rt2.id = test_peer2_id
+                rt2.uri = test_peer2["uri"]
+            test_peer3_id = test_peers[1]
+            if test_peer3_id:
+                test_peer3 = utils.get_node(rt1, test_peer3_id)
+                if test_peer3:
+                    rt3 = utils.RT(test_peer3["control_uri"])
+                    rt3.id = test_peer3_id
+                    rt3.uri = test_peer3["uri"]
     else:
         try:
             ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
         except:
             import socket
             ip_addr = socket.gethostbyname(socket.gethostname())
-        rt1,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://localhost:5003")
-        rt2,_ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://localhost:5004")
-        rt3,_ = dispatch_node("calvinip://%s:5002" % (ip_addr,), "http://localhost:5005")
+        rt1,_ = dispatch_node(["calvinip://%s:5000" % (ip_addr,)], "http://localhost:5003")
+        rt2,_ = dispatch_node(["calvinip://%s:5001" % (ip_addr,)], "http://localhost:5004")
+        rt3,_ = dispatch_node(["calvinip://%s:5002" % (ip_addr,)], "http://localhost:5005")
         time.sleep(.4)
         utils.peer_setup(rt1, ["calvinip://%s:5001" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
         utils.peer_setup(rt2, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])

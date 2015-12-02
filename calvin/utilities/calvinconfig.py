@@ -88,7 +88,9 @@ class CalvinConfig(object):
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json',
                 'media_framework': 'defaultimpl',
-                'display_plugin': 'stdout_impl'
+                'display_plugin': 'stdout_impl',
+                'transports': ['calvinip'],
+                'control_proxy': None
             },
             'testing': {
                 'comment': 'Test settings',
