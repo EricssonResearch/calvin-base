@@ -34,15 +34,16 @@ def extract_capabilities(out_iter, kwargs, final, value):
     _log.debug("shadow_match:extract_capabilities BEGIN")
     shadow_params = kwargs.get('shadow_params', [])
     if not final[0] and value != dynops.FailedElement:
+        _log.debug("shadow_match:extract_capabilities VALUE %s" % value)
         mandatory = value['args']['mandatory']
-        optional = value['args']['optional']
+        optional = value['args']['optional'].keys()
         # To be valid actor type all mandatory params need to be supplied and only valid params
         if all([p in shadow_params for p in mandatory]) and all([p in (mandatory + optional) for p in shadow_params]):
             _log.debug("shadow_match:extract_capabilities ACT")
             kwargs['descriptions'].append(value)
             reqs = value['requires']
             new = set(reqs) - kwargs['capabilities']
-            kwargs['capabilities'] += new
+            kwargs['capabilities'].update(new)
             out_iter.extend(new)
     if final[0]:
         _log.debug("shadow_match:extract_capabilities FINAL")
@@ -62,41 +63,47 @@ def get_capability(out_iter, kwargs, final, value):
     _log.debug("shadow_match:get_capability END")
 
 def placement(out_iter, kwargs, final, capability_nodes):
-    _log.debug("shadow_match:placement BEGIN")
-    if kwargs['done']:
-        return
-
+    _log.debug("shadow_match:placement BEGIN %s" % (capability_nodes,))
     if final[0]:
-        if not kwargs['capabilities']:
+        try:
+            possible_nodes = set.union(*[d['node_match'] for d in kwargs['descriptions'] if 'node_match' in d])
+        except:
+            possible_nodes = set([])
+            if not kwargs['capabilities']:
+                # No capabilities required, then get final direct, ok
+                out_iter.append(dynops.InfiniteElement())
+                out_iter.final()
+                return
+        if not possible_nodes:
+            # None found
+            out_iter.final()
+            return
+        if any([isinstance(n, dynops.InfiniteElement) for n in possible_nodes]):
+            # Some actor can have infinte placement, lets that be our response
             out_iter.append(dynops.InfiniteElement())
-        kwargs['done'] = True
+            out_iter.final()
+            return
+        # Send out the union of possible nodes
+        out_iter.extend(possible_nodes)
         out_iter.final()
+        return
     else:
-        kwargs['capabilities'][capability_nodes[0]] = capability_nodes[1]
+        capability = "".join(capability_nodes[0].partition('calvinsys.')[1:])
+        kwargs['capabilities'].setdefault(capability, []).append(capability_nodes[1])
 
-    found = []
-
+    _log.debug("shadow_match:placement EVALUATE %s" % kwargs)
+    # Update matches
     for d in kwargs['descriptions']:
-        if 'node_match' not in d:
-            if not d['requires']:
-                # No capability requirements
-                _log.debug("shadow_match:placement No requires create Infinity")
-                found = [dynops.InfiniteElement()]
-                d['node_match'] = found
-            elif set(d['requires']) <= set(kwargs['capabilities'].keys()):
-                _log.debug("shadow_match:placement require:%s, caps:%s" % (d['requires'], kwargs['capabilities']))
-                found = set.intersection(*[set(kwargs['capabilities'][r]) for r in d['requires']])
-                d['node_match'] = found
-
-    # Return first found
-    if found:
-        out_iter.extend(found)
-        out_iter.final()
-        kwargs['done'] = True
-    
-    if all(['node_match' in d for d in kwargs['descriptions']]):
-        # None found
-        out_iter.final()
+        if 'node_match' not in d and not d['requires']:
+            # No capability requirements
+            _log.debug("shadow_match:placement No requires create Infinity")
+            d['node_match'] = set([dynops.InfiniteElement()])
+        elif set(d['requires']) <= set(kwargs['capabilities'].keys()):
+            _log.debug("shadow_match:placement require:%s, caps:%s" % (d['requires'], kwargs['capabilities']))
+            found = set.intersection(*[set(kwargs['capabilities'][r]) for r in d['requires']])
+            new = found - d.setdefault('node_match', set([]))
+            d['node_match'].update(new)
+            # TODO drip out matches as they come, but how to handle infinte responses
 
 def req_op(node, signature, shadow_params, actor_id=None, component=None):
     """ Based on signature find actors' requires in global storage,
@@ -121,6 +128,6 @@ def req_op(node, signature, shadow_params, actor_id=None, component=None):
     collect_caps_iter.set_name("shadow_match:collect")
     # return nodes that can host first seen actor type with all capabilities fulfilled
     placement_iter = dynops.Map(placement, collect_caps_iter, capabilities={}, 
-                                descriptions=extract_caps_iter.get_kwargs()['descriptions'], done=False)
+                                descriptions=extract_caps_iter.get_kwargs()['descriptions'])
     placement_iter.set_name("shadow_match:place")
     return placement_iter
