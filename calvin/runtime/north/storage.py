@@ -286,7 +286,7 @@ class Storage(object):
         else:
             local_list = []
         if include_key:
-            local_list = [(org_key, v) for v in local_list]
+            local_list = [(key, v) for v in local_list]
         it = dynops.List(local_list)
         try:
             self.storage.get_concat(key=prefix + key,
