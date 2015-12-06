@@ -3,14 +3,14 @@
         "test9:a": {
             "actor_type": "std.Counter", 
             "args": {}, 
-            "signature": "21cccf799050c37bf9680ec301b59ea583c9070f8051c33f1933f3502e649225", 
+            "signature": "331d33480afb9f997af83087126e59a40465429e050a8e469d69841007264264", 
             "signature_desc": {
                 "actor_type": "std.Counter", 
-                "inports": [
-                    "integer"
-                ], 
+                "inports": [], 
                 "is_primitive": true, 
-                "outports": []
+                "outports": [
+                    "integer"
+                ]
             }
         }, 
         "test9:b:d:delay": {
@@ -78,14 +78,14 @@
         "test9:c": {
             "actor_type": "io.StandardOut", 
             "args": {}, 
-            "signature": "6cd2028539086f9607700fc30fa94f7f1cca90b50a70266337e29f3b587d0160", 
+            "signature": "5d0b3f7d38f7673c5086b4fc85d8c3c73b8e177116dcfc561bc0806f4b5d24af", 
             "signature_desc": {
                 "actor_type": "io.StandardOut", 
-                "inports": [], 
-                "is_primitive": true, 
-                "outports": [
+                "inports": [
                     "token"
-                ]
+                ], 
+                "is_primitive": true, 
+                "outports": []
             }
         }
     }, 
@@ -106,5 +106,6 @@
             "test9:b:d:id.token"
         ]
     }, 
+    "name": "test9.calvin", 
     "valid": true
 }
