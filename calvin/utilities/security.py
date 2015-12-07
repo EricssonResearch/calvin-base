@@ -207,6 +207,13 @@ class Security(object):
                 return None
         return {'cert': cert_content, 'sign': sign_content, 'file': file_content}
 
+    def verify_signature(self, file, flag):
+        content = Security.verify_signature_get_files(file)
+        if content:
+            return self.verify_signature_content(content, flag)
+        else:
+            return False
+
     def verify_signature_content(self, content, flag):
         if STUB:
             return True
