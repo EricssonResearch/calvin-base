@@ -330,8 +330,11 @@ control_api_doc += \
     Body:
     {
         "name": <application name>,
-        "script": <calvin script>  # alternativly app_info
-        "app_info": <compiled script as app_info>  # alternativly script
+        "script": <calvin script>  # alternativly "app_info"
+        "app_info": <compiled script as app_info>  # alternativly "script"
+        "sec_sign": <security signature of script> # optional and only with "script"
+        "sec_cert": <security ceritificate used> # optional and only with "script"
+        "sec_credentials": <security credentials of user> # optional
         "deploy_info":
            {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
             "requirements": {
@@ -344,8 +347,17 @@ control_api_doc += \
                             }
            }
     }
-    Note that either a script or app_info must be supplied.
-
+    Note that either a script or app_info must be supplied. Optionally security
+    verification of application script can be made. Also optionally user credentials
+    can be supplied, some runtimes are configured to require credentials. The
+    credentials takes for example the following form:
+        {"user": <username>,
+         "password": <password>,
+         "role": <role>,
+         "group": <group>,
+         ...
+        }
+    
     The matching rules are implemented as plug-ins, intended to be extended.
     The type "+" is "and"-ing rules together (actually the intersection of all
     possible nodes returned by the rules.) The type "-" is explicitly removing
@@ -367,7 +379,7 @@ control_api_doc += \
          "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
          "type": "+"
         }
-    Response status code: OK, CREATED, BAD_REQUEST or INTERNAL_ERROR
+    Response status code: OK, CREATED, BAD_REQUEST, UNAUTHORIZED or INTERNAL_ERROR
     Response: {"application_id": <application-id>,
                "actor_map": {<actor name with namespace>: <actor id>, ...}
                "placement": {<actor_id>: <node_id>, ...},
@@ -1057,15 +1069,33 @@ class CalvinControl(object):
         try:
             _log.analyze(self.node.id, "+", data)
             if 'app_info' not in data:
-                app_info, errors, warnings = compiler.compile(
-                    data["script"], filename=data["name"], verify=data["check"] if "check" in data else True)
+                kwargs = {}
+                # Supply security verification data when available
+                if "credentials" in data:
+                    kwargs['credentials'] = data['sec_credentials']
+                    if "sec_sign" in data and "sec_cert" in data:
+                        kwargs['content'] = {'file': data["script"],
+                                             'cert': data['sec_cert'],
+                                             'sign': data['sec_sign']}
+                app_info, errors, warnings = compiler.compile(data["script"], filename=data["name"],
+                        verify=data["check"] if "check" in data else True, **kwargs)
+                if errors:
+                    if any([e['reason'].startswith("401:") for e in errors]):
+                        _log.error("Security verification of script failed")
+                        self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
+                    else:
+                        _log.exception("Compilation failed")
+                        self.send_response(handle, connection, json.dumps({'errors': errors, 'warnings': warnings}),
+                                            status=calvinresponse.BAD_REQUEST)
             else:
+                # When supplying app_info directly any app security verification must be done by client
                 app_info = data['app_info']
-                errors = ""
-                warnings = ""
+                errors = [""]
+                warnings = [""]
             _log.analyze(self.node.id, "+ COMPILED", {'app_info': app_info, 'errors': errors, 'warnings': warnings})
             d = Deployer(deployable=app_info, deploy_info=data["deploy_info"] if "deploy_info" in data else None,
                          node=self.node, name=data["name"] if "name" in data else None,
+                         credentials=data["sec_credentials"] if "sec_credentials" in data else None,
                          verify=data["check"] if "check" in data else True,
                          cb=CalvinCB(self.handle_deploy_cb, handle, connection))
             _log.analyze(self.node.id, "+ Deployer instanciated", {})

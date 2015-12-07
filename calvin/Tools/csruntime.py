@@ -86,17 +86,25 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('-s', '--storage-only', dest='storage', action='store_true', default=False,
                            help='Start storage only runtime')
 
+    argparser.add_argument('--credentials', metavar='<credentials>', type=str,
+                           help='Supply credentials to run program under '
+                                'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
+                           dest='credentials', default=None)
+
     return argparser.parse_args()
 
 
 def runtime(uri, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_node, start_node
     kwargs = {'attributes': attributes} if attributes else {}
-    if dispatch:
-        return dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
-    else:
-        start_node(uri, control_uri, **kwargs)
-
+    try:
+        if dispatch:
+            return dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
+        else:
+            start_node(uri, control_uri, **kwargs)
+    except Exception as e:
+        print "Starting runtime failed:\n%s" % e
+        return 1
 
 def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_storage_node, start_storage_node
@@ -107,21 +115,21 @@ def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
         start_storage_node(uri, control_uri, **kwargs)
 
 
-def compile_script(scriptfile):
+def compile_script(scriptfile, credentials):
     _log.debug("Compiling %s ..." % file)
     from calvin.Tools import cscompiler
-    app_info, errors, _ = cscompiler.compile_file(scriptfile)
+    app_info, errors, _ = cscompiler.compile_file(scriptfile, credentials)
     if errors:
         _log.error("{reason} {script} [{line}:{col}]".format(script=file, **errors[0]))
         return False
     return app_info
 
 
-def deploy(rt, app_info):
+def deploy(rt, app_info, credentials):
     from calvin.Tools import deployer
     d = {}
     try:
-        d = deployer.Deployer(rt, app_info)
+        d = deployer.Deployer(rt, app_info, credentials)
         d.deploy()
     except:
         from calvin.utilities.calvinlogger import get_logger
@@ -162,11 +170,11 @@ def set_loglevel(levels, filename):
             get_logger(module).setLevel(5)
 
 
-def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
+def dispatch_and_deploy(app_info, wait, uri, control_uri, attr, credentials):
     from calvin.requests.request_handler import RequestHandler
     rt, process = runtime(uri, control_uri, attr, dispatch=True)
     app_id = None
-    app_id = deploy(rt, app_info)
+    app_id = deploy(rt, app_info, credentials)
     print "Deployed application", app_id
 
     timeout = wait if wait else None
@@ -203,8 +211,16 @@ def main():
 
     app_info = None
 
+    credentials_ = None
+    if args.credentials:
+        try:
+            credentials_ = json.loads(args.credentials)
+        except Exception as e:
+            print "Credentials not JSON:\n", e
+            return 1
+
     if args.file:
-        app_info = compile_script(args.file)
+        app_info = compile_script(args.file, credentials_)
         if not app_info:
             print "Compilation failed."
             return 1
@@ -236,7 +252,7 @@ def main():
             return -1
 
     if app_info:
-        dispatch_and_deploy(app_info, args.wait, uris, control_uri, attr_)
+        dispatch_and_deploy(app_info, args.wait, uris, control_uri, attr_, credentials_)
     else:
         if args.storage:
             storage_runtime(uris, control_uri, attr_, dispatch=False)
@@ -245,8 +261,8 @@ def main():
     return 0
 
 
-def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False,
-              outfile=None, configfile=None):
+def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False, 
+              credentials=None, outfile=None, configfile=None):
     """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
         runtimes from the same python script, since some objects otherwise gets unexceptedly shared.
     """
@@ -260,6 +276,10 @@ def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, at
     if loglevel:
         for l in loglevel:
             call += " --loglevel %s" % (l, )
+    try:
+        call += (" --credentials \"%s\"" % (json.dumps(credentials).replace('"',"\\\""), )) if credentials else ""
+    except:
+        pass
     call += " -w 0"
     call += (" &> %s" % outfile) if outfile else ""
     call += " &"

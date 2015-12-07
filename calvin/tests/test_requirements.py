@@ -156,14 +156,15 @@ class TestDeployScript(unittest.TestCase):
         
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy1.deployjson", check=True)
+                                reqs=test_script_dir+"test_deploy1.deployjson", check=True, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
@@ -180,14 +181,15 @@ class TestDeployScript(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy2.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy2.deployjson", check=True)
+                                reqs=test_script_dir+"test_deploy2.deployjson", check=True, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
@@ -207,14 +209,15 @@ class TestDeployScript(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy3.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy3.deployjson", check=True)
+                                reqs=test_script_dir+"test_deploy3.deployjson", check=True, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
@@ -336,14 +339,15 @@ class TestDeployShadow(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow1.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow1.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         #print "RESULT:", result
         time.sleep(2)
@@ -370,14 +374,15 @@ class TestDeployShadow(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow2.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow2.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         #print "RESULT:", result
         time.sleep(2)
@@ -434,14 +439,15 @@ class TestDeployShadow(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadowcomponent1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadowcomponent1.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadowcomponent1.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2)]
@@ -612,14 +618,15 @@ class TestSepDeployShadow(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow1.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow1.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         #print "RESULT:", result
         assert result['requirements_fulfilled']

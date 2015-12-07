@@ -558,10 +558,11 @@ class Deployer(object):
     produce a running calvin application.
     """
 
-    def __init__(self, deployable, node, name=None, deploy_info=None, verify=True, cb=None):
+    def __init__(self, deployable, node, name=None, deploy_info=None, credentials=None, verify=True, cb=None):
         super(Deployer, self).__init__()
         self.deployable = deployable
         self.deploy_info = deploy_info
+        self.credentials = credentials
         self.actor_map = {}
         self.actor_connections = {}
         self.node = node
@@ -618,7 +619,7 @@ class Deployer(object):
           - 'signature' is the GlobalStore actor-signature to lookup the actor
         """
         req = self.get_req(actor_name)
-        found, is_primitive, actor_def = ActorStore().lookup(actor_type)
+        found, is_primitive, actor_def = ActorStore().lookup(actor_type, credentials=self.credentials)
         if not found or not is_primitive:
             raise Exception("Not known actor type: %s" % actor_type)
 
@@ -634,7 +635,7 @@ class Deployer(object):
         # args is a **dictionary** of key-value arguments for this instance
         # signature is the GlobalStore actor-signature to lookup the actor
         args['name'] = actor_name
-        actor_id = self.node.am.new(actor_type=actor_type, args=args, signature=signature)
+        actor_id = self.node.am.new(actor_type=actor_type, args=args, signature=signature, credentials=self.credentials)
         if req:
             self.node.am.actors[actor_id].requirements_add(req, extend=False)
         return actor_id
@@ -672,7 +673,8 @@ class Deployer(object):
         desc = comp_name_desc[1]
         try:
             # List of (found, is_primitive, info)
-            actor_types = [ActorStore().lookup(actor['actor_type']) for actor in desc['component']['structure']['actors'].values()]
+            actor_types = [ActorStore().lookup(actor['actor_type'], credentials=self.credentials)
+                                for actor in desc['component']['structure']['actors'].values()]
         except KeyError:
             actor_types = []
             # Not a component, shadow actor candidate, likely
@@ -680,6 +682,7 @@ class Deployer(object):
             comp_name_desc[1]['shadow_actor'] = True
             return
         except Exception as e:
+            # FIXME Handled when security verification failed
             _log.exception("select_actor desc: %s" % desc)
             raise e
         if all([a[0] and a[1] for a in actor_types]):
