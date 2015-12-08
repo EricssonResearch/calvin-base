@@ -272,7 +272,7 @@ class RequestHandler(object):
             "check": check
         }
         if content and 'sign' in content:
-            data["sec_sign"] = content['sign']
+            data["sec_sign"] = content['sign'].encode('hex_codec')
         if content and 'cert' in content:
             data["sec_cert"] = content['cert']
         r = self._post(rt, timeout, async, DEPLOY, data)

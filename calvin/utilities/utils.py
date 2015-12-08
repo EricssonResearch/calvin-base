@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import os
-from functools import partial
 
 from calvin.utilities.calvinlogger import get_logger
 

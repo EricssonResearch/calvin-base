@@ -115,7 +115,7 @@ class Security(object):
         if 'authentication_local_users' not in self.sec_conf:
             return False
         d = self.sec_conf['authentication_local_users']
-        if 'user' in self.principal and self.principal['user'][0] in d:
+        if 'user' in self.principal and self.principal['user'][0] in d.keys():
             if d[self.principal['user'][0]] == self.principal['password'][0]:
                 _log.debug("found user: %s",self.principal['user'][0])
                 return True
@@ -123,7 +123,7 @@ class Security(object):
                 _log.debug("incorrect username or password")
                 return False
         else:
-            _log.debug("No username supplied")
+            _log.debug("No username supplied in principal %s" % self.principal)
             return False
 
     def check_security_actor_requirements(self, requires):
@@ -224,18 +224,18 @@ class Security(object):
 
         #loop through the policies until one is found that applies to the user
         for plcy in self.sec_policy.values():
-            if any([plcy['principal'][principal_type] == principal_name
-                        for principal_type, principal_name in self.principal.iteritems()
-                        if principal_type in plcy['principal']]):
+            _log.debug("Security: verify_signature policy: %s\nprincipal: %s" % (plcy, self.principal))
+            if any([principal_name in plcy['principal'][principal_type]
+                        for principal_type, principal_names in self.principal.iteritems()
+                        if principal_type in plcy['principal'] for principal_name in principal_names]):
                 _log.debug("found an accepting policy:" % plcy)
                 if flag=="application":
                     if 'application_signature' in plcy:
-                        try:
-                            self.verify_signature_and_certificate(content, plcy, flag)
-                            _log.debug("application signature correct: %s" % file)
+                        if self.verify_signature_and_certificate(content, plcy, flag):
+                            _log.debug("application signature correct")
                             return True
-                        except Exception as e:
-                            _log.exception("verification of application signature failed")
+                        else:
+                            _log.error("verification of application signature failed")
                             return False
                     else:
                         # No appliction_signature, so allow unsigned apps for subjects
@@ -244,12 +244,11 @@ class Security(object):
                         return True
                 elif flag=="actor":
                     if 'actor_signature' in plcy:
-                        try:
-                            self.verify_signature_and_certificate(content, plcy, flag)
-                            _log.debug("actor signature correct: %s" % file)
+                        if self.verify_signature_and_certificate(content, plcy, flag):
+                            _log.debug("actor signature correct")
                             return True
-                        except Exception as e:
-                            _log.exception("verification of actor signature failed")
+                        else:
+                            _log.error("verification of actor signature failed")
                             return False
                     else:
                         # No actor_signature, so allow unsigned actors for subjects 
@@ -280,6 +279,7 @@ class Security(object):
                 if self.check_signature_policy(trusted_cert, flag, plcy):
                     try:
                         OpenSSL.crypto.verify(trusted_cert, content['sign'], content['file'], 'sha256')
+                        return True
                     except Exception as e:
                         _log.exception("OpenSSL verification error")
                         return False

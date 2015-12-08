@@ -1,0 +1,6 @@
+src : std.CountTimer()
+sum : std.Sum()
+snk : io.StandardOut()
+
+src.integer > sum.integer
+sum.integer > snk.token

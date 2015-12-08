@@ -1071,12 +1071,12 @@ class CalvinControl(object):
             if 'app_info' not in data:
                 kwargs = {}
                 # Supply security verification data when available
-                if "credentials" in data:
+                if "sec_credentials" in data:
                     kwargs['credentials'] = data['sec_credentials']
                     if "sec_sign" in data and "sec_cert" in data:
                         kwargs['content'] = {'file': data["script"],
                                              'cert': data['sec_cert'],
-                                             'sign': data['sec_sign']}
+                                             'sign': data['sec_sign'].decode('hex_codec')}
                 app_info, errors, warnings = compiler.compile(data["script"], filename=data["name"],
                         verify=data["check"] if "check" in data else True, **kwargs)
                 if errors:
