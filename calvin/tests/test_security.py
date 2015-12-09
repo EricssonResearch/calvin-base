@@ -269,6 +269,9 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1:sum'] in actors
         assert result['actor_map']['test_security1:snk'] in actors
 
+        actual = utils.report(rt1, result['actor_map']['test_security1:snk'])
+        assert len(actual) > 5
+
         utils.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
@@ -301,6 +304,9 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1:src'] in actors
         assert result['actor_map']['test_security1:sum'] in actors
         assert result['actor_map']['test_security1:snk'] in actors
+
+        actual = utils.report(rt2, result['actor_map']['test_security1:snk'])
+        assert len(actual) > 5
 
         utils.delete_application(rt2, result['application_id'])
 
