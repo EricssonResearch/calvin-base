@@ -55,6 +55,12 @@ def security_modules_check():
             return False
     return True
 
+def security_needed_check():
+    if _conf.get("security","security_conf") or _conf.get("security","security_policy"):
+        # Want security
+        return True
+    else:
+        return False
 
 class Security(object):
     def __init__(self):

@@ -26,6 +26,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
 from calvin.requests import calvinresponse
+from calvin.utilities.security import security_needed_check
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
 
@@ -1089,7 +1090,14 @@ class CalvinControl(object):
                                             status=calvinresponse.BAD_REQUEST)
                     return
             else:
-                # When supplying app_info directly any app security verification must be done by client
+                # Supplying app_info is for backward compatibility hence abort if node configured security
+                # Main user is csruntime when deploying script at the same time and some tests used
+                # via calvin.Tools.deployer (the Deployer below is the new in appmanager)
+                # TODO rewrite these users to send the uncompiled script as cscontrol does.
+                if security_needed_check():
+                    _log.error("Can't combine compiled script with runtime having security")
+                    self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
+                    return
                 app_info = data['app_info']
                 errors = [""]
                 warnings = [""]
