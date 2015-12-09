@@ -161,6 +161,7 @@ class TestSecurity(unittest.TestCase):
                             "resource":["runtime"]
                         }
                     })
+        rt2_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
         rt2_conf.save("/tmp/calvin5001.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5001"

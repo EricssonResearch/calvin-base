@@ -129,18 +129,16 @@ class Store(object):
                         subdirs.remove(exclude)
 
 
-    def _load_pymodule(self, name, path, credentials=None):
+    def _load_pymodule(self, name, path):
         if not os.path.isfile(path):
             return None
         pymodule = None
         try:
-            if credentials:
-                sec = Security()
-                sec.set_principal(credentials)
-                _log.debug("Verify credentials for %s actor with credentials %s" % (name, credentials))
-                if not sec.verify_signature(path, "actor"):
+            if self.sec:
+                _log.debug("Verify credentials for %s actor with credentials %s" % (name, self.sec.principal))
+                if not self.sec.verify_signature(path, "actor"):
                     _log.debug("Failed verification of credentials for %s actor with credentials %s" %
-                                    (name, credentials))
+                                    (name, self.sec.principal))
                     raise Exception("Actor security signature incorrect")
             pymodule = imp.load_source(name, path)
             # Check if we have a module or not
@@ -153,10 +151,10 @@ class Store(object):
             return pymodule
 
 
-    def _load_pyclass(self, name, path, credentials=None):
+    def _load_pyclass(self, name, path):
         if not os.path.isfile(path):
             return None
-        pymodule = self._load_pymodule(name, path, credentials)
+        pymodule = self._load_pymodule(name, path)
         pyclass = pymodule and pymodule.__dict__.get(name, None)
         if not pyclass:
             _log.debug("No entry %s in %s" % (name, path))
@@ -199,9 +197,10 @@ class Store(object):
 class ActorStore(Store):
     __metaclass__ = Singleton
 
-    def __init__(self):
+    def __init__(self, security=None):
         self.conf_paths_name = 'actor_paths'
         super(ActorStore, self).__init__()
+        self.sec = security
         self.update()
 
 
@@ -210,8 +209,8 @@ class ActorStore(Store):
         return self.load_actor(actor_type, path)
 
 
-    def load_actor(self, actor_type, actor_path, credentials=None):
-        actor_class = self._load_pyclass(actor_type, actor_path, credentials)
+    def load_actor(self, actor_type, actor_path):
+        actor_class = self._load_pyclass(actor_type, actor_path)
         if actor_class:
             inports, outports = self._gather_ports(actor_class)
             actor_class.inport_names = inports
@@ -219,11 +218,10 @@ class ActorStore(Store):
         return actor_class
 
 
-    def lookup(self, qualified_name, credentials=None):
+    def lookup(self, qualified_name):
         """
         Look up actor using qualified_name, e.g. foo.bar.Actor
-        If credentials are supplied use it to verify if access rights
-        TODO: if actors are sign require credentials, instead of passing when no credentials
+        If self.sec is set use it to verify access rights
         Return a tuple (found, is_primitive, info) where
             found:         boolean
             is_primitive:  boolean
@@ -236,7 +234,7 @@ class ActorStore(Store):
         for path in self.paths_for_module(namespace):
             # Primitives has precedence over components
             actor_path = os.path.join(path, actor_type + '.py')
-            actor_class = self.load_actor(actor_type, actor_path, credentials)
+            actor_class = self.load_actor(actor_type, actor_path)
             if actor_class:
                 return (True, True, actor_class)
         for path in self.paths_for_module(namespace):

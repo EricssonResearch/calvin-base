@@ -20,6 +20,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
+from calvin.utilities.security import Security
 from calvin.actor.actor import ShadowActor
 
 _log = get_logger(__name__)
@@ -94,7 +95,13 @@ class ActorManager(object):
 
     def _new_actor(self, actor_type, actor_id=None, credentials=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
-        (found, is_primitive, class_) = ActorStore().lookup(actor_type, credentials)
+        if credentials is not None:
+            sec = Security()
+            sec.set_principal(credentials)
+            sec.authenticate_principal()
+        else:
+            sec = None
+        (found, is_primitive, class_) = ActorStore(security=sec).lookup(actor_type)
         if not found:
             # Here assume a primtive actor, now become shadow actor
             _log.analyze(self.node.id, "+ NOT FOUND CREATE SHADOW ACTOR", {'class': class_})
@@ -112,14 +119,14 @@ class ActorManager(object):
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
             raise(e)
         try:
-            a.set_credentials(credentials)
+            a.set_credentials(credentials, security=sec)
             a._calvinsys = self.node.calvinsys()
             a.check_requirements()
         except Exception as e:
             _log.exception("Catched new from state")
             _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
             a = ShadowActor(actor_type, actor_id=actor_id)
-            a.set_credentials(credentials)
+            a.set_credentials(credentials, security=sec)
             a._calvinsys = self.node.calvinsys()
         return a
 

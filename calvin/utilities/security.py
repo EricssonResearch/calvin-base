@@ -87,6 +87,10 @@ class Security(object):
         if STUB:
             return True
         _log.debug("Security:authenticate_principal")
+        if not security_needed_check():
+            _log.debug("Security:authenticate_principal no security needed")
+            return True
+
         if self.sec_conf['authentication_method'] == "local_file":
             _log.debug("local file authentication method chosen")
             return self.authenticate_using_local_database()
@@ -256,7 +260,8 @@ class Security(object):
         # Verification OK if sign and cert OK for any principal matching policy
         # that have previously been authorized
         for plcy in self.sec_policy.values():
-            _log.debug("Security: verify_signature policy: %s\nprincipal: %s" % (plcy, self.principal))
+            _log.debug("Security: verify_signature policy: %s\nprincipal: %s\nauth:%s" %
+                        (plcy, self.principal, self.auth))
             if any([principal_name in plcy['principal'][principal_type]
                         for principal_type, principal_names in self.principal.iteritems()
                             if principal_type in plcy['principal']

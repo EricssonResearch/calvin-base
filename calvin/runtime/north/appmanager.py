@@ -23,6 +23,7 @@ import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinuuid
 from calvin.actorstore.store import ActorStore, GlobalStore
 from calvin.runtime.south.plugins.async import async
+from calvin.utilities.security import Security
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -563,6 +564,8 @@ class Deployer(object):
         self.deployable = deployable
         self.deploy_info = deploy_info
         self.credentials = credentials
+        self.sec = Security()
+        self.sec.set_principal(self.credentials)
         self.actor_map = {}
         self.actor_connections = {}
         self.node = node
@@ -619,7 +622,7 @@ class Deployer(object):
           - 'signature' is the GlobalStore actor-signature to lookup the actor
         """
         req = self.get_req(actor_name)
-        found, is_primitive, actor_def = ActorStore().lookup(actor_type, credentials=self.credentials)
+        found, is_primitive, actor_def = ActorStore(security=self.sec).lookup(actor_type)
         if not found or not is_primitive:
             raise Exception("Not known actor type: %s" % actor_type)
 
@@ -673,7 +676,7 @@ class Deployer(object):
         desc = comp_name_desc[1]
         try:
             # List of (found, is_primitive, info)
-            actor_types = [ActorStore().lookup(actor['actor_type'], credentials=self.credentials)
+            actor_types = [ActorStore(security=self.sec).lookup(actor['actor_type'])
                                 for actor in desc['component']['structure']['actors'].values()]
         except KeyError:
             actor_types = []
@@ -797,6 +800,9 @@ class Deployer(object):
         """
         if not self.deployable['valid']:
             raise Exception("Deploy information is not valid")
+
+        # Authenticate Security instance once
+        self.sec.authenticate_principal()
 
         unhandled = {}
 

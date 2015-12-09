@@ -358,13 +358,22 @@ class Actor(object):
                              disable_state_checks=disable_state_checks)
         self.metering.add_actor_info(self)
 
-    def set_credentials(self, credentials):
+    def set_credentials(self, credentials, security=None):
+        """ Sets the credentials the actor operates under
+            This will trigger an authentication of the credentials
+            Optionally an authenticated Security instance can be supplied,
+            to reduce the needed authentication processing.
+        """
         _log.debug("actor.py: set_credentials: %s" % credentials)
         if credentials is None:
             return
         self.credentials = credentials
-        self.sec = Security()
-        self.sec.set_principal(self.credentials)
+        if security:
+            self.sec = security
+        else:
+            self.sec = Security()
+            self.sec.set_principal(self.credentials)
+            self.sec.authenticate_principal()
 
     def get_credentials(self):
         _log.debug("actor.py: get_credentials: %s" % self.credentials)
