@@ -62,6 +62,7 @@ class Security(object):
         self.sec_conf = _conf.get("security","security_conf")
         self.sec_policy = _conf.get("security","security_policy")
         self.principal = {}
+        self.auth = {}
 
     def set_principal(self, principal):
         if STUB:
@@ -73,6 +74,8 @@ class Security(object):
             # Make sure all principal values are lists
             self.principal = {k: list(v) if isinstance(v, (list, tuple, set)) else [v]
                                 for k, v in principal.iteritems()}
+            # All default to unauthorized
+            self.auth = {k: [False]*len(v) for k, v in self.principal.iteritems()}
 
     def authenticate_principal(self):
         if STUB:
@@ -93,6 +96,7 @@ class Security(object):
 
 
     def authenticate_using_radius_server(self):
+        # FIXME update self.auth and verify all of principal
         if self.principal['user']:
             # FIXME hardcoded secret
             srv=Client(server="localhost", secret="testing123",
@@ -116,19 +120,32 @@ class Security(object):
         return False
 
     def authenticate_using_local_database(self):
+        """ Authenticate a principal against config stored information
+            This is primarily intended for testing purposes,
+            since passwords arn't stored securily.
+        """
         if 'authentication_local_users' not in self.sec_conf:
             return False
+        # Verify users against stored passwords
+        # TODO expand with other principal types
         d = self.sec_conf['authentication_local_users']
-        if 'user' in self.principal and self.principal['user'][0] in d.keys():
-            if d[self.principal['user'][0]] == self.principal['password'][0]:
-                _log.debug("found user: %s",self.principal['user'][0])
-                return True
-            else:
-                _log.debug("incorrect username or password")
-                return False
-        else:
-            _log.debug("No username supplied in principal %s" % self.principal)
+        if not ('user' in self.principal and 'password' in self.principal):
             return False
+        if len(self.principal['user']) != len(self.principal['password']):
+            return False
+        auth = []
+        for user, password in zip(self.principal['user'], self.principal['password']):
+            if user in d.keys():
+                if d[user] == password:
+                    _log.debug("found user: %s",user)
+                    auth.append(True)
+                else:
+                    _log.debug("incorrect username or password")
+                    auth.append(False)
+            else:
+                auth.append(False)
+        self.auth['user'] = auth
+        return any(auth)
 
     def check_security_actor_requirements(self, requires):
         if STUB:
@@ -231,11 +248,14 @@ class Security(object):
 
         # loop through the policies until one is found that applies to the principal
         # Verification OK if sign and cert OK for any principal matching policy
+        # that have previously been authorized
         for plcy in self.sec_policy.values():
             _log.debug("Security: verify_signature policy: %s\nprincipal: %s" % (plcy, self.principal))
             if any([principal_name in plcy['principal'][principal_type]
                         for principal_type, principal_names in self.principal.iteritems()
-                        if principal_type in plcy['principal'] for principal_name in principal_names]):
+                            if principal_type in plcy['principal']
+                        for principal_name, auth in zip(principal_names, self.auth[principal_type])
+                            if auth]):
                 _log.debug("found a policy with matching principal:" % plcy)
                 if (flag + '_signature') in plcy:
                     if self.verify_signature_and_certificate(content, plcy, flag):
@@ -247,9 +267,13 @@ class Security(object):
         if STUB:
             return True
 
-        if plcy[flag + '_signature'] == "__unsigned__":
+        if "__unsigned__" in plcy[flag + '_signature']:
             _log.debug("%s is allowed unsigned" % flag)
             return True
+
+        if content is None:
+            _log.debug("%s need sign and cert" % flag)
+            return False
 
         if not HAS_OPENSSL:
             _log.error("Install openssl to allow verification of signatures and certificates")
