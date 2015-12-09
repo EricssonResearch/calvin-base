@@ -229,25 +229,26 @@ class Security(object):
             # TODO add component verification
             raise NotImplementedError
 
-        #loop through the policies until one is found that applies to the user
+        # loop through the policies until one is found that applies to the principal
+        # Verification OK if sign and cert OK for any principal matching policy
         for plcy in self.sec_policy.values():
             _log.debug("Security: verify_signature policy: %s\nprincipal: %s" % (plcy, self.principal))
             if any([principal_name in plcy['principal'][principal_type]
                         for principal_type, principal_names in self.principal.iteritems()
                         if principal_type in plcy['principal'] for principal_name in principal_names]):
-                _log.debug("found an accepting policy:" % plcy)
+                _log.debug("found a policy with matching principal:" % plcy)
                 if (flag + '_signature') in plcy:
-                    return self.verify_signature_and_certificate(content, plcy, flag)
-                else:
-                    # No appliction_signature, so allow unsigned apps for subjects
-                    # in this policy
-                    _log.debug("allow unsigned %s" % flag)
-                    return True
+                    if self.verify_signature_and_certificate(content, plcy, flag):
+                        return True
         _log.error("verification of %s signature failed" % flag)
         return False
 
     def verify_signature_and_certificate(self, content, plcy, flag):
         if STUB:
+            return True
+
+        if plcy[flag + '_signature'] == "__unsigned__":
+            _log.debug("%s is allowed unsigned" % flag)
             return True
 
         if not HAS_OPENSSL:

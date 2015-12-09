@@ -1087,6 +1087,7 @@ class CalvinControl(object):
                         _log.exception("Compilation failed")
                         self.send_response(handle, connection, json.dumps({'errors': errors, 'warnings': warnings}),
                                             status=calvinresponse.BAD_REQUEST)
+                    return
             else:
                 # When supplying app_info directly any app security verification must be done by client
                 app_info = data['app_info']

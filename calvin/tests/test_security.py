@@ -123,7 +123,45 @@ class TestSecurity(unittest.TestCase):
         rt1 = utils.RT("http://%s:5003" % ip_addr)
 
         rt2_conf = copy.deepcopy(_conf)
-        # Update conf if needed
+        rt2_conf.add_section("security")
+        rt2_conf.set("security", "security_conf", {
+                        "comment": "Experimental security settings",
+                        "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
+                        "access_control_enabled": "True",
+                        "authentication_method":"local_file",
+                        "authentication_local_users": {"user1": "pass1", "user2": "pass2"}
+                    })
+        rt2_conf.set("security", "security_policy", {
+                        "policy1":{
+                            "principal":{
+                                "user":["user1","user2"],
+                                "role":["owner"]
+                            },
+                            "application_signature": ["__unsigned__"],
+                            "actor_signature":["signer"],
+                            "resource":["calvinsys", "runtime"]
+                        },
+                        "policy2":{
+                            "principal":{
+                                "role":["cleaner"],
+                                "group":["everyone"]
+                            },
+                            "application_signature": ["signer"],
+                            "component_signature":["signer"],
+                            "actor_signature":["signer"],
+                            "resource":["calvinsys.events.timer", "runtime"]
+                        },
+                        "policy3":{
+                            "principal":{
+                                "group":["everyone"]
+                            },
+                            "application_signature": ["signer"],
+                            "component_signature":["signer"],
+                            "actor_signature":["signer"],
+                            "resource":["runtime"]
+                        }
+                    })
+        rt2_conf.save("/tmp/calvin5001.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5001"
             outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
@@ -200,7 +238,7 @@ class TestSecurity(unittest.TestCase):
         _log.analyze("TESTRUN", "+ RT2 INDEX", {})
 
     @pytest.mark.slow
-    def testSecuritySimple(self):
+    def testSecurityAppSign(self):
         _log.analyze("TESTRUN", "+", {})
         global rt1
         global rt2
@@ -216,7 +254,9 @@ class TestSecurity(unittest.TestCase):
             result = utils.deploy_application(rt1, "test_security1", content['file'], 
                         credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
                         check=True)
-        except:
+        except Exception as e:
+            if e.message == "401":
+                raise Exception("Failed security verification of app test_security1")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1, no use to verify if requirements fulfilled")
         #print "RESULT:", result
@@ -229,4 +269,62 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1:snk'] in actors
 
         utils.delete_application(rt1, result['application_id'])
+
+    @pytest.mark.slow
+    def testSecurityAppUnsigned(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt1
+        global rt2
+        global security_test_dir
+
+        self.verify_storage()
+
+        result = {}
+        try:
+            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1.calvin")
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            result = utils.deploy_application(rt2, "test_security1", content['file'], 
+                        credentials={"user": ["user1"], "password": ["pass1"]}, content=None, 
+                        check=True)
+        except Exception as e:
+            if e.message == "401":
+                raise Exception("Failed security verification of app test_security1")
+            _log.exception("Test deploy failed")
+            raise Exception("Failed deployment of app test_security1, no use to verify if requirements fulfilled")
+        #print "RESULT:", result
+        time.sleep(2)
+
+        # For example verify that actors exist like this
+        actors = utils.get_actors(rt2)
+        assert result['actor_map']['test_security1:src'] in actors
+        assert result['actor_map']['test_security1:sum'] in actors
+        assert result['actor_map']['test_security1:snk'] in actors
+
+        utils.delete_application(rt2, result['application_id'])
+
+    @pytest.mark.slow
+    def testSecurityAppFailSign(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt1
+        global rt2
+        global security_test_dir
+
+        self.verify_storage()
+
+        result = {}
+        try:
+            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1.calvin")
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            result = utils.deploy_application(rt1, "test_security1", content['file'], 
+                        credentials={"user": ["user3"], "password": ["pass1"]}, content=content, 
+                        check=True)
+        except Exception as e:
+            if e.message == "401":
+                # We were blocked, as we should
+                return
+            _log.exception("Test deploy failed for non security reasons")
+
+        raise Exception("Deployment of app test_security1, did not fail for security reasons")
 
