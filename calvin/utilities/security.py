@@ -68,7 +68,11 @@ class Security(object):
             return True
         else:
             _log.debug("Security: set_principal %s" % principal)
-            self.principal = principal
+            if not isinstance(principal, dict):
+                return False
+            # Make sure all principal values are lists
+            self.principal = {k: list(v) if isinstance(v, (list, tuple, set)) else [v]
+                                for k, v in principal.iteritems()}
 
     def authenticate_principal(self):
         if STUB:
@@ -151,9 +155,10 @@ class Security(object):
                 temp2 = '.'.join(temp)
                 # Satisfied when one principal match in one policy
                 for plcy in [p for p in self.sec_policy.values() if temp2 in p['resource']]:
-                    if any([plcy['principal'][principal_type] == principal_name
-                                for principal_type, principal_name in principal.iteritems()
-                                if principal_name and principal_type in plcy['principal']]):
+                    if any([principal_name in plcy['principal'][principal_type]
+                                for principal_type, principal_names in principal.iteritems()
+                                if principal_type in plcy['principal']
+                                for principal_name in principal_names]):
                         _log.debug("found a match")
                         return True
                 #Let's go up in hierarchy, e.g. if we found no policy for calvinsys.media.camera
@@ -167,17 +172,15 @@ class Security(object):
         elif req == "runtime":
             # Satisfied when one principal match in one policy
             for plcy in [p for p in self.sec_policy.values() if "runtime" in p['resource']]:
-                if any([plcy['principal'][principal_type] == principal_name
-                            for principal_type, principal_name in principal.iteritems()
-                            if principal_type in plcy['principal']]):
+                if any([principal_name in plcy['principal'][principal_type]
+                            for principal_type, principal_names in principal.iteritems()
+                            if principal_type in plcy['principal']
+                            for principal_name in principal_names]):
                     _log.debug("found a match for runtime")
                     return True
 
         #The user is not in the list of allowed users for the resource
         return False
-
-
- ##################################################################################
 
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):
@@ -222,6 +225,10 @@ class Security(object):
             _log.debug("no signature verificate required")
             return True
 
+        if flag not in ["application", "actor"]:
+            # TODO add component verification
+            raise NotImplementedError
+
         #loop through the policies until one is found that applies to the user
         for plcy in self.sec_policy.values():
             _log.debug("Security: verify_signature policy: %s\nprincipal: %s" % (plcy, self.principal))
@@ -229,35 +236,14 @@ class Security(object):
                         for principal_type, principal_names in self.principal.iteritems()
                         if principal_type in plcy['principal'] for principal_name in principal_names]):
                 _log.debug("found an accepting policy:" % plcy)
-                if flag=="application":
-                    if 'application_signature' in plcy:
-                        if self.verify_signature_and_certificate(content, plcy, flag):
-                            _log.debug("application signature correct")
-                            return True
-                        else:
-                            _log.error("verification of application signature failed")
-                            return False
-                    else:
-                        # No appliction_signature, so allow unsigned apps for subjects
-                        # in this policy
-                        _log.debug("allow unsigned application")
-                        return True
-                elif flag=="actor":
-                    if 'actor_signature' in plcy:
-                        if self.verify_signature_and_certificate(content, plcy, flag):
-                            _log.debug("actor signature correct")
-                            return True
-                        else:
-                            _log.error("verification of actor signature failed")
-                            return False
-                    else:
-                        # No actor_signature, so allow unsigned actors for subjects 
-                        # in this policy
-                        _log.debug("allow unsigned actor")
-                        return True
+                if (flag + '_signature') in plcy:
+                    return self.verify_signature_and_certificate(content, plcy, flag)
                 else:
-                    # TODO add component verification
-                    raise NotImplementedError
+                    # No appliction_signature, so allow unsigned apps for subjects
+                    # in this policy
+                    _log.debug("allow unsigned %s" % flag)
+                    return True
+        _log.error("verification of %s signature failed" % flag)
         return False
 
     def verify_signature_and_certificate(self, content, plcy, flag):
@@ -266,6 +252,7 @@ class Security(object):
 
         if not HAS_OPENSSL:
             _log.error("Install openssl to allow verification of signatures and certificates")
+            _log.error("verification of %s signature failed" % flag)
             return False
 
         _log.debug("Security:verify_signature_and_certificate")
@@ -279,15 +266,19 @@ class Security(object):
                 if self.check_signature_policy(trusted_cert, flag, plcy):
                     try:
                         OpenSSL.crypto.verify(trusted_cert, content['sign'], content['file'], 'sha256')
+                        _log.debug("%s signature correct" % flag)
                         return True
                     except Exception as e:
                         _log.exception("OpenSSL verification error")
+                        _log.error("verification of %s signature failed" % flag)
                         return False
                 else:
                     _log.debug("signature policy not fulfilled")
+                    _log.error("verification of %s signature failed" % flag)
                     return False
         except Exception as e:
             _log.exception("error opening one of the needed certificates")
+            _log.error("verification of %s signature failed" % flag)
             return False
 
     def check_signature_policy(self, cert, flag, plcy):
