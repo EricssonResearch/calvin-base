@@ -129,7 +129,7 @@ class TestSecurity(unittest.TestCase):
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
                         "access_control_enabled": "True",
                         "authentication_method":"local_file",
-                        "authentication_local_users": {"user1": "pass1", "user2": "pass2"}
+                        "authentication_local_users": {"user1": "pass1", "user2": "pass2", "user_calvinsys": "pass1"}
                     })
         rt2_conf.set("security", "security_policy", {
                         "policy1":{
@@ -140,6 +140,15 @@ class TestSecurity(unittest.TestCase):
                             "application_signature": ["__unsigned__"],
                             "actor_signature":["signer"],
                             "resource":["calvinsys", "runtime"]
+                        },
+                        "policyX":{
+                            "principal":{
+                                "user":["user_calvinsys"],
+                                "role":["owner"]
+                            },
+                            "application_signature": ["__unsigned__"],
+                            "actor_signature":["__unsigned__"],
+                            "resource":["runtime"]
                         },
                         "policy2":{
                             "principal":{
@@ -307,6 +316,43 @@ class TestSecurity(unittest.TestCase):
 
         actual = utils.report(rt2, result['actor_map']['test_security1:snk'])
         assert len(actual) > 5
+
+        utils.delete_application(rt2, result['application_id'])
+
+    @pytest.mark.slow
+    def testSecurityCalvinsysFail(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt1
+        global rt2
+        global security_test_dir
+
+        self.verify_storage()
+
+        result = {}
+        try:
+            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1.calvin")
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            result = utils.deploy_application(rt2, "test_security1", content['file'], 
+                        credentials={"user": ["user_calvinsys"], "password": ["pass1"]}, content=None, 
+                        check=True)
+        except Exception as e:
+            if e.message == "401":
+                raise Exception("Failed security verification of app test_security1")
+            _log.exception("Test deploy failed")
+            raise Exception("Failed deployment of app test_security1, no use to verify if requirements fulfilled")
+        #print "RESULT:", result
+        time.sleep(2)
+
+        # For example verify that actors exist like this
+        actors = utils.get_actors(rt2)
+        assert result['actor_map']['test_security1:src'] in actors
+        assert result['actor_map']['test_security1:sum'] in actors
+        assert result['actor_map']['test_security1:snk'] in actors
+
+        # Make sure no tokens produced, since the src is still a shadow actor
+        actual = utils.report(rt2, result['actor_map']['test_security1:snk'])
+        assert len(actual) == 0
 
         utils.delete_application(rt2, result['application_id'])
 

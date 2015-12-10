@@ -174,39 +174,24 @@ class Security(object):
             return True
         _log.debug("Security:check_security_policy_actor")
         #Calling function shall already have checked that self.sec_conf exist
-        #If the resource is of type calvinsys.media.camera.lense
-        if "." in req:
-            #create list, e.g., ['calvinsys','media','camera','lense']
-            temp = req.split(".")
-            while len(temp) >0:
-                temp2 = '.'.join(temp)
-                # Satisfied when one principal match in one policy
-                for plcy in [p for p in self.sec_policy.values() if temp2 in p['resource']]:
-                    if any([principal_name in plcy['principal'][principal_type]
-                                for principal_type, principal_names in principal.iteritems()
-                                if principal_type in plcy['principal']
-                                for principal_name in principal_names]):
-                        _log.debug("found a match")
-                        return True
-                #Let's go up in hierarchy, e.g. if we found no policy for calvinsys.media.camera
-                #let's now try calvinsys.media instead
-                temp.pop()
-            #The user is not in the list of allowed users for the resource
-            _log.debug("the principal does not have access rights to resource: %s" % req)
-            return False
-        #Special handling for access only to execution in runtime, but 
-        #without access to any particular resource
-        elif req == "runtime":
+        #create list, e.g., ['calvinsys','media','camera','lense']
+        temp = req.split(".")
+        while len(temp) >0:
+            temp2 = '.'.join(temp)
             # Satisfied when one principal match in one policy
-            for plcy in [p for p in self.sec_policy.values() if "runtime" in p['resource']]:
+            for plcy in [p for p in self.sec_policy.values() if temp2 in p['resource']]:
                 if any([principal_name in plcy['principal'][principal_type]
                             for principal_type, principal_names in principal.iteritems()
-                            if principal_type in plcy['principal']
-                            for principal_name in principal_names]):
-                    _log.debug("found a match for runtime")
+                                if principal_type in plcy['principal']
+                            for principal_name, auth in zip(principal_names, self.auth[principal_type])
+                                if auth]):
+                    _log.debug("found a match for %s against %s" % (req, temp2))
                     return True
-
+            #Let's go up in hierarchy, e.g. if we found no policy for calvinsys.media.camera
+            #let's now try calvinsys.media instead
+            temp.pop()
         #The user is not in the list of allowed users for the resource
+        _log.debug("the principal does not have access rights to resource: %s" % req)
         return False
 
     @staticmethod
