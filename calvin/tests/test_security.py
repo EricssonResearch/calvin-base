@@ -220,11 +220,11 @@ class TestSecurity(unittest.TestCase):
         caps2 = []
         for i in range(20):
             try:
-                if len(caps1) != 2:
+                if not (rt1_id in caps1 and rt2_id in caps1):
                     caps1 = utils.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
-                if len(caps2) != 2:
+                if not (rt1_id in caps2 and rt2_id in caps2):
                     caps2 = utils.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
-                if len(caps1) == 2 and len(caps2) == 2:
+                if rt1_id in caps1 and rt2_id in caps1 and rt1_id in caps1 and rt2_id in caps1:
                     failed = False
                     break
                 else:
