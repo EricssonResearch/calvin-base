@@ -1,0 +1,6 @@
+src : std.CountTimer()
+sum : std.SumFake()
+snk : io.StandardOut(store_tokens=true)
+
+src.integer > sum.integer
+sum.integer > snk.token

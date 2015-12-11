@@ -47,11 +47,11 @@ def security_modules_check():
         # Want security
         if not HAS_OPENSSL:
             # Miss open ssl
-            _log.error("Install openssl to allow verification of signatures and certificates")
+            _log.error("Security: Install openssl to allow verification of signatures and certificates")
             return False
             _conf.get("security","security_conf")['authentication_method']
         if _conf.get("security","security_conf")['authentication_method'] == "radius" and not HAS_PYRAD:
-            _log.error("Install pyrad to use radius server as authentication method.")
+            _log.error("Security: Install pyrad to use radius server as authentication method.")
             return False
     return True
 
@@ -64,7 +64,7 @@ def security_needed_check():
 
 class Security(object):
     def __init__(self):
-        _log.debug("Security:_init_")
+        _log.debug("Security: _init_")
         self.sec_conf = _conf.get("security","security_conf")
         self.sec_policy = _conf.get("security","security_policy")
         self.principal = {}
@@ -86,22 +86,22 @@ class Security(object):
     def authenticate_principal(self):
         if STUB:
             return True
-        _log.debug("Security:authenticate_principal")
+        _log.debug("Security: authenticate_principal")
         if not security_needed_check():
-            _log.debug("Security:authenticate_principal no security needed")
+            _log.debug("Security: authenticate_principal no security needed")
             return True
 
         if self.sec_conf['authentication_method'] == "local_file":
-            _log.debug("local file authentication method chosen")
+            _log.debug("Securty: local file authentication method chosen")
             return self.authenticate_using_local_database()
         if self.sec_conf['authentication_method'] == "radius":
             if not HAS_PYRAD:
-                _log.error("Install pyrad to use radius server as authentication method.\n" +
+                _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
                             "NB! NO AUTHENTICATION USED")
                 return False
-            _log.info("Radius authtentication method chosen")
+            _log.info("Security: Radius authtentication method chosen")
             return self.authenticate_using_radius_server()
-        _log.info("No security config, so authentication disabled")
+        _log.info("Security: No security config, so authentication disabled")
         return True
 
 
@@ -121,12 +121,12 @@ class Security(object):
             for i in reply.keys():
                 _log.debug("%s: %s" % (i, reply[i]))
             if reply.code==pyrad.packet.AccessAccept:
-                _log.debug("access accepted")
+                _log.debug("Security:access accepted")
                 return True
             else:
-                _log.debug("access denied")
+                _log.debug("Security: access denied")
                 return False
-        _log.debug("No username supplied")
+        _log.debug("Security: No username supplied")
         return False
 
     def authenticate_using_local_database(self):
@@ -147,10 +147,10 @@ class Security(object):
         for user, password in zip(self.principal['user'], self.principal['password']):
             if user in d.keys():
                 if d[user] == password:
-                    _log.debug("found user: %s",user)
+                    _log.debug("Security: found user: %s",user)
                     auth.append(True)
                 else:
-                    _log.debug("incorrect username or password")
+                    _log.debug("Security: incorrect username or password")
                     auth.append(False)
             else:
                 auth.append(False)
@@ -160,7 +160,7 @@ class Security(object):
     def check_security_actor_requirements(self, requires):
         if STUB:
             return True
-        _log.debug("Security:check_security_actor_requirements")
+        _log.debug("Security: check_security_actor_requirements")
         if self.sec_conf and self.sec_conf['access_control_enabled'] == "True":
             for req in requires:
                 if not self.check_security_policy_actor(req, "user", self.principal):
@@ -172,7 +172,7 @@ class Security(object):
         """ Checks that the requirement is allowed by the security policy """
         if STUB:
             return True
-        _log.debug("Security:check_security_policy_actor")
+        _log.debug("Security: check_security_policy_actor")
         #Calling function shall already have checked that self.sec_conf exist
         #create list, e.g., ['calvinsys','media','camera','lense']
         temp = req.split(".")
@@ -185,13 +185,13 @@ class Security(object):
                                 if principal_type in plcy['principal']
                             for principal_name, auth in zip(principal_names, self.auth[principal_type])
                                 if auth]):
-                    _log.debug("found a match for %s against %s" % (req, temp2))
+                    _log.debug("Security: found a match for %s against %s" % (req, temp2))
                     return True
             #Let's go up in hierarchy, e.g. if we found no policy for calvinsys.media.camera
             #let's now try calvinsys.media instead
             temp.pop()
         #The user is not in the list of allowed users for the resource
-        _log.debug("the principal does not have access rights to resource: %s" % req)
+        _log.debug("Security: the principal does not have access rights to resource: %s" % req)
         return False
 
     @staticmethod
@@ -207,19 +207,24 @@ class Security(object):
         try:
             with open(cert_filename, 'rt') as f:
                 cert_content = f.read()
+                _log.debug("Security: found certificate")
         except:
-            return None
+            cert_content = None
+            _log.debug("Security: no certificate file")
         try:
             with open(sign_filename, 'rt') as f:
                 sign_content = f.read()
+                _log.debug("Security: found signature")
         except:
-            return None
+            sign_filename = None
+            _log.debug("Security: no signature file")
         if not skip_file:
             try:
                 with open(filename, 'rt') as f:
                     file_content = f.read()
             except:
                 return None
+                _log.debug("Security: file can't be opened")
         return {'cert': cert_content, 'sign': sign_content, 'file': file_content}
 
     def verify_signature(self, file, flag):
@@ -234,7 +239,7 @@ class Security(object):
             return True
         _log.debug("Security: verify_signature")
         if not self.sec_conf:
-            _log.debug("no signature verificate required")
+            _log.debug("Security: no signature verification required: %s"% content['file'])
             return True
 
         if flag not in ["application", "actor"]:
@@ -252,11 +257,12 @@ class Security(object):
                             if principal_type in plcy['principal']
                         for principal_name, auth in zip(principal_names, self.auth[principal_type])
                             if auth]):
-                _log.debug("found a policy with matching principal:" % plcy)
+                _log.debug("Security: found a policy with matching principal")
                 if (flag + '_signature') in plcy:
                     if self.verify_signature_and_certificate(content, plcy, flag):
+                        _log.debug("Security: signature verification successfull")
                         return True
-        _log.error("verification of %s signature failed" % flag)
+        _log.error("Security: verification of %s signature failed" % flag)
         return False
 
     def verify_signature_and_certificate(self, content, plcy, flag):
@@ -264,16 +270,24 @@ class Security(object):
             return True
 
         if "__unsigned__" in plcy[flag + '_signature']:
-            _log.debug("%s is allowed unsigned" % flag)
+            _log.debug("Security: %s is allowed unsigned" % flag)
             return True
 
         if content is None:
-            _log.debug("%s need sign and cert" % flag)
+            _log.debug("Security: %s need file, sign and cert" % flag)
+            return False
+
+        if content['cert'] is None:
+            _log.debug("Security: %s cert" % flag)
+            return False
+
+        if content['sign'] is None:
+            _log.debug("Security: %s sign" % flag)
             return False
 
         if not HAS_OPENSSL:
-            _log.error("Install openssl to allow verification of signatures and certificates")
-            _log.error("verification of %s signature failed" % flag)
+            _log.error("Security: Install openssl to allow verification of signatures and certificates")
+            _log.error("Security: verification of %s signature failed" % flag)
             return False
 
         _log.debug("Security:verify_signature_and_certificate")
@@ -287,19 +301,19 @@ class Security(object):
                 if self.check_signature_policy(trusted_cert, flag, plcy):
                     try:
                         OpenSSL.crypto.verify(trusted_cert, content['sign'], content['file'], 'sha256')
-                        _log.debug("%s signature correct" % flag)
+                        _log.debug("Security: %s signature correct" % flag)
                         return True
                     except Exception as e:
-                        _log.exception("OpenSSL verification error")
-                        _log.error("verification of %s signature failed" % flag)
+                        _log.exception("Security: OpenSSL verification error")
+                        _log.error("Security: verification of %s signature failed" % flag)
                         return False
                 else:
-                    _log.debug("signature policy not fulfilled")
-                    _log.error("verification of %s signature failed" % flag)
+                    _log.debug("Security: signature policy not fulfilled")
+                    _log.error("Security: verification of %s signature failed" % flag)
                     return False
         except Exception as e:
-            _log.exception("error opening one of the needed certificates")
-            _log.error("verification of %s signature failed" % flag)
+            _log.exception("Security: error opening one of the needed certificates")
+            _log.error("Security: verification of %s signature failed" % flag)
             return False
 
     def check_signature_policy(self, cert, flag, plcy):
@@ -310,17 +324,17 @@ class Security(object):
         if flag=="application":
             if 'application_signature' in plcy:
                 if cert.get_issuer().CN not in plcy['application_signature']:
-                    _log.debug("application signer not allowed")
+                    _log.debug("Security: application signer not allowed")
                     return False
             else:
-                _log.debug("no application_signature element, unsigned applications allowed")
+                _log.debug("Security: no application_signature element, unsigned applications allowed")
         elif flag=="actor":
             if 'actor_signature' in plcy:
                 if cert.get_issuer().CN not in plcy['actor_signature']:
-                    _log.debug("actor signer not allowed")
+                    _log.debug("Security: actor signer not allowed")
                     return False
             else:
-                _log.debug("no actor_signature element, unsigned applications allowed")
+                _log.debug("Security: no actor_signature element, unsigned applications allowed")
         return True
 
 
