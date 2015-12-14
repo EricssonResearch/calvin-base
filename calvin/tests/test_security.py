@@ -70,95 +70,48 @@ class TestSecurity(unittest.TestCase):
                         "comment": "Experimental security settings",
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
                         "access_control_enabled": "False",
-                        "authentication_method":"local_file",
-                        "authentication_local_users": {"user1": "pass1", "user2": "pass2", "user3":"pass3"}
+                        "authentication": {
+                            "procedure": "local_file",
+                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
+                            }
                     })
         rt1_conf.set("security", "security_policy", {
-                        "policy1":{
-                            "principal":{
-                                "user":["user1"]
+                        "policy1": {
+                            "principal": {
+                                "user": ["user1"]
                             },
                             "application_signature": ["signer"],
-                            "actor_signature":["signer"],
-                            "resource":["calvinsys", "runtime"]
+                            "actor_signature": ["signer"],
+                            "resource": ["calvinsys"]
                         },
                         "policy2":{
-                            "principal":{
-                                "user":["user2"],
+                            "principal": {
+                                "user": ["user2"],
                             },
                             "application_signature": ["__unsigned__"],
-                            "actor_signature":["signer"],
-                            "resource":["calvinsys", "runtime"]
+                            "actor_signature": ["signer"],
+                            "resource": ["calvinsys", "runtime"]
                         },
-                        "policy3":{
-                            "principal":{
-                                "user":["user3"],
+                        "policy3": {
+                            "principal": {
+                                "user": ["user3"],
                             },
                             "application_signature": ["__unsigned__"],
-                            "actor_signature":["__unsigned__"],
-                            "resource":["calvinsys", "runtime"]
+                            "actor_signature": ["__unsigned__"],
+                            "resource": ["calvinsys", "runtime"]
                         },
-                    })
-        rt1_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
-        rt1_conf.save("/tmp/calvin5000.conf")
-
-        try:
-            logfile = _config_pytest.getoption("logfile")+"5000"
-            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-            if outfile == logfile:
-                outfile = None
-        except:
-            logfile = None
-            outfile = None
-        csruntime(ip_addr, port=5000, controlport=5003, attr={'indexed_public':
-                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
-                   'node_name': {'organization': 'org.testexample', 'name': 'testNode1'},
-                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5000.conf")
-        rt1 = utils.RT("http://%s:5003" % ip_addr)
-
-        rt2_conf = copy.deepcopy(_conf)
-        rt2_conf.add_section("security")
-        rt2_conf.set("security", "security_conf", {
-                        "comment": "Experimental security settings",
-                        "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
-                        "access_control_enabled": "True",
-                        "authentication_method":"local_file",
-                        "authentication_local_users": {"user1": "pass1", "user2": "pass2"}
-                    })
-        rt2_conf.set("security", "security_policy", {
-                        "policy1":{
-                            "principal":{
-                                "user":["user1","user2"],
-                                "role":["owner"]
-                            },
-                            "application_signature": ["__unsigned__"],
-                            "actor_signature":["signer"],
-                            "resource":["calvinsys", "runtime"]
-                        },
-                        "policy2":{
-                            "principal":{
-                                "role":["cleaner"],
-                                "group":["everyone"]
+                        "policy4": {
+                            "principal": {
+                                "user": ["user4"],
                             },
                             "application_signature": ["signer"],
-                            "component_signature":["signer"],
-                            "actor_signature":["signer"],
-                            "resource":["calvinsys.events.timer", "runtime"]
-                        },
-                        "policy3":{
-                            "principal":{
-                                "group":["everyone"]
-                            },
-                            "application_signature": ["signer"],
-                            "component_signature":["signer"],
-                            "actor_signature":["signer"],
-                            "resource":["runtime"]
+                            "actor_signature": ["unsigner"],
+                            "resource": ["runtime"]
                         }
                     })
-        rt2_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
-        rt2_conf.save("/tmp/calvin5001.conf")
+        rt1_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
+        rt1_conf.save("/tmp/calvin5001.conf")
+
         try:
             logfile = _config_pytest.getoption("logfile")+"5001"
             outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
@@ -167,13 +120,54 @@ class TestSecurity(unittest.TestCase):
         except:
             logfile = None
             outfile = None
-        csruntime(ip_addr, port=5001, controlport=5004, attr={'indexed_public':
+        csruntime(ip_addr, port=5001, controlport=5021, attr={'indexed_public':
+                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
+                   'node_name': {'organization': 'org.testexample', 'name': 'testNode1'},
+                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
+                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                   configfile="/tmp/calvin5001.conf")
+        rt1 = utils.RT("http://%s:5021" % ip_addr)
+
+        rt2_conf = copy.deepcopy(_conf)
+        rt2_conf.add_section("security")
+        rt2_conf.set("security", "security_conf", {
+                        "comment": "Experimental security settings",
+                        "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
+                        "access_control_enabled": "True",
+                        "authentication_method": "radius",
+                        "authentication": {
+                            "procedure": "radius", 
+                            "server_ip": "136.225.129.50", 
+                            "secret": "elxghyc5lz1_passwd"
+                            }
+                    })
+        rt2_conf.set("security", "security_policy", {
+                        "policy1": {
+                            "principal": {
+                                "user": ["radius_user1"],
+                            },
+                            "application_signature": ["signer"],
+                            "actor_signature": ["signer"],
+                            "resource": ["calvinsys", "runtime"]
+                        }
+                    })
+        rt2_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
+        rt2_conf.save("/tmp/calvin5002.conf")
+        try:
+            logfile = _config_pytest.getoption("logfile")+"5002"
+            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+            if outfile == logfile:
+                outfile = None
+        except:
+            logfile = None
+            outfile = None
+        csruntime(ip_addr, port=5002, controlport=5022, attr={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode2'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5001.conf")
-        rt2 = utils.RT("http://%s:5004" % ip_addr)
+                   configfile="/tmp/calvin5002.conf")
+        rt2 = utils.RT("http://%s:5022" % ip_addr)
 
         request.addfinalizer(self.teardown)
 
@@ -186,8 +180,8 @@ class TestSecurity(unittest.TestCase):
         for p in multiprocessing.active_children():
             p.terminate()
         # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
-        os.system("pkill -9 -f 'csruntime -n %s -p 5000'" % (ip_addr,))
         os.system("pkill -9 -f 'csruntime -n %s -p 5001'" % (ip_addr,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5002'" % (ip_addr,))
         time.sleep(0.2)
 
     def verify_storage(self):
@@ -457,4 +451,42 @@ class TestSecurity(unittest.TestCase):
             _log.exception("Test deploy failed for non security reasons")
 
         raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")  
+
+###################################
+#   Authentication related tests
+###################################
+    @pytest.mark.slow
+    def testSecurity_POSITIVE_RADIUS_Authentication(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt2
+        global security_test_dir
+
+        self.verify_storage()
+
+        result = {}
+        try:
+            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            result = utils.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
+                        credentials={"user": ["radius_user1"], "password": ["radius_passwd1"]}, content=content, 
+                        check=True)
+        except Exception as e:
+            if e.message == "401":
+                raise Exception("Failed security verification of app test_security1_correctly_signed")
+            _log.exception("Test deploy failed")
+            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+        #print "RESULT:", result
+        time.sleep(2)
+
+        # For example verify that actors exist like this
+        actors = utils.get_actors(rt2)
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
+
+        actual = utils.report(rt2, result['actor_map']['test_security1_correctly_signed:snk'])
+        assert len(actual) > 5
+
+        utils.delete_application(rt2, result['application_id'])
 

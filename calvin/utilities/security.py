@@ -49,8 +49,8 @@ def security_modules_check():
             # Miss open ssl
             _log.error("Security: Install openssl to allow verification of signatures and certificates")
             return False
-            _conf.get("security","security_conf")['authentication_method']
-        if _conf.get("security","security_conf")['authentication_method'] == "radius" and not HAS_PYRAD:
+            _conf.get("security","security_conf")['authentication']
+        if _conf.get("security","security_conf")['authentication']['procedure'] == "radius" and not HAS_PYRAD:
             _log.error("Security: Install pyrad to use radius server as authentication method.")
             return False
     return True
@@ -94,10 +94,10 @@ class Security(object):
             _log.debug("Security: authenticate_principal no security needed")
             return True
 
-        if self.sec_conf['authentication_method'] == "local_file":
-            _log.debug("Securty: local file authentication method chosen")
+        if self.sec_conf['authentication']['procedure'] == "local_file":
+            _log.debug("Security: local file authentication method chosen")
             return self.authenticate_using_local_database()
-        if self.sec_conf['authentication_method'] == "radius":
+        if self.sec_conf['authentication']['procedure'] == "radius":
             if not HAS_PYRAD:
                 _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
                             "NB! NO AUTHENTICATION USED")
@@ -109,14 +109,14 @@ class Security(object):
 
 
     def authenticate_using_radius_server(self):
-        # FIXME update self.auth and verify all of principal
+        auth = []
         if self.principal['user']:
-            # FIXME hardcoded secret
-            srv=Client(server="localhost", secret="testing123",
-                    dict=Dictionary("dicts/dictionary", "dicts/dictionary.acc"))
+            srv=Client(server=self.sec_conf['authentication']['server_ip'], 
+                        secret= bytes(self.sec_conf['authentication']['secret']),
+                        dict=Dictionary("dicts/dictionary", "dicts/dictionary.acc"))
             req=srv.CreateAuthPacket(code=pyrad.packet.AccessRequest,
-                    User_Name=self.principal['user'][0],
-                    NAS_Identifier="localhost")
+                        User_Name=self.principal['user'][0],
+                        NAS_Identifier="localhost")
             req["User-Password"]=req.PwCrypt(self.principal['password'][0])
             # FIXME is this over socket? then we should not block here
             reply=srv.SendPacket(req)
@@ -125,23 +125,26 @@ class Security(object):
                 _log.debug("%s: %s" % (i, reply[i]))
             if reply.code==pyrad.packet.AccessAccept:
                 _log.debug("Security:access accepted")
-                return True
+                auth.append(True)
+#                return True
             else:
                 _log.debug("Security: access denied")
-                return False
-        _log.debug("Security: No username supplied")
-        return False
+                auth.append(False)
+#                return False
+        self.auth['user']=auth
+        return any(auth)
 
     def authenticate_using_local_database(self):
         """ Authenticate a principal against config stored information
             This is primarily intended for testing purposes,
             since passwords arn't stored securily.
         """
-        if 'authentication_local_users' not in self.sec_conf:
+        if 'local_users' not in self.sec_conf['authentication']:
+            _log.debug("local_users not found in security_conf: %s" % self.sec_conf['authentication'])
             return False
         # Verify users against stored passwords
         # TODO expand with other principal types
-        d = self.sec_conf['authentication_local_users']
+        d = self.sec_conf['authentication']['local_users']
         if not ('user' in self.principal and 'password' in self.principal):
             return False
         if len(self.principal['user']) != len(self.principal['password']):
