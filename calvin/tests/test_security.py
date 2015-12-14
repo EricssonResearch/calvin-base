@@ -45,6 +45,7 @@ except:
 
 rt1 = None
 rt2 = None
+rt3 = None
 
 security_test_dir = None
 
@@ -62,8 +63,11 @@ class TestSecurity(unittest.TestCase):
         from conftest import _config_pytest
         global rt1
         global rt2
+        global rt3
         global security_test_dir
         security_test_dir = absolute_filename('security_test/')
+
+
         rt1_conf = copy.deepcopy(_conf)
         rt1_conf.add_section("security")
         rt1_conf.set("security", "security_conf", {
@@ -128,31 +132,58 @@ class TestSecurity(unittest.TestCase):
                    configfile="/tmp/calvin5001.conf")
         rt1 = utils.RT("http://%s:5021" % ip_addr)
 
+
+
+
+        
         rt2_conf = copy.deepcopy(_conf)
         rt2_conf.add_section("security")
         rt2_conf.set("security", "security_conf", {
                         "comment": "Experimental security settings",
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
-                        "access_control_enabled": "True",
-                        "authentication_method": "radius",
+                        "access_control_enabled": "False",
                         "authentication": {
-                            "procedure": "radius", 
-                            "server_ip": "136.225.129.50", 
-                            "secret": "elxghyc5lz1_passwd"
+                            "procedure": "local_file",
+                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
                             }
                     })
         rt2_conf.set("security", "security_policy", {
                         "policy1": {
                             "principal": {
-                                "user": ["radius_user1"],
+                                "user": ["user1"]
                             },
                             "application_signature": ["signer"],
                             "actor_signature": ["signer"],
+                            "resource": ["calvinsys"]
+                        },
+                        "policy2":{
+                            "principal": {
+                                "user": ["user2"],
+                            },
+                            "application_signature": ["__unsigned__"],
+                            "actor_signature": ["signer"],
                             "resource": ["calvinsys", "runtime"]
+                        },
+                        "policy3": {
+                            "principal": {
+                                "user": ["user3"],
+                            },
+                            "application_signature": ["__unsigned__"],
+                            "actor_signature": ["__unsigned__"],
+                            "resource": ["calvinsys", "runtime"]
+                        },
+                        "policy4": {
+                            "principal": {
+                                "user": ["user4"],
+                            },
+                            "application_signature": ["signer"],
+                            "actor_signature": ["unsigner"],
+                            "resource": ["runtime"]
                         }
                     })
         rt2_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
         rt2_conf.save("/tmp/calvin5002.conf")
+
         try:
             logfile = _config_pytest.getoption("logfile")+"5002"
             outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
@@ -169,32 +200,82 @@ class TestSecurity(unittest.TestCase):
                    configfile="/tmp/calvin5002.conf")
         rt2 = utils.RT("http://%s:5022" % ip_addr)
 
+
+
+
+        rt3_conf = copy.deepcopy(_conf)
+        rt3_conf.add_section("security")
+        rt3_conf.set("security", "security_conf", {
+                        "comment": "Experimental security settings",
+                        "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
+                        "access_control_enabled": "True",
+                        "authentication_method": "radius",
+                        "authentication": {
+                            "procedure": "radius", 
+                            "server_ip": "136.225.129.50", 
+                            "secret": "elxghyc5lz1_passwd"
+                            }
+                    })
+        rt3_conf.set("security", "security_policy", {
+                        "policy1": {
+                            "principal": {
+                                "user": ["radius_user1"],
+                            },
+                            "application_signature": ["signer"],
+                            "actor_signature": ["signer"],
+                            "resource": ["calvinsys", "runtime"]
+                        }
+                    })
+        rt3_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
+        rt3_conf.save("/tmp/calvin5003.conf")
+        try:
+            logfile = _config_pytest.getoption("logfile")+"5003"
+            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+            if outfile == logfile:
+                outfile = None
+        except:
+            logfile = None
+            outfile = None
+        csruntime(ip_addr, port=5003, controlport=5023, attr={'indexed_public':
+                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
+                   'node_name': {'organization': 'org.testexample', 'name': 'testNode3'},
+                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
+                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                   configfile="/tmp/calvin5003.conf")
+        rt3 = utils.RT("http://%s:5023" % ip_addr)
+
         request.addfinalizer(self.teardown)
 
     def teardown(self):
         global rt1
         global rt2
+        global rt3
         utils.quit(rt1)
         utils.quit(rt2)
+        utils.quit(rt3)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
         # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
         os.system("pkill -9 -f 'csruntime -n %s -p 5001'" % (ip_addr,))
         os.system("pkill -9 -f 'csruntime -n %s -p 5002'" % (ip_addr,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5003'" % (ip_addr,))
         time.sleep(0.2)
 
     def verify_storage(self):
         global rt1
         global rt2
+        global rt3
         rt1_id = None
         rt2_id = None
+        rt3_id = None
         failed = True
         # Try 10 times waiting for control API to be up and running
         for i in range(10):
             try:
                 rt1_id = rt1_id or utils.get_node_id(rt1)
                 rt2_id = rt2_id or utils.get_node_id(rt2)
+                rt3_id = rt3_id or utils.get_node_id(rt3)
                 failed = False
                 break
             except:
@@ -202,19 +283,23 @@ class TestSecurity(unittest.TestCase):
         assert not failed
         assert rt1_id
         assert rt2_id
-        print "RUNTIMES:", rt1_id, rt2_id
+        assert rt3_id
+        print "RUNTIMES:", rt1_id, rt2_id, rt3_id
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
         # Try 20 times waiting for storage to be connected
         caps1 = []
         caps2 = []
+        caps3 = []
         for i in range(20):
             try:
-                if not (rt1_id in caps1 and rt2_id in caps1):
+                if not (rt1_id in caps1  and rt2_id in caps2 and rt3_id in caps1):
                     caps1 = utils.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
-                if not (rt1_id in caps2 and rt2_id in caps2):
+                if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
                     caps2 = utils.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
-                if rt1_id in caps1 and rt2_id in caps1 and rt1_id in caps1 and rt2_id in caps1:
+                if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3):
+                    caps3 = utils.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
+                if rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1:
                     failed = False
                     break
                 else:
@@ -225,8 +310,10 @@ class TestSecurity(unittest.TestCase):
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
         assert utils.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
         _log.analyze("TESTRUN", "+ RT1 INDEX", {})
-        assert utils.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
-        _log.analyze("TESTRUN", "+ RT2 INDEX", {})
+        assert utils.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
+        _log.analyze("TESTRUN", "+ rt2 INDEX", {})
+        assert utils.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
+        _log.analyze("TESTRUN", "+ rt3 INDEX", {})
 
 ###################################
 #   Signature related tests
@@ -458,7 +545,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_RADIUS_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt2
+        global rt3
         global security_test_dir
 
         self.verify_storage()
@@ -468,7 +555,7 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
+            result = utils.deploy_application(rt3, "test_security1_correctly_signed", content['file'], 
                         credentials={"user": ["radius_user1"], "password": ["radius_passwd1"]}, content=content, 
                         check=True)
         except Exception as e:
@@ -480,13 +567,13 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # For example verify that actors exist like this
-        actors = utils.get_actors(rt2)
+        actors = utils.get_actors(rt3)
         assert result['actor_map']['test_security1_correctly_signed:src'] in actors
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
 
-        actual = utils.report(rt2, result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = utils.report(rt3, result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 5
 
-        utils.delete_application(rt2, result['application_id'])
+        utils.delete_application(rt3, result['application_id'])
 
