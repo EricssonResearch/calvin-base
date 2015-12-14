@@ -318,11 +318,22 @@ class TestSecurity(unittest.TestCase):
         except Exception as e:
             _log.debug(str(e))
             if e.message == "401":
-                # We were blocked, as we should
-                return
-            _log.exception("Test deploy failed for non security reasons")
+                raise Exception("Failed security verification of app testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor")
+            _log.exception("Test deploy failed")
+            raise Exception("Failed deployment of app testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor, no use to verify if requirements fulfilled")
+        #print "RESULT:", result
+        time.sleep(2)
 
-        raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")
+        # Verify that actors exist like this
+        actors = utils.get_actors(rt1)
+        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:src'] in actors
+        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:sum'] in actors
+        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'] in actors
+
+        actual = utils.report(rt1, result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'])
+        assert len(actual) == 0
+
+        utils.delete_application(rt1, result['application_id'])
 
 ###################################
 #   Policy related tests

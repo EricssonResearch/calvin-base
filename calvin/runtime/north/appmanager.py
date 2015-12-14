@@ -566,6 +566,7 @@ class Deployer(object):
         self.credentials = credentials
         self.sec = Security()
         self.sec.set_principal(self.credentials)
+        self.actorstore = ActorStore(security=self.sec)
         self.actor_map = {}
         self.actor_connections = {}
         self.node = node
@@ -585,6 +586,7 @@ class Deployer(object):
             self.name = self.app_id
             self.ns = ""
         self.group_components()
+        _log.analyze(self.node.id, "+ SECURITY", {'sec': str(self.sec)})
 
     # TODO Make deployer use the Application class group_components, component_name and get_req
     def group_components(self):
@@ -622,7 +624,8 @@ class Deployer(object):
           - 'signature' is the GlobalStore actor-signature to lookup the actor
         """
         req = self.get_req(actor_name)
-        found, is_primitive, actor_def = ActorStore(security=self.sec).lookup(actor_type)
+        _log.analyze(self.node.id, "+ SECURITY", {'sec': str(self.sec)})
+        found, is_primitive, actor_def = self.actorstore.lookup(actor_type)
         if not found or not is_primitive:
             raise Exception("Not known actor type: %s" % actor_type)
 
@@ -676,7 +679,7 @@ class Deployer(object):
         desc = comp_name_desc[1]
         try:
             # List of (found, is_primitive, info)
-            actor_types = [ActorStore(security=self.sec).lookup(actor['actor_type'])
+            actor_types = [self.actorstore.lookup(actor['actor_type'])
                                 for actor in desc['component']['structure']['actors'].values()]
         except KeyError:
             actor_types = []
@@ -701,8 +704,9 @@ class Deployer(object):
 
     def resolve_remote(self, deployables):
         all_desc_iters = dynops.List()
+        store = GlobalStore(node=self.node)
         for actor_name, info in deployables.iteritems():
-            desc_iter = GlobalStore(node=self.node).global_lookup_iter(info['signature'], info['args'].keys())
+            desc_iter = store.global_lookup_iter(info['signature'], info['args'].keys())
             all_desc_iters.append((actor_name, desc_iter), trigger_iter=desc_iter)
         all_desc_iters.final()
         collect_desc_iter = dynops.Collect(all_desc_iters).set_name("collected_desc")

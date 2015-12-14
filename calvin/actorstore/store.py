@@ -104,6 +104,7 @@ class Store(object):
 
     def update(self):
         """Should be called after a module has been added at runtime."""
+        _log.debug("Store update SECURITY %s" % str(self.sec))
         self._MODULE_CACHE = self.find_all_modules()
 
 
@@ -133,6 +134,7 @@ class Store(object):
         if not os.path.isfile(path):
             return None
         pymodule = None
+        _log.debug("Store load_pymodule SECURITY %s" % str(self.sec))
         try:
             if self.sec:
                 _log.debug("Verify credentials for %s actor with credentials %s" % (name, self.sec.principal))
@@ -195,12 +197,12 @@ class Store(object):
 # Actor Store
 #
 class ActorStore(Store):
-    __metaclass__ = Singleton
 
     def __init__(self, security=None):
         self.conf_paths_name = 'actor_paths'
         super(ActorStore, self).__init__()
         self.sec = security
+        _log.debug("ActorStore init SECURITY %s" % str(self.sec))
         self.update()
 
 
@@ -229,6 +231,7 @@ class ActorStore(Store):
                             True  => actor object
                             False => component definition dictionary
         """
+        _log.debug("ActorStore lookup SECURITY %s" % str(self.sec))
         namespace, _, actor_type = qualified_name.rpartition('.')
         # Search in the order given by config
         for path in self.paths_for_module(namespace):

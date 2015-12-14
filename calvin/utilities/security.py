@@ -70,6 +70,9 @@ class Security(object):
         self.principal = {}
         self.auth = {}
 
+    def __str__(self):
+        return "Principal: %s\nAuth: %s" % (self.principal, self.auth)
+
     def set_principal(self, principal):
         if STUB:
             return True

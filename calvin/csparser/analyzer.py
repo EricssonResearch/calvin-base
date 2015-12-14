@@ -52,6 +52,7 @@ class Analyzer(object):
         self.connections = {}
         self.actors = {}
         self.verify = verify
+        self.actorstore = ActorStore()
         self.analyze()
 
     def analyze(self):
@@ -112,7 +113,7 @@ class Analyzer(object):
         if actor_type in self.local_components:
             compdef = self.local_components[actor_type]
             return compdef, False
-        found, is_actor, info = ActorStore().lookup(actor_type)
+        found, is_actor, info = self.actorstore.lookup(actor_type)
         if self.verify and not found:
             msg = 'Actor "{}" not found.'.format(actor_type)
             raise Exception(msg)
