@@ -15,9 +15,7 @@
 # limitations under the License.
 
 import os
-import random
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.south.plugins.async import async
 from calvin.utilities import dynops
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
@@ -236,44 +234,18 @@ class AppManager(object):
 
 
     ### DEPLOYMENT ###
-    
-    def key_actor_id(self, out_iter, kwargs, final, node_id):
-        _log.analyze(self._node.id, "+ BEGIN", {'actor_id': kwargs['actor_id'], 'node_id': str(node_id)}, tb=True)
-        if final[0]:
-            _log.analyze(self._node.id, "+ STOP", {'actor_id': kwargs['actor_id']}, tb=True)
-            out_iter.final()
-        elif node_id:
-            _log.analyze(self._node.id, "+ VALUE", {'actor_id': kwargs['actor_id'], 'node_id': str(node_id)}, tb=True)
-            out_iter.append((kwargs['actor_id'], node_id))
-        _log.analyze(self._node.id, "+ END", {}, tb=True)
 
-    def save_placement(self, out_iter, kwargs, final, actor_node_id):
-        _log.analyze(self._node.id, "+ BEGIN", {'placements': kwargs['app'].actor_placement, 'final': final, 'actor_node_id': str(actor_node_id)}, tb=True)
-        if final[0]:
-            _log.analyze(self._node.id, "+ STOP", {}, tb=True)
-            out_iter.final()
-        else:
-            if actor_node_id[0] in kwargs['app'].actor_placement:
-                kwargs['app'].actor_placement[actor_node_id[0]].add(actor_node_id[1])
-            else:
-                kwargs['app'].actor_placement[actor_node_id[0]] = set([actor_node_id[1]])
-        _log.analyze(self._node.id, "+ END", {'placements': kwargs['app'].actor_placement, 'actor_node_id': str(actor_node_id)}, tb=True)
-
-    def more_placement(self, it, app, counter=0):
+    def collect_placement(self, it, app, counter=0):
         _log.analyze(self._node.id, "+ BEGIN", {}, tb=True)
         try:
             while True:
                 _log.analyze(self._node.id, "+ ITER", {})
-                it.next()
+                actor_node_id = it.next()
+                app.actor_placement.setdefault(actor_node_id[0], set([])).add(actor_node_id[1])
         except dynops.PauseIteration:
             _log.analyze(self._node.id, "+ PAUSED", {'counter': counter})
-            # FIXME Quick fix, need to investigate why not trigger enough when using proxy storage
             if counter < 3:
-                self.more_placement(it, app, counter=counter+1)
-            elif counter < 10:
-                async.DelayedCall(0.1, self.more_placement, it, app, counter=counter+1)
-            elif counter < 100:
-                async.DelayedCall(1, self.more_placement, it, app, counter=counter+1)
+                self.collect_placement(it, app, counter=counter+1)
             return
         except StopIteration:
             if not app.done_final:
@@ -283,7 +255,7 @@ class AppManager(object):
                 self._app_requirements(app)
                 _log.analyze(self._node.id, "+ END", {})
         except:
-            _log.exception("appmanager:more_placement")
+            _log.exception("appmanager:collect_placement")
 
     def execute_requirements(self, application_id, cb):
         app = None
@@ -316,9 +288,8 @@ class AppManager(object):
             _log.analyze(self._node.id, "+ ACTOR REQ DONE", {'actor_id': actor_id}, tb=True)
         actor_placement_it.final()
         collect_iter = dynops.Collect(actor_placement_it)
-        final_iter = dynops.Map(self.save_placement, collect_iter, app=app).set_name("App")
-        final_iter.set_cb(self.more_placement, final_iter, app)
-        self.more_placement(final_iter, app)
+        collect_iter.set_cb(self.collect_placement, collect_iter, app)
+        self.collect_placement(collect_iter, app)
         _log.analyze(self._node.id, "+ DONE", {'application_id': application_id}, tb=True)
 
     def actor_requirements(self, app, actor_id):
