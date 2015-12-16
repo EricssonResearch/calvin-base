@@ -23,7 +23,9 @@ from calvin.utilities.calvin_callback import CalvinCB
 import calvin.utilities.calvinresponse as response
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
+from calvin.utilities import calvinconfig
 _log = calvinlogger.get_logger(__name__)
+_conf = calvinconfig.get()
 
 # FIXME should be read from calvin config
 TRANSPORT_PLUGIN_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), *['south', 'plugins', 'transports'])
@@ -302,7 +304,19 @@ class CalvinNetwork(object):
             return
 
         # join the peer node
-        self.join(value['uri'], callback, [key])
+        # TODO: if connection fails, retry with other transport schemes
+        self.join([self.get_supported_uri(value['uri'])], callback, [key])
+
+    def get_supported_uri(self, uris):
+        """ Match configured transport interfaces with uris and return first match.
+            returns: First supported uri, None if no match
+        """
+        transports = _conf.get(None, 'transports')
+        for transport in transports:
+            for uri in uris:
+                if transport in uri:
+                    return uri
+        return None
 
     def peer_disconnected(self, link, rt_id, reason):
         _log.analyze(self.node.id, "+", {'reason': reason, 
