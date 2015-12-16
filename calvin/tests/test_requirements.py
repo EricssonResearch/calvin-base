@@ -463,7 +463,8 @@ class TestSepDeployShadow(unittest.TestCase):
         global rt1
         global rt2
         global test_script_dir
-        _conf.save("/tmp/calvin5000.conf")
+        rt1_conf = copy.deepcopy(_conf)
+        rt1_conf.save("/tmp/calvin5000.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5000"
             outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
@@ -479,9 +480,10 @@ class TestSepDeployShadow(unittest.TestCase):
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5000.conf")
         rt1 = utils.RT("http://%s:5003" % ip_addr)
-        _conf.set('global', 'actor_paths', [absolute_filename('test_store')])
-        _conf.set('global', 'capabilities_blacklist', ['calvinsys.events.timer'])
-        _conf.save("/tmp/calvin5001.conf")
+        rt2_conf = copy.deepcopy(_conf)
+        rt2_conf.set('global', 'actor_paths', [absolute_filename('test_store')])
+        rt2_conf.set('global', 'capabilities_blacklist', ['calvinsys.events.timer'])
+        rt2_conf.save("/tmp/calvin5001.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5001"
             outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
@@ -632,9 +634,10 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         rt1 = utils.RT("http://%s:5003" % ip_addr)
         time.sleep(1)
 
+        rt2_3_conf = copy.deepcopy(_conf)
         if use_proxy_storage:
-            _conf.set('global', 'storage_proxy', "calvinip://%s:5000" % ip_addr)
-        _conf.save("/tmp/calvin5001.conf")
+            rt2_3_conf.set('global', 'storage_proxy', "calvinip://%s:5000" % ip_addr)
+        rt2_3_conf.save("/tmp/calvin5001.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5001"
             outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
@@ -650,7 +653,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
                    configfile="/tmp/calvin5001.conf")
         rt2 = utils.RT("http://%s:5004" % ip_addr)
 
-        _conf.save("/tmp/calvin5002.conf")
+        rt2_3_conf.save("/tmp/calvin5002.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5002"
             outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
