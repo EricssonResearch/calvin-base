@@ -126,6 +126,7 @@ class Storage(object):
     def stop(self, cb=None):
         """ Stop storage
         """
+        _log.analyze(self.node.id, "+", {'started': self.started})
         if self.started:
             self.storage.stop(cb=cb)
         elif cb:
@@ -223,7 +224,7 @@ class Storage(object):
                     self.storage.get(key=prefix + key,
                                      cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
                 except:
-                    _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': org_key})
+                    _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
                     _log.error("Failed to get: %s" % key)
                     it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
 
@@ -255,7 +256,8 @@ class Storage(object):
                 self.storage.get_concat(key=prefix + key,
                                 cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
             except:
-                _log.error("Failed to get: %s" % key, exc_info=True)
+                if self.started:
+                    _log.error("Failed to get: %s" % key, exc_info=True)
                 async.DelayedCall(0, cb, key=key, value=local_list if local_list else None)
 
     def get_concat_iter_cb(self, key, value, org_key, include_key, it):
@@ -293,7 +295,8 @@ class Storage(object):
                             cb=CalvinCB(func=self.get_concat_iter_cb, org_key=key, 
                                         include_key=include_key, it=it))
         except:
-            _log.error("Failed to get: %s" % key, exc_info=True)
+            if self.started:
+                _log.error("Failed to get: %s" % key, exc_info=True)
             it.final()
         _log.analyze(self.node.id, "+ END", {'key': key, 'iter': str(it)})
         return it

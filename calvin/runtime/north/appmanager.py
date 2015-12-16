@@ -17,6 +17,7 @@
 import os
 import random
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.runtime.south.plugins.async import async
 from calvin.utilities import dynops
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
@@ -265,9 +266,14 @@ class AppManager(object):
                 _log.analyze(self._node.id, "+ ITER", {})
                 it.next()
         except dynops.PauseIteration:
-            _log.analyze(self._node.id, "+ PAUSED", {})
+            _log.analyze(self._node.id, "+ PAUSED", {'counter': counter})
+            # FIXME Quick fix, need to investigate why not trigger enough when using proxy storage
             if counter < 3:
                 self.more_placement(it, app, counter=counter+1)
+            elif counter < 10:
+                async.DelayedCall(0.1, self.more_placement, it, app, counter=counter+1)
+            elif counter < 100:
+                async.DelayedCall(1, self.more_placement, it, app, counter=counter+1)
             return
         except StopIteration:
             if not app.done_final:
@@ -618,7 +624,7 @@ class Deployer(object):
                 info = self.deployable['actors'][name]
                 actor_id = self.instantiate_primitive(name, info['actor_type'], info['args'], req, info['signature'])
                 if not actor_id:
-                    _log.error("Second phase, could not make shadow actor %s!" % actor_type)
+                    _log.error("Second phase, could not make shadow actor %s!" % info['actor_type'])
                 self.actor_map[name] = actor_id
                 self.node.app_manager.add(self.app_id, actor_id)
             elif 'shadow_component' in desc:
@@ -672,7 +678,7 @@ class Deployer(object):
                     # Instanciate it
                     actor_id = self.instantiate_primitive(name + ":" + actor_name, actor_desc['actor_type'], args, req, sign)
                     if not actor_id:
-                        _log.error("Third phase, could not make shadow actor %s!" % actor_type)
+                        _log.error("Third phase, could not make shadow actor %s!" % info['actor_type'])
                     self.actor_map[name + ":" + actor_name] = actor_id
                     self.node.app_manager.add(self.app_id, actor_id)
 

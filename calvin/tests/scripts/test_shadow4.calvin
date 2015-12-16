@@ -1,0 +1,6 @@
+button : std.CountTimer()
+check : std.Sum()
+bell : io.StandardOut(store_tokens=true)
+
+button.integer > check.integer
+check.integer > bell.token
