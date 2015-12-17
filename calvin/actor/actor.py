@@ -607,8 +607,11 @@ class Actor(object):
     def component_members(self):
         return self._component_members
 
-    def requirements_add(self, deploy_reqs):
-        self._deployment_requirements.extend(deploy_reqs)
+    def requirements_add(self, deploy_reqs, extend=False):
+        if extend:
+            self._deployment_requirements.extend(deploy_reqs)
+        else:
+            self._deployment_requirements = deploy_reqs
 
     def requirements_get(self):
         return self._deployment_requirements + (

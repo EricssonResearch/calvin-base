@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from calvin.actorstore.store import ActorStore
+from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.utilities.calvinresponse as response
@@ -173,6 +174,54 @@ class ActorManager(object):
             self.actors[actor_id].disable()
         else:
             _log.info("!!!FAILED to disable %s", actor_id)
+
+    def update_requirements(self, actor_id, requirements, extend=False, move=False, callback=None):
+        """ Update requirements and trigger a potential migration """
+        if actor_id not in self.actors:
+            # Can only migrate actors from our node
+            if callback:
+                callback(status=response.CalvinResponse(False))
+            return
+        if not isinstance(requirements, (list, tuple)):
+            # requirements need to be list
+            if callback:
+                callback(status=response.CalvinResponse(response.BAD_REQUEST))
+            return
+        actor = self.actors[actor_id]
+        actor.requirements_add(requirements, extend)
+        node_iter = self.node.app_manager.actor_requirements(None, actor_id)
+        possible_placements = set([])
+        node_iter.set_cb(self._update_requirements_placements, node_iter, actor_id, possible_placements,
+                         move=move, cb=callback)
+
+    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, move=False, cb=None, counter=0):
+        _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
+        try:
+            while True:
+                _log.analyze(self.node.id, "+ ITER", {})
+                node_id = node_iter.next()
+                possible_placements.add(node_id)
+        except dynops.PauseIteration:
+            _log.analyze(self.node.id, "+ PAUSED", {'counter': counter})
+            if counter < 3:
+                self._update_requirements_placements(node_iter, actor_id, possible_placements,
+                                                     move, cb=cb, counter=counter+1)
+            return
+        except StopIteration:
+            # all possible actor placements derived
+            _log.analyze(self.node.id, "+ ALL", {})
+            if move and len(possible_placements)>1:
+                possible_placements.discard(self.node.id)
+            if not possible_placements:
+                if cb:
+                    cb(status=response.CalvinResponse(False))
+                return
+            # TODO do a better selection between possible nodes
+            self.migrate(actor_id, possible_placements.pop(), callback=cb)
+            _log.analyze(self.node.id, "+ END", {})
+        except:
+            _log.exception("actormanager:_update_requirements_placements")
+        
 
     def migrate(self, actor_id, node_id, callback = None):
         """ Migrate an actor actor_id to peer node node_id """

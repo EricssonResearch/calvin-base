@@ -502,7 +502,7 @@ class Deployer(object):
         args['name'] = actor_name
         actor_id = self.node.am.new(actor_type=actor_type, args=args, signature=signature)
         if req:
-            self.node.am.actors[actor_id].requirements_add(req)
+            self.node.am.actors[actor_id].requirements_add(req, extend=False)
         return actor_id
 
     def connectid(self, connection):

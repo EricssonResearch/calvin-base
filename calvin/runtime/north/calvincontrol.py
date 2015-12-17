@@ -189,9 +189,22 @@ re_get_actor_report = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re
 control_api_doc += \
     """
     POST /actor/{actor-id}/migrate
-    Migrate actor to (other) node
+    Migrate actor to (other) node, either explicit node_id or by updated requirements
     Body: {"peer_node_id": <node-id>}
-    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
+    Alternative body:
+    Body:
+    {
+        "requirements": [ {"op": "<matching rule name>",
+                          "kwargs": {<rule param key>: <rule param value>, ...},
+                          "type": "+" or "-" for set intersection or set removal, respectively
+                          }, ...
+                        ],
+        "extend": True or False  # defaults to False, i.e. replace current requirements
+        "move": True or False  # defaults to False, i.e. when possible stay on the current node
+    }
+    
+    For further details about requirements see application deploy.
+    Response status code: OK, BAD_REQUEST, INTERNAL_ERROR or NOT_FOUND
     Response: none
 """
 re_post_actor_migrate = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
@@ -674,8 +687,17 @@ class CalvinControl(object):
     def handle_actor_migrate(self, handle, connection, match, data, hdr):
         """ Migrate actor
         """
-        self.node.am.migrate(match.group(1), data['peer_node_id'],
-                             callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+        if 'peer_node_id' in data:
+            self.node.am.migrate(match.group(1), data['peer_node_id'],
+                                 callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+        elif 'requirements' in data:
+            self.node.am.update_requirements(match.group(1), data['requirements'],
+                extend=data['extend'] if 'extend' in data else False,
+                move=data['move'] if 'move' in data else False,
+                callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+        else:
+            self.send_response(handle, connection,
+                               None, status=calvinresponse.BAD_REQUEST)
 
     def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
         """ Migrate actor respons
@@ -779,7 +801,6 @@ class CalvinControl(object):
             _log.analyze(self.node.id, "+ Deployer instanciated", {})
             d.deploy()
             _log.analyze(self.node.id, "+ DEPLOYING", {})
-            status = calvinresponse.OK
         except:
             _log.exception("Deployer failed")
             self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
