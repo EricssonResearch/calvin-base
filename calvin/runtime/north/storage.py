@@ -20,6 +20,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.actor import actorport
+from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
 from calvin.actorstore.store import GlobalStore
 from calvin.utilities import dynops
@@ -513,6 +514,7 @@ class Storage(object):
             outports.append(port)
             self.add_port(p, node_id, actor.id, "out")
         data["outports"] = outports
+        data["is_shadow"] = isinstance(actor, ShadowActor)
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):
