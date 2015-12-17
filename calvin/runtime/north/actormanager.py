@@ -216,6 +216,11 @@ class ActorManager(object):
                 if cb:
                     cb(status=response.CalvinResponse(False))
                 return
+            if self.node.id in possible_placements:
+                # Actor could stay, then do that
+                if cb:
+                    cb(status=response.CalvinResponse(True))
+                return
             # TODO do a better selection between possible nodes
             self.migrate(actor_id, possible_placements.pop(), callback=cb)
             _log.analyze(self.node.id, "+ END", {})
