@@ -170,20 +170,17 @@ div.ui-widget-header {
     <br>
     <label for="deploy_script">Script:</label>
     <br>
-    <textarea name="deploy_script" id="deploy_script" rows="25" cols="100"></textarea>
+    <textarea name="deploy_script" id="deploy_script" rows="20" cols="100"></textarea>
+    <br>
+    <label for="deploy_requirements">Requirements:</label>
+    <br>
+    <input type="file" id="fileInputMigrateApplication" accept=".deployjson">
+    <br>
+    <textarea name="migrate_reqs" id="migrate_reqs" rows="20" cols="100"></textarea>
     <br>
     <label for="name">Script name:</label>
     <br>
     <input type="text" name="script_name" id="script_name">
-  </form>
-</div>
-
-<!-- Application migration dialog -->
-<div id="migrateDialog" title="Connect" style="display:none;">
-  <form>
-    <input type="file" id="fileInputMigrateApplication" accept=".deployjson">
-    <br>
-    <textarea name="migrate_reqs" id="migrate_reqs" rows="25" cols="100"></textarea>
   </form>
 </div>
 
@@ -961,14 +958,6 @@ function showApplication()
         btnDestroy.setAttribute("onclick", "destroyApplication(this.id)");
         AddTableItem(tableRef, document.createTextNode("Destroy"), btnDestroy);
 
-        // Migrate dialog
-        var btnMigrate = document.createElement('input');
-        btnMigrate.type = 'button';
-        btnMigrate.id = application.id;
-        btnMigrate.value = 'Migrate...';
-        btnMigrate.setAttribute("onclick", "showMigrateApplication(this.id)");
-        AddTableItem(tableRef, document.createTextNode("Migrate..."), btnMigrate);
-
         var index;
         for (index in application.actors) {
             getActor(application.actors[index], false);
@@ -1257,12 +1246,13 @@ function showDeployApplication(peer_id)
         $("#deployDialog").dialog({
             modal: true,
             width: 800,
-            height: 600,
+            height: 800,
             buttons: {
                 "Deploy": function() {
                     var script = $("#deploy_script").val();
                     var name = $("#script_name").val();
-                    deployApplication(peer.control_uri, script, name);
+                    var reqs = $("#migrate_reqs").val();
+                    deployApplication(peer.control_uri, script, reqs, name);
                     $(this).dialog("close");
                 },
                 "Cancel": function() {
@@ -1274,10 +1264,11 @@ function showDeployApplication(peer_id)
 }
 
 // Deploy application with "script" and "name" to runtime with "uri"
-function deployApplication(uri, script, name)
+function deployApplication(uri, script, reqs, name)
 {
     var url = uri + '/deploy';
-    var data = JSON.stringify({'script': script, 'name': name});
+    var requirements = JSON.parse(reqs);
+    var data = JSON.stringify({'script': script, 'deploy_info': requirements, 'name': name});
     console.log("deployApplication url: " + url + " data: " + data);
     $.ajax({
         timeout: 20000,
@@ -1295,56 +1286,6 @@ function deployApplication(uri, script, name)
         },
         error: function() {
             alert("Failed to deploy application, url: " + url + " data: " + data);
-        }
-    });
-}
-
-// Show dialog for migrating "application_id"
-function showMigrateApplication(application_id)
-{
-    var application = findApplication(application_id);
-    if (application) {
-        $("#migrateDialog").dialog({
-            modal: true,
-            width: 800,
-            height: 600,
-            buttons: {
-                "Migrate": function() {
-                    var script = $("#migrate_reqs").val();
-                    migrateApplication(application, script);
-                    $(this).dialog("close");
-                },
-                "Cancel": function() {
-                    $(this).dialog("close");
-                }
-            }
-        });
-    }
-}
-
-// Migrate "application" with deployment from "script"
-function migrateApplication(application, script)
-{
-    var url = application.control_uri + "/application/" + application.id + "/migrate";
-    var deploy_data = JSON.parse(script);
-    var data = JSON.stringify({'reqs': deploy_data});
-    console.log("migrateApplication url: " + url + " data: " + data);
-    $.ajax({
-        timeout: 20000,
-        beforeSend: function() {
-            startSpin();
-        },
-        complete: function() {
-            stopSpin();
-        },
-        url: url,
-        type: 'POST',
-        data: data,
-        success: function(data) {
-            console.log("migrateApplication - Success");
-        },
-        error: function() {
-            alert("Failed to migrate application, url: " + url + " data: " + data);
         }
     });
 }
