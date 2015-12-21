@@ -1267,8 +1267,13 @@ function showDeployApplication(peer_id)
 function deployApplication(uri, script, reqs, name)
 {
     var url = uri + '/deploy';
-    var requirements = JSON.parse(reqs);
-    var data = JSON.stringify({'script': script, 'deploy_info': requirements, 'name': name});
+    var data;
+    if (reqs) {
+        var requirements = JSON.parse(reqs);
+        data = JSON.stringify({'script': script, 'deploy_info': requirements, 'name': name});
+    } else {
+        data = JSON.stringify({'script': script, 'name': name});
+    }
     console.log("deployApplication url: " + url + " data: " + data);
     $.ajax({
         timeout: 20000,
