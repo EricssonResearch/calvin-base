@@ -123,7 +123,7 @@ control_api_doc += \
     """
     DELETE /application/{application-id}
     Stop application (only applications launched from this node)
-    Response status code: ACCEPTED
+    Response status code: OK, NOT_FOUND, INTERNAL_ERROR
     Response: none
 """
 re_del_application = re.compile(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
@@ -657,9 +657,14 @@ class CalvinControl(object):
     def handle_del_application(self, handle, connection, match, data, hdr):
         """ Delete application from id
         """
-        # FIXME add callback, for now just say we got the request
-        self.node.app_manager.destroy(match.group(1))
-        self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
+        try:
+            self.node.app_manager.destroy(match.group(1), cb=CalvinCB(self.handle_del_application_cb,
+                                                                        handle, connection))
+        except:
+            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+
+    def handle_del_application_cb(self, handle, connection, status=None):
+        self.send_response(handle, connection, None, status=status.status)
 
     def handle_new_actor(self, handle, connection, match, data, hdr):
         """ Create actor
