@@ -108,6 +108,7 @@ class ActorManager(object):
             a._calvinsys = self.node.calvinsys()
             a.check_requirements()
         except Exception as e:
+            _log.exception("Catched new from state")
             _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
             a = ShadowActor(actor_type, actor_id)
             a._calvinsys = self.node.calvinsys()
@@ -140,16 +141,18 @@ class ActorManager(object):
                 args = state.pop('_shadow_args')
                 state['_managed'].remove('_shadow_args')
                 a.init(**args)
-                shadow_migrate = True
+                # If still shadow don't call did_migrate
+                did_migrate = isinstance(a, ShadowActor)
             else:
-                shadow_migrate = False
+                did_migrate = True
             # Always do a set_state for the port's state
             a._set_state(state)
             self.node.pm.add_ports_of_actor(a)
-            if not shadow_migrate:
+            if did_migrate:
                 a.did_migrate()
             a.setup_complete()
         except Exception as e:
+            _log.exception("Catched new from state %s %s" % (a, dir(a)))
             raise(e)
         return a
 

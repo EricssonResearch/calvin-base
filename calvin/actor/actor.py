@@ -538,9 +538,13 @@ class Actor(object):
     @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING])
     def _set_state(self, state):
         # Managed state handling
-        self._managed = set(state['_managed'])
 
-        for key in self._managed:
+        # Update since if previously a shadow actor the init has been called first
+        # which potentially have altered the managed attributes set compared
+        # with the recorded state
+        self._managed.update(set(state['_managed']))
+
+        for key in state['_managed']:
             if key not in self.__dict__:
                 self.__dict__[key] = state.pop(key)
             else:

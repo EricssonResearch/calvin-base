@@ -234,6 +234,15 @@ def migrate_use_req(rt, actor_id, requirements, extend=False, move=False, timeou
         rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
+
+def migrate_app_use_req(rt, application_id, deploy_info=None, move=False, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    data = {'deploy_info': deploy_info, "move": move}
+    req = session if async else requests
+    r = req.post(rt.control_uri + "/application/" + application_id + "/migrate", data=json.dumps(data), timeout=timeout)
+    return check_response(r)
+
+
 def get_port(rt, actor_id, port_id, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
     req = session if async else requests

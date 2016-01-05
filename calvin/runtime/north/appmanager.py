@@ -28,18 +28,20 @@ class Application(object):
 
     """ Application class """
 
-    def __init__(self, id, name, origin_node_id, actor_manager):
+    def __init__(self, id, name, origin_node_id, actor_manager, actors=None, deploy_info=None):
         self.id = id
         self.name = name or id
         self.ns = os.path.splitext(os.path.basename(name))[0]
         self.am = actor_manager
-        self.actors = {}
+        self.actors = {} if actors is None else actors
         self.origin_node_id = origin_node_id
         self._track_actor_cb = None
         self.actor_placement = None
         # node_info contains key: node_id, value: list of actors
         # Currently only populated at destruction time
         self.node_info = {}
+        self.components = {}
+        self.deploy_info = deploy_info
 
     def add_actor(self, actor_id):
         # Save actor_id and mapping to name while the actor is still on this node
@@ -98,6 +100,32 @@ class Application(object):
     def complete_node_info(self):
         return sum([len(a) for a in self.node_info.itervalues()]) == len(self.actors)
 
+    def group_components(self):
+        self.components = {}
+        l = (len(self.ns)+1) if self.ns else 0 
+        for name in self.actors.values():
+             if name.find(':',l)> -1:
+                # This is part of a component
+                # component name including optional namespace
+                component = ':'.join(name.split(':')[0:(2 if self.ns else 1)])
+                if component in self.components:
+                    self.components[component].append(name)
+                else:
+                    self.components[component] = [name]
+
+    def component_name(self, name):
+        l = (len(self.ns)+1) if self.ns else 0 
+        if name.find(':',l)> -1:
+            return ':'.join(name.split(':')[0:(2 if self.ns else 1)])
+        else:
+            return None
+
+    def get_req(self, actor_name):
+        name = self.component_name(actor_name) or actor_name
+        name = name.split(':', 1)[1] if self.ns else name
+        return self.deploy_info['requirements'][name] if (self.deploy_info and 'requirements' in self.deploy_info
+                                                            and name in self.deploy_info['requirements']) else None
+
 
 class AppManager(object):
 
@@ -147,7 +175,8 @@ class AppManager(object):
         _log.analyze(self._node.id, "+", {'application_id': application_id, 'value': value})
         _log.debug("Destroy app info %s: %s" % application_id, value)
         if value:
-            self._destroy(Application(application_id, value['name'], value['actors'], value['origin_node_id']))
+            self._destroy(Application(application_id, value['name'], value['origin_node_id'],
+                                      self._node.am, value['actors_name_map']))
 
     def _destroy(self, application):
         _log.analyze(self._node.id, "+", {'actors': application.actors})
@@ -233,7 +262,7 @@ class AppManager(object):
         return list(self.applications.keys())
 
 
-    ### DEPLOYMENT ###
+    ### DEPLOYMENT REQUIREMENTS ###
 
     def collect_placement(self, it, app, counter=0):
         _log.analyze(self._node.id, "+ BEGIN", {}, tb=True)
@@ -258,6 +287,11 @@ class AppManager(object):
             _log.exception("appmanager:collect_placement")
 
     def execute_requirements(self, application_id, cb):
+        """ Build dynops iterator to collect all possible placements,
+            then trigger migration.
+            
+            For initial deployment (all actors on the current node)
+        """
         app = None
         try:
             app = self.applications[application_id]
@@ -418,6 +452,58 @@ class AppManager(object):
             actor_matrix[i][i] = 1
         return (list_actors, actor_matrix)
 
+    # Remigration
+
+    def migrate_with_requirements(self, app_id, deploy_info, move=False, cb=None):
+        """ Migrate actors of app app_id based on newly supplied deploy_info.
+            Optional argument move controls if actors prefers to stay when possible.
+        """
+        self.storage.get_application(app_id, cb=CalvinCB(self._migrate_got_app,
+                                                         app_id=app_id, deploy_info=deploy_info,
+                                                         move=move, cb=cb))
+
+    def _migrate_got_app(self, key, value, app_id, deploy_info, move, cb):
+        if not value:
+            if cb:
+                cb(status=response.CalvinResponse(response.NOT_FOUND))
+            return
+        app = Application(app_id, value['name'], value['origin_node_id'],
+                                              self._node.am, actors=value['actors_name_map'], deploy_info=deploy_info)
+        app.group_components()
+        app._migrated_actors = {a: None for a in app.actors}
+        for actor_id, actor_name in app.actors.iteritems():
+            req = app.get_req(actor_name)
+            if req is None:
+                _log.analyze(self._node.id, "+ NO REQ", {'actor_id': actor_id, 'actor_name': actor_name})
+                # No requirement then leave as is.
+                self._migrated_cb(response.CalvinResponse(True), app, actor_id, cb)
+                continue
+            if actor_id in self._node.am.actors:
+                self._node.am.update_requirements(actor_id, req, False, move,
+                                                 callback=CalvinCB(self._migrated_cb, app=app,
+                                                                   actor_id=actor_id, cb=cb))
+            else:
+                self.storage.get_actor(actor_id, cb=CalvinCB(self._migrate_from_rt, app=app, 
+                                                                  actor_id=actor_id, req=req,
+                                                                  move=move, cb=cb))
+
+    def _migrate_from_rt(self, key, value, app, actor_id, req, move, cb):
+        if not value:
+            self._migrated_cb(response.CalvinResponse(response.NOT_FOUND), app, actor_id, cb)
+            return
+        self._node.proto.actor_migrate(value['node_id'], CalvinCB(self._migrated_cb, app=app, actor_id=actor_id, cb=cb),
+                                     actor_id, req, False, move)
+
+    def _migrated_cb(self, status, app, actor_id, cb):
+        app.actors[actor_id] = status
+        if any([s is None for s in app.actors.values()]):
+            return
+        # Done
+        if cb and all([s for s in app.actors.values()]):
+            cb(status=response.CalvinResponse(True))
+        else:
+            cb(status=response.CalvinResponse(False))
+
 class Deployer(object):
 
     """
@@ -449,6 +535,7 @@ class Deployer(object):
             self.ns = ""
         self.group_components()
 
+    # TODO Make deployer use the Application class group_components, component_name and get_req
     def group_components(self):
         self.components = {}
         l = (len(self.ns)+1) if self.ns else 0 

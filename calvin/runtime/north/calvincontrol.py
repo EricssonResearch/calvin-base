@@ -328,6 +328,30 @@ re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
 
 control_api_doc += \
     """
+    POST /application/{application-id}/migrate
+    Update deployment requirements of application application-id
+    and initiate migration of actors.
+    Body:
+    {
+        "deploy_info":
+           {"requirements": {
+                "<actor instance 1 name>": [ {"op": "<matching rule name>",
+                                              "kwargs": {<rule param key>: <rule param value>, ...},
+                                              "type": "+" or "-" for set intersection or set removal, respectively
+                                              }, ...
+                                           ],
+                ...
+                            }
+           }
+    }
+    For more details on deployment information see application deploy.
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
+    Response: none
+"""
+re_post_application_migrate = re.compile(r"POST /application/(APP_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
+
+control_api_doc += \
+    """
     POST /disconnect
     Disconnect a port.
     If port fields are empty, all ports of the actor are disconnected
@@ -470,6 +494,7 @@ class CalvinControl(object):
             (re_post_connect, self.handle_connect),
             (re_set_port_property, self.handle_set_port_property),
             (re_post_deploy, self.handle_deploy),
+            (re_post_application_migrate, self.handle_post_application_migrate),
             (re_delete_node, self.handle_quit),
             (re_post_disconnect, self.handle_disconnect),
             (re_post_index, self.handle_post_index),
@@ -815,6 +840,21 @@ class CalvinControl(object):
                                status=status.status)
         else:
             self.send_response(handle, connection, None, status=status.status)
+
+    def handle_post_application_migrate(self, handle, connection, match, data, hdr):
+        app_id = match.group(1)
+        try:
+            self.node.app_manager.migrate_with_requirements(app_id,
+                                                   deploy_info=data["deploy_info"] if "deploy_info" in data else None,
+                                                   move=data["move"] if "move" in data else False,
+                                                   cb=CalvinCB(self.handle_post_application_migrate_cb, handle, connection))
+        except:
+            _log.exception("App migration failed")
+            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+
+    def handle_post_application_migrate_cb(self, handle, connection, status, **kwargs):
+        _log.analyze(self.node.id, "+ MIGRATED", {'status': status.status})
+        self.send_response(handle, connection, None, status=status.status)
 
     def handle_quit(self, handle, connection, match, data, hdr):
         async.DelayedCall(.2, self.node.stop)

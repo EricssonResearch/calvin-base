@@ -359,6 +359,7 @@ class TestDeployShadow(unittest.TestCase):
         
         actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
+        assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
         utils.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
@@ -392,6 +393,7 @@ class TestDeployShadow(unittest.TestCase):
         
         actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
+        assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
         utils.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
@@ -425,6 +427,7 @@ class TestDeployShadow(unittest.TestCase):
         
         actual = utils.report(rt1, result['actor_map']['test_shadow3:snk'])
         assert len(actual) > 5
+        assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
         utils.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
@@ -599,6 +602,8 @@ class TestSepDeployShadow(unittest.TestCase):
         
         actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
+        assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
+
         utils.delete_application(rt1, result['application_id'])
 
 @pytest.mark.slow
@@ -768,6 +773,8 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         
         actual = utils.report(rt3, result['actor_map']['test_shadow4:bell'])
         assert len(actual) > 5
+        assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
+
         utils.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
@@ -813,5 +820,141 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         assert result['actor_map']['test_shadow4:bell'] in actors2
         actual2 = utils.report(rt2, result['actor_map']['test_shadow4:bell'])
         assert len(actual2) > len(actual)
+        assert all([y-x > 0 for x, y in zip(actual2, actual2[1:])])
+
+        utils.delete_application(rt1, result['application_id'])
+
+    @pytest.mark.slow
+    def testDeploy3NodesProxyStorageMoveAllAgain(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt1
+        global rt2
+        global rt3
+        global test_script_dir
+
+        self.verify_storage()
+
+        from calvin.Tools.cscontrol import control_deploy as deploy_app
+        from collections import namedtuple
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        args = DeployArgs(node='http://%s:5003' % ip_addr,
+                          script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+        result = {}
+        try:
+            result = deploy_app(args)
+        except:
+            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
+        #print "RESULT:", result
+        time.sleep(2)
+
+        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        # src -> rt1, sum -> rt2, snk -> rt1
+        assert result['actor_map']['test_shadow4:button'] in actors[1]
+        assert result['actor_map']['test_shadow4:check'] in actors[0]
+        assert result['actor_map']['test_shadow4:bell'] in actors[2]
+        
+        actual = utils.report(rt3, result['actor_map']['test_shadow4:bell'])
+        assert len(actual) > 5
+        utils.migrate_app_use_req(rt3, result['application_id'], 
+                            {
+                                "requirements": {
+                                    "button": [
+                                        {
+                                          "op": "node_attr_match",
+                                            "kwargs": {"index": ["address", {"locality": "inside"}]},
+                                            "type": "+"
+                                       }],
+                                        "bell": [
+                                        {
+                                            "op": "node_attr_match",
+                                            "kwargs": {"index": ["address", {"locality": "outside"}]},
+                                            "type": "+"
+                                        }],
+                                        "check": [
+                                        {
+                                            "op": "node_attr_match",
+                                            "kwargs": {"index": ["node_name", {"name": "display"}]},
+                                            "type": "+"
+                                        }]
+                                }
+                            })
+        time.sleep(1)
+        actors2 = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        assert result['actor_map']['test_shadow4:bell'] in actors2[1]
+        assert result['actor_map']['test_shadow4:check'] in actors[0]
+        assert result['actor_map']['test_shadow4:button'] in actors2[2]
+        actual2 = utils.report(rt2, result['actor_map']['test_shadow4:bell'])
+        assert len(actual2) > len(actual)
+        assert all([y-x > 0 for x, y in zip(actual2, actual2[1:])])
+
+        utils.delete_application(rt1, result['application_id'])
+
+
+    @pytest.mark.slow
+    def testDeploy3NodesProxyStorageComponentMoveAllAgain(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt1
+        global rt2
+        global rt3
+        global test_script_dir
+
+        self.verify_storage()
+
+        from calvin.Tools.cscontrol import control_deploy as deploy_app
+        from collections import namedtuple
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        args = DeployArgs(node='http://%s:5003' % ip_addr,
+                          script=open(test_script_dir+"test_shadow5.calvin"), attr=None,
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+        result = {}
+        try:
+            result = deploy_app(args)
+        except:
+            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
+        #print "RESULT:", result
+        time.sleep(2)
+
+        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        # src -> rt1, sum -> rt2, snk -> rt1
+        assert result['actor_map']['test_shadow5:button:first'] in actors[1]
+        assert result['actor_map']['test_shadow5:button:second'] in actors[1]
+        assert result['actor_map']['test_shadow5:check'] in actors[0]
+        assert result['actor_map']['test_shadow5:bell'] in actors[2]
+        
+        actual = utils.report(rt3, result['actor_map']['test_shadow5:bell'])
+        assert len(actual) > 5
+        utils.migrate_app_use_req(rt3, result['application_id'], 
+                            {
+                                "requirements": {
+                                    "button": [
+                                        {
+                                          "op": "node_attr_match",
+                                            "kwargs": {"index": ["address", {"locality": "inside"}]},
+                                            "type": "+"
+                                       }],
+                                        "bell": [
+                                        {
+                                            "op": "node_attr_match",
+                                            "kwargs": {"index": ["address", {"locality": "outside"}]},
+                                            "type": "+"
+                                        }],
+                                        "check": [
+                                        {
+                                            "op": "node_attr_match",
+                                            "kwargs": {"index": ["node_name", {"name": "display"}]},
+                                            "type": "+"
+                                        }]
+                                }
+                            })
+        time.sleep(1)
+        actors2 = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        assert result['actor_map']['test_shadow5:bell'] in actors2[1]
+        assert result['actor_map']['test_shadow5:check'] in actors[0]
+        assert result['actor_map']['test_shadow5:button:first'] in actors2[2]
+        assert result['actor_map']['test_shadow5:button:second'] in actors2[2]
+        actual2 = utils.report(rt2, result['actor_map']['test_shadow5:bell'])
+        assert len(actual2) > len(actual)
+        assert all([y-x > 0 for x, y in zip(actual2, actual2[1:])])
 
         utils.delete_application(rt1, result['application_id'])

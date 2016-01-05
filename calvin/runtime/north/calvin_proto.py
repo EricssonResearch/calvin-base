@@ -18,7 +18,6 @@ from calvin.utilities import calvinuuid
 from calvin.utilities.utils import enum
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 import calvin.utilities.calvinresponse as response
-from calvin.runtime.north.calvin_network import CalvinLink
 
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
@@ -150,6 +149,7 @@ class CalvinProto(CalvinCBClass):
             # functions that should be called. Either permanent here
             # or using the callback_register method.
             'ACTOR_NEW': [CalvinCB(self.actor_new_handler)],
+            'ACTOR_MIGRATE': [CalvinCB(self.actor_migrate_handler)],
             'APP_DESTROY': [CalvinCB(self.app_destroy_handler)],
             'PORT_CONNECT': [CalvinCB(self.port_connect_handler)],
             'PORT_DISCONNECT': [CalvinCB(self.port_disconnect_handler)],
@@ -236,6 +236,46 @@ class CalvinProto(CalvinCBClass):
 
     def _actor_new_handler(self, payload, status, **kwargs):
         """ Potentially created actor, reply to requesting node """
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def actor_migrate(self, to_rt_uuid, callback, actor_id, requirements, extend=False, move=False):
+        """ Request actor on to_rt_uuid node to migrate accoring to new deployment requirements 
+            callback: called when finished with the status respons as argument
+            actor_id: actor_id to migrate
+            requirements: see app manager
+            extend: if extending current deployment requirements
+            move: if prefers to move from node
+        """
+        if self.node.network.link_request(to_rt_uuid, CalvinCB(self._actor_migrate,
+                                                        to_rt_uuid=to_rt_uuid,
+                                                        callback=callback,
+                                                        actor_id=actor_id,
+                                                        requirements=requirements,
+                                                        extend=extend,
+                                                        move=move)):
+            # Already have link just continue in _actor_new
+                self._actor_migrate(to_rt_uuid, callback, actor_id, requirements, 
+                                    extend, move, status=response.CalvinResponse(True))
+
+    def _actor_migrate(self, to_rt_uuid, callback, actor_id, requirements, extend, move, status,
+                       peer_node_id=None, uri=None):
+        """ Got link? continue actor migrate """
+        if status:
+            msg = {'cmd': 'ACTOR_MIGRATE',
+                   'requirements': requirements, 'actor_id': actor_id, 'extend': extend, 'move': move}
+            self.network.links[to_rt_uuid].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def actor_migrate_handler(self, payload):
+        """ Peer request new actor with state and connections """
+        self.node.am.update_requirements(payload['actor_id'], payload['requirements'],
+                                         payload['extend'], payload['move'],
+                                         callback=CalvinCB(self._actor_migrate_handler, payload))
+
+    def _actor_migrate_handler(self, payload, status, **kwargs):
+        """ Potentially migrated actor, reply to requesting node """
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
 
@@ -392,7 +432,7 @@ class CalvinProto(CalvinCBClass):
             tunnel = self.tunnels[to_rt_uuid][tunnel_uuid]
         except:
             raise Exception("ERROR_UNKNOWN_TUNNEL")
-            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
+            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", None)
         # It exist, lets request its destruction
         msg = {'cmd': 'TUNNEL_DESTROY', 'tunnel_id': tunnel.id}
         self.network.links[to_rt_uuid].send_with_reply(CalvinCB(tunnel._destroy_ack), msg)
@@ -400,7 +440,7 @@ class CalvinProto(CalvinCBClass):
     def tunnel_destroy_handler(self, payload):
         """ Destroy tunnel (response side) """
         try:
-            self.network.link_check(to_rt_uuid)
+            self.network.link_check(payload['to_rt_uuid'])
         except:
             raise Exception("ERROR_UNKNOWN_RUNTIME")
         try:
