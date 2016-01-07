@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -301,6 +301,35 @@ def deploy_app_info(rt, name, app_info, deploy_info=None, check=True, timeout=TI
     data = {"name": name, "app_info": app_info, 'deploy_info': deploy_info, "check": check}
     req = session if async else requests
     r = req.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
+    return check_response(r)
+
+
+def register_metering(rt, user_id=None, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    data = {'user_id': user_id} if user_id else None
+    req = session if async else requests
+    r = req.post(rt.control_uri + '/meter', data=json.dumps(data), timeout=timeout)
+    return check_response(r)
+
+
+def unregister_metering(rt, user_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.delete(rt.control_uri + '/meter/' + user_id, data=json.dumps(None), timeout=timeout)
+    return check_response(r)
+
+
+def get_timed_metering(rt, user_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.get(rt.control_uri + '/meter/' + user_id + '/timed', timeout=timeout)
+    return check_response(r)
+
+
+def get_actorinfo_metering(rt, user_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.get(rt.control_uri + '/meter/' + user_id + '/metainfo', timeout=timeout)
     return check_response(r)
 
 

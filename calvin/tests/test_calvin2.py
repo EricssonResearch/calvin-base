@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -313,6 +313,41 @@ class TestScripts(CalvinTestBase):
         actual = utils.report(self.rt1, snk)
         self.assert_lists_equal(range(1, 20), actual)
 
+        d.destroy()
+
+
+@pytest.mark.essential
+class TestMetering(CalvinTestBase):
+
+    @pytest.mark.slow
+    def testMetering(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+          src : std.CountTimer()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > snk.token
+          """
+
+        r = utils.register_metering(self.rt1)
+        user_id = r['user_id']
+        metering_timeout = r['timeout']
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(0.5)
+        metainfo = utils.get_actorinfo_metering(self.rt1, user_id)
+        data1 = utils.get_timed_metering(self.rt1, user_id)
+        time.sleep(0.5)
+        data2 = utils.get_timed_metering(self.rt1, user_id)
+        snk = d.actor_map['simple:snk']
+        actual = utils.report(self.rt1, (snk))
+        self.assert_lists_equal(range(1, 20), actual)
+        # Verify only new data
+        assert max([data[0] for data in data1[snk]]) < min([data[0] for data in data2[snk]])
+        # Verify about same number of tokens (time diff makes exact match not possible)
+        diff = len(data1[snk]) + len(data2[snk]) - len(actual)
+        assert diff > -3 and diff < 3
+        utils.unregister_metering(self.rt1, user_id)
         d.destroy()
 
 

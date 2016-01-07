@@ -20,6 +20,7 @@ import argparse
 from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.south.endpoint import Endpoint
+from calvin.runtime.north import metering
 
 
 def fwrite(port, value):
@@ -200,6 +201,7 @@ class ActorTester(object):
         self.actors = {}
         self.illegal_actors = {}
         self.components = {}
+        self.metering = metering.set_metering(metering.Metering(None))
 
     def collect_actors(self, actor):
         actors = [m + '.' + a for m in self.store.modules() for a in self.store.actors(m)]

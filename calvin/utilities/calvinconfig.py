@@ -87,6 +87,7 @@ class CalvinConfig(object):
                 'capabilities_blacklist': [],
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json',
+                'metering_timeout': 10.0,
                 'media_framework': 'defaultimpl',
                 'display_plugin': 'stdout_impl',
                 'transports': ['calvinip'],

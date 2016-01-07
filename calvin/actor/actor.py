@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 from calvin.runtime.north import calvincontrol
+from calvin.runtime.north import metering
 
 _log = get_logger(__name__)
 
@@ -175,7 +176,8 @@ def condition(action_input=[], action_output=[]):
                 raise Exception("%s invalid production %s, expected %s" % (action, str(action_result.production), str(tuple(action_output))))
 
             return action_result
-
+        condition_wrapper.action_input = action_input
+        condition_wrapper.action_output = action_output
         return condition_wrapper
     return wrap
 
@@ -334,6 +336,7 @@ class Actor(object):
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
+        self.metering = metering.get_metering()
         self._migrating_to = None  # During migration while on the previous node set to the next node id
 
         self.inports = {p: actorport.InPort(p, self) for p in self.inport_names}
@@ -347,6 +350,7 @@ class Actor(object):
                              allow_invalid_transitions=allow_invalid_transitions,
                              disable_transition_checks=disable_transition_checks,
                              disable_state_checks=disable_state_checks)
+        self.metering.add_actor_info(self)
 
     @verify_status([STATUS.LOADED])
     def setup_complete(self):
@@ -481,7 +485,8 @@ class Actor(object):
                 # hence when fired start from the beginning
                 if action_result.did_fire:
                     # FIXME: Make this a hook for the runtime too use, don't
-                    #        import and use calvin_control in actor
+                    #        import and use calvin_control or metering in actor
+                    self.metering.fired(self.id, action_method.__name__)
                     self.control.log_firing(
                         self.name,
                         action_method.__name__,

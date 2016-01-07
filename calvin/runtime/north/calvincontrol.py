@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import json
 from random import randint
 from calvin.Tools import cscompiler as compiler
 from calvin.runtime.north.appmanager import Deployer
+from calvin.runtime.north import metering
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection, async
@@ -378,6 +379,75 @@ re_delete_node = re.compile(r"DELETE /node\sHTTP/1")
 
 control_api_doc += \
     """
+    POST /meter
+    Register for metering information
+    Body:
+    {
+        "user_id": <user-id> optional user id
+    }
+    Response status code: OK or BAD_REQUEST
+    Response:
+    {
+        "user_id": <user-id>,
+        "timeout": <seconds data is kept>,
+        "epoch_year": <the year the epoch starts at Jan 1 00:00, e.g. 1970>
+    }
+"""
+re_post_meter = re.compile(r"POST /meter\sHTTP/1")
+
+control_api_doc += \
+    """
+    DELETE /meter/{user-id}
+    Unregister for metering information
+    Response status code: OK or NOT_FOUND
+"""
+re_delete_meter = re.compile(r"DELETE /meter/(METERING_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+
+control_api_doc += \
+    """
+    GET /meter/{user-id}/timed
+    Get timed metering information
+    Response status code: OK or NOT_FOUND
+    Response:
+    {
+        <actor-id>: 
+            [
+                [<seconds since epoch>, <name of action>],
+                ...
+            ],
+            ...
+    }
+"""
+re_get_timed_meter = re.compile(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/timed\sHTTP/1")
+
+control_api_doc += \
+    """
+    GET /meter/{user-id}/metainfo
+    Get metering meta information on actors
+    Response status code: OK or NOT_FOUND
+    Response:
+    {
+        <actor-id>: 
+        {
+            <action-name>:
+            {
+                'inports': {
+                    <port-name> : <number of tokens per firing>,
+                    ...
+                           },
+                'outports': {
+                    <port-name> : <number of tokens per firing>,
+                    ...
+                           }
+            },
+            ...
+        }
+    }
+"""
+re_get_metainfo_meter = re.compile(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/metainfo\sHTTP/1")
+
+control_api_doc += \
+    """
     POST /index/{key}
     Store value under index key
     Body:
@@ -470,6 +540,7 @@ class CalvinControl(object):
         self.host = None
         self.tunnel_server = None
         self.tunnel_client = None
+        self.metering = None
 
         # Set routes for requests
         self.routes = [
@@ -497,6 +568,10 @@ class CalvinControl(object):
             (re_post_application_migrate, self.handle_post_application_migrate),
             (re_delete_node, self.handle_quit),
             (re_post_disconnect, self.handle_disconnect),
+            (re_post_meter, self.handle_post_meter),
+            (re_delete_meter, self.handle_delete_meter),
+            (re_get_timed_meter, self.handle_get_timed_meter),
+            (re_get_metainfo_meter, self.handle_get_metainfo_meter),
             (re_post_index, self.handle_post_index),
             (re_delete_index, self.handle_delete_index),
             (re_get_index, self.handle_get_index),
@@ -509,6 +584,7 @@ class CalvinControl(object):
         """ If not tunnel, start listening on uri and handle http requests.
             If tunnel, setup a tunnel to uri and handle requests.
         """
+        self.metering = metering.get_metering()
         self.node = node
         schema, _ = uri.split(':', 1)
         if tunnel:
@@ -553,13 +629,13 @@ class CalvinControl(object):
             if match:
                 if data:
                     data = json.loads(data)
-                _log.debug("Calvin control handles:\n%s\n---------------" % data)
+                _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
                 route[1](handle, connection, match, data, headers)
                 found = True
                 break
 
         if not found:
-            _log.error("No route found for: %s" % data)
+            _log.error("No route found for: %s\n%s" % (command, data))
             self.send_response(handle, connection, None, status=404)
 
     def send_response(self, handle, connection, data, status=200):
@@ -873,6 +949,48 @@ class CalvinControl(object):
     def handle_disconnect_cb(self, handle, connection, **kwargs):
         status = kwargs.get('status', None)
         self.send_response(handle, connection, None, status=status.status)
+
+    def handle_post_meter(self, handle, connection, match, data, hdr):
+        try:
+            user_id = self.metering.register(data['user_id'] if data and 'user_id' in data else None)
+            timeout = self.metering.timeout
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_get_timed_meter")
+            status = calvinresponse.BAD_REQUEST
+        self.send_response(handle, connection, json.dumps({ 'user_id': user_id,
+                                                            'timeout': timeout,
+                                                            'epoch_year': time.gmtime(0).tm_year})
+                                                if status == calvinresponse.OK else None, status=status)
+
+    def handle_delete_meter(self, handle, connection, match, data, hdr):
+        try:
+            self.metering.unregister(match.group(1))
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_get_timed_meter")
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, None, status=status)
+
+    def handle_get_timed_meter(self, handle, connection, match, data, hdr):
+        try:
+            data = self.metering.get_timed_meter(match.group(1))
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_get_timed_meter")
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, 
+            json.dumps(data) if status == calvinresponse.OK else None, status=status)
+
+    def handle_get_metainfo_meter(self, handle, connection, match, data, hdr):
+        try:
+            data = self.metering.get_actors_info(match.group(1))
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_get_timed_meter")
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, 
+            json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
     def handle_post_index(self, handle, connection, match, data, hdr):
         """ Add to index

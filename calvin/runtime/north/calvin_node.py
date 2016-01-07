@@ -27,6 +27,7 @@ from calvin.runtime.north import appmanager
 from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
 from calvin.runtime.north import calvincontrol
+from calvin.runtime.north import metering
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
@@ -66,6 +67,7 @@ class Node(object):
             _log.exception("Attributes not correct, uses empty attribute!")
             self.attributes = AttributeResolver(None)
         self.id = calvinuuid.uuid("NODE")
+        self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
         self.control = calvincontrol.get_calvincontrol()
