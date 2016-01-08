@@ -422,6 +422,31 @@ re_get_timed_meter = re.compile(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_
 
 control_api_doc += \
     """
+    GET /meter/{user-id}/aggregated
+    Get aggregated metering information
+    Response status code: OK or NOT_FOUND
+    Response:
+    {
+        'activity':
+        {
+            <actor-id>: 
+            {
+                <action-name>: <total fire count>,
+                ...
+            },
+            ...
+        },
+        'modification_time':
+        {
+            <actor-id>: <last modification time>,
+            ...
+        }
+    }
+"""
+re_get_aggregated_meter = re.compile(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/aggregated\sHTTP/1")
+
+control_api_doc += \
+    """
     GET /meter/{user-id}/metainfo
     Get metering meta information on actors
     Response status code: OK or NOT_FOUND
@@ -571,6 +596,7 @@ class CalvinControl(object):
             (re_post_meter, self.handle_post_meter),
             (re_delete_meter, self.handle_delete_meter),
             (re_get_timed_meter, self.handle_get_timed_meter),
+            (re_get_aggregated_meter, self.handle_get_aggregated_meter),
             (re_get_metainfo_meter, self.handle_get_metainfo_meter),
             (re_post_index, self.handle_post_index),
             (re_delete_index, self.handle_delete_index),
@@ -980,6 +1006,16 @@ class CalvinControl(object):
             status = calvinresponse.OK
         except:
             _log.exception("handle_get_timed_meter")
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, 
+            json.dumps(data) if status == calvinresponse.OK else None, status=status)
+
+    def handle_get_aggregated_meter(self, handle, connection, match, data, hdr):
+        try:
+            data = self.metering.get_aggregated_meter(match.group(1))
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_get_aggregated_meter")
             status = calvinresponse.NOT_FOUND
         self.send_response(handle, connection, 
             json.dumps(data) if status == calvinresponse.OK else None, status=status)

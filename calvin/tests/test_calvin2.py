@@ -402,6 +402,58 @@ class TestMetering(CalvinTestBase):
         utils.unregister_metering(self.rt2, user_id)
         d.destroy()
 
+    @pytest.mark.slow
+    def testAggregatedMigratingMetering(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+          src : std.CountTimer()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > snk.token
+          """
+
+        r1 = utils.register_metering(self.rt1)
+        user_id = r1['user_id']
+        # Register as same user to keep it simple
+        r2 = utils.register_metering(self.rt2, user_id)
+        # deploy app
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        # migrate sink back and forth
+        time.sleep(0.5)
+        snk = d.actor_map['simple:snk']
+        utils.migrate(self.rt1, snk, self.rt2.id)
+        time.sleep(0.5)
+        utils.migrate(self.rt2, snk, self.rt1.id)
+        time.sleep(0.5)
+        # Get metering
+        metainfo1 = utils.get_actorinfo_metering(self.rt1, user_id)
+        data1 = utils.get_timed_metering(self.rt1, user_id)
+        agg2 = utils.get_aggregated_metering(self.rt2, user_id)
+        data2 = utils.get_timed_metering(self.rt2, user_id)
+        agg1 = utils.get_aggregated_metering(self.rt1, user_id)
+        metainfo2 = utils.get_actorinfo_metering(self.rt2, user_id)
+        # Check metainfo
+        assert snk in metainfo1
+        assert snk in metainfo2
+        assert data1[snk][0][1] in metainfo1[snk]
+        assert data2[snk][0][1] in metainfo2[snk]
+        # Check that the sink produced something
+        actual = utils.report(self.rt1, (snk))
+        self.assert_lists_equal(range(1, 20), actual)
+        # Verify about same number of tokens (time diff makes exact match not possible)
+        total_timed = len(data1[snk]) + len(data2[snk])
+        diff = total_timed - len(actual)
+        assert diff > -3 and diff < 3
+        total_agg = sum(agg1['activity'][snk].values()) + sum(agg2['activity'][snk].values())
+        diff = total_agg - len(actual)
+        assert diff > -3 and diff < 3
+        assert sum(agg1['activity'][snk].values()) >= len(data1[snk])
+        assert sum(agg2['activity'][snk].values()) <= len(data2[snk])
+        utils.unregister_metering(self.rt1, user_id)
+        utils.unregister_metering(self.rt2, user_id)
+        d.destroy()
+
 
 class TestStateMigration(CalvinTestBase):
 

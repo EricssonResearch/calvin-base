@@ -326,6 +326,13 @@ def get_timed_metering(rt, user_id, timeout=TIMEOUT, async=False):
     return check_response(r)
 
 
+def get_aggregated_metering(rt, user_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.get(rt.control_uri + '/meter/' + user_id + '/aggregated', timeout=timeout)
+    return check_response(r)
+
+
 def get_actorinfo_metering(rt, user_id, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
     req = session if async else requests

@@ -53,11 +53,20 @@ class Metering(object):
         self.users = {}
         self.oldest = time.time()
         self.last_forget = time.time()
+        self.actors_aggregated = {}
+        self.actors_aggregated_time = {}
 
     def fired(self, actor_id, action_name):
-        if self.active and self.timeout > 0.0:
+        if self.active:
             t = time.time()
-            self.actors_log[actor_id].append((t, action_name))
+            # Aggregate
+            if actor_id not in self.actors_aggregated:
+                self.actors_aggregated[actor_id] = {action: 0 for action in self.actors_meta[actor_id]}
+            self.actors_aggregated[actor_id][action_name] += 1
+            self.actors_aggregated_time[actor_id] = t
+            # Timed metering
+            if self.timeout > 0.0:
+                self.actors_log[actor_id].append((t, action_name))
             # Remove old data at most once per second
             if self.oldest < t - self.timeout and self.last_forget < t - 1.0:
                 self.forget(t)
@@ -90,6 +99,13 @@ class Metering(object):
         self.forget(t)
         return response
 
+    def get_aggregated_meter(self, user_id):
+        if user_id not in self.users:
+            _log.debug("get_aggregated_meter: User id not found")
+            raise Exception("User id not found")
+        response = {'activity': self.actors_aggregated, 'modification_time': self.actors_aggregated_time}
+        return response
+
     def forget(self, current):
         self.last_forget = current
         if not self.active:
@@ -102,13 +118,19 @@ class Metering(object):
         self.oldest = t
         for actor_id, data in self.actors_log.iteritems():
             self.actors_log[actor_id] = [d for d in data if d[0] > t]
-        # Remove meta info that we don't have any action data for anyway
-        # Use one extra timeout here to not annoy clients that first read 
-        # timed meter and then metainfo
-        et = t - self.timeout
+        # Remove meta info that we don't have any action data for anyway.
+        # Also remove aggregated data for actors destroyed a while ago
+        # Use extra timeout here to not annoy clients that first read 
+        # timed meter or aggregated meter and then metainfo
+        et = t - max([self.timeout, 5.0])
         for actor_id, dt in self.actors_destroyed.iteritems():
             if dt < et:
                 self.actors_meta.pop(actor_id)
+                try:
+                    self.actors_aggregated.pop(actor_id)
+                    self.actors_aggregated_time.pop(actor_id)
+                except:
+                    pass
         self.actors_destroyed = {actor_id: dt for actor_id, dt in self.actors_destroyed.iteritems() if dt >= et}
 
     def add_actor_info(self, actor):
