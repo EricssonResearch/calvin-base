@@ -99,7 +99,7 @@ class ActorManager(object):
             raise Exception("ERROR_NOT_FOUND")
         try:
             # Create a 'bare' instance of the actor
-            a = class_(actor_type, actor_id)
+            a = class_(actor_type, actor_id=actor_id)
         except Exception as e:
             _log.exception("")
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
@@ -110,7 +110,7 @@ class ActorManager(object):
         except Exception as e:
             _log.exception("Catched new from state")
             _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
-            a = ShadowActor(actor_type, actor_id)
+            a = ShadowActor(actor_type, actor_id=actor_id)
             a._calvinsys = self.node.calvinsys()
         return a
 

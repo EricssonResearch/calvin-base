@@ -330,6 +330,7 @@ class Actor(object):
         self._type = actor_type
         self.name = name  # optional: human_readable_name
         self.id = actor_id or calvinuuid.uuid("ACTOR")
+        _log.debug("New actor id: %s, supplied actor id %s" % (self.id, actor_id))
         self._deployment_requirements = []
         self._component_members = set([self.id])  # We are only part of component if this is extended
         self._managed = set(('id', 'name', '_deployment_requirements'))
