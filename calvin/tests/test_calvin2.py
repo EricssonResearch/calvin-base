@@ -340,6 +340,8 @@ class TestMetering(CalvinTestBase):
         time.sleep(0.5)
         data2 = utils.get_timed_metering(self.rt1, user_id)
         snk = d.actor_map['simple:snk']
+        assert snk in metainfo
+        assert data1[snk][0][1] in metainfo[snk]
         actual = utils.report(self.rt1, (snk))
         self.assert_lists_equal(range(1, 20), actual)
         # Verify only new data
@@ -348,6 +350,56 @@ class TestMetering(CalvinTestBase):
         diff = len(data1[snk]) + len(data2[snk]) - len(actual)
         assert diff > -3 and diff < 3
         utils.unregister_metering(self.rt1, user_id)
+        d.destroy()
+
+    @pytest.mark.slow
+    def testMigratingMetering(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+          src : std.CountTimer()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > snk.token
+          """
+
+        r1 = utils.register_metering(self.rt1)
+        user_id = r1['user_id']
+        # Register as same user to keep it simple
+        r2 = utils.register_metering(self.rt2, user_id)
+        # deploy app
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        # migrate sink back and forth
+        time.sleep(0.5)
+        snk = d.actor_map['simple:snk']
+        utils.migrate(self.rt1, snk, self.rt2.id)
+        time.sleep(0.5)
+        utils.migrate(self.rt2, snk, self.rt1.id)
+        time.sleep(0.5)
+        # Get metering
+        metainfo1 = utils.get_actorinfo_metering(self.rt1, user_id)
+        metainfo2 = utils.get_actorinfo_metering(self.rt2, user_id)
+        data1 = utils.get_timed_metering(self.rt1, user_id)
+        data2 = utils.get_timed_metering(self.rt2, user_id)
+        # Check metainfo
+        assert snk in metainfo1
+        assert snk in metainfo2
+        assert data1[snk][0][1] in metainfo1[snk]
+        assert data2[snk][0][1] in metainfo2[snk]
+        # Check that the sink produced something
+        actual = utils.report(self.rt1, (snk))
+        self.assert_lists_equal(range(1, 20), actual)
+        # Verify action times of data2 is in middle of data1
+        limits = (min([data[0] for data in data2[snk]]), max([data[0] for data in data2[snk]]))
+        v = [data[0] for data in data1[snk]]
+        assert len(filter(lambda x: x > limits[0] and x < limits[1], v)) == 0
+        assert len(filter(lambda x: x < limits[0], v)) > 0
+        assert len(filter(lambda x: x > limits[1], v)) > 0
+        # Verify about same number of tokens (time diff makes exact match not possible)
+        diff = len(data1[snk]) + len(data2[snk]) - len(actual)
+        assert diff > -3 and diff < 3
+        utils.unregister_metering(self.rt1, user_id)
+        utils.unregister_metering(self.rt2, user_id)
         d.destroy()
 
 

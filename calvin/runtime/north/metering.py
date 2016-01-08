@@ -37,7 +37,7 @@ def set_metering(metering):
     global _metering
     if _metering is None:
         _metering = metering
-
+    return _metering
 
 class Metering(object):
     """Metering logs all actor activity"""
@@ -47,15 +47,19 @@ class Metering(object):
         self.timeout = _conf.get(None, 'metering_timeout')
         self.actors_log = {}
         self.actors_meta = {}
+        self.actors_destroyed = {}
         self.active = False
+        # Keep track of user's last access time, should inactive users be deleted? When?
         self.users = {}
         self.oldest = time.time()
+        self.last_forget = time.time()
 
     def fired(self, actor_id, action_name):
-        if self.active:
+        if self.active and self.timeout > 0.0:
             t = time.time()
             self.actors_log[actor_id].append((t, action_name))
-            if self.oldest < t - self.timeout:
+            # Remove old data at most once per second
+            if self.oldest < t - self.timeout and self.last_forget < t - 1.0:
                 self.forget(t)
 
     def register(self, user_id=None):
@@ -87,6 +91,7 @@ class Metering(object):
         return response
 
     def forget(self, current):
+        self.last_forget = current
         if not self.active:
             self.actors_log = {}
             self.oldest = current
@@ -97,14 +102,31 @@ class Metering(object):
         self.oldest = t
         for actor_id, data in self.actors_log.iteritems():
             self.actors_log[actor_id] = [d for d in data if d[0] > t]
+        # Remove meta info that we don't have any action data for anyway
+        # Use one extra timeout here to not annoy clients that first read 
+        # timed meter and then metainfo
+        et = t - self.timeout
+        for actor_id, dt in self.actors_destroyed.iteritems():
+            if dt < et:
+                self.actors_meta.pop(actor_id)
+        self.actors_destroyed = {actor_id: dt for actor_id, dt in self.actors_destroyed.iteritems() if dt >= et}
 
     def add_actor_info(self, actor):
         self.actors_meta[actor.id] = {}
-        self.actors_log[actor.id] = []
+        # Remove note on actor destroyed for an actor that migrates back
+        if actor.id in self.actors_destroyed:
+            self.actors_destroyed.pop(actor.id)
+        # Make sure the log exist but don't overwrite old data for an actor that migrates back
+        self.actors_log.setdefault(actor.id, [])
         for action_method in actor.__class__.action_priority:
             self.actors_meta[actor.id][action_method.__name__] = {
                     'inports': {p[0]: p[1] for p in action_method.action_input},
                     'outports': {p[0]: p[1] for p in action_method.action_output}}
+        _log.analyze(self.node.id, "+", {'actor_id': actor.id, 'metainfo': self.actors_meta[actor.id]})
+
+    def remove_actor_info(self, actor_id):
+        if actor_id in self.actors_meta:
+            self.actors_destroyed[actor_id] = time.time()
 
     def get_actors_info(self, user_id):
         return self.actors_meta

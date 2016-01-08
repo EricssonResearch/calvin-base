@@ -737,6 +737,7 @@ class CalvinControl(object):
             self.node.app_manager.destroy(match.group(1), cb=CalvinCB(self.handle_del_application_cb,
                                                                         handle, connection))
         except:
+            _log.exception("Destroy application failed")
             self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
 
     def handle_del_application_cb(self, handle, connection, status=None):
@@ -775,6 +776,7 @@ class CalvinControl(object):
             self.node.am.destroy(match.group(1))
             status = calvinresponse.OK
         except:
+            _log.exception("Destroy actor failed")
             status = calvinresponse.NOT_FOUND
         self.send_response(handle, connection, None, status=status)
 
@@ -956,7 +958,7 @@ class CalvinControl(object):
             timeout = self.metering.timeout
             status = calvinresponse.OK
         except:
-            _log.exception("handle_get_timed_meter")
+            _log.exception("handle_post_meter")
             status = calvinresponse.BAD_REQUEST
         self.send_response(handle, connection, json.dumps({ 'user_id': user_id,
                                                             'timeout': timeout,
@@ -968,7 +970,7 @@ class CalvinControl(object):
             self.metering.unregister(match.group(1))
             status = calvinresponse.OK
         except:
-            _log.exception("handle_get_timed_meter")
+            _log.exception("handle_delete_meter")
             status = calvinresponse.NOT_FOUND
         self.send_response(handle, connection, None, status=status)
 
@@ -987,7 +989,7 @@ class CalvinControl(object):
             data = self.metering.get_actors_info(match.group(1))
             status = calvinresponse.OK
         except:
-            _log.exception("handle_get_timed_meter")
+            _log.exception("handle_get_metainfo_meter")
             status = calvinresponse.NOT_FOUND
         self.send_response(handle, connection, 
             json.dumps(data) if status == calvinresponse.OK else None, status=status)

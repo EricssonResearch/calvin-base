@@ -201,7 +201,8 @@ class ActorTester(object):
         self.actors = {}
         self.illegal_actors = {}
         self.components = {}
-        self.metering = metering.set_metering(metering.Metering(None))
+        self.id = "ActorTester"
+        self.metering = metering.set_metering(metering.Metering(self))
 
     def collect_actors(self, actor):
         actors = [m + '.' + a for m in self.store.modules() for a in self.store.actors(m)]

@@ -159,6 +159,7 @@ class ActorManager(object):
 
     def destroy(self, actor_id):
         # @TOOD - check order here
+        self.node.metering.remove_actor_info(actor_id)
         a = self.actors[actor_id]
         a.will_end()
         self.node.pm.remove_ports_of_actor(a)
