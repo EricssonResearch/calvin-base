@@ -82,7 +82,7 @@ def check_response(response, success=range(200, 207), key=None):
             except:
                 return None
         # When failed raise exception
-        raise Exception("%d" % response.status_code)
+        raise Exception("%d%s" % (response.status_code, ("\n" + response.text) if response.text else ""))
     else:
         # We have a async Future just return it
         response._calvin_key = key

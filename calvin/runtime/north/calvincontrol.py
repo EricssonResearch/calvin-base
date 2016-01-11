@@ -320,10 +320,13 @@ control_api_doc += \
          "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
          "type": "+"
         }
-    Response status code: OK or INTERNAL_ERROR
+    Response status code: OK, BAD_REQUEST or INTERNAL_ERROR
     Response: {"application_id": <application-id>,
                "actor_map": {<actor name with namespace>: <actor id>, ...}
                "placement": {<actor_id>: <node_id>, ...}}
+    Failure response: {'errors': <compilation errors>,
+                       'warnings': <compilation warnings>,
+                       'exception': <exception string>}
 """
 re_post_deploy = re.compile(r"POST /deploy\sHTTP/1")
 
@@ -935,9 +938,11 @@ class CalvinControl(object):
             _log.analyze(self.node.id, "+ Deployer instanciated", {})
             d.deploy()
             _log.analyze(self.node.id, "+ DEPLOYING", {})
-        except:
+        except Exception as e:
             _log.exception("Deployer failed")
-            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+            self.send_response(handle, connection, json.dumps({'errors': errors, 'warnings': warnings,
+                                                                'exception': str(e)}),
+                                status=calvinresponse.BAD_REQUEST if errors else calvinresponse.INTERNAL_ERROR)
 
     def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
         _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})
