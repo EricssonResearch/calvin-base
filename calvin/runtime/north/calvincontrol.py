@@ -436,9 +436,9 @@ control_api_doc += \
             },
             ...
         },
-        'modification_time':
+        'time':
         {
-            <actor-id>: <last modification time>,
+            <actor-id>: [<start time of counter>, <last modification time>],
             ...
         }
     }

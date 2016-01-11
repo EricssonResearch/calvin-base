@@ -45,6 +45,7 @@ class Metering(object):
         super(Metering, self).__init__()
         self.node = node
         self.timeout = _conf.get(None, 'metering_timeout')
+        self.aggregated_timeout = _conf.get(None, 'metering_aggregated_timeout')
         self.actors_log = {}
         self.actors_meta = {}
         self.actors_destroyed = {}
@@ -53,20 +54,23 @@ class Metering(object):
         self.users = {}
         self.oldest = time.time()
         self.last_forget = time.time()
+        self.next_forget_aggregated = time.time()
         self.actors_aggregated = {}
         self.actors_aggregated_time = {}
 
     def fired(self, actor_id, action_name):
-        if self.active:
-            t = time.time()
+        t = time.time()
+        if self.aggregated_timeout > 0.0:
             # Aggregate
-            if actor_id not in self.actors_aggregated:
-                self.actors_aggregated[actor_id] = {action: 0 for action in self.actors_meta[actor_id]}
-            self.actors_aggregated[actor_id][action_name] += 1
-            self.actors_aggregated_time[actor_id] = t
+            self.actors_aggregated.setdefault(actor_id,
+                                            {action: 0 for action in self.actors_meta[actor_id]})[action_name] += 1
+            # Set [start time, modification time] and update modification time
+            self.actors_aggregated_time.setdefault(actor_id, [t, t])[1] = t
+            if self.next_forget_aggregated <= t:
+                self.forget_aggregated(t)
+        if self.active and self.timeout > 0.0:
             # Timed metering
-            if self.timeout > 0.0:
-                self.actors_log[actor_id].append((t, action_name))
+            self.actors_log[actor_id].append((t, action_name))
             # Remove old data at most once per second
             if self.oldest < t - self.timeout and self.last_forget < t - 1.0:
                 self.forget(t)
@@ -103,7 +107,7 @@ class Metering(object):
         if user_id not in self.users:
             _log.debug("get_aggregated_meter: User id not found")
             raise Exception("User id not found")
-        response = {'activity': self.actors_aggregated, 'modification_time': self.actors_aggregated_time}
+        response = {'activity': self.actors_aggregated, 'time': self.actors_aggregated_time}
         return response
 
     def forget(self, current):
@@ -118,20 +122,25 @@ class Metering(object):
         self.oldest = t
         for actor_id, data in self.actors_log.iteritems():
             self.actors_log[actor_id] = [d for d in data if d[0] > t]
+
+    def forget_aggregated(self, current):
         # Remove meta info that we don't have any action data for anyway.
-        # Also remove aggregated data for actors destroyed a while ago
-        # Use extra timeout here to not annoy clients that first read 
-        # timed meter or aggregated meter and then metainfo
-        et = t - max([self.timeout, 5.0])
+        # Also remove aggregated data for timeouted destroyed actors
+        et = current - (self.timeout * 2) - self.aggregated_timeout
         for actor_id, dt in self.actors_destroyed.iteritems():
             if dt < et:
                 self.actors_meta.pop(actor_id)
                 try:
-                    self.actors_aggregated.pop(actor_id)
                     self.actors_aggregated_time.pop(actor_id)
+                    self.actors_aggregated.pop(actor_id)
                 except:
                     pass
         self.actors_destroyed = {actor_id: dt for actor_id, dt in self.actors_destroyed.iteritems() if dt >= et}
+        if self.actors_destroyed:
+            self.next_forget_aggregated = (min(self.actors_destroyed.values()) +
+                                           self.aggregated_timeout + (self.timeout * 2))
+        else:
+            self.next_forget_aggregated = current + self.aggregated_timeout + (self.timeout * 2)
 
     def add_actor_info(self, actor):
         self.actors_meta[actor.id] = {}
@@ -149,6 +158,8 @@ class Metering(object):
     def remove_actor_info(self, actor_id):
         if actor_id in self.actors_meta:
             self.actors_destroyed[actor_id] = time.time()
+            self.next_forget_aggregated = (min(self.actors_destroyed.values()) +
+                                           self.aggregated_timeout + (self.timeout * 2))
 
     def get_actors_info(self, user_id):
         return self.actors_meta
