@@ -409,10 +409,10 @@ class TestDeployShadow(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow3.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow2.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow2.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -879,10 +879,10 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -915,10 +915,10 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -962,10 +962,10 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -1029,10 +1029,10 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow5.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
