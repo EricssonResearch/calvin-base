@@ -417,7 +417,8 @@ class AppManager(object):
         for actor_id, possible_nodes in app.actor_placement.iteritems():
             if any([isinstance(n, dynops.InfiniteElement) for n in possible_nodes]):
                 app.actor_placement[actor_id] = node_ids
-        _log.analyze(self._node.id, "+ ACTOR MATRIX", {'actor_ids': actor_ids, 'actor_matrix': actor_matrix, 'node_ids': node_ids, 'placement': app.actor_placement}, tb=True)
+        _log.analyze(self._node.id, "+ ACTOR MATRIX", {'actor_ids': actor_ids, 'actor_matrix': actor_matrix,
+                                            'node_ids': node_ids, 'placement': app.actor_placement}, tb=True)
 
         # Weight the actors possible placement with their connectivity matrix
         weighted_actor_placement = {}
@@ -497,10 +498,12 @@ class AppManager(object):
                 self._migrated_cb(response.CalvinResponse(True), app, actor_id, cb)
                 continue
             if actor_id in self._node.am.actors:
+                _log.analyze(self._node.id, "+ OWN ACTOR", {'actor_id': actor_id, 'actor_name': actor_name})
                 self._node.am.update_requirements(actor_id, req, False, move,
                                                  callback=CalvinCB(self._migrated_cb, app=app,
                                                                    actor_id=actor_id, cb=cb))
             else:
+                _log.analyze(self._node.id, "+ OTHER NODE", {'actor_id': actor_id, 'actor_name': actor_name})
                 self.storage.get_actor(actor_id, cb=CalvinCB(self._migrate_from_rt, app=app, 
                                                                   actor_id=actor_id, req=req,
                                                                   move=move, cb=cb))
@@ -509,18 +512,19 @@ class AppManager(object):
         if not value:
             self._migrated_cb(response.CalvinResponse(response.NOT_FOUND), app, actor_id, cb)
             return
+        _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'node_id': value['node_id']},
+                                                                peer_node_id=value['node_id'])
         self._node.proto.actor_migrate(value['node_id'], CalvinCB(self._migrated_cb, app=app, actor_id=actor_id, cb=cb),
                                      actor_id, req, False, move)
 
     def _migrated_cb(self, status, app, actor_id, cb):
-        app.actors[actor_id] = status
-        if any([s is None for s in app.actors.values()]):
+        app._migrated_actors[actor_id] = status
+        _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'status': status, 'statuses': app._migrated_actors})
+        if any([s is None for s in app._migrated_actors.values()]):
             return
         # Done
-        if cb and all([s for s in app.actors.values()]):
-            cb(status=response.CalvinResponse(True))
-        else:
-            cb(status=response.CalvinResponse(False))
+        if cb:
+            cb(status=response.CalvinResponse(all([s for s in app._migrated_actors.values()])))
 
 class Deployer(object):
 

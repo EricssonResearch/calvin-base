@@ -183,11 +183,13 @@ class ActorManager(object):
         """ Update requirements and trigger a potential migration """
         if actor_id not in self.actors:
             # Can only migrate actors from our node
+            _log.analyze(self.node.id, "+ NO ACTOR", {'actor_id': actor_id})
             if callback:
                 callback(status=response.CalvinResponse(False))
             return
         if not isinstance(requirements, (list, tuple)):
             # requirements need to be list
+            _log.analyze(self.node.id, "+ NO REQ LIST", {'actor_id': actor_id})
             if callback:
                 callback(status=response.CalvinResponse(response.BAD_REQUEST))
             return
@@ -195,11 +197,19 @@ class ActorManager(object):
         actor.requirements_add(requirements, extend)
         node_iter = self.node.app_manager.actor_requirements(None, actor_id)
         possible_placements = set([])
+        done = [False]
         node_iter.set_cb(self._update_requirements_placements, node_iter, actor_id, possible_placements,
-                         move=move, cb=callback)
+                         move=move, cb=callback, done=done)
+        _log.analyze(self.node.id, "+ CALL CB", {'actor_id': actor_id, 'node_iter': str(node_iter)})
+        # Must call it since the triggers might already have released before cb set
+        self._update_requirements_placements(node_iter, actor_id, possible_placements,
+                                 move=move, cb=callback, done=done)
+        _log.analyze(self.node.id, "+ END", {'actor_id': actor_id, 'node_iter': str(node_iter)})
 
-    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, move=False, cb=None, counter=0):
+    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False, cb=None, counter=0):
         _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
+        if done[0]:
+            return
         try:
             while True:
                 _log.analyze(self.node.id, "+ ITER", {})
@@ -208,12 +218,13 @@ class ActorManager(object):
         except dynops.PauseIteration:
             _log.analyze(self.node.id, "+ PAUSED", {'counter': counter})
             if counter < 3:
-                self._update_requirements_placements(node_iter, actor_id, possible_placements,
-                                                     move, cb=cb, counter=counter+1)
+                self._update_requirements_placements(node_iter, actor_id, possible_placements, done=done,
+                                                     move=move, cb=cb, counter=counter+1)
             return
         except StopIteration:
             # all possible actor placements derived
             _log.analyze(self.node.id, "+ ALL", {})
+            done[0] = True
             if move and len(possible_placements)>1:
                 possible_placements.discard(self.node.id)
             if not possible_placements:
