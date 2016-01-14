@@ -43,6 +43,9 @@ Analyze calvin log.
     argparser.add_argument('-w', '--width', dest='width', type=int, default=80,
                            help='Width of node column')
 
+    argparser.add_argument('-c', '--text-width', dest='text_width', type=int, default=None,
+                           help='Width of text in node column')
+
     argparser.add_argument('-f', '--first', dest='first', type=str, default=None,
                            help='A node id that should be in first column')
 
@@ -62,6 +65,7 @@ def main():
     global WIDTH
     args = parse_arguments()
     WIDTH = args.width or WIDTH
+    text_width = args.text_width or WIDTH + 20
     print "Analyze", args.files
     files = []
     for name in args.files:
@@ -130,7 +134,7 @@ def main():
             lines = str.splitlines(l['param'].rstrip())
             pre = "<>"
             for line in lines:
-                wrapped_lines = textwrap.wrap(line, width=WIDTH + 20,
+                wrapped_lines = textwrap.wrap(line, width=text_width,
                                               replace_whitespace=False, drop_whitespace=False)
                 for wl in wrapped_lines:
                     print " "*ind + pre + wl
@@ -149,7 +153,7 @@ def main():
                 print (" "*ind + [c['param']['cmd'] for c in log 
                                  if c['func'] == "SEND" and "msg_uuid" in c['param'] and c['param']['msg_uuid'] == id_][0] +
                                  " reply")
-            pp = pprint.pformat(l['param'], indent=1, width=WIDTH)
+            pp = pprint.pformat(l['param'], indent=1, width=text_width)
             for p in pp.split("\n"):
                 print " "*ind + p
         elif l['func']!="RECV":
