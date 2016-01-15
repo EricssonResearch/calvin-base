@@ -187,6 +187,7 @@ class Node(object):
 
         # Start control api
         proxy_control_uri = _conf.get(None, 'control_proxy')
+        _log.debug("Start control API on %s with uri: %s and proxy: %s" % (self.id, self.control_uri, proxy_control_uri))
         if proxy_control_uri is not None:
             self.control.start(node=self, uri=proxy_control_uri, tunnel=True)
         else:

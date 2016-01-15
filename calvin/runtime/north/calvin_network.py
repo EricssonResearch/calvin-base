@@ -142,11 +142,12 @@ class CalvinNetwork(object):
                                                                      'peer_disconnected': [CalvinCB(self.peer_disconnected)]},
                                                                     schemas, formats)
             except:
-                _log.debug("Could not register transport plugin %s" % (m,), exc_info=True)
+                _log.debug("Could not register transport plugin %s" % (m,))
                 continue
-            _log.debug("Register transport plugin %s" % (m,))
-            # Add them to the list - currently only one module can handle one schema
-            self.transports.update(schema_objects)
+            if schema_objects:
+                _log.debug("Register transport plugin %s" % (m,))
+                # Add them to the list - currently only one module can handle one schema
+                self.transports.update(schema_objects)
 
     def start_listeners(self, uris=None):
         """ Start the transport listening on the uris 
