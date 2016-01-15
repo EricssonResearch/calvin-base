@@ -31,7 +31,7 @@ class Application(object):
     def __init__(self, id, name, origin_node_id, actor_manager, actors=None, deploy_info=None):
         self.id = id
         self.name = name or id
-        self.ns = os.path.splitext(os.path.basename(name))[0]
+        self.ns = os.path.splitext(os.path.basename(self.name))[0]
         self.am = actor_manager
         self.actors = {} if actors is None else actors
         self.origin_node_id = origin_node_id
