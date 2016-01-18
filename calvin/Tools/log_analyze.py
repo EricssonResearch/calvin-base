@@ -49,6 +49,9 @@ Analyze calvin log.
     argparser.add_argument('-f', '--first', dest='first', type=str, default=None,
                            help='A node id that should be in first column')
 
+    argparser.add_argument('-x', '--exclude', dest='excludes', action='append', default=[],
+                           help="Exclude logged module, can be repeated")
+
     return argparser.parse_args()
 
 re_pid = re.compile("^[0-9,\-,\,, ,:]*[A-Z]* *([0-9]*)-.*")
@@ -91,7 +94,9 @@ def main():
                         log[-1]['param'] += line
                 continue
             try:
-                logline = json.loads(line.split('[[ANALYZE]]',1)[1])
+                lineparts = line.split('[[ANALYZE]]',1)
+                logline = json.loads(lineparts[1])
+                logline['match_exclude'] = lineparts[0]
             except:
                 # For some reason could not handle it, treat it as a normal other log level line
                 logline = {'func': 'OTHER', 'param': line, 'node_id': None}
@@ -120,6 +125,12 @@ def main():
         line += n + " "*(WIDTH-35)
     print line
     for l in log:
+        if 'match_exclude' in l:
+            exclude_line = l['match_exclude']
+        else:
+            exclude_line = l['param']
+        if any([exclude_line.find(excl) > -1 for excl in args.excludes]):
+            continue
         if l['node_id'] == "TESTRUN":
             print l['func'] + "%"*(len(nodes)*WIDTH-len(l['func']))
             if 'param' in l and l['param']:
