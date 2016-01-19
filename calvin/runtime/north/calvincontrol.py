@@ -826,17 +826,29 @@ class CalvinControl(object):
     def handle_actor_migrate(self, handle, connection, match, data, hdr):
         """ Migrate actor
         """
+        status = calvinresponse.OK
         if 'peer_node_id' in data:
-            self.node.am.migrate(match.group(1), data['peer_node_id'],
+            try:
+                self.node.am.migrate(match.group(1), data['peer_node_id'],
                                  callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+            except:
+                _log.exception("Migration failed")
+                status = calvinresponse.INTERNAL_ERROR
         elif 'requirements' in data:
-            self.node.am.update_requirements(match.group(1), data['requirements'],
-                extend=data['extend'] if 'extend' in data else False,
-                move=data['move'] if 'move' in data else False,
-                callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+            try:
+                self.node.am.update_requirements(match.group(1), data['requirements'],
+                    extend=data['extend'] if 'extend' in data else False,
+                    move=data['move'] if 'move' in data else False,
+                    callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+            except:
+                _log.exception("Migration failed")
+                status = calvinresponse.INTERNAL_ERROR
         else:
+            status=calvinresponse.BAD_REQUEST
+
+        if status != calvinresponse.OK:
             self.send_response(handle, connection,
-                               None, status=calvinresponse.BAD_REQUEST)
+                               None, status=status)
 
     def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
         """ Migrate actor respons
@@ -1290,8 +1302,12 @@ class CalvinControlTunnelClient(object):
         """ Gets called when a storage master replies"""
         if "cmd" in payload:
             if payload["cmd"] == "httpreq":
-                self.calvincontrol.route_request(
-                    payload["msgid"], None, payload["command"], payload["headers"], payload["data"])
+                try:
+                    self.calvincontrol.route_request(
+                        payload["msgid"], None, payload["command"], payload["headers"], payload["data"])
+                except:
+                    _log.exception("FIXME! Caught exception in calvincontrol when tunneling.")
+                    self.calvincontrol.send_response(payload["msgid"], None, None, status=calvinresponse.INTERNAL_ERROR)
             elif payload["cmd"] == "started":
                 self.calvincontrol.node.control_uri = payload["controluri"]
                 self.calvincontrol.node.storage.add_node(self.calvincontrol.node)
