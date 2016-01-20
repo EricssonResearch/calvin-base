@@ -1,0 +1,4 @@
+src:io.StandardIn()
+snk:io.Print()
+
+src.out > snk.token

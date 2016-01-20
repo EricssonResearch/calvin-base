@@ -54,8 +54,14 @@ class File(object):
         return self.fd.read()
 
 
+class StdIn(File):
+    def __init__(self, node):
+        self.fd = filedescriptor.FDStdIn(node.sched.trigger_loop)
+
+
 def access_allowed(filename):
     return os.access(os.path.dirname(os.path.realpath(filename)), os.W_OK | os.X_OK)
+
 
 class FileHandler(object):
     def __init__(self, node):
@@ -70,6 +76,9 @@ class FileHandler(object):
             raise Exception("Cannot create file")
 
         return File(self.node, fname, mode)
+
+    def open_stdin(self):
+        return StdIn(self.node)
 
     def close(self, fp):
         fp.close()

@@ -14,9 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+import os
+
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet import fdesc
-import os
 
 
 class FD(FileDescriptor):
@@ -24,10 +26,13 @@ class FD(FileDescriptor):
     def __init__(self, trigger, fname, mode):
         super(FD, self).__init__()
         self.trigger = trigger
-        self.fp = open(fname, mode, buffering=2048)
+        self._init_fp(fname, mode)
         fdesc.setNonBlocking(self)
         self.connected = True  # Required by FileDescriptor class
         self.data = b""
+
+    def _init_fp(self, fname, mode):
+        self.fp = open(fname, mode, buffering=2048)
 
         if "w" in mode:
             self.startWriting()
@@ -79,3 +84,17 @@ class FD(FileDescriptor):
         data = self.data
         self.data = b""
         return data
+
+
+class FDStdIn(FD):
+    def __init__(self, trigger):
+        super(FDStdIn, self).__init__(trigger, None, None)
+
+    def _init_fp(self, *args):
+        self.fp = sys.stdin
+        self.totalread = 0
+        self.startReading()
+
+    def endOfFile(self):
+        """Continue listening on StdIn"""
+        return False
