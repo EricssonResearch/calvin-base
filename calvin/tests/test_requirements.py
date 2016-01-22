@@ -628,6 +628,7 @@ class TestSepDeployShadow(unittest.TestCase):
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         #print "RESULT:", result
+        assert result['requirements_fulfilled']
         time.sleep(2)
 
         actors = [utils.get_actors(rt1), utils.get_actors(rt2)]
@@ -667,6 +668,7 @@ class TestSepDeployShadow(unittest.TestCase):
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         #print "RESULT:", result
+        assert result['requirements_fulfilled']
         time.sleep(1)
         utils.migrate(rt2, result['actor_map']['test_shadow1:snk'], rt1_id)
         time.sleep(1)
@@ -698,6 +700,35 @@ class TestSepDeployShadow(unittest.TestCase):
         actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 3
 
+        utils.delete_application(rt2, result['application_id'])
+
+    @pytest.mark.slow
+    def testDeployFailReqs(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt1
+        global rt2
+        global rt3
+        global rt1_id
+        global rt2_id
+        global rt3_id
+        global test_script_dir
+
+        self.verify_storage()
+
+        from calvin.Tools.cscontrol import control_deploy as deploy_app
+        from collections import namedtuple
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        args = DeployArgs(node='http://%s:5004' % ip_addr,
+                          script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
+                                reqs=test_script_dir+"test_shadow6.deployjson", check=False)
+        result = {}
+        try:
+            result = deploy_app(args)
+        except:
+            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
+        #print "RESULT:", result
+        time.sleep(1)
+        assert not result['requirements_fulfilled']
         utils.delete_application(rt2, result['application_id'])
 
 @pytest.mark.slow

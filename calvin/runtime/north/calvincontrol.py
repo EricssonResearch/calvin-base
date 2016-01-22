@@ -320,10 +320,11 @@ control_api_doc += \
          "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
          "type": "+"
         }
-    Response status code: OK, BAD_REQUEST or INTERNAL_ERROR
+    Response status code: OK, CREATED, BAD_REQUEST or INTERNAL_ERROR
     Response: {"application_id": <application-id>,
                "actor_map": {<actor name with namespace>: <actor id>, ...}
-               "placement": {<actor_id>: <node_id>, ...}}
+               "placement": {<actor_id>: <node_id>, ...},
+               "requirements_fulfilled": True/False}
     Failure response: {'errors': <compilation errors>,
                        'warnings': <compilation warnings>,
                        'exception': <exception string>}
@@ -951,7 +952,9 @@ class CalvinControl(object):
             self.send_response(handle, connection,
                                json.dumps({'application_id': deployer.app_id,
                                            'actor_map': deployer.actor_map,
-                                           'placement': kwargs.get('placement', None)}) if deployer.app_id else None,
+                                           'placement': kwargs.get('placement', None),
+                                           'requirements_fulfilled': status.status == calvinresponse.OK}
+                                          ) if deployer.app_id else None,
                                status=status.status)
         else:
             self.send_response(handle, connection, None, status=status.status)

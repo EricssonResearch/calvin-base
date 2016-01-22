@@ -398,12 +398,15 @@ class AppManager(object):
     def _app_requirements(self, app):
         _log.debug("_app_requirements(app=%s)" % (app,))
         _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': app.actor_placement}, tb=True)
+        status = response.CalvinResponse(True)
         if any([not n for n in app.actor_placement.values()]) or len(app.actors) > len(app.actor_placement):
-            # At least one actor have no possible placement
-            app._org_cb(status=response.CalvinResponse(False))
-            del app._org_cb
-            _log.analyze(self._node.id, "+ NO PLACEMENT", {'app_id': app.id}, tb=True)
-            return
+            # At least one actor have no required placement
+            # Let them stay on this node
+            for actor_id in [a for a in app.actors if a not in app.actor_placement]:
+                app.actor_placement[actor_id] = set([self._node.id])
+            # Status will indicate success, but be different than the normal OK code
+            status = response.CalvinResponse(response.CREATED)
+            _log.analyze(self._node.id, "+ MISS PLACEMENT", {'app_id': app.id, 'placement': app.actor_placement}, tb=True)
 
         # Collect an actor by actor matrix stipulating a weighting 0.0 - 1.0 for their connectivity
         actor_ids, actor_matrix = self._actor_connectivity(app)
@@ -441,7 +444,7 @@ class AppManager(object):
             _log.debug("Actor deployment %s \t-> %s" % (app.actors[actor_id], node_id))
             self._node.am.migrate(actor_id, node_id)
 
-        app._org_cb(status=response.CalvinResponse(True), placement=weighted_actor_placement)
+        app._org_cb(status=status, placement=weighted_actor_placement)
         del app._org_cb
         _log.analyze(self._node.id, "+ DONE", {'app_id': app.id}, tb=True)
 
