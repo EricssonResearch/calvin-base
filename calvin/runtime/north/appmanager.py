@@ -398,7 +398,7 @@ class AppManager(object):
     def _app_requirements(self, app):
         _log.debug("_app_requirements(app=%s)" % (app,))
         _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': app.actor_placement}, tb=True)
-        if any([not n for n in app.actor_placement.values()]):
+        if any([not n for n in app.actor_placement.values()]) or len(app.actors) > len(app.actor_placement):
             # At least one actor have no possible placement
             app._org_cb(status=response.CalvinResponse(False))
             del app._org_cb

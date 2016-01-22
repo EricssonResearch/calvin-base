@@ -816,6 +816,7 @@ class CalvinControl(object):
             report = self.node.am.report(match.group(1))
             status = calvinresponse.OK
         except:
+            _log.exception("Actor report failed")
             report = None
             status = calvinresponse.NOT_FOUND
         self.send_response(

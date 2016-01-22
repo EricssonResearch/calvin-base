@@ -562,9 +562,11 @@ class Actor(object):
 
         # Manual state handling
         for port in state['inports']:
-            self.inports[port]._set_state(state['inports'][port])
+            # Uses setdefault to support shadow actor
+            self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
         for port in state['outports']:
-            self.outports[port]._set_state(state['outports'][port])
+            # Uses setdefault to support shadow actor
+            self.outports.setdefault(port, actorport.OutPort(port, self))._set_state(state['outports'][port])
         self._component_members= set(state['_component_members'])
 
     # TODO verify status should only allow reading connections when and after being fully connected (enabled)
