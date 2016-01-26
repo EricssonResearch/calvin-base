@@ -562,6 +562,7 @@ class CalvinControl(object):
     def __init__(self):
         self.node = None
         self.log_connection = None
+        self.log_tunnel_handle = None
         self.routes = None
         self.server = None
         self.connections = {}
@@ -688,14 +689,21 @@ class CalvinControl(object):
                 connection.close()
             del self.connections[handle]
 
-    def send_streamheader(self, connection):
+    def send_streamheader(self, handle, connection):
         """ Send response header for text/event-stream
         """
         response = "HTTP/1.0 200 OK\n" + "Content-Type: text/event-stream\n" + \
             "Access-Control-Allow-Origin: *\r\n" + "\n"
 
-        if not connection.connection_lost:
-            connection.send(response)
+        if connection is not None:
+            self.log_connection = connection
+            if not connection.connection_lost:
+                connection.send(response)
+        else:
+            if self.tunnel_client is not None:
+                self.log_tunnel_handle = handle
+                msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
+                self.tunnel_client.send(msg)
 
     def storage_cb(self, key, value, handle, connection):
         self.send_response(handle, connection, None if value is None else json.dumps(value),
@@ -713,11 +721,7 @@ class CalvinControl(object):
     def handle_get_log(self, handle, connection, match, data, hdr):
         """ Get log stream
         """
-        if connection is None:
-            self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
-        else:
-            self.log_connection = connection
-            self.send_streamheader(connection)
+        self.send_streamheader(handle, connection)
 
     def handle_get_node_id(self, handle, connection, match, data, hdr):
         """ Get node id from this node
@@ -1100,7 +1104,7 @@ class CalvinControl(object):
     def log_firing(self, actor_name, action_method, tokens_produced, tokens_consumed, production):
         """ Trace firing, sends data on log_sock
         """
-        if self.log_connection is not None:
+        if self.log_connection is not None or (self.tunnel_client is not None and self.log_tunnel_handle is not None):
             ts = time.time()
             st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
             data = {}
@@ -1111,7 +1115,11 @@ class CalvinControl(object):
             data['action_method'] = action_method
             data['produced'] = tokens_produced
             data['consumed'] = tokens_consumed
-            self.log_connection.send("data: %s\n\n" % json.dumps(data))
+            if self.log_connection is not None:
+                self.log_connection.send("data: %s\n\n" % json.dumps(data))
+            elif self.tunnel_client is not None and self.log_tunnel_handle is not None:
+                msg = {"cmd": "logevent", "msgid": self.log_tunnel_handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                self.tunnel_client.send(msg)
 
     def handle_options(self, handle, connection, match, data, hdr):
         """ Handle HTTP OPTIONS requests
@@ -1193,7 +1201,6 @@ class CalvinControlTunnel(object):
     def __init__(self, tunnel):
         self.tunnel = tunnel
         self.connections = {}
-        self.messages = {}
 
         # Start a socket server on same interface as calvincontrol
         self.host = get_calvincontrol().host
@@ -1217,17 +1224,18 @@ class CalvinControlTunnel(object):
         self.server.stop()
 
     def handle_request(self, actor_ids=None):
-        """ Tunnel incomming requests
+        """ Handle connections and tunnel requests
         """
         if self.server.pending_connections:
             addr, conn = self.server.accept()
-            self.connections[addr] = conn
+            msg_id = calvinuuid.uuid("MSGID")
+            self.connections[msg_id] = conn
+            _log.debug("New connection msg_id: %s" % msg_id)
 
-        for handle, connection in self.connections.items():
+        for msg_id, connection in self.connections.items():
             if connection.data_available:
                 command, headers, data = connection.data_get()
-                msg_id = calvinuuid.uuid("MSGID")
-                self.messages[msg_id] = handle
+                _log.debug("CalvinControlTunnel handle_request msg_id: %s command: %s" % (msg_id, command))
                 msg = {"cmd": "httpreq",
                        "msgid": msg_id,
                        "command": command,
@@ -1236,27 +1244,42 @@ class CalvinControlTunnel(object):
                 self.tunnel.send(msg)
 
     def handle_response(self, payload):
-        if "cmd" in payload and payload["cmd"] == "httpresp":
-            msg_id = payload["msgid"]
-            handle = self.messages[msg_id]
-            del self.messages[msg_id]
-            connection = self.connections[handle]
-            self.send_response(handle, connection, payload["header"], payload["data"])
-        else:
-            _log.error("Unknown control proxy response %s" % payload['cmd'] if 'cmd' in payload else "")
+        """ Handle a tunnel response
+        """
+        if "msgid" in payload:
+            msgid = payload["msgid"]
+            if msgid in self.connections:
+                if "cmd" in payload and "header" in payload and "data" in payload:
+                    cmd = payload["cmd"]
+                    if cmd == "httpresp":
+                        self.send_response(msgid, payload["header"], payload["data"], True)
+                        return
+                    elif cmd == "logresp":
+                        self.send_response(msgid, payload["header"], payload["data"], False)
+                        return
+                    elif cmd == "logevent":
+                        result = self.send_response(msgid, payload["header"], payload["data"], False)
+                        if not result:
+                            msg = {"cmd": "logclose"}
+                            self.tunnel.send(msg)
+                        return
+        _log.error("Unknown control proxy response %s" % payload)
 
-    def send_response(self, handle, connection, header, data):
+    def send_response(self, msgid, header, data, closeConnection):
         """ Send response header text/html
         """
+        connection = self.connections[msgid]
         if not connection.connection_lost:
             if header is not None:
                 connection.send(str(header))
             if data is not None:
                 connection.send(str(data))
-            connection.close()
-            del self.connections[handle]
-        else:
-            _log.debug("Connection lost")
+            if closeConnection:
+                connection.close()
+                del self.connections[msgid]
+            return True
+        del self.connections[msgid]
+        return False
 
 
 class CalvinControlTunnelClient(object):
@@ -1311,6 +1334,11 @@ class CalvinControlTunnelClient(object):
             elif payload["cmd"] == "started":
                 self.calvincontrol.node.control_uri = payload["controluri"]
                 self.calvincontrol.node.storage.add_node(self.calvincontrol.node)
+                return
+            elif payload["cmd"] == "logclose":
+                self.calvincontrol.log_tunnel_handle = None
+                return
+        _log.error("Tunnel client received unknown command %s" % payload['cmd'] if 'cmd' in payload else "")
 
     def send(self, msg):
         if self.tunnel:
