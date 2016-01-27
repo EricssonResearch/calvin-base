@@ -75,6 +75,8 @@ class ActorManager(object):
             # Convert prev_connections to connection_list format
             connection_list = self._prev_connections_to_connection_list(prev_connections)
 
+        self.node.control.log_actor_new(a.id, a.name, actor_type)
+
         if connection_list:
             # Migrated actor
             self.connect(a.id, connection_list, callback=callback)
@@ -166,6 +168,7 @@ class ActorManager(object):
         # @TOOD - insert callback here
         self.node.storage.delete_actor(actor_id)
         del self.actors[actor_id]
+        self.node.control.log_actor_destroy(a.id)
 
     # DEPRECATED: Enabling of an actor is dependent on wether it's connected or not
     def enable(self, actor_id):
@@ -269,6 +272,7 @@ class ActorManager(object):
                                                   node_id=node_id,
                                                   callback=callback),
                                 actor_id=actor_id)
+        self.node.control.log_actor_migrate(actor_id, node_id)
 
     def _migrate_disconnected(self, actor, actor_type, ports, node_id, status, callback = None, **state):
         """ Actor disconnected, continue migration """

@@ -139,6 +139,7 @@ class AppManager(object):
     def new(self, name):
         application_id = calvinuuid.uuid("APP")
         self.applications[application_id] = Application(application_id, name, self._node.id, self._node.am)
+        self._node.control.log_application_new(application_id, name)
         return application_id
 
     def add(self, application_id, actor_id):
@@ -258,6 +259,7 @@ class AppManager(object):
             application.destroy_cb(status=response.CalvinResponse(True))
         else:
             application.destroy_cb(status=response.CalvinResponse(False))
+        self._node.control.log_application_destroy(application.id)
 
     def destroy_request(self, application_id, actor_ids):
         """ Request from peer of local application parts destruction and related actors """

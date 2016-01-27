@@ -488,8 +488,8 @@ class Actor(object):
                     # FIXME: Make this a hook for the runtime too use, don't
                     #        import and use calvin_control or metering in actor
                     self.metering.fired(self.id, action_method.__name__)
-                    self.control.log_firing(
-                        self.name,
+                    self.control.log_actor_firing(
+                        self.id,
                         action_method.__name__,
                         action_result.tokens_produced,
                         action_result.tokens_consumed,

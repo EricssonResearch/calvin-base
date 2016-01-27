@@ -16,7 +16,6 @@
 
 import re
 import time
-import datetime
 import json
 from random import randint
 from calvin.Tools import cscompiler as compiler
@@ -48,12 +47,59 @@ control_api_doc += \
 """
 re_get_actor_doc = re.compile(r"GET /actor_doc(\S*)\sHTTP/1")
 
-# control_api_doc += \
+control_api_doc += \
+    """
+    POST /log
+    Register for log events and set actor and event filter.
+    Body:
+    {
+        'user_id': <user_id>     # Optional user id
+        'actors': [<actor-id>],  # Actors to log, empty list for all
+        'events': [<event_type>] # Event types to log: actor_firing, action_result,
+                                                       actor_new, actor_destroy, actor_migrate,
+                                                       application_new, application_destroy
+    }
+    Response status code: OK or BAD_REQUEST
+    Response:
+    {
+        'user_id': <user_id>,
+        'epoch_year': <the year the epoch starts at Jan 1 00:00, e.g. 1970>
+    }
 """
-    GET /log
-    Streaming log from calvin node (more documentation needed)
+re_post_log = re.compile(r"POST /log\sHTTP/1")
+
+control_api_doc += \
+    """
+    DELETE /log/{user-id}
+    Unregister for trace data
+    Response status code: OK or NOT_FOUND
 """
-re_get_log = re.compile(r"GET /log\sHTTP/1")
+re_delete_log = re.compile(r"DELETE /log/(TRACE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+
+control_api_doc += \
+    """
+    GET /log/{user-id}
+    Get streamed log events
+    Response status code: OK or NOT_FOUND
+    Content-Type: text/event-stream
+    data:
+    {
+        'timestamp': <timestamp>,
+        'node_id': <node_id>,
+        'type': <event_type>, # event types: actor_fire, actor_new, actor_destroy, actor_migrate, application_new, application_destroy
+        'actor_id',           # included in: actor_fire, actor_new, actor_destroy, actor_migrate
+        'actor.name',         # included in: actor_new
+        'action_method',      # included in: actor_fire
+        'consumed',           # included in: actor_fire
+        'produced'            # included in: actor_fire
+        'action_result'       # included in: actor_fire
+        'actor_type',         # included in: actor_new
+        'dest_node_id',       # included in: actor_migrate
+        'application_name',   # included in: application_new
+        'application_id'      # included in: application, application_destroy
+    }
+"""
+re_get_log = re.compile(r"GET /log/(TRACE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
     """
@@ -554,15 +600,38 @@ def get_calvincontrol():
     return _calvincontrol
 
 
+class Logger(object):
+
+    """ Log object
+    """
+
+    def __init__(self, actors, events):
+        self.handle = None
+        self.connection = None
+        self.actors = actors
+        self.events = events
+
+    def set_connection(self, handle, connection):
+        self.handle = handle
+        self.connection = connection
+
+
 class CalvinControl(object):
 
     """ A HTTP REST API for calvin nodes
     """
 
+    LOG_ACTOR_FIRING = 0
+    LOG_ACTION_RESULT = 1
+    LOG_ACTOR_NEW = 2
+    LOG_ACTOR_DESTROY = 3
+    LOG_ACTOR_MIGRATE = 4
+    LOG_APPLICATION_NEW = 5
+    LOG_APPLICATION_DESTROY = 6
+
     def __init__(self):
         self.node = None
-        self.log_connection = None
-        self.log_tunnel_handle = None
+        self.loggers = {}
         self.routes = None
         self.server = None
         self.connections = {}
@@ -575,6 +644,8 @@ class CalvinControl(object):
         # Set routes for requests
         self.routes = [
             (re_get_actor_doc, self.handle_get_actor_doc),
+            (re_post_log, self.handle_post_log),
+            (re_delete_log, self.handle_delete_log),
             (re_get_log, self.handle_get_log),
             (re_get_node_id, self.handle_get_node_id),
             (re_get_nodes, self.handle_get_nodes),
@@ -641,6 +712,13 @@ class CalvinControl(object):
         if self.tunnel_client is not None:
             self.tunnel_client.stop()
 
+    def close_log_tunnel(self, handle):
+        """ Close log tunnel
+        """
+        for user_id, logger in self.loggers:
+            if logger.handle == handle:
+                del self.loggers[user_id]
+
     def handle_request(self, actor_ids=None):
         """ Handle incoming requests on socket
         """
@@ -696,12 +774,10 @@ class CalvinControl(object):
             "Access-Control-Allow-Origin: *\r\n" + "\n"
 
         if connection is not None:
-            self.log_connection = connection
             if not connection.connection_lost:
                 connection.send(response)
         else:
             if self.tunnel_client is not None:
-                self.log_tunnel_handle = handle
                 msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
                 self.tunnel_client.send(msg)
 
@@ -718,10 +794,69 @@ class CalvinControl(object):
         data = ds.help_raw(what)
         self.send_response(handle, connection, json.dumps(data))
 
+    def handle_post_log(self, handle, connection, match, data, hdr):
+        """ Create log session
+        """
+        status = calvinresponse.OK
+        actors = []
+        events = []
+
+        if data and 'user_id' in data:
+            user_id = data['user_id']
+        else:
+            user_id = calvinuuid.uuid("TRACE")
+
+        if user_id not in self.loggers:
+            if 'actors' in data and data['actors']:
+                actors = data['actors']
+            if 'events' in data:
+                events = []
+                for event in data['events']:
+                    if event == 'actor_firing':
+                        events.append(self.LOG_ACTOR_FIRING)
+                    elif event == 'action_result':
+                        events.append(self.LOG_ACTION_RESULT)
+                    elif event == 'actor_new':
+                        events.append(self.LOG_ACTOR_NEW)
+                    elif event == 'actor_destroy':
+                        events.append(self.LOG_ACTOR_DESTROY)
+                    elif event == 'actor_migrate':
+                        events.append(self.LOG_ACTOR_MIGRATE)
+                    elif event == 'application_new':
+                        events.append(self.LOG_APPLICATION_NEW)
+                    elif event == 'application_destroy':
+                        events.append(self.LOG_APPLICATION_DESTROY)
+                    else:
+                        status = calvinresponse.BAD_REQUEST
+                        break
+            if status == calvinresponse.OK:
+                self.loggers[user_id] = Logger(actors=actors, events=events)
+        else:
+            status = calvinresponse.BAD_REQUEST
+
+        self.send_response(handle, connection,
+                           json.dumps({'user_id': user_id, 'epoch_year': time.gmtime(0).tm_year})
+                           if status == calvinresponse.OK else None,
+                           status=status)
+
+    def handle_delete_log(self, handle, connection, match, data, hdr):
+        """ Delete log session
+        """
+        if match.group(1) in self.loggers:
+            del self.loggers[match.group(1)]
+            status = calvinresponse.OK
+        else:
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, None, status=status)
+
     def handle_get_log(self, handle, connection, match, data, hdr):
         """ Get log stream
         """
-        self.send_streamheader(handle, connection)
+        if match.group(1) in self.loggers:
+            self.loggers[match.group(1)].set_connection(handle, connection)
+            self.send_streamheader(handle, connection)
+        else:
+            self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
 
     def handle_get_node_id(self, handle, connection, match, data, hdr):
         """ Get node id from this node
@@ -1101,25 +1236,150 @@ class CalvinControl(object):
         """
         self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
 
-    def log_firing(self, actor_name, action_method, tokens_produced, tokens_consumed, production):
-        """ Trace firing, sends data on log_sock
+    def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_consumed, production):
+        """ Trace actor firing
         """
-        if self.log_connection is not None or (self.tunnel_client is not None and self.log_tunnel_handle is not None):
-            ts = time.time()
-            st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-            data = {}
-            data['timestamp'] = st
-            data['node_id'] = self.node.id
-            data['type'] = 'fire'
-            data['actor'] = actor_name
-            data['action_method'] = action_method
-            data['produced'] = tokens_produced
-            data['consumed'] = tokens_consumed
-            if self.log_connection is not None:
-                self.log_connection.send("data: %s\n\n" % json.dumps(data))
-            elif self.tunnel_client is not None and self.log_tunnel_handle is not None:
-                msg = {"cmd": "logevent", "msgid": self.log_tunnel_handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                self.tunnel_client.send(msg)
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_ACTOR_FIRING in logger.events:
+                if not logger.actors or actor_id in logger.actors:
+                    data = {}
+                    data['timestamp'] = time.time()
+                    data['node_id'] = self.node.id
+                    data['type'] = 'actor_fire'
+                    data['actor_id'] = actor_id
+                    data['action_method'] = action_method
+                    data['produced'] = tokens_produced
+                    data['consumed'] = tokens_consumed
+                    if self.LOG_ACTION_RESULT in logger.events:
+                        data['action_result'] = production
+                    if logger.connection is not None:
+                        if not logger.connection.connection_lost:
+                            logger.connection.send("data: %s\n\n" % json.dumps(data))
+                        else:
+                            disconnected.append(user_id)
+                    elif self.tunnel_client is not None and logger.handle is not None:
+                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                        self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_actor_new(self, actor_id, actor_name, actor_type):
+        """ Trace actor new
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_ACTOR_NEW in logger.events:
+                if not logger.actors or actor_id in logger.actors:
+                    data = {}
+                    data['timestamp'] = time.time()
+                    data['node_id'] = self.node.id
+                    data['type'] = 'actor_new'
+                    data['actor_id'] = actor_id
+                    data['actor_name'] = actor_name
+                    data['actor_type'] = actor_type
+                    if logger.connection is not None:
+                        if not logger.connection.connection_lost:
+                            logger.connection.send("data: %s\n\n" % json.dumps(data))
+                        else:
+                            disconnected.append(user_id)
+                    elif self.tunnel_client is not None and logger.handle is not None:
+                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                        self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_actor_destroy(self, actor_id):
+        """ Trace actor destroy
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_ACTOR_DESTROY in logger.events:
+                if not logger.actors or actor_id in logger.actors:
+                    data = {}
+                    data['timestamp'] = time.time()
+                    data['node_id'] = self.node.id
+                    data['type'] = 'actor_destroy'
+                    data['actor_id'] = actor_id
+                    if logger.connection is not None:
+                        if not logger.connection.connection_lost:
+                            logger.connection.send("data: %s\n\n" % json.dumps(data))
+                        else:
+                            disconnected.append(user_id)
+                    elif self.tunnel_client is not None and logger.handle is not None:
+                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                        self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_actor_migrate(self, actor_id, dest_node_id):
+        """ Trace actor migrate
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_ACTOR_MIGRATE in logger.events:
+                if not logger.actors or actor_id in logger.actors:
+                    data = {}
+                    data['timestamp'] = time.time()
+                    data['node_id'] = self.node.id
+                    data['type'] = 'actor_migrate'
+                    data['actor_id'] = actor_id
+                    data['dest_node_id'] = dest_node_id
+                    if logger.connection is not None:
+                        if not logger.connection.connection_lost:
+                            logger.connection.send("data: %s\n\n" % json.dumps(data))
+                        else:
+                            disconnected.append(user_id)
+                    elif self.tunnel_client is not None and logger.handle is not None:
+                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                        self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_application_new(self, application_id, application_name):
+        """ Trace application new
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_APPLICATION_NEW in logger.events:
+                data = {}
+                data['timestamp'] = time.time()
+                data['node_id'] = self.node.id
+                data['type'] = 'application_new'
+                data['application_id'] = application_id
+                data['application_name'] = application_name
+                if logger.connection is not None:
+                    if not logger.connection.connection_lost:
+                        logger.connection.send("data: %s\n\n" % json.dumps(data))
+                    else:
+                        disconnected.append(user_id)
+                elif self.tunnel_client is not None and logger.handle is not None:
+                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                    self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_application_destroy(self, application_id):
+        """ Trace application destroy
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_APPLICATION_DESTROY in logger.events:
+                data = {}
+                data['timestamp'] = time.time()
+                data['node_id'] = self.node.id
+                data['type'] = 'application_destroy'
+                data['application_id'] = application_id
+                if logger.connection is not None:
+                    if not logger.connection.connection_lost:
+                        logger.connection.send("data: %s\n\n" % json.dumps(data))
+                    else:
+                        disconnected.append(user_id)
+                elif self.tunnel_client is not None and logger.handle is not None:
+                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                    self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
 
     def handle_options(self, handle, connection, match, data, hdr):
         """ Handle HTTP OPTIONS requests
@@ -1322,7 +1582,7 @@ class CalvinControlTunnelClient(object):
         return True
 
     def tunnel_recv_handler(self, payload):
-        """ Gets called when a storage master replies"""
+        """ Gets called when a control proxy replies"""
         if "cmd" in payload:
             if payload["cmd"] == "httpreq":
                 try:
@@ -1336,7 +1596,7 @@ class CalvinControlTunnelClient(object):
                 self.calvincontrol.node.storage.add_node(self.calvincontrol.node)
                 return
             elif payload["cmd"] == "logclose":
-                self.calvincontrol.log_tunnel_handle = None
+                self.calvincontrol.close_log_tunnel(payload["msg_id"])
                 return
         _log.error("Tunnel client received unknown command %s" % payload['cmd'] if 'cmd' in payload else "")
 
