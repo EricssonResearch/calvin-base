@@ -777,7 +777,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
             logfile = None
             outfile = None
         csruntime(ip_addr, port=5001, controlport=5004, attr={'indexed_public':
-                  {'node_name': {'organization': 'com.ericsson'},
+                  {'node_name': {'name': 'serv'},
                    'address': {"locality" : "outside"}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5001.conf")
@@ -793,7 +793,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
             logfile = None
             outfile = None
         csruntime(ip_addr, port=5002, controlport=5005, attr={'indexed_public':
-                  {'node_name': {'organization': 'com.ericsson'},
+                  {'node_name': {'name': 'mtrx'},
                    'address': {"locality" : "inside"}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5002.conf")
@@ -1081,5 +1081,65 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         actual2 = utils.report(rt2, result['actor_map']['test_shadow5:bell'])
         assert len(actual2) > len(actual)
         assert all([y-x > 0 for x, y in zip(actual2, actual2[1:])])
+
+        utils.delete_application(rt1, result['application_id'])
+
+    @pytest.mark.slow
+    def testDeploy3NodesProxyStorageMoveManyTimes(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt1
+        global rt2
+        global rt3
+        global test_script_dir
+
+        self.verify_storage()
+
+        from calvin.Tools.cscontrol import control_deploy as deploy_app
+        from collections import namedtuple
+        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
+        args = DeployArgs(node='http://%s:5003' % ip_addr,
+                          script=open(test_script_dir+"test_deploy1.calvin"), attr=None,
+                                reqs=test_script_dir+"test_deploy4.deployjson", check=False)
+        result = {}
+        try:
+            result = deploy_app(args)
+        except:
+            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
+        print "RESULT:", result
+        time.sleep(2)
+
+        assert result['requirements_fulfilled']
+
+        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        # src -> rt1, sum -> rt1, snk -> rt2
+        assert result['actor_map']['test_deploy1:src'] in actors[1]
+        assert result['actor_map']['test_deploy1:sum'] in actors[0]
+        assert result['actor_map']['test_deploy1:snk'] in actors[1]
+
+        for i in range(10):
+            utils.migrate_app_use_req(rt1, result['application_id'],
+                             {"requirements":
+                                {"snk":
+                                    [{"op": "node_attr_match",
+                                     "kwargs": {"index": ["node_name", {"name": "mtrx"}]},
+                                     "type": "+"
+                                     }]
+                                }
+                            }, move=False)
+            time.sleep(1)
+            actors = utils.get_actors(rt3)
+            assert result['actor_map']['test_deploy1:snk'] in actors
+            utils.migrate_app_use_req(rt1, result['application_id'],
+                             {"requirements":
+                                {"snk":
+                                    [{"op": "node_attr_match",
+                                     "kwargs": {"index": ["node_name", {"name": "serv"}]},
+                                     "type": "+"
+                                     }]
+                                }
+                            }, move=False)
+            time.sleep(1)
+            actors = utils.get_actors(rt2)
+            assert result['actor_map']['test_deploy1:snk'] in actors
 
         utils.delete_application(rt1, result['application_id'])
