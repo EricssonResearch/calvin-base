@@ -138,6 +138,9 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
 
     def _set_proto(self, proto):
         _log.debug("%s, %s, %s" % (self, '_set_proto', proto))
+        if self._proto:
+            _log.error("_set_proto: Already connected")
+            return
         self._proto = proto
 
     def _connected(self, proto):
