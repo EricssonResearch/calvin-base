@@ -71,7 +71,7 @@ def main():
     text_width = args.text_width or WIDTH + 20
     print "Analyze", args.files
     files = []
-    for name in args.files:
+    for name in set(args.files):
         files.append(open(name, 'r'))
 
     log = []
