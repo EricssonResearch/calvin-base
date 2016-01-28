@@ -228,6 +228,7 @@ class CalvinProto(CalvinCBClass):
 
     def actor_new_handler(self, payload):
         """ Peer request new actor with state and connections """
+        _log.analyze(self.rt_id, "+", payload, tb=True)
         self.node.am.new(payload['state']['actor_type'],
                          None,
                          payload['state']['actor_state'],
@@ -397,7 +398,7 @@ class CalvinProto(CalvinCBClass):
                     # Our tunnel has highest id, keep our id
                     # update status and call proper callbacks
                     # but send tunnel reply first, to get everything in order
-                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(ok, data={'tunnel_id': payload['tunnel_id']}).encode()}
+                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(ok, data={'tunnel_id': tunnel.id}).encode()}
                     self.network.links[payload['from_rt_uuid']].send(msg)
                     tunnel._setup_ack(response.CalvinResponse(True, data={'tunnel_id': tunnel.id}))
                     _log.analyze(self.rt_id, "+ KEEP ID", payload, peer_node_id=payload['from_rt_uuid'])

@@ -176,6 +176,10 @@ class CalvinNetwork(object):
             when a simultaneous join happens due to that it is not possible to detect by URI only.
             Should add a timeout that cleans out callbacks with failed status replies and let client retry.
         """
+        _log.analyze(self.node.id, "+ BEGIN", {'uris': uris,
+                                               'peer_ids': corresponding_peer_ids,
+                                               'pending_joins': self.pending_joins,
+                                               'pending_joins_by_id': self.pending_joins_by_id}, tb=True)
         # For each URI and when available a peer id
         for uri, peer_id in zip(uris,
                                 corresponding_peer_ids if corresponding_peer_ids and
@@ -221,7 +225,10 @@ class CalvinNetwork(object):
         """
         # while a link is pending it is the responsibility of the transport layer, since
         # higher layers don't have any use for it anyway
-        _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+        _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id,
+                                         'pending_joins': self.pending_joins,
+                                         'pending_joins_by_id': self.pending_joins_by_id},
+                                         peer_node_id=peer_id, tb=True)
         if tp_link is None:
             # This is a failed join lets send it upwards
             if uri in self.pending_joins:
@@ -251,7 +258,7 @@ class CalvinNetwork(object):
                 self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self.links[peer_id])
         else:
             # No simultaneous join detected, just add the link
-            _log.analyze(self.node.id, "+ INSERT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+            _log.analyze(self.node.id, "+ INSERT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id, tb=True)
             self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link)
 
         # Find and call any callbacks registered for the uri or peer id
@@ -290,14 +297,14 @@ class CalvinNetwork(object):
         """
         if peer_id in self.links:
             return True
-        _log.analyze(self.node.id, "+ CHECK STORAGE", {}, peer_node_id=peer_id)
+        _log.analyze(self.node.id, "+ CHECK STORAGE", {}, peer_node_id=peer_id, tb=True)
         # We don't have the peer, let's ask for it in storage
         self.node.storage.get_node(peer_id, CalvinCB(self.link_request_finished, callback=callback))
         return False
 
     def link_request_finished(self, key, value, callback):
         """ Called by storage when the node is (not) found """
-        _log.analyze(self.node.id, "+", {'value': value}, peer_node_id=key)
+        _log.analyze(self.node.id, "+", {'value': value}, peer_node_id=key, tb=True)
         # Test if value is None or False indicating node does not currently exist in storage
         if not value:
             # the peer_id did not exist in storage
