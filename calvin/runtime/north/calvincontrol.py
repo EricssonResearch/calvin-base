@@ -25,7 +25,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
-from calvin.utilities import calvinresponse
+from calvin.requests import calvinresponse
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
 
