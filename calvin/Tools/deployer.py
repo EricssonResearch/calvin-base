@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities import utils
 from calvin.utilities.calvinlogger import get_logger
+from calvin.requests.request_handler import RequestHandler
 
 _log = get_logger(__name__)
 
@@ -25,7 +25,7 @@ class Deployer(object):
     """
     Deprecated!
     Thin layer to support legacy users.
-    New users should use the control REST API or the utils.deploy_application or utils.deploy_app_info
+    New users should use the control REST API or the RequestHandler.deploy_application or RequestHandler.deploy_app_info
     Deploys an application to a runtime.
     """
 
@@ -36,11 +36,11 @@ class Deployer(object):
         self.actor_map = {}
         self.app_id = None
         self.verify = verify
+        self.poster = RequestHandler()
         if "name" in self.deployable:
             self.name = self.deployable["name"]
         else:
             self.name = None
-
 
     def deploy(self):
         """
@@ -49,12 +49,11 @@ class Deployer(object):
         if not self.deployable['valid']:
             raise Exception("Deploy information is not valid")
 
-        result = utils.deploy_app_info(self.runtime, self.name, self.deployable, check=self.verify)
+        result = self.poster.deploy_app_info(self.runtime, self.name, self.deployable, check=self.verify)
         self.app_id = result['application_id']
         self.actor_map = result['actor_map']
 
         return self.app_id
 
     def destroy(self):
-        result = utils.delete_application(self.runtime, self.app_id)
-
+        return self.poster.delete_application(self.runtime, self.app_id)

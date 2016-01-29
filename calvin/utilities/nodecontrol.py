@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.north import calvin_node
-from calvin.utilities.utils import get_node_id, get_node
-from calvin.utilities import storage_node
 import time
+from calvin.runtime.north import calvin_node
+from calvin.utilities import storage_node
+from calvin.requests.request_handler import RequestHandler
+
 
 def node_control(control_uri, barrier=True):
     class NodeControl(object):
@@ -27,13 +28,14 @@ def node_control(control_uri, barrier=True):
             self._id = None
             self._uri = None
             self.control_uri = control_uri
+            self.poster = RequestHandler()
             # When barrier ordered make sure we can contact the runtime
             if barrier:
                 failed = True
                 # Try 20 times waiting for control API to be up and running
                 for i in range(20):
                     try:
-                        self._id = get_node_id(self)
+                        self._id = self.poster.get_node_id(self)
                         failed = False
                         break
                     except:
@@ -43,13 +45,13 @@ def node_control(control_uri, barrier=True):
         @property
         def id(self):
             if self._id is None:
-                self._id = get_node_id(self)
+                self._id = self.poster.get_node_id(self)
             return self._id
 
         @property
         def uri(self):
             if self._uri is None:
-                self._uri = get_node(self, self.id)["uri"]
+                self._uri = self.poster.get_node(self, self.id)["uri"]
             return self._uri
 
     return NodeControl(control_uri, barrier=barrier)

@@ -21,6 +21,9 @@ import json
 import traceback
 import logging
 import os
+
+from calvin.requests.request_handler import RequestHandler
+
 # Calvin related imports must be in functions, to be able to set logfile before imports
 _conf = None
 _log = None
@@ -161,7 +164,6 @@ def set_loglevel(levels, filename):
 
 
 def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
-    from calvin.utilities import utils
     rt, process = runtime(uri, control_uri, attr, dispatch=True)
     app_id = None
     app_id = deploy(rt, app_info)
@@ -170,10 +172,11 @@ def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
     timeout = wait if wait else None
     if timeout:
         process.join(timeout)
-        utils.quit(rt)
+        RequestHandler().quit(rt)
         time.sleep(0.1)
     else:
         process.join()
+
 
 def set_config_from_args(args):
     from calvin.utilities import calvinconfig
@@ -185,9 +188,8 @@ def set_config_from_args(args):
             _log.debug("Adding ARGUMENTS to config {}={}".format(arg, getattr(args, arg)))
             _conf.set("ARGUMENTS", arg, getattr(args, arg))
 
-def main():
-    import sys
 
+def main():
     args = parse_arguments()
 
     if args.debug:
@@ -243,7 +245,7 @@ def main():
     return 0
 
 
-def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False, 
+def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False,
               outfile=None, configfile=None):
     """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
         runtimes from the same python script, since some objects otherwise gets unexceptedly shared.
