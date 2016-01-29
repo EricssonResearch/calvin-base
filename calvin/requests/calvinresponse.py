@@ -16,7 +16,8 @@
 
 import numbers
 
-RESPONSE_CODES = {  # Information
+RESPONSE_CODES = {
+    # Information
     100: 'Continue',
     101: 'Switching Protocols',
     # Success
@@ -161,7 +162,6 @@ class CalvinResponse(object):
 
     def __str__(self):
         return str(self.status) + ", " + RESPONSE_CODES[self.status] + ((", " + str(self.data)) if self.data else "")
-
 
 if __name__ == '__main__':
     r = CalvinResponse(OK)

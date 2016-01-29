@@ -81,7 +81,8 @@ class RequestHandler(object):
         result = self.check_response(r, key='actor_id')
         return result
 
-    def new_actor_wargs(self, rt, actor_type, actor_name, args=None, deploy_args=None, timeout=DEFAULT_TIMEOUT, async=False, **kwargs):
+    def new_actor_wargs(self, rt, actor_type, actor_name, args=None, deploy_args=None, timeout=DEFAULT_TIMEOUT,
+                        async=False, **kwargs):
         rt = get_runtime(rt)
         req = session if async else requests
         if args is None:
@@ -112,7 +113,8 @@ class RequestHandler(object):
         r = req.delete(rt.control_uri + '/actor/' + actor_id, timeout=timeout)
         return self.check_response(r)
 
-    def connect(self, rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name, timeout=DEFAULT_TIMEOUT, async=False):
+    def connect(self, rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name, timeout=DEFAULT_TIMEOUT,
+                async=False):
         rt = get_runtime(rt)
         data = {'actor_id': actor_id, 'port_name': port_name, 'port_dir': 'in', 'peer_node_id': peer_node_id,
                 'peer_actor_id': peer_actor_id, 'peer_port_name': peer_port_name, 'peer_port_dir': 'out'}
@@ -120,7 +122,8 @@ class RequestHandler(object):
         r = req.post(rt.control_uri + '/connect', data=json.dumps(data), timeout=timeout)
         return self.check_response(r)
 
-    def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, timeout=DEFAULT_TIMEOUT, async=False):
+    def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, timeout=DEFAULT_TIMEOUT,
+                   async=False):
         rt = get_runtime(rt)
         data = {'actor_id': actor_id, 'port_name': port_name,
                 'port_dir': port_dir, 'port_id': port_id}
@@ -157,7 +160,8 @@ class RequestHandler(object):
             rt.control_uri + "/actor/" + actor_id + '/port/' + port_id, timeout=timeout)
         return self.check_response(r)
 
-    def set_port_property(self, rt, actor_id, port_type, port_name, port_property, value, timeout=DEFAULT_TIMEOUT, async=False):
+    def set_port_property(self, rt, actor_id, port_type, port_name, port_property, value, timeout=DEFAULT_TIMEOUT,
+                          async=False):
         rt = get_runtime(rt)
         data = {'actor_id': actor_id, 'port_type': port_type, 'port_name':
                 port_name, 'port_property': port_property, 'value': value}
