@@ -127,9 +127,12 @@ class Node(object):
         _log.debug("peersetup(%s)" % (peers))
         peers_copy = peers[:]
         peer_node_ids = {}
-        self.network.join(peers,
-            callback=CalvinCB(self.logging_callback, preamble="peersetup cb") if cb is None else
-                     CalvinCB(self.peersetup_collect_cb, peers=peers_copy, peer_node_ids=peer_node_ids, org_cb=cb))
+        if not cb:
+            callback = CalvinCB(self.logging_callback, preamble="peersetup cb")
+        else:
+            callback = CalvinCB(self.peersetup_collect_cb, peers=peers_copy, peer_node_ids=peer_node_ids, org_cb=cb)
+
+        self.network.join(peers, callback=callback)
 
     def peersetup_collect_cb(self, status, uri, peer_node_id, peer_node_ids, peers, org_cb):
         if uri in peers:
