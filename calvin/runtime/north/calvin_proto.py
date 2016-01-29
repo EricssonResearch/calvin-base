@@ -464,10 +464,16 @@ class CalvinProto(CalvinCBClass):
     def tunnel_data_handler(self, payload):
         """ Map received data over tunnel to the correct link and tunnel """
         try:
-            self.tunnels[payload['from_rt_uuid']][payload['tunnel_id']].recv_handler(payload['value'])
+            tunnel = self.tunnels[payload['from_rt_uuid']][payload['tunnel_id']]
         except:
             _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
             raise Exception("ERROR_UNKNOWN_TUNNEL")
+        try:
+            tunnel.recv_handler(payload['value'])
+        except Exception as e:
+            _log.exception("Check error in tunnel recv handler")
+            _log.analyze(self.rt_id, "+ EXCEPTION TUNNEL RECV HANDLER", {'payload': payload, 'exception': str(e)}, 
+                                                                peer_node_id=payload['from_rt_uuid'], tb=True)
 
     #### PORTS ####
 
