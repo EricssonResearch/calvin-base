@@ -20,17 +20,15 @@ import sys
 import trace
 import logging
 
-from calvin.calvinsys import Sys as CalvinSys
 
 from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.south.plugins.async import async
-from calvin.utilities.attribute_resolver import AttributeResolver
-from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
+
 
 class FakeAM(object):
     def enabled_actors():
@@ -43,7 +41,6 @@ class FakeMonitor(object):
 
 
 class StorageNode(object):
-
 
     def __init__(self, control_uri):
         super(StorageNode, self).__init__()
@@ -76,6 +73,7 @@ class StorageNode(object):
 
         _log.analyze(self.id, "+", {})
         self.storage.stop(stopped)
+
 
 def create_node(uri, control_uri, attributes=None):
     n = StorageNode(control_uri)

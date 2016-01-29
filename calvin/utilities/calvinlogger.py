@@ -15,11 +15,12 @@
 # limitations under the License.
 
 import logging
-from colorlog import ColoredFormatter
 import json
 import inspect
 import os
 import traceback
+
+from colorlog import ColoredFormatter
 
 _name = "calvin"
 _log = None
@@ -55,10 +56,13 @@ def analyze(self, node_id, func, param, peer_node_id=None, tb=False, mute=False,
         self._log(5, "[[ANALYZE]]" + json.dumps({'node_id': node_id,
                                                  'peer_node_id': peer_node_id,
                                                  'func': func,
-                                                 'param':param,
-                                                 'stack': stack}, cls=JSONEncoderIters), args, **kws) 
+                                                 'param': param,
+                                                 'stack': stack}, cls=JSONEncoderIters), args, **kws)
+
+
 logging.Logger.analyze = analyze
 logging.addLevelName(5, "ANALYZE")
+
 
 def _create_logger(filename=None):
     global _log
@@ -73,7 +77,6 @@ def _create_logger(filename=None):
         else:
             ch = logging.StreamHandler()
         ch.setLevel(5)
-        
 
         # create formatter
         colored = ColoredFormatter(
@@ -96,7 +99,6 @@ def _create_logger(filename=None):
             log_colors={}
         )
 
-
         # formatter = logging.Formatter('%(asctime)-15s - %(levelname)-7s - %(name)s: %(message)s')s
 
         # add formatter to ch
@@ -107,8 +109,10 @@ def _create_logger(filename=None):
 
     return _log
 
+
 def set_file(filename):
     _create_logger(filename)
+
 
 def get_logger(name=None):
     log = _create_logger()
