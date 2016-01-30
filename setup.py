@@ -39,11 +39,12 @@ setup(name='calvin',
           'kademlia>=0.4',
           'ply>=3.6',
           'Twisted>=15.0.0',
-          'requests >= 2.6.0',
+          'requests>=2.6.0',
           'infi.traceback>=0.3.11',
           'wrapt==1.10.2',
           'pyserial>=2.6',
-          'netifaces>=0.10.4'
+          'netifaces>=0.10.4',
+          'psutil>=3.4.1'
       ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",

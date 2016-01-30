@@ -17,9 +17,12 @@
 import pytest
 import sys
 import argparse
+from collections import namedtuple
 from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.south.endpoint import Endpoint
+
+CpuTimes = namedtuple("CpuTimes", ["idle", "user", "system"])
 
 
 def fwrite(port, value):
@@ -170,6 +173,11 @@ class CalvinSysFileMock(object):
         fdmock.close()
 
 
+class PsUtilMock(object):
+    def cpu_percent(self):
+        return 25.8
+
+
 def load_python_requirement(req):
     import importlib
     loaded = importlib.import_module("calvin.calvinsys.native." + req)
@@ -183,7 +191,8 @@ requirements = \
         'calvinsys.native.python-re': load_python_requirement('python-re'),
         'calvinsys.native.python-json': load_python_requirement('python-json'),
         'calvinsys.native.python-copy': load_python_requirement('python-copy'),
-        'calvinsys.native.python-base64': load_python_requirement('python-base64')
+        'calvinsys.native.python-base64': load_python_requirement('python-base64'),
+        'calvinsys.native.python-psutil': PsUtilMock
 
     }
 

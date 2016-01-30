@@ -1,0 +1,6 @@
+src : sys.ResourceReporter()
+delay : std.ClassicDelay(delay=2)
+snk : io.Print()
+
+src.out > delay.token
+delay.token > snk.token
