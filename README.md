@@ -75,7 +75,7 @@ Alternatively, install the requirements using `pip`
 
 To verify a working installation, try
 
-    $ csruntime --host localhost calvin/scripts/test1.calvin
+    $ csruntime --host localhost calvin/examples/sample-scripts/test1.calvin
 
 This should produced an output similar to this:
 
@@ -101,7 +101,7 @@ Applications can then be deployed remotely using
     $ cscontrol http://<address>:<controlport> deploy <script-file>
     Deployed application <app id>
 
-and stopped with 
+and stopped with
 
     $ cscontrol http://<address>:<controlport> applications delete <app id>
 
@@ -120,7 +120,7 @@ Start web server
 In a web browser go to `http://localhost:8000`, enter the control uri of the runtime you wish to inspect
 (in this case `http://localhost:5001`)
 
-To deploy an application to the runtime, go to the `Deploy` tab, load a script and deploy it. 
+To deploy an application to the runtime, go to the `Deploy` tab, load a script and deploy it.
 (_Note_: There have been issues with some browsers on this page. Only Google Chrome seems to work
 consistently.)
 
