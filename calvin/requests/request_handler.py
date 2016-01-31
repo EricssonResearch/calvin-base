@@ -28,6 +28,7 @@ class RequestHandler(object):
                     r = json.loads(response.text)
                     return r if key is None else r[key]
                 except:
+                    _log.debug("Failed to parse response '{}' as json".format(response.text))
                     return None
             # When failed raise exception
             raise Exception("%d" % response.status_code)
@@ -38,167 +39,166 @@ class RequestHandler(object):
             self.future_responses.append(response)
             return response
 
-    def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
+    def _send(self, rt, timeout, send_func, path, data=None):
         rt = get_runtime(rt)
+        if data:
+            return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data))
+        else:
+            return send_func(rt.control_uri + path, timeout=timeout)
+
+    def _get(self, rt, timeout, async, path):
         req = session if async else requests
-        r = req.get(rt.control_uri + '/id', timeout=timeout)
+        return self._send(rt, timeout, req.get, path)
+
+    def _post(self, rt, timeout, async, path, data={}):
+        req = session if async else requests
+        return self._send(rt, timeout, req.post, path, data)
+
+    def _delete(self, rt, timeout, async, path):
+        req = session if async else requests
+        return self._send(rt, timeout, req.delete, path)
+
+    def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
+        r = self._get(rt, timeout, async, '/id')
         return self.check_response(r, key="id")
 
     def get_node(self, rt, node_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/node/' + node_id, timeout=timeout)
+        r = self._get(rt, timeout, async, '/node/{}'.format(node_id))
         return self.check_response(r)
 
     def quit(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.delete(rt.control_uri + '/node', timeout=timeout)
+        r = self._delete(rt, timeout, async, '/node')
         return self.check_response(r)
 
     def get_nodes(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        return self.check_response(req.get(rt.control_uri + '/nodes', timeout=timeout))
+        r = self._get(rt, timeout, async, '/nodes')
+        return self.check_response(r)
 
     def peer_setup(self, rt, *peers, **kwargs):
-        rt = get_runtime(rt)
         timeout = kwargs.get('timeout', DEFAULT_TIMEOUT)
         async = kwargs.get('async', False)
+
         if not isinstance(peers[0], type("")):
             peers = peers[0]
-        req = session if async else requests
-        r = req.post(
-            rt.control_uri + '/peer_setup', data=json.dumps({'peers': peers}), timeout=timeout)
+        data = {'peers': peers}
+
+        r = self._post(rt, timeout, async, '/peer_setup', data)
         return self.check_response(r)
 
     def new_actor(self, rt, actor_type, actor_name, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        data = {'actor_type': actor_type, 'args': {
-            'name': actor_name}, 'deploy_args': None}
-        req = session if async else requests
-        r = req.post(rt.control_uri + '/actor', data=json.dumps(data), timeout=timeout)
-        result = self.check_response(r, key='actor_id')
-        return result
+        data = {
+            'actor_type': actor_type,
+            'args': {'name': actor_name},
+            'deploy_args': None
+        }
+
+        r = self._post(rt, timeout, async, '/actor', data)
+        return self.check_response(r, key='actor_id')
 
     def new_actor_wargs(self, rt, actor_type, actor_name, args=None, deploy_args=None, timeout=DEFAULT_TIMEOUT,
                         async=False, **kwargs):
-        rt = get_runtime(rt)
-        req = session if async else requests
+        data = {'actor_type': actor_type, 'deploy_args': deploy_args}
+
         if args is None:
             kwargs['name'] = actor_name
-            r = req.post(rt.control_uri + '/actor', data=json.dumps(
-                {'actor_type': actor_type, 'deploy_args': deploy_args, 'args': kwargs}))
+            data['args'] = kwargs
         else:
-            r = req.post(rt.control_uri + '/actor', data=json.dumps(
-                {'actor_type': actor_type, 'deploy_args': deploy_args, 'args': args}), timeout=timeout)
-        result = self.check_response(r, key='actor_id')
-        return result
+            data['args'] = args
+
+        r = self._post(rt, timeout, async, '/actor', data)
+        return self.check_response(r, key='actor_id')
 
     def get_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/actor/' + actor_id, timeout=timeout)
+        r = self._get(rt, timeout, async, '/actor/{}'.format(actor_id))
         return self.check_response(r)
 
     def get_actors(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/actors', timeout=timeout)
+        r = self._get(rt, timeout, async, '/actors')
         return self.check_response(r)
 
     def delete_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.delete(rt.control_uri + '/actor/' + actor_id, timeout=timeout)
+        r = self._delete(rt, timeout, async, '/actor/{}'.format(actor_id))
         return self.check_response(r)
 
     def connect(self, rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name, timeout=DEFAULT_TIMEOUT,
                 async=False):
-        rt = get_runtime(rt)
-        data = {'actor_id': actor_id, 'port_name': port_name, 'port_dir': 'in', 'peer_node_id': peer_node_id,
-                'peer_actor_id': peer_actor_id, 'peer_port_name': peer_port_name, 'peer_port_dir': 'out'}
-        req = session if async else requests
-        r = req.post(rt.control_uri + '/connect', data=json.dumps(data), timeout=timeout)
+        data = {
+            'actor_id': actor_id,
+            'port_name': port_name,
+            'port_dir': 'in',
+            'peer_node_id': peer_node_id,
+            'peer_actor_id': peer_actor_id,
+            'peer_port_name': peer_port_name,
+            'peer_port_dir': 'out'
+        }
+        r = self._post(rt, timeout, async, '/connect', data)
         return self.check_response(r)
 
     def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, timeout=DEFAULT_TIMEOUT,
                    async=False):
-        rt = get_runtime(rt)
-        data = {'actor_id': actor_id, 'port_name': port_name,
-                'port_dir': port_dir, 'port_id': port_id}
-        req = session if async else requests
-        r = req.post(rt.control_uri + '/disconnect', json.dumps(data), timeout=timeout)
+        data = {
+            'actor_id': actor_id,
+            'port_name': port_name,
+            'port_dir': port_dir,
+            'port_id': port_id
+        }
+        r = self._post(rt, timeout, async, '/disconnect', data)
         return self.check_response(r)
 
     def disable(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.post(rt.control_uri + '/actor/' + actor_id + '/disable', timeout=timeout)
+        path = '/actor/{}/disable'.format(actor_id)
+        r = self._post(rt, timeout, async, path)
         return self.check_response(r)
 
     def migrate(self, rt, actor_id, dst_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
         data = {'peer_node_id': dst_id}
-        req = session if async else requests
-        r = req.post(
-            rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data), timeout=timeout)
+        path = '/actor/{}/migrate'.format(actor_id)
+        r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
     def add_requirements(self, rt, application_id, reqs, timeout=DEFAULT_TIMEOUT, async=False):
         rt = get_runtime(rt)
         data = {'reqs': reqs}
-        req = session if async else requests
-        r = req.post(
-            rt.control_uri + '/application/' + application_id + "/migrate", data=json.dumps(data), timeout=timeout)
+        r = self._post(rt, timeout, async, '/application/{}'.format(application_id), data)
         return self.check_response(r)
 
     def get_port(self, rt, actor_id, port_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(
-            rt.control_uri + "/actor/" + actor_id + '/port/' + port_id, timeout=timeout)
+        path = '/actor/{}/{}'.format(actor_id, port_id)
+        r = self._get(rt, timeout, async, path)
         return self.check_response(r)
 
     def set_port_property(self, rt, actor_id, port_type, port_name, port_property, value, timeout=DEFAULT_TIMEOUT,
                           async=False):
-        rt = get_runtime(rt)
-        data = {'actor_id': actor_id, 'port_type': port_type, 'port_name':
-                port_name, 'port_property': port_property, 'value': value}
-        req = session if async else requests
-        r = req.post(
-            rt.control_uri + '/set_port_property', data=json.dumps(data), timeout=timeout)
+        data = {
+            'actor_id': actor_id,
+            'port_type': port_type,
+            'port_name': port_name,
+            'port_property': port_property,
+            'value': value
+        }
+        r = self._post(rt, timeout, async, '/set_port_property', data)
         return self.check_response(r)
 
     def report(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/actor/' + actor_id + '/report', timeout=timeout)
+        path = '/actor/{}/report'.format(actor_id)
+        r = self._get(rt, timeout, async, path)
         return self.check_response(r)
 
     def get_applications(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/applications', timeout=timeout)
+        r = self._get(rt, timeout, async, '/applications')
         return self.check_response(r)
 
     def get_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/application/' + application_id, timeout=timeout)
+        r = self._get(rt, timeout, async, '/application/{}'.format(application_id))
         return self.check_response(r)
 
     def delete_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.delete(rt.control_uri + '/application/' + application_id, timeout=timeout)
+        r = self._delete(rt, timeout, async, '/application/{}'.format(application_id))
         return self.check_response(r)
 
     def deploy_application(self, rt, name, script, check=True, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
         data = {"name": name, "script": script, "check": check}
-        req = session if async else requests
-        r = req.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
+        r = self._post(rt, timeout, async, '/deploy', data)
         return self.check_response(r)
 
     def deploy_app_info(self, rt, name, app_info, deploy_info=None, check=True, timeout=DEFAULT_TIMEOUT, async=False):
@@ -240,36 +240,27 @@ class RequestHandler(object):
         return self.check_response(r)
 
     def add_index(self, rt, index, value, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
         data = {'value': value}
-        req = session if async else requests
-        r = req.post(rt.control_uri + '/index/' + index, data=json.dumps(data), timeout=timeout)
+        r = self._post(rt, timeout, async, '/index/{}'.format(index), data)
         return self.check_response(r)
 
     def remove_index(self, rt, index, value, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
         data = {'value': value}
-        req = session if async else requests
-        r = req.delete(rt.control_uri + '/index/' + index, data=json.dumps(data), timeout=timeout)
+        r = self._delete(rt, timeout, async, '/index/{}'.format(index), data)
         return self.check_response(r)
 
     def get_index(self, rt, index, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/index/' + index, timeout=timeout)
+        r = self._get(rt, timeout, async, '/index/{}'.format(index))
         return self.check_response(r)
 
     def get_storage(self, rt, key, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/storage/' + key, timeout=timeout)
+        r = self._get(rt, timeout, async, '/storage/{}'.format(key))
         return self.check_response(r)
 
     def set_storage(self, rt, key, value, timeout=DEFAULT_TIMEOUT, async=False):
         rt = get_runtime(rt)
         data = {'value': value}
-        req = session if async else requests
-        r = req.post(rt.control_uri + '/storage/' + key, data=json.dumps(data), timeout=timeout)
+        r = self._post(rt, timeout, async, '/storage/{}'.format(key), data)
         return self.check_response(r)
 
     def async_response(self, response):
