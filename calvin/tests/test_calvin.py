@@ -24,7 +24,6 @@ from calvin.runtime import Runtime
 from calvin.Tools import cscompiler as compiler
 from calvin.Tools import deployer
 from calvin.utilities import calvinconfig
-from calvin.utilities import poster
 from calvin.utilities import calvinlogger
 from calvin.utilities.nodecontrol import dispatch_node
 from calvin.utilities.attribute_resolver import format_index_string
@@ -35,7 +34,7 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 def actual_tokens(rt, actor_id):
-    return poster.report(rt, actor_id)
+    return request_handler.report(rt, actor_id)
 
 def expected_counter(n):
     return [i for i in range(1, n + 1)]
@@ -50,7 +49,7 @@ def expected_sum(n):
     return list(cumsum(range(1, n + 1)))
 
 def expected_tokens(rt, actor_id, src_actor_type):
-    tokens = poster.report(rt, actor_id)
+    tokens = request_handler.report(rt, actor_id)
 
     if src_actor_type == 'std.CountTimer':
         return expected_counter(tokens)
@@ -64,18 +63,18 @@ runtime = None
 runtimes = []
 peerlist = []
 kill_peers = True
-poster = None
+request_handler = None
 
 def setup_module(module):
     global runtime
     global runtimes
     global peerlist
     global kill_peers
-    global poster
+    global request_handler
     ip_addr = None
     bt_master_controluri = None
 
-    poster = RequestHandler()
+    request_handler = RequestHandler()
     try:
         ip_addr = os.environ["CALVIN_TEST_IP"]
         purpose = os.environ["CALVIN_TEST_UUID"]
@@ -114,7 +113,7 @@ def setup_module(module):
         for retries in range(1,20):
             time.sleep(interval)
             _log.debug("Trying to get test nodes for 'purpose' %s" % purpose)
-            test_peers = poster.get_index(runtime, format_index_string({'node_name':
+            test_peers = request_handler.get_index(runtime, format_index_string({'node_name':
                                                                          {'organization': 'com.ericsson',
                                                                           'purpose': purpose}
                                                                       }))
@@ -128,7 +127,7 @@ def setup_module(module):
             raise Exception("Not all nodes found dont run tests, peers = %s" % test_peers)
 
         test_peer2_id = test_peers[0]
-        test_peer2 = poster.get_node(runtime, test_peer2_id)
+        test_peer2 = request_handler.get_node(runtime, test_peer2_id)
         if test_peer2:
             runtime2 = Runtime(test_peer2["control_uri"])
             runtime2.id = test_peer2_id
@@ -136,7 +135,7 @@ def setup_module(module):
             runtimes.append(runtime2)
         test_peer3_id = test_peers[1]
         if test_peer3_id:
-            test_peer3 = poster.get_node(runtime, test_peer3_id)
+            test_peer3 = request_handler.get_node(runtime, test_peer3_id)
             if test_peer3:
                 runtime3 = Runtime(test_peer3["control_uri"])
                 runtime3.id = test_peer3_id
@@ -183,7 +182,7 @@ def setup_module(module):
         time.sleep(1)
 
         # FIXME When storage up and running peersetup not needed, but still useful during testing
-        poster.peer_setup(runtime, [i[0] for i in remotehosts])
+        request_handler.peer_setup(runtime, [i[0] for i in remotehosts])
 
         time.sleep(0.5)
         """
@@ -210,9 +209,9 @@ def teardown_module(module):
 
     if kill_peers:
         for peer in runtimes:
-            poster.quit(peer)
+            request_handler.quit(peer)
             time.sleep(0.2)
-    poster.quit(runtime)
+    request_handler.quit(runtime)
     time.sleep(0.2)
     for p in multiprocessing.active_children():
         p.terminate()
@@ -246,7 +245,7 @@ class TestNodeSetup(CalvinTestBase):
         print "### testStartNode ###", self.runtime
         rt, id_, peers = self.runtime, self.runtime.id, self.peerlist
         print "GOT RT"
-        assert poster.get_node(rt, id_)['uri'] == rt.uri
+        assert request_handler.get_node(rt, id_)['uri'] == rt.uri
         print "GOT URI", rt.uri
 
 
@@ -261,116 +260,116 @@ class TestLocalConnectDisconnect(CalvinTestBase):
 
         rt, id_, peers = self.runtime, self.runtime.id, self.peerlist
 
-        src = poster.new_actor(rt, 'std.CountTimer', 'src')
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        poster.connect(rt, snk, 'token', id_, src, 'integer')
+        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        request_handler.connect(rt, snk, 'token', id_, src, 'integer')
 
         time.sleep(0.4)
 
         # disable(rt, id_, src)
-        poster.disconnect(rt, src)
+        request_handler.disconnect(rt, src)
 
         expected = expected_tokens(rt, src, 'std.CountTimer')
         actual = actual_tokens(rt, snk)
 
         self.assertListPrefix(expected, actual)
 
-        poster.delete_actor(rt, src)
-        poster.delete_actor(rt, snk)
+        request_handler.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
 
     def testLocalConnectDisconnectSink(self):
         """Testing local connect/disconnect/re-connect on sink"""
 
         rt, id_ = self.runtime, self.runtime.id
 
-        src = poster.new_actor(rt, "std.CountTimer", "src")
-        snk = poster.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1)
-        poster.connect(rt, snk, 'token', id_, src, 'integer')
+        src = request_handler.new_actor(rt, "std.CountTimer", "src")
+        snk = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1)
+        request_handler.connect(rt, snk, 'token', id_, src, 'integer')
         time.sleep(0.2)
 
-        poster.disconnect(rt, snk)
-        poster.connect(rt, snk, 'token', id_, src, 'integer')
+        request_handler.disconnect(rt, snk)
+        request_handler.connect(rt, snk, 'token', id_, src, 'integer')
         time.sleep(0.2)
-        poster.disconnect(rt, snk)
+        request_handler.disconnect(rt, snk)
         # disable(rt, id_, src)
 
         expected = expected_tokens(rt, src, 'std.CountTimer')
         actual = actual_tokens(rt, snk)
         self.assertListPrefix(expected, actual)
 
-        poster.delete_actor(rt, src)
-        poster.delete_actor(rt, snk)
+        request_handler.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
 
     def testLocalConnectDisconnectSource(self):
         """Testing local connect/disconnect/re-connect on source"""
 
         rt, id_ = self.runtime, self.runtime.id
 
-        src = poster.new_actor(rt, "std.CountTimer", "src")
-        snk = poster.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1)
+        src = request_handler.new_actor(rt, "std.CountTimer", "src")
+        snk = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1)
 
-        poster.connect(rt, snk, "token", id_, src, "integer")
+        request_handler.connect(rt, snk, "token", id_, src, "integer")
         time.sleep(0.2)
-        poster.disconnect(rt, src)
+        request_handler.disconnect(rt, src)
 
-        poster.connect(rt, snk, "token", id_, src, "integer")
+        request_handler.connect(rt, snk, "token", id_, src, "integer")
         time.sleep(0.2)
-        poster.disconnect(rt, src)
+        request_handler.disconnect(rt, src)
         #disable(rt, id_, src)
 
         expected = expected_tokens(rt, src, "std.CountTimer")
         actual = actual_tokens(rt, snk)
         self.assertListPrefix(expected, actual)
 
-        poster.delete_actor(rt, src)
-        poster.delete_actor(rt, snk)
+        request_handler.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
 
     def testLocalConnectDisconnectFilter(self):
         """Testing local connect/disconnect/re-connect on filter"""
 
         rt, id_ = self.runtime, self.runtime.id
 
-        src = poster.new_actor(rt, "std.CountTimer", "src")
-        sum_ = poster.new_actor(rt, "std.Sum", "sum")
-        snk = poster.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1)
+        src = request_handler.new_actor(rt, "std.CountTimer", "src")
+        sum_ = request_handler.new_actor(rt, "std.Sum", "sum")
+        snk = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1)
 
-        poster.connect(rt, snk, "token", id_, sum_, "integer")
-        poster.connect(rt, sum_, "integer", id_, src, "integer")
-
-        time.sleep(0.2)
-
-        poster.disconnect(rt, sum_)
-
-        poster.connect(rt, snk, "token", id_, sum_, "integer")
-        poster.connect(rt, sum_, "integer", id_, src, "integer")
+        request_handler.connect(rt, snk, "token", id_, sum_, "integer")
+        request_handler.connect(rt, sum_, "integer", id_, src, "integer")
 
         time.sleep(0.2)
 
-        poster.disconnect(rt, src)
+        request_handler.disconnect(rt, sum_)
+
+        request_handler.connect(rt, snk, "token", id_, sum_, "integer")
+        request_handler.connect(rt, sum_, "integer", id_, src, "integer")
+
+        time.sleep(0.2)
+
+        request_handler.disconnect(rt, src)
         # disable(rt, id_, src)
 
         expected = expected_tokens(rt, src, "std.Sum")
         actual = actual_tokens(rt, snk)
         self.assertListPrefix(expected, actual)
 
-        poster.delete_actor(rt, src)
-        poster.delete_actor(rt, sum_)
-        poster.delete_actor(rt, snk)
+        request_handler.delete_actor(rt, src)
+        request_handler.delete_actor(rt, sum_)
+        request_handler.delete_actor(rt, snk)
 
     def testTimerLocalSourceSink(self):
         """Testing timer based local source and sink"""
 
         rt, id_, peers = self.runtime, self.runtime.id, self.peerlist
 
-        src = poster.new_actor_wargs(
+        src = request_handler.new_actor_wargs(
             rt, 'std.CountTimer', 'src', sleep=0.1, steps=10)
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        poster.connect(rt, snk, 'token', id_, src, 'integer')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        request_handler.connect(rt, snk, 'token', id_, src, 'integer')
 
         time.sleep(1.2)
 
         # disable(rt, id_, src)
-        poster.disconnect(rt, src)
+        request_handler.disconnect(rt, src)
 
         expected = expected_tokens(rt, src, 'std.CountTimer')
         actual = actual_tokens(rt, snk)
@@ -378,8 +377,8 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         self.assertListPrefix(expected, actual)
         self.assertTrue(len(actual) > 0)
 
-        poster.delete_actor(rt, src)
-        poster.delete_actor(rt, snk)
+        request_handler.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
 
 
 @pytest.mark.essential
@@ -396,24 +395,24 @@ class TestRemoteConnection(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        sum_ = poster.new_actor(peer, 'std.Sum', 'sum')
-        src = poster.new_actor(rt, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        sum_ = request_handler.new_actor(peer, 'std.Sum', 'sum')
+        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
-        poster.connect(rt, snk, 'token', peer_id, sum_, 'integer')
-        poster.connect(peer, sum_, 'integer', id_, src, 'integer')
+        request_handler.connect(rt, snk, 'token', peer_id, sum_, 'integer')
+        request_handler.connect(peer, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.5)
 
-        poster.disable(rt, src)
+        request_handler.disable(rt, src)
 
         expected = expected_tokens(rt, src, 'std.Sum')
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         self.assertListPrefix(expected, actual)
 
-        poster.delete_actor(rt, snk)
-        poster.delete_actor(peer, sum_)
-        poster.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
+        request_handler.delete_actor(peer, sum_)
+        request_handler.delete_actor(rt, src)
 
     def testRemoteSlowPort(self):
         """Testing remote slow port and that token flow control works"""
@@ -423,18 +422,18 @@ class TestRemoteConnection(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk1 = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1)
-        alt = poster.new_actor(peer, 'std.Alternate', 'alt')
-        src1 = poster.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
-        src2 = poster.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
+        snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1)
+        alt = request_handler.new_actor(peer, 'std.Alternate', 'alt')
+        src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
+        src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
 
-        poster.connect(rt, snk1, 'token', peer_id, alt, 'token')
-        poster.connect(peer, alt, 'token_1', id_, src1, 'integer')
-        poster.connect(peer, alt, 'token_2', id_, src2, 'integer')
+        request_handler.connect(rt, snk1, 'token', peer_id, alt, 'token')
+        request_handler.connect(peer, alt, 'token_1', id_, src1, 'integer')
+        request_handler.connect(peer, alt, 'token_2', id_, src2, 'integer')
         time.sleep(2)
 
-        poster.disable(rt, src1)
-        poster.disable(rt, src2)
+        request_handler.disable(rt, src1)
+        request_handler.disable(rt, src2)
         time.sleep(0.2)  # HACK
 
         def _d():
@@ -447,10 +446,10 @@ class TestRemoteConnection(CalvinTestBase):
         assert(len(actual) > 1)
         self.assertListPrefix(expected, actual)
 
-        poster.delete_actor(rt, snk1)
-        poster.delete_actor(peer, alt)
-        poster.delete_actor(rt, src1)
-        poster.delete_actor(rt, src2)
+        request_handler.delete_actor(rt, snk1)
+        request_handler.delete_actor(peer, alt)
+        request_handler.delete_actor(rt, src1)
+        request_handler.delete_actor(rt, src2)
 
     def testRemoteSlowFanoutPort(self):
         """Testing remote slow port with fan out and that token flow control works"""
@@ -460,20 +459,20 @@ class TestRemoteConnection(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk1 = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1)
-        snk2 = poster.new_actor_wargs(peer, 'io.StandardOut', 'snk2', store_tokens=1)
-        alt = poster.new_actor(peer, 'std.Alternate', 'alt')
-        src1 = poster.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
-        src2 = poster.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
+        snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1)
+        snk2 = request_handler.new_actor_wargs(peer, 'io.StandardOut', 'snk2', store_tokens=1)
+        alt = request_handler.new_actor(peer, 'std.Alternate', 'alt')
+        src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
+        src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
 
-        poster.connect(rt, snk1, 'token', peer_id, alt, 'token')
-        poster.connect(peer, snk2, 'token', id_, src1, 'integer')
-        poster.connect(peer, alt, 'token_1', id_, src1, 'integer')
-        poster.connect(peer, alt, 'token_2', id_, src2, 'integer')
+        request_handler.connect(rt, snk1, 'token', peer_id, alt, 'token')
+        request_handler.connect(peer, snk2, 'token', id_, src1, 'integer')
+        request_handler.connect(peer, alt, 'token_1', id_, src1, 'integer')
+        request_handler.connect(peer, alt, 'token_2', id_, src2, 'integer')
         time.sleep(2)
 
-        poster.disable(rt, src1)
-        poster.disable(rt, src2)
+        request_handler.disable(rt, src1)
+        request_handler.disable(rt, src2)
         time.sleep(0.2)  # HACK
 
         def _d():
@@ -491,11 +490,11 @@ class TestRemoteConnection(CalvinTestBase):
         assert(len(actual) > 1)
         self.assertListPrefix(expected, actual)
 
-        poster.delete_actor(rt, snk1)
-        poster.delete_actor(peer, snk2)
-        poster.delete_actor(peer, alt)
-        poster.delete_actor(rt, src1)
-        poster.delete_actor(rt, src2)
+        request_handler.delete_actor(rt, snk1)
+        request_handler.delete_actor(peer, snk2)
+        request_handler.delete_actor(peer, alt)
+        request_handler.delete_actor(rt, src1)
+        request_handler.delete_actor(rt, src2)
 
 @pytest.mark.essential
 @pytest.mark.slow
@@ -509,16 +508,16 @@ class TestActorMigration(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        sum_ = poster.new_actor(peer, 'std.Sum', 'sum')
-        src = poster.new_actor(rt, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        sum_ = request_handler.new_actor(peer, 'std.Sum', 'sum')
+        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
-        poster.connect(rt, snk, 'token', peer_id, sum_, 'integer')
-        poster.connect(peer, sum_, 'integer', id_, src, 'integer')
+        request_handler.connect(rt, snk, 'token', peer_id, sum_, 'integer')
+        request_handler.connect(peer, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.27)
 
         actual_1 = actual_tokens(rt, snk)
-        poster.migrate(rt, src, peer_id)
+        request_handler.migrate(rt, src, peer_id)
         time.sleep(0.2)
 
         expected = expected_tokens(peer, src, 'std.Sum')
@@ -526,9 +525,9 @@ class TestActorMigration(CalvinTestBase):
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
         self.assertListPrefix(expected, actual)
-        poster.delete_actor(rt, snk)
-        poster.delete_actor(peer, sum_)
-        poster.delete_actor(peer, src)
+        request_handler.delete_actor(rt, snk)
+        request_handler.delete_actor(peer, sum_)
+        request_handler.delete_actor(peer, src)
 
     def testOutPortLocalToRemoteMigration(self):
         """Testing outport local to remote migration"""
@@ -538,16 +537,16 @@ class TestActorMigration(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        sum_ = poster.new_actor(peer, 'std.Sum', 'sum')
-        src = poster.new_actor(peer, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        sum_ = request_handler.new_actor(peer, 'std.Sum', 'sum')
+        src = request_handler.new_actor(peer, 'std.CountTimer', 'src')
 
-        poster.connect(rt, snk, 'token', peer_id, sum_, 'integer')
-        poster.connect(peer, sum_, 'integer', peer_id, src, 'integer')
+        request_handler.connect(rt, snk, 'token', peer_id, sum_, 'integer')
+        request_handler.connect(peer, sum_, 'integer', peer_id, src, 'integer')
         time.sleep(0.27)
 
         actual_1 = actual_tokens(rt, snk)
-        poster.migrate(peer, src, id_)
+        request_handler.migrate(peer, src, id_)
         time.sleep(0.2)
 
         expected = expected_tokens(rt, src, 'std.Sum')
@@ -555,9 +554,9 @@ class TestActorMigration(CalvinTestBase):
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
         self.assertListPrefix(expected, actual)
-        poster.delete_actor(rt, snk)
-        poster.delete_actor(peer, sum_)
-        poster.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
+        request_handler.delete_actor(peer, sum_)
+        request_handler.delete_actor(rt, src)
 
     def testOutPortLocalRemoteRepeatedMigration(self):
         """Testing outport local to remote migration and revers repeatedly"""
@@ -567,20 +566,20 @@ class TestActorMigration(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        sum_ = poster.new_actor(peer, 'std.Sum', 'sum')
-        src = poster.new_actor(peer, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        sum_ = request_handler.new_actor(peer, 'std.Sum', 'sum')
+        src = request_handler.new_actor(peer, 'std.CountTimer', 'src')
 
-        poster.connect(rt, snk, 'token', peer_id, sum_, 'integer')
-        poster.connect(peer, sum_, 'integer', peer_id, src, 'integer')
+        request_handler.connect(rt, snk, 'token', peer_id, sum_, 'integer')
+        request_handler.connect(peer, sum_, 'integer', peer_id, src, 'integer')
         time.sleep(0.27)
         actual_x = []
         actual_1 = actual_tokens(rt, snk)
         for i in range(5):
             if i % 2 == 0:
-                poster.migrate(peer, src, id_)
+                request_handler.migrate(peer, src, id_)
             else:
-                poster.migrate(rt, src, peer_id)
+                request_handler.migrate(rt, src, peer_id)
             time.sleep(0.2)
             actual_x_ = actual_tokens(rt, snk)
             assert(len(actual_x_) > len(actual_x))
@@ -591,9 +590,9 @@ class TestActorMigration(CalvinTestBase):
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
         self.assertListPrefix(expected, actual)
-        poster.delete_actor(rt, snk)
-        poster.delete_actor(peer, sum_)
-        poster.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
+        request_handler.delete_actor(peer, sum_)
+        request_handler.delete_actor(rt, src)
 
     def testInOutPortRemoteToLocalMigration(self):
         """Testing out- and inport remote to local migration"""
@@ -603,16 +602,16 @@ class TestActorMigration(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        sum_ = poster.new_actor(peer, 'std.Sum', 'sum')
-        src = poster.new_actor(rt, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        sum_ = request_handler.new_actor(peer, 'std.Sum', 'sum')
+        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
-        poster.connect(rt, snk, 'token', peer_id, sum_, 'integer')
-        poster.connect(peer, sum_, 'integer', id_, src, 'integer')
+        request_handler.connect(rt, snk, 'token', peer_id, sum_, 'integer')
+        request_handler.connect(peer, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.27)
 
         actual_1 = actual_tokens(rt, snk)
-        poster.migrate(peer, sum_, id_)
+        request_handler.migrate(peer, sum_, id_)
         time.sleep(0.2)
 
         expected = expected_tokens(rt, src, 'std.Sum')
@@ -620,9 +619,9 @@ class TestActorMigration(CalvinTestBase):
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
         self.assertListPrefix(expected, actual)
-        poster.delete_actor(rt, snk)
-        poster.delete_actor(rt, sum_)
-        poster.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
+        request_handler.delete_actor(rt, sum_)
+        request_handler.delete_actor(rt, src)
 
     def testInOutPortLocalRemoteRepeatedMigration(self):
         """Testing outport local to remote migration and revers repeatedly"""
@@ -632,20 +631,20 @@ class TestActorMigration(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        sum_ = poster.new_actor(rt, 'std.Sum', 'sum')
-        src = poster.new_actor(rt, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        sum_ = request_handler.new_actor(rt, 'std.Sum', 'sum')
+        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
-        poster.connect(rt, snk, 'token', id_, sum_, 'integer')
-        poster.connect(rt, sum_, 'integer', id_, src, 'integer')
+        request_handler.connect(rt, snk, 'token', id_, sum_, 'integer')
+        request_handler.connect(rt, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.27)
         actual_x = []
         actual_1 = actual_tokens(rt, snk)
         for i in range(5):
             if i % 2 == 0:
-                poster.migrate(rt, sum_, peer_id)
+                request_handler.migrate(rt, sum_, peer_id)
             else:
-                poster.migrate(peer, sum_, id_)
+                request_handler.migrate(peer, sum_, id_)
             time.sleep(0.2)
             actual_x_ = actual_tokens(rt, snk)
             assert(len(actual_x_) > len(actual_x))
@@ -656,9 +655,9 @@ class TestActorMigration(CalvinTestBase):
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
         self.assertListPrefix(expected, actual)
-        poster.delete_actor(rt, snk)
-        poster.delete_actor(peer, sum_)
-        poster.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
+        request_handler.delete_actor(peer, sum_)
+        request_handler.delete_actor(rt, src)
 
     def testInOutPortLocalToRemoteMigration(self):
         """Testing out- and inport local to remote migration"""
@@ -668,16 +667,16 @@ class TestActorMigration(CalvinTestBase):
         peer = self.runtimes[0]
         peer_id = peer.id
 
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        sum_ = poster.new_actor(rt, 'std.Sum', 'sum')
-        src = poster.new_actor(rt, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        sum_ = request_handler.new_actor(rt, 'std.Sum', 'sum')
+        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
-        poster.connect(rt, snk, 'token', id_, sum_, 'integer')
-        poster.connect(rt, sum_, 'integer', id_, src, 'integer')
+        request_handler.connect(rt, snk, 'token', id_, sum_, 'integer')
+        request_handler.connect(rt, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.27)
 
         actual_1 = actual_tokens(rt, snk)
-        poster.migrate(rt, sum_, peer_id)
+        request_handler.migrate(rt, sum_, peer_id)
         time.sleep(0.2)
 
         expected = expected_tokens(rt, src, 'std.Sum')
@@ -685,9 +684,9 @@ class TestActorMigration(CalvinTestBase):
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
         self.assertListPrefix(expected, actual)
-        poster.delete_actor(rt, snk)
-        poster.delete_actor(peer, sum_)
-        poster.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
+        request_handler.delete_actor(peer, sum_)
+        request_handler.delete_actor(rt, src)
 
 
     def testInOutPortRemoteToRemoteMigration(self):
@@ -701,17 +700,17 @@ class TestActorMigration(CalvinTestBase):
         peer1_id = peer1.id
 
         time.sleep(0.5)
-        snk = poster.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
-        sum_ = poster.new_actor(peer0, 'std.Sum', 'sum')
-        src = poster.new_actor(rt, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1)
+        sum_ = request_handler.new_actor(peer0, 'std.Sum', 'sum')
+        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
-        poster.connect(rt, snk, 'token', peer0_id, sum_, 'integer')
+        request_handler.connect(rt, snk, 'token', peer0_id, sum_, 'integer')
         time.sleep(0.5)
-        poster.connect(peer0, sum_, 'integer', id_, src, 'integer')
+        request_handler.connect(peer0, sum_, 'integer', id_, src, 'integer')
         time.sleep(0.5)
 
         actual_1 = actual_tokens(rt, snk)
-        poster.migrate(peer0, sum_, peer1_id)
+        request_handler.migrate(peer0, sum_, peer1_id)
         time.sleep(0.5)
 
         expected = expected_tokens(rt, src, 'std.Sum')
@@ -719,9 +718,9 @@ class TestActorMigration(CalvinTestBase):
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
         self.assertListPrefix(expected, actual)
-        poster.delete_actor(rt, snk)
-        poster.delete_actor(peer1, sum_)
-        poster.delete_actor(rt, src)
+        request_handler.delete_actor(rt, snk)
+        request_handler.delete_actor(peer1, sum_)
+        request_handler.delete_actor(rt, src)
 
     def testExplicitStateMigration(self):
         """Testing migration of explicit state handling"""
@@ -733,16 +732,16 @@ class TestActorMigration(CalvinTestBase):
         peer1 = self.runtimes[1]
         peer1_id = peer1.id
 
-        snk = poster.new_actor_wargs(peer0, 'io.StandardOut', 'snk', store_tokens=1)
-        wrapper = poster.new_actor(rt, 'misc.ExplicitStateExample', 'wrapper')
-        src = poster.new_actor(rt, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(peer0, 'io.StandardOut', 'snk', store_tokens=1)
+        wrapper = request_handler.new_actor(rt, 'misc.ExplicitStateExample', 'wrapper')
+        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
-        poster.connect(peer0, snk, 'token', id_, wrapper, 'token')
-        poster.connect(rt, wrapper, 'token', id_, src, 'integer')
+        request_handler.connect(peer0, snk, 'token', id_, wrapper, 'token')
+        request_handler.connect(rt, wrapper, 'token', id_, src, 'integer')
         time.sleep(0.3)
 
         actual_1 = actual_tokens(peer0, snk)
-        poster.migrate(rt, wrapper, peer0_id)
+        request_handler.migrate(rt, wrapper, peer0_id)
         time.sleep(0.3)
 
         actual = actual_tokens(peer0, snk)
@@ -750,9 +749,9 @@ class TestActorMigration(CalvinTestBase):
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
         self.assertListPrefix(expected, actual)
-        poster.delete_actor(peer0, snk)
-        poster.delete_actor(peer0, wrapper)
-        poster.delete_actor(rt, src)
+        request_handler.delete_actor(peer0, snk)
+        request_handler.delete_actor(peer0, wrapper)
+        request_handler.delete_actor(rt, src)
 
 
 @pytest.mark.essential
@@ -774,7 +773,7 @@ class TestCalvinScript(CalvinTestBase):
         src = d.actor_map['simple:src']
         snk = d.actor_map['simple:snk']
 
-        poster.disconnect(rt, src)
+        request_handler.disconnect(rt, src)
 
         actual = actual_tokens(rt, snk)
         expected = expected_tokens(rt, src, 'std.CountTimer')
@@ -798,15 +797,15 @@ class TestCalvinScript(CalvinTestBase):
         src = d.actor_map['simple:src']
         snk = d.actor_map['simple:snk']
 
-        applications = poster.get_applications(rt)
+        applications = request_handler.get_applications(rt)
         assert app_id in applications
 
         d.destroy()
 
-        applications = poster.get_applications(rt)
+        applications = request_handler.get_applications(rt)
         assert app_id not in applications
 
-        actors = poster.get_actors(rt)
+        actors = request_handler.get_actors(rt)
         assert src not in actors
         assert snk not in actors
 
@@ -828,19 +827,19 @@ class TestCalvinScript(CalvinTestBase):
         snk = d.actor_map['simple:snk']
 
         # FIXME --> remove when operating on closed pending connections during migration is fixed
-        poster.disable(rt, src)
-        poster.disable(rt, snk)
+        request_handler.disable(rt, src)
+        request_handler.disable(rt, snk)
         # <--
-        poster.migrate(rt, snk, rt1.id)
-        poster.migrate(rt, src, rt2.id)
+        request_handler.migrate(rt, snk, rt1.id)
+        request_handler.migrate(rt, src, rt2.id)
 
-        applications = poster.get_applications(rt)
+        applications = request_handler.get_applications(rt)
         assert app_id in applications
 
         d.destroy()
 
         for retry in range(1, 5):
-            applications = poster.get_applications(rt)
+            applications = request_handler.get_applications(rt)
             if app_id in applications:
                 print("Retrying in %s" % (retry * 0.2, ))
                 time.sleep(0.2 * retry)
@@ -850,9 +849,9 @@ class TestCalvinScript(CalvinTestBase):
 
         for retry in range(1, 5):
             actors = []
-            actors.extend(poster.get_actors(rt))
-            actors.extend(poster.get_actors(rt1))
-            actors.extend(poster.get_actors(rt2))
+            actors.extend(request_handler.get_actors(rt))
+            actors.extend(request_handler.get_actors(rt1))
+            actors.extend(request_handler.get_actors(rt2))
             intersection = [a for a in actors if a in d.actor_map.values()]
             if len(intersection) > 0:
                 print("Retrying in %s" % (retry * 0.2, ))

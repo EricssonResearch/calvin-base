@@ -36,7 +36,7 @@ class Deployer(object):
         self.actor_map = {}
         self.app_id = None
         self.verify = verify
-        self.poster = RequestHandler()
+        self.request_handler = RequestHandler()
         if "name" in self.deployable:
             self.name = self.deployable["name"]
         else:
@@ -49,11 +49,11 @@ class Deployer(object):
         if not self.deployable['valid']:
             raise Exception("Deploy information is not valid")
 
-        result = self.poster.deploy_app_info(self.runtime, self.name, self.deployable, check=self.verify)
+        result = self.request_handler.deploy_app_info(self.runtime, self.name, self.deployable, check=self.verify)
         self.app_id = result['application_id']
         self.actor_map = result['actor_map']
 
         return self.app_id
 
     def destroy(self):
-        return self.poster.delete_application(self.runtime, self.app_id)
+        return self.request_handler.delete_application(self.runtime, self.app_id)
