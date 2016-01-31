@@ -16,6 +16,28 @@ DEFAULT_TIMEOUT = 5
 
 _log = get_logger(__name__)
 
+# PATHS
+NODE_PATH = '/node/{}'
+NODE = '/node'
+NODES = '/nodes'
+NODE_ID = '/id'
+PEER_SETUP = '/peer_setup'
+ACTOR = '/actor'
+ACTOR_PATH = '/actor/{}'
+ACTORS = '/actors'
+ACTOR_DISABLE = '/actor/{}/disable'
+ACTOR_MIGRATE = '/actor/{}/migrate'
+APPLICATION_PATH = '/application/{}'
+ACTOR_PORT = '/actor/{}/{}'
+ACTOR_REPORT = '/actor/{}/report'
+SET_PORT_PROPERTY = '/set_port_property'
+APPLICATIONS = '/applications'
+DEPLOY = '/deploy'
+CONNECT = '/connect'
+DISCONNECT = '/disconnect'
+INDEX_PATH = '/index/{}'
+STORAGE_PATH = '/storage/{}'
+
 
 class RequestHandler(object):
     def __init__(self):
@@ -59,19 +81,19 @@ class RequestHandler(object):
         return self._send(rt, timeout, req.delete, path)
 
     def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/id')
+        r = self._get(rt, timeout, async, NODE_ID)
         return self.check_response(r, key="id")
 
     def get_node(self, rt, node_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/node/{}'.format(node_id))
+        r = self._get(rt, timeout, async, NODE_PATH.format(node_id))
         return self.check_response(r)
 
     def quit(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._delete(rt, timeout, async, '/node')
+        r = self._delete(rt, timeout, async, NODE)
         return self.check_response(r)
 
     def get_nodes(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/nodes')
+        r = self._get(rt, timeout, async, NODES)
         return self.check_response(r)
 
     def peer_setup(self, rt, *peers, **kwargs):
@@ -82,7 +104,7 @@ class RequestHandler(object):
             peers = peers[0]
         data = {'peers': peers}
 
-        r = self._post(rt, timeout, async, '/peer_setup', data)
+        r = self._post(rt, timeout, async, PEER_SETUP, data)
         return self.check_response(r)
 
     def new_actor(self, rt, actor_type, actor_name, timeout=DEFAULT_TIMEOUT, async=False):
@@ -92,7 +114,7 @@ class RequestHandler(object):
             'deploy_args': None
         }
 
-        r = self._post(rt, timeout, async, '/actor', data)
+        r = self._post(rt, timeout, async, ACTOR, data)
         return self.check_response(r, key='actor_id')
 
     def new_actor_wargs(self, rt, actor_type, actor_name, args=None, deploy_args=None, timeout=DEFAULT_TIMEOUT,
@@ -105,19 +127,19 @@ class RequestHandler(object):
         else:
             data['args'] = args
 
-        r = self._post(rt, timeout, async, '/actor', data)
+        r = self._post(rt, timeout, async, ACTOR, data)
         return self.check_response(r, key='actor_id')
 
     def get_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/actor/{}'.format(actor_id))
+        r = self._get(rt, timeout, async, ACTOR_PATH.format(actor_id))
         return self.check_response(r)
 
     def get_actors(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/actors')
+        r = self._get(rt, timeout, async, ACTORS)
         return self.check_response(r)
 
     def delete_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._delete(rt, timeout, async, '/actor/{}'.format(actor_id))
+        r = self._delete(rt, timeout, async, ACTOR_PATH.format(actor_id))
         return self.check_response(r)
 
     def connect(self, rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name, timeout=DEFAULT_TIMEOUT,
@@ -131,7 +153,7 @@ class RequestHandler(object):
             'peer_port_name': peer_port_name,
             'peer_port_dir': 'out'
         }
-        r = self._post(rt, timeout, async, '/connect', data)
+        r = self._post(rt, timeout, async, CONNECT, data)
         return self.check_response(r)
 
     def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, timeout=DEFAULT_TIMEOUT,
@@ -142,28 +164,29 @@ class RequestHandler(object):
             'port_dir': port_dir,
             'port_id': port_id
         }
-        r = self._post(rt, timeout, async, '/disconnect', data)
+        r = self._post(rt, timeout, async, DISCONNECT, data)
         return self.check_response(r)
 
     def disable(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        path = '/actor/{}/disable'.format(actor_id)
+        path = ACTOR_DISABLE.format(actor_id)
         r = self._post(rt, timeout, async, path)
         return self.check_response(r)
 
     def migrate(self, rt, actor_id, dst_id, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'peer_node_id': dst_id}
-        path = '/actor/{}/migrate'.format(actor_id)
+        path = ACTOR_MIGRATE.format(actor_id)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
     def add_requirements(self, rt, application_id, reqs, timeout=DEFAULT_TIMEOUT, async=False):
         rt = get_runtime(rt)
         data = {'reqs': reqs}
-        r = self._post(rt, timeout, async, '/application/{}'.format(application_id), data)
+        path = APPLICATION_PATH.format(application_id)
+        r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
     def get_port(self, rt, actor_id, port_id, timeout=DEFAULT_TIMEOUT, async=False):
-        path = '/actor/{}/{}'.format(actor_id, port_id)
+        path = ACTOR_PORT.format(actor_id, port_id)
         r = self._get(rt, timeout, async, path)
         return self.check_response(r)
 
@@ -176,29 +199,29 @@ class RequestHandler(object):
             'port_property': port_property,
             'value': value
         }
-        r = self._post(rt, timeout, async, '/set_port_property', data)
+        r = self._post(rt, timeout, async, SET_PORT_PROPERTY, data)
         return self.check_response(r)
 
     def report(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        path = '/actor/{}/report'.format(actor_id)
+        path = ACTOR_REPORT.format(actor_id)
         r = self._get(rt, timeout, async, path)
         return self.check_response(r)
 
     def get_applications(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/applications')
+        r = self._get(rt, timeout, async, APPLICATIONS)
         return self.check_response(r)
 
     def get_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/application/{}'.format(application_id))
+        r = self._get(rt, timeout, async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
     def delete_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._delete(rt, timeout, async, '/application/{}'.format(application_id))
+        r = self._delete(rt, timeout, async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
     def deploy_application(self, rt, name, script, check=True, timeout=DEFAULT_TIMEOUT, async=False):
         data = {"name": name, "script": script, "check": check}
-        r = self._post(rt, timeout, async, '/deploy', data)
+        r = self._post(rt, timeout, async, DEPLOY, data)
         return self.check_response(r)
 
     def deploy_app_info(self, rt, name, app_info, deploy_info=None, check=True, timeout=DEFAULT_TIMEOUT, async=False):
@@ -241,26 +264,29 @@ class RequestHandler(object):
 
     def add_index(self, rt, index, value, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'value': value}
-        r = self._post(rt, timeout, async, '/index/{}'.format(index), data)
+        path = INDEX_PATH.format(index)
+        r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
     def remove_index(self, rt, index, value, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'value': value}
-        r = self._delete(rt, timeout, async, '/index/{}'.format(index), data)
+        path = INDEX_PATH.format(index)
+        r = self._delete(rt, timeout, async, path, data)
         return self.check_response(r)
 
     def get_index(self, rt, index, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/index/{}'.format(index))
+        r = self._get(rt, timeout, async, INDEX_PATH.format(index))
         return self.check_response(r)
 
     def get_storage(self, rt, key, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, '/storage/{}'.format(key))
+        r = self._get(rt, timeout, async, STORAGE_PATH.format(key))
         return self.check_response(r)
 
     def set_storage(self, rt, key, value, timeout=DEFAULT_TIMEOUT, async=False):
         rt = get_runtime(rt)
         data = {'value': value}
-        r = self._post(rt, timeout, async, '/storage/{}'.format(key), data)
+        path = STORAGE_PATH.format(key)
+        r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
     def async_response(self, response):
