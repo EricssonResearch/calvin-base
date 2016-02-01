@@ -52,7 +52,7 @@ class ActorManager(object):
           2) a mangled list of tuples with (in_node_id, in_port_id, out_node_id, out_port_id) supplied as
              connection_list
         """
-        _log.debug("class: %s args: %s state: %s", actor_type, args, state)
+        _log.debug("class: %s args: %s state: %s, signature: %s" % (actor_type, args, state, signature))
         _log.analyze(self.node.id, "+", {'actor_type': actor_type, 'state': state})
 
         try:
@@ -65,7 +65,7 @@ class ActorManager(object):
             raise(e)
 
         # Store the actor signature to enable GlobalStore lookup
-        a._signature = signature
+        a.signature_set(signature)
 
         self.actors[a.id] = a
 

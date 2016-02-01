@@ -332,8 +332,9 @@ class Actor(object):
         self.id = actor_id or calvinuuid.uuid("ACTOR")
         _log.debug("New actor id: %s, supplied actor id %s" % (self.id, actor_id))
         self._deployment_requirements = []
+        self._signature = None
         self._component_members = set([self.id])  # We are only part of component if this is extended
-        self._managed = set(('id', 'name', '_deployment_requirements'))
+        self._managed = set(('id', 'name', '_deployment_requirements', '_signature'))
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
@@ -632,6 +633,10 @@ class Actor(object):
                   'type': '+'}]
                 if hasattr(self, 'requires') else [])
 
+    def signature_set(self, signature):
+        if self._signature is None:
+            self._signature = signature
+
 class ShadowActor(Actor):
     """A shadow actor try to behave as another actor but don't have any implementation"""
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
@@ -662,7 +667,12 @@ class ShadowActor(Actor):
         return False
 
     def requirements_get(self):
-        return self._deployment_requirements + [{'op': 'shadow_actor_reqs_match',
+        # If missing signature we can't add requirement for finding actor's requires.
+        if self._signature:
+            return self._deployment_requirements + [{'op': 'shadow_actor_reqs_match',
                                                  'kwargs': {'signature': self._signature,
                                                             'shadow_params': self._shadow_args.keys()},
                                                  'type': '+'}]
+        else:
+            _log.error("Shadow actor %s - %s miss signature" % (self.name, self.id))
+            return self._deployment_requirements
