@@ -29,7 +29,6 @@ class TimerEvent(async.DelayedCall):
         self.trigger_loop = trigger_loop
         self.repeats = repeats
         _log.debug("Set calvinsys timer %f %s on %s" % (delay, "repeat" if self.repeats else "", self._actor_id))
-        self.reset()
 
     @property
     def triggered(self):
@@ -39,12 +38,11 @@ class TimerEvent(async.DelayedCall):
         self._triggered = False
 
     def trigger(self):
-        if self.delayedCall.active():
-            _log.debug("Trigger calvinsys timer on %s" % (self._actor_id))
-            self._triggered = True
-            if self.repeats:
-                self.reset()
-            self.trigger_loop(actor_ids=[self._actor_id])
+        _log.debug("Trigger calvinsys timer on %s" % (self._actor_id))
+        self._triggered = True
+        if self.repeats:
+            self.reset()
+        self.trigger_loop(actor_ids=[self._actor_id])
 
 
 class TimerHandler(object):

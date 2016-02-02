@@ -25,7 +25,9 @@ class List(Actor):
     Create a list.
 
     Consumes 'n' tokens  to produce a list, 'n' defaults to 1. If 'n' is zero or negative,
-    consumes tokens until EOS encountered (variable list length).
+    consumes tokens until EOS encountered (variable list length). 
+    The optional arguments pre_list and post_list are used to prepend and extend the list before
+    delivering the final list.
     Will produce an ExceptionToken if EOS is encountered when n > 0, or if an ExceptionToken is
     encountered regardless of value of 'n'.
 
@@ -43,9 +45,11 @@ class List(Actor):
         return ActionResult()
 
     @manage(['n', '_list', 'done'])
-    def init(self, n=1):
+    def init(self, n=1, pre_list=None, post_list=None):
         self.n = n if n > 0 else 0
         self._list = []
+        self.pre_list = pre_list
+        self.post_list = post_list
         self.done = False
 
     @condition(['item'], [])
@@ -65,7 +69,10 @@ class List(Actor):
     @condition([], ['list'])
     @guard(lambda self: self.done)
     def produce_list(self):
-        res = self._list
+        if isinstance(self._list, list):
+            res = (self.pre_list if self.pre_list else []) + self._list +(self.post_list if self.post_list else [])
+        else:
+            res = self._list
         self.done = False
         self._list = []
         return ActionResult(production=(res, ))
@@ -84,6 +91,21 @@ class List(Actor):
             'setup': [lambda self: self.init(n=2)],
             'in': {'item': [1, 2]},
             'out': {'list': [[1, 2]]},
+        },
+        {
+            'setup': [lambda self: self.init(n=2, pre_list=[5, 7])],
+            'in': {'item': [1, 2]},
+            'out': {'list': [[5, 7, 1, 2]]},
+        },
+        {
+            'setup': [lambda self: self.init(n=2, post_list=[5, 7])],
+            'in': {'item': [1, 2]},
+            'out': {'list': [[1, 2, 5, 7]]},
+        },
+        {
+            'setup': [lambda self: self.init(n=2, pre_list=[8, 9], post_list=[5, 7])],
+            'in': {'item': [1, 2]},
+            'out': {'list': [[8, 9, 1, 2, 5, 7]]},
         },
         {
             'setup': [lambda self: self.init(n=0)],

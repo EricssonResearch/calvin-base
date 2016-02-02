@@ -1,0 +1,14 @@
+component WordCountComponent(file) -> out {
+    filename:std.Constant(data=file)
+    file:io.FileReader()
+    counter: text.WordCount()
+
+    filename.token > file.filename
+    file.out > counter.in
+    counter.out > .out
+}
+
+src:WordCountComponent(file="words.txt")
+snk:io.Print()
+
+src.out > snk.token

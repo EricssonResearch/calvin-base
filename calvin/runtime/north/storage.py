@@ -20,8 +20,10 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.actor import actorport
+from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
 from calvin.actorstore.store import GlobalStore
+from calvin.utilities import dynops
 import re
 
 _log = calvinlogger.get_logger(__name__)
@@ -125,6 +127,7 @@ class Storage(object):
     def stop(self, cb=None):
         """ Stop storage
         """
+        _log.analyze(self.node.id, "+", {'started': self.started})
         if self.started:
             self.storage.stop(cb=cb)
         elif cb:
@@ -194,6 +197,38 @@ class Storage(object):
                     _log.error("Failed to get: %s" % key)
                     async.DelayedCall(0, cb, key=key, value=False)
 
+    def get_iter_cb(self, key, value, it, org_key, include_key=False):
+        """ get callback
+        """
+        _log.analyze(self.node.id, "+ BEGIN", {'value': value, 'key': org_key})
+        if value:
+            value = self.coder.decode(value)
+            it.append((key, value) if include_key else value)
+            _log.analyze(self.node.id, "+", {'value': value, 'key': org_key})
+        else:
+            _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': org_key})
+            it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
+
+    def get_iter(self, prefix, key, it, include_key=False):
+        """ Get value for key: prefix+key, first look in localstore
+            Add the value to the supplied dynamic iterable (preferable a LimitedList or List)
+        """
+        if it:
+            if prefix + key in self.localstore:
+                value = self.localstore[prefix + key]
+                if value:
+                    value = self.coder.decode(value)
+                _log.analyze(self.node.id, "+", {'value': value, 'key': key})
+                it.append((key, value) if include_key else value)
+            else:
+                try:
+                    self.storage.get(key=prefix + key,
+                                     cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
+                except:
+                    _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
+                    _log.error("Failed to get: %s" % key)
+                    it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
+
     def get_concat_cb(self, key, value, org_cb, org_key, local_list):
         """ get callback
         """
@@ -222,8 +257,50 @@ class Storage(object):
                 self.storage.get_concat(key=prefix + key,
                                 cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
             except:
-                _log.error("Failed to get: %s" % key, exc_info=True)
+                if self.started:
+                    _log.error("Failed to get: %s" % key, exc_info=True)
                 async.DelayedCall(0, cb, key=key, value=local_list if local_list else None)
+
+    def get_concat_iter_cb(self, key, value, org_key, include_key, it):
+        """ get callback
+        """
+        _log.analyze(self.node.id, "+ BEGIN", {'key': org_key, 'value': value, 'iter': str(it)})
+        if value:
+            value = self.coder.decode(value)
+            _log.analyze(self.node.id, "+ VALUE", {'value': value, 'key': org_key})
+            it.extend([(org_key, v) for v in value] if include_key else value)
+        it.final()
+        _log.analyze(self.node.id, "+ END", {'key': org_key, 'iter': str(it)})
+
+    def get_concat_iter(self, prefix, key, include_key=False):
+        """ Get value for key: prefix+key, first look in localstore
+            Returned value is dynamic iterable. The storage could be eventually consistent.
+            For example a remove might only have reached part of the
+            storage and hence the return iterable might contain removed items,
+            but also missing items.
+        """
+        _log.analyze(self.node.id, "+ BEGIN", {'key': key})
+        if prefix + key in self.localstore_sets:
+            _log.analyze(self.node.id, "+ GET LOCAL", None)
+            value = self.localstore_sets[prefix + key]
+            # Return the set that we intended to append since that's all we have until it is synced
+            local_list = list(value['+'])
+            _log.analyze(self.node.id, "+", {'value': local_list, 'key': key})
+        else:
+            local_list = []
+        if include_key:
+            local_list = [(key, v) for v in local_list]
+        it = dynops.List(local_list)
+        try:
+            self.storage.get_concat(key=prefix + key,
+                            cb=CalvinCB(func=self.get_concat_iter_cb, org_key=key, 
+                                        include_key=include_key, it=it))
+        except:
+            if self.started:
+                _log.error("Failed to get: %s" % key, exc_info=True)
+            it.final()
+        _log.analyze(self.node.id, "+ END", {'key': key, 'iter': str(it)})
+        return it
 
     def append_cb(self, key, value, org_key, org_value, org_cb):
         """ append callback, on error retry after flush_timeout
@@ -437,6 +514,7 @@ class Storage(object):
             outports.append(port)
             self.add_port(p, node_id, actor.id, "out")
         data["outports"] = outports
+        data["is_shadow"] = isinstance(actor, ShadowActor)
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):
@@ -614,6 +692,32 @@ class Storage(object):
         _log.debug("get index %s" % (index))
         self.get_concat(prefix="index-", key=index, cb=cb)
 
+    def get_index_iter(self, index, include_key=False):
+        """
+        Get index from the storage.
+        index: a string with slash as delimiter for finer level of index,
+               e.g. node/address/example_street/3/buildingA/level3/room3003,
+               node/affiliation/owner/com.ericsson/Harald,
+               node/affiliation/name/com.ericsson/laptop
+
+        Since storage might be eventually consistent caller must expect that the
+        list can containe node ids that are removed and node ids have not yet reached
+        the storage.
+        """
+
+        # TODO this implementation will get the value from the level of the index.
+        # When time permits a proper implementation should be done with for example
+        # a prefix hash table on top of the DHT or using other storage backend with
+        # prefix search built in.
+
+        if isinstance(index, list):
+            index = "/".join(index)
+
+        if not index.startswith("/"):
+            index = "/" + index
+        _log.debug("get index iter %s" % (index))
+        return self.get_concat_iter(prefix="index-", key=index, include_key=include_key)
+
     ### Storage proxy server ###
     
     def tunnel_request_handles(self, tunnel):
@@ -645,7 +749,7 @@ class Storage(object):
 
     def tunnel_recv_handler(self, tunnel, payload):
         """ Gets called when a storage client request"""
-        _log.info("Storage proxy request %s" % payload)
+        _log.debug("Storage proxy request %s" % payload)
         _log.analyze(self.node.id, "+ SERVER", {'payload': payload})
         if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
             if 'value' in payload:

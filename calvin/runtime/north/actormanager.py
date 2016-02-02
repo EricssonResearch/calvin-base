@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from calvin.actorstore.store import ActorStore
+from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.utilities.calvinresponse as response
@@ -51,7 +52,7 @@ class ActorManager(object):
           2) a mangled list of tuples with (in_node_id, in_port_id, out_node_id, out_port_id) supplied as
              connection_list
         """
-        _log.debug("class: %s args: %s state: %s", actor_type, args, state)
+        _log.debug("class: %s args: %s state: %s, signature: %s" % (actor_type, args, state, signature))
         _log.analyze(self.node.id, "+", {'actor_type': actor_type, 'state': state})
 
         try:
@@ -64,7 +65,7 @@ class ActorManager(object):
             raise(e)
 
         # Store the actor signature to enable GlobalStore lookup
-        a._signature = signature
+        a.signature_set(signature)
 
         self.actors[a.id] = a
 
@@ -73,6 +74,8 @@ class ActorManager(object):
         if prev_connections:
             # Convert prev_connections to connection_list format
             connection_list = self._prev_connections_to_connection_list(prev_connections)
+
+        self.node.control.log_actor_new(a.id, a.name, actor_type)
 
         if connection_list:
             # Migrated actor
@@ -98,7 +101,7 @@ class ActorManager(object):
             raise Exception("ERROR_NOT_FOUND")
         try:
             # Create a 'bare' instance of the actor
-            a = class_(actor_type, actor_id)
+            a = class_(actor_type, actor_id=actor_id)
         except Exception as e:
             _log.exception("")
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
@@ -107,8 +110,9 @@ class ActorManager(object):
             a._calvinsys = self.node.calvinsys()
             a.check_requirements()
         except Exception as e:
+            _log.exception("Catched new from state")
             _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
-            a = ShadowActor(actor_type, actor_id)
+            a = ShadowActor(actor_type, actor_id=actor_id)
             a._calvinsys = self.node.calvinsys()
         return a
 
@@ -139,28 +143,32 @@ class ActorManager(object):
                 args = state.pop('_shadow_args')
                 state['_managed'].remove('_shadow_args')
                 a.init(**args)
-                shadow_migrate = True
+                # If still shadow don't call did_migrate
+                did_migrate = isinstance(a, ShadowActor)
             else:
-                shadow_migrate = False
+                did_migrate = True
             # Always do a set_state for the port's state
-            a.set_state(state)
+            a._set_state(state)
             self.node.pm.add_ports_of_actor(a)
-            if not shadow_migrate:
+            if did_migrate:
                 a.did_migrate()
             a.setup_complete()
         except Exception as e:
+            _log.exception("Catched new from state %s %s" % (a, dir(a)))
             raise(e)
         return a
 
 
     def destroy(self, actor_id):
         # @TOOD - check order here
+        self.node.metering.remove_actor_info(actor_id)
         a = self.actors[actor_id]
         a.will_end()
         self.node.pm.remove_ports_of_actor(a)
         # @TOOD - insert callback here
         self.node.storage.delete_actor(actor_id)
         del self.actors[actor_id]
+        self.node.control.log_actor_destroy(a.id)
 
     # DEPRECATED: Enabling of an actor is dependent on wether it's connected or not
     def enable(self, actor_id):
@@ -173,6 +181,70 @@ class ActorManager(object):
             self.actors[actor_id].disable()
         else:
             _log.info("!!!FAILED to disable %s", actor_id)
+
+    def update_requirements(self, actor_id, requirements, extend=False, move=False, callback=None):
+        """ Update requirements and trigger a potential migration """
+        if actor_id not in self.actors:
+            # Can only migrate actors from our node
+            _log.analyze(self.node.id, "+ NO ACTOR", {'actor_id': actor_id})
+            if callback:
+                callback(status=response.CalvinResponse(False))
+            return
+        if not isinstance(requirements, (list, tuple)):
+            # requirements need to be list
+            _log.analyze(self.node.id, "+ NO REQ LIST", {'actor_id': actor_id})
+            if callback:
+                callback(status=response.CalvinResponse(response.BAD_REQUEST))
+            return
+        actor = self.actors[actor_id]
+        actor.requirements_add(requirements, extend)
+        node_iter = self.node.app_manager.actor_requirements(None, actor_id)
+        possible_placements = set([])
+        done = [False]
+        node_iter.set_cb(self._update_requirements_placements, node_iter, actor_id, possible_placements,
+                         move=move, cb=callback, done=done)
+        _log.analyze(self.node.id, "+ CALL CB", {'actor_id': actor_id, 'node_iter': str(node_iter)})
+        # Must call it since the triggers might already have released before cb set
+        self._update_requirements_placements(node_iter, actor_id, possible_placements,
+                                 move=move, cb=callback, done=done)
+        _log.analyze(self.node.id, "+ END", {'actor_id': actor_id, 'node_iter': str(node_iter)})
+
+    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False, cb=None, counter=0):
+        _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
+        if done[0]:
+            return
+        try:
+            while True:
+                _log.analyze(self.node.id, "+ ITER", {})
+                node_id = node_iter.next()
+                possible_placements.add(node_id)
+        except dynops.PauseIteration:
+            _log.analyze(self.node.id, "+ PAUSED", {'counter': counter})
+            if counter < 3:
+                self._update_requirements_placements(node_iter, actor_id, possible_placements, done=done,
+                                                     move=move, cb=cb, counter=counter+1)
+            return
+        except StopIteration:
+            # all possible actor placements derived
+            _log.analyze(self.node.id, "+ ALL", {})
+            done[0] = True
+            if move and len(possible_placements)>1:
+                possible_placements.discard(self.node.id)
+            if not possible_placements:
+                if cb:
+                    cb(status=response.CalvinResponse(False))
+                return
+            if self.node.id in possible_placements:
+                # Actor could stay, then do that
+                if cb:
+                    cb(status=response.CalvinResponse(True))
+                return
+            # TODO do a better selection between possible nodes
+            self.migrate(actor_id, possible_placements.pop(), callback=cb)
+            _log.analyze(self.node.id, "+ END", {})
+        except:
+            _log.exception("actormanager:_update_requirements_placements")
+        
 
     def migrate(self, actor_id, node_id, callback = None):
         """ Migrate an actor actor_id to peer node node_id """
@@ -200,6 +272,7 @@ class ActorManager(object):
                                                   node_id=node_id,
                                                   callback=callback),
                                 actor_id=actor_id)
+        self.node.control.log_actor_migrate(actor_id, node_id)
 
     def _migrate_disconnected(self, actor, actor_type, ports, node_id, status, callback = None, **state):
         """ Actor disconnected, continue migration """

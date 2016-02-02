@@ -16,7 +16,7 @@
 
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
-from calvin.runtime.south.plugins.transports.calvinip import base_transport
+from calvin.runtime.south.plugins.transports.lib.twisted import base_transport
 
 from twisted.protocols.basic import Int32StringReceiver
 from twisted.internet import reactor, protocol
@@ -138,6 +138,9 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
 
     def _set_proto(self, proto):
         _log.debug("%s, %s, %s" % (self, '_set_proto', proto))
+        if self._proto:
+            _log.error("_set_proto: Already connected")
+            return
         self._proto = proto
 
     def _connected(self, proto):

@@ -80,6 +80,8 @@ class Analyzer(object):
             _log.exception(e)
             valid = False
         self.app_info = {'valid':valid, 'actors': self.actors, 'connections':self.connections}
+        if self.script_name:
+            self.app_info['name'] = self.script_name
 
     def debug_info(self, d):
         file = 'File "%s"' % self.script_name
@@ -211,10 +213,10 @@ class Analyzer(object):
                                 'inports': [],
                                 'outports': []}
                 for c in structure['connections']:
-                    if actor_name == c['src'] and c['src_port'] not in signature_desc['inports']:
-                        signature_desc['inports'].append(c['src_port'])
-                    elif actor_name == c['dst'] and c['dst_port'] not in signature_desc['outports']:
-                        signature_desc['outports'].append(c['dst_port'])
+                    if actor_name == c['src'] and c['src_port'] not in signature_desc['outports']:
+                        signature_desc['outports'].append(c['src_port'])
+                    elif actor_name == c['dst'] and c['dst_port'] not in signature_desc['inports']:
+                        signature_desc['inports'].append(c['dst_port'])
                 signature = GlobalStore.actor_signature(signature_desc)
                 # Add actor and its arguments to the list of actor instances
                 self.actors[qualified_name] = {'actor_type':actor_def['actor_type'], 'args':args,

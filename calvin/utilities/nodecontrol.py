@@ -17,16 +17,28 @@
 from calvin.runtime.north import calvin_node
 from calvin.utilities.utils import get_node_id, get_node
 from calvin.utilities import storage_node
+import time
 
-
-def node_control(control_uri):
+def node_control(control_uri, barrier=True):
     class NodeControl(object):
 
-        def __init__(self, control_uri):
+        def __init__(self, control_uri, barrier):
             super(NodeControl, self).__init__()
             self._id = None
             self._uri = None
             self.control_uri = control_uri
+            # When barrier ordered make sure we can contact the runtime
+            if barrier:
+                failed = True
+                # Try 20 times waiting for control API to be up and running
+                for i in range(20):
+                    try:
+                        self._id = get_node_id(self)
+                        failed = False
+                        break
+                    except:
+                        time.sleep(0.1)
+                assert not failed
 
         @property
         def id(self):
@@ -40,12 +52,19 @@ def node_control(control_uri):
                 self._uri = get_node(self, self.id)["uri"]
             return self._uri
 
-    return NodeControl(control_uri)
+    return NodeControl(control_uri, barrier=barrier)
 
 
-def dispatch_node(uri, control_uri, trace=False, attributes=None):
+def dispatch_node(uri, control_uri, trace=False, attributes=None, barrier=True):
+    """ Dispatch calvin runtime in new process.
+        uri: list of uris for rt 2 rt comm
+        control_uri: uri to control the rt
+        trace: True/False
+        attributes: dictionary according to documentation in AttributeResolver
+        barrier: when True wait until managed to obtain the id of the runtime
+    """
     p = calvin_node.start_node(uri, control_uri, trace, attributes)
-    return node_control(control_uri), p
+    return node_control(control_uri, barrier=barrier), p
 
 
 def start_node(uri, control_uri, trace=False, attributes=None):

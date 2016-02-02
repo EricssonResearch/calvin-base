@@ -1,0 +1,13 @@
+component TheSource() -> out {
+  first: std.CountTimer()
+  second: std.Identity()
+  
+  first.integer > second.token
+  second.token > .out
+}
+button : TheSource()
+check : std.Sum()
+bell : io.StandardOut(store_tokens=true)
+
+button.out > check.integer
+check.integer > bell.token
