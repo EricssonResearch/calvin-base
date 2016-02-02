@@ -22,7 +22,6 @@ import traceback
 import logging
 import os
 
-from calvin.requests.request_handler import RequestHandler
 
 # Calvin related imports must be in functions, to be able to set logfile before imports
 _conf = None
@@ -164,6 +163,7 @@ def set_loglevel(levels, filename):
 
 
 def dispatch_and_deploy(app_info, wait, uri, control_uri, attr):
+    from calvin.requests.request_handler import RequestHandler
     rt, process = runtime(uri, control_uri, attr, dispatch=True)
     app_id = None
     app_id = deploy(rt, app_info)

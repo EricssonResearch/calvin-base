@@ -18,19 +18,23 @@
 import argparse
 import json
 from calvin.utilities.calvinlogger import get_logger
-from calvin.requests.request_handler import RequestHandler
 
 _log = get_logger(__name__)
-_request_handler = RequestHandler()
+_request_handler = None
+
+
+def get_request_handler():
+    from calvin.requests.request_handler import RequestHandler
+    return _request_handler if _request_handler else RequestHandler()
 
 
 def control_id(args):
-    return _request_handler.get_node_id(args.node)
+    return get_request_handler().get_node_id(args.node)
 
 
 def get_node_info(control_uri, node_id):
     try:
-        return _request_handler.get_node(control_uri, node_id)
+        return get_request_handler().get_node(control_uri, node_id)
     except:
         raise Exception("No node with id {} found".format(node_id))
 
@@ -62,7 +66,7 @@ def control_deploy(args):
     print args
     reqs = requirements_file(args.reqs) if args.reqs else None
     try:
-        response = _request_handler.deploy_application(args.node, args.script.name, args.script.read(), reqs, args.check)
+        response = get_request_handler().deploy_application(args.node, args.script.name, args.script.read(), reqs, args.check)
     except Exception as e:
         print e
     return response
@@ -70,32 +74,32 @@ def control_deploy(args):
 
 def control_actors(args):
     if args.cmd == 'list':
-        return _request_handler.get_actors(args.node)
+        return get_request_handler().get_actors(args.node)
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No actor id given")
-        return _request_handler.get_actor(args.node, args.id)
+        return get_request_handler().get_actor(args.node, args.id)
     elif args.cmd == 'delete':
         if not args.id:
             raise Exception("No actor id given")
-        return _request_handler.delete_actor(args.node, args.id)
+        return get_request_handler().delete_actor(args.node, args.id)
     elif args.cmd == 'migrate':
         if not args.id or not args.peer_node:
             raise Exception("No actor or peer given")
-        return _request_handler.migrate(args.node, args.id, args.peer_node)
+        return get_request_handler().migrate(args.node, args.id, args.peer_node)
 
 
 def control_applications(args):
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No application id given")
-        return _request_handler.get_application(args.node, args.id)
+        return get_request_handler().get_application(args.node, args.id)
     elif args.cmd == 'list':
-        return _request_handler.get_applications(args.node)
+        return get_request_handler().get_applications(args.node)
     elif args.cmd == 'delete':
         if not args.id:
             raise Exception("No application id given")
-        return _request_handler.delete_application(args.node, args.id)
+        return get_request_handler().delete_application(args.node, args.id)
 
 
 def control_nodes(args):
@@ -103,14 +107,14 @@ def control_nodes(args):
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No node id given")
-        return _request_handler.get_node(args.node, args.id)
+        return get_request_handler().get_node(args.node, args.id)
     elif args.cmd == 'list':
-        return _request_handler.get_nodes(args.node)
+        return get_request_handler().get_nodes(args.node)
     elif args.cmd == 'add':
-        return _request_handler.peer_setup(args.node, *args.peerlist)
+        return get_request_handler().peer_setup(args.node, *args.peerlist)
     elif args.cmd == 'stop':
         try:
-            return _request_handler.quit(args.node)
+            return get_request_handler().quit(args.node)
         except ConnectionError:
             # If the connection goes down before response that is OK
             return None
@@ -119,19 +123,20 @@ def control_nodes(args):
 def control_storage(args):
     from calvin.utilities.attribute_resolver import format_index_string
     import json
+    request_handler = get_request_handler()
     if args.cmd == 'get_index':
         try:
             index = json.loads(args.index)
         except:
             raise Exception("Malformed JSON index string:\n%s" % args.index)
         formated_index = format_index_string(index)
-        return _request_handler.get_index(args.node, formated_index)
+        return request_handler.get_index(args.node, formated_index)
     elif args.cmd == 'raw_get_index':
         try:
             index = json.loads(args.index)
         except:
             raise Exception("Malformed JSON index string:\n%s" % args.index)
-        return _request_handler.get_index(args.node, index)
+        return request_handler.get_index(args.node, index)
 
 
 def parse_args():
