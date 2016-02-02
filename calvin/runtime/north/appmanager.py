@@ -23,6 +23,7 @@ from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.utilities.calvinresponse as response
 from calvin.utilities import calvinuuid
 from calvin.actorstore.store import ActorStore, GlobalStore
+from calvin.runtime.south.plugins.async import async
 
 class Application(object):
 
@@ -42,6 +43,7 @@ class Application(object):
         self.node_info = {}
         self.components = {}
         self.deploy_info = deploy_info
+        self._collect_placement = None
 
     def add_actor(self, actor_id):
         # Save actor_id and mapping to name while the actor is still on this node
@@ -284,17 +286,28 @@ class AppManager(object):
 
     ### DEPLOYMENT REQUIREMENTS ###
 
-    def collect_placement(self, it, app, counter=0):
+    def collect_placement(self, it, app):
         _log.analyze(self._node.id, "+ BEGIN", {}, tb=True)
+        if app._collect_placement:
+            app._collect_placement_cb.cancel()
+            app._collect_placement_cb = None
         try:
             while True:
                 _log.analyze(self._node.id, "+ ITER", {})
                 actor_node_id = it.next()
+                app._collect_placement_last_value = app._collect_placement_counter
                 app.actor_placement.setdefault(actor_node_id[0], set([])).add(actor_node_id[1])
         except dynops.PauseIteration:
-            _log.analyze(self._node.id, "+ PAUSED", {'counter': counter})
-            if counter < 3:
-                self.collect_placement(it, app, counter=counter+1)
+            _log.analyze(self._node.id, "+ PAUSED",
+                    {'counter': app._collect_placement_counter,
+                     'last_value': app._collect_placement_last_value,
+                     'diff': app._collect_placement_counter - app._collect_placement_last_value})
+            # FIXME the dynops should be self triggering, but is not...
+            # This is a temporary fix by keep trying
+            delay = 0.0 if app._collect_placement_counter > app._collect_placement_last_value + 100 else 0.2
+            app._collect_placement_counter += 1
+            app._collect_placement_cb = async.DelayedCall(delay, self.collect_placement, it=it,
+                                                                    app=app)
             return
         except StopIteration:
             if not app.done_final:
@@ -329,6 +342,8 @@ class AppManager(object):
             return
         app._org_cb = cb
         app.done_final = False
+        app._collect_placement_counter = 0
+        app._collect_placement_last_value = 0
         actor_placement_it = dynops.List()
         app.actor_placement = {}  # Clean placement slate
         _log.analyze(self._node.id, "+ APP REQ", {}, tb=True)
