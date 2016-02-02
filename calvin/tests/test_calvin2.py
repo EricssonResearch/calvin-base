@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,14 +43,24 @@ def setup_module(module):
     global rt3
     global kill_peers
     ip_addr = None
+    bt_master_controluri = None
 
     try:
         ip_addr = os.environ["CALVIN_TEST_IP"]
         purpose = os.environ["CALVIN_TEST_UUID"]
         _log.debug("Running remote tests")
     except KeyError:
-        _log.debug("Running lcoal test")
+        _log.debug("Running local test")
         pass
+
+    if ip_addr is None:
+        # Bluetooth tests assumes one master runtime with two connected peers
+        # CALVIN_TEST_BT_MASTERCONTROLURI is the control uri of the master runtime
+        try:
+            bt_master_controluri = os.environ["CALVIN_TEST_BT_MASTERCONTROLURI"]
+            _log.debug("Running Bluetooth tests")
+        except KeyError:
+            pass
 
     if ip_addr:
         remote_node_count = 2
@@ -66,7 +76,7 @@ def setup_module(module):
             ports.append(addr[1])
             s.close()
 
-        rt1,_ = dispatch_node("calvinip://%s:%s" % (ip_addr, ports[0]), "http://%s:%s" % (ip_addr, ports[1]))
+        rt1,_ = dispatch_node(["calvinip://%s:%s" % (ip_addr, ports[0])], "http://%s:%s" % (ip_addr, ports[1]))
 
         _log.debug("First runtime started, control http://%s:%s, calvinip://%s:%s" % (ip_addr, ports[1], ip_addr, ports[0]))
 
@@ -102,15 +112,36 @@ def setup_module(module):
                 rt3 = utils.RT(test_peer3["control_uri"])
                 rt3.id = test_peer3_id
                 rt3.uri = test_peer3["uri"]
+    elif bt_master_controluri:
+        rt1 = utils.RT(bt_master_controluri)
+        bt_master_id = utils.get_node_id(rt1)
+        data = utils.get_node(rt1, bt_master_id)
+        if data:
+            rt1.id = bt_master_id
+            rt1.uri = data["uri"]
+            test_peers = utils.get_nodes(rt1)
+            test_peer2_id = test_peers[0]
+            test_peer2 = utils.get_node(rt1, test_peer2_id)
+            if test_peer2:
+                rt2 = utils.RT(test_peer2["control_uri"])
+                rt2.id = test_peer2_id
+                rt2.uri = test_peer2["uri"]
+            test_peer3_id = test_peers[1]
+            if test_peer3_id:
+                test_peer3 = utils.get_node(rt1, test_peer3_id)
+                if test_peer3:
+                    rt3 = utils.RT(test_peer3["control_uri"])
+                    rt3.id = test_peer3_id
+                    rt3.uri = test_peer3["uri"]
     else:
         try:
             ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
         except:
             import socket
             ip_addr = socket.gethostbyname(socket.gethostname())
-        rt1,_ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://localhost:5003")
-        rt2,_ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://localhost:5004")
-        rt3,_ = dispatch_node("calvinip://%s:5002" % (ip_addr,), "http://localhost:5005")
+        rt1,_ = dispatch_node(["calvinip://%s:5000" % (ip_addr,)], "http://localhost:5003")
+        rt2,_ = dispatch_node(["calvinip://%s:5001" % (ip_addr,)], "http://localhost:5004")
+        rt3,_ = dispatch_node(["calvinip://%s:5002" % (ip_addr,)], "http://localhost:5005")
         time.sleep(.4)
         utils.peer_setup(rt1, ["calvinip://%s:5001" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
         utils.peer_setup(rt2, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
@@ -282,6 +313,188 @@ class TestScripts(CalvinTestBase):
         actual = utils.report(self.rt1, snk)
         self.assert_lists_equal(range(1, 20), actual)
 
+        d.destroy()
+
+
+@pytest.mark.essential
+class TestMetering(CalvinTestBase):
+
+    @pytest.mark.slow
+    def testMetering(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+          src : std.CountTimer()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > snk.token
+          """
+
+        r = utils.register_metering(self.rt1)
+        user_id = r['user_id']
+        metering_timeout = r['timeout']
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(0.5)
+        metainfo = utils.get_actorinfo_metering(self.rt1, user_id)
+        data1 = utils.get_timed_metering(self.rt1, user_id)
+        time.sleep(0.5)
+        data2 = utils.get_timed_metering(self.rt1, user_id)
+        snk = d.actor_map['simple:snk']
+        assert snk in metainfo
+        assert data1[snk][0][1] in metainfo[snk]
+        actual = utils.report(self.rt1, (snk))
+        self.assert_lists_equal(range(1, 20), actual)
+        # Verify only new data
+        assert max([data[0] for data in data1[snk]]) < min([data[0] for data in data2[snk]])
+        # Verify about same number of tokens (time diff makes exact match not possible)
+        diff = len(data1[snk]) + len(data2[snk]) - len(actual)
+        assert diff > -3 and diff < 3
+        utils.unregister_metering(self.rt1, user_id)
+        d.destroy()
+
+    @pytest.mark.slow
+    def testMigratingMetering(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+          src : std.CountTimer()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > snk.token
+          """
+
+        r1 = utils.register_metering(self.rt1)
+        user_id = r1['user_id']
+        # Register as same user to keep it simple
+        r2 = utils.register_metering(self.rt2, user_id)
+        # deploy app
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        # migrate sink back and forth
+        time.sleep(0.5)
+        snk = d.actor_map['simple:snk']
+        utils.migrate(self.rt1, snk, self.rt2.id)
+        time.sleep(0.5)
+        utils.migrate(self.rt2, snk, self.rt1.id)
+        time.sleep(0.5)
+        # Get metering
+        metainfo1 = utils.get_actorinfo_metering(self.rt1, user_id)
+        metainfo2 = utils.get_actorinfo_metering(self.rt2, user_id)
+        data1 = utils.get_timed_metering(self.rt1, user_id)
+        data2 = utils.get_timed_metering(self.rt2, user_id)
+        # Check metainfo
+        assert snk in metainfo1
+        assert snk in metainfo2
+        assert data1[snk][0][1] in metainfo1[snk]
+        assert data2[snk][0][1] in metainfo2[snk]
+        # Check that the sink produced something
+        actual = utils.report(self.rt1, (snk))
+        self.assert_lists_equal(range(1, 20), actual)
+        # Verify action times of data2 is in middle of data1
+        limits = (min([data[0] for data in data2[snk]]), max([data[0] for data in data2[snk]]))
+        v = [data[0] for data in data1[snk]]
+        assert len(filter(lambda x: x > limits[0] and x < limits[1], v)) == 0
+        assert len(filter(lambda x: x < limits[0], v)) > 0
+        assert len(filter(lambda x: x > limits[1], v)) > 0
+        # Verify about same number of tokens (time diff makes exact match not possible)
+        diff = len(data1[snk]) + len(data2[snk]) - len(actual)
+        assert diff > -3 and diff < 3
+        utils.unregister_metering(self.rt1, user_id)
+        utils.unregister_metering(self.rt2, user_id)
+        d.destroy()
+
+    @pytest.mark.slow
+    def testAggregatedMigratingMetering(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+          src : std.CountTimer()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > snk.token
+          """
+
+        r1 = utils.register_metering(self.rt1)
+        user_id = r1['user_id']
+        # Register as same user to keep it simple
+        r2 = utils.register_metering(self.rt2, user_id)
+        # deploy app
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        # migrate sink back and forth
+        time.sleep(0.5)
+        snk = d.actor_map['simple:snk']
+        utils.migrate(self.rt1, snk, self.rt2.id)
+        time.sleep(0.5)
+        utils.migrate(self.rt2, snk, self.rt1.id)
+        time.sleep(0.5)
+        # Get metering
+        metainfo1 = utils.get_actorinfo_metering(self.rt1, user_id)
+        data1 = utils.get_timed_metering(self.rt1, user_id)
+        agg2 = utils.get_aggregated_metering(self.rt2, user_id)
+        data2 = utils.get_timed_metering(self.rt2, user_id)
+        agg1 = utils.get_aggregated_metering(self.rt1, user_id)
+        metainfo2 = utils.get_actorinfo_metering(self.rt2, user_id)
+        # Check metainfo
+        assert snk in metainfo1
+        assert snk in metainfo2
+        assert data1[snk][0][1] in metainfo1[snk]
+        assert data2[snk][0][1] in metainfo2[snk]
+        # Check that the sink produced something
+        actual = utils.report(self.rt1, (snk))
+        self.assert_lists_equal(range(1, 20), actual)
+        # Verify about same number of tokens (time diff makes exact match not possible)
+        total_timed = len(data1[snk]) + len(data2[snk])
+        diff = total_timed - len(actual)
+        assert diff > -3 and diff < 3
+        total_agg = sum(agg1['activity'][snk].values()) + sum(agg2['activity'][snk].values())
+        diff = total_agg - len(actual)
+        assert diff > -3 and diff < 3
+        assert sum(agg1['activity'][snk].values()) >= len(data1[snk])
+        assert sum(agg2['activity'][snk].values()) <= len(data2[snk])
+        utils.unregister_metering(self.rt1, user_id)
+        utils.unregister_metering(self.rt2, user_id)
+        d.destroy()
+
+
+    @pytest.mark.slow
+    def testLateAggregatedMigratingMetering(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+          src : std.CountTimer()
+          snk : io.StandardOut(store_tokens=1, quiet=1)
+          src.integer > snk.token
+          """
+
+        # deploy app
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        # migrate sink back and forth
+        time.sleep(0.5)
+        snk = d.actor_map['simple:snk']
+        utils.migrate(self.rt1, snk, self.rt2.id)
+        time.sleep(0.5)
+        utils.migrate(self.rt2, snk, self.rt1.id)
+        time.sleep(0.5)
+        # Metering
+        r1 = utils.register_metering(self.rt1)
+        user_id = r1['user_id']
+        # Register as same user to keep it simple
+        r2 = utils.register_metering(self.rt2, user_id)
+        metainfo1 = utils.get_actorinfo_metering(self.rt1, user_id)
+        agg2 = utils.get_aggregated_metering(self.rt2, user_id)
+        agg1 = utils.get_aggregated_metering(self.rt1, user_id)
+        metainfo2 = utils.get_actorinfo_metering(self.rt2, user_id)
+        # Check metainfo
+        assert snk in metainfo1
+        assert snk in metainfo2
+        # Check that the sink produced something
+        actual = utils.report(self.rt1, (snk))
+        self.assert_lists_equal(range(1, 20), actual)
+        total_agg = sum(agg1['activity'][snk].values()) + sum(agg2['activity'][snk].values())
+        diff = total_agg - len(actual)
+        assert diff > -3 and diff < 3
+        utils.unregister_metering(self.rt1, user_id)
+        utils.unregister_metering(self.rt2, user_id)
         d.destroy()
 
 

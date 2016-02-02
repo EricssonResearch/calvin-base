@@ -40,15 +40,38 @@ Analyze calvin log.
     argparser.add_argument('-l', '--limit', dest='limit', type=int, default=0,
                            help='Limit stack trace print to specified nbr of frames')
 
+    argparser.add_argument('-w', '--width', dest='width', type=int, default=80,
+                           help='Width of node column')
+
+    argparser.add_argument('-c', '--text-width', dest='text_width', type=int, default=None,
+                           help='Width of text in node column')
+
+    argparser.add_argument('-f', '--first', dest='first', type=str, default=None,
+                           help='A node id that should be in first column')
+
+    argparser.add_argument('-x', '--exclude', dest='excludes', action='append', default=[],
+                           help="Exclude logged module, can be repeated")
+
     return argparser.parse_args()
 
 re_pid = re.compile("^[0-9,\-,\,, ,:]*[A-Z]* *([0-9]*)-.*")
 
+
+class MyPrettyPrinter(pprint.PrettyPrinter):
+    def format(self, object, context, maxlevels, level):
+        # Pretty print strings unescaped
+        if isinstance(object, basestring):
+            return (object.decode('string_escape'), True, False)
+        return pprint.PrettyPrinter.format(self, object, context, maxlevels, level)
+
 def main():
+    global WIDTH
     args = parse_arguments()
+    WIDTH = args.width or WIDTH
+    text_width = args.text_width or WIDTH + 20
     print "Analyze", args.files
     files = []
-    for name in args.files:
+    for name in set(args.files):
         files.append(open(name, 'r'))
 
     log = []
@@ -71,7 +94,9 @@ def main():
                         log[-1]['param'] += line
                 continue
             try:
-                logline = json.loads(line.split('[[ANALYZE]]',1)[1])
+                lineparts = line.split('[[ANALYZE]]',1)
+                logline = json.loads(lineparts[1])
+                logline['match_exclude'] = lineparts[0]
             except:
                 # For some reason could not handle it, treat it as a normal other log level line
                 logline = {'func': 'OTHER', 'param': line, 'node_id': None}
@@ -92,11 +117,20 @@ def main():
 
     # Collect all node ids and remove "TESTRUN" string as node id since it is used when logging py.test name
     nodes = list(set([l['node_id'] for l in log] + [l.get('peer_node_id', None)  for l in log]) - set([None, "TESTRUN"]))
+    if args.first in nodes:
+        nodes.remove(args.first)
+        nodes.insert(0, args.first)
     line = ""
     for n in nodes:
         line += n + " "*(WIDTH-35)
     print line
     for l in log:
+        if 'match_exclude' in l:
+            exclude_line = l['match_exclude']
+        else:
+            exclude_line = l['param']
+        if any([exclude_line.find(excl) > -1 for excl in args.excludes]):
+            continue
         if l['node_id'] == "TESTRUN":
             print l['func'] + "%"*(len(nodes)*WIDTH-len(l['func']))
             if 'param' in l and l['param']:
@@ -111,7 +145,7 @@ def main():
             lines = str.splitlines(l['param'].rstrip())
             pre = "<>"
             for line in lines:
-                wrapped_lines = textwrap.wrap(line, width=WIDTH + 20,
+                wrapped_lines = textwrap.wrap(line, width=text_width,
                                               replace_whitespace=False, drop_whitespace=False)
                 for wl in wrapped_lines:
                     print " "*ind + pre + wl
@@ -130,7 +164,7 @@ def main():
                 print (" "*ind + [c['param']['cmd'] for c in log 
                                  if c['func'] == "SEND" and "msg_uuid" in c['param'] and c['param']['msg_uuid'] == id_][0] +
                                  " reply")
-            pp = pprint.pformat(l['param'], indent=1, width=WIDTH)
+            pp = pprint.pformat(l['param'], indent=1, width=text_width)
             for p in pp.split("\n"):
                 print " "*ind + p
         elif l['func']!="RECV":
@@ -142,7 +176,7 @@ def main():
                     print " "*ends + "*" + "="*(ind - ends-1) + "# " + l['func'] + " #"
             else:
                 print " "*ind + "# " + l['func'] + " #"
-            pp = pprint.pformat(l['param'], indent=1, width=WIDTH)
+            pp = MyPrettyPrinter(indent=1, width=WIDTH).pformat(l['param'])
             for p in pp.split("\n"):
                 print " "*ind + p
             if l['stack'] and args.limit >= 0:

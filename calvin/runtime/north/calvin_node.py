@@ -27,6 +27,7 @@ from calvin.runtime.north import appmanager
 from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
 from calvin.runtime.north import calvincontrol
+from calvin.runtime.north import metering
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
@@ -36,7 +37,9 @@ from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities import calvinconfig
 _log = get_logger(__name__)
+_conf = calvinconfig.get()
 
 
 def addr_from_uri(uri):
@@ -48,7 +51,7 @@ def addr_from_uri(uri):
 class Node(object):
 
     """A node of calvin
-       the uri is used as server connection point
+       the uri is a list of server connection points
        the control_uri is the local console
        attributes is a supplied list of external defined attributes that will be used as the key when storing index
        such as name of node
@@ -64,12 +67,12 @@ class Node(object):
             _log.exception("Attributes not correct, uses empty attribute!")
             self.attributes = AttributeResolver(None)
         self.id = calvinuuid.uuid("NODE")
+        self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
         self.control = calvincontrol.get_calvincontrol()
         _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         self.sched = _scheduler(self, self.am, self.monitor)
-        self.control.start(node=self, uri=control_uri)
         self.async_msg_ids = {}
         self._calvinsys = CalvinSys(self)
 
@@ -82,6 +85,7 @@ class Node(object):
         self.proto = CalvinProto(self, self.network)
         self.pm = PortManager(self, self.proto)
         self.app_manager = appmanager.AppManager(self)
+
         # The initialization that requires the main loop operating is deferred to start function
         async.DelayedCall(0, self.start)
 
@@ -123,9 +127,12 @@ class Node(object):
         _log.debug("peersetup(%s)" % (peers))
         peers_copy = peers[:]
         peer_node_ids = {}
-        self.network.join(peers,
-            callback=CalvinCB(self.logging_callback, preamble="peersetup cb") if cb is None else
-                     CalvinCB(self.peersetup_collect_cb, peers=peers_copy, peer_node_ids=peer_node_ids, org_cb=cb))
+        if not cb:
+            callback = CalvinCB(self.logging_callback, preamble="peersetup cb")
+        else:
+            callback = CalvinCB(self.peersetup_collect_cb, peers=peers_copy, peer_node_ids=peer_node_ids, org_cb=cb)
+
+        self.network.join(peers, callback=callback)
 
     def peersetup_collect_cb(self, status, uri, peer_node_id, peer_node_ids, peers, org_cb):
         if uri in peers:
@@ -141,6 +148,7 @@ class Node(object):
                    ('#' * 40, self.id, preamble if preamble else "*", args, kwargs, '#' * 40))
 
     def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None):
+        # TODO requirements should be input to am.new
         actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
                         signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None)
         if deploy_args:
@@ -149,7 +157,8 @@ class Node(object):
                 app_name = app_id
             else:
                 app_name = deploy_args['app_name']
-            self.app_manager.add(app_id, app_name, actor_id)
+            self.app_manager.add(app_id, actor_id,
+                                 deploy_info = deploy_args['deploy_info'] if 'deploy_info' in deploy_args else None)
         return actor_id
 
     def deployment_control(self, app_id, actor_id, deploy_args):
@@ -172,12 +181,21 @@ class Node(object):
 
     def start(self):
         """ Run once when main loop is started """
-        # FIXME hardcoded which transport and encoder plugin we use, should be based on
-        self.network.register(['calvinip'], ['json'])
-        self.network.start_listeners([self.uri])
+        interfaces = _conf.get(None, 'transports')
+        self.network.register(interfaces, ['json'])
+        self.network.start_listeners(self.uri)
         # Start storage after network, proto etc since storage proxy expects them
         self.storage.start()
         self.storage.add_node(self)
+
+        # Start control api
+        proxy_control_uri = _conf.get(None, 'control_proxy')
+        _log.debug("Start control API on %s with uri: %s and proxy: %s" % (self.id, self.control_uri, proxy_control_uri))
+        if proxy_control_uri is not None:
+            self.control.start(node=self, uri=proxy_control_uri, tunnel=True)
+        else:
+            if self.control_uri is not None:
+                self.control.start(node=self, uri=self.control_uri)
 
     def stop(self, callback=None):
         def stopped(*args):

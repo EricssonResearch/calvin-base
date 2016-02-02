@@ -1,0 +1,11 @@
+{
+    "indexed_public" : {
+        "node_name": {
+            "organization" : "com.ericsson"
+        },
+        "address": {
+            "locality" : "outside"
+        }
+    }
+}
+

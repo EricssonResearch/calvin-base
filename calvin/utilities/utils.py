@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ def check_response(response, success=range(200, 207), key=None):
             except:
                 return None
         # When failed raise exception
-        raise Exception("%d" % response.status_code)
+        raise Exception("%d%s" % (response.status_code, ("\n" + response.text) if response.text else ""))
     else:
         # We have a async Future just return it
         response._calvin_key = key
@@ -226,12 +226,20 @@ def migrate(rt, actor_id, dst_id, timeout=TIMEOUT, async=False):
         rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
-def add_requirements(rt, application_id, reqs, timeout=TIMEOUT, async=False):
+def migrate_use_req(rt, actor_id, requirements, extend=False, move=False, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
-    data = {'reqs': reqs}
+    data = {'requirements': requirements, 'extend': extend, 'move': move}
     req = session if async else requests
     r = req.post(
-        rt.control_uri + '/application/' + application_id + "/migrate", data=json.dumps(data), timeout=timeout)
+        rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data), timeout=timeout)
+    return check_response(r)
+
+
+def migrate_app_use_req(rt, application_id, deploy_info=None, move=False, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    data = {'deploy_info': deploy_info, "move": move}
+    req = session if async else requests
+    r = req.post(rt.control_uri + "/application/" + application_id + "/migrate", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
 
@@ -280,11 +288,55 @@ def delete_application(rt, application_id, timeout=TIMEOUT, async=False):
     r = req.delete(rt.control_uri + '/application/' + application_id, timeout=timeout)
     return check_response(r)
 
-def deploy_application(rt, name, script, check=True, timeout=TIMEOUT, async=False):
+def deploy_application(rt, name, script, deploy_info=None, check=True, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
-    data = {"name": name, "script": script, "check": check}
+    data = {"name": name, "script": script, 'deploy_info': deploy_info, "check": check}
     req = session if async else requests
     r = req.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
+    return check_response(r)
+
+
+def deploy_app_info(rt, name, app_info, deploy_info=None, check=True, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    data = {"name": name, "app_info": app_info, 'deploy_info': deploy_info, "check": check}
+    req = session if async else requests
+    r = req.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
+    return check_response(r)
+
+
+def register_metering(rt, user_id=None, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    data = {'user_id': user_id} if user_id else None
+    req = session if async else requests
+    r = req.post(rt.control_uri + '/meter', data=json.dumps(data), timeout=timeout)
+    return check_response(r)
+
+
+def unregister_metering(rt, user_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.delete(rt.control_uri + '/meter/' + user_id, data=json.dumps(None), timeout=timeout)
+    return check_response(r)
+
+
+def get_timed_metering(rt, user_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.get(rt.control_uri + '/meter/' + user_id + '/timed', timeout=timeout)
+    return check_response(r)
+
+
+def get_aggregated_metering(rt, user_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.get(rt.control_uri + '/meter/' + user_id + '/aggregated', timeout=timeout)
+    return check_response(r)
+
+
+def get_actorinfo_metering(rt, user_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.get(rt.control_uri + '/meter/' + user_id + '/metainfo', timeout=timeout)
     return check_response(r)
 
 

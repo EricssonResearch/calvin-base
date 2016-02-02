@@ -26,25 +26,33 @@ class ClassicDelay(Actor):
         token: anything
     """
 
-    @manage(['delay'])
+    @manage(['delay', 'started'])
     def init(self, delay=0.1):
         self.delay = delay
-        self.use('calvinsys.events.timer', shorthand='timer')
         self.timer = None
+        self.started = False
+        self.setup()
 
     def setup(self):
+        self.use('calvinsys.events.timer', shorthand='timer')
+
+    def start(self):
         self.timer = self['timer'].repeat(self.delay)
+        self.started = True
 
     def will_migrate(self):
-        self.timer.cancel()
+        if self.timer:
+            self.timer.cancel()
 
     def did_migrate(self):
         self.setup()
+        if self.started:
+            self.start()
 
     @condition(['token'], ['token'])
-    @guard(lambda self, _: not self.timer)
+    @guard(lambda self, _: not self.started)
     def start_timer(self, token):
-        self.setup()
+        self.start()
         return ActionResult(production=(token, ))
 
     @condition(['token'], ['token'])

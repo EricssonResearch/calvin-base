@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-def req_op(node, cb, actor_id=None, component=None):
+from calvin.utilities import dynops
+
+def req_op(node, actor_id=None, component=None):
     """ current node """
-    cb([node.id])
+    it = dynops.List([node.id])
+    it.final()
+    return it

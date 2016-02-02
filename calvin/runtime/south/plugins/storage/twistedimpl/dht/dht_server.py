@@ -134,7 +134,7 @@ class AutoDHTServer(StorageBase):
         self._ssdps = None
         self._started = False
 
-    def start(self, iface='', network=None, bootstrap=None, cb=None):
+    def start(self, iface='', network=None, bootstrap=None, cb=None, ignore_self=True):
         if bootstrap is None:
             bootstrap = []
 
@@ -147,7 +147,7 @@ class AutoDHTServer(StorageBase):
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = SSDPServiceDiscovery(iface)
+        self._ssdps = SSDPServiceDiscovery(iface, ignore_self=ignore_self)
         dlist += self._ssdps.start()
 
         _log.debug("Register service %s %s:%s" % (network, ip, port))
