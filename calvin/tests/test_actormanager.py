@@ -17,6 +17,7 @@
 import unittest
 import mock
 from calvin.runtime.north.actormanager import ActorManager
+from calvin.runtime.north import metering
 
 
 class DummyNode:
@@ -25,10 +26,11 @@ class DummyNode:
         self.id = id(self)
         self.pm = mock.Mock()
         self.storage = mock.Mock()
+        self.control = mock.Mock()
+        self.metering = metering.set_metering(metering.Metering(self))
 
     def calvinsys(self):
         return None
-
 
 
 class ActorManagerTests(unittest.TestCase):
