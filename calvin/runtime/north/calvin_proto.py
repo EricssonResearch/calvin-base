@@ -17,11 +17,11 @@
 from calvin.utilities import calvinuuid
 from calvin.utilities.utils import enum
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
-import calvin.utilities.calvinresponse as response
-from calvin.runtime.north.calvin_network import CalvinLink
-
 from calvin.utilities import calvinlogger
+import calvin.requests.calvinresponse as response
+
 _log = calvinlogger.get_logger(__name__)
+
 
 class CalvinTunnel(object):
     """CalvinTunnel is a tunnel over the runtime to runtime communication with a peer node"""
@@ -53,7 +53,7 @@ class CalvinTunnel(object):
                 self.tunnels[self.peer_node_id][self.id]=self
             else:
                 self.tunnels[self.peer_node_id] = {self.id: self}
-        # The callbacks recv for incoming message, down for tunnel failed or died, up for tunnel working 
+        # The callbacks recv for incoming message, down for tunnel failed or died, up for tunnel working
         self.recv_handler = None
         self.down_handler = None
         self.up_handler = None
@@ -100,7 +100,7 @@ class CalvinTunnel(object):
             raise Exception("Got none ack on destruction of tunnel!\n%s" % reply)
 
     def send(self, payload):
-        """ Send a payload over the tunnel 
+        """ Send a payload over the tunnel
             payload must be serializable, i.e. only built-in types such as:
             dict, list, tuple, string, numbers, booleans, etc
         """
@@ -127,7 +127,7 @@ class CalvinTunnel(object):
     def close(self, local_only=False):
         """ Removes the tunnel but does not inform
             other end when local_only.
-            
+
             Currently does not support local_only == False
         """
         self.status = CalvinTunnel.STATUS.TERMINATED
@@ -139,7 +139,7 @@ class CalvinTunnel(object):
 class CalvinProto(CalvinCBClass):
     """ CalvinProto class is the interface between runtimes for all runtime
         subsystem that need to interact. It uses the links in network.
-        
+
         Besides handling tunnel setup etc, it mainly formats commands uniformerly.
     """
 
@@ -150,6 +150,7 @@ class CalvinProto(CalvinCBClass):
             # functions that should be called. Either permanent here
             # or using the callback_register method.
             'ACTOR_NEW': [CalvinCB(self.actor_new_handler)],
+            'ACTOR_MIGRATE': [CalvinCB(self.actor_migrate_handler)],
             'APP_DESTROY': [CalvinCB(self.app_destroy_handler)],
             'PORT_CONNECT': [CalvinCB(self.port_connect_handler)],
             'PORT_DISCONNECT': [CalvinCB(self.port_disconnect_handler)],
@@ -202,7 +203,7 @@ class CalvinProto(CalvinCBClass):
     #### ACTORS ####
 
     def actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections):
-        """ Creates a new actor on to_rt_uuid node, but is only intended for migrating actors 
+        """ Creates a new actor on to_rt_uuid node, but is only intended for migrating actors
             callback: called when finished with the peers respons as argument
             actor_type: see actor manager
             state: see actor manager
@@ -228,6 +229,7 @@ class CalvinProto(CalvinCBClass):
 
     def actor_new_handler(self, payload):
         """ Peer request new actor with state and connections """
+        _log.analyze(self.rt_id, "+", payload, tb=True)
         self.node.am.new(payload['state']['actor_type'],
                          None,
                          payload['state']['actor_state'],
@@ -236,6 +238,46 @@ class CalvinProto(CalvinCBClass):
 
     def _actor_new_handler(self, payload, status, **kwargs):
         """ Potentially created actor, reply to requesting node """
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def actor_migrate(self, to_rt_uuid, callback, actor_id, requirements, extend=False, move=False):
+        """ Request actor on to_rt_uuid node to migrate accoring to new deployment requirements
+            callback: called when finished with the status respons as argument
+            actor_id: actor_id to migrate
+            requirements: see app manager
+            extend: if extending current deployment requirements
+            move: if prefers to move from node
+        """
+        if self.node.network.link_request(to_rt_uuid, CalvinCB(self._actor_migrate,
+                                                        to_rt_uuid=to_rt_uuid,
+                                                        callback=callback,
+                                                        actor_id=actor_id,
+                                                        requirements=requirements,
+                                                        extend=extend,
+                                                        move=move)):
+            # Already have link just continue in _actor_new
+                self._actor_migrate(to_rt_uuid, callback, actor_id, requirements,
+                                    extend, move, status=response.CalvinResponse(True))
+
+    def _actor_migrate(self, to_rt_uuid, callback, actor_id, requirements, extend, move, status,
+                       peer_node_id=None, uri=None):
+        """ Got link? continue actor migrate """
+        if status:
+            msg = {'cmd': 'ACTOR_MIGRATE',
+                   'requirements': requirements, 'actor_id': actor_id, 'extend': extend, 'move': move}
+            self.network.links[to_rt_uuid].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def actor_migrate_handler(self, payload):
+        """ Peer request new actor with state and connections """
+        self.node.am.update_requirements(payload['actor_id'], payload['requirements'],
+                                         payload['extend'], payload['move'],
+                                         callback=CalvinCB(self._actor_migrate_handler, payload))
+
+    def _actor_migrate_handler(self, payload, status, **kwargs):
+        """ Potentially migrated actor, reply to requesting node """
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
 
@@ -267,7 +309,7 @@ class CalvinProto(CalvinCBClass):
 
     def app_destroy_handler(self, payload):
         """ Peer request destruction of app and its actors """
-        reply = self.node.app_manager.destroy_request(payload['app_uuid'], 
+        reply = self.node.app_manager.destroy_request(payload['app_uuid'],
                                                       payload['actor_uuids'] if 'actor_uuids' in payload else [])
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
@@ -297,7 +339,7 @@ class CalvinProto(CalvinCBClass):
             tunnel = CalvinTunnel(self.network.links, self.tunnels, None, tunnel_type, policy, rt_id=self.node.id)
             self.network.link_request(to_rt_uuid, CalvinCB(self._tunnel_link_request_finished, tunnel=tunnel, to_rt_uuid=to_rt_uuid, tunnel_type=tunnel_type, policy=policy))
             return tunnel
-        
+
         # Do we have a tunnel already?
         tunnel = self._get_tunnel(to_rt_uuid, tunnel_type = tunnel_type)
         if tunnel != None:
@@ -357,7 +399,7 @@ class CalvinProto(CalvinCBClass):
                     # Our tunnel has highest id, keep our id
                     # update status and call proper callbacks
                     # but send tunnel reply first, to get everything in order
-                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(ok, data={'tunnel_id': payload['tunnel_id']}).encode()}
+                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(ok, data={'tunnel_id': tunnel.id}).encode()}
                     self.network.links[payload['from_rt_uuid']].send(msg)
                     tunnel._setup_ack(response.CalvinResponse(True, data={'tunnel_id': tunnel.id}))
                     _log.analyze(self.rt_id, "+ KEEP ID", payload, peer_node_id=payload['from_rt_uuid'])
@@ -392,7 +434,7 @@ class CalvinProto(CalvinCBClass):
             tunnel = self.tunnels[to_rt_uuid][tunnel_uuid]
         except:
             raise Exception("ERROR_UNKNOWN_TUNNEL")
-            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
+            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", None)
         # It exist, lets request its destruction
         msg = {'cmd': 'TUNNEL_DESTROY', 'tunnel_id': tunnel.id}
         self.network.links[to_rt_uuid].send_with_reply(CalvinCB(tunnel._destroy_ack), msg)
@@ -400,7 +442,7 @@ class CalvinProto(CalvinCBClass):
     def tunnel_destroy_handler(self, payload):
         """ Destroy tunnel (response side) """
         try:
-            self.network.link_check(to_rt_uuid)
+            self.network.link_check(payload['to_rt_uuid'])
         except:
             raise Exception("ERROR_UNKNOWN_RUNTIME")
         try:
@@ -423,10 +465,16 @@ class CalvinProto(CalvinCBClass):
     def tunnel_data_handler(self, payload):
         """ Map received data over tunnel to the correct link and tunnel """
         try:
-            self.tunnels[payload['from_rt_uuid']][payload['tunnel_id']].recv_handler(payload['value'])
+            tunnel = self.tunnels[payload['from_rt_uuid']][payload['tunnel_id']]
         except:
             _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
             raise Exception("ERROR_UNKNOWN_TUNNEL")
+        try:
+            tunnel.recv_handler(payload['value'])
+        except Exception as e:
+            _log.exception("Check error in tunnel recv handler")
+            _log.analyze(self.rt_id, "+ EXCEPTION TUNNEL RECV HANDLER", {'payload': payload, 'exception': str(e)},
+                                                                peer_node_id=payload['from_rt_uuid'], tb=True)
 
     #### PORTS ####
 

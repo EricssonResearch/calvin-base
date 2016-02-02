@@ -57,11 +57,11 @@ class ExplicitStateExample(Actor):
         state['wrapper'] = [self.wrapper.left, self.wrapper.right]
         return state
 
-    def set_state(self, state):
+    def _set_state(self, state):
         l, r = state.pop('wrapper')
         # Create an instance from a serialized representation
         self.wrapper = Wrapper(l, r)
-        super(ExplicitStateExample, self).set_state(state)
+        super(ExplicitStateExample, self)._set_state(state)
 
     @condition(['token'], ['token'])
     def wrap_action(self, input):

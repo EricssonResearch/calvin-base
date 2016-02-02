@@ -1,0 +1,6 @@
+src : testshadow.TheSource()
+sum : std.Sum()
+snk : io.StandardOut()
+
+src.out > sum.integer
+sum.integer > snk.token

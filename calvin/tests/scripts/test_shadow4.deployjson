@@ -1,0 +1,23 @@
+{
+    "requirements": {
+        "button": [
+            {
+              "op": "node_attr_match",
+                "kwargs": {"index": ["address", {"locality": "outside"}]},
+                "type": "+"
+           }],
+            "bell": [
+            {
+                "op": "node_attr_match",
+                "kwargs": {"index": ["address", {"locality": "inside"}]},
+                "type": "+"
+            }],
+            "check": [
+            {
+                "op": "node_attr_match",
+                "kwargs": {"index": ["node_name", {"name": "display"}]},
+                "type": "+"
+            }]
+
+    }
+}

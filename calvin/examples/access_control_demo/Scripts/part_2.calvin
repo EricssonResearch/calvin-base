@@ -1,0 +1,6 @@
+button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+check: std.Identity(dump=true)
+lock : hue.RedGreenLight()
+
+button.state > check.token
+check.token > lock.select

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 from calvin.runtime.north import calvincontrol
+from calvin.runtime.north import metering
 
 _log = get_logger(__name__)
 
@@ -175,7 +176,8 @@ def condition(action_input=[], action_output=[]):
                 raise Exception("%s invalid production %s, expected %s" % (action, str(action_result.production), str(tuple(action_output))))
 
             return action_result
-
+        condition_wrapper.action_input = action_input
+        condition_wrapper.action_output = action_output
         return condition_wrapper
     return wrap
 
@@ -328,11 +330,15 @@ class Actor(object):
         self._type = actor_type
         self.name = name  # optional: human_readable_name
         self.id = actor_id or calvinuuid.uuid("ACTOR")
+        _log.debug("New actor id: %s, supplied actor id %s" % (self.id, actor_id))
         self._deployment_requirements = []
-        self._managed = set(('id', 'name', '_deployment_requirements'))
+        self._signature = None
+        self._component_members = set([self.id])  # We are only part of component if this is extended
+        self._managed = set(('id', 'name', '_deployment_requirements', '_signature'))
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
+        self.metering = metering.get_metering()
         self._migrating_to = None  # During migration while on the previous node set to the next node id
 
         self.inports = {p: actorport.InPort(p, self) for p in self.inport_names}
@@ -346,6 +352,7 @@ class Actor(object):
                              allow_invalid_transitions=allow_invalid_transitions,
                              disable_transition_checks=disable_transition_checks,
                              disable_state_checks=disable_state_checks)
+        self.metering.add_actor_info(self)
 
     @verify_status([STATUS.LOADED])
     def setup_complete(self):
@@ -480,9 +487,10 @@ class Actor(object):
                 # hence when fired start from the beginning
                 if action_result.did_fire:
                     # FIXME: Make this a hook for the runtime too use, don't
-                    #        import and use calvin_control in actor
-                    self.control.log_firing(
-                        self.name,
+                    #        import and use calvin_control or metering in actor
+                    self.metering.fired(self.id, action_method.__name__)
+                    self.control.log_actor_firing(
+                        self.id,
                         action_method.__name__,
                         action_result.tokens_produced,
                         action_result.tokens_consumed,
@@ -522,6 +530,7 @@ class Actor(object):
                             for port in self.inports}
         state['outports'] = {
             port: self.outports[port]._state() for port in self.outports}
+        state['_component_members'] = list(self._component_members)
 
         # Managed state handling
         for key in self._managed:
@@ -534,11 +543,15 @@ class Actor(object):
         return state
 
     @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING])
-    def set_state(self, state):
+    def _set_state(self, state):
         # Managed state handling
-        self._managed = set(state['_managed'])
 
-        for key in self._managed:
+        # Update since if previously a shadow actor the init has been called first
+        # which potentially have altered the managed attributes set compared
+        # with the recorded state
+        self._managed.update(set(state['_managed']))
+
+        for key in state['_managed']:
             if key not in self.__dict__:
                 self.__dict__[key] = state.pop(key)
             else:
@@ -550,9 +563,12 @@ class Actor(object):
 
         # Manual state handling
         for port in state['inports']:
-            self.inports[port]._set_state(state['inports'][port])
+            # Uses setdefault to support shadow actor
+            self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
         for port in state['outports']:
-            self.outports[port]._set_state(state['outports'][port])
+            # Uses setdefault to support shadow actor
+            self.outports.setdefault(port, actorport.OutPort(port, self))._set_state(state['outports'][port])
+        self._component_members= set(state['_component_members'])
 
     # TODO verify status should only allow reading connections when and after being fully connected (enabled)
     @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING])
@@ -577,7 +593,7 @@ class Actor(object):
         return self.state()
 
     def deserialize(self, data):
-        self.set_state(data)
+        self._set_state(data)
 
     def exception_handler(self, action, args, context):
         """Defult handler when encountering ExceptionTokens"""
@@ -588,16 +604,38 @@ class Actor(object):
     def events(self):
         return []
 
-    def deployment_add_requirements(self, deploy_reqs, component=None):
-        self._deployment_requirements.extend([dict(r, component=component) for r in deploy_reqs])
+    def component_add(self, actor_ids):
+        if not isinstance(actor_ids, (set, list, tuple)):
+            actor_ids = [actor_ids]
+        self._component_members.update(actor_ids)
 
-    def get_deployment_requirements(self):
+    def component_remove(self, actor_ids):
+        if not isinstance(actor_ids, (set, list, tuple)):
+            actor_ids = [actor_ids]
+        self._component_members -= set(actor_ids)
+        
+    def part_of_component(self):
+        return len(self._component_members - set([self.id]))>0
+
+    def component_members(self):
+        return self._component_members
+
+    def requirements_add(self, deploy_reqs, extend=False):
+        if extend:
+            self._deployment_requirements.extend(deploy_reqs)
+        else:
+            self._deployment_requirements = deploy_reqs
+
+    def requirements_get(self):
         return self._deployment_requirements + (
                 [{'op': 'actor_reqs_match',
                   'kwargs': {'requires': self.requires},
-                  'type': '+',
-                  'component': self._deployment_requirements[0]['component'] if self._deployment_requirements else None}]
+                  'type': '+'}]
                 if hasattr(self, 'requires') else [])
+
+    def signature_set(self, signature):
+        if self._signature is None:
+            self._signature = signature
 
 class ShadowActor(Actor):
     """A shadow actor try to behave as another actor but don't have any implementation"""
@@ -628,9 +666,13 @@ class ShadowActor(Actor):
     def enabled(self):
         return False
 
-    def get_deployment_requirements(self):
-        return self._deployment_requirements + [{'op': 'shadow_actor_reqs_match',
+    def requirements_get(self):
+        # If missing signature we can't add requirement for finding actor's requires.
+        if self._signature:
+            return self._deployment_requirements + [{'op': 'shadow_actor_reqs_match',
                                                  'kwargs': {'signature': self._signature,
                                                             'shadow_params': self._shadow_args.keys()},
-                                                 'type': '+',
-                                                 'component': None}]
+                                                 'type': '+'}]
+        else:
+            _log.error("Shadow actor %s - %s miss signature" % (self.name, self.id))
+            return self._deployment_requirements

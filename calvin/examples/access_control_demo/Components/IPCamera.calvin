@@ -1,0 +1,20 @@
+component IPCamera() trigger -> image {
+  /* Actors */
+  const_url : std.Constantify(constant="http://192.168.0.137/axis-cgi/jpg/image.cgi")
+  client : net.HTTPGet()
+  header : std.Terminator()
+  status : io.Print()
+  auth   : net.BasicAuthHeader()
+
+  {"username": "root", "password": "pass"} > auth.credential
+  .trigger > const_url.in
+  const_url.out > client.URL
+  auth.header > client.header
+  {} > client.params
+
+  client.status > status.token
+  client.data > .image
+  client.header > header.void
+}
+
+
