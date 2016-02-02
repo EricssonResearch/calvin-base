@@ -16,6 +16,7 @@
 
 from calvin.actorstore.store import ActorStore
 from calvin.utilities import dynops
+from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.utilities.calvinresponse as response
@@ -197,6 +198,9 @@ class ActorManager(object):
                 callback(status=response.CalvinResponse(response.BAD_REQUEST))
             return
         actor = self.actors[actor_id]
+        actor._collect_placement_counter = 0
+        actor._collect_placement_last_value = 0
+        actor._collect_placement_cb = None
         actor.requirements_add(requirements, extend)
         node_iter = self.node.app_manager.actor_requirements(None, actor_id)
         possible_placements = set([])
@@ -209,8 +213,12 @@ class ActorManager(object):
                                  move=move, cb=callback, done=done)
         _log.analyze(self.node.id, "+ END", {'actor_id': actor_id, 'node_iter': str(node_iter)})
 
-    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False, cb=None, counter=0):
+    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False, cb=None):
         _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
+        actor = self.actors[actor_id]
+        if actor._collect_placement_cb:
+            actor._collect_placement_cb.cancel()
+            actor._collect_placement_cb = None
         if done[0]:
             return
         try:
@@ -219,10 +227,17 @@ class ActorManager(object):
                 node_id = node_iter.next()
                 possible_placements.add(node_id)
         except dynops.PauseIteration:
-            _log.analyze(self.node.id, "+ PAUSED", {'counter': counter})
-            if counter < 3:
-                self._update_requirements_placements(node_iter, actor_id, possible_placements, done=done,
-                                                     move=move, cb=cb, counter=counter+1)
+            _log.analyze(self.node.id, "+ PAUSED",
+                    {'counter': actor._collect_placement_counter,
+                     'last_value': actor._collect_placement_last_value,
+                     'diff': actor._collect_placement_counter - actor._collect_placement_last_value})
+            # FIXME the dynops should be self triggering, but is not...
+            # This is a temporary fix by keep trying
+            delay = 0.0 if actor._collect_placement_counter > actor._collect_placement_last_value + 100 else 0.2
+            actor._collect_placement_counter += 1
+            actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements, 
+                                                    node_iter, actor_id, possible_placements, done=done,
+                                                     move=move, cb=cb)
             return
         except StopIteration:
             # all possible actor placements derived

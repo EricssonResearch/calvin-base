@@ -43,7 +43,7 @@ class Application(object):
         self.node_info = {}
         self.components = {}
         self.deploy_info = deploy_info
-        self._collect_placement = None
+        self._collect_placement_cb = None
 
     def add_actor(self, actor_id):
         # Save actor_id and mapping to name while the actor is still on this node
@@ -288,7 +288,7 @@ class AppManager(object):
 
     def collect_placement(self, it, app):
         _log.analyze(self._node.id, "+ BEGIN", {}, tb=True)
-        if app._collect_placement:
+        if app._collect_placement_cb:
             app._collect_placement_cb.cancel()
             app._collect_placement_cb = None
         try:
