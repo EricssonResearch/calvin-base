@@ -40,6 +40,11 @@ CONNECT = '/connect'
 DISCONNECT = '/disconnect'
 INDEX_PATH = '/index/{}'
 STORAGE_PATH = '/storage/{}'
+METER = '/meter'
+METER_PATH = '/meter/{}'
+METER_PATH_TIMED = '/meter/{}/timed'
+METER_PATH_AGGREGATED = '/meter/{}/aggregated'
+METER_PATH_METAINFO = '/meter/{}/metainfo'
 
 
 class RequestHandler(object):
@@ -182,7 +187,6 @@ class RequestHandler(object):
         return self.check_response(r)
 
     def add_requirements(self, rt, application_id, reqs, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
         data = {'reqs': reqs}
         path = APPLICATION_PATH.format(application_id)
         r = self._post(rt, timeout, async, path, data)
@@ -228,41 +232,29 @@ class RequestHandler(object):
         return self.check_response(r)
 
     def deploy_app_info(self, rt, name, app_info, deploy_info=None, check=True, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
         data = {"name": name, "app_info": app_info, 'deploy_info': deploy_info, "check": check}
-        req = session if async else requests
-        r = req.post(rt.control_uri + "/deploy", data=json.dumps(data), timeout=timeout)
+        r = self._post(rt, timeout, async, DEPLOY, data=data)
         return self.check_response(r)
 
     def register_metering(self, rt, user_id=None, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
         data = {'user_id': user_id} if user_id else None
-        req = session if async else requests
-        r = req.post(rt.control_uri + '/meter', data=json.dumps(data), timeout=timeout)
+        r = self._post(rt, timeout, async, METER, data=data)
         return self.check_response(r)
 
     def unregister_metering(self, rt, user_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.delete(rt.control_uri + '/meter/' + user_id, data=json.dumps(None), timeout=timeout)
+        r = self._delete(rt, timeout, async, METER_PATH.format(user_id))
         return self.check_response(r)
 
     def get_timed_metering(self, rt, user_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/meter/' + user_id + '/timed', timeout=timeout)
+        r = self._get(rt, timeout, async, METER_PATH_TIMED.format(user_id))
         return self.check_response(r)
 
     def get_aggregated_metering(self, rt, user_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/meter/' + user_id + '/aggregated', timeout=timeout)
+        r = self._get(rt, timeout, async, METER_PATH_AGGREGATED.format(user_id))
         return self.check_response(r)
 
     def get_actorinfo_metering(self, rt, user_id, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
-        req = session if async else requests
-        r = req.get(rt.control_uri + '/meter/' + user_id + '/metainfo', timeout=timeout)
+        r = self._get(rt, timeout, async, METER_PATH_METAINFO.format(user_id))
         return self.check_response(r)
 
     def add_index(self, rt, index, value, timeout=DEFAULT_TIMEOUT, async=False):
@@ -286,7 +278,6 @@ class RequestHandler(object):
         return self.check_response(r)
 
     def set_storage(self, rt, key, value, timeout=DEFAULT_TIMEOUT, async=False):
-        rt = get_runtime(rt)
         data = {'value': value}
         path = STORAGE_PATH.format(key)
         r = self._post(rt, timeout, async, path, data)
