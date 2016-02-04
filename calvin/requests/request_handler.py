@@ -1,8 +1,11 @@
 
 import json
 import requests
+import inspect
 
+from functools import partial
 from requests import Response
+
 try:
     from requests_futures.sessions import FuturesSession
     session = FuturesSession(max_workers=10)
@@ -307,3 +310,10 @@ class RequestHandler(object):
                 exceptions.append(e)
         if exceptions:
             raise Exception(max(exceptions))
+
+
+# Generate async_* versions of all functions in RequestHandler with async argument set to True
+for func_name, func in inspect.getmembers(RequestHandler, predicate=inspect.ismethod):
+    if hasattr(func, '__call__') and ((hasattr(func, '__code__') and 'async' in func.__code__.co_varnames)
+                                    or func.__name__ == 'peer_setup'):
+        setattr(RequestHandler, 'async_' + func_name, partial(func, async=True))
