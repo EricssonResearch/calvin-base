@@ -50,17 +50,3 @@ def uniq_list(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
-
-
-# Generate async_* versions of all functions with async argument set to True
-funcs = {}
-g = None
-f = None
-
-for g, f in globals().iteritems():
-    if hasattr(f, '__call__') and ((hasattr(f, '__code__') and 'async' in f.__code__.co_varnames) or f.__name__ == 'peer_setup'):
-        funcs['async_' + g] = partial(f, async=True)
-globals().update(funcs)
-del funcs
-del g
-del f
