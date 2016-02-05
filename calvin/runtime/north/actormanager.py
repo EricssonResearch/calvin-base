@@ -76,7 +76,7 @@ class ActorManager(object):
             # Convert prev_connections to connection_list format
             connection_list = self._prev_connections_to_connection_list(prev_connections)
 
-        self.node.control.log_actor_new(a.id, a.name, actor_type)
+        self.node.control.log_actor_new(a.id, a.name, actor_type, isinstance(a, ShadowActor))
 
         if connection_list:
             # Migrated actor
