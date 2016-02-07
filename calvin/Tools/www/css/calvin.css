@@ -88,3 +88,7 @@ table tr.active {background: #ccc;}
 div.ui-widget-header {
   background: #7FB5DA;
 }
+
+.modal {
+    position: absolute;
+}
