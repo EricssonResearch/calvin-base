@@ -1,0 +1,90 @@
+body { font: 12px Arial;}
+
+#applicationData {
+    float:left;
+    resize: both;
+    overflow: auto;
+}
+
+#applicationGraph {
+    float:left;
+    resize: both;
+    overflow: auto;
+}
+
+.spinner {
+    position: fixed;
+    top: 40%;
+    left: 40%;
+}
+
+/*----- Table selection -----*/
+table tr.active {background: #ccc;}
+
+/*----- Tabs -----*/
+.tabs {
+    float: left;
+    width:100%;
+    height: 50%;
+    clear: both;
+}
+
+    /*----- Tab Links -----*/
+    /* Clearfix */
+    .tab-links:after {
+        display:block;
+        clear:both;
+        content:'';
+    }
+
+    .tab-links li {
+        margin:0px 5px;
+        float:left;
+        list-style:none;
+    }
+
+        .tab-links a {
+            padding:9px 15px;
+            display:inline-block;
+            border-radius:3px 3px 0px 0px;
+            background:#7FB5DA;
+            color:#4c4c4c;
+            transition:all linear 0.15s;
+        }
+
+        .tab-links a:hover {
+            background:#a7cce5;
+            text-decoration:none;
+        }
+
+    li.active a, li.active a:hover {
+        background:#fff;
+        color:#4c4c4c;
+    }
+
+    /*----- Content of Tabs -----*/
+    .tab-content {
+        padding:15px;
+        border-radius:3px;
+        background:#fff;
+        width:100%;
+        height: 100%;
+    }
+
+        .tab {
+            display:none;
+        }
+
+        .tab.active {
+            display:block;
+        }
+
+#logData {
+    width:100%;
+    height: 50%;
+    clear: both;
+}
+
+div.ui-widget-header {
+  background: #7FB5DA;
+}
