@@ -189,7 +189,7 @@ class CalvinConfig(object):
                 conf = json.loads(f.read())
                 self._expand_actor_paths(conf, path)
         except Exception as e:
-            _log.info("Could not read config at '{}'".format(confpath))
+            _log.info("Could not read config at '{}', {}".format(confpath, e))
             conf = None
         return conf
 

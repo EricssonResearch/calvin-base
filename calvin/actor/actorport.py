@@ -16,7 +16,7 @@
 
 from calvin.utilities import calvinuuid
 from calvin.runtime.north import fifo
-from calvin.runtime.south import endpoint
+from calvin.runtime.south.endpoint import Endpoint, Peer
 from calvin.utilities.calvinlogger import get_logger
 import copy
 
@@ -79,7 +79,7 @@ class InPort(Port):
     def __init__(self, name, owner):
         super(InPort, self).__init__(name, owner)
         self.fifo.add_reader(self.id)
-        self.endpoint = endpoint.Endpoint(self)
+        self.endpoint = Endpoint(self)
 
     def __str__(self):
         s = super(InPort, self).__str__()
@@ -89,11 +89,11 @@ class InPort(Port):
         return self.endpoint.is_connected()
 
     def is_connected_to(self, peer_id):
-        return self.endpoint.is_connected() and self.endpoint.get_peer()[1]==peer_id
+        return self.endpoint.is_connected() and self.endpoint.get_peer().port_id == peer_id
 
     def attach_endpoint(self, endpoint_):
         old_endpoint = self.endpoint
-        if type(old_endpoint) is not endpoint.Endpoint:
+        if type(old_endpoint) is not Endpoint:
             self.detach_endpoint(old_endpoint)
         self.endpoint = endpoint_
         self.owner.did_connect(self)
@@ -104,12 +104,12 @@ class InPort(Port):
             _log.warning("Inport: No such endpoint")
             return
         self.owner.did_disconnect(self)
-        self.endpoint = endpoint.Endpoint(self, former_peer_id=endpoint_.get_peer()[1])
+        self.endpoint = Endpoint(self, former_peer_id=endpoint_.get_peer().port_id)
 
     def disconnect(self):
         self.owner.did_disconnect(self)
         endpoints = [self.endpoint]
-        self.endpoint = endpoint.Endpoint(self, former_peer_id=self.endpoint.get_peer()[1])
+        self.endpoint = Endpoint(self, former_peer_id=self.endpoint.get_peer().port_id)
         return endpoints
 
     def read_token(self):
@@ -173,7 +173,7 @@ class OutPort(Port):
 
     def is_connected_to(self, peer_id):
         for ep in self.endpoints:
-            if ep.get_peer()[1] == peer_id:
+            if ep.get_peer().port_id == peer_id:
                 return True
         return False
 
@@ -207,8 +207,7 @@ class OutPort(Port):
         # When local no effect since already equal
         # When tunneled transport tokens after last continuous acked token will be resent later, receiver will just ack them again if rereceived
         for e in endpoints:
-            peer_node_id, peer_id = e.get_peer()
-            self.fifo.commit_reads(peer_id, False)
+            self.fifo.commit_reads(e.get_peer().port_id, False)
         return endpoints
 
     def write_token(self, data):
@@ -230,10 +229,11 @@ class OutPort(Port):
         peers = []
         for ep in self.endpoints:
             peers.append(ep.get_peer())
+        peers = [peer for peer in peers]
         if len(peers) < len(self.fifo.readers):
             all = copy.copy(self.fifo.readers)
-            all -= set([p[1] for p in peers])
-            peers.extend([(None, p) for p in all])
+            all -= set([p.port_id for p in peers])
+            peers.extend([Peer(None, port_id) for port_id in all])
         return peers
 
 

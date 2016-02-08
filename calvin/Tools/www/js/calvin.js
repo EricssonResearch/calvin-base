@@ -879,13 +879,25 @@ function showActor()
                 selectNode.options.add(optionPeer);
             }
         }
+        var div = document.createElement('div');
         var btnMigrate = document.createElement('input');
         btnMigrate.type = 'button';
         btnMigrate.className = "btn btn-primary btn-xs";
         btnMigrate.id = actor.id;
         btnMigrate.value = 'Migrate';
         btnMigrate.setAttribute("onclick", "migrate(this.id)");
-        AddTableItem(tableRef, selectNode, btnMigrate);
+
+        var btnReplicate = document.createElement('input');
+        btnReplicate.type = 'button';
+        btnReplicate.style = "margin-left: 5px;";
+        btnReplicate.className = "btn btn-primary btn-xs";
+        btnReplicate.id = actor.id;
+        btnReplicate.value = 'Replicate';
+        btnReplicate.setAttribute("onclick", "replicate(this.id)");
+
+        div.appendChild(btnMigrate);
+        div.appendChild(btnReplicate);
+        AddTableItem(tableRef, selectNode, div);
 
         // Add ports
         var portSelector = document.getElementById("portSelector");
@@ -983,6 +995,52 @@ function migrate(actor_id)
         }
     }
 }
+
+// Replicate actor with "actor_id" to selected runtime in combobox in actorsTable
+function replicate(actor_id)
+{
+    var combo = document.getElementById('selectRuntime');
+    var peer_control_uri = combo.options[combo.selectedIndex].text;
+    var index;
+    var peer_id = combo.options[combo.selectedIndex].id;
+    var actor = findActor(actor_id);
+    if (actor) {
+        var node = findRuntime(actor.peer_id);
+        if (node) {
+            var url = node.control_uri + '/actor/' + actor.id + '/replicate';
+            var data = JSON.stringify({'peer_node_id': peer_id});
+            console.log("replicate - url: " + url + " data: " + data);
+            $.ajax({
+                timeout: 5000,
+                beforeSend: function() {
+                    startSpin();
+                },
+                complete: function() {
+                    stopSpin();
+                },
+                url: url,
+                type: 'POST',
+                data: data,
+                success: function(data) {
+                    if (data) {
+                        var selectedIndex = document.getElementById("applicationSelector").selectedIndex;
+                        var selectOptions = document.getElementById("applicationSelector").options;
+                        var applicationID = selectOptions[selectedIndex].id;
+                        var application = findApplication(applicationID);
+                        application.actors.push(data.actor_id);
+                        setTimeout(showApplication, 1000);
+                    }
+                },
+                error: function() {
+                    console.log("Failed to replicate");
+                }
+            });
+        } else {
+            console.log("replicate - No node with id: " + actor.peer_id);
+        }
+    }
+}
+
 
 // Destroy application with "application_id"
 function destroyApplication(application_id)

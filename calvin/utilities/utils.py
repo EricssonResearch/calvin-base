@@ -226,6 +226,16 @@ def migrate(rt, actor_id, dst_id, timeout=TIMEOUT, async=False):
         rt.control_uri + '/actor/' + actor_id + "/migrate", data=json.dumps(data), timeout=timeout)
     return check_response(r)
 
+
+def replicate(rt, actor_id, dst_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    data = {'peer_node_id': dst_id}
+    req = session if async else requests
+    r = req.post(
+        rt.control_uri + '/actor/' + actor_id + "/replicate", data=json.dumps(data), timeout=timeout)
+    return check_response(r, key='actor_id')
+
+
 def migrate_use_req(rt, actor_id, requirements, extend=False, move=False, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
     data = {'requirements': requirements, 'extend': extend, 'move': move}
@@ -287,6 +297,7 @@ def delete_application(rt, application_id, timeout=TIMEOUT, async=False):
     req = session if async else requests
     r = req.delete(rt.control_uri + '/application/' + application_id, timeout=timeout)
     return check_response(r)
+
 
 def deploy_application(rt, name, script, deploy_info=None, check=True, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
@@ -381,7 +392,7 @@ g = None
 f = None
 from functools import partial
 for g, f in globals().iteritems():
-    if hasattr(f, '__call__') and ((hasattr(f, '__code__') and 'async' in f.__code__.co_varnames) 
+    if hasattr(f, '__call__') and ((hasattr(f, '__code__') and 'async' in f.__code__.co_varnames)
                                     or f.__name__ == 'peer_setup'):
         funcs['async_'+g] = partial(f, async=True)
 globals().update(funcs)

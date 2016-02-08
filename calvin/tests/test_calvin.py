@@ -16,26 +16,30 @@
 
 import os
 import unittest
-from calvin.Tools import cscompiler as compiler
-from calvin.Tools import deployer
 import time
 import multiprocessing
+import pytest
+
+from calvin.Tools import cscompiler as compiler
+from calvin.Tools import deployer
 from calvin.utilities import calvinconfig
 from calvin.utilities import utils
 from calvin.utilities.nodecontrol import dispatch_node
 from calvin.utilities.attribute_resolver import format_index_string
-import pytest
 from calvin.utilities import calvinlogger
 
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
+
 def actual_tokens(rt, actor_id):
     return utils.report(rt, actor_id)
 
+
 def expected_counter(n):
     return [i for i in range(1, n + 1)]
+
 
 def cumsum(l):
     s = 0
@@ -43,8 +47,10 @@ def cumsum(l):
         s = s + n
         yield s
 
+
 def expected_sum(n):
     return list(cumsum(range(1, n + 1)))
+
 
 def expected_tokens(rt, actor_id, src_actor_type):
     tokens = utils.report(rt, actor_id)
@@ -57,10 +63,12 @@ def expected_tokens(rt, actor_id, src_actor_type):
 
     return None
 
+
 runtime = None
 runtimes = []
 peerlist = []
 kill_peers = True
+
 
 def setup_module(module):
     global runtime
@@ -212,9 +220,10 @@ def teardown_module(module):
         p.terminate()
         time.sleep(0.2)
 
+
 class CalvinTestBase(unittest.TestCase):
 
-    def assertListPrefix(self, expected, actual, allow_empty=False):
+    def assert_list_prefix(self, expected, actual, allow_empty=False):
         assert actual
         if len(expected) > len(actual):
             self.assertListEqual(expected[:len(actual)], actual)
@@ -223,10 +232,22 @@ class CalvinTestBase(unittest.TestCase):
         else :
             self.assertListEqual(expected, actual)
 
+    def assert_list_postfix(self, expected, actual):
+        assert expected
+        assert actual
+        if len(actual) > len(expected):
+            return False
+        if len(actual) == len(expected):
+            return actual == expected
+
+        index = expected.index(actual[0])
+        return self.assertListEqual(expected[index:], actual)
+
     def setUp(self):
         self.runtime = runtime
         self.runtimes = runtimes
         self.peerlist = peerlist
+
 
 @pytest.mark.slow
 @pytest.mark.essential
@@ -267,7 +288,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         expected = expected_tokens(rt, src, 'std.CountTimer')
         actual = actual_tokens(rt, snk)
 
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         utils.delete_actor(rt, src)
         utils.delete_actor(rt, snk)
@@ -290,7 +311,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
 
         expected = expected_tokens(rt, src, 'std.CountTimer')
         actual = actual_tokens(rt, snk)
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         utils.delete_actor(rt, src)
         utils.delete_actor(rt, snk)
@@ -314,7 +335,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
 
         expected = expected_tokens(rt, src, "std.CountTimer")
         actual = actual_tokens(rt, snk)
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         utils.delete_actor(rt, src)
         utils.delete_actor(rt, snk)
@@ -345,7 +366,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
 
         expected = expected_tokens(rt, src, "std.Sum")
         actual = actual_tokens(rt, snk)
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         utils.delete_actor(rt, src)
         utils.delete_actor(rt, sum_)
@@ -369,7 +390,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         expected = expected_tokens(rt, src, 'std.CountTimer')
         actual = actual_tokens(rt, snk)
 
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         self.assertTrue(len(actual) > 0)
 
         utils.delete_actor(rt, src)
@@ -403,7 +424,7 @@ class TestRemoteConnection(CalvinTestBase):
         expected = expected_tokens(rt, src, 'std.Sum')
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         utils.delete_actor(rt, snk)
         utils.delete_actor(peer, sum_)
@@ -439,7 +460,7 @@ class TestRemoteConnection(CalvinTestBase):
         expected = list(_d())
         actual = actual_tokens(rt, snk1)
         assert(len(actual) > 1)
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         utils.delete_actor(rt, snk1)
         utils.delete_actor(peer, alt)
@@ -478,18 +499,19 @@ class TestRemoteConnection(CalvinTestBase):
         expected = list(_d())
         actual = actual_tokens(rt, snk1)
         assert(len(actual) > 1)
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         expected = range(1, 100)
         actual = actual_tokens(peer, snk2)
         assert(len(actual) > 1)
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         utils.delete_actor(rt, snk1)
         utils.delete_actor(peer, snk2)
         utils.delete_actor(peer, alt)
         utils.delete_actor(rt, src1)
         utils.delete_actor(rt, src2)
+
 
 @pytest.mark.essential
 @pytest.mark.slow
@@ -519,7 +541,7 @@ class TestActorMigration(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         utils.delete_actor(rt, snk)
         utils.delete_actor(peer, sum_)
         utils.delete_actor(peer, src)
@@ -548,7 +570,7 @@ class TestActorMigration(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         utils.delete_actor(rt, snk)
         utils.delete_actor(peer, sum_)
         utils.delete_actor(rt, src)
@@ -584,7 +606,7 @@ class TestActorMigration(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         utils.delete_actor(rt, snk)
         utils.delete_actor(peer, sum_)
         utils.delete_actor(rt, src)
@@ -613,7 +635,7 @@ class TestActorMigration(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         utils.delete_actor(rt, snk)
         utils.delete_actor(rt, sum_)
         utils.delete_actor(rt, src)
@@ -649,7 +671,7 @@ class TestActorMigration(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         utils.delete_actor(rt, snk)
         utils.delete_actor(peer, sum_)
         utils.delete_actor(rt, src)
@@ -678,11 +700,10 @@ class TestActorMigration(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         utils.delete_actor(rt, snk)
         utils.delete_actor(peer, sum_)
         utils.delete_actor(rt, src)
-
 
     def testInOutPortRemoteToRemoteMigration(self):
         """Testing out- and inport remote to remote migration"""
@@ -712,7 +733,7 @@ class TestActorMigration(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         utils.delete_actor(rt, snk)
         utils.delete_actor(peer1, sum_)
         utils.delete_actor(rt, src)
@@ -743,10 +764,187 @@ class TestActorMigration(CalvinTestBase):
         expected = [u'((( 1 )))', u'((( 2 )))', u'((( 3 )))', u'((( 4 )))', u'((( 5 )))', u'((( 6 )))', u'((( 7 )))', u'((( 8 )))']
         assert(len(actual) > 1)
         assert(len(actual) > len(actual_1))
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
         utils.delete_actor(peer0, snk)
         utils.delete_actor(peer0, wrapper)
         utils.delete_actor(rt, src)
+
+
+@pytest.mark.essential
+@pytest.mark.slow
+class TestActorReplication(CalvinTestBase):
+
+    def testReplicationGetsNewName(self):
+        """Testing outport remote to local migration"""
+        rt = self.runtime
+        peer = self.runtimes[0]
+
+        snk = utils.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=123, quiet=True)
+        src = utils.new_actor(rt, 'std.CountTimer', 'src')
+
+        utils.connect(rt, snk, 'token', rt.id, src, 'integer')
+        time.sleep(0.27)
+
+        snk_replica = utils.replicate(rt, snk, peer.id)
+        time.sleep(0.27)
+
+        original = utils.get_actor(rt, snk)
+        replica = utils.get_actor(peer, snk_replica)
+
+        assert original['name'] != replica['name']
+
+        utils.delete_actor(rt, src)
+        utils.delete_actor(rt, snk)
+        utils.delete_actor(peer, snk_replica)
+
+    def testLocalToRemoteReplication(self):
+        rt = self.runtime
+        peer = self.runtimes[0]
+
+        script = """
+            src : std.CountTimer()
+            snk : io.StandardOut(store_tokens=1)
+            src.integer > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(rt, app_info)
+        app_id = d.deploy()
+
+        time.sleep(0.2)
+
+        snk = d.actor_map['simple:snk']
+        src = d.actor_map['simple:src']
+        replica = utils.replicate(rt, snk, peer.id)
+
+        time.sleep(0.2)
+
+        app = utils.get_application(rt, app_id)
+        assert replica in app['actors']
+        assert replica in app['actors_name_map']
+
+        app = utils.get_application(peer, app_id)
+        assert replica in app['actors']
+        assert replica in app['actors_name_map']
+
+        expected = expected_tokens(rt, src, 'std.CountTimer')
+        actual_orig = actual_tokens(rt, snk)
+        actual_replica = actual_tokens(peer, replica)
+
+        assert(len(actual_orig) > 1)
+        self.assert_list_prefix(expected, actual_orig)
+        self.assert_list_prefix(expected, actual_replica)
+
+        d.destroy()
+
+    def testLocalToLocalReplication(self):
+        rt = self.runtime
+
+        script = """
+            src : std.CountTimer()
+            snk : io.StandardOut(store_tokens=1)
+            src.integer > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(rt, app_info)
+        app_id = d.deploy()
+
+        time.sleep(0.2)
+
+        snk = d.actor_map['simple:snk']
+        src = d.actor_map['simple:src']
+        replica = utils.replicate(rt, snk, rt.id)
+
+        time.sleep(0.2)
+
+        app = utils.get_application(rt, app_id)
+        assert replica in app['actors']
+        assert replica in app['actors_name_map']
+
+        expected = expected_tokens(rt, src, 'std.CountTimer')
+        actual_orig = actual_tokens(rt, snk)
+        actual_replica = actual_tokens(rt, replica)
+
+        assert(len(actual_orig) > 1)
+        self.assert_list_prefix(expected, actual_orig)
+        self.assert_list_prefix(expected, actual_replica)
+
+        d.destroy()
+
+    def testRemoteToRemoteReplication(self):
+        rt = self.runtime
+        peer = self.runtimes[0]
+
+        script = """
+            src : std.CountTimer()
+            snk : io.StandardOut(store_tokens=1)
+            src.integer > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(rt, app_info)
+        app_id = d.deploy()
+
+        time.sleep(0.2)
+
+        snk = d.actor_map['simple:snk']
+        src = d.actor_map['simple:src']
+        utils.migrate(rt, snk, peer.id)
+        time.sleep(0.2)
+        replica = utils.replicate(peer, snk, peer.id)
+        time.sleep(0.2)
+
+        app = utils.get_application(rt, app_id)
+        assert replica in app['actors']
+        assert replica in app['actors_name_map']
+
+        expected = expected_tokens(rt, src, 'std.CountTimer')
+        actual_orig = actual_tokens(peer, snk)
+        actual_replica = actual_tokens(peer, replica)
+
+        assert(len(actual_orig) > 1)
+        self.assert_list_prefix(expected, actual_orig)
+        self.assert_list_prefix(expected, actual_replica)
+
+        d.destroy()
+
+    def testRemoteToLocalReplication(self):
+        rt = self.runtime
+        peer = self.runtimes[0]
+
+        script = """
+            src : std.CountTimer()
+            snk : io.StandardOut(store_tokens=1)
+            src.integer > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(rt, app_info)
+        app_id = d.deploy()
+
+        time.sleep(0.2)
+
+        snk = d.actor_map['simple:snk']
+        src = d.actor_map['simple:src']
+        utils.migrate(rt, snk, peer.id)
+        time.sleep(0.2)
+        replica = utils.replicate(peer, snk, rt.id)
+        time.sleep(0.2)
+
+        app = utils.get_application(rt, app_id)
+        assert replica in app['actors']
+        assert replica in app['actors_name_map']
+
+        app = utils.get_application(peer, app_id)
+        assert replica in app['actors']
+        assert replica in app['actors_name_map']
+
+        expected = expected_tokens(rt, src, 'std.CountTimer')
+        actual_orig = actual_tokens(peer, snk)
+        actual_replica = actual_tokens(rt, replica)
+
+        assert(len(actual_orig) > 1)
+        self.assert_list_prefix(expected, actual_orig)
+        self.assert_list_prefix(expected, actual_replica)
+
+        d.destroy()
 
 
 @pytest.mark.essential
@@ -773,7 +971,7 @@ class TestCalvinScript(CalvinTestBase):
         actual = actual_tokens(rt, snk)
         expected = expected_tokens(rt, src, 'std.CountTimer')
 
-        self.assertListPrefix(expected, actual)
+        self.assert_list_prefix(expected, actual)
 
         d.destroy()
 

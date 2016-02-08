@@ -41,8 +41,8 @@ class ActorManagerTests(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def _new_actor(self, a_type, a_args, **kwargs):
-        a_id = self.am.new(a_type, a_args, **kwargs)
+    def _new_actor(self, a_type, a_args, app_id=None, **kwargs):
+        a_id = self.am.new(a_type, a_args, app_id=app_id, **kwargs)
         a = self.am.actors.get(a_id, None)
         self.assertTrue(a)
         return a, a_id
@@ -65,19 +65,18 @@ class ActorManagerTests(unittest.TestCase):
         self.assertEqual(s['id'], a_id)
         self.assertEqual(s['n'], 1)
 
-
     def testNewActorFromState(self):
         # Test basic actor state manipulation
         a_type = 'std.Constant'
         data = 42
-        a, a_id = self._new_actor(a_type, {'data':data})
+        a, a_id = self._new_actor(a_type, {'data': data})
         a.data = 43
         a.n = 2
         s = a.state()
         self.am.destroy(a_id)
         self.assertEqual(len(self.am.actors), 0)
 
-        b, b_id = self._new_actor(a_type, None, state = s)
+        b, b_id = self._new_actor(a_type, None, state=s)
 
         self.assertEqual(a.data, 43)
         self.assertEqual(a.n, 2)
@@ -87,6 +86,43 @@ class ActorManagerTests(unittest.TestCase):
         self.assertTrue(self.am.actors[a_id])
         self.assertEqual(len(self.am.actors), 1)
 
+    def testNewReplicaWithState(self):
+        a_type = 'io.StandardOut'
+        a, a_id = self._new_actor(a_type, {'name': 'a_name', 'store_tokens': 1})
+        a.tokens = [1, 2, 3]
+        state = a.state()
+
+        prev_connections = a.connections(self.am.node.id)
+        prev_connections['port_names'] = a.port_names()
+
+        prev_connections['inports'] = [conn.__dict__ for conn in prev_connections['inports']]
+
+        args = a.replication_args()
+        b = self.am.new_replica(a_type, args, state, prev_connections, None)
+        self.assertEqual(len(self.am.actors), 2)
+
+        self.assertEqual(a.tokens, [1, 2, 3])
+        self.assertEqual(a.store_tokens, 1)
+        self.assertEqual(b.tokens, [1, 2, 3])
+        self.assertEqual(b.store_tokens, 1)
+
+        # Assert new id is assigned
+        self.assertNotEqual(b.id, a.id)
+
+        # Assert new name is assigned
+        self.assertNotEqual(b.name, a.name)
+
+        self.assertNotEqual(b.name, a.name)
+        assert b.name.startswith(a.name)
+
+        # Assert actor database is consistent
+        self.assertTrue(self.am.actors[a_id])
+        self.assertTrue(self.am.actors[b.id])
+        self.assertEqual(len(self.am.actors), 2)
+
+        a_inport = a.connections(self.am.node.id)['inports'][0].port_id
+        b_inport = b.connections(self.am.node.id)['inports'][0].port_id
+        self.assertNotEqual(a_inport, b_inport)
 
 
 if __name__ == '__main__':

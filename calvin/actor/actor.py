@@ -16,8 +16,11 @@
 
 import wrapt
 import functools
+import re
+
 from calvin.utilities import calvinuuid
 from calvin.actor import actorport
+from calvin.actor.connection import Connection
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
@@ -324,13 +327,14 @@ class Actor(object):
 
     # What are the arguments, really?
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
-                 disable_state_checks=False, actor_id=None):
+                 disable_state_checks=False, actor_id=None, app_id=None):
         """Should _not_ be overridden in subclasses."""
         super(Actor, self).__init__()
         self._type = actor_type
         self.name = name  # optional: human_readable_name
         self.id = actor_id or calvinuuid.uuid("ACTOR")
         _log.debug("New actor id: %s, supplied actor id %s" % (self.id, actor_id))
+        self.app_id = app_id
         self._deployment_requirements = []
         self._signature = None
         self._component_members = set([self.id])  # We are only part of component if this is extended
@@ -532,7 +536,13 @@ class Actor(object):
             port: self.outports[port]._state() for port in self.outports}
         state['_component_members'] = list(self._component_members)
 
+        state.update(self._get_managed())
+
+        return state
+
+    def _get_managed(self):
         # Managed state handling
+        state = {}
         for key in self._managed:
             obj = self.__dict__[key]
             if _implements_state(obj):
@@ -540,10 +550,12 @@ class Actor(object):
             else:
                 state[key] = obj
 
+        state['app_id'] = self.app_id
+
         return state
 
     @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING])
-    def _set_state(self, state):
+    def set_state(self, state):
         # Managed state handling
 
         # Update since if previously a shadow actor the init has been called first
@@ -551,49 +563,60 @@ class Actor(object):
         # with the recorded state
         self._managed.update(set(state['_managed']))
 
-        for key in state['_managed']:
+        set_ports = state.get('set_ports', True)
+
+        for key in self._managed:
             if key not in self.__dict__:
                 self.__dict__[key] = state.pop(key)
-            else:
+            elif key in state:
                 obj = self.__dict__[key]
                 if _implements_state(obj):
                     obj.set_state(state.pop(key))
                 else:
                     self.__dict__[key] = state.pop(key)
 
-        # Manual state handling
-        for port in state['inports']:
-            # Uses setdefault to support shadow actor
-            self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
-        for port in state['outports']:
-            # Uses setdefault to support shadow actor
-            self.outports.setdefault(port, actorport.OutPort(port, self))._set_state(state['outports'][port])
-        self._component_members= set(state['_component_members'])
+        if set_ports:
+            # Manual state handling
+            for port in state['inports']:
+                # Uses setdefault to support shadow actor
+                self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
+            for port in state['outports']:
+                # Uses setdefault to support shadow actor
+                self.outports.setdefault(port, actorport.OutPort(port, self))._set_state(state['outports'][port])
+        self._component_members = set(state['_component_members'])
 
     # TODO verify status should only allow reading connections when and after being fully connected (enabled)
     @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING])
     def connections(self, node_id):
         c = {'actor_id': self.id, 'actor_name': self.name}
-        inports = {}
+
+        inports = []
         for port in self.inports.values():
             peer = port.get_peer()
-            if peer[0] == 'local':
-                peer = (node_id, peer[1])
-            inports[port.id] = peer
+            if peer.is_local:
+                peer.node_id = node_id
+            #inports[port.id] = (peer.node_id, peer.port_id)
+            inports.append(Connection(node_id, port.id, peer.node_id, peer.port_id))
         c['inports'] = inports
-        outports = {}
+
+        outports = []
         for port in self.outports.values():
-            peers = [
-                (node_id, p[1]) if p[0] == 'local' else p for p in port.get_peers()]
-            outports[port.id] = peers
+            #peers = [
+            #    (node_id, p.port_id) if p.is_local else (p.node_id, p.port_id) for p in port.get_peers()]
+            #outports[port.id] = peers
+            for peer in port.get_peers():
+                if peer.is_local:
+                    peer.node_id = node_id
+                outports.append(Connection(node_id, port.id, peer.node_id, peer.port_id))
         c['outports'] = outports
+
         return c
 
     def serialize(self):
         return self.state()
 
     def deserialize(self, data):
-        self._set_state(data)
+        self.set_state(data)
 
     def exception_handler(self, action, args, context):
         """Defult handler when encountering ExceptionTokens"""
@@ -613,7 +636,7 @@ class Actor(object):
         if not isinstance(actor_ids, (set, list, tuple)):
             actor_ids = [actor_ids]
         self._component_members -= set(actor_ids)
-        
+
     def part_of_component(self):
         return len(self._component_members - set([self.id]))>0
 
@@ -637,15 +660,38 @@ class Actor(object):
         if self._signature is None:
             self._signature = signature
 
+    def replication_args(self):
+        """Returns args with a name with a random postfix based.
+
+        The name must not contain '-', this will break the web interface
+        """
+        args = self._get_managed()
+
+        args['name'] = re.sub(calvincontrol.uuid_re, "", self.name) + calvinuuid.uuid("REPLICA")
+        args['id'] = calvinuuid.uuid("ACTOR")
+
+        return args
+
+    def port_names(self):
+        """Returns a dict mapping port_id to port_name"""
+        port_names = {}
+        for port_name in self.inports:
+            port_names[self.inports[port_name].id] = port_name
+        for port_name in self.outports:
+            port_names[self.outports[port_name].id] = port_name
+        return port_names
+
+
 class ShadowActor(Actor):
     """A shadow actor try to behave as another actor but don't have any implementation"""
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
-                 disable_state_checks=False, actor_id=None):
+                 disable_state_checks=False, actor_id=None, app_id=None):
         self.inport_names = []
         self.outport_names = []
-        super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions, 
+        super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions,
                                             disable_transition_checks=disable_transition_checks,
-                                            disable_state_checks=disable_state_checks, actor_id=actor_id)
+                                            disable_state_checks=disable_state_checks, actor_id=actor_id,
+                                            app_id=app_id)
 
     @manage(['_shadow_args'])
     def init(self, **args):

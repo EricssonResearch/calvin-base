@@ -158,7 +158,7 @@ class TestDeployScript(unittest.TestCase):
     def testDeploySimple(self):
         _log.analyze("TESTRUN", "+", {})
         self.verify_storage()
-        
+
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         from collections import namedtuple
         DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
@@ -359,7 +359,7 @@ class TestDeployShadow(unittest.TestCase):
         assert result['actor_map']['test_shadow1:src'] in actors[0]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
-        
+
         actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
@@ -393,7 +393,7 @@ class TestDeployShadow(unittest.TestCase):
         assert result['actor_map']['test_shadow1:src'] in actors[0]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
-        
+
         actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
@@ -427,7 +427,7 @@ class TestDeployShadow(unittest.TestCase):
         assert result['actor_map']['test_shadow3:src'] in actors[0]
         assert result['actor_map']['test_shadow3:sum'] in actors[1]
         assert result['actor_map']['test_shadow3:snk'] in actors[0]
-        
+
         actual = utils.report(rt1, result['actor_map']['test_shadow3:snk'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
@@ -636,7 +636,7 @@ class TestSepDeployShadow(unittest.TestCase):
         assert result['actor_map']['test_shadow1:src'] in actors[0]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
-        
+
         actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
@@ -822,6 +822,9 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         global rt1
         global rt2
         global rt3
+        global rt1_id
+        global rt2_id
+        global rt3_id
         rt1_id = None
         rt2_id = None
         rt3_id = None
@@ -895,7 +898,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         assert result['actor_map']['test_shadow4:button'] in actors[1]
         assert result['actor_map']['test_shadow4:check'] in actors[0]
         assert result['actor_map']['test_shadow4:bell'] in actors[2]
-        
+
         actual = utils.report(rt3, result['actor_map']['test_shadow4:bell'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
@@ -931,10 +934,10 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         assert result['actor_map']['test_shadow4:button'] in actors[1]
         assert result['actor_map']['test_shadow4:check'] in actors[0]
         assert result['actor_map']['test_shadow4:bell'] in actors[2]
-        
+
         actual = utils.report(rt3, result['actor_map']['test_shadow4:bell'])
         assert len(actual) > 5
-        utils.migrate_use_req(rt3, result['actor_map']['test_shadow4:bell'], 
+        utils.migrate_use_req(rt3, result['actor_map']['test_shadow4:bell'],
                                 [{
                                     "op": "node_attr_match",
                                     "kwargs": {"index": ["address", {"locality": "outside"}]},
@@ -978,10 +981,10 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         assert result['actor_map']['test_shadow4:button'] in actors[1]
         assert result['actor_map']['test_shadow4:check'] in actors[0]
         assert result['actor_map']['test_shadow4:bell'] in actors[2]
-        
+
         actual = utils.report(rt3, result['actor_map']['test_shadow4:bell'])
         assert len(actual) > 5
-        utils.migrate_app_use_req(rt3, result['application_id'], 
+        utils.migrate_app_use_req(rt3, result['application_id'],
                             {
                                 "requirements": {
                                     "button": [
@@ -1046,10 +1049,10 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         assert result['actor_map']['test_shadow5:button:second'] in actors[1]
         assert result['actor_map']['test_shadow5:check'] in actors[0]
         assert result['actor_map']['test_shadow5:bell'] in actors[2]
-        
+
         actual = utils.report(rt3, result['actor_map']['test_shadow5:bell'])
         assert len(actual) > 5
-        utils.migrate_app_use_req(rt3, result['application_id'], 
+        utils.migrate_app_use_req(rt3, result['application_id'],
                             {
                                 "requirements": {
                                     "button": [
@@ -1143,3 +1146,43 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
             assert result['actor_map']['test_deploy1:snk'] in actors
 
         utils.delete_application(rt1, result['application_id'])
+
+    @pytest.mark.slow
+    @pytest.mark.essential
+    def testRemoteToRemoteReplicaIsAddedToApplicationsActors(self):
+        global rt1
+        global rt2
+        global rt1_id
+        global rt2_id
+        self.verify_storage()
+        rt = rt1
+        peer = rt2
+        rt.id = rt1_id
+        peer.id = rt2_id
+
+        script = """
+            src : std.CountTimer()
+            snk : io.StandardOut(store_tokens=1)
+            src.integer > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(rt, app_info)
+        app_id = d.deploy()
+
+        time.sleep(0.2)
+
+        snk = d.actor_map['simple:snk']
+        utils.migrate(rt, snk, rt2_id)
+        time.sleep(0.2)
+        replica = utils.replicate(peer, snk, rt2_id)
+        time.sleep(0.2)
+
+        app = utils.get_application(rt, app_id)
+        assert replica in app['actors']
+        assert replica in app['actors_name_map']
+
+        app = utils.get_application(peer, app_id)
+        assert replica in app['actors']
+        assert replica in app['actors_name_map']
+
+        d.destroy()

@@ -17,11 +17,12 @@
 import json
 from message_coder import MessageCoderBase
 
+
 # set of functions to encode/decode data tokens to/from a json description
 class MessageCoder(MessageCoderBase):
 
     def encode(self, data):
-        return json.dumps(data)
+        return json.dumps(data, default=lambda obj: obj.__dict__)
 
     def decode(self, data):
         return json.loads(data)

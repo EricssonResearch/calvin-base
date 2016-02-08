@@ -18,10 +18,7 @@
 import argparse
 import json
 import calvin.utilities.utils as utils
-import os
 from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities import calvinresponse
-import logging
 
 _log = get_logger(__name__)
 
@@ -44,7 +41,7 @@ def get_node_control_uri(control_uri, node_id):
 def requirements_file(path):
     """ Reads in a requirements file of JSON format with the structure:
         {<actor_name>: [(<req_op>, <req_args>), ...], ...}
-        
+
         Needs to be called after the initial deployment to get the actor_ids
     """
     reqs = None
@@ -82,6 +79,10 @@ def control_actors(args):
         if not args.id or not args.peer_node:
             raise Exception("No actor or peer given")
         return utils.migrate(args.node, args.id, args.peer_node)
+    elif args.cmd == 'replicate':
+        if not args.id or not args.peer_node:
+            raise Exception("No actor or peer given")
+        return utils.replicate(args.node, args.id, args.peer_node)
 
 
 def control_applications(args):
@@ -152,7 +153,7 @@ def parse_args():
     cmd_deploy.add_argument("script", metavar="<calvin script>", type=argparse.FileType('r'),
                             help="script to be deployed")
     cmd_deploy.add_argument('-c', '--no-check', dest='check', action='store_false', default=True,
-                           help='Don\'t verify if actors or components are correct, ' + 
+                           help='Don\'t verify if actors or components are correct, ' +
                                 'allows deployment of actors not known on the node')
 
     cmd_deploy.add_argument('--reqs', metavar='<reqs>', type=str,
@@ -161,7 +162,7 @@ def parse_args():
     cmd_deploy.set_defaults(func=control_deploy)
 
     # parsers for actor commands
-    actor_commands = ['info', 'list', 'delete', 'migrate']
+    actor_commands = ['info', 'list', 'delete', 'migrate', 'replicate']
     cmd_actor = cmdparsers.add_parser('actor', help="handle actors on node")
     cmd_actor.add_argument('cmd', metavar="<command>", choices=actor_commands, type=str,
                            help="one of %s" % (", ".join(actor_commands)))

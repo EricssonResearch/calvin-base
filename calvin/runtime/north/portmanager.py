@@ -95,10 +95,10 @@ class PortManager(object):
             # Inform other end that it sent token to a port that does not exist on this node or
             # that we have initiated a disconnect (endpoint does not have recv_token).
             # Can happen e.g. when the actor and port just migrated and the token was in the air
-            reply = {'cmd': 'TOKEN_REPLY', 
-                     'port_id':payload['port_id'], 
-                     'peer_port_id': payload['peer_port_id'], 
-                     'sequencenbr': payload['sequencenbr'], 
+            reply = {'cmd': 'TOKEN_REPLY',
+                     'port_id':payload['port_id'],
+                     'peer_port_id': payload['peer_port_id'],
+                     'sequencenbr': payload['sequencenbr'],
                      'value': 'ABORT'}
             tunnel.send(reply)
 
@@ -114,7 +114,7 @@ class PortManager(object):
                 # We might have started disconnect before getting the reply back, just ignore in that case
                 # it is sorted out if we connect again
                 try:
-                    if e.get_peer()[1] == payload['peer_port_id']:
+                    if e.get_peer().port_id == payload['peer_port_id']:
                         e.reply(payload['sequencenbr'], payload['value'])
                         break
                 except:
@@ -139,9 +139,9 @@ class PortManager(object):
             _log.analyze(self.node.id, "+ NOT ENOUGH DATA", payload, peer_node_id=payload['from_rt_uuid'])
             return response.CalvinResponse(response.BAD_REQUEST)
         try:
-            port = self._get_local_port(payload['peer_actor_id'], 
-                                        payload['peer_port_name'], 
-                                        payload['peer_port_dir'], 
+            port = self._get_local_port(payload['peer_actor_id'],
+                                        payload['peer_port_name'],
+                                        payload['peer_port_dir'],
                                         payload['peer_port_id'])
         except:
             # We don't have the port
@@ -160,16 +160,16 @@ class PortManager(object):
                 return response.CalvinResponse(response.GONE)
 
             if isinstance(port, InPort):
-                endp = endpoint.TunnelInEndpoint(port, 
-                                                 tunnel, 
-                                                 payload['from_rt_uuid'], 
-                                                 payload['port_id'], 
+                endp = endpoint.TunnelInEndpoint(port,
+                                                 tunnel,
+                                                 payload['from_rt_uuid'],
+                                                 payload['port_id'],
                                                  self.node.sched.trigger_loop)
             else:
-                endp = endpoint.TunnelOutEndpoint(port, 
-                                                  tunnel, 
-                                                  payload['from_rt_uuid'], 
-                                                  payload['port_id'], 
+                endp = endpoint.TunnelOutEndpoint(port,
+                                                  tunnel,
+                                                  payload['from_rt_uuid'],
+                                                  payload['port_id'],
                                                   self.node.sched.trigger_loop)
                 self.monitor.register_out_endpoint(endp)
 
@@ -192,7 +192,7 @@ class PortManager(object):
 
     def connect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None, peer_node_id=None,
                       peer_actor_id=None, peer_port_name=None, peer_port_dir=None, peer_port_id=None):
-        """ Obtain any missing information to enable making a connection and make actual connect 
+        """ Obtain any missing information to enable making a connection and make actual connect
             callback: an optional callback that gets called with status when finished
             local port identified by:
                 actor_id, port_name and port_dir='in'/'out' or
@@ -201,7 +201,7 @@ class PortManager(object):
             peer port (remote or local) identified by:
                 peer_actor_id, peer_port_name and peer_port_dir='in'/'out' or
                 peer_port_id
-                
+
             connect -----------------------------> _connect -> _connect_via_tunnel -> _connected_via_tunnel -!
                     \> _connect_by_peer_port_id /           \-> _connect_via_local -!
                     \-> _connect_by_actor_id ---/
@@ -229,13 +229,13 @@ class PortManager(object):
             else:
                 status = response.CalvinResponse(response.BAD_REQUEST, "First port %s on actor %s must be local" % (port_name, actor_id))
             if callback:
-                callback(status=status, 
-                         actor_id=actor_id, 
-                         port_name=port_name, 
-                         port_id=port_id, 
-                         peer_node_id=peer_node_id, 
-                         peer_actor_id=peer_actor_id, 
-                         peer_port_name=peer_port_name, 
+                callback(status=status,
+                         actor_id=actor_id,
+                         port_name=port_name,
+                         port_id=port_id,
+                         peer_node_id=peer_node_id,
+                         peer_actor_id=peer_actor_id,
+                         peer_port_name=peer_port_name,
                          peer_port_id=peer_port_id)
                 return
             else:
@@ -446,16 +446,16 @@ class PortManager(object):
         tunnel = self.tunnels[state['peer_node_id']]
         port = self.ports[state['port_id']]
         if isinstance(port, InPort):
-            endp = endpoint.TunnelInEndpoint(port, 
-                                             tunnel, 
-                                             state['peer_node_id'], 
-                                             reply.data['port_id'], 
+            endp = endpoint.TunnelInEndpoint(port,
+                                             tunnel,
+                                             state['peer_node_id'],
+                                             reply.data['port_id'],
                                              self.node.sched.trigger_loop)
         else:
-            endp = endpoint.TunnelOutEndpoint(port, 
-                                              tunnel, 
-                                              state['peer_node_id'], 
-                                              reply.data['port_id'], 
+            endp = endpoint.TunnelOutEndpoint(port,
+                                              tunnel,
+                                              state['peer_node_id'],
+                                              reply.data['port_id'],
                                               self.node.sched.trigger_loop)
             # register into main loop
             self.monitor.register_out_endpoint(endp)
@@ -598,18 +598,20 @@ class PortManager(object):
             ep.destroy()
 
         ok = True
-        for peer_node_id, peer_port_id in peer_ids:
-            if peer_node_id == 'local':
+        for peer in peer_ids:
+            peer_node_id = peer.node_id
+            peer_port_id = peer.port_id
+            if peer.is_local:
                 # Use the disconnect request function since does not matter if local or remote request
                 if not self.disconnection_request({'peer_port_id': peer_port_id}):
                     ok = False
 
         # Inform all the remote ports of the disconnect
-        remote_peers = [pp for pp in peer_ids if pp[0] and pp[0] != 'local']
+        remote_peers = [(pp.node_id, pp.port_id) for pp in peer_ids if pp.node_id and not pp.is_local]
         # Keep track of disconnection of remote peer ports
         self.disconnecting_ports[state['port_id']] = remote_peers
         for peer_node_id, peer_port_id in remote_peers:
-            self.proto.port_disconnect(callback=CalvinCB(self._disconnected_port, 
+            self.proto.port_disconnect(callback=CalvinCB(self._disconnected_port,
                                                          peer_id=(peer_node_id, peer_port_id),
                                                          **state),
                                         port_id=state['port_id'],
