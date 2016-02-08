@@ -57,7 +57,11 @@ function addPortToGraph(port)
                     if (graphTimer) {
                         clearTimeout(graphTimer);
                     }
-                    graph.setEdge(port.actor_id, peer_port.actor_id);
+                    if(document.getElementById("chkShowPortNames").checked) {
+                        graph.setEdge(port.actor_id, peer_port.actor_id, {label: port.name + " > " + peer_port.name});
+                    } else {
+                        graph.setEdge(port.actor_id, peer_port.actor_id);
+                    }
                 }
             }
         } else if(port.direction == "in") {
@@ -66,7 +70,11 @@ function addPortToGraph(port)
                 if (peer_port) {
                     var peer_actor = findActor(peer_port.actor_id);
                     if (peer_actor) {
-                        graph.setEdge(peer_port.actor_id, port.actor_id);
+                        if(document.getElementById("chkShowPortNames").checked) {
+                            graph.setEdge(peer_port.actor_id, port.actor_id, {label: peer_port.name + " > " + port.name});
+                        } else {
+                            graph.setEdge(peer_port.actor_id, port.actor_id);
+                        }
                     }
                 }
             }
@@ -93,9 +101,8 @@ function updateGraph()
     // Run the renderer. This is what draws the final graph.
     render(d3.select("svg g"), graph);
 
-    // Resize
-    svg.attr("width", graph.graph().width + 40);
-    svg.attr("height", graph.graph().height + 40);
+    svg.attr("width", 1000);
+    svg.attr("height", 600);
 }
 
 // Clear application graph
@@ -1051,8 +1058,10 @@ function toggleDrawConnections()
 {
     if (document.getElementById("chkDrawApplication").checked) {
         document.getElementById("chkDrawConnections").disabled = false;
+        document.getElementById("chkShowPortNames").disabled = false;
     } else {
         document.getElementById("chkDrawConnections").disabled = true;
+        document.getElementById("chkShowPortNames").disabled = true;
     }
 }
 
