@@ -126,3 +126,5 @@ class StorageProxy(StorageBase):
 
     def stop(self, cb=None):
         _log.analyze(self.node.id, "+ CLIENT", None)
+        if cb:
+            cb()
