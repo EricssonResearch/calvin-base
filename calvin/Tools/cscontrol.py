@@ -85,7 +85,11 @@ def control_actors(args):
 
 
 def control_applications(args):
-    if args.cmd == 'list':
+    if args.cmd == 'info':
+        if not args.id:
+            raise Exception("No application id given")
+        return utils.get_application(args.node, args.id)
+    elif args.cmd == 'list':
         return utils.get_applications(args.node)
     elif args.cmd == 'delete':
         if not args.id:
@@ -172,7 +176,7 @@ def parse_args():
     cmd_actor.set_defaults(func=control_actors)
 
     # parser for applications
-    app_commands = ['list', 'delete']
+    app_commands = ['info', 'list', 'delete']
     cmd_apps = cmdparsers.add_parser('applications', help="handle applications deployed on node")
     cmd_apps.add_argument("cmd", metavar="<command>", choices=app_commands, type=str,
                           help="one of %s" % (", ".join(app_commands)))
