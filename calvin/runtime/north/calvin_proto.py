@@ -81,7 +81,7 @@ class CalvinTunnel(object):
 
     def _setup_ack(self, reply):
         """ Gets called when the tunnel request is acknowledged by the other side """
-        if reply.data['tunnel_id'] != self.id:
+        if reply and reply.data['tunnel_id'] != self.id:
             self._update_id(reply.data['tunnel_id'])
         if reply:
             self.status = CalvinTunnel.STATUS.WORKING
@@ -96,7 +96,7 @@ class CalvinTunnel(object):
         """ Gets called when the tunnel destruction is acknowledged by the other side """
         self.close(local_only=True)
         if not reply:
-            raise Exception("Got none ack on destruction of tunnel!\n%s" % reply)
+            _log.error("Got none ack on destruction of tunnel!\n%s" % reply)
 
     def send(self, payload):
         """ Send a payload over the tunnel 

@@ -46,6 +46,7 @@ class CalvinLink(object):
         # FIXME replies should also be made independent on the link object, 
         # to handle dying transports losing reply callbacks
         self.replies = old_link.replies if old_link else {}
+        self.replies_timeout = old_link.replies_timeout if old_link else {}
         if old_link:
             # close old link after a period, since might still receive messages on the transport layer
             # TODO chose the delay based on RTT instead of arbitrary 3 seconds
@@ -55,10 +56,30 @@ class CalvinLink(object):
     def reply_handler(self, payload):
         """ Gets called when a REPLY messages arrives on this link """
         try:
+            # Cancel timeout
+            self.replies_timeout.pop(payload['msg_uuid']).cancel()
+        except:
+            # We ignore any errors in cancelling timeout
+            pass
+
+        try:
             # Call the registered callback,for the reply message id, with the reply data as argument
             self.replies.pop(payload['msg_uuid'])(response.CalvinResponse(encoded=payload['value']))
         except:
             # We ignore unknown replies
+            return
+
+    def reply_timeout(self, msg_id):
+        """ Gets called when a request times out """
+        try:
+            # remove timeout
+            self.replies_timeout.pop(msg_id)
+        except:
+            pass
+        try:
+            self.replies.pop(msg_id)(response.CalvinResponse(response.GATEWAY_TIMEOUT))
+        except:
+            # We ignore errors
             return
 
     def send_with_reply(self, callback, msg):
@@ -67,6 +88,7 @@ class CalvinLink(object):
         """
         msg_id = calvinuuid.uuid("MSGID")
         self.replies[msg_id] = callback
+        self.replies_timeout[msg_id] = async.DelayedCall(10.0, CalvinCB(self.reply_timeout, msg_id))
         msg['msg_uuid'] = msg_id
         self.send(msg)
 
