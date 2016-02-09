@@ -113,7 +113,7 @@ function clearApplicationGraph() {
                 .setGraph({
                     rankdir: "LR"
                 })
-                .setDefaultEdgeLabel(function() { return {}; });    
+                .setDefaultEdgeLabel(function() { return {}; });
     render = new dagreD3.render();
     svg = d3.select("#applicationGraph").append("svg");
     svg.attr("width", 1000);
@@ -209,6 +209,15 @@ function clearCombo(selectbox)
         selectbox.remove(i);
     }
 }
+
+// Helper to sort combobox
+function sortCombo(selectbox)
+{
+    $(selectbox).html($(selectbox).children('option').sort(function (x, y) {
+        return $(x).text().toUpperCase() < $(y).text().toUpperCase() ? -1 : 1;
+    }));
+    $(selectbox).get(0).selectedIndex = 0;
+};
 
 // Busy spinner
 var opts = {
@@ -532,11 +541,13 @@ function getApplication(uri, id)
                 var optionApplication = new Option(application.name);
                 optionApplication.id =  application.id;
                 applicationSelector.options.add(optionApplication);
+                sortCombo(applicationSelector);
 
-                var applicationSelector = document.getElementById("traceApplicationSelector");
-                var optionApplication = new Option(application.name);
+                applicationSelector = document.getElementById("traceApplicationSelector");
+                optionApplication = new Option(application.name);
                 optionApplication.id =  application.id;
                 applicationSelector.options.add(optionApplication);
+                sortCombo(applicationSelector);
             } else {
                 console.log("getApplication - Empty response");
             }
@@ -595,6 +606,7 @@ function getActor(id, show)
                     var optionActor = new Option(actor.name);
                     optionActor.id =  actor.id;
                     actorSelector.options.add(optionActor);
+                    sortCombo(actorSelector);
                     addActorToGraph(actor);
                 }
             } else {
@@ -877,6 +889,7 @@ function showActor()
                 var optionPeer = new Option(peers[index].name);
                 optionPeer.id = peers[index].id;
                 selectNode.options.add(optionPeer);
+                sortCombo(selectNode);
             }
         }
         var btnMigrate = document.createElement('input');
@@ -899,6 +912,7 @@ function showActor()
                 var optionPort = new Option(port.name);
                 optionPort.id =  port.id;
                 portSelector.options.add(optionPort);
+                sortCombo(portSelector);
             }
         }
         for (index in actor.outports) {
@@ -907,6 +921,7 @@ function showActor()
                 var optionPort = new Option(port.name);
                 optionPort.id =  port.id;
                 portSelector.options.add(optionPort);
+                sortCombo(portSelector);
             }
         }
     }
