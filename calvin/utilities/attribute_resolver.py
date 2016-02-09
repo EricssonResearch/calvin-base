@@ -113,6 +113,7 @@ countries = ["AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "
              "VG", "VI", "VN", "VU", "WF", "WS", "YE", "YT", "ZA", "ZM", "ZW"]
 
 
+
 class AttributeResolverHelper(object):
     '''Resolves attributes'''
 
@@ -196,6 +197,7 @@ attr_resolver = {"owner": AttributeResolverHelper.owner_resolver,
                  "node_name": AttributeResolverHelper.node_name_resolver,
                  "address": AttributeResolverHelper.address_resolver,
                  "user_extra": AttributeResolverHelper.extra_resolver}
+
 
 
 def format_index_string(attr, trim=True):

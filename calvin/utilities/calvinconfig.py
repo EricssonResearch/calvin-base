@@ -19,9 +19,8 @@ import json
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
-
-
 _config = None
+
 
 class CalvinConfig(object):
 
@@ -74,7 +73,7 @@ class CalvinConfig(object):
         # Check if any options were set on the command line
         self.set_wildcards()
 
-        _log.debug("\n{0}\n{1}\n{0}".format("-"*80, self))
+        _log.debug("\n{0}\n{1}\n{0}".format("-" * 80, self))
 
     def default_config(self):
         default = {
@@ -123,6 +122,7 @@ class CalvinConfig(object):
             _option = option.lower()
             return self.config[_section][_option]
         except Exception as e:
+            _log.error("Error while getting value {}".format(e))
             return None
 
     def set(self, section, option, value):
@@ -135,7 +135,7 @@ class CalvinConfig(object):
         _section = self.config[section.lower()]
         _option = option.lower()
         old_value = _section.setdefault(_option, [])
-        if type(old_value) is not list :
+        if type(old_value) is not list:
             raise Exception("Can't append, {}:{} is not a list".format(section, option))
         if type(value) is not list:
             raise Exception("Can't append, value is not a list")
@@ -157,7 +157,7 @@ class CalvinConfig(object):
                 continue
             for _option in conf[section]:
                 if _option.lower() == option.lower():
-                     return _section, _option
+                    return _section, _option
             return _section, None
         return None, None
 
@@ -175,10 +175,10 @@ class CalvinConfig(object):
 
     def config_at_path(self, path):
         """Returns config or None if no config at path."""
-        if os.path.exists(path+'/calvin.conf'):
-            confpath = path+'/calvin.conf'
-        elif os.path.exists(path+'/.calvin.conf'):
-            confpath = path+'/.calvin.conf'
+        if os.path.exists(path + '/calvin.conf'):
+            confpath = path + '/calvin.conf'
+        elif os.path.exists(path + '/.calvin.conf'):
+            confpath = path + '/.calvin.conf'
         elif os.path.exists(path) and os.path.isfile(path):
             confpath = path
         else:
@@ -189,7 +189,7 @@ class CalvinConfig(object):
                 conf = json.loads(f.read())
                 self._expand_actor_paths(conf, path)
         except Exception as e:
-            _log.info("Could not read config at '{}'".format(confpath))
+            _log.info("Could not read config at '{}': {}".format(confpath, e))
             conf = None
         return conf
 
@@ -281,7 +281,6 @@ if __name__ == "__main__":
     os.environ['CALVIN_TESTING_UNITTEST_LOOPS'] = '44'
     a = get()
 
-
     print(a)
     p = a.get('global', 'actor_paths')
     print(p, type(p))
@@ -293,4 +292,3 @@ if __name__ == "__main__":
 
     p = a.get('Testing', 'unittest_loops')
     print(p, type(p))
-

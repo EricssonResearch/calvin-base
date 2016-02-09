@@ -16,53 +16,54 @@
 
 import numbers
 
-RESPONSE_CODES = {  # Information
-                  100: 'Continue',
-                  101: 'Switching Protocols',
-                  # Success
-                  200: 'OK',  # Preferred
-                  201: 'Created',
-                  202: 'Accepted', #  Preferred
-                  203: 'Non-Authoritative Information',
-                  204: 'No Content',
-                  205: 'Reset Content',
-                  206: 'Partial Content',
-                  # Redirect
-                  300: 'Multiple Choices',
-                  301: 'Moved Permanently',
-                  302: 'Found',
-                  303: 'See Other',
-                  304: 'Not Modified',
-                  305: 'Use Proxy',
-                  306: '(Unused)',
-                  307: 'Temporary Redirect',
-                  # Client errors
-                  400: 'Bad Request',  # Preferred
-                  401: 'Unauthorized',
-                  402: 'Payment Required',
-                  403: 'Forbidden',
-                  404: 'Not Found',  # Preferred
-                  405: 'Method Not Allowed',
-                  406: 'Not Acceptable',
-                  407: 'Proxy Authentication Required',
-                  408: 'Request Timeout',
-                  409: 'Conflict',
-                  410: 'Gone',  # Preferred
-                  411: 'Length Required',
-                  412: 'Precondition Failed',
-                  413: 'Request Entity Too Large',
-                  414: 'Request-URI Too Long',
-                  415: 'Unsupported Media Type',
-                  416: 'Requested Range Not Satisfiable',
-                  417: 'Expectation Failed',
-                  # Server error
-                  500: 'Internal Server Error',  # Preferred
-                  501: 'Not Implemented',  # Preferred
-                  502: 'Bad Gateway',  # Preferred
-                  503: 'Service Unavailable',  # Preferred
-                  504: 'Gateway Timeout',  # Preferred
-                  505: 'HTTP Version Not Supported'
-                  }
+RESPONSE_CODES = {
+    # Information
+    100: 'Continue',
+    101: 'Switching Protocols',
+    # Success
+    200: 'OK',  # Preferred
+    201: 'Created',
+    202: 'Accepted',  # Preferred
+    203: 'Non-Authoritative Information',
+    204: 'No Content',
+    205: 'Reset Content',
+    206: 'Partial Content',
+    # Redirect
+    300: 'Multiple Choices',
+    301: 'Moved Permanently',
+    302: 'Found',
+    303: 'See Other',
+    304: 'Not Modified',
+    305: 'Use Proxy',
+    306: '(Unused)',
+    307: 'Temporary Redirect',
+    # Client errors
+    400: 'Bad Request',  # Preferred
+    401: 'Unauthorized',
+    402: 'Payment Required',
+    403: 'Forbidden',
+    404: 'Not Found',  # Preferred
+    405: 'Method Not Allowed',
+    406: 'Not Acceptable',
+    407: 'Proxy Authentication Required',
+    408: 'Request Timeout',
+    409: 'Conflict',
+    410: 'Gone',  # Preferred
+    411: 'Length Required',
+    412: 'Precondition Failed',
+    413: 'Request Entity Too Large',
+    414: 'Request-URI Too Long',
+    415: 'Unsupported Media Type',
+    416: 'Requested Range Not Satisfiable',
+    417: 'Expectation Failed',
+    # Server error
+    500: 'Internal Server Error',  # Preferred
+    501: 'Not Implemented',  # Preferred
+    502: 'Bad Gateway',  # Preferred
+    503: 'Service Unavailable',  # Preferred
+    504: 'Gateway Timeout',  # Preferred
+    505: 'HTTP Version Not Supported'
+}
 
 OK = 200
 CREATED = 201
@@ -76,6 +77,7 @@ BAD_GATEWAY = 502
 SERVICE_UNAVAILABLE = 503
 GATEWAY_TIMEOUT = 504
 
+
 class CalvinResponse(object):
     """A generic class for handling all responses between entities"""
     def __init__(self, status=OK, data=None, encoded=None):
@@ -87,7 +89,7 @@ class CalvinResponse(object):
         else:
             self.set_status(status)
             self.data = data
-            self.success_list = range(200,207)
+            self.success_list = range(200, 207)
 
     def __nonzero__(self):
         return self._status()
@@ -101,7 +103,7 @@ class CalvinResponse(object):
     def __eq__(self, other):
         """ When need to check if response is equal to specific code
             other can be another CalvinResponse object,
-            a status code 
+            a status code
         """
         if isinstance(other, CalvinResponse):
             return self.status == other.status
@@ -159,7 +161,7 @@ class CalvinResponse(object):
         return {'status': self.status, 'data': self.data, 'success_list': self.success_list}
 
     def __str__(self):
-        return str(self.status) + ", " + RESPONSE_CODES[self.status] + ((", " + str(self.data)) if self.data else "") 
+        return str(self.status) + ", " + RESPONSE_CODES[self.status] + ((", " + str(self.data)) if self.data else "")
 
 if __name__ == '__main__':
     r = CalvinResponse(OK)
@@ -170,12 +172,12 @@ if __name__ == '__main__':
         print "CORRECT", r
     else:
         print "INCORRECT", r
-    
+
     if r3:
         print "INCORRECT", r3
     else:
         print "CORRECT", r3
-    
+
     if r == OK:
         print "EQ CORRECT1"
     else:

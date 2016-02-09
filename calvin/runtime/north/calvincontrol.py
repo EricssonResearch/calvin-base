@@ -25,7 +25,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
-from calvin.utilities import calvinresponse
+from calvin.requests import calvinresponse
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
 
@@ -250,7 +250,7 @@ control_api_doc += \
         "extend": True or False  # defaults to False, i.e. replace current requirements
         "move": True or False  # defaults to False, i.e. when possible stay on the current node
     }
-    
+
     For further details about requirements see application deploy.
     Response status code: OK, BAD_REQUEST, INTERNAL_ERROR or NOT_FOUND
     Response: none
@@ -345,14 +345,14 @@ control_api_doc += \
            }
     }
     Note that either a script or app_info must be supplied.
-    
+
     The matching rules are implemented as plug-ins, intended to be extended.
     The type "+" is "and"-ing rules together (actually the intersection of all
     possible nodes returned by the rules.) The type "-" is explicitly removing
     the nodes returned by this rule from the set of possible nodes. Note that
     only negative rules will result in no possible nodes, i.e. there is no
     implied "all but these."
-    
+
     A special matching rule exist, to first form a union between matching
     rules, i.e. alternative matches. This is useful for e.g. alternative
     namings, ownerships or specifying either of two specific nodes.
@@ -461,7 +461,7 @@ control_api_doc += \
     Response status code: OK or NOT_FOUND
     Response:
     {
-        <actor-id>: 
+        <actor-id>:
             [
                 [<seconds since epoch>, <name of action>],
                 ...
@@ -480,7 +480,7 @@ control_api_doc += \
     {
         'activity':
         {
-            <actor-id>: 
+            <actor-id>:
             {
                 <action-name>: <total fire count>,
                 ...
@@ -503,7 +503,7 @@ control_api_doc += \
     Response status code: OK or NOT_FOUND
     Response:
     {
-        <actor-id>: 
+        <actor-id>:
         {
             <action-name>:
             {
@@ -862,8 +862,7 @@ class CalvinControl(object):
     def handle_get_node_id(self, handle, connection, match, data, hdr):
         """ Get node id from this node
         """
-        self.send_response(
-            handle, connection, json.dumps({'id': self.node.id}))
+        self.send_response(handle, connection, json.dumps({'id': self.node.id}))
 
     def handle_peer_setup(self, handle, connection, match, data, hdr):
         _log.analyze(self.node.id, "+", data)
@@ -871,16 +870,17 @@ class CalvinControl(object):
 
     def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=None):
         _log.analyze(self.node.id, "+", status.encode())
-        self.send_response(handle, connection,
-                           None if peer_node_ids is None else json.dumps(
-                               {k: (v[0], v[1].status) for k, v in peer_node_ids.items()}),
-                           status=status.status)
+        if peer_node_ids:
+            data = {k: (v[0], v[1].status) for k, v in peer_node_ids.items()}
+        else:
+            data = {}
+
+        self.send_response(handle, connection, json.dumps(data), status=status.status)
 
     def handle_get_nodes(self, handle, connection, match, data, hdr):
         """ Get active nodes
         """
-        self.send_response(
-            handle, connection, json.dumps(self.node.network.list_links()))
+        self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
 
     def handle_get_node(self, handle, connection, match, data, hdr):
         """ Get node information from id
@@ -996,6 +996,17 @@ class CalvinControl(object):
         self.send_response(handle, connection,
                            None, status=status.status)
 
+    def handle_application_requirements(self, handle, connection, match, data, hdr):
+        """ Apply application deployment requirements
+            to actors of an application and initiate migration of actors accordingly
+        """
+        callback = CalvinCB(func=self.handle_application_requirements_cb, handle=handle, connection=connection)
+        self.node.app_manager.deployment_add_requirements(match.group(1), data['reqs'], callback)
+
+    def handle_application_requirements_cb(self, handle, connection, *args, **kwargs):
+        data = json.dumps({'placement': kwargs['placement'] if 'placement' in kwargs else {}})
+        self.send_response(handle, connection, data, status=kwargs['status'].status)
+
     def handle_actor_disable(self, handle, connection, match, data, hdr):
         try:
             self.node.am.disable(match.group(1))
@@ -1024,35 +1035,16 @@ class CalvinControl(object):
     def handle_connect(self, handle, connection, match, data, hdr):
         """ Connect port
         """
-        if "actor_id" not in data:
-            data["actor_id"] = None
-        if "port_name" not in data:
-            data["port_name"] = None
-        if "port_dir" not in data:
-            data["port_dir"] = None
-        if "port_id" not in data:
-            data["port_id"] = None
-        if "peer_node_id" not in data:
-            data["peer_node_id"] = None
-        if "peer_actor_id" not in data:
-            data["peer_actor_id"] = None
-        if "peer_port_name" not in data:
-            data["peer_port_name"] = None
-        if "peer_port_dir" not in data:
-            data["peer_port_dir"] = None
-        if "peer_port_id" not in data:
-            data["peer_port_id"] = None
-
         self.node.connect(
-            actor_id=data["actor_id"],
-            port_name=data["port_name"],
-            port_dir=data["port_dir"],
-            port_id=data["port_id"],
-            peer_node_id=data["peer_node_id"],
-            peer_actor_id=data["peer_actor_id"],
-            peer_port_name=data["peer_port_name"],
-            peer_port_dir=data["peer_port_dir"],
-            peer_port_id=data["peer_port_id"],
+            actor_id=data.get("actor_id"),
+            port_name=data.get("port_name"),
+            port_dir=data.get("port_dir"),
+            port_id=data.get("port_id"),
+            peer_node_id=data.get("peer_node_id"),
+            peer_actor_id=data.get("peer_actor_id"),
+            peer_port_name=data.get("peer_port_name"),
+            peer_port_dir=data.get("peer_port_dir"),
+            peer_port_id=data.get("peer_port_id"),
             cb=CalvinCB(self.handle_connect_cb, handle, connection))
 
     def handle_connect_cb(self, handle, connection, **kwargs):
@@ -1168,7 +1160,7 @@ class CalvinControl(object):
         except:
             _log.exception("handle_get_timed_meter")
             status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection, 
+        self.send_response(handle, connection,
             json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
     def handle_get_aggregated_meter(self, handle, connection, match, data, hdr):
@@ -1178,7 +1170,7 @@ class CalvinControl(object):
         except:
             _log.exception("handle_get_aggregated_meter")
             status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection, 
+        self.send_response(handle, connection,
             json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
     def handle_get_metainfo_meter(self, handle, connection, match, data, hdr):
@@ -1188,7 +1180,7 @@ class CalvinControl(object):
         except:
             _log.exception("handle_get_metainfo_meter")
             status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection, 
+        self.send_response(handle, connection,
             json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
     def handle_post_index(self, handle, connection, match, data, hdr):
