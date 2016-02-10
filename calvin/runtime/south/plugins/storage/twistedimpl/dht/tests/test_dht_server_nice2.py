@@ -70,7 +70,7 @@ class TestDHT(object):
             q.put([aa,args])
 
         try:
-            amount_of_servers = 6
+            amount_of_servers = 5
             # Twisted is using 20 threads so having > 20 server
             # causes threadlocks really easily.
 

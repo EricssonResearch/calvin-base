@@ -115,10 +115,11 @@ class TestDHT(object):
             set_def = servers[0].set(key=key, value=value)
             set_value = yield threads.defer_to_thread(set_def.wait, 10)
             assert set_value
+            print("Node with port {} posted key={}, value={}".format(servers[0].dht_server.port.getHost().port, key, value))
             get_def = servers[0].get(key="KOALA")
             get_value = yield threads.defer_to_thread(get_def.wait, 10)
             assert get_value == "bambu"
-            print("Node with port {} posted key={}, value={}".format(servers[0].dht_server.port.getHost().port, key, value))
+            print("Node with port {} confirmed key={}, value={} was reachable".format(servers[0].dht_server.port.getHost().port, key, value))
 
             drawNetworkState("3nice_graph.png", servers, amount_of_servers)
             yield threads.defer_to_thread(time.sleep, 7)
@@ -141,7 +142,7 @@ class TestDHT(object):
             traceback.print_exc()
             pytest.fail(traceback.format_exc())
         finally:
-            yield threads.defer_to_thread(time.sleep, 5)
+            yield threads.defer_to_thread(time.sleep, 10)
             i = 0
             for server in servers:
                 shutil.rmtree("/home/ubuntu/.calvin/security/test/{}/others".format(name + "{}".format(i)), ignore_errors=True)
