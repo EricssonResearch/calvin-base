@@ -127,6 +127,7 @@ function runtimeObject(id)
     this.id = id;
     this.actors = [];
     this.source = null;
+    this.peers = [];
 }
 
 // Return runtime object from id
@@ -303,7 +304,6 @@ function connectHandler() {
     document.cookie="calvin_uri=" + connect_uri;
     document.cookie="calvin_indexsearch=" + index_search;
     getPeerID();
-    getPeers();
     if (index_search) {
         getPeersFromIndex(index_search);
     }
@@ -376,11 +376,12 @@ function getPeersFromIndex(index)
 }
 
 // Get connected peers
-function getPeers()
+function getPeers(peer)
 {
-    var url = connect_uri + '/nodes';
+    var url = peer.control_uri + '/nodes';
     console.log("getPeers - url: " + url);
     $.ajax({
+        peer: peer,
         timeout: 20000,
         beforeSend: function() {
             startSpin();
@@ -394,6 +395,7 @@ function getPeers()
         success: function(data) {
             if (data) {
                 console.log("getPeers response: " + JSON.stringify(data));
+                this.peer.peers = data;
                 var index;
                 for (index in data) {
                     if (!findRuntime(data[index])) {
@@ -447,6 +449,7 @@ function getPeer(id)
                     }
                     peers[peers.length] = peer;
                     showPeer(peer);
+                    getPeers(peer);
                 }
             } else {
                 console.log("getPeer - Empty response");
@@ -769,9 +772,9 @@ function showPeer(peer)
     btnDeploy.value = 'Deploy...';
     btnDeploy.setAttribute("onclick", "showDeployApplication(this.id)");
 
-    var row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnDestroy, btnDeploy);
+    var row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnDestroy, btnDeploy);
     row.id = peer.id;
-    row.setAttribute("onclick", "showPeerAttributes(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");");
+    row.setAttribute("onclick", "showPeerAttributes(this.id); showPeerConnections(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");");
 }
 
 // Update peerTable with attributes from runtime with id "peer_id"
@@ -790,6 +793,26 @@ function showPeerAttributes(peer_id)
         if (peer.attributes.public) {
             for (attribute in peer.attributes.public) {
                 AddTableItem(tableRef, document.createTextNode("Public"), document.createTextNode(peer.attributes.public[attribute]));
+            }
+        }
+    }
+}
+
+// Update connectionsTable with attributes from runtime with id "peer_id"
+function showPeerConnections(peer_id)
+{
+    var runtime = findRuntime(peer_id);
+    if (runtime) {
+        var tableRef = document.getElementById('connectionsTable');
+        clearTable(tableRef);
+        if (runtime.peers) {
+            for (connection in runtime.peers) {
+                var peer = findRuntime(runtime.peers[connection]);
+                if (peer) {
+                    AddTableItem(tableRef, document.createTextNode(peer.name));
+                } else {
+                    AddTableItem(tableRef, document.createTextNode(runtime.peers[connection]));
+                }
             }
         }
     }
