@@ -112,7 +112,7 @@ class TestDHT(object):
                 assert [str(servno), self._sucess_start] in started
             
             yield threads.defer_to_thread(q.queue.clear)
-            yield threads.defer_to_thread(time.sleep, 10)
+            yield threads.defer_to_thread(time.sleep, 12)
 
             evilPort = servers[0].dht_server.port.getHost().port
             drawNetworkState("start_graph.png", servers, amount_of_servers)

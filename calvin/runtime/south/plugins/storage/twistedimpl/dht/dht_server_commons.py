@@ -957,4 +957,4 @@ def drawNetworkState(name, servers, amount_of_servers):
 
 def logger(node, message, level=None):
     _log.debug("{}:{}:{} - {}".format(node.id.encode("hex").upper(), node.ip, node.port, message))
-    print("{}:{}:{} - {}".format(node.id.encode("hex").upper(), node.ip, node.port, message))
+    # print("{}:{}:{} - {}".format(node.id.encode("hex").upper(), node.ip, node.port, message))
