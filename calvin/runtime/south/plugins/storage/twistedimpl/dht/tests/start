@@ -5,4 +5,5 @@ cd ~/newcalvin/calvin-base/calvin/runtime/south/plugins/storage/twistedimpl/dht/
 python ../cert_script.py
 py.test --twisted --runslow --runinteractive test_dht_server_nice2.py -s & 
 py.test --twisted --runslow --runinteractive test_dht_server_nice.py -s &
+py.test --twisted --runslow --runinteractive test_dht_server_nice3.py -s &
 py.test --twisted --runslow --runinteractive test_dht_server_evil.py -s &

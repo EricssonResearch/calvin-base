@@ -340,7 +340,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
             else:
                 return None
         else:
-            # _log.debug("Node with port {} did not get cert response from node with port {}".format(self.sourceNode.port, node.port))
             self.router.removeContact(node)
         return result
 
@@ -863,7 +862,7 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
 
     def poison_rpc_find_value(self, sender, nodeid, key, challenge, signature):
         value = self.storage[digest(str(self.sourceNode.id.encode("hex").upper()) + "cert")]
-        if key == digest("APA") or key == digest("KANIN"):
+        if key == digest("APA") or key == digest("KANIN") or key == digest("KOALA"):
             _log.debug("Attacking node with port {} sent back forged value".format(self.router.node.port))
             value = "apelsin"
         try:
