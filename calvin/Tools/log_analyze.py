@@ -91,7 +91,8 @@ def main():
                         log.append({'time': t, 
                                     'func': 'OTHER', 'param': line, 'node_id': None})
                     else:
-                        log[-1]['param'] += line
+                        if log:
+                            log[-1]['param'] += line
                 continue
             try:
                 lineparts = line.split('[[ANALYZE]]',1)
