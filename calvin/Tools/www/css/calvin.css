@@ -24,7 +24,7 @@ text {
 }
 
 #applicationGraph {
-    float:left;
+    float:right;
     resize: both;
     overflow: auto;
 }

@@ -10,6 +10,8 @@ var graph = new dagreD3.graphlib.Graph({compound:true})
             .setDefaultEdgeLabel(function() { return {}; });
 var render = new dagreD3.render();
 var svg = d3.select("#applicationGraph").append("svg");
+svg.attr("width", document.getElementById("applicationGraph").width);
+svg.attr("height", document.getElementById("applicationGraph").height);
 var svgGroup = svg.append("g");
 var graphTimer = null;
 
@@ -100,9 +102,6 @@ function updateGraph()
 
     // Run the renderer. This is what draws the final graph.
     render(d3.select("svg g"), graph);
-
-    svg.attr("width", 1000);
-    svg.attr("height", 600);
 }
 
 // Clear application graph
@@ -116,8 +115,8 @@ function clearApplicationGraph() {
                 .setDefaultEdgeLabel(function() { return {}; });
     render = new dagreD3.render();
     svg = d3.select("#applicationGraph").append("svg");
-    svg.attr("width", 1000);
-    svg.attr("height", 600);
+    svg.attr("width", document.getElementById("applicationGraph").width);
+    svg.attr("height", document.getElementById("applicationGraph").height);
     svgGroup = svg.append("g");
 }
 
