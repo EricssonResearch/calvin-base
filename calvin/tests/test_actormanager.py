@@ -28,6 +28,7 @@ class DummyNode:
         self.storage = mock.Mock()
         self.control = mock.Mock()
         self.metering = metering.set_metering(metering.Metering(self))
+        self.app_manager = mock.Mock()
 
     def calvinsys(self):
         return None
@@ -43,8 +44,8 @@ class ActorManagerTests(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def _new_actor(self, a_type, a_args, **kwargs):
-        a_id = self.am.new(a_type, a_args, **kwargs)
+    def _new_actor(self, a_type, a_args, app_id=None, **kwargs):
+        a_id = self.am.new(a_type, a_args, app_id=app_id, **kwargs)
         a = self.am.actors.get(a_id, None)
         self.assertTrue(a)
         return a, a_id
@@ -76,7 +77,7 @@ class ActorManagerTests(unittest.TestCase):
         a.data = 43
         a.n = 2
         s = a.state()
-        self.am.destroy(a_id)
+        self.am.delete_actor(a_id)
         self.assertEqual(len(self.am.actors), 0)
 
         b, b_id = self._new_actor(a_type, None, state = s)

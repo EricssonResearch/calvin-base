@@ -325,13 +325,14 @@ class Actor(object):
 
     # What are the arguments, really?
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
-                 disable_state_checks=False, actor_id=None):
+                 disable_state_checks=False, actor_id=None, app_id=None):
         """Should _not_ be overridden in subclasses."""
         super(Actor, self).__init__()
         self._type = actor_type
         self.name = name  # optional: human_readable_name
         self.id = actor_id or calvinuuid.uuid("ACTOR")
         _log.debug("New actor id: %s, supplied actor id %s" % (self.id, actor_id))
+        self.app_id = app_id
         self._deployment_requirements = []
         self._signature = None
         self._component_members = set([self.id])  # We are only part of component if this is extended
@@ -548,6 +549,8 @@ class Actor(object):
             else:
                 state[key] = obj
 
+        state['app_id'] = self.app_id
+
         return state
 
     @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING])
@@ -648,12 +651,13 @@ class Actor(object):
 class ShadowActor(Actor):
     """A shadow actor try to behave as another actor but don't have any implementation"""
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
-                 disable_state_checks=False, actor_id=None):
+                 disable_state_checks=False, actor_id=None, app_id=None):
         self.inport_names = []
         self.outport_names = []
         super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions, 
                                             disable_transition_checks=disable_transition_checks,
-                                            disable_state_checks=disable_state_checks, actor_id=actor_id)
+                                            disable_state_checks=disable_state_checks, actor_id=actor_id,
+                                            app_id=app_id)
 
     @manage(['_shadow_args'])
     def init(self, **args):

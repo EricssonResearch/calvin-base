@@ -282,6 +282,13 @@ def get_application(rt, application_id, timeout=TIMEOUT, async=False):
     return check_response(r)
 
 
+def get_application_actors(rt, application_id, timeout=TIMEOUT, async=False):
+    rt = get_RT(rt)
+    req = session if async else requests
+    r = req.get(rt.control_uri + '/application/{}/actors'.format(application_id), timeout=timeout)
+    return check_response(r)
+
+
 def delete_application(rt, application_id, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
     req = session if async else requests
@@ -381,7 +388,7 @@ g = None
 f = None
 from functools import partial
 for g, f in globals().iteritems():
-    if hasattr(f, '__call__') and ((hasattr(f, '__code__') and 'async' in f.__code__.co_varnames) 
+    if hasattr(f, '__call__') and ((hasattr(f, '__code__') and 'async' in f.__code__.co_varnames)
                                     or f.__name__ == 'peer_setup'):
         funcs['async_'+g] = partial(f, async=True)
 globals().update(funcs)

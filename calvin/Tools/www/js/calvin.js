@@ -514,7 +514,17 @@ function getApplications()
 // Get application with id "id"
 function getApplication(uri, id)
 {
-    var url = uri + '/application/' + id;
+    var application = findApplication(id);
+    if (!application) {
+        application = new applicationObject(id);
+        applications[applications.length] = application;
+    }
+    loadApplicationActors(uri, application);
+    loadApplicationData(uri, application);
+}
+
+function loadApplicationData(uri, application) {
+    var url = uri + '/application/' + application.id;
     console.log("getApplication - url: " + url);
     $.ajax({
         uri: uri,
@@ -531,14 +541,9 @@ function getApplication(uri, id)
         success: function(data) {
             if (data) {
                 console.log("getApplication - Response: " + JSON.stringify(data));
-                var application = findApplication(id);
-                if (!application) {
-                    application = new applicationObject(id);
-                    applications[applications.length] = application;
-                }
                 application.name = data.name;
-                application.actors = data.actors;
                 application.control_uri = this.uri;
+
                 var applicationSelector = document.getElementById("applicationSelector");
                 var optionApplication = new Option(application.name);
                 optionApplication.id =  application.id;
@@ -556,6 +561,35 @@ function getApplication(uri, id)
         },
         error: function() {
             alert("Failed to get application, url: " + url);
+        }
+    });
+}
+
+function loadApplicationActors(uri, application) {
+    var url = uri + '/application/' + application.id + '/actors';
+    console.log("getApplicationActors - url: " + url);
+    $.ajax({
+        uri: uri,
+        timeout: 20000,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: url,
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                console.log("getApplicationActors - Response: " + JSON.stringify(data));
+                application.actors = data;
+            } else {
+                console.log("getApplicationActors - Empty response");
+            }
+        },
+        error: function() {
+            alert("Failed to get application actors, url: " + url);
         }
     });
 }

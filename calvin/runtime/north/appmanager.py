@@ -65,9 +65,9 @@ class Application(object):
         actors = {v: [k] for k, v in self.actors.items() if v is not None}
         # Collect all actors under top component name
         components = {}
-        l = (len(ns)+1) if ns else 0 
+        l = (len(ns)+1) if ns else 0
         for name, _id in actors.iteritems():
-             if name.find(':',l)> -1:
+             if name.find(':', l) > -1:
                 # This is a component
                 # component name including optional namespace
                 component = ':'.join(name.split(':')[0:(2 if ns else 1)])
@@ -104,7 +104,7 @@ class Application(object):
 
     def group_components(self):
         self.components = {}
-        l = (len(self.ns)+1) if self.ns else 0 
+        l = (len(self.ns)+1) if self.ns else 0
         for name in self.actors.values():
              if name.find(':',l)> -1:
                 # This is part of a component
@@ -116,7 +116,7 @@ class Application(object):
                     self.components[component] = [name]
 
     def component_name(self, name):
-        l = (len(self.ns)+1) if self.ns else 0 
+        l = (len(self.ns)+1) if self.ns else 0
         if name.find(':',l)> -1:
             return ':'.join(name.split(':')[0:(2 if self.ns else 1)])
         else:
@@ -190,12 +190,15 @@ class AppManager(object):
         except:
             pass
         application.clear_node_info()
+        self.storage.get_application_actors(application.id, cb=CalvinCB(self._destroy_actors, application=application))
+
+    def _destroy_actors(self, key, value, application):
         # Loop over copy of app's actors, since modified inside loop
-        for actor_id in application.actors.keys()[:]:
+        for actor_id in value:
             if actor_id in self._node.am.list_actors():
                 _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id})
-                # TODO: Check if it went ok
-                self._node.am.destroy(actor_id)
+                # TODO: Check if it whent ok
+                self._node.am.delete_actor(actor_id)
                 application.remove_actor(actor_id)
             else:
                 _log.analyze(self._node.id, "+ REMOTE ACTOR", {'actor_id': actor_id})
@@ -213,12 +216,11 @@ class AppManager(object):
         if value and 'node_id' in value:
             application.update_node_info(value['node_id'], key)
         else:
-            if retries<10:
+            if retries < 10:
                 # FIXME add backoff time
                 _log.analyze(self._node.id, "+ RETRY", {'actor_id': key, 'value': value, 'retries': retries})
-                self.storage.get_actor(key, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries+1)))
+                self.storage.get_actor(key, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries + 1)))
             else:
-                # FIXME report failure
                 _log.analyze(self._node.id, "+ GIVE UP", {'actor_id': key, 'value': value, 'retries': retries})
                 application.update_node_info(None, key)
 
@@ -270,7 +272,7 @@ class AppManager(object):
         reply = response.CalvinResponse(True)
         for actor_id in actor_ids:
             if actor_id in self._node.am.list_actors():
-                self._node.am.destroy(actor_id)
+                self._node.am.delete_actor(actor_id)
             else:
                 reply = response.CalvinResponse(False)
         if application_id in self.applications:
@@ -322,7 +324,7 @@ class AppManager(object):
     def execute_requirements(self, application_id, cb):
         """ Build dynops iterator to collect all possible placements,
             then trigger migration.
-            
+
             For initial deployment (all actors on the current node)
         """
         app = None
@@ -381,7 +383,7 @@ class AppManager(object):
             else:
                 try:
                     _log.analyze(self._node.id, "+ REQ OP", {'op': req['op'], 'kwargs': req['kwargs']})
-                    it = req_operations[req['op']].req_op(self._node, 
+                    it = req_operations[req['op']].req_op(self._node,
                                             actor_id=actor_id,
                                             component=actor.component_members(),
                                             **req['kwargs']).set_name(req['op']+",SActor"+actor_id)
@@ -404,7 +406,7 @@ class AppManager(object):
         union_iters = []
         for union_req in state['req']['requirements']:
             try:
-                union_iters.append(req_operations[union_req['op']].req_op(self._node, 
+                union_iters.append(req_operations[union_req['op']].req_op(self._node,
                                         actor_id=state['actor_id'],
                                         component=state['component'],
                                         **union_req['kwargs']).set_name(union_req['op']+",UActor"+state['actor_id']))
@@ -469,7 +471,7 @@ class AppManager(object):
         """ Matrix of weights between actors how close they want to be
             0 = don't care
             1 = same node
-            
+
             Currently any nodes that are connected gets 0.5, and
             diagonal is 1:s
         """
@@ -524,7 +526,7 @@ class AppManager(object):
                                                                    actor_id=actor_id, cb=cb))
             else:
                 _log.analyze(self._node.id, "+ OTHER NODE", {'actor_id': actor_id, 'actor_name': actor_name})
-                self.storage.get_actor(actor_id, cb=CalvinCB(self._migrate_from_rt, app=app, 
+                self.storage.get_actor(actor_id, cb=CalvinCB(self._migrate_from_rt, app=app,
                                                                   actor_id=actor_id, req=req,
                                                                   move=move, cb=cb))
 
@@ -580,7 +582,7 @@ class Deployer(object):
     # TODO Make deployer use the Application class group_components, component_name and get_req
     def group_components(self):
         self.components = {}
-        l = (len(self.ns)+1) if self.ns else 0 
+        l = (len(self.ns)+1) if self.ns else 0
         for name in self.deployable['actors']:
              if name.find(':',l)> -1:
                 # This is part of a component
@@ -592,7 +594,7 @@ class Deployer(object):
                     self.components[component] = [name]
 
     def component_name(self, name):
-        l = (len(self.ns)+1) if self.ns else 0 
+        l = (len(self.ns)+1) if self.ns else 0
         if name.find(':',l)> -1:
             return ':'.join(name.split(':')[0:(2 if self.ns else 1)])
         else:
@@ -603,7 +605,7 @@ class Deployer(object):
         name = name.split(':', 1)[1] if self.ns else name
         return self.deploy_info['requirements'][name] if (self.deploy_info and 'requirements' in self.deploy_info
                                                             and name in self.deploy_info['requirements']) else []
-        
+
     def instantiate(self, actor_name, actor_type, argd, signature=None):
         """
         Instantiate an actor.
@@ -629,7 +631,7 @@ class Deployer(object):
         # args is a **dictionary** of key-value arguments for this instance
         # signature is the GlobalStore actor-signature to lookup the actor
         args['name'] = actor_name
-        actor_id = self.node.am.new(actor_type=actor_type, args=args, signature=signature)
+        actor_id = self.node.am.new(actor_type=actor_type, args=args, signature=signature, app_id=self.app_id)
         if req:
             self.node.am.actors[actor_id].requirements_add(req, extend=False)
         return actor_id
@@ -823,6 +825,6 @@ class Deployer(object):
                 c = (src_actor, src_port, dst_actor, dst_port)
                 self.connectid(c)
 
-        self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False, 
+        self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False,
                                        cb=CalvinCB(self.cb, deployer=self))
 

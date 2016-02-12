@@ -354,14 +354,13 @@ class Storage(object):
             coded_value = self.coder.encode(list(self.localstore_sets[prefix + key]['+']))
             self.storage.append(key=prefix + key, value=coded_value,
                                 cb=CalvinCB(func=self.append_cb, org_key=key, org_value=value, org_cb=cb))
-        else:
-            if cb:
-                cb(key=key, value=True)
+        elif cb:
+            cb(key=key, value=True)
 
     def remove_cb(self, key, value, org_key, org_value, org_cb):
         """ remove callback, on error retry after flush_timeout
         """
-        if value == True:
+        if value:
             if org_cb:
                 org_cb(key=org_key, value=True)
             if key in self.localstore_sets:
@@ -394,9 +393,8 @@ class Storage(object):
             coded_value = self.coder.encode(list(self.localstore_sets[prefix + key]['-']))
             self.storage.remove(key=prefix + key, value=coded_value,
                                 cb=CalvinCB(func=self.remove_cb, org_key=key, org_value=value, org_cb=cb))
-        else:
-            if cb:
-                cb(key=key, value=True)
+        elif cb:
+            cb(key=key, value=True)
 
     def delete(self, prefix, key, cb):
         """ Delete key: prefix+key (value set to None)
@@ -494,7 +492,6 @@ class Storage(object):
                  value={"name": application.name,
                         "ns": application.ns,
                         # FIXME when all users of the actors field is updated, save the full dict only
-                        "actors": application.actors.keys(),
                         "actors_name_map": application.actors,
                         "origin_node_id": application.origin_node_id},
                  cb=cb)
@@ -505,6 +502,12 @@ class Storage(object):
         """
         self.get(prefix="application-", key=application_id, cb=cb)
 
+    def get_application_actors(self, application_id, cb=None):
+        """
+        Get application from storage
+        """
+        self.get_concat(prefix="app-actors-", key=application_id, cb=cb)
+
     def delete_application(self, application_id, cb=None):
         """
         Delete application from storage
@@ -512,12 +515,14 @@ class Storage(object):
         _log.debug("Delete application %s" % application_id)
         self.delete(prefix="application-", key=application_id, cb=cb)
 
-    def add_actor(self, actor, node_id, cb=None):
+    def add_actor(self, actor, node_id, app_id, cb=None):
         """
         Add actor and its ports to storage
         """
         _log.debug("Add actor %s id %s" % (actor, node_id))
-        data = {"name": actor.name, "type": actor._type, "node_id": node_id}
+
+        data = {"name": actor.name, "type": actor._type, "node_id": node_id, 'app_id': app_id}
+
         inports = []
         for p in actor.inports.values():
             port = {"id": p.id, "name": p.name}
@@ -525,6 +530,7 @@ class Storage(object):
             self.add_port(p, node_id, actor.id, "in")
         data["inports"] = inports
         outports = []
+
         for p in actor.outports.values():
             port = {"id": p.id, "name": p.name}
             outports.append(port)
@@ -532,6 +538,10 @@ class Storage(object):
         data["outports"] = outports
         data["is_shadow"] = isinstance(actor, ShadowActor)
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
+
+        if app_id:
+            cb = CalvinCB(func=self.append_cb, org_key=None, org_value=None, org_cb=cb)
+            self.append("app-actors-", key=app_id, value=[actor.id], cb=cb)
 
     def get_actor(self, actor_id, cb=None):
         """
@@ -545,6 +555,12 @@ class Storage(object):
         """
         _log.debug("Delete actor id %s" % (actor_id))
         self.delete(prefix="actor-", key=actor_id, cb=cb)
+
+    def delete_actor_from_app(self, app_id, actor_id):
+        """Remove actor_id from application's list of actors"""
+        if not app_id:
+            return
+        self.remove("app-actors-", key=app_id, value=[actor_id], cb=None)
 
     def add_port(self, port, node_id, actor_id=None, direction=None, cb=None):
         """

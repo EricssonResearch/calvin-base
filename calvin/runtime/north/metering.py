@@ -59,6 +59,8 @@ class Metering(object):
         self.actors_aggregated_time = {}
 
     def fired(self, actor_id, action_name):
+        if actor_id not in self.actors_meta:
+            return
         t = time.time()
         if self.aggregated_timeout > 0.0:
             # Aggregate

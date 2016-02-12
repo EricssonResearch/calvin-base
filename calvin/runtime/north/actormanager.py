@@ -40,7 +40,7 @@ class ActorManager(object):
         self.node = node
 
     def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None,
-            signature=None):
+            signature=None, app_id=None):
         """
         Instantiate an actor of type 'actor_type'. Parameters are passed in 'args',
         'name' is an optional parameter in 'args', specifying a human readable name.
@@ -58,9 +58,9 @@ class ActorManager(object):
 
         try:
             if state:
-                a = self._new_from_state(actor_type, state)
+                a = self._new_from_state(actor_type, state, app_id)
             else:
-                a = self._new(actor_type, args)
+                a = self._new(actor_type, args, app_id)
         except Exception as e:
             _log.exception("Actor creation failed")
             raise(e)
@@ -70,7 +70,7 @@ class ActorManager(object):
 
         self.actors[a.id] = a
 
-        self.node.storage.add_actor(a, self.node.id)
+        self.node.storage.add_actor(a, self.node.id, app_id)
 
         if prev_connections:
             # Convert prev_connections to connection_list format
@@ -88,7 +88,7 @@ class ActorManager(object):
             else:
                 return a.id
 
-    def _new_actor(self, actor_type, actor_id=None):
+    def _new_actor(self, app_id, actor_type, actor_id=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         (found, is_primitive, class_) = ActorStore().lookup(actor_type)
         if not found:
@@ -102,7 +102,7 @@ class ActorManager(object):
             raise Exception("ERROR_NOT_FOUND")
         try:
             # Create a 'bare' instance of the actor
-            a = class_(actor_type, actor_id=actor_id)
+            a = class_(actor_type, actor_id=actor_id, app_id=app_id)
         except Exception as e:
             _log.exception("")
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
@@ -113,15 +113,14 @@ class ActorManager(object):
         except Exception as e:
             _log.exception("Catched new from state")
             _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
-            a = ShadowActor(actor_type, actor_id=actor_id)
+            a = ShadowActor(actor_type, actor_id=actor_id, app_id=app_id)
             a._calvinsys = self.node.calvinsys()
         return a
 
-
-    def _new(self, actor_type, args):
+    def _new(self, actor_type, args, app_id):
         """Return an initialized actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type)
+            a = self._new_actor(app_id, actor_type)
             # Now that required APIs are attached we can call init() which may use the APIs
             human_readable_name = args.pop('name', '')
             a.name = human_readable_name
@@ -133,12 +132,11 @@ class ActorManager(object):
             raise(e)
         return a
 
-
-    def _new_from_state(self, actor_type, state):
+    def _new_from_state(self, actor_type, state, app_id):
         """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
             _log.analyze(self.node.id, "+", state)
-            a = self._new_actor(actor_type, actor_id=state['id'])
+            a = self._new_actor(app_id, actor_type, actor_id=state['id'])
             if '_shadow_args' in state:
                 # We were a shadow, do a full init
                 args = state.pop('_shadow_args')
@@ -159,17 +157,25 @@ class ActorManager(object):
             raise(e)
         return a
 
-
-    def destroy(self, actor_id):
+    def delete_actor(self, actor_id):
         # @TOOD - check order here
         self.node.metering.remove_actor_info(actor_id)
         a = self.actors[actor_id]
         a.will_end()
         self.node.pm.remove_ports_of_actor(a)
+
         # @TOOD - insert callback here
         self.node.storage.delete_actor(actor_id)
         del self.actors[actor_id]
+
         self.node.control.log_actor_destroy(a.id)
+
+        self.node.storage.delete_actor_from_app(a.app_id, actor_id)
+        app = self.node.app_manager.applications.get(a.app_id)
+        if app:
+            app.remove_actor(actor_id)
+
+        return a
 
     # DEPRECATED: Enabling of an actor is dependent on wether it's connected or not
     def enable(self, actor_id):
@@ -235,7 +241,7 @@ class ActorManager(object):
             # This is a temporary fix by keep trying
             delay = 0.0 if actor._collect_placement_counter > actor._collect_placement_last_value + 100 else 0.2
             actor._collect_placement_counter += 1
-            actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements, 
+            actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements,
                                                     node_iter, actor_id, possible_placements, done=done,
                                                      move=move, cb=cb)
             return
@@ -259,7 +265,7 @@ class ActorManager(object):
             _log.analyze(self.node.id, "+ END", {})
         except:
             _log.exception("actormanager:_update_requirements_placements")
-        
+
 
     def migrate(self, actor_id, node_id, callback = None):
         """ Migrate an actor actor_id to peer node node_id """
@@ -293,12 +299,10 @@ class ActorManager(object):
         """ Actor disconnected, continue migration """
         if status:
             state = actor.state()
-            self.destroy(actor.id)
-            self.node.proto.actor_new(node_id, callback, actor_type, state, ports)
-        else:
-            # FIXME handle errors!!!
-            if callback:
-                callback(status=status)
+            self.delete_actor(actor.id)
+            self.node.proto.actor_new(node_id, callback, actor_type, state, ports, app_id=actor.app_id)
+        elif callback:  # FIXME handle errors!!!
+            callback(status=status)
 
     def peernew_to_local_cb(self, reply, **kwargs):
         if kwargs['actor_id'] == reply:

@@ -220,9 +220,9 @@ class ActorTester(object):
 
         self.actor_names = actors
 
-    def instantiate_actor(self, actorclass, actorname):
+    def instantiate_actor(self, actorclass, actorname, app_id=None):
         try:
-            actor = actorclass(actorname, disable_state_checks=True)
+            actor = actorclass(actorname, app_id, disable_state_checks=True)
             if not hasattr(actor, 'test_set'):
                 self.actors[actorname] = 'no_test'
                 return

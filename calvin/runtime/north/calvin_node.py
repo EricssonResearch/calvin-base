@@ -150,7 +150,8 @@ class Node(object):
     def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None):
         # TODO requirements should be input to am.new
         actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
-                        signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None)
+                               app_id=deploy_args['app_id'] if deploy_args else None,
+                               signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None)
         if deploy_args:
             app_id = deploy_args['app_id']
             if 'app_name' not in deploy_args:

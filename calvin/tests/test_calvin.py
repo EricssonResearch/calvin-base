@@ -246,6 +246,69 @@ class TestNodeSetup(CalvinTestBase):
 
 @pytest.mark.essential
 @pytest.mark.slow
+class TestActorDeletion(CalvinTestBase):
+
+    """Testing deletion of actor"""
+
+    def testDeleteLocalActor(self):
+        rt = self.runtime
+
+        script = """
+            src : std.CountTimer()
+            snk : io.StandardOut(store_tokens=1)
+            src.integer > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(rt, app_info)
+        app_id = d.deploy()
+
+        time.sleep(0.2)
+
+        actors = utils.get_application_actors(rt, app_id)
+        snk = d.actor_map['simple:snk']
+
+        assert snk in actors
+        utils.delete_actor(rt, snk)
+        time.sleep(0.2)
+
+        actors = utils.get_application_actors(rt, app_id)
+        assert snk not in actors
+
+        d.destroy()
+
+    def testDeleteRemoteActor(self):
+        rt = self.runtime
+        peer = self.runtimes[0]
+
+        script = """
+            src : std.CountTimer()
+            snk : io.StandardOut(store_tokens=1)
+            src.integer > snk.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "simple")
+        d = deployer.Deployer(rt, app_info)
+        app_id = d.deploy()
+
+        snk = d.actor_map['simple:snk']
+
+        time.sleep(0.2)
+        utils.migrate(rt, snk, peer.id)
+        time.sleep(0.2)
+        utils.delete_actor(peer, snk)
+        time.sleep(0.2)
+
+        snk = d.actor_map['simple:snk']
+        actors = utils.get_application_actors(rt, app_id)
+        assert snk not in actors
+
+        actors = utils.get_application_actors(peer, app_id)
+        assert snk not in actors
+
+        d.destroy()
+
+
+@pytest.mark.essential
+@pytest.mark.slow
 class TestLocalConnectDisconnect(CalvinTestBase):
 
     """Testing local connect/disconnect/re-connect"""
