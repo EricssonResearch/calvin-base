@@ -43,6 +43,8 @@ def verify_file(actor):
         with open(fname, "r") as fp:
             f = fp.read()
         result = "\n".join(l for l in file_data) + "\n" == f
+        os.remove(fname)
+
     return result
 
 
