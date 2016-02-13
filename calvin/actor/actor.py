@@ -621,7 +621,7 @@ class Actor(object):
         if not isinstance(actor_ids, (set, list, tuple)):
             actor_ids = [actor_ids]
         self._component_members -= set(actor_ids)
-        
+
     def part_of_component(self):
         return len(self._component_members - set([self.id]))>0
 
@@ -645,13 +645,14 @@ class Actor(object):
         if self._signature is None:
             self._signature = signature
 
+
 class ShadowActor(Actor):
     """A shadow actor try to behave as another actor but don't have any implementation"""
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
                  disable_state_checks=False, actor_id=None):
         self.inport_names = []
         self.outport_names = []
-        super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions, 
+        super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions,
                                             disable_transition_checks=disable_transition_checks,
                                             disable_state_checks=disable_state_checks, actor_id=actor_id)
 
