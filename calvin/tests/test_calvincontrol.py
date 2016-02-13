@@ -1,0 +1,123 @@
+import pytest
+
+from mock import Mock, patch, call
+
+from calvin.runtime.north.calvincontrol import get_calvincontrol, CalvinControl
+from calvin.utilities import calvinuuid
+
+
+def calvincontrol():
+    control = CalvinControl()
+    control.send_response = Mock()
+    control.send_response = Mock()
+    return control
+
+uuid = calvinuuid.uuid("")
+
+
+def test_get_calvincontrol_returns_xxx():
+    control = get_calvincontrol()
+    assert control == get_calvincontrol()
+
+
+@pytest.mark.parametrize("url,match,handler", [
+    ("GET /actor_doc HTTP/1", None, "handle_get_actor_doc"),
+    ("POST /log HTTP/1", None, "handle_post_log"),
+    ("DELETE /log/TRACE_" + uuid + " HTTP/1", "TRACE_" + uuid, "handle_delete_log"),
+    ("GET /log/TRACE_" + uuid + " HTTP/1", "TRACE_" + uuid, "handle_get_log"),
+    ("GET /id HTTP/1", None, "handle_get_node_id"),
+    ("GET /nodes HTTP/1", None, "handle_get_nodes"),
+    ("GET /node/NODE_" + uuid + " HTTP/1", "NODE_" + uuid, "handle_get_node"),
+    ("POST /peer_setup HTTP/1", None, "handle_peer_setup"),
+    ("GET /applications HTTP/1", None, "handle_get_applications"),
+    ("GET /application/APP_" + uuid + " HTTP/1", "APP_" + uuid, "handle_get_application"),
+    ("DELETE /application/APP_" + uuid + " HTTP/1", "APP_" + uuid, "handle_del_application"),
+    ("POST /actor HTTP/1", None, "handle_new_actor"),
+    ("GET /actors HTTP/1", None, "handle_get_actors"),
+    ("GET /actor/" + uuid + " HTTP/1", uuid, "handle_get_actor"),
+    ("DELETE /actor/" + uuid + " HTTP/1", uuid, "handle_del_actor"),
+    ("GET /actor/" + uuid + "/report HTTP/1", uuid, "handle_get_actor_report"),
+    ("POST /actor/" + uuid + "/migrate HTTP/1", uuid, "handle_actor_migrate"),
+    ("POST /actor/" + uuid + "/disable HTTP/1", uuid, "handle_actor_disable"),
+    ("GET /actor/" + uuid + "/port/PORT_" + uuid + " HTTP/1", uuid, "handle_get_port"),
+    ("GET /actor/" + uuid + "/port/PORT_" + uuid + "/state HTTP/1", uuid, "handle_get_port_state"),
+    ("POST /connect HTTP/1", None, "handle_connect"),
+    ("POST /set_port_property HTTP/1", None, "handle_set_port_property"),
+    ("POST /deploy HTTP/1", None, "handle_deploy"),
+    ("POST /application/APP_" + uuid + "/migrate HTTP/1", "APP_" + uuid, "handle_post_application_migrate"),
+    ("POST /disconnect HTTP/1", None, "handle_disconnect"),
+    ("DELETE /node HTTP/1", None, "handle_quit"),
+    ("POST /meter HTTP/1", None, "handle_post_meter"),
+    ("DELETE /meter/METERING_" + uuid + " HTTP/1", "METERING_" + uuid, "handle_delete_meter"),
+    ("GET /meter/METERING_" + uuid + "/timed HTTP/1", "METERING_" + uuid, "handle_get_timed_meter"),
+    ("GET /meter/METERING_" + uuid + "/aggregated HTTP/1", "METERING_" + uuid, "handle_get_aggregated_meter"),
+    ("GET /meter/METERING_" + uuid + "/metainfo HTTP/1", "METERING_" + uuid, "handle_get_metainfo_meter"),
+    ("POST /index/abc123 HTTP/1", "abc123", "handle_post_index"),
+    ("DELETE /index/abc123 HTTP/1", "abc123", "handle_delete_index"),
+    ("GET /index/abc123 HTTP/1", "abc123", "handle_get_index"),
+    ("GET /storage/abc123 HTTP/1", "abc123", "handle_get_storage"),
+    ("POST /storage/abc123 HTTP/1", "abc123", "handle_post_storage"),
+    ("OPTIONS /abc123 HTTP/1.1", None, "handle_options")
+])
+def test_routes_correctly(url, match, handler):
+    with patch.object(CalvinControl, handler) as func:
+        control = calvincontrol()
+
+        control.route_request(1, 2, url, 3, {})
+        assert func.called
+        args, kwargs = func.call_args
+        assert args[0] == 1
+        assert args[1] == 2
+        if match:
+            assert args[2].group(1) == match
+        assert args[3] == {}
+        assert args[4] == 3
+
+
+def test_send_response():
+    control = CalvinControl()
+    control.tunnel_client = Mock()
+
+    handle = Mock()
+    connection = Mock()
+    data = {'value': 1}
+    status = 200
+
+    control.connections[handle] = connection
+    control.send_response(handle, None, data, status)
+    assert control.tunnel_client.send.called
+
+    control.connections[handle] = connection
+    connection.connection_lost = True
+    control.send_response(handle, connection, data, status)
+    assert not connection.send.called
+
+    control.connections[handle] = connection
+    connection.connection_lost = False
+    control.send_response(handle, connection, data, status)
+    assert connection.send.called
+    connection.send.assert_called_with(data)
+
+    assert handle not in control.connections
+
+
+def test_send_streamhader():
+    control = CalvinControl()
+    control.tunnel_client = Mock()
+
+    handle = Mock()
+    connection = Mock()
+
+    control.connections[handle] = connection
+    control.send_streamheader(handle, None)
+    assert control.tunnel_client.send.called
+
+    control.connections[handle] = connection
+    connection.connection_lost = True
+    control.send_streamheader(handle, connection)
+    assert not connection.send.called
+
+    control.connections[handle] = connection
+    connection.connection_lost = False
+    control.send_streamheader(handle, connection)
+    assert connection.send.called
