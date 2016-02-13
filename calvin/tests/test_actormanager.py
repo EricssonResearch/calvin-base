@@ -17,22 +17,9 @@
 import unittest
 import pytest
 from mock import Mock, patch
+
+from calvin.tests import DummyNode
 from calvin.runtime.north.actormanager import ActorManager
-from calvin.runtime.north import metering
-from calvin.utilities.calvin_callback import CalvinCB
-
-
-class DummyNode:
-
-    def __init__(self):
-        self.id = id(self)
-        self.pm = Mock()
-        self.storage = Mock()
-        self.control = Mock()
-        self.metering = metering.set_metering(metering.Metering(self))
-
-    def calvinsys(self):
-        return None
 
 
 class ActorManagerTests(unittest.TestCase):

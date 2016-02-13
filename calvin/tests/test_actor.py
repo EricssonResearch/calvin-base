@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
 import pytest
-from mock import Mock, patch
+
+from mock import Mock
+from calvin.tests import DummyNode
 from calvin.runtime.north.actormanager import ActorManager
-from calvin.runtime.north import metering
 from calvin.runtime.south.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actor import Actor
 
@@ -34,19 +34,6 @@ def create_actor(node):
 @pytest.fixture
 def actor():
     return create_actor(DummyNode())
-
-
-class DummyNode:
-
-    def __init__(self):
-        self.id = id(self)
-        self.pm = Mock()
-        self.storage = Mock()
-        self.control = Mock()
-        self.metering = metering.set_metering(metering.Metering(self))
-
-    def calvinsys(self):
-        return None
 
 
 @pytest.mark.parametrize("port_type,port_name,port_property,value,expected", [

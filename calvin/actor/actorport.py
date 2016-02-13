@@ -89,7 +89,7 @@ class InPort(Port):
         return self.endpoint.is_connected()
 
     def is_connected_to(self, peer_id):
-        return self.endpoint.is_connected() and self.endpoint.get_peer()[1]==peer_id
+        return self.endpoint.is_connected() and self.endpoint.get_peer()[1] == peer_id
 
     def attach_endpoint(self, endpoint_):
         old_endpoint = self.endpoint
@@ -213,8 +213,7 @@ class OutPort(Port):
 
     def write_token(self, data):
         """docstring for write_token"""
-        ok = self.fifo.write(data)
-        if not ok:
+        if not self.fifo.write(data):
             raise Exception("FIFO full when writing to port %s.%s with id: %s" % (
                 self.owner.name, self.name, self.id))
 
