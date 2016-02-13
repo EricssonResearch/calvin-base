@@ -39,6 +39,10 @@ class ActorManager(object):
         self.actors = {}
         self.node = node
 
+    def _actor_not_found(self, actor_id):
+        _log.exception("Actor '{}' not found".format(actor_id))
+        raise Exception("Actor '{}' not found".format(actor_id))
+
     def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None,
             signature=None):
         """
@@ -159,8 +163,10 @@ class ActorManager(object):
             raise(e)
         return a
 
-
     def destroy(self, actor_id):
+        if actor_id not in self.actors:
+            self._actor_not_found(actor_id)
+
         # @TOOD - check order here
         self.node.metering.remove_actor_info(actor_id)
         a = self.actors[actor_id]
@@ -173,15 +179,18 @@ class ActorManager(object):
 
     # DEPRECATED: Enabling of an actor is dependent on wether it's connected or not
     def enable(self, actor_id):
-        if actor_id in self.actors:
-            self.actors[actor_id].enable()
+        if actor_id not in self.actors:
+            self._actor_not_found(actor_id)
+
+        self.actors[actor_id].enable()
 
     # DEPRECATED: Disabling of an actor is dependent on wether it's connected or not
     def disable(self, actor_id):
-        if actor_id in self.actors:
-            self.actors[actor_id].disable()
-        else:
+        if actor_id not in self.actors:
             _log.info("!!!FAILED to disable %s", actor_id)
+            self._actor_not_found(actor_id)
+
+        self.actors[actor_id].disable()
 
     def update_requirements(self, actor_id, requirements, extend=False, move=False, callback=None):
         """ Update requirements and trigger a potential migration """
@@ -235,7 +244,7 @@ class ActorManager(object):
             # This is a temporary fix by keep trying
             delay = 0.0 if actor._collect_placement_counter > actor._collect_placement_last_value + 100 else 0.2
             actor._collect_placement_counter += 1
-            actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements, 
+            actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements,
                                                     node_iter, actor_id, possible_placements, done=done,
                                                      move=move, cb=cb)
             return
@@ -259,9 +268,8 @@ class ActorManager(object):
             _log.analyze(self.node.id, "+ END", {})
         except:
             _log.exception("actormanager:_update_requirements_placements")
-        
 
-    def migrate(self, actor_id, node_id, callback = None):
+    def migrate(self, actor_id, node_id, callback=None):
         """ Migrate an actor actor_id to peer node node_id """
         if actor_id not in self.actors:
             # Can only migrate actors from our node
@@ -324,7 +332,7 @@ class ActorManager(object):
         of tuples (node_id i.e. our id, port_id, peer_node_id, peer_port_id)
         """
         if actor_id not in self.actors:
-            return
+            self._actor_not_found(actor_id)
 
         peer_port_ids = [c[3] for c in connection_list]
 
@@ -359,32 +367,32 @@ class ActorManager(object):
                     _callback(status=response.CalvinResponse(True), actor_id=actor_id)
 
     def connections(self, actor_id):
-        return self.actors.get(actor_id, None).connections(self.node.id)
+        if actor_id not in self.actors:
+            self._actor_not_found(actor_id)
+
+        return self.actors[actor_id].connections(self.node.id)
 
     def dump(self, actor_id):
-        actor = self.actors.get(actor_id, None)
-        if not actor:
-            raise Exception("Actor '%s' not found" % (actor_id,))
+        if actor_id not in self.actors:
+            self._actor_not_found(actor_id)
+
+        actor = self.actors[actor_id]
         _log.debug("-----------")
         _log.debug(actor)
         _log.debug("-----------")
 
     def set_port_property(self, actor_id, port_type, port_name, port_property, value):
-        try:
-            actor = self.actors[actor_id]
-        except Exception as e:
-            _log.exception("Actor '%s' not found" % (actor_id,))
-            raise e
+        if actor_id not in self.actors:
+            self._actor_not_found(actor_id)
+        actor = self.actors[actor_id]
         success = actor.set_port_property(port_type, port_name, port_property, value)
         return 'OK' if success else 'FAILURE'
 
     def get_port_state(self, actor_id, port_id):
-        try:
-            actor = self.actors[actor_id]
-        except Exception as e:
-            _log.exception("Actor '%s' not found" % (actor_id,))
-            raise e
+        if actor_id not in self.actors:
+            self._actor_not_found(actor_id)
 
+        actor = self.actors[actor_id]
         for port in actor.inports.values():
             if port.id == port_id:
                 return port.fifo._state()
@@ -398,11 +406,13 @@ class ActorManager(object):
         return actor._type if actor else 'BAD ACTOR'
 
     def report(self, actor_id):
-        return self.actors.get(actor_id, None).report()
+        if actor_id not in self.actors:
+            self._actor_not_found(actor_id)
+
+        return self.actors[actor_id].report()
 
     def enabled_actors(self):
         return [actor for actor in self.actors.values() if actor.enabled()]
 
     def list_actors(self):
         return self.actors.keys()
-
