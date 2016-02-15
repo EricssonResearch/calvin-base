@@ -103,8 +103,7 @@ def test_disconnect_outport(inport, outport):
     outport.attach_endpoint(endpoint_2)
     assert outport.disconnect() == [endpoint_1, endpoint_2]
     assert outport.owner.did_disconnect.called
-    outport.fifo.commit_reads.assert_has_calls(call(endpoint_1.peer_id, False))
-    outport.fifo.commit_reads.assert_has_calls(call(endpoint_2.peer_id, False))
+    outport.fifo.commit_reads.assert_has_calls([call(endpoint_1.peer_id, False), call(endpoint_2.peer_id, False)])
 
 
 def test_inport_outport_connection(inport, outport):
