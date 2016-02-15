@@ -20,14 +20,17 @@ import ply.yacc as yacc
 import calvin_rules
 from calvin_rules import tokens
 
+
 class CalvinSyntaxError(Exception):
     def __init__(self, message, token):
         super(CalvinSyntaxError, self).__init__(message)
         self.token = token
 
+
 class CalvinEOFError(Exception):
     def __init__(self, message):
         super(CalvinEOFError, self).__init__(message)
+
 
 def p_script(p):
     """script : constdefs compdefs opt_program"""
@@ -45,7 +48,7 @@ def p_constdefs(p):
 
 def p_constdef(p):
     """constdef : DEFINE IDENTIFIER EQ argument"""
-    constdef = {p[2]:p[4]}
+    constdef = {p[2]: p[4]}
     p[0] = constdef
 
 
@@ -59,7 +62,9 @@ def p_compdefs(p):
 
 
 def p_compdef(p):
-    """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring program RBRACE"""
+    """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring
+    program RBRACE
+    """
     name = p[2]
     arg_ids = p[4]
     inputs = p[6]
@@ -73,9 +78,9 @@ def p_compdef(p):
         'arg_identifiers': arg_ids,
         'structure': structure,
         'docstring': docstring,
-        'dbg_line':p.lineno(2)
+        'dbg_line': p.lineno(2)
     }
-    p[0] = {name:comp}
+    p[0] = {name: comp}
 
 
 def p_docstring(p):
@@ -125,7 +130,7 @@ def p_statement(p):
 
 def p_assignment(p):
     """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
-    p[0] = ('assignment', {p[1]: {'actor_type': p[3], 'args': p[5], 'dbg_line':p.lineno(2)}})
+    p[0] = ('assignment', {p[1]: {'actor_type': p[3], 'args': p[5], 'dbg_line': p.lineno(2)}})
 
 
 def p_link(p):
@@ -181,51 +186,51 @@ def p_value(p):
 
 
 def p_bool(p):
-  """bool : TRUE
-          | FALSE"""
-  p[0] = bool(p.slice[1].type == 'TRUE')
+    """bool : TRUE
+            | FALSE"""
+    p[0] = bool(p.slice[1].type == 'TRUE')
 
 
 def p_null(p):
-  """null : NULL"""
-  p[0] = None
+    """null : NULL"""
+    p[0] = None
 
 
 def p_dictionary(p):
-  """dictionary : LBRACE members RBRACE"""
-  p[0] = dict(p[2])
+    """dictionary : LBRACE members RBRACE"""
+    p[0] = dict(p[2])
 
 
 def p_members(p):
-  """members :
-             | members member COMMA
-             | members member"""
-  if len(p) == 1:
-    p[0] = list()
-  else:
-    p[1].append(p[2])
-    p[0] = p[1]
+    """members :
+                | members member COMMA
+                | members member"""
+    if len(p) == 1:
+        p[0] = list()
+    else:
+        p[1].append(p[2])
+        p[0] = p[1]
 
 
 def p_member(p):
-  """member : STRING COLON value"""
-  p[0] = (p[1], p[3])
+    """member : STRING COLON value"""
+    p[0] = (p[1], p[3])
 
 
 def p_values(p):
-  """values :
-            | values value COMMA
-            | values value"""
-  if len(p) == 1:
-    p[0] = list()
-  else:
-    p[1].append(p[2])
-    p[0] = p[1]
+    """values :
+                | values value COMMA
+                | values value"""
+    if len(p) == 1:
+        p[0] = list()
+    else:
+        p[1].append(p[2])
+        p[0] = p[1]
 
 
 def p_array(p):
-  """array :  LBRACK values RBRACK"""
-  p[0] = p[2]
+    """array :  LBRACK values RBRACK"""
+    p[0] = p[2]
 
 
 # def p_opt_id_list(p):
@@ -275,15 +280,17 @@ def _calvin_parser():
     parser = yacc.yacc(debug=False, optimize=True, outputdir=containing_dir)
     return parser
 
+
 # Compute column.
 #     input is the input text string
 #     token is a token instance
 def _find_column(input, token):
     last_cr = input.rfind('\n', 0, token.lexpos)
     if last_cr < 0:
-	    last_cr = 0
+        last_cr = 0
     column = (token.lexpos - last_cr) + 1
     return column
+
 
 def calvin_parser(source_text, source_file=''):
     parser = _calvin_parser()
@@ -295,17 +302,17 @@ def calvin_parser(source_text, source_file=''):
         result = parser.parse(source_text)
     except CalvinSyntaxError as e:
         error = {
-            'reason':str(e),
-            'line':e.token.lexer.lineno,
-            'col':_find_column(source_text, e.token)
+            'reason': str(e),
+            'line': e.token.lexer.lineno,
+            'col': _find_column(source_text, e.token)
         }
         errors.append(error)
     except CalvinEOFError as e:
         lines = source_text.splitlines()
         error = {
-            'reason':str(e),
-            'line':len(lines),
-            'col':len(lines[-1])
+            'reason': str(e),
+            'line': len(lines),
+            'col': len(lines[-1])
         }
         errors.append(error)
 
@@ -318,7 +325,6 @@ def calvin_parser(source_text, source_file=''):
 
 if __name__ == '__main__':
     import sys
-    import os
     import json
 
     if len(sys.argv) < 2:
