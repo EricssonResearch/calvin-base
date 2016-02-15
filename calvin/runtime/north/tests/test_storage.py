@@ -19,6 +19,7 @@ from calvin.runtime.north import storage
 from calvin.runtime.north import appmanager
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.tests import TestNode, TestActor, TestPort
 import Queue
 import pytest
 import time
@@ -27,42 +28,6 @@ try:
     import pytest.inlineCallbacks
 except ImportError:
     pytest.inlineCallbacks = lambda *args: False
-
-
-class TestNode:
-
-    def __init__(self, uri):
-        self.id = calvinuuid.uuid("NODE")
-        self.uri = uri
-
-
-class TestActor:
-
-    def __init__(self, name, type, inports, outports):
-        self.id = calvinuuid.uuid("ACTOR")
-        self.name = name
-        self._type = type
-        self.inports = inports
-        self.outports = outports
-
-
-class TestPort:
-
-    def __init__(self, name, direction):
-        self.id = calvinuuid.uuid("PORT")
-        self.name = name
-        self.direction = direction
-        self.peer = None
-        self.peers = None
-
-    def is_connected(self):
-        return True
-
-    def get_peer(self):
-        return self.peer
-
-    def get_peers(self):
-        return self.peers
 
 
 @pytest.mark.interactive
