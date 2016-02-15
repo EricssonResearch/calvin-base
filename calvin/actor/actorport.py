@@ -26,12 +26,13 @@ _log = get_logger(__name__)
 class Port(object):
     """docstring for Port"""
 
-    def __init__(self, name, owner, fifo_size=5):
+    def __init__(self, name, owner, direction, fifo_size=5):
         super(Port, self).__init__()
         # Human readable port name
         self.name = name
         # Actor instance to which the port belongs (may change over time)
         self.owner = owner
+        self.direction = direction
         # Unique id to universally identify port (immutable)
         self.id = calvinuuid.uuid("PORT")
         # The token queue. Not all scenarios use it,
@@ -77,7 +78,7 @@ class InPort(Port):
     """An inport can have only one endpoint."""
 
     def __init__(self, name, owner):
-        super(InPort, self).__init__(name, owner)
+        super(InPort, self).__init__(name, owner, "in")
         self.fifo.add_reader(self.id)
         self.endpoint = endpoint.Endpoint(self)
 
@@ -141,7 +142,7 @@ class OutPort(Port):
     """An outport can have many endpoints."""
 
     def __init__(self, name, owner):
-        super(OutPort, self).__init__(name, owner)
+        super(OutPort, self).__init__(name, owner, "out")
         self.fanout = 1
         self.endpoints = []
 
