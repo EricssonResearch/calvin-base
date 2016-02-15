@@ -540,8 +540,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         self.router.addContact(source)
         node = Node(key)
         bucket = map(list, self.router.findNeighbors(node, exclude=source))
-        file = open("/home/ubuntu/.calvin/security/test/{}/private/private.key".format(self.name), 'rt')
-        st_key = file.read()
         try:
             private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, challenge, "sha256")
@@ -558,7 +556,8 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         self.maybeTransferKeyValues(source)
         certificate = self.searchForCertificate(nodeid.encode('hex').upper())
         if certificate == None:   
-            if key == digest(str(self.sourceNode.id.encode("hex").upper()) + "cert") and cert != None: # If the senders certificate is not in store, the only allowed action is to ask for the certificate
+            if key == digest(str(self.sourceNode.id.encode("hex").upper()) + "cert") and cert != None: 
+            # If the senders certificate is not in store, the only allowed action is to ask for the certificate
                 try:
                     certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
                     store_ctx = OpenSSL.crypto.X509StoreContext(self.trustedStore, certificate)
@@ -616,11 +615,11 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                 logger(self.sourceNode, "Bad signature for sender of ping with explicit certificate: {}".format(source))
                 return None
         else:
-            cert = self.searchForCertificate(nodeid.encode('hex').upper())
-            if cert == None:
+            certificate = self.searchForCertificate(nodeid.encode('hex').upper())
+            if certificate == None:
                 return None
             try:
-                OpenSSL.crypto.verify(cert, signature, str(addr) + challenge, "sha256")
+                OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
             except:
                 logger(self.sourceNode, "Bad signature for sender of ping: {}".format(source))
                 return None
