@@ -14,13 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import json
 from calvin.runtime.north.calvin_token import Token
 import time
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
+
 
 class Endpoint(object):
 
@@ -74,13 +73,14 @@ class LocalInEndpoint(Endpoint):
         return True
 
     def _fifo_mismatch_fix(self):
-        # Fix once mismatch of positions: we have tokens in the peer fifo that are duplicates of tokens transferred (and ack never reached peer)
+        # Fix once mismatch of positions: we have tokens in the peer fifo that are duplicates of tokens transferred
+        # (and ack never reached peer)
         # Need to remove in peer fifo since might already been consumed
         while self.peer_port.fifo.can_read(self.port.id) and self.port.fifo.write_pos > self.peer_port.fifo.read_pos[self.port.id]:
-            token = self.peer_port.fifo.read(self.port.id)
+            self.peer_port.fifo.read(self.port.id)
             self.peer_port.fifo.commit_reads(self.port.id, True)
         self.fifo_mismatch = False
-        
+
     def _sync_local_fifos(self):
         # TODO Fix performance by only doing this at a disconnect of local port
         # Make this port's write pos to be synced with peer's read_pos as it is when using 2 FIFOs (i.e. remote)
@@ -122,8 +122,8 @@ class LocalInEndpoint(Endpoint):
 
     def peek_rewind(self):
         if self.data_in_local_fifo:
-            token = self.port.fifo.rollback_reads(self.port.id)
-        token = self.peer_port.fifo.rollback_reads(self.port.id)
+            self.port.fifo.rollback_reads(self.port.id)
+        self.peer_port.fifo.rollback_reads(self.port.id)
 
     def commit_peek_as_read(self):
         if self.data_in_local_fifo:
@@ -192,16 +192,23 @@ class TunnelInEndpoint(Endpoint):
         return True
 
     def recv_token(self, payload):
-        ok =False
+        ok = False
         # Drop any tokens that we can't write to fifo or is out of sequence
         if self.port.fifo.can_write() and self.port.fifo.write_pos == payload['sequencenbr']:
             self.port.fifo.write(Token.decode(payload['token']))
             self.trigger_loop()
             ok = True
         elif self.port.fifo.write_pos > payload['sequencenbr']:
-            # Other side resent a token we already have received (can happen after a reconnect if our previous ACK was lost), just ACK
+            # Other side resent a token we already have received (can happen after a reconnect if our previous ACK was
+            # lost), just ACK
             ok = True
-        reply = {'cmd': 'TOKEN_REPLY', 'port_id':payload['port_id'], 'peer_port_id': payload['peer_port_id'], 'sequencenbr': payload['sequencenbr'], 'value': 'ACK' if ok else 'NACK'}
+        reply = {
+            'cmd': 'TOKEN_REPLY',
+            'port_id': payload['port_id'],
+            'peer_port_id': payload['peer_port_id'],
+            'sequencenbr': payload['sequencenbr'],
+            'value': 'ACK' if ok else 'NACK'
+        }
         self.tunnel.send(reply)
 
     def read_token(self):
@@ -254,51 +261,64 @@ class TunnelOutEndpoint(Endpoint):
         return True
 
     def reply(self, sequencenbr, status):
-        sequencenbr_sent = self.port.fifo.tentative_read_pos[self.peer_id]
-        sequencenbr_acked= self.port.fifo.read_pos[self.peer_id]
         _log.debug("Reply on port %s/%s/%s [%i] %s" % (self.port.owner.name, self.peer_id, self.port.name, sequencenbr, status))
-        if status=='ACK':
-            # Back to full send speed directly
-            self.bulk = True
-            self.backoff = 0.0
-            if sequencenbr < sequencenbr_sent:
-                self.sequencenbrs_acked.append(sequencenbr)
-            while any(n==sequencenbr_acked for n in self.sequencenbrs_acked):
-                self.port.fifo.commit_one_read(self.peer_id, True)
-                self.sequencenbrs_acked.remove(sequencenbr_acked)
-            # Maybe someone can fill the fifo again
-            self.trigger_loop()
-
-        elif status=='NACK':
-            # Make send only send one token at a time and have increasing time between them
-            curr_time = time.time()
-            if self.bulk:
-                self.time_cont = curr_time
-            if self.time_cont <= curr_time:
-                # Need to trigger again due to either too late NACK or switched from series of ACK
-                self.trigger_loop()
-            self.bulk = False
-            self.backoff = min(1.0, 0.1 if self.backoff < 0.1 else self.backoff*2.0)
-
-            if sequencenbr < sequencenbr_sent and sequencenbr >= sequencenbr_acked:
-                # Filter out ACK for later seq nbrs, should not happen but precaution
-                self.sequencenbrs_acked = [n for n in self.sequencenbrs_acked if n<sequencenbr]
-                # Rollback fifo to the NACKed token
-                while(self.port.fifo.tentative_read_pos[self.peer_id] > sequencenbr):
-                    self.port.fifo.commit_one_read(self.peer_id, False)
+        if status == 'ACK':
+            self._reply_ack(sequencenbr, status)
+        elif status == 'NACK':
+            self._reply_nack(sequencenbr, status)
         else:
             # FIXME implement ABORT
             pass
 
+    def _reply_ack(self, sequencenbr, status):
+        sequencenbr_sent = self.port.fifo.tentative_read_pos[self.peer_id]
+        sequencenbr_acked = self.port.fifo.read_pos[self.peer_id]
+        # Back to full send speed directly
+        self.bulk = True
+        self.backoff = 0.0
+        if sequencenbr < sequencenbr_sent:
+            self.sequencenbrs_acked.append(sequencenbr)
+        while any(n == sequencenbr_acked for n in self.sequencenbrs_acked):
+            self.port.fifo.commit_one_read(self.peer_id, True)
+            self.sequencenbrs_acked.remove(sequencenbr_acked)
+        # Maybe someone can fill the fifo again
+        self.trigger_loop()
+
+    def _reply_nack(self, sequencenbr, status):
+        sequencenbr_sent = self.port.fifo.tentative_read_pos[self.peer_id]
+        sequencenbr_acked = self.port.fifo.read_pos[self.peer_id]
+        # Make send only send one token at a time and have increasing time between them
+        curr_time = time.time()
+        if self.bulk:
+            self.time_cont = curr_time
+        if self.time_cont <= curr_time:
+            # Need to trigger again due to either too late NACK or switched from series of ACK
+            self.trigger_loop()
+        self.bulk = False
+        self.backoff = min(1.0, 0.1 if self.backoff < 0.1 else self.backoff * 2.0)
+
+        if sequencenbr < sequencenbr_sent and sequencenbr >= sequencenbr_acked:
+            # Filter out ACK for later seq nbrs, should not happen but precaution
+            self.sequencenbrs_acked = [n for n in self.sequencenbrs_acked if n < sequencenbr]
+            # Rollback fifo to the NACKed token
+            while(self.port.fifo.tentative_read_pos[self.peer_id] > sequencenbr):
+                self.port.fifo.commit_one_read(self.peer_id, False)
+
     def _send_one_token(self):
         token = self.port.fifo.read(self.peer_id)
         sequencenbr_sent = self.port.fifo.tentative_read_pos[self.peer_id] - 1
-        _log.debug("Send on port  %s/%s/%s [%i] %s" % (self.port.owner.name, 
-                                                       self.peer_id, 
-                                                       self.port.name, 
-                                                       sequencenbr_sent, 
+        _log.debug("Send on port  %s/%s/%s [%i] %s" % (self.port.owner.name,
+                                                       self.peer_id,
+                                                       self.port.name,
+                                                       sequencenbr_sent,
                                                        "" if self.bulk else "@%f/%f" % (self.time_cont, self.backoff)))
-        self.tunnel.send({'cmd':'TOKEN', 'token':token.encode(), 'peer_port_id':self.peer_id, 'sequencenbr': sequencenbr_sent, 'port_id': self.port.id})
+        self.tunnel.send({
+            'cmd': 'TOKEN',
+            'token': token.encode(),
+            'peer_port_id': self.peer_id,
+            'sequencenbr': sequencenbr_sent,
+            'port_id': self.port.id
+        })
 
     def communicate(self, *args, **kwargs):
         sent = False
@@ -309,7 +329,7 @@ class TunnelOutEndpoint(Endpoint):
                 self._send_one_token()
         else:
             # Send only one since other side sent NACK likely due to their FIFO is full
-            if (self.port.fifo.can_read(self.peer_id) and 
+            if (self.port.fifo.can_read(self.peer_id) and
                self.port.fifo.tentative_read_pos[self.peer_id] == self.port.fifo.read_pos[self.peer_id] and
                time.time() >= self.time_cont):
                 # Something to read and last (N)ACK recived
