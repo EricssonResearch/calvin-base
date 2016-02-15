@@ -327,17 +327,16 @@ class TunnelOutEndpoint(Endpoint):
             while self.port.fifo.can_read(self.peer_id):
                 sent = True
                 self._send_one_token()
-        else:
+        elif (self.port.fifo.can_read(self.peer_id) and
+              self.port.fifo.tentative_read_pos[self.peer_id] == self.port.fifo.read_pos[self.peer_id] and
+              time.time() >= self.time_cont):
             # Send only one since other side sent NACK likely due to their FIFO is full
-            if (self.port.fifo.can_read(self.peer_id) and
-               self.port.fifo.tentative_read_pos[self.peer_id] == self.port.fifo.read_pos[self.peer_id] and
-               time.time() >= self.time_cont):
-                # Something to read and last (N)ACK recived
-                self._send_one_token()
-                sent = True
-                self.time_cont = time.time() + self.backoff
-                # Make sure that resend will be tried in backoff seconds
-                self.trigger_loop(self.backoff)
+            # Something to read and last (N)ACK recived
+            self._send_one_token()
+            sent = True
+            self.time_cont = time.time() + self.backoff
+            # Make sure that resend will be tried in backoff seconds
+            self.trigger_loop(self.backoff)
         return sent
 
     def get_peer(self):
