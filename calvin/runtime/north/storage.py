@@ -408,9 +408,8 @@ class Storage(object):
             del self.localstore_sets[prefix + key]
         if self.started:
             self.set(prefix, key, None, cb)
-        else:
-            if cb:
-                cb(key, True)
+        elif cb:
+            cb(key, True)
 
     ### Calvin object handling ###
 

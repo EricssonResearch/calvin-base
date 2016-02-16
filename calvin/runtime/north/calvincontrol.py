@@ -906,8 +906,8 @@ class CalvinControl(object):
         try:
             self.node.app_manager.destroy(match.group(1), cb=CalvinCB(self.handle_del_application_cb,
                                                                         handle, connection))
-        except:
-            _log.exception("Destroy application failed")
+        except Exception as e:
+            _log.exception("Destroy application failed {}".format(e))
             self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
 
     def handle_del_application_cb(self, handle, connection, status=None):
@@ -1531,6 +1531,7 @@ class CalvinControlTunnel(object):
         """ Send response header text/html
         """
         connection = self.connections[msgid]
+
         if not connection.connection_lost:
             if header is not None:
                 connection.send(str(header))

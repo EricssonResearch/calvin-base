@@ -288,6 +288,7 @@ def delete_application(rt, application_id, timeout=TIMEOUT, async=False):
     r = req.delete(rt.control_uri + '/application/' + application_id, timeout=timeout)
     return check_response(r)
 
+
 def deploy_application(rt, name, script, deploy_info=None, check=True, timeout=TIMEOUT, async=False):
     rt = get_RT(rt)
     data = {"name": name, "script": script, 'deploy_info': deploy_info, "check": check}
