@@ -20,17 +20,15 @@ import sys
 import trace
 import logging
 
-from calvin.calvinsys import Sys as CalvinSys
-
 from calvin.runtime.north import scheduler
-from calvin.runtime.north import storage
-from calvin.runtime.north import calvincontrol
 from calvin.runtime.south.plugins.async import async
-from calvin.utilities.attribute_resolver import AttributeResolver
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities import calvinuuid
+from calvin.runtime.north.calvin_node import Node
+from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
+
 _log = get_logger(__name__)
+_conf = calvinconfig.get()
+
 
 class FakeAM(object):
     def enabled_actors():
@@ -38,22 +36,19 @@ class FakeAM(object):
 
 
 class FakeMonitor(object):
-    def loop():
+    def loop(self, node):
         return False
 
 
-class StorageNode(object):
+class StorageNode(Node):
 
-
-    def __init__(self, control_uri):
-        super(StorageNode, self).__init__()
-        self.id = calvinuuid.uuid("NODE")
-        self.control_uri = control_uri
-        self.control = calvincontrol.get_calvincontrol()
+    def __init__(self, uri, control_uri):
+        super(StorageNode, self).__init__(uri, control_uri, self_start=False)
+        self.monitor = FakeMonitor()
+        self.am = FakeAM()
         _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
-        self.sched = _scheduler(self, FakeAM(), FakeMonitor())
-        self.control.start(node=self, uri=control_uri)
-        self.storage = storage.Storage(self)
+        self.sched = _scheduler(self, self.am, self.monitor)
+
         async.DelayedCall(0, self.start)
 
     #
@@ -64,10 +59,6 @@ class StorageNode(object):
         _log.debug("Node %s is running" % self.id)
         self.sched.run()
 
-    def start(self):
-        """ Run once when main loop is started """
-        self.storage.start()
-
     def stop(self, callback=None):
         def stopped(*args):
             _log.analyze(self.id, "+", {'args': args})
@@ -77,8 +68,9 @@ class StorageNode(object):
         _log.analyze(self.id, "+", {})
         self.storage.stop(stopped)
 
+
 def create_node(uri, control_uri, attributes=None):
-    n = StorageNode(control_uri)
+    n = StorageNode(uri, control_uri)
     n.run()
     _log.info('Quitting node "%s"' % n.control_uri)
 
@@ -88,7 +80,7 @@ def create_tracing_node(uri, control_uri, attributes=None):
     Same as create_node, but will trace every line of execution.
     Creates trace dump in output file '<host>_<port>.trace'
     """
-    n = StorageNode(control_uri)
+    n = StorageNode(uri, control_uri)
     _, host = uri.split('://')
     with open("%s.trace" % (host, ), "w") as f:
         tmp = sys.stdout

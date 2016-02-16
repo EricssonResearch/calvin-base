@@ -179,6 +179,8 @@ class CalvinNetwork(object):
         """
         if not uris:
             uris = [schema + ":default" for schema in self.transports.keys()]
+        if not isinstance(uris, list):
+            uris = [uris]
 
         for uri in uris:
             schema, addr = uri.split(':', 1)
