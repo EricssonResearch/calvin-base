@@ -108,7 +108,7 @@ class TestDHT(object):
                 assert [str(servno), self._sucess_start] in started
             
             yield threads.defer_to_thread(q.queue.clear)
-            yield threads.defer_to_thread(time.sleep, 5)
+            yield threads.defer_to_thread(time.sleep, 8)
             key = "APA"
             value = "banan"
             set_def = servers[0].set(key=key, value=value)

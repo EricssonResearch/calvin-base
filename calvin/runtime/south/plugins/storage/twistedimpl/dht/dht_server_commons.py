@@ -196,9 +196,12 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
             if len(neighbors) == 0 or (newNodeClose and thisNodeClosest):
                 if key in self.set_keys:
+                    print "this happens"
                     ds.append(self.callAppend(node, key, value))
                 else:
-                    ds.append(self.callStore(node, key, value))
+                    # ds.append(self.callStore(node, key, value))
+                    self.callStore(node, key, value)
+                    return None
         return defer.gatherResults(ds)
 
     def maybeTransferKeyValues(self, node):
@@ -212,7 +215,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         if not exists:
             identifier = digest(node.id.encode('hex').upper() + "cert")
             cert = Node(identifier)
-            self.callCertFindValue(node, cert, self.getOwnCert())
+            self.callCertFindValue(node, cert)
 
     def storeOwnCert(self, cert):
         """
@@ -248,7 +251,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         return self.storage[digest(str(self.sourceNode.id.encode("hex").upper()) + "cert")]
 
 
-    def callCertFindValue(self, nodeToAsk, nodeToFind, cert=None):
+    def callCertFindValue(self, nodeToAsk, nodeToFind):
         """
         Asks 'nodeToAsk' for its certificate.
         """
@@ -258,9 +261,9 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
         except:
-            logger(self.sourceNode, "Signing of CertFindValue failed")
+            logger(self.sourceNode, "Signing of certFindValue failed")
             return None
-        d = self.find_value(address, self.sourceNode.id, nodeToFind.id, challenge, signature, cert)
+        d = self.find_value(address, self.sourceNode.id, nodeToFind.id, challenge, signature, self.getOwnCert())
         return d.addCallback(self.handleCertCallResponse, nodeToAsk, challenge)
 
     def callFindNode(self, nodeToAsk, nodeToFind):
@@ -329,35 +332,25 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         If we get a response, add the node to the routing table.  If
         we get no response, make sure it's removed from the routing table.
         """
-        if result[0]:
-            if 'value' in result[1] and 'signature' in result[1]:
-                try:
-                    cert=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, result[1]['value'])
-                except:
-                    logger(self.sourceNode, "Invalid certificate response from {}".format(node))
-                    return None
-                fingerprint = cert.digest("sha256")
-                id = fingerprint.replace(":","")[-40:]
-                if node.id.encode('hex').upper() == id:
-                    try:
-                        OpenSSL.crypto.verify(cert, result[1]['signature'], result[1]['value'] + challenge, "sha256")
-                    except:
-                        logger(self.sourceNode, "Bad signature for sender of certificate: {}".format(node))
-                        return None
-                    self.router.addContact(node)
-                    self.storeCert(result[1]['value'], id)
-                    if self.router.isNewNode(node):
-                        self.transferKeyValues(node)
-                else:
-                    logger(self.sourceNode, "Certificate from {} does not match claimed node id".format(node))
-                    return None
+        if 'value' in result[1]:
+            try:
+                cert=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, result[1]['value'])
+            except:
+                logger(self.sourceNode, "Invalid certificate response from {}".format(node))
+                return None
+            fingerprint = cert.digest("sha256")
+            id = fingerprint.replace(":","")[-40:]
+            if node.id.encode('hex').upper() == id:
+                OpenSSL.crypto.verify(cert, result[1]['signature'], challenge, "sha256")
+                self.router.addContact(node)
+                self.storeCert(result[1]['value'], id)
+                if self.router.isNewNode(node):
+                    self.transferKeyValues(node)
             else:
-                logger(self.sourceNode, "Signature not present for sender of certificate: {}".format(node))
+                # logger(self.sourceNode, "Certificate from {} does not match claimed node id".format(node))
                 return None
         else:
-            logger(self.sourceNode, "No certificate response from {}, removing from bucket".format(node))
             self.router.removeContact(node)
-            return None
         return result
 
     def handleSignedBucketResponse(self, result, node, challenge):
@@ -366,7 +359,9 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         we get no response, make sure it's removed from the routing table.
         """
         if result[0]:
-            if 'bucket' in result[1] and 'signature' in result[1]:
+            if "NACK" in result[1]:
+                return self.handleSignedNACKResponse(result, node, challenge)
+            elif 'bucket' in result[1] and 'signature' in result[1]:
                 cert = self.searchForCertificate(node.id.encode('hex').upper())
                 if cert == None:
                     logger(self.sourceNode, "Certificate for sender of bucket: {} not present in store".format(node))
@@ -378,7 +373,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                     for bucketnode in result[1]['bucket']:
                         if not self.certificateExists(bucketnode[0].encode('hex').upper()):
                             nonCertifiedNode = Node(bucketnode[0], bucketnode[1], bucketnode[2])
-                            self.callCertFindValue(nonCertifiedNode, Node(digest(str(bucketnode[0].encode("hex").upper()) + "cert")), self.getOwnCert())
+                            self.callCertFindValue(nonCertifiedNode, Node(digest(str(bucketnode[0].encode("hex").upper()) + "cert")))
                         else:
                             newbucket.append(bucketnode)
                     return (result[0], newbucket)
@@ -400,13 +395,15 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         we get no response, make sure it's removed from the routing table.
         """
         if result[0]:
-            if 'id' in result[1] and 'signature' in result[1]:
+            if "NACK" in result[1]:
+                return self.handleSignedNACKResponse(result, node, challenge)
+            elif 'id' in result[1] and 'signature' in result[1]:
                 cert = self.searchForCertificate(node.id.encode('hex').upper())
                 if cert == None:
                     logger(self.sourceNode, "Certificate for sender of pong: {} not present in store".format(node))
                     return None
                 try: 
-                    OpenSSL.crypto.verify(cert, result[1]['signature'], str(result[1]['id']) + challenge, "sha256")
+                    OpenSSL.crypto.verify(cert, result[1]['signature'], challenge, "sha256")
                     self.router.addContact(node)
                     return result[1]['id']
                 except:
@@ -425,7 +422,9 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         If we get a response, add the node to the routing table.  If
         we get no response, make sure it's removed from the routing table.
         """
-        if result[1]:
+        if result[0]:
+            if "NACK" in result[1]:
+                return self.handleSignedNACKResponse(result, node, challenge)
             cert = self.searchForCertificate(node.id.encode('hex').upper())
             if cert == None:
                 logger(self.sourceNode, "Certificate for sender of store confirmation: {} not present in store".format(node))
@@ -448,15 +447,17 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         we get no response, make sure it's removed from the routing table.
         """
         if result[0]:
-            if 'bucket' in result[1]:
+            if "NACK" in result[1]:
+                return self.handleSignedNACKResponse(result, node, challenge)
+            elif 'bucket' in result[1]:
                 return self.handleSignedBucketResponse(result, node, challenge)
-            if 'value' in result[1] and 'signature' in result[1]:
+            elif 'value' in result[1] and 'signature' in result[1]:
                 cert = self.searchForCertificate(node.id.encode('hex').upper())
                 if cert == None:
                     logger(self.sourceNode, "Certificate for sender of value response: {} not present in store".format(node))
                     return None
                 try: 
-                    OpenSSL.crypto.verify(cert, result[1]['signature'], result[1]['value'] + challenge, "sha256")
+                    OpenSSL.crypto.verify(cert, result[1]['signature'], challenge, "sha256")
                     self.router.addContact(node)
                     return result
                 except:
@@ -468,6 +469,20 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         else:
             logger(self.sourceNode, "No value response from {}, removing from bucket".format(node))
             self.router.removeContact(node)
+        return None
+
+    def handleSignedNACKResponse(self, result, node, challenge):
+        cert = self.searchForCertificate(node.id.encode('hex').upper())
+        if cert == None:
+            logger(self.sourceNode, "Certificate for sender of NACK: {} not present in store".format(node))
+        if "NACK" in result[1]:
+            logger(self.sourceNode, "NACK in Value response")
+            try:
+                OpenSSL.crypto.verify(cert, result[1]['signature'], challenge, "sha256")
+                self.callPing(node, self.getOwnCert())
+                logger(self.sourceNode, "Certificate sent!")
+            except:
+                logger(self.sourceNode, "Bad signature for sender of NACK: {}".format(node))
         return None
 
     def certificateExists(self, id):
@@ -505,9 +520,11 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
     def rpc_store(self, sender, nodeid, key, value, challenge, signature):
         source = Node(nodeid, sender[0], sender[1])
         certificate = self.searchForCertificate(nodeid.encode('hex').upper())
-        self.maybeTransferKeyValues(source)
         if certificate == None:
-            return None
+            private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
+            signature = OpenSSL.crypto.sign(private, challenge, "sha256")
+            logger(self.sourceNode, "Certificate for {} not found in store".format(source))
+            return {'NACK' : None, "signature" : signature}
         try:
             addr = (self.sourceNode.ip, self.sourceNode.port)
             OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
@@ -527,10 +544,13 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
     def rpc_find_node(self, sender, nodeid, key, challenge, signature):
         self.log.info("finding neighbors of %i in local table" % long(nodeid.encode('hex'), 16))
         source = Node(nodeid, sender[0], sender[1])
-        self.maybeTransferKeyValues(source)
+        # self.maybeTransferKeyValues(source)
         certificate = self.searchForCertificate(nodeid.encode('hex').upper())
         if certificate == None:
-                return None
+            private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
+            signature = OpenSSL.crypto.sign(private, challenge, "sha256")
+            logger(self.sourceNode, "Certificate for {} not found in store".format(source))
+            return {'NACK' : None, "signature" : signature}
         try:
             addr = (self.sourceNode.ip, self.sourceNode.port)
             OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
@@ -540,6 +560,8 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         self.router.addContact(source)
         node = Node(key)
         bucket = map(list, self.router.findNeighbors(node, exclude=source))
+        file = open("/home/ubuntu/.calvin/security/test/{}/private/private.key".format(self.name), 'rt')
+        st_key = file.read()
         try:
             private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, challenge, "sha256")
@@ -553,7 +575,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         source = Node(nodeid, sender[0], sender[1])
         addr = (self.sourceNode.ip, self.sourceNode.port)
         _log.debug("rpc_find_value sender=%s, source=%s, key=%s" % (sender, source, base64.b64encode(key)))
-        self.maybeTransferKeyValues(source)
+        # self.maybeTransferKeyValues(source)
         certificate = self.searchForCertificate(nodeid.encode('hex').upper())
         if certificate == None:   
             if key == digest(str(self.sourceNode.id.encode("hex").upper()) + "cert") and cert != None: 
@@ -567,16 +589,23 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                     if id != nodeid.encode("hex").upper():
                         logger(self.sourceNode, "Explicit certificate in find_value from {} does not match nodeid".format(source))
                         return None
+                    addr = (self.sourceNode.ip, self.sourceNode.port)
                     OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
                     self.storeCert(cert, nodeid.encode("hex").upper())
                 except:
                     logger(self.sourceNode, "Invalid certificate request: {}".format(source))
                     return None
             else:
+                try:
+                    private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
+                    signature = OpenSSL.crypto.sign(private, challenge, "sha256")
+                except:
+                    return None
                 logger(self.sourceNode, "Certificate for {} not found in store".format(source))
-                return None
+                return { 'NACK' : None, 'signature': signature}
         else:
             try:
+                addr = (self.sourceNode.ip, self.sourceNode.port)
                 OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
             except:
                 logger(self.sourceNode, "Bad signature for sender of find_value: {}".format(source))
@@ -589,16 +618,14 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         else:
             try:
                 private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-                signature = OpenSSL.crypto.sign(private, value + challenge, "sha256")
+                signature = OpenSSL.crypto.sign(private, challenge, "sha256")
             except:
                 logger(self.sourceNode, "Signing of rpc_find_value failed")
                 return None
             return { 'value': value, 'signature': signature }
 
     def rpc_ping(self, sender, nodeid, challenge, signature, cert=None):
-        addr = (self.sourceNode.ip, self.sourceNode.port)
         source = Node(nodeid, sender[0], sender[1])
-        self.maybeTransferKeyValues(source)
         if cert != None:
             try:
                 certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
@@ -609,24 +636,32 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                 if id != nodeid.encode("hex").upper():
                     logger(self.sourceNode, "Explicit certificate in ping from {} does not match nodeid".format(source))
                     return None
+                addr = (self.sourceNode.ip, self.sourceNode.port)
                 OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
-                self.storeCert(cert, nodeid.encode("hex").upper())
+                if not self.certificateExists(nodeid.encode("hex").upper()):
+                    self.storeCert(cert, nodeid.encode("hex").upper())
+                    self.transferKeyValues(source)
             except:
                 logger(self.sourceNode, "Bad signature for sender of ping with explicit certificate: {}".format(source))
                 return None
         else:
             certificate = self.searchForCertificate(nodeid.encode('hex').upper())
             if certificate == None:
-                return None
+                private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
+                signature = OpenSSL.crypto.sign(private, challenge, "sha256")
+                logger(self.sourceNode, "Certificate for {} not found in store".format(source))
+                return {'NACK' : None, "signature" : signature}
             try:
+                addr = (self.sourceNode.ip, self.sourceNode.port)
                 OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
             except:
                 logger(self.sourceNode, "Bad signature for sender of ping: {}".format(source))
                 return None
-        self.router.addContact(source)
+        
+        # self.maybeTransferKeyValues(source)
         try:
             private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-            signature = OpenSSL.crypto.sign(private, self.sourceNode.id + challenge, "sha256")
+            signature = OpenSSL.crypto.sign(private, challenge, "sha256")
         except:
             logger(self.sourceNode, "Signing of rpc_ping failed")
             return None
@@ -657,11 +692,11 @@ class niceAppendServer(AppendServer):
                     data = self.protocol.certificateExists(result[1]['id'].encode('hex').upper())
                     if not data:
                         identifier = digest(result[1]['id'].encode('hex').upper() + "cert")
-                        self.protocol.callCertFindValue(Node(result[1]['id'], addr[0], addr[1]), Node(identifier), self.getOwnCert())
+                        self.protocol.callCertFindValue(Node(result[1]['id'], addr[0], addr[1]), Node(identifier))
                     else:
                         cert = self.protocol.searchForCertificate(result[1]['id'].encode('hex').upper())
                         try:
-                            OpenSSL.crypto.verify(cert, result[1]['signature'], result[1]['id'] + challenge, "sha256")
+                            OpenSSL.crypto.verify(cert, result[1]['signature'], challenge, "sha256")
                         except:
                             traceback.print_exc()
                         nodes.append(Node(result[1]['id'], addr[0], addr[1]))
@@ -704,6 +739,9 @@ class evilAutoDHTServer(AutoDHTServer):
         key = cert.digest("sha256")
         newkey = key.replace(":", "")
         bytekey = newkey.decode("hex")
+
+        if network is None:
+            network = _conf.get_in_order("dht_network_filter", "ALL")
 
         if network is None:
             network = _conf.get_in_order("dht_network_filter", "ALL")
@@ -772,15 +810,15 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
         challenge = os.urandom(4).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-            signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
+            signature = OpenSSL.crypto.sign(private, challenge, "sha256")
         except:
             "Signing ping failed"
         if id:
             decider = random.random()
             if decider < 0.5:
-                d = self.ping(address, id, challenge, signature, self.getOwnCert())
+                self.ping(address, id, challenge, signature, self.getOwnCert())
             else:
-                d = self.ping(address, id, challenge, signature)
+                self.ping(address, id, challenge, signature)
         else:
                 d = self.ping(address, self.sourceNode.id, challenge, signature, self.getOwnCert())
         return True
@@ -837,6 +875,7 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
                     node = Node(self.neighbours[nodeToAttack][0],self.neighbours[nodeToAttack][1],self.neighbours[nodeToAttack][2])
                     self.callPing(node, self.neighbours[nodeToImpersonate][0])
 
+
     # def eclipse(self):
     #     self.neighbours = map(list, self.router.findNeighbors(Node(hashlib.sha1(str(random.getrandbits(255))).digest()),k=20))
     #     for nodeToAttack in range(0, len(self.neighbours)):
@@ -882,20 +921,24 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
 
     def poison_rpc_find_node(self, sender, nodeid, key, challenge, signature):
         source = Node(nodeid, sender[0], sender[1])
-        self.maybeTransferKeyValues(source)
+        # self.maybeTransferKeyValues(source)
         self.router.addContact(source)
         node = Node(key)
         decider = random.random()
+        self.neighbours = map(list, self.router.findNeighbors(Node(hashlib.sha1(str(random.getrandbits(255))).digest()),k=20))
         if decider < 0.1:
             self.poison_routing_tables()
-        self.neighbours = map(list, self.router.findNeighbors(Node(hashlib.sha1(str(random.getrandbits(255))).digest()),k=20))
+        elif decider > 0.9:
+            print "sending"
+            self.find_node((self.neighbours[0][1], self.neighbours[0][2]), nodeid, self.neighbours[0][0], challenge, signature)
+            print "sent"
+        
         neighbourList = list(self.neighbours) 
         for i in range(0, len(neighbourList)):
             neighbourList[i] = [neighbourList[i][0], neighbourList[i][1], self.router.node.port]
         mergedlist = []
         mergedlist.extend(neighbourList)
         mergedlist.extend(self.false_neighbour_list)
-        self.find_node((self.neighbours[0][1], self.neighbours[0][2]), nodeid, self.neighbours[0][0], challenge, signature)
         try:
             private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, challenge, "sha256")
@@ -903,14 +946,14 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
             _log.debug("signing poison find node failed")
         return { 'bucket' : mergedlist , 'signature' : signature }
 
-    def poison_rpc_find_value(self, sender, nodeid, key, challenge, signature, cert=None):
+    def poison_rpc_find_value(self, sender, nodeid, key, challenge, signature):
         value = self.storage[digest(str(self.sourceNode.id.encode("hex").upper()) + "cert")]
         if key == digest("APA") or key == digest("KANIN") or key == digest("KOALA"):
-            logger(self.sourceNode, "Attacking node with port sent back forged value")
+            _log.debug("Attacking node with port {} sent back forged value".format(self.router.node.port))
             value = "apelsin"
         try:
             private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-            signature = OpenSSL.crypto.sign(private, value + challenge, "sha256")
+            signature = OpenSSL.crypto.sign(private, challenge, "sha256")
         except:
             _log.debug("signing poison find value failed")
         return { 'value': value, 'signature': signature }
@@ -945,23 +988,24 @@ class evilAppendServer(niceAppendServer):
                    are acceptable - hostnames will cause an error.
         """
         # if the transport hasn't been initialized yet, wait a second
+        # _log.debug("bootstrap"
         if self.protocol.transport is None:
             return task.deferLater(reactor, 1, self.bootstrap, addrs)
 
-        def initTable(results, challenge, id):
+        def initTable(results):
             nodes = []
             for addr, result in results.items():
                 if result[0]:
-                    data = self.protocol.certificateExists(result[1]['id'].encode('hex').upper())
-                    if not data:
+                    data = self.protocol.storage.get(digest(id + "cert"))
+                    if not data[0]:
                         identifier = digest(result[1]['id'].encode('hex').upper() + "cert")
-                        self.protocol.callCertFindValue(Node(result[1]['id'], addr[0], addr[1]), Node(identifier), self.getOwnCert())
+                        self.protocol.callCertFindValue(Node(result[1]['id'], addr[0], addr[1]), Node(identifier))
                     else:
                         cert = self.protocol.searchForCertificate(result[1]['id'].encode('hex').upper())
                         try:
-                            OpenSSL.crypto.verify(cert, result[1]['signature'], result[1]['id'] + challenge, "sha256")
+                            OpenSSL.crypto.verify(cert, result[1]['signature'], challenge, "sha256")
                         except:
-                            traceback.print_exc()
+                            _log.debug("Signature verification failed")
                         nodes.append(Node(result[1]['id'], addr[0], addr[1]))
             spider = NodeSpiderCrawl(self.protocol, self.node, nodes, self.ksize, self.alpha)
             return spider.find()
@@ -978,7 +1022,7 @@ class evilAppendServer(niceAppendServer):
                 ds[addr] = self.protocol.ping(addr, self.node.id, challenge, signature, self.protocol.getOwnCert())
                 cert=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data[2])
             except:
-                _log.debug("Certificate creation failed")
+                "Certificate creation failed"
             fingerprint = cert.digest("sha256")
             id = fingerprint.replace(":","")[-40:]
             self.protocol.storeCert(data[2], id)
