@@ -236,10 +236,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
     #####################
 
     def handleCertCallResponse(self, result, node, challenge):
-        """
-        If we get a response, add the node to the routing table.  If
-        we get no response, make sure it's removed from the routing table.
-        """
         if 'value' in result[1]:
             try:
                 cert=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, result[1]['value'])
@@ -265,10 +261,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         return result
 
     def handleSignedBucketResponse(self, result, node, challenge):
-        """
-        If we get a response, add the node to the routing table.  If
-        we get no response, make sure it's removed from the routing table.
-        """
         if result[0]:
             if "NACK" in result[1]:
                 return self.handleSignedNACKResponse(result, node, challenge)
@@ -301,10 +293,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         return None
 
     def handleSignedPingResponse(self, result, node, challenge):
-        """
-        If we get a response, add the node to the routing table.  If
-        we get no response, make sure it's removed from the routing table.
-        """
         if result[0]:
             if "NACK" in result[1]:
                 return self.handleSignedNACKResponse(result, node, challenge)
@@ -332,10 +320,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         return None
 
     def handleSignedStoreResponse(self, result, node, challenge):
-        """
-        If we get a response, add the node to the routing table.  If
-        we get no response, make sure it's removed from the routing table.
-        """
         if result[0]:
             if "NACK" in result[1]:
                 return self.handleSignedNACKResponse(result, node, challenge)
@@ -356,10 +340,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         return None
 
     def handleSignedValueResponse(self, result, node, challenge):
-        """
-        If we get a response, add the node to the routing table.  If
-        we get no response, make sure it's removed from the routing table.
-        """
         if result[0]:
             if "NACK" in result[1]:
                 return self.handleSignedNACKResponse(result, node, challenge)
@@ -641,7 +621,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
             if len(neighbors) == 0 or (newNodeClose and thisNodeClosest):
                 if key in self.set_keys:
-                    print "this happens"
                     ds.append(self.callAppend(node, key, value))
                 else:
                     # ds.append(self.callStore(node, key, value))
