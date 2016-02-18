@@ -161,7 +161,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         Asks 'nodeToAsk' for its certificate.
         """
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(4).encode("hex")
+        challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
@@ -176,7 +176,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         Asks 'nodeToAsk' for the value 'nodeToFind.id'
         """
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(4).encode("hex")
+        challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
@@ -191,7 +191,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         Asks 'nodeToAsk' for the information regarding the node 'nodeToFind'
         """
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(4).encode("hex")
+        challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
@@ -206,7 +206,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         Sends a ping message to 'nodeToAsk'
         """        
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(4).encode("hex")
+        challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
@@ -221,7 +221,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         Sends a request for 'nodeToAsk' to store value 'value' with key 'key'
         """   
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(4).encode("hex")
+        challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
@@ -698,7 +698,7 @@ class niceAppendServer(AppendServer):
             return spider.find()
 
         ds = {}
-        challenge = os.urandom(4).encode("hex")
+        challenge = os.urandom(8).encode("hex")
         id = None
         if addrs:
             data = addrs[0]
@@ -801,7 +801,7 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
 
     def callPing(self, nodeToAsk, id=None):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(4).encode("hex")
+        challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
             signature = OpenSSL.crypto.sign(private, challenge, "sha256")
@@ -1004,7 +1004,7 @@ class evilAppendServer(niceAppendServer):
             return spider.find()
 
         ds = {}
-        challenge = os.urandom(4).encode("hex")
+        challenge = os.urandom(8).encode("hex")
         id = None
         if addrs:
             data = addrs[0]
