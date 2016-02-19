@@ -164,7 +164,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-            signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
+            signature = OpenSSL.crypto.sign(private, nodeToAsk.id.encode("hex").upper() + challenge, "sha256")
         except:
             logger(self.sourceNode, "Signing of certFindValue failed")
             return None
@@ -179,7 +179,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-            signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
+            signature = OpenSSL.crypto.sign(private, nodeToAsk.id.encode("hex").upper() + challenge, "sha256")
         except:
             logger(self.sourceNode, "Signing of findNode failed")
             return None
@@ -194,7 +194,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-            signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
+            signature = OpenSSL.crypto.sign(private, nodeToAsk.id.encode("hex").upper() + challenge, "sha256")
         except:
             logger(self.sourceNode, "Signing of findValue failed")
             return None
@@ -209,7 +209,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-            signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
+            signature = OpenSSL.crypto.sign(private, nodeToAsk.id.encode("hex").upper() + challenge, "sha256")
         except:
             logger(self.sourceNode, "Signing of ping failed")
             return None
@@ -224,7 +224,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         challenge = os.urandom(8).encode("hex")
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
-            signature = OpenSSL.crypto.sign(private, str(address) + challenge, "sha256")
+            signature = OpenSSL.crypto.sign(private, nodeToAsk.id.encode("hex").upper() + challenge, "sha256")
         except:
             logger(self.sourceNode, "Signing of store failed")
             return None
@@ -397,8 +397,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
             return {'NACK' : None, "signature" : signature}
         else:
             try:
-                addr = (self.sourceNode.ip, self.sourceNode.port)
-                OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
+                OpenSSL.crypto.verify(certificate, signature, self.sourceNode.id.encode('hex').upper() + challenge, "sha256")
             except:
                 logger(self.sourceNode, "Bad signature for sender of store request: {}".format(source))
                 return None
@@ -426,16 +425,13 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
             return {'NACK' : None, "signature" : signature}
         else:
             try:
-                addr = (self.sourceNode.ip, self.sourceNode.port)
-                OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
+                OpenSSL.crypto.verify(certificate, signature, self.sourceNode.id.encode('hex').upper() + challenge, "sha256")
             except:
                 logger(self.sourceNode, "Bad signature for sender of find_node: {}".format(source))
                 return None
             self.router.addContact(source)
             node = Node(key)
             bucket = map(list, self.router.findNeighbors(node, exclude=source))
-            file = open("/home/ubuntu/.calvin/security/test/{}/private/private.key".format(self.name), 'rt')
-            st_key = file.read()
             try:
                 private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.priv_key, '')
                 signature = OpenSSL.crypto.sign(private, challenge, "sha256")
@@ -447,7 +443,6 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
 
     def rpc_find_value(self, sender, nodeid, key, challenge, signature, certString=None):
         source = Node(nodeid, sender[0], sender[1])
-        addr = (self.sourceNode.ip, self.sourceNode.port)
         certificate = self.searchForCertificate(nodeid.encode('hex').upper())
         if certificate == None:   
             if key == digest(str(self.sourceNode.id.encode("hex").upper()) + "cert") and certString != None: 
@@ -461,8 +456,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                     if id != nodeid.encode("hex").upper():
                         logger(self.sourceNode, "Explicit certificate in find_value from {} does not match nodeid".format(source))
                         return None
-                    addr = (self.sourceNode.ip, self.sourceNode.port)
-                    OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
+                    OpenSSL.crypto.verify(certificate, signature, self.sourceNode.id.encode('hex').upper() + challenge, "sha256")
                     self.storeCert(certString, nodeid.encode("hex").upper())
                 except:
                     logger(self.sourceNode, "Invalid certificate request: {}".format(source))
@@ -477,8 +471,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                 return { 'NACK' : None, 'signature': signature}
         else:
             try:
-                addr = (self.sourceNode.ip, self.sourceNode.port)
-                OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
+                OpenSSL.crypto.verify(certificate, signature, self.sourceNode.id.encode('hex').upper() + challenge, "sha256")
             except:
                 logger(self.sourceNode, "Bad signature for sender of find_value: {}".format(source))
                 return None
@@ -509,8 +502,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                 if id != nodeid.encode("hex").upper():
                     logger(self.sourceNode, "Explicit certificate in ping from {} does not match nodeid".format(source))
                     return None
-                addr = (self.sourceNode.ip, self.sourceNode.port)
-                OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
+                OpenSSL.crypto.verify(certificate, signature, self.sourceNode.id.encode('hex').upper() + challenge, "sha256")
                 if not self.certificateExists(nodeid.encode("hex").upper()):
                     self.storeCert(certString, nodeid.encode("hex").upper())
                     self.transferKeyValues(source)
@@ -529,8 +521,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                 return {'NACK' : None, "signature" : signature}
             else:
                 try:
-                    addr = (self.sourceNode.ip, self.sourceNode.port)
-                    OpenSSL.crypto.verify(certificate, signature, str(addr) + challenge, "sha256")
+                    OpenSSL.crypto.verify(certificate, signature, self.sourceNode.id.encode('hex').upper() + challenge, "sha256")
                 except:
                     logger(self.sourceNode, "Bad signature for sender of ping: {}".format(source))
                     return None
@@ -704,14 +695,14 @@ class niceAppendServer(AppendServer):
             data = addrs[0]
             addr = (data[0], data[1])
             try:
-                private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.protocol.priv_key, '')
-                signature = OpenSSL.crypto.sign(private, str(addr) + challenge, "sha256")
-                ds[addr] = self.protocol.ping(addr, self.node.id, challenge, signature, self.protocol.getOwnCert())
                 cert=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data[2])
+                fingerprint = cert.digest("sha256")
+                id = fingerprint.replace(":","")[-40:]
+                private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.protocol.priv_key, '')
+                signature = OpenSSL.crypto.sign(private, id + challenge, "sha256")
+                ds[addr] = self.protocol.ping(addr, self.node.id, challenge, signature, self.protocol.getOwnCert())
             except:
                 logger(self.protocol.sourceNode, "Certificate creation failed")
-            fingerprint = cert.digest("sha256")
-            id = fingerprint.replace(":","")[-40:]
             self.protocol.storeCert(data[2], id)
             node = Node(id.decode("hex"), data[0], data[1])
             if self.protocol.router.isNewNode(node):
@@ -985,12 +976,12 @@ class evilAppendServer(niceAppendServer):
         if self.protocol.transport is None:
             return task.deferLater(reactor, 1, self.bootstrap, addrs)
 
-        def initTable(results):
+        def initTable(results, challenge, id):
             nodes = []
             for addr, result in results.items():
                 if result[0]:
-                    data = self.protocol.storage.get(digest(id + "cert"))
-                    if not data[0]:
+                    data = self.protocol.certificateExists(result[1]['id'].encode('hex').upper())
+                    if not data:
                         identifier = digest(result[1]['id'].encode('hex').upper() + "cert")
                         self.protocol.callCertFindValue(Node(result[1]['id'], addr[0], addr[1]), Node(identifier))
                     else:
@@ -998,7 +989,7 @@ class evilAppendServer(niceAppendServer):
                         try:
                             OpenSSL.crypto.verify(cert, result[1]['signature'], challenge, "sha256")
                         except:
-                            _log.debug("Signature verification failed")
+                            traceback.print_exc()
                         nodes.append(Node(result[1]['id'], addr[0], addr[1]))
             spider = NodeSpiderCrawl(self.protocol, self.node, nodes, self.ksize, self.alpha)
             return spider.find()
@@ -1010,14 +1001,14 @@ class evilAppendServer(niceAppendServer):
             data = addrs[0]
             addr = (data[0], data[1])
             try:
-                private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.protocol.priv_key, '')
-                signature = OpenSSL.crypto.sign(private, str(addr) + challenge, "sha256")
-                ds[addr] = self.protocol.ping(addr, self.node.id, challenge, signature, self.protocol.getOwnCert())
                 cert=OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data[2])
+                fingerprint = cert.digest("sha256")
+                id = fingerprint.replace(":","")[-40:]
+                private=OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.protocol.priv_key, '')
+                signature = OpenSSL.crypto.sign(private, id + challenge, "sha256")
+                ds[addr] = self.protocol.ping(addr, self.node.id, challenge, signature, self.protocol.getOwnCert())
             except:
-                logger(self.sourceNode, "Certificate creation failed")
-            fingerprint = cert.digest("sha256")
-            id = fingerprint.replace(":","")[-40:]
+                logger(self.protocol.sourceNode, "Certificate creation failed")
             self.protocol.storeCert(data[2], id)
             node = Node(id.decode("hex"), data[0], data[1])
             if self.protocol.router.isNewNode(node):
@@ -1036,4 +1027,4 @@ def drawNetworkState(name, servers, amount_of_servers):
 
 def logger(node, message, level=None):
     _log.debug("{}:{}:{} - {}".format(node.id.encode("hex").upper(), node.ip, node.port, message))
-    print("{}:{}:{} - {}".format(node.id.encode("hex").upper(), node.ip, node.port, message))
+    # print("{}:{}:{} - {}".format(node.id.encode("hex").upper(), node.ip, node.port, message))
