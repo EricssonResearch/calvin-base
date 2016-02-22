@@ -90,7 +90,7 @@ class niceAutoDHTServer(AutoDHTServer):
 
         if network is None:
             network = _conf.get_in_order("dht_network_filter", "ALL")
-        
+
         self.dht_server = IDServerApp(niceAppendServer, bytekey[-20:])
         ip, port = self.dht_server.start(iface=iface)
 
@@ -475,7 +475,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
             except:
                 logger(self.sourceNode, "Bad signature for sender of find_value: {}".format(source))
                 return None
-        
+
         self.router.addContact(source)
         exists, value = self.storage.get(key, None)
         if not exists:
@@ -733,7 +733,7 @@ class evilAutoDHTServer(AutoDHTServer):
         self.dht_server = IDServerApp(evilAppendServer, bytekey[-20:])
         ip, port = self.dht_server.start(iface=iface)
 
-        
+
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
@@ -813,8 +813,8 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
         old_find_node = self.rpc_find_node
         old_find_value = self.rpc_find_value
         self.router.node.port = evilPort;
-        if self.evilType == "poison":      
-            self.rpc_find_node = self.poison_rpc_find_node       
+        if self.evilType == "poison":
+            self.rpc_find_node = self.poison_rpc_find_node
             self.rpc_find_value = self.poison_rpc_find_value
             self.false_neighbour_list = []
             for i in range(0, 30):
@@ -917,7 +917,7 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
             self.find_value((self.neighbours[0][1], self.neighbours[0][2]), hashlib.sha1(str(random.getrandbits(255))).digest(), hashlib.sha1(str(random.getrandbits(255))).digest(), challenge, signature)
         elif decider > 0.9:
             self.find_node((self.neighbours[0][1], self.neighbours[0][2]), nodeid, self.neighbours[0][0], challenge, signature)
-        neighbourList = list(self.neighbours) 
+        neighbourList = list(self.neighbours)
         for i in range(0, len(neighbourList)):
             neighbourList[i] = [neighbourList[i][0], neighbourList[i][1], self.router.node.port]
         mergedlist = []
@@ -1022,7 +1022,7 @@ def drawNetworkState(name, servers, amount_of_servers):
         for neighbour in neighbours:
             printPort = servers[servno].dht_server.port.getHost().port
             edge = pydot.Edge(printPort, neighbour[2], label=str(neighbour[0].encode('hex')[-4:]))
-            graph.add_edge(edge)  
+            graph.add_edge(edge)
     graph.write_png(name)
 
 def logger(node, message, level=None):

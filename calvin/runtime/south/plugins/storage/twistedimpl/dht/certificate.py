@@ -432,4 +432,3 @@ def sign_req(conf, req, name):
     print(signed)
     print(newkeyname)
     os.rename(signed, newkeyname)
-    # print("Detta händer också")
