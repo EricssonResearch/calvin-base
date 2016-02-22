@@ -29,6 +29,7 @@ import re
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
+
 class Storage(object):
 
     """
@@ -84,7 +85,7 @@ class Storage(object):
             self._flush_remove(key, value['-'])
 
     def _flush_append(self, key, value):
-        if not value:
+        if not value or not self.started:
             return
 
         _log.debug("Flush append on key %s: %s" % (key, list(value)))
@@ -170,7 +171,7 @@ class Storage(object):
 
         self.trigger_flush()
 
-    def set(self, prefix, key, value, cb):
+    def set(self, prefix, key, value, cb=None):
         """ Set key: prefix+key value: value
         """
         _log.debug("Set key %s, value %s" % (prefix + key, value))
@@ -192,25 +193,28 @@ class Storage(object):
         """
         if value:
             value = self.coder.decode(value)
-        org_cb(org_key, value)
+        if org_cb:
+            org_cb(org_key, value)
+        return value
 
-    def get(self, prefix, key, cb):
+    def get(self, prefix, key, cb=None):
         """ Get value for key: prefix+key, first look in localstore
         """
-        if not cb:
-            return
-
+        value = None
         if prefix + key in self.localstore:
             value = self.localstore[prefix + key]
             if value:
                 value = self.coder.decode(value)
-            async.DelayedCall(0, cb, key=key, value=value)
-        else:
+            if cb:
+                async.DelayedCall(0, cb, key=key, value=value)
+        elif self.started:
             try:
-                self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
+                return self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
             except:
                 _log.error("Failed to get: %s" % key)
                 async.DelayedCall(0, cb, key=key, value=False)
+
+        return value
 
     def get_iter_cb(self, key, value, it, org_key, include_key=False):
         """ get callback
@@ -228,21 +232,26 @@ class Storage(object):
         """ Get value for key: prefix+key, first look in localstore
             Add the value to the supplied dynamic iterable (preferable a LimitedList or List)
         """
-        if it:
-            if prefix + key in self.localstore:
-                value = self.localstore[prefix + key]
-                if value:
-                    value = self.coder.decode(value)
-                _log.analyze(self.node.id, "+", {'value': value, 'key': key})
-                it.append((key, value) if include_key else value)
-            else:
-                try:
-                    self.storage.get(key=prefix + key,
-                                     cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
-                except:
-                    _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
-                    _log.error("Failed to get: %s" % key)
-                    it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
+        if it is None:
+            return
+
+        value = None
+        if prefix + key in self.localstore:
+            value = self.localstore[prefix + key]
+            if value:
+                value = self.coder.decode(value)
+            _log.analyze(self.node.id, "+", {'value': value, 'key': key})
+            it.append((key, value) if include_key else value)
+        else:
+            try:
+                return self.storage.get(key=prefix + key,
+                                        cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
+            except:
+                _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
+                _log.error("Failed to get: %s" % key)
+                it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
+
+        return value
 
     def get_concat_cb(self, key, value, org_cb, org_key, local_list):
         """ get callback
@@ -250,32 +259,34 @@ class Storage(object):
         if value:
             value = self.coder.decode(value)
             org_cb(org_key, list(set(value + local_list)))
-        else:
+        elif org_cb:
             org_cb(org_key, local_list if local_list else None)
 
-    def get_concat(self, prefix, key, cb):
+        return value
+
+    def get_concat(self, prefix, key, cb=None):
         """ Get value for key: prefix+key, first look in localstore
             Return value is list. The storage could be eventually consistent.
             For example a remove might only have reached part of the
             storage and hence the return list might contain removed items,
             but also missing items.
         """
-        if not cb:
-            return
-
+        value = []
         if prefix + key in self.localstore_sets:
             _log.analyze(self.node.id, "+ GET LOCAL", None)
             value = self.localstore_sets[prefix + key]
             # Return the set that we intended to append since that's all we have until it is synced
-            local_list = list(value['+'])
-        else:
-            local_list = []
-        try:
-            self.storage.get_concat(key=prefix + key,
-                                    cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
-        except:
-            _log.error("Failed to get: %s" % key, exc_info=True)
-            async.DelayedCall(0, cb, key=key, value=local_list if local_list else None)
+            value = list(value['+'])
+        elif self.started:
+            value = []
+            try:
+                return self.storage.get_concat(key=prefix + key,
+                                               cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=value))
+            except:
+                _log.error("Failed to get: %s" % key, exc_info=True)
+                async.DelayedCall(0, cb, key=key, value=value if value else None)
+
+        return value
 
     def get_concat_iter_cb(self, key, value, org_key, include_key, it):
         """ get callback
@@ -287,6 +298,8 @@ class Storage(object):
             it.extend([(org_key, v) for v in value] if include_key else value)
         it.final()
         _log.analyze(self.node.id, "+ END", {'key': org_key, 'iter': str(it)})
+
+        return value
 
     def get_concat_iter(self, prefix, key, include_key=False):
         """ Get value for key: prefix+key, first look in localstore
@@ -309,8 +322,8 @@ class Storage(object):
         it = dynops.List(local_list)
         try:
             self.storage.get_concat(key=prefix + key,
-                            cb=CalvinCB(func=self.get_concat_iter_cb, org_key=key,
-                                        include_key=include_key, it=it))
+                                    cb=CalvinCB(func=self.get_concat_iter_cb, org_key=key,
+                                                include_key=include_key, it=it))
         except:
             if self.started:
                 _log.error("Failed to get: %s" % key, exc_info=True)
@@ -337,7 +350,7 @@ class Storage(object):
 
         self.trigger_flush()
 
-    def append(self, prefix, key, value, cb):
+    def append(self, prefix, key, value, cb=None):
         """ set operation append on key: prefix+key value: value is a list of items
         """
         _log.debug("Append key %s, value %s" % (prefix + key, value))
@@ -354,14 +367,13 @@ class Storage(object):
             coded_value = self.coder.encode(list(self.localstore_sets[prefix + key]['+']))
             self.storage.append(key=prefix + key, value=coded_value,
                                 cb=CalvinCB(func=self.append_cb, org_key=key, org_value=value, org_cb=cb))
-        else:
-            if cb:
-                cb(key=key, value=True)
+        elif cb:
+            cb(key=key, value=True)
 
     def remove_cb(self, key, value, org_key, org_value, org_cb):
         """ remove callback, on error retry after flush_timeout
         """
-        if value == True:
+        if value:
             if org_cb:
                 org_cb(key=org_key, value=True)
             if key in self.localstore_sets:
@@ -377,7 +389,7 @@ class Storage(object):
 
         self.trigger_flush()
 
-    def remove(self, prefix, key, value, cb):
+    def remove(self, prefix, key, value, cb=None):
         """ set operation remove on key: prefix+key value: value is a list of items
         """
         _log.debug("Remove key %s, value %s" % (prefix + key, value))
@@ -398,7 +410,7 @@ class Storage(object):
             if cb:
                 cb(key=key, value=True)
 
-    def delete(self, prefix, key, cb):
+    def delete(self, prefix, key, cb=None):
         """ Delete key: prefix+key (value set to None)
         """
         _log.debug("Deleting key %s" % prefix + key)
@@ -408,9 +420,8 @@ class Storage(object):
             del self.localstore_sets[prefix + key]
         if self.started:
             self.set(prefix, key, None, cb)
-        else:
-            if cb:
-                cb(key, True)
+        elif cb:
+            cb(key, True)
 
     ### Calvin object handling ###
 
@@ -448,7 +459,7 @@ class Storage(object):
         """
         Get node data from storage
         """
-        self.get(prefix="node-", key=node_id, cb=cb)
+        return self.get(prefix="node-", key=node_id, cb=cb)
 
     def delete_node(self, node, cb=None):
         """
@@ -503,7 +514,7 @@ class Storage(object):
         """
         Get application from storage
         """
-        self.get(prefix="application-", key=application_id, cb=cb)
+        return self.get(prefix="application-", key=application_id, cb=cb)
 
     def delete_application(self, application_id, cb=None):
         """
@@ -537,7 +548,7 @@ class Storage(object):
         """
         Get actor from storage
         """
-        self.get(prefix="actor-", key=actor_id, cb=cb)
+        return self.get(prefix="actor-", key=actor_id, cb=cb)
 
     def delete_actor(self, actor_id, cb=None):
         """
@@ -577,7 +588,7 @@ class Storage(object):
         """
         Get port from storage
         """
-        self.get(prefix="port-", key=port_id, cb=cb)
+        return self.get(prefix="port-", key=port_id, cb=cb)
 
     def delete_port(self, port_id, cb=None):
         """
@@ -706,7 +717,7 @@ class Storage(object):
         if not index.startswith("/"):
             index = "/" + index
         _log.debug("get index %s" % (index))
-        self.get_concat(prefix="index-", key=index, cb=cb)
+        return self.get_concat(prefix="index-", key=index, cb=cb)
 
     def get_index_iter(self, index, include_key=False):
         """

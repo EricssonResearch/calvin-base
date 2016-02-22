@@ -218,6 +218,7 @@ def create_node(uri, control_uri, attributes=None):
     n = Node(uri, control_uri, attributes)
     n.run()
     _log.info('Quitting node "%s"' % n.uri)
+    return n
 
 
 def create_tracing_node(uri, control_uri, attributes=None):
@@ -242,6 +243,7 @@ def create_tracing_node(uri, control_uri, attributes=None):
             tracer.runfunc(n.run)
         sys.stdout = tmp
     _log.info('Quitting node "%s"' % n.uri)
+    return n
 
 
 def start_node(uri, control_uri, trace_exec=False, attributes=None):
