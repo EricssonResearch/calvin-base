@@ -77,15 +77,21 @@ def test_analyze(extract_stack, node_id, func, param, peer_node_id, tb, mute, ar
         if tb:
             expected_stack = "stack"
 
-        msg = "[[ANALYZE]]" + json.dumps({
+        correct_msg = {
             "peer_node_id": peer_node_id,
             "node_id": node_id,
             "func": func,
             "param": param,
             "stack": expected_stack
-        })
-        log._log.assert_called_with(5, msg, (), args=args, kwargs=kwargs)
-
+        }
+        # JSON might reorder the dict hence need detailed assert
+        assert log._log.call_args[0][0] == 5
+        assert log._log.call_args[0][1].startswith("[[ANALYZE]]")
+        test_msg = json.loads(log._log.call_args[0][1][11:])
+        assert correct_msg == test_msg
+        assert log._log.call_args[0][2] == ()
+        assert log._log.call_args[1]['args'] == args
+        assert log._log.call_args[1]['kwargs'] == kwargs
         if tb:
             assert extract_stack.called
         else:
