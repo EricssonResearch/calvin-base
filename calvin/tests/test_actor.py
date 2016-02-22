@@ -22,6 +22,8 @@ from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.south.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actor import Actor
 
+pytestmark = pytest.mark.unittest
+
 
 def create_actor(node):
     actor_manager = ActorManager(node)
@@ -124,10 +126,10 @@ def test_connections():
 def test_state(actor):
     inport = actor.inports['token']
     outport = actor.outports['token']
-    assert actor.state() == {
-        '_component_members': [actor.id],
+    correct_state = {
+        '_component_members': set([actor.id]),
         '_deployment_requirements': [],
-        '_managed': ['dump', '_signature', 'id', '_deployment_requirements', 'name'],
+        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name']),
         '_signature': None,
         'dump': False,
         'id': actor.id,
@@ -157,7 +159,13 @@ def test_state(actor):
                                         'write_pos': 0},
                                'id': outport.id,
                                'name': 'token'}}}
-
+    test_state = actor.state()
+    for k, v in correct_state.iteritems():
+        # Read state use list to support JSON serialization
+        if isinstance(v, set):
+            assert set(test_state[k]) == v
+        else:
+            assert test_state[k] == v
 
 @pytest.mark.parametrize("prev_signature,new_signature,expected", [
     (None, "new_val", "new_val"),

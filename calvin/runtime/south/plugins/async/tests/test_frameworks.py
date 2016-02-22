@@ -23,8 +23,11 @@ import inspect
 from calvin.utilities import calvinlogger
 from calvin.runtime.south.plugins.async import get_frameworks
 from calvin.runtime.south.plugins.async import twistedimpl
-
 from twisted.internet import defer, threads
+import pytest
+
+pytestmark = pytest.mark.unittest
+
 
 _LOG = calvinlogger.get_logger(__name__)
 

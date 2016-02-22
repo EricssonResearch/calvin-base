@@ -21,6 +21,8 @@ from mock import Mock, patch
 from calvin.tests import DummyNode
 from calvin.runtime.north.actormanager import ActorManager
 
+pytestmark = pytest.mark.unittest
+
 
 class ActorManagerTests(unittest.TestCase):
 
