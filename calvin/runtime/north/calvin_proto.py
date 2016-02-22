@@ -52,7 +52,7 @@ class CalvinTunnel(object):
                 self.tunnels[self.peer_node_id][self.id]=self
             else:
                 self.tunnels[self.peer_node_id] = {self.id: self}
-        # The callbacks recv for incoming message, down for tunnel failed or died, up for tunnel working 
+        # The callbacks recv for incoming message, down for tunnel failed or died, up for tunnel working
         self.recv_handler = None
         self.down_handler = None
         self.up_handler = None
@@ -99,7 +99,7 @@ class CalvinTunnel(object):
             _log.error("Got none ack on destruction of tunnel!\n%s" % reply)
 
     def send(self, payload):
-        """ Send a payload over the tunnel 
+        """ Send a payload over the tunnel
             payload must be serializable, i.e. only built-in types such as:
             dict, list, tuple, string, numbers, booleans, etc
         """
@@ -126,7 +126,7 @@ class CalvinTunnel(object):
     def close(self, local_only=False):
         """ Removes the tunnel but does not inform
             other end when local_only.
-            
+
             Currently does not support local_only == False
         """
         self.status = CalvinTunnel.STATUS.TERMINATED
@@ -138,7 +138,7 @@ class CalvinTunnel(object):
 class CalvinProto(CalvinCBClass):
     """ CalvinProto class is the interface between runtimes for all runtime
         subsystem that need to interact. It uses the links in network.
-        
+
         Besides handling tunnel setup etc, it mainly formats commands uniformerly.
     """
 
@@ -156,6 +156,7 @@ class CalvinProto(CalvinCBClass):
             'PORT_PENDING_MIGRATE': [CalvinCB(self.not_impl_handler)],
             'PORT_COMMIT_MIGRATE': [CalvinCB(self.not_impl_handler)],
             'PORT_CANCEL_MIGRATE': [CalvinCB(self.not_impl_handler)],
+            'PEER_SETUP': [CalvinCB(self.peer_setup_handler)],
             'TUNNEL_NEW': [CalvinCB(self.tunnel_new_handler)],
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
@@ -202,7 +203,7 @@ class CalvinProto(CalvinCBClass):
     #### ACTORS ####
 
     def actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections):
-        """ Creates a new actor on to_rt_uuid node, but is only intended for migrating actors 
+        """ Creates a new actor on to_rt_uuid node, but is only intended for migrating actors
             callback: called when finished with the peers respons as argument
             actor_type: see actor manager
             state: see actor manager
@@ -241,7 +242,7 @@ class CalvinProto(CalvinCBClass):
         self.network.links[payload['from_rt_uuid']].send(msg)
 
     def actor_migrate(self, to_rt_uuid, callback, actor_id, requirements, extend=False, move=False):
-        """ Request actor on to_rt_uuid node to migrate accoring to new deployment requirements 
+        """ Request actor on to_rt_uuid node to migrate accoring to new deployment requirements
             callback: called when finished with the status respons as argument
             actor_id: actor_id to migrate
             requirements: see app manager
@@ -256,7 +257,7 @@ class CalvinProto(CalvinCBClass):
                                                         extend=extend,
                                                         move=move)):
             # Already have link just continue in _actor_new
-                self._actor_migrate(to_rt_uuid, callback, actor_id, requirements, 
+                self._actor_migrate(to_rt_uuid, callback, actor_id, requirements,
                                     extend, move, status=response.CalvinResponse(True))
 
     def _actor_migrate(self, to_rt_uuid, callback, actor_id, requirements, extend, move, status,
@@ -308,7 +309,7 @@ class CalvinProto(CalvinCBClass):
 
     def app_destroy_handler(self, payload):
         """ Peer request destruction of app and its actors """
-        reply = self.node.app_manager.destroy_request(payload['app_uuid'], 
+        reply = self.node.app_manager.destroy_request(payload['app_uuid'],
                                                       payload['actor_uuids'] if 'actor_uuids' in payload else [])
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
@@ -338,7 +339,7 @@ class CalvinProto(CalvinCBClass):
             tunnel = CalvinTunnel(self.network.links, self.tunnels, None, tunnel_type, policy, rt_id=self.node.id)
             self.network.link_request(to_rt_uuid, CalvinCB(self._tunnel_link_request_finished, tunnel=tunnel, to_rt_uuid=to_rt_uuid, tunnel_type=tunnel_type, policy=policy))
             return tunnel
-        
+
         # Do we have a tunnel already?
         tunnel = self._get_tunnel(to_rt_uuid, tunnel_type = tunnel_type)
         if tunnel != None:
@@ -472,7 +473,7 @@ class CalvinProto(CalvinCBClass):
             tunnel.recv_handler(payload['value'])
         except Exception as e:
             _log.exception("Check error in tunnel recv handler")
-            _log.analyze(self.rt_id, "+ EXCEPTION TUNNEL RECV HANDLER", {'payload': payload, 'exception': str(e)}, 
+            _log.analyze(self.rt_id, "+ EXCEPTION TUNNEL RECV HANDLER", {'payload': payload, 'exception': str(e)},
                                                                 peer_node_id=payload['from_rt_uuid'], tb=True)
 
     #### PORTS ####
@@ -507,6 +508,35 @@ class CalvinProto(CalvinCBClass):
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
+
+    #### NODES ####
+
+    def peer_setup(self, to_rt_uuid, peers, callback=None):
+        """ Sends a peer setup request to the other node.
+            prev_connections: list of node ids to setup a connecting with
+        """
+        if self.node.network.link_request(to_rt_uuid, CalvinCB(self._peer_setup, callback=callback, peers=peers)):
+            # Already have link just continue in _peer_setup
+                self._peer_setup(to_rt_uuid, callback, peers, status=response.CalvinResponse(True))
+
+    def _peer_setup(self, to_rt_uuid, callback, peers, status):
+        """ Got link? continue actor new """
+        if status:
+            msg = {'cmd': 'PEER_SETUP',
+                   'peers': peers}
+            self.network.links[to_rt_uuid].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def peer_setup_handler(self, payload):
+        """ Peer request new actor with state and connections """
+        self.node.peersetup(payload['peers'], cb=CalvinCB(self._peer_setup_handler, payload))
+
+    def _peer_setup_handler(self, payload, status, **kwargs):
+        """ Potentially created actor, reply to requesting node """
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
 
 if __name__ == '__main__':
     import pytest

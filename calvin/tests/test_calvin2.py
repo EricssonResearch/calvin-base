@@ -144,8 +144,6 @@ def setup_module(module):
         rt3,_ = dispatch_node(["calvinip://%s:5002" % (ip_addr,)], "http://localhost:5005")
         time.sleep(.4)
         utils.peer_setup(rt1, ["calvinip://%s:5001" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
-        utils.peer_setup(rt2, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
-        utils.peer_setup(rt3, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5001" % (ip_addr, )])
         time.sleep(.4)
 
 

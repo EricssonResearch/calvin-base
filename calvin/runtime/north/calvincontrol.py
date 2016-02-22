@@ -870,10 +870,26 @@ class CalvinControl(object):
 
     def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=None):
         _log.analyze(self.node.id, "+", status.encode())
-        self.send_response(handle, connection,
-                           None if peer_node_ids is None else json.dumps(
-                               {k: (v[0], v[1].status) for k, v in peer_node_ids.items()}),
-                           status=status.status)
+        if not peer_node_ids:
+            data = {}
+        else:
+            data = {k: (v[0], v[1].status) for k, v in peer_node_ids.items()}
+
+        peers = []
+        for uri, (_, status_code) in data.iteritems():
+            # Only include successful peers
+            if status_code == 200:
+                peers.append(uri)
+
+        for uri, (node_id, status_code) in data.iteritems():
+            if status_code == 200:
+                to_send = set(peers)
+                to_send.remove(uri)
+                to_send.add(self.node.uri[0])
+                cb = CalvinCB(self.node.logging_callback)
+                self.node.proto.peer_setup(node_id, [peer for peer in to_send], callback=cb)
+
+        self.send_response(handle, connection, json.dumps(data), status=status.status)
 
     def handle_get_nodes(self, handle, connection, match, data, hdr):
         """ Get active nodes
