@@ -15,8 +15,11 @@
 # limitations under the License.
 
 from calvin.utilities.nodecontrol import dispatch_node
-from calvin.utilities import utils
+from calvin.requests.request_handler import RequestHandler
 import time
+
+# Get the handler for sending the API requests
+request_handler = RequestHandler()
 
 # create one node
 node_1 = dispatch_node(uri="calvinip://localhost:5000", control_uri="http://localhost:5001",
@@ -25,16 +28,16 @@ node_1 = dispatch_node(uri="calvinip://localhost:5000", control_uri="http://loca
                              'node_name': {'organization': 'org.testexample', 'name': 'node-1'}}})
 
 # send 'new actor' command to node
-counter_id = utils.new_actor(node_1, 'std.Counter', 'counter')
+counter_id = request_handler.new_actor(node_1, 'std.Counter', 'counter')
 
 # send 'new actor' command to node
-output_id = utils.new_actor(node_1, 'io.StandardOut', 'output')
+output_id = request_handler.new_actor(node_1, 'io.StandardOut', 'output')
 
 # send 'connect' command to node
-utils.connect(node_1, output_id, 'token', node_1.id, counter_id, 'integer')
+request_handler.connect(node_1, output_id, 'token', node_1.id, counter_id, 'integer')
 
 # runt app for 3 seconds
 time.sleep(3)
 
 # send quite to node
-utils.quit(node_1)
+request_handler.quit(node_1)

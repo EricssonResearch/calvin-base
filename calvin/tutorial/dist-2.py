@@ -15,8 +15,11 @@
 # limitations under the License.
 
 from calvin.utilities.nodecontrol import dispatch_node
-from calvin.utilities import utils
+from calvin.requests.request_handler import RequestHandler
 import time
+
+# Get the handler for sending the API requests
+request_handler = RequestHandler()
 
 # create two nodes, named node-1 and node-2, respectively
 node_1 = dispatch_node(uri="calvinip://localhost:5000", control_uri="http://localhost:5001",
@@ -29,23 +32,23 @@ node_2 = dispatch_node(uri="calvinip://localhost:5002", control_uri="http://loca
                              'node_name': {'organization': 'org.testexample', 'name': 'node-2'}}})
 
 # send 'new actor' command to node_2
-counter_id = utils.new_actor(node_2, 'std.Counter', 'counter')
+counter_id = request_handler.new_actor(node_2, 'std.Counter', 'counter')
 
 # send 'new actor' command to node_1
-output_id = utils.new_actor(node_1, 'io.StandardOut', 'output')
+output_id = request_handler.new_actor(node_1, 'io.StandardOut', 'output')
 
 # inform node_1 about peers
-utils.peer_setup(node_1, ["calvinip://localhost:5002"])
+request_handler.peer_setup(node_1, ["calvinip://localhost:5002"])
 
 # allow network to stabilize
 time.sleep(1.0)
 
 # send connect command to node_1
-utils.connect(node_1, output_id, 'token', node_2.id, counter_id, 'integer')
+request_handler.connect(node_1, output_id, 'token', node_2.id, counter_id, 'integer')
 
 # run app for 3 seconds
 time.sleep(3.0)
 
 # send quit to nodes
-utils.quit(node_1)
-utils.quit(node_2)
+request_handler.quit(node_1)
+request_handler.quit(node_2)

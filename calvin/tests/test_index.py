@@ -21,13 +21,14 @@ from calvin.runtime.north import calvin_node
 from calvin.Tools import cscompiler as compiler
 from calvin.Tools import deployer
 import pytest
-from calvin.utilities import utils
+from calvin.requests.request_handler import RequestHandler
 from calvin.utilities.nodecontrol import dispatch_node
 from calvin.utilities import calvinuuid
 from warnings import warn
 from calvin.utilities.attribute_resolver import format_index_string
 import socket
 ip_addr = socket.gethostbyname(socket.gethostname())
+request_handler = None
 
 def absolute_filename(filename):
     import os.path
@@ -36,17 +37,19 @@ def absolute_filename(filename):
 class CalvinTestBase(unittest.TestCase):
 
     def setUp(self):
-        self.rt1, _ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5003" % ip_addr)
-        self.rt2, _ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://%s:5004" % ip_addr)
-        self.rt3, _ = dispatch_node("calvinip://%s:5002" % (ip_addr,), "http://%s:5005" % ip_addr)
-        utils.peer_setup(self.rt1, ["calvinip://%s:5001" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
-        utils.peer_setup(self.rt2, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
-        utils.peer_setup(self.rt3, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5001" % (ip_addr, )])
+        global request_handler
+        request_handler = RequestHandler()
+        self.rt1, _ = dispatch_node(["calvinip://%s:5000" % (ip_addr,)], "http://%s:5003" % ip_addr)
+        self.rt2, _ = dispatch_node(["calvinip://%s:5001" % (ip_addr,)], "http://%s:5004" % ip_addr)
+        self.rt3, _ = dispatch_node(["calvinip://%s:5002" % (ip_addr,)], "http://%s:5005" % ip_addr)
+        request_handler.peer_setup(self.rt1, ["calvinip://%s:5001" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
+        request_handler.peer_setup(self.rt2, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
+        request_handler.peer_setup(self.rt3, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5001" % (ip_addr, )])
 
     def tearDown(self):
-        utils.quit(self.rt1)
-        utils.quit(self.rt2)
-        utils.quit(self.rt3)
+        request_handler.quit(self.rt1)
+        request_handler.quit(self.rt2)
+        request_handler.quit(self.rt3)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -72,12 +75,12 @@ class TestIndex(CalvinTestBase):
         for n, node_ids in lindex.items():
             for id_ in node_ids:
                 #print "ADD", n, id_
-                utils.add_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, id_)
+                request_handler.add_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, id_)
 
-        h_ = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
-        h = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson")
+        h_ = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
+        h = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson")
 
         assert(h_['result'] is None)  # Test that the storage is local
         assert(set(h['result']) == set(lindex["Harald"]))
@@ -85,34 +88,34 @@ class TestIndex(CalvinTestBase):
         assert(set(e['result']) == set(lindex["Per"] + lindex["Harald"]))
 
         for n, node_ids in lindex.items():
-            utils.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, node_ids[0])
+            request_handler.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, node_ids[0])
 
-        h = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson")
+        h = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson")
 
         assert(set(h['result']) == set(lindex["Harald"][1:]))
         assert(set(p['result']) == set(lindex["Per"][1:]))
         assert(set(e['result']) == set(lindex["Per"][1:] + lindex["Harald"][1:]))
 
-        utils.add_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald", common)
-        utils.add_index(self.rt1, "node/affiliation/owner/com.ericsson/Per", common)
+        request_handler.add_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald", common)
+        request_handler.add_index(self.rt1, "node/affiliation/owner/com.ericsson/Per", common)
 
-        h = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson")
+        h = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson")
 
         assert(set(h['result']) == set(lindex["Harald"][1:] + [common]))
         assert(set(p['result']) == set(lindex["Per"][1:] + [common]))
         assert(set(e['result']) == set(lindex["Per"][1:] + lindex["Harald"][1:] + [common]))
 
         for node_id in lindex['Harald']:
-            utils.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald", node_id)
+            request_handler.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald", node_id)
 
-        h = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt1, "node/affiliation/owner/com.ericsson")
-        h_ = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
+        h = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson")
+        h_ = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
 
         if h_['result'] is not None:
             # Test that the storage is local
@@ -122,9 +125,9 @@ class TestIndex(CalvinTestBase):
         assert(set(e['result']) == set(lindex["Per"][1:] + [common]))
 
         time.sleep(2)
-        h = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
+        h = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
 
         assert(set(h['result']) == set([common]))
         assert(set(p['result']) == set(lindex["Per"][1:] + [common]))
@@ -141,44 +144,44 @@ class TestIndex(CalvinTestBase):
         for n, node_ids in lindex.items():
             for id_ in node_ids:
                 #print "ADD", n, id_
-                utils.add_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, id_)
+                request_handler.add_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, id_)
 
-        h = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
+        h = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
 
         assert(set(h['result']) == set(lindex["Harald"]))
         assert(set(p['result']) == set(lindex["Per"]))
         assert(set(e['result']) == set(lindex["Per"] + lindex["Harald"]))
 
         for n, node_ids in lindex.items():
-            utils.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, node_ids[0])
+            request_handler.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, node_ids[0])
 
-        h = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
+        h = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
 
         assert(set(h['result']) == set(lindex["Harald"][1:]))
         assert(set(p['result']) == set(lindex["Per"][1:]))
         assert(set(e['result']) == set(lindex["Per"][1:] + lindex["Harald"][1:]))
 
-        utils.add_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald", common)
-        utils.add_index(self.rt1, "node/affiliation/owner/com.ericsson/Per", common)
+        request_handler.add_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald", common)
+        request_handler.add_index(self.rt1, "node/affiliation/owner/com.ericsson/Per", common)
 
-        h = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
+        h = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
 
         assert(set(h['result']) == set(lindex["Harald"][1:] + [common]))
         assert(set(p['result']) == set(lindex["Per"][1:] + [common]))
         assert(set(e['result']) == set(lindex["Per"][1:] + lindex["Harald"][1:] + [common]))
 
         for node_id in lindex['Harald']:
-            utils.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald", node_id)
+            request_handler.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald", node_id)
 
-        h = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
-        p = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
-        e = utils.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
+        h = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
+        p = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Per")
+        e = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson")
 
         assert(set(h['result']) == set([common]))
         assert(set(p['result']) == set(lindex["Per"][1:] + [common]))
@@ -188,27 +191,29 @@ class TestIndex(CalvinTestBase):
 class CalvinNodeTestBase(unittest.TestCase):
 
     def setUp(self):
-        self.rt1, _ = dispatch_node("calvinip://%s:5000" % (ip_addr,), "http://%s:5003" % ip_addr,
+        global request_handler
+        request_handler = RequestHandler()
+        self.rt1, _ = dispatch_node(["calvinip://%s:5000" % (ip_addr,)], "http://%s:5003" % ip_addr,
              attributes={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode1'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}})
 
-        self.rt2, _ = dispatch_node("calvinip://%s:5001" % (ip_addr,), "http://%s:5004" % ip_addr,
+        self.rt2, _ = dispatch_node(["calvinip://%s:5001" % (ip_addr,)], "http://%s:5004" % ip_addr,
              attributes={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode2'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}})
-        self.rt3, _ = dispatch_node("calvinip://%s:5002" % (ip_addr,), "http://%s:5005" % ip_addr,
+        self.rt3, _ = dispatch_node(["calvinip://%s:5002" % (ip_addr,)], "http://%s:5005" % ip_addr,
              attributes={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner2'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode3'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 2}}})
 
     def tearDown(self):
-        utils.quit(self.rt1)
-        utils.quit(self.rt2)
-        utils.quit(self.rt3)
+        request_handler.quit(self.rt1)
+        request_handler.quit(self.rt2)
+        request_handler.quit(self.rt3)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -223,31 +228,33 @@ class TestNodeIndex(CalvinNodeTestBase):
 
         print self.rt1.id, self.rt2.id, self.rt3.id
 
-        owner1 = utils.get_index(self.rt1, format_index_string({'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'}}))
+        owner1 = request_handler.get_index(self.rt1, format_index_string({'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'}}))
         assert(set(owner1['result']) == set([self.rt1.id, self.rt2.id]))
 
-        owner2 = utils.get_index(self.rt1, format_index_string({'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner2'}}))
+        owner2 = request_handler.get_index(self.rt1, format_index_string({'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner2'}}))
         assert(set(owner2['result']) == set([self.rt3.id]))
 
-        owners = utils.get_index(self.rt1, format_index_string({'owner':{'organization': 'org.testexample'}}))
+        owners = request_handler.get_index(self.rt1, format_index_string({'owner':{'organization': 'org.testexample'}}))
         assert(set(owners['result']) == set([self.rt1.id, self.rt2.id, self.rt3.id]))
 
-        names = utils.get_index(self.rt1, format_index_string({'node_name':{}}))
+        names = request_handler.get_index(self.rt1, format_index_string({'node_name':{}}))
         assert(set(names['result']) == set([self.rt1.id, self.rt2.id, self.rt3.id]))
 
-        addr2 = utils.get_index(self.rt1, format_index_string({'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 2}}))
+        addr2 = request_handler.get_index(self.rt1, format_index_string({'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 2}}))
         assert(set(addr2['result']) == set([self.rt3.id]))
 
 @pytest.mark.slow
 class CalvinNodeTestIndexAll(unittest.TestCase):
 
     def setUp(self):
+        global request_handler
+        request_handler = RequestHandler()
         self.hosts = []
         self.rt = []
 
     def tearDown(self):
         for r in self.rt:
-            utils.quit(r)
+            request_handler.quit(r)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -260,42 +267,42 @@ class CalvinNodeTestIndexAll(unittest.TestCase):
             inconsistent. It is also extremly slow.
         """
         self.hosts = [("calvinip://%s:%d" % (ip_addr, d), "http://%s:%d" % (ip_addr, d+1), "owner%d" % ((d-5000)/2)) for d in range(5000, 5041, 2)]
-        self.rt = [dispatch_node(h[0], h[1], attributes={'indexed_public': {'owner':{'personOrGroup': h[2]}}})[0] for h in self.hosts]
+        self.rt = [dispatch_node([h[0]], h[1], attributes={'indexed_public': {'owner':{'personOrGroup': h[2]}}})[0] for h in self.hosts]
         time.sleep(3)
         owner = []
         for i in range(len(self.hosts)):
-            res = utils.get_index(self.rt[0], format_index_string({'owner':{'personOrGroup': self.hosts[i][2]}}))
+            res = request_handler.get_index(self.rt[0], format_index_string({'owner':{'personOrGroup': self.hosts[i][2]}}))
             owner.append(res)
             assert(set(res['result']) == set([self.rt[i].id]))
 
-        owners = utils.get_index(self.rt[0], format_index_string({'owner':{}}))
+        owners = request_handler.get_index(self.rt[0], format_index_string({'owner':{}}))
         assert(set(owners['result']) <= set([r.id for r in self.rt]))
         if not set(owners['result']) >= set([r.id for r in self.rt]):
             warn("Not all nodes manage to reach the index %d of %d" % (len(owners['result']), len(self.rt)))
         rt = self.rt[:]
         ids = [r.id for r in rt]
         hosts = self.hosts[:]
-        utils.quit(self.rt[10])
+        request_handler.quit(self.rt[10])
         del self.rt[10]
         del self.hosts[10]
-        owners = utils.get_index(self.rt[0], format_index_string({'owner':{}}))
+        owners = request_handler.get_index(self.rt[0], format_index_string({'owner':{}}))
         assert(set(owners['result']) <= set(ids))
         if ids[10] in set(owners['result']):
             warn("The removed node is still in the all owners set")
 
-        removed_owner = utils.get_index(self.rt[0], format_index_string({'owner':{'personOrGroup': hosts[10][2]}}))
+        removed_owner = request_handler.get_index(self.rt[0], format_index_string({'owner':{'personOrGroup': hosts[10][2]}}))
         assert(not removed_owner['result'] or set(removed_owner['result']) == set([ids[10]]))
         if removed_owner['result']:
             warn("The removed node is still in its own index")
 
         # Destroy a bunch of the nodes
         for _ in range(7):
-            utils.quit(self.rt[10])
+            request_handler.quit(self.rt[10])
             del self.rt[10]
             del self.hosts[10]
 
         time.sleep(2)
-        owners = utils.get_index(self.rt[0], format_index_string({'owner':{}}))
+        owners = request_handler.get_index(self.rt[0], format_index_string({'owner':{}}))
         assert(set(owners['result']) <= set(ids))
         l = len(set(owners['result']))
         if l > (len(ids)-8):

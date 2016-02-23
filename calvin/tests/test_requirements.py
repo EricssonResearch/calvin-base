@@ -18,14 +18,9 @@ import unittest
 import time
 import copy
 import multiprocessing
-from calvin.runtime.north import calvin_node
-from calvin.Tools import cscompiler as compiler
-from calvin.Tools import deployer
 import pytest
-from calvin.utilities import utils
+from calvin.requests.request_handler import RequestHandler, RT
 from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
-from calvin.utilities import calvinuuid
-from warnings import warn
 from calvin.utilities.attribute_resolver import format_index_string
 import socket
 import os
@@ -35,11 +30,11 @@ from calvin.utilities import calvinconfig
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
+request_handler = RequestHandler()
 
 try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
 except:
-    import socket
     ip_addr = socket.gethostbyname(socket.gethostname())
 
 rt1 = None
@@ -90,9 +85,9 @@ class TestDeployScript(unittest.TestCase):
         global rt1
         global rt2
         global rt3
-        utils.quit(rt1)
-        utils.quit(rt2)
-        utils.quit(rt3)
+        request_handler.quit(rt1)
+        request_handler.quit(rt2)
+        request_handler.quit(rt3)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -106,12 +101,12 @@ class TestDeployScript(unittest.TestCase):
         rt2_id = None
         rt3_id = None
         failed = True
-        # Try 10 times waiting for control API to be up and running
-        for i in range(10):
+        # Try 30 times waiting for control API to be up and running
+        for i in range(30):
             try:
-                rt1_id = rt1_id or utils.get_node_id(rt1)
-                rt2_id = rt2_id or utils.get_node_id(rt2)
-                rt3_id = rt3_id or utils.get_node_id(rt3)
+                rt1_id = rt1_id or request_handler.get_node_id(rt1)
+                rt2_id = rt2_id or request_handler.get_node_id(rt2)
+                rt3_id = rt3_id or request_handler.get_node_id(rt3)
                 failed = False
                 break
             except:
@@ -123,19 +118,19 @@ class TestDeployScript(unittest.TestCase):
         print "RUNTIMES:", rt1_id, rt2_id, rt3_id
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
-        # Try 20 times waiting for storage to be connected
+        # Try 30 times waiting for storage to be connected
         caps1 = []
         caps2 = []
         caps3 = []
         rt_ids = set([rt1_id, rt2_id, rt3_id])
-        for i in range(20):
+        for i in range(30):
             try:
                 if not (rt1_id in caps1  and rt2_id in caps2 and rt3_id in caps1):
-                    caps1 = utils.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
-                    caps2 = utils.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3):
-                    caps3 = utils.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps3 = request_handler.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
                 if rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3):
                     failed = False
                     break
@@ -145,13 +140,13 @@ class TestDeployScript(unittest.TestCase):
                 time.sleep(0.1)
         assert not failed
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
-        assert utils.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
-        assert utils.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
-        assert utils.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
-        assert utils.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
-        assert utils.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
-        assert utils.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
-        assert utils.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
+        assert request_handler.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
+        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        assert request_handler.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
+        assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
+        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
         _log.analyze("TESTRUN", "+ RT INDEX", {})
 
     @pytest.mark.slow
@@ -171,12 +166,12 @@ class TestDeployScript(unittest.TestCase):
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt2, sum -> rt2, snk -> rt3
         assert result['actor_map']['test_deploy1:src'] in actors[1]
         assert result['actor_map']['test_deploy1:sum'] in actors[1]
         assert result['actor_map']['test_deploy1:snk'] in actors[2]
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeployLongActorChain(self):
@@ -195,7 +190,7 @@ class TestDeployScript(unittest.TestCase):
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt1, sum[1:8] -> [rt1, rt2, rt3], snk -> rt3
         assert result['actor_map']['test_deploy2:src'] in actors[0]
         assert result['actor_map']['test_deploy2:snk'] in actors[2]
@@ -203,7 +198,7 @@ class TestDeployScript(unittest.TestCase):
         sum_place = [0 if a in actors[0] else 1 if a in actors[1] else 2 if a in actors[2] else -1 for a in sum_list]
         assert not any([p==-1 for p in sum_place])
         assert all(x<=y for x, y in zip(sum_place, sum_place[1:]))
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeployComponent(self):
@@ -222,13 +217,13 @@ class TestDeployScript(unittest.TestCase):
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src:(first, second) -> rt1, sum -> rt2, snk -> rt3
         assert result['actor_map']['test_deploy3:src:first'] in actors[0]
         assert result['actor_map']['test_deploy3:src:second'] in actors[0]
         assert result['actor_map']['test_deploy3:sum'] in actors[1]
         assert result['actor_map']['test_deploy3:snk'] in actors[2]
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
 rt1 = None
 rt2 = None
@@ -253,7 +248,6 @@ class TestDeployShadow(unittest.TestCase):
         # FIXME do it properly
         import calvin.actorstore.store
         import calvin.calvinsys
-        import copy
         calvin.actorstore.store._conf = copy.deepcopy(calvin.actorstore.store._conf)
         calvin.actorstore.store._conf.config['global']['actor_paths'] = [absolute_filename('test_store')]
         calvin.calvinsys._conf = copy.deepcopy(calvin.actorstore.store._conf)
@@ -272,8 +266,8 @@ class TestDeployShadow(unittest.TestCase):
     def teardown(self):
         global rt1
         global rt2
-        utils.quit(rt1)
-        utils.quit(rt2)
+        request_handler.quit(rt1)
+        request_handler.quit(rt2)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -285,11 +279,11 @@ class TestDeployShadow(unittest.TestCase):
         rt1_id = None
         rt2_id = None
         failed = True
-        # Try 10 times waiting for control API to be up and running
-        for i in range(10):
+        # Try 30 times waiting for control API to be up and running
+        for i in range(30):
             try:
-                rt1_id = rt1_id or utils.get_node_id(rt1)
-                rt2_id = rt2_id or utils.get_node_id(rt2)
+                rt1_id = rt1_id or request_handler.get_node_id(rt1)
+                rt2_id = rt2_id or request_handler.get_node_id(rt2)
                 failed = False
                 break
             except:
@@ -300,16 +294,16 @@ class TestDeployShadow(unittest.TestCase):
         print "RUNTIMES:", rt1_id, rt2_id
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
-        # Try 20 times waiting for storage to be connected
+        # Try 30 times waiting for storage to be connected
         caps1 = []
         caps2 = []
         rt_ids = set([rt1_id, rt2_id])
-        for i in range(20):
+        for i in range(30):
             try:
                 if not (rt1_id in caps1 and rt2_id in caps1):
-                    caps1 = utils.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps2 and rt2_id in caps2):
-                    caps2 = utils.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
                 if rt_ids <= set(caps1) and rt_ids <= set(caps2):
                     failed = False
                     break
@@ -320,15 +314,15 @@ class TestDeployShadow(unittest.TestCase):
         assert not failed
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
         # Now check for the values needed by this specific test
-        caps = utils.get_index(rt1, 'node/capabilities/calvinsys.events.timer')
+        caps = request_handler.get_index(rt1, 'node/capabilities/calvinsys.events.timer')
         assert rt1_id in caps['result']
         _log.analyze("TESTRUN", "+ RT1 CAPS", {})
-        caps = utils.get_index(rt2, 'node/capabilities/calvinsys.events.timer')
+        caps = request_handler.get_index(rt2, 'node/capabilities/calvinsys.events.timer')
         assert rt1_id in caps['result']
         _log.analyze("TESTRUN", "+ RT2 CAPS", {})
-        assert utils.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
         _log.analyze("TESTRUN", "+ RT1 INDEX", {})
-        assert utils.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
+        assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
         _log.analyze("TESTRUN", "+ RT2 INDEX", {})
 
     @pytest.mark.slow
@@ -354,16 +348,16 @@ class TestDeployShadow(unittest.TestCase):
         #print "RESULT:", result
         time.sleep(2)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow1:src'] in actors[0]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
         
-        actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeployRequiresShadow(self):
@@ -388,16 +382,16 @@ class TestDeployShadow(unittest.TestCase):
         #print "RESULT:", result
         time.sleep(2)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow1:src'] in actors[0]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
         
-        actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeployRequiresCapabilityShadow(self):
@@ -422,16 +416,16 @@ class TestDeployShadow(unittest.TestCase):
         #print "RESULT:", result
         time.sleep(2)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow3:src'] in actors[0]
         assert result['actor_map']['test_shadow3:sum'] in actors[1]
         assert result['actor_map']['test_shadow3:snk'] in actors[0]
         
-        actual = utils.report(rt1, result['actor_map']['test_shadow3:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_shadow3:snk'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeployShadowComponent(self):
@@ -450,13 +444,13 @@ class TestDeployShadow(unittest.TestCase):
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2)]
         # src:(first, second) -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadowcomponent1:src:first'] in actors[1]
         assert result['actor_map']['test_shadowcomponent1:src:second'] in actors[1]
         assert result['actor_map']['test_shadowcomponent1:sum'] in actors[0]
         assert result['actor_map']['test_shadowcomponent1:snk'] in actors[0]
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
 
 @pytest.mark.slow
@@ -486,7 +480,7 @@ class TestSepDeployShadow(unittest.TestCase):
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5000.conf")
-        rt1 = utils.RT("http://%s:5003" % ip_addr)
+        rt1 = RT("http://%s:5003" % ip_addr)
         rt2_conf = copy.deepcopy(_conf)
         rt2_conf.set('global', 'actor_paths', [absolute_filename('test_store')])
         rt2_conf.set('global', 'capabilities_blacklist', ['calvinsys.events.timer'])
@@ -505,7 +499,7 @@ class TestSepDeployShadow(unittest.TestCase):
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5001.conf")
-        rt2 = utils.RT("http://%s:5004" % ip_addr)
+        rt2 = RT("http://%s:5004" % ip_addr)
         rt3_conf = copy.deepcopy(_conf)
         rt3_conf.set('global', 'actor_paths', [absolute_filename('test_store')])
         rt3_conf.set('global', 'capabilities_blacklist', ['calvinsys.events.timer'])
@@ -524,7 +518,7 @@ class TestSepDeployShadow(unittest.TestCase):
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5002.conf")
-        rt3 = utils.RT("http://%s:5005" % ip_addr)
+        rt3 = RT("http://%s:5005" % ip_addr)
 
         test_script_dir = absolute_filename('scripts/')
         request.addfinalizer(self.teardown)
@@ -533,9 +527,9 @@ class TestSepDeployShadow(unittest.TestCase):
         global rt1
         global rt2
         global rt3
-        utils.quit(rt1)
-        utils.quit(rt2)
-        utils.quit(rt3)
+        request_handler.quit(rt1)
+        request_handler.quit(rt2)
+        request_handler.quit(rt3)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -556,12 +550,12 @@ class TestSepDeployShadow(unittest.TestCase):
         rt2_id = None
         rt3_id = None
         failed = True
-        # Try 10 times waiting for control API to be up and running
-        for i in range(10):
+        # Try 30 times waiting for control API to be up and running
+        for i in range(30):
             try:
-                rt1_id = rt1_id or utils.get_node_id(rt1)
-                rt2_id = rt2_id or utils.get_node_id(rt2)
-                rt3_id = rt3_id or utils.get_node_id(rt3)
+                rt1_id = rt1_id or request_handler.get_node_id(rt1)
+                rt2_id = rt2_id or request_handler.get_node_id(rt2)
+                rt3_id = rt3_id or request_handler.get_node_id(rt3)
                 failed = False
                 break
             except:
@@ -573,19 +567,19 @@ class TestSepDeployShadow(unittest.TestCase):
         print "RUNTIMES:", rt1_id, rt2_id, rt3_id
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
-        # Try 20 times waiting for storage to be connected
+        # Try 30 times waiting for storage to be connected
         caps1 = []
         caps2 = []
         caps3 = []
         rt_ids = set([rt1_id, rt2_id, rt3_id])
-        for i in range(20):
+        for i in range(30):
             try:
                 if not (rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1):
-                    caps1 = utils.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
-                    caps2 = utils.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3):
-                    caps3 = utils.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps3 = request_handler.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
                 if rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3):
                     failed = False
                     break
@@ -596,15 +590,15 @@ class TestSepDeployShadow(unittest.TestCase):
         assert not failed
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
         # Now check for the values needed by this specific test
-        caps = utils.get_index(rt1, 'node/capabilities/calvinsys.events.timer')
+        caps = request_handler.get_index(rt1, 'node/capabilities/calvinsys.events.timer')
         assert rt1_id in caps['result']
         _log.analyze("TESTRUN", "+ RT1 CAPS", {})
-        caps = utils.get_index(rt2, 'node/capabilities/calvinsys.events.timer')
+        caps = request_handler.get_index(rt2, 'node/capabilities/calvinsys.events.timer')
         assert rt1_id in caps['result']
         _log.analyze("TESTRUN", "+ RT2 CAPS", {})
-        assert utils.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
         _log.analyze("TESTRUN", "+ RT1 INDEX", {})
-        assert utils.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
+        assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
         _log.analyze("TESTRUN", "+ RT2 INDEX", {})
 
     @pytest.mark.slow
@@ -631,17 +625,17 @@ class TestSepDeployShadow(unittest.TestCase):
         assert result['requirements_fulfilled']
         time.sleep(2)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow1:src'] in actors[0]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
         
-        actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeployStillShadow(self):
@@ -670,37 +664,37 @@ class TestSepDeployShadow(unittest.TestCase):
         #print "RESULT:", result
         assert result['requirements_fulfilled']
         time.sleep(1)
-        utils.migrate(rt2, result['actor_map']['test_shadow1:snk'], rt1_id)
+        request_handler.migrate(rt2, result['actor_map']['test_shadow1:snk'], rt1_id)
         time.sleep(1)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt2, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow1:src'] in actors[1]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
 
-        actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) == 0
-        utils.migrate(rt2, result['actor_map']['test_shadow1:src'], rt3_id)
+        request_handler.migrate(rt2, result['actor_map']['test_shadow1:src'], rt3_id)
         time.sleep(1)
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt3, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow1:src'] in actors[2]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
-        actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) == 0
-        utils.migrate(rt3, result['actor_map']['test_shadow1:src'], rt1_id)
+        request_handler.migrate(rt3, result['actor_map']['test_shadow1:src'], rt1_id)
         time.sleep(1)
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow1:src'] in actors[0]
         assert result['actor_map']['test_shadow1:sum'] in actors[1]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
-        actual = utils.report(rt1, result['actor_map']['test_shadow1:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 3
 
-        utils.delete_application(rt2, result['application_id'])
+        request_handler.delete_application(rt2, result['application_id'])
 
     @pytest.mark.slow
     def testDeployFailReqs(self):
@@ -729,7 +723,7 @@ class TestSepDeployShadow(unittest.TestCase):
         #print "RESULT:", result
         time.sleep(1)
         assert not result['requirements_fulfilled']
-        utils.delete_application(rt2, result['application_id'])
+        request_handler.delete_application(rt2, result['application_id'])
 
 @pytest.mark.slow
 class TestDeployment3NodesProxyStorage(unittest.TestCase):
@@ -761,7 +755,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
                   {'node_name': {'name': 'display'}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5000.conf")
-        rt1 = utils.RT("http://%s:5003" % ip_addr)
+        rt1 = RT("http://%s:5003" % ip_addr)
         time.sleep(1)
 
         rt2_3_conf = copy.deepcopy(_conf)
@@ -781,7 +775,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
                    'address': {"locality" : "outside"}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5001.conf")
-        rt2 = utils.RT("http://%s:5004" % ip_addr)
+        rt2 = RT("http://%s:5004" % ip_addr)
 
         rt2_3_conf.save("/tmp/calvin5002.conf")
         try:
@@ -797,7 +791,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
                    'address': {"locality" : "inside"}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5002.conf")
-        rt3 = utils.RT("http://%s:5005" % ip_addr)
+        rt3 = RT("http://%s:5005" % ip_addr)
 
         test_script_dir = absolute_filename('scripts/')
         request.addfinalizer(self.teardown)
@@ -806,9 +800,9 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         global rt1
         global rt2
         global rt3
-        utils.quit(rt1)
-        utils.quit(rt2)
-        utils.quit(rt3)
+        request_handler.quit(rt1)
+        request_handler.quit(rt2)
+        request_handler.quit(rt3)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -826,12 +820,12 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         rt2_id = None
         rt3_id = None
         failed = True
-        # Try 10 times waiting for control API to be up and running
-        for i in range(10):
+        # Try 30 times waiting for control API to be up and running
+        for i in range(30):
             try:
-                rt1_id = rt1_id or utils.get_node_id(rt1)
-                rt2_id = rt2_id or utils.get_node_id(rt2)
-                rt3_id = rt3_id or utils.get_node_id(rt3)
+                rt1_id = rt1_id or request_handler.get_node_id(rt1)
+                rt2_id = rt2_id or request_handler.get_node_id(rt2)
+                rt3_id = rt3_id or request_handler.get_node_id(rt3)
                 failed = False
                 break
             except:
@@ -843,19 +837,19 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         print "RUNTIMES:", rt1_id, rt2_id, rt3_id
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
-        # Try 20 times waiting for storage to be connected
+        # Try 30 times waiting for storage to be connected
         caps1 = []
         caps2 = []
         caps3 = []
         rt_ids = set([rt1_id, rt2_id, rt3_id])
-        for i in range(20):
+        for i in range(30):
             try:
                 if not (rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1):
-                    caps1 = utils.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
-                    caps2 = utils.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3):
-                    caps3 = utils.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps3 = request_handler.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
                 if rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3):
                     failed = False
                     break
@@ -890,17 +884,17 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         #print "RESULT:", result
         time.sleep(2)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow4:button'] in actors[1]
         assert result['actor_map']['test_shadow4:check'] in actors[0]
         assert result['actor_map']['test_shadow4:bell'] in actors[2]
         
-        actual = utils.report(rt3, result['actor_map']['test_shadow4:bell'])
+        actual = request_handler.report(rt3, result['actor_map']['test_shadow4:bell'])
         assert len(actual) > 5
         assert all([y-x > 0 for x, y in zip(actual, actual[1:])])
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeploy3NodesProxyStorageMoveAgain(self):
@@ -926,28 +920,28 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         #print "RESULT:", result
         time.sleep(2)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow4:button'] in actors[1]
         assert result['actor_map']['test_shadow4:check'] in actors[0]
         assert result['actor_map']['test_shadow4:bell'] in actors[2]
         
-        actual = utils.report(rt3, result['actor_map']['test_shadow4:bell'])
+        actual = request_handler.report(rt3, result['actor_map']['test_shadow4:bell'])
         assert len(actual) > 5
-        utils.migrate_use_req(rt3, result['actor_map']['test_shadow4:bell'], 
+        request_handler.migrate_use_req(rt3, result['actor_map']['test_shadow4:bell'], 
                                 [{
                                     "op": "node_attr_match",
                                     "kwargs": {"index": ["address", {"locality": "outside"}]},
                                     "type": "+"
                                 }])
         time.sleep(1)
-        actors2 = utils.get_actors(rt2)
+        actors2 = request_handler.get_actors(rt2)
         assert result['actor_map']['test_shadow4:bell'] in actors2
-        actual2 = utils.report(rt2, result['actor_map']['test_shadow4:bell'])
+        actual2 = request_handler.report(rt2, result['actor_map']['test_shadow4:bell'])
         assert len(actual2) > len(actual)
         assert all([y-x > 0 for x, y in zip(actual2, actual2[1:])])
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeploy3NodesProxyStorageMoveAllAgain(self):
@@ -973,15 +967,15 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         #print "RESULT:", result
         time.sleep(2)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow4:button'] in actors[1]
         assert result['actor_map']['test_shadow4:check'] in actors[0]
         assert result['actor_map']['test_shadow4:bell'] in actors[2]
         
-        actual = utils.report(rt3, result['actor_map']['test_shadow4:bell'])
+        actual = request_handler.report(rt3, result['actor_map']['test_shadow4:bell'])
         assert len(actual) > 5
-        utils.migrate_app_use_req(rt3, result['application_id'], 
+        request_handler.migrate_app_use_req(rt3, result['application_id'], 
                             {
                                 "requirements": {
                                     "button": [
@@ -1005,15 +999,15 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
                                 }
                             })
         time.sleep(1)
-        actors2 = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors2 = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         assert result['actor_map']['test_shadow4:bell'] in actors2[1]
         assert result['actor_map']['test_shadow4:check'] in actors[0]
         assert result['actor_map']['test_shadow4:button'] in actors2[2]
-        actual2 = utils.report(rt2, result['actor_map']['test_shadow4:bell'])
+        actual2 = request_handler.report(rt2, result['actor_map']['test_shadow4:bell'])
         assert len(actual2) > len(actual)
         assert all([y-x > 0 for x, y in zip(actual2, actual2[1:])])
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
 
     @pytest.mark.slow
@@ -1040,16 +1034,16 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         #print "RESULT:", result
         time.sleep(2)
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt1, sum -> rt2, snk -> rt1
         assert result['actor_map']['test_shadow5:button:first'] in actors[1]
         assert result['actor_map']['test_shadow5:button:second'] in actors[1]
         assert result['actor_map']['test_shadow5:check'] in actors[0]
         assert result['actor_map']['test_shadow5:bell'] in actors[2]
         
-        actual = utils.report(rt3, result['actor_map']['test_shadow5:bell'])
+        actual = request_handler.report(rt3, result['actor_map']['test_shadow5:bell'])
         assert len(actual) > 5
-        utils.migrate_app_use_req(rt3, result['application_id'], 
+        request_handler.migrate_app_use_req(rt3, result['application_id'], 
                             {
                                 "requirements": {
                                     "button": [
@@ -1073,16 +1067,16 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
                                 }
                             })
         time.sleep(1)
-        actors2 = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors2 = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         assert result['actor_map']['test_shadow5:bell'] in actors2[1]
         assert result['actor_map']['test_shadow5:check'] in actors[0]
         assert result['actor_map']['test_shadow5:button:first'] in actors2[2]
         assert result['actor_map']['test_shadow5:button:second'] in actors2[2]
-        actual2 = utils.report(rt2, result['actor_map']['test_shadow5:bell'])
+        actual2 = request_handler.report(rt2, result['actor_map']['test_shadow5:bell'])
         assert len(actual2) > len(actual)
         assert all([y-x > 0 for x, y in zip(actual2, actual2[1:])])
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
     @pytest.mark.slow
     def testDeploy3NodesProxyStorageMoveManyTimes(self):
@@ -1110,14 +1104,14 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
 
         assert result['requirements_fulfilled']
 
-        actors = [utils.get_actors(rt1), utils.get_actors(rt2), utils.get_actors(rt3)]
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt1, sum -> rt1, snk -> rt2
         assert result['actor_map']['test_deploy1:src'] in actors[1]
         assert result['actor_map']['test_deploy1:sum'] in actors[0]
         assert result['actor_map']['test_deploy1:snk'] in actors[1]
 
         for i in range(10):
-            utils.migrate_app_use_req(rt1, result['application_id'],
+            request_handler.migrate_app_use_req(rt1, result['application_id'],
                              {"requirements":
                                 {"snk":
                                     [{"op": "node_attr_match",
@@ -1127,9 +1121,9 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
                                 }
                             }, move=False)
             time.sleep(1)
-            actors = utils.get_actors(rt3)
+            actors = request_handler.get_actors(rt3)
             assert result['actor_map']['test_deploy1:snk'] in actors
-            utils.migrate_app_use_req(rt1, result['application_id'],
+            request_handler.migrate_app_use_req(rt1, result['application_id'],
                              {"requirements":
                                 {"snk":
                                     [{"op": "node_attr_match",
@@ -1139,7 +1133,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
                                 }
                             }, move=False)
             time.sleep(1)
-            actors = utils.get_actors(rt2)
+            actors = request_handler.get_actors(rt2)
             assert result['actor_map']['test_deploy1:snk'] in actors
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])

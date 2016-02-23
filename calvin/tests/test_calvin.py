@@ -20,14 +20,13 @@ import time
 import pytest
 import multiprocessing
 
-from calvin.runtime import Runtime
 from calvin.Tools import cscompiler as compiler
 from calvin.Tools import deployer
 from calvin.utilities import calvinconfig
 from calvin.utilities import calvinlogger
 from calvin.utilities.nodecontrol import dispatch_node
 from calvin.utilities.attribute_resolver import format_index_string
-from calvin.requests.request_handler import RequestHandler
+from calvin.requests.request_handler import RequestHandler, RT
 
 
 _log = calvinlogger.get_logger(__name__)
@@ -129,7 +128,7 @@ def setup_module(module):
         test_peer2_id = test_peers[0]
         test_peer2 = request_handler.get_node(runtime, test_peer2_id)
         if test_peer2:
-            runtime2 = Runtime(test_peer2["control_uri"])
+            runtime2 = RT(test_peer2["control_uri"])
             runtime2.id = test_peer2_id
             runtime2.uri = test_peer2["uri"]
             runtimes.append(runtime2)
@@ -137,30 +136,30 @@ def setup_module(module):
         if test_peer3_id:
             test_peer3 = request_handler.get_node(runtime, test_peer3_id)
             if test_peer3:
-                runtime3 = Runtime(test_peer3["control_uri"])
+                runtime3 = RT(test_peer3["control_uri"])
                 runtime3.id = test_peer3_id
                 runtime3.uri = test_peer3["uri"]
                 runtimes.append(runtime3)
     elif bt_master_controluri:
-        runtime = utils.RT(bt_master_controluri)
-        bt_master_id = utils.get_node_id(runtime)
-        data = utils.get_node(runtime, bt_master_id)
+        runtime = RT(bt_master_controluri)
+        bt_master_id = request_handler.get_node_id(bt_master_controluri)
+        data = request_handler.get_node(runtime, bt_master_id)
         if data:
             runtime.id = bt_master_id
             runtime.uri = data["uri"]
-            test_peers = utils.get_nodes(runtime)
+            test_peers = request_handler.get_nodes(runtime)
             test_peer2_id = test_peers[0]
-            test_peer2 = utils.get_node(runtime, test_peer2_id)
+            test_peer2 = request_handler.get_node(runtime, test_peer2_id)
             if test_peer2:
-                rt2 = utils.RT(test_peer2["control_uri"])
+                rt2 = RT(test_peer2["control_uri"])
                 rt2.id = test_peer2_id
                 rt2.uri = test_peer2["uri"]
                 runtimes.append(rt2)
             test_peer3_id = test_peers[1]
             if test_peer3_id:
-                test_peer3 = utils.get_node(runtime, test_peer3_id)
+                test_peer3 = request_handler.get_node(runtime, test_peer3_id)
                 if test_peer3:
-                    rt3 = utils.RT(test_peer3["control_uri"])
+                    rt3 = request_handler.RT(test_peer3["control_uri"])
                     rt3.id = test_peer3_id
                     rt3.uri = test_peer3["uri"]
                     runtimes.append(rt3)

@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2015-2016 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import json
 import requests
@@ -13,7 +28,6 @@ except:
     session = None
 
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime import get_runtime
 
 DEFAULT_TIMEOUT = 5
 
@@ -31,6 +45,7 @@ ACTORS = '/actors'
 ACTOR_DISABLE = '/actor/{}/disable'
 ACTOR_MIGRATE = '/actor/{}/migrate'
 APPLICATION_PATH = '/application/{}'
+APPLICATION_MIGRATE = '/application/{}/migrate'
 ACTOR_PORT = '/actor/{}/{}'
 ACTOR_REPORT = '/actor/{}/report'
 SET_PORT_PROPERTY = '/set_port_property'
@@ -47,6 +62,18 @@ METER_PATH_AGGREGATED = '/meter/{}/aggregated'
 METER_PATH_METAINFO = '/meter/{}/metainfo'
 
 
+def get_runtime(value):
+    if isinstance(value, basestring):
+        return RT(value)
+    else:
+        return value
+
+
+class RT(object):
+    def __init__(self, control_uri):
+        self.control_uri = control_uri
+
+
 class RequestHandler(object):
     def __init__(self):
         self.future_responses = []
@@ -61,7 +88,7 @@ class RequestHandler(object):
                     _log.debug("Failed to parse response '{}' as json".format(response.text))
                     return None
             # When failed raise exception
-            raise Exception("%d" % response.status_code)
+            raise Exception("%d%s" % (response.status_code, ("\n" + response.text) if response.text else ""))
         else:
             # We have a async Future just return it
             response._calvin_key = key
@@ -71,7 +98,7 @@ class RequestHandler(object):
 
     def _send(self, rt, timeout, send_func, path, data=None):
         rt = get_runtime(rt)
-        if data:
+        if data is not None:
             return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data))
         else:
             return send_func(rt.control_uri + path, timeout=timeout)
@@ -80,13 +107,13 @@ class RequestHandler(object):
         req = session if async else requests
         return self._send(rt, timeout, req.get, path)
 
-    def _post(self, rt, timeout, async, path, data={}):
+    def _post(self, rt, timeout, async, path, data=None):
         req = session if async else requests
         return self._send(rt, timeout, req.post, path, data)
 
-    def _delete(self, rt, timeout, async, path):
+    def _delete(self, rt, timeout, async, path, data=None):
         req = session if async else requests
-        return self._send(rt, timeout, req.delete, path)
+        return self._send(rt, timeout, req.delete, path, data)
 
     def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, NODE_ID)
@@ -186,9 +213,18 @@ class RequestHandler(object):
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
-    def add_requirements(self, rt, application_id, reqs, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'reqs': reqs}
-        path = APPLICATION_PATH.format(application_id)
+    def migrate_use_req(self, rt, actor_id, requirements, extend=False, move=False, timeout=DEFAULT_TIMEOUT,
+                        async=False):
+        data = {'requirements': requirements, 'extend': extend, 'move': move}
+        path = ACTOR_MIGRATE.format(actor_id)
+        r = self._post(rt, timeout, async, path, data)
+        return self.check_response(r)
+
+
+    def migrate_app_use_req(self, rt, application_id, deploy_info=None, move=False, timeout=DEFAULT_TIMEOUT,
+                            async=False):
+        data = {'deploy_info': deploy_info, "move": move}
+        path = APPLICATION_MIGRATE.format(application_id)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
@@ -226,8 +262,8 @@ class RequestHandler(object):
         r = self._delete(rt, timeout, async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
-    def deploy_application(self, rt, name, script, check=True, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {"name": name, "script": script, "check": check}
+    def deploy_application(self, rt, name, script, deploy_info=None, check=True, timeout=DEFAULT_TIMEOUT, async=False):
+        data = {"name": name, "script": script, 'deploy_info': deploy_info, "check": check}
         r = self._post(rt, timeout, async, DEPLOY, data)
         return self.check_response(r)
 
@@ -305,6 +341,7 @@ class RequestHandler(object):
 
 # Generate async_* versions of all functions in RequestHandler with async argument set to True
 for func_name, func in inspect.getmembers(RequestHandler, predicate=inspect.ismethod):
-    if hasattr(func, '__call__') and ((hasattr(func, '__code__') and 'async' in func.__code__.co_varnames)
-                                    or func.__name__ == 'peer_setup'):
+    if ((hasattr(func, '__code__') and 'async' in func.__code__.co_varnames and
+            func.__name__ not in ['_get', '_post', '_delete'])
+            or func.__name__ == 'peer_setup'):
         setattr(RequestHandler, 'async_' + func_name, partial(func, async=True))

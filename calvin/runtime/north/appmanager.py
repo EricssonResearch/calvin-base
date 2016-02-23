@@ -158,6 +158,7 @@ class AppManager(object):
         _log.analyze(self._node.id, "+", {'status': str(status), 'placement': placement}, tb=True)
 
     def finalize(self, application_id, migrate=False, cb=None):
+        _log.analyze(self._node.id, "+", {'application_id': application_id, 'migrate': migrate, 'cb': str(cb)})
         if application_id not in self.applications:
             _log.error("Non existing application id (%s) specified" % application_id)
             return
@@ -321,15 +322,14 @@ class AppManager(object):
         except:
             _log.exception("appmanager:collect_placement")
 
+    ### DEPLOYMENT ###
+
     def execute_requirements(self, application_id, cb):
         """ Build dynops iterator to collect all possible placements,
             then trigger migration.
 
             For initial deployment (all actors on the current node)
         """
-    ### DEPLOYMENT ###
-
-    def deployment_add_requirements(self, application_id, reqs, cb):
         app = None
         try:
             app = self.applications[application_id]

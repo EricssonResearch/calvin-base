@@ -870,11 +870,10 @@ class CalvinControl(object):
     def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=None):
         _log.analyze(self.node.id, "+", status.encode())
         if peer_node_ids:
-            data = {k: (v[0], v[1].status) for k, v in peer_node_ids.items()}
+            data = json.dumps({k: (v[0], v[1].status) for k, v in peer_node_ids.items()})
         else:
-            data = {}
-
-        self.send_response(handle, connection, json.dumps(data), status=status.status)
+            data = None
+        self.send_response(handle, connection, data, status=status.status)
 
     def handle_get_nodes(self, handle, connection, match, data, hdr):
         """ Get active nodes
@@ -995,17 +994,6 @@ class CalvinControl(object):
         self.send_response(handle, connection,
                            None, status=status.status)
 
-    def handle_application_requirements(self, handle, connection, match, data, hdr):
-        """ Apply application deployment requirements
-            to actors of an application and initiate migration of actors accordingly
-        """
-        callback = CalvinCB(func=self.handle_application_requirements_cb, handle=handle, connection=connection)
-        self.node.app_manager.deployment_add_requirements(match.group(1), data['reqs'], callback)
-
-    def handle_application_requirements_cb(self, handle, connection, *args, **kwargs):
-        data = json.dumps({'placement': kwargs['placement'] if 'placement' in kwargs else {}})
-        self.send_response(handle, connection, data, status=kwargs['status'].status)
-
     def handle_actor_disable(self, handle, connection, match, data, hdr):
         try:
             self.node.am.disable(match.group(1))
@@ -1067,7 +1055,7 @@ class CalvinControl(object):
 
     def handle_deploy(self, handle, connection, match, data, hdr):
         try:
-            _log.analyze(self.node.id, "+", {})
+            _log.analyze(self.node.id, "+", data)
             if 'app_info' not in data:
                 app_info, errors, warnings = compiler.compile(
                     data["script"], filename=data["name"], verify=data["check"] if "check" in data else True)
