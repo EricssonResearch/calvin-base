@@ -34,6 +34,11 @@ class CalvinCB(object):
         self.func = func
         self.args = list(args)
         self.kwargs = kwargs
+        # Ref a functions name if we wrap several CalvinCB and need to take __str__
+        try:
+            self.name = self.func.__name__
+        except:
+            self.name = self.func.name if hasattr(self.func, 'name') else "unknown"
 
     def args_append(self, *args):
         """ Append specific args to the call"""
@@ -57,7 +62,7 @@ class CalvinCB(object):
                 self.func, self.func.__name__, (self.args + list(args)), dict(self.kwargs, **kwargs)))
 
     def __str__(self):
-        return "CalvinCB - " + self.func.__name__ + "(%s, %s)" % (self.args, self.kwargs)
+        return "CalvinCB - " + self.name + "(%s, %s)" % (self.args, self.kwargs)
 
 
 class CalvinCBGroup(object):
