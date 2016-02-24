@@ -62,9 +62,7 @@ def p_compdefs(p):
 
 
 def p_compdef(p):
-    """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring
-    program RBRACE
-    """
+    """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring program RBRACE"""
     name = p[2]
     arg_ids = p[4]
     inputs = p[6]
