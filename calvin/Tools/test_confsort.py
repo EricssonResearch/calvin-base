@@ -31,7 +31,7 @@ def test():
     original = fp.readlines()
     fp.close()
 
-    order.reorder("test.ini")
+    confsort.reorder("test.ini")
 
     fp = open("test.ini", 'r')
     sort = fp.readlines()
