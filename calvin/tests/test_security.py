@@ -17,17 +17,11 @@
 import unittest
 import time
 import multiprocessing
-from calvin.runtime.north import calvin_node
-from calvin.Tools import cscompiler as compiler
-from calvin.Tools import deployer
 import pytest
-from calvin.utilities import utils
+from calvin.requests.request_handler import RequestHandler, RT
 from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
-from calvin.utilities import calvinuuid
 from calvin.utilities.security import Security
-from warnings import warn
 from calvin.utilities.attribute_resolver import format_index_string
-import socket
 import os
 import json
 import copy
@@ -36,6 +30,7 @@ from calvin.utilities import calvinconfig
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
+request_handler = RequestHandler()
 
 try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
@@ -130,7 +125,7 @@ class TestSecurity(unittest.TestCase):
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5001.conf")
-        rt1 = utils.RT("http://%s:5021" % ip_addr)
+        rt1 = RT("http://%s:5021" % ip_addr)
 
 
 
@@ -198,7 +193,7 @@ class TestSecurity(unittest.TestCase):
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5002.conf")
-        rt2 = utils.RT("http://%s:5022" % ip_addr)
+        rt2 = RT("http://%s:5022" % ip_addr)
 
 
 
@@ -242,7 +237,7 @@ class TestSecurity(unittest.TestCase):
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5003.conf")
-        rt3 = utils.RT("http://%s:5023" % ip_addr)
+        rt3 = RT("http://%s:5023" % ip_addr)
 
         request.addfinalizer(self.teardown)
 
@@ -250,9 +245,9 @@ class TestSecurity(unittest.TestCase):
         global rt1
         global rt2
         global rt3
-        utils.quit(rt1)
-        utils.quit(rt2)
-        utils.quit(rt3)
+        request_handler.quit(rt1)
+        request_handler.quit(rt2)
+        request_handler.quit(rt3)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -270,12 +265,12 @@ class TestSecurity(unittest.TestCase):
         rt2_id = None
         rt3_id = None
         failed = True
-        # Try 10 times waiting for control API to be up and running
-        for i in range(10):
+        # Try 30 times waiting for control API to be up and running
+        for i in range(30):
             try:
-                rt1_id = rt1_id or utils.get_node_id(rt1)
-                rt2_id = rt2_id or utils.get_node_id(rt2)
-                rt3_id = rt3_id or utils.get_node_id(rt3)
+                rt1_id = rt1_id or request_handler.get_node_id(rt1)
+                rt2_id = rt2_id or request_handler.get_node_id(rt2)
+                rt3_id = rt3_id or request_handler.get_node_id(rt3)
                 failed = False
                 break
             except:
@@ -287,19 +282,20 @@ class TestSecurity(unittest.TestCase):
         print "RUNTIMES:", rt1_id, rt2_id, rt3_id
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
-        # Try 20 times waiting for storage to be connected
+        # Try 30 times waiting for storage to be connected
         caps1 = []
         caps2 = []
         caps3 = []
-        for i in range(20):
+        rt_ids = set([rt1_id, rt2_id, rt3_id])
+        for i in range(30):
             try:
                 if not (rt1_id in caps1  and rt2_id in caps2 and rt3_id in caps1):
-                    caps1 = utils.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
-                    caps2 = utils.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3):
-                    caps3 = utils.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
-                if rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1:
+                    caps3 = request_handler.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
+                if rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3):
                     failed = False
                     break
                 else:
@@ -308,11 +304,11 @@ class TestSecurity(unittest.TestCase):
                 time.sleep(0.1)
         assert not failed
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
-        assert utils.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
         _log.analyze("TESTRUN", "+ RT1 INDEX", {})
-        assert utils.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
+        assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
         _log.analyze("TESTRUN", "+ rt2 INDEX", {})
-        assert utils.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
+        assert request_handler.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
         _log.analyze("TESTRUN", "+ rt3 INDEX", {})
 
 ###################################
@@ -332,11 +328,11 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
                         credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
                         check=True)
         except Exception as e:
-            if e.message == "401":
+            if e.message.startswith("401"):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
@@ -344,15 +340,15 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # For example verify that actors exist like this
-        actors = utils.get_actors(rt1)
+        actors = request_handler.get_actors(rt1)
         assert result['actor_map']['test_security1_correctly_signed:src'] in actors
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
 
-        actual = utils.report(rt1, result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 5
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
 
 
@@ -369,11 +365,11 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_incorrectly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
                         credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
                         check=True)
         except Exception as e:
-            if e.message == "401":
+            if e.message.startswith("401"):
                 # We were blocked, as we should
                 return
             _log.exception("Test deploy failed for non security reasons")
@@ -393,12 +389,12 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctlySignedApp_incorrectlySignedActor.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt1, "test_security1_correctlySignedApp_incorrectlySignedActor", content['file'], 
+            result = request_handler.deploy_application(rt1, "test_security1_correctlySignedApp_incorrectlySignedActor", content['file'], 
                         credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
                         check=True)
         except Exception as e:
             _log.debug(str(e))
-            if e.message == "401":
+            if e.message.startswith("401"):
                 raise Exception("Failed security verification of app testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor, no use to verify if requirements fulfilled")
@@ -406,15 +402,15 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # Verify that actors exist like this
-        actors = utils.get_actors(rt1)
+        actors = request_handler.get_actors(rt1)
         assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:src'] in actors
         assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:sum'] in actors
         assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'] in actors
 
-        actual = utils.report(rt1, result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'])
         assert len(actual) == 0
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
 ###################################
 #   Policy related tests
@@ -432,11 +428,11 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_unsignedApp_signedActors.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt1, "test_security1_unsignedApp_signedActors", content['file'], 
+            result = request_handler.deploy_application(rt1, "test_security1_unsignedApp_signedActors", content['file'], 
                         credentials={"user": ["user2"], "password": ["pass2"]}, content=content, 
                         check=True)
         except Exception as e:
-            if e.message == "401":
+            if e.message.startswith("401"):
                 raise Exception("Failed security verification of app test_security1_unsigned")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_unsignedApp_signedActors, no use to verify if requirements fulfilled")
@@ -444,15 +440,15 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # For example verify that actors exist like this
-        actors = utils.get_actors(rt1)
+        actors = request_handler.get_actors(rt1)
         assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors
         assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors
         assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors
 
-        actual = utils.report(rt1, result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
         assert len(actual) > 5
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
 
     @pytest.mark.slow
@@ -468,11 +464,11 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_unsignedApp_unsignedActors.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt1, "test_security1_unsignedApp_unsignedActors", content['file'], 
+            result = request_handler.deploy_application(rt1, "test_security1_unsignedApp_unsignedActors", content['file'], 
                         credentials={"user": ["user3"], "password": ["pass3"]}, content=content, 
                         check=True)
         except Exception as e:
-            if e.message == "401":
+            if e.message.startswith("401"):
                 raise Exception("Failed security verification of app test_security1_unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
@@ -480,15 +476,15 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # For example verify that actors exist like this
-        actors = utils.get_actors(rt1)
+        actors = request_handler.get_actors(rt1)
         assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors
         assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors
         assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors
 
-        actual = utils.report(rt1, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
+        actual = request_handler.report(rt1, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
         assert len(actual) > 5
 
-        utils.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt1, result['application_id'])
 
 
     @pytest.mark.slow
@@ -504,11 +500,11 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
                         credentials={"user": ["user_not_allowed"], "password": ["pass1"]}, content=content, 
                         check=True)
         except Exception as e:
-            if e.message == "401":
+            if e.message.startswith("401"):
                 # We were blocked, as we should
                 return
             _log.exception("Test deploy failed for non security reasons")
@@ -528,11 +524,11 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
                         credentials={"user": ["user1"], "password": ["incorrect_password"]}, content=content, 
                         check=True)
         except Exception as e:
-            if e.message == "401":
+            if e.message.startswith("401"):
                 # We were blocked, as we should
                 return
             _log.exception("Test deploy failed for non security reasons")
@@ -555,11 +551,11 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = utils.deploy_application(rt3, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt3, "test_security1_correctly_signed", content['file'], 
                         credentials={"user": ["radius_user1"], "password": ["radius_passwd1"]}, content=content, 
                         check=True)
         except Exception as e:
-            if e.message == "401":
+            if e.message.startswith("401"):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
@@ -567,13 +563,13 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # For example verify that actors exist like this
-        actors = utils.get_actors(rt3)
+        actors = request_handler.get_actors(rt3)
         assert result['actor_map']['test_security1_correctly_signed:src'] in actors
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
 
-        actual = utils.report(rt3, result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt3, result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 5
 
-        utils.delete_application(rt3, result['application_id'])
+        request_handler.delete_application(rt3, result['application_id'])
 
