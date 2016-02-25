@@ -104,7 +104,8 @@ def main():
             if logline['node_id']:
                 try:
                     pid = re.match(re_pid, line).group(1)
-                    pid_to_node_id[pid] = logline['node_id']
+                    if int(pid) != logline['node_id']:
+                        pid_to_node_id[pid] = logline['node_id']
                 except:
                     pass
             logline['time'] = t
@@ -112,6 +113,11 @@ def main():
             log.append(logline)
 
     pprint.pprint(pid_to_node_id)
+    int_pid_to_node_id = {int(k): v for k,v in pid_to_node_id.iteritems()}
+
+    for l in log:
+        if l['node_id'] in int_pid_to_node_id:
+            l['node_id'] = int_pid_to_node_id[l['node_id']]
 
     if len(files)>1:
         log = sorted(log, key=lambda k: k['time'])

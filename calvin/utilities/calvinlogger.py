@@ -45,6 +45,9 @@ class JSONEncoderIters(json.JSONEncoder):
 
 def analyze(self, node_id, func, param, peer_node_id=None, tb=False, mute=False, *args, **kws):
     if not mute and self.isEnabledFor(5):
+        if node_id is None:
+            # Allow None node_id and enter the process id instead
+            node_id = os.getpid()
         if func.startswith("+"):
             f = inspect.currentframe()
             if f is not None:
