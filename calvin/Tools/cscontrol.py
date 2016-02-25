@@ -172,10 +172,11 @@ def parse_args():
     cmd_nodes = cmdparsers.add_parser('nodes', help='handle node peers')
     cmd_nodes.add_argument('cmd', metavar='<command>', choices=node_commands, type=str,
                            help="one of %s" % ", ".join(node_commands))
-    cmd_nodes.add_argument('id', metavar="<node id>", type=str, nargs='?', default=None,
-                           help="id of node")
-    cmd_nodes.add_argument('peerlist', metavar='<peer>', nargs='*', default=[],
-                           help="list of peers of the form calvinip://<address>:<port>")
+    info_group = cmd_nodes.add_argument_group('info')
+    info_group.add_argument('id', metavar='<node id>', nargs='?', help="id of node to get info about")
+    list_group = cmd_nodes.add_argument_group('list, add, stop')
+    list_group.add_argument('peerlist', metavar='<peerlist>', nargs='*', default=[],
+                            help="list of peers of the form calvinip://<address>:<port>")
     cmd_nodes.set_defaults(func=control_nodes)
 
     # parser for deploy
