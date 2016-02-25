@@ -138,7 +138,7 @@ class niceAutoDHTServer(AutoDHTServer):
         dl = defer.DeferredList(dlist)
         dl.addBoth(start_msearch)
         self.dht_server.kserver.protocol.sourceNode.port = port
-        self.dht_server.kserver.protocol.sourceNode.ip = "10.0.0.9"
+        self.dht_server.kserver.protocol.sourceNode.ip = "0.0.0.0"
         self.dht_server.kserver.name = name
         self.dht_server.kserver.protocol.name = name
         self.dht_server.kserver.protocol.storeOwnCert(certificate)
@@ -1073,7 +1073,7 @@ class evilAutoDHTServer(AutoDHTServer):
         dl.addBoth(start_msearch)
         self.dht_server.kserver.protocol.evilType = type
         self.dht_server.kserver.protocol.sourceNode.port = port
-        self.dht_server.kserver.protocol.sourceNode.ip = "10.0.0.9"
+        self.dht_server.kserver.protocol.sourceNode.ip = "10.0.0.13"
         self.dht_server.kserver.name = name
         self.dht_server.kserver.protocol.name = name
         self.dht_server.kserver.protocol.storeOwnCert(certificate)
@@ -1391,6 +1391,7 @@ class evilAppendServer(niceAppendServer):
         return deferredDict(ds)
 
 def drawNetworkState(name, servers, amount_of_servers):
+    """Save image describinh network of `servers` as `name`."""
     graph = pydot.Dot(graph_type='digraph',
                      nodesep=0,
                      ranksep=0,
@@ -1398,12 +1399,12 @@ def drawNetworkState(name, servers, amount_of_servers):
     for servno in range(0, amount_of_servers):
         rndnode = Node(hashlib.sha1(str(random.getrandbits(255))).digest())
         findNeighbors = servers[servno].dht_server.kserver.protocol.router.findNeighbors
-        neighbours = map(tuple, findNeighbors(rndnode), k=50)
-        for neighbour in neighbours:
+        neighbors = map(tuple, findNeighbors(rndnode, k=50))
+        for neighbor in neighbors:
             printPort = servers[servno].dht_server.port.getHost().port
-            edge = pydot.Edge(printPort,
-                             neighbour[2],
-                             label=str(neighbour[0].encode('hex')[-4:]))
+            edge = pydot.Edge(str(printPort),
+                             str(neighbor[2]),
+                             label=str(neighbor[0].encode('hex')[-4:]))
             graph.add_edge(edge)
     graph.write_png(name)
 
