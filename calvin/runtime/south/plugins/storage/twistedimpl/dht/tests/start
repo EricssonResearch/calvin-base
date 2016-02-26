@@ -1,9 +1,10 @@
 #!/bin/bash
+WORKDIR=$PWD
 cd ~/.calvin/security/test/
-rm -r private newcerts certs index* node* serial* evil*
-cd ~/newcalvin/calvin-base/calvin/runtime/south/plugins/storage/twistedimpl/dht/tests/
-python ../cert_script.py
-py.test --twisted --runslow --runinteractive test_dht_server_nice2.py -s & 
-py.test --twisted --runslow --runinteractive test_dht_server_nice.py -s &
-py.test --twisted --runslow --runinteractive test_dht_server_nice3.py -s &
-py.test --twisted --runslow --runinteractive test_dht_server_evil.py -s &
+rm -r private runtimes newcerts certs index* node* serial* evil* cacert.pem
+cd "$WORKDIR"
+python ./cert_script.py
+py.test --twisted --runslow --runinteractive tests/test_dht_server_nice2.py -s & 
+py.test --twisted --runslow --runinteractive tests/test_dht_server_nice.py -s &
+py.test --twisted --runslow --runinteractive tests/test_dht_server_nice3.py -s &
+py.test --twisted --runslow --runinteractive tests/test_dht_server_evil.py -s &

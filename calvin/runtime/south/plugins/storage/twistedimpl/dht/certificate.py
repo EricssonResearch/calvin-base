@@ -26,6 +26,7 @@ import tempfile
 
 import confsort
 
+BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
 
 class Config():
     """
@@ -61,6 +62,7 @@ class Config():
                               'private_dir': '$dir/private/',
                               'new_certs_dir': '$dir/newcerts',
                               'private_key': '$dir/private/ca.key',
+                              'runtimes_dir': '$dir/runtimes',
                               'email_in_dn': 'no',
                               'x509_extensions': 'usr_cert',
                               'copy_extensions': 'none',
@@ -233,21 +235,21 @@ def new_runtime(conf, name):
                 -keyout $private_dir/runtime.key
     """
     outpath = conf.configuration["CA_default"]["new_certs_dir"]
-    private = conf.configuration["CA_default"]["private_dir"]
+    name_dir = os.path.join(conf.configuration["CA_default"]["runtimes_dir"], name)
+    private_key = os.path.join(name_dir, "private", "private.key")
+    private = os.path.dirname(private_key)
 
     out = os.path.join(outpath, "{}.csr".format(name))
-    os.makedirs("/home/ubuntu/.calvin/security/test/{}/private".format(name))
-    private_key = os.path.join("/home/ubuntu/.calvin/security/test/{}/private/".format(name), "private.key")
 
     os.umask(0077)
 
     try:
-        os.mkdir(outpath, 0755)
+        os.makedirs(outpath, 0755)
     except OSError:
         pass
 
     try:
-        os.mkdir(private, 0700)
+        os.makedirs(private, 0700)
     except OSError:
         pass
 
@@ -266,13 +268,10 @@ def new_runtime(conf, name):
 
     log = subprocess.Popen(["openssl", "req", "-new",
                             "-subj", subject,
-                            # "-newkey", "rsa:2048",
                             "-key", private_key,
                             "-nodes",
                             "-utf8",
                             "-out", out],
-                            # "-out", out,
-                            # "-keyout", private_key],
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
     stdout, stderr = log.communicate()
@@ -317,7 +316,6 @@ def new_domain(conf):
     crlpath = conf.configuration["CA_default"]["crl_dir"]
     private_key = conf.configuration["CA_default"]["private_key"]
     out = conf.configuration["CA_default"]["certificate"]
-    dirpath = conf.configuration["CA_default"]["dir"]
 
     password_file = os.path.join(private, "ca_password")
 
@@ -389,6 +387,7 @@ def sign_req(conf, req, name):
     private = conf.configuration["CA_default"]["private_dir"]
     requestpath = conf.configuration["CA_default"]["new_certs_dir"]
     certspath = conf.configuration["CA_default"]["certs"]
+    name_dir = os.path.join(conf.configuration["CA_default"]["runtimes_dir"], name)
 
     password_file = os.path.join(private, "ca_password")
     signed = os.path.join(certspath, "signed.pem")
@@ -423,12 +422,18 @@ def sign_req(conf, req, name):
         raise IOError(stderr)
 
     fp = fingerprint(signed)
-    fp.replace(":", "")[-40:]
-    newcert = "{}.pem".format(fp)
-    os.makedirs("/home/ubuntu/.calvin/security/test/{}/mine".format(name))
-    os.makedirs("/home/ubuntu/.calvin/security/test/{}/others".format(name))
+    newcert = "{}.pem".format(fp.replace(":", "")[-40:])
+    
+    try:
+        os.makedirs(os.path.join(name_dir, "mine"))
+    except OSError:
+        pass
+    try:
+        os.makedirs(os.path.join(name_dir, "others"))
+    except OSError:
+        pass
 
-    newkeyname = os.path.join("/home/ubuntu/.calvin/security/test/{}/mine/".format(name), newcert)
+    newkeyname = os.path.join(name_dir, "mine", newcert)
     print(signed)
     print(newkeyname)
     os.rename(signed, newkeyname)

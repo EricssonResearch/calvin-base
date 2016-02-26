@@ -18,7 +18,6 @@ import pytest
 import sys
 import os
 import traceback
-import pydot
 import hashlib
 import twisted
 import shutil
@@ -36,6 +35,11 @@ from calvin.runtime.south.plugins.async import threads
 from calvin.utilities import calvinconfig
 
 _conf = calvinconfig.get()
+_conf.add_section("security")
+_conf_file = os.path.join(os.getenv("HOME"), ".calvin/security/test/openssl.conf")
+_conf.set("security", "certificate_conf", _conf_file)
+_conf.set("security", "certificate_domain", "test")
+_cert_conf = certificate.Config(_conf_file, "test").configuration
 _log = calvinlogger.get_logger(__name__)
 name = "node3:"
 
@@ -132,7 +136,8 @@ class TestDHT(object):
             assert get_value == "bambu"
             print("Node with port {} got right value: {}".format(servers[0].dht_server.port.getHost().port, get_value))
             for i in range(0, amount_of_servers):
-                filenames = os.listdir("/home/ubuntu/.calvin/security/test/{}{}/others".format(name, i))
+                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))
+                filenames = os.listdir(os.path.join(name_dir, "others"))
                 print("Node with port {} has {} certificates in store".format(servers[i].dht_server.port.getHost().port, len(filenames)))
 
         except AssertionError as e:
@@ -145,7 +150,8 @@ class TestDHT(object):
             yield threads.defer_to_thread(time.sleep, 10)
             i = 0
             for server in servers:
-                shutil.rmtree("/home/ubuntu/.calvin/security/test/{}/others".format(name + "{}".format(i)), ignore_errors=True)
-                os.mkdir("/home/ubuntu/.calvin/security/test/{}/others".format(name + "{}".format(i)))
+                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))
+                shutil.rmtree(os.path.join(name_dir, "others"), ignore_errors=True)
+                os.mkdir(os.path.join(name_dir, "others"))
                 i += 1
                 server.stop()

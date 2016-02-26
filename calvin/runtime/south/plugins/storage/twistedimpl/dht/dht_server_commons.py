@@ -14,27 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-import sys
 import os
 import traceback
 import random
-import pydot
+try:
+    import pydot
+except:
+    pydot = None
 import hashlib
-import twisted
 import OpenSSL.crypto
-import time
 
-from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
 from calvin.runtime.south.plugins.storage.twistedimpl.dht import append_server
 from calvin.runtime.south.plugins.storage.twistedimpl.dht import dht_server
 from calvin.runtime.south.plugins.storage.twistedimpl.dht import service_discovery_ssdp
-
-#import calvin.runtime.south.plugins.storage.twistedimpl.dht.certificate
+# FIXME refactor to calvin.runtime.north.certificate
+from calvin.runtime.south.plugins.storage.twistedimpl.dht import certificate
 
 from kademlia.node import Node
 from kademlia.utils import deferredDict, digest
+from kademlia.crawling import NodeSpiderCrawl
 
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities import calvinconfig
@@ -42,7 +41,9 @@ from calvin.utilities import calvinconfig
 _conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)
 
-BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
+def generate_challenge():
+    """ Generate a random challenge of 8 bytes, hex string formated"""
+    return os.urandom(8).encode("hex")
 
 class IDServerApp(object):
 
@@ -80,13 +81,19 @@ class IDServerApp(object):
             return self.port.stopListening()
 
 class niceAutoDHTServer(dht_server.AutoDHTServer):
+    def __init__(self, *args, **kwargs):
+        super(niceAutoDHTServer, self).__init__(*args, **kwargs)
+        self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
+                                            _conf.get("security", "certificate_domain")).configuration
+
     def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None):
         if bootstrap is None:
             bootstrap = []
-        filename = os.listdir("/home/ubuntu/.calvin/security/test/{}/mine".format(name))
-        st_cert = open("/home/ubuntu/.calvin/security/test/{}/mine/{}".format(name, filename[0]), 'rt').read()
-        cert_part = st_cert.split(BEGIN_LINE)
-        certstr = "{}{}".format(BEGIN_LINE, cert_part[1])
+        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)
+        filename = os.listdir(os.path.join(name_dir, "mine"))
+        st_cert = open(os.path.join(name_dir, "mine", filename[0]), 'rt').read()
+        cert_part = st_cert.split(certificate.BEGIN_LINE)
+        certstr = "{}{}".format(certificate.BEGIN_LINE, cert_part[1])
 
         try:
             cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
@@ -150,6 +157,7 @@ class niceAutoDHTServer(dht_server.AutoDHTServer):
         # Wait until servers all listen
         dl = service_discovery_ssdp.defer.DeferredList(dlist)
         dl.addBoth(start_msearch)
+        #FIXME handle inside IDServerApp
         self.dht_server.kserver.protocol.sourceNode.port = port
         self.dht_server.kserver.protocol.sourceNode.ip = "0.0.0.0"
         self.dht_server.kserver.name = name
@@ -163,6 +171,8 @@ class niceAutoDHTServer(dht_server.AutoDHTServer):
 class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
     def __init__(self, *args, **kwargs):
         append_server.KademliaProtocol.__init__(self, *args, **kwargs)
+        self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
+                                            _conf.get("security", "certificate_domain")).configuration
         self.set_keys=set([])
         try:
             self.trustedStore = OpenSSL.crypto.X509Store() # Contains all trusted CA-certificates.
@@ -178,7 +188,7 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         Asks 'nodeToAsk' for its certificate.
         """
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(8).encode("hex")
+        challenge = generate_challenge()
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                      self.priv_key,
@@ -204,7 +214,7 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         Asks 'nodeToAsk' for the value 'nodeToFind.id'
         """
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(8).encode("hex")
+        challenge = generate_challenge()
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                      self.priv_key,
@@ -229,7 +239,7 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         Asks 'nodeToAsk' for the information regarding the node 'nodeToFind'
         """
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(8).encode("hex")
+        challenge = generate_challenge()
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                     self.priv_key,
@@ -254,7 +264,7 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         Sends a ping message to 'nodeToAsk'
         """        
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(8).encode("hex")
+        challenge = generate_challenge()
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                     self.priv_key,
@@ -279,7 +289,7 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         Sends a request for 'nodeToAsk' to store value 'value' with key 'key'
         """   
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(8).encode("hex")
+        challenge = generate_challenge()
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                     self.priv_key,
@@ -703,7 +713,7 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
                     private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                             self.priv_key,
                                                             '')
-                    signature = sign(private,
+                    signature = OpenSSL.crypto.sign(private,
                                     challenge,
                                     "sha256")
                 except:
@@ -855,10 +865,11 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
                                                       data[1])
             except:
                 return None
-        filename = os.listdir("/home/ubuntu/.calvin/security/test/{}/others".format(self.name))
+        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
+        filename = os.listdir(os.path.join(name_dir, "others"))
         matching = [s for s in filename if id in s]
         if len(matching) == 1:
-            file = open("/home/ubuntu/.calvin/security/test/{}/others/{}".format(self.name, matching[0]), 'rt')
+            file = open(os.path.join(name_dir, "others", matching[0]), 'rt')
             st_cert = file.read()
             try:
                 cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
@@ -878,7 +889,8 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         Retrieves the nodes private key from disk and
         stores it at priv_key.
         '''
-        file = open("/home/ubuntu/.calvin/security/test/{}/private/private.key".format(self.name), 'rt')
+        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
+        file = open(os.path.join(name_dir, "private", "private.key"), 'rt')
         self.priv_key = file.read()
 
     def addCACert(self):
@@ -887,7 +899,8 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         it to the trustedStore.
         """
         try:
-            cafile = open("/home/ubuntu/.calvin/security/test/cacert.pem".format(self.name), 'rt')
+            # Read CA's cacert.pem file
+            cafile = open(self.cert_conf["CA_default"]["certificate"], 'rt')
             cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                                   cafile.read())
             self.trustedStore.add_cert(cert)
@@ -957,7 +970,8 @@ class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         exists = self.storage.get(digest("{}cert".format(id)))
         if not exists[0]:
             self.storage[digest("{}cert".format(id))] = certString
-            file = open("/home/ubuntu/.calvin/security/test/{}/others/{}.pem".format(self.name, id), 'w')
+            name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
+            file = open(os.path.join(name_dir, "others", "{}.pem".format(id)), 'w')
             file.write(certString)
             file.close()
 
@@ -1032,7 +1046,7 @@ class niceAppendServer(append_server.AppendServer):
             return spider.find()
 
         ds = {}
-        challenge = os.urandom(8).encode("hex")
+        challenge = generate_challenge()
         id = None
         if addrs:
             data = addrs[0]
@@ -1064,13 +1078,20 @@ class niceAppendServer(append_server.AppendServer):
         return deferredDict(ds)
 
 class evilAutoDHTServer(dht_server.AutoDHTServer):
+
+    def __init__(self, *args, **kwargs):
+        super(evilAutoDHTServer, self).__init__(*args, **kwargs)
+        self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
+                                            _conf.get("security", "certificate_domain")).configuration
+
     def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None):
         if bootstrap is None:
             bootstrap = []
-        filename = os.listdir("/home/ubuntu/.calvin/security/test/{}/mine".format(name))
-        st_cert=open("/home/ubuntu/.calvin/security/test/{}/mine/{}".format(name, filename[0]), 'rt').read()
-        cert_part = st_cert.split(BEGIN_LINE)
-        certstr = "{}{}".format(BEGIN_LINE, cert_part[1])
+        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)
+        filename = os.listdir(os.path.join(name_dir, "mine"))
+        st_cert = open(os.path.join(name_dir, "mine", filename[0]), 'rt').read()
+        cert_part = st_cert.split(certificate.BEGIN_LINE)
+        certstr = "{}{}".format(certificate.BEGIN_LINE, cert_part[1])
         try:
             cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                                   certstr)
@@ -1139,7 +1160,7 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
         dl.addBoth(start_msearch)
         self.dht_server.kserver.protocol.evilType = type
         self.dht_server.kserver.protocol.sourceNode.port = port
-        self.dht_server.kserver.protocol.sourceNode.ip = "10.0.0.13"
+        self.dht_server.kserver.protocol.sourceNode.ip = "0.0.0.0"
         self.dht_server.kserver.name = name
         self.dht_server.kserver.protocol.name = name
         self.dht_server.kserver.protocol.storeOwnCert(certstr)
@@ -1156,7 +1177,7 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
 
     def callPing(self, nodeToAsk, id=None):
         address = (nodeToAsk.ip, nodeToAsk.port)
-        challenge = os.urandom(8).encode("hex")
+        challenge = generate_challenge()
         try:
             private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                     self.priv_key,
@@ -1434,7 +1455,7 @@ class evilAppendServer(niceAppendServer):
             return spider.find()
 
         ds = {}
-        challenge = os.urandom(8).encode("hex")
+        challenge = generate_challenge()
         id = None
         if addrs:
             data = addrs[0]
@@ -1465,6 +1486,8 @@ class evilAppendServer(niceAppendServer):
 
 def drawNetworkState(name, servers, amount_of_servers):
     """Save image describinh network of `servers` as `name`."""
+    if pydot is None:
+        return
     graph = pydot.Dot(graph_type='digraph',
                      nodesep=0,
                      ranksep=0,

@@ -15,13 +15,9 @@
 # limitations under the License.
 
 import pytest
-import sys
 import os
 import traceback
-import pydot
-import hashlib
 import twisted
-import random
 import shutil
 
 from calvin.utilities.calvin_callback import CalvinCB
@@ -36,6 +32,11 @@ from calvin.runtime.south.plugins.async import threads
 from calvin.utilities import calvinconfig
 
 _conf = calvinconfig.get()
+_conf.add_section("security")
+_conf_file = os.path.join(os.getenv("HOME"), ".calvin/security/test/openssl.conf")
+_conf.set("security", "certificate_conf", _conf_file)
+_conf.set("security", "certificate_domain", "test")
+_cert_conf = certificate.Config(_conf_file, "test").configuration
 _log = calvinlogger.get_logger(__name__)
 
 reactor.suggestThreadPoolSize(30)
@@ -135,7 +136,8 @@ class TestDHT(object):
             pytest.fail(traceback.format_exc())
         finally:
             for server in servers:
-                shutil.rmtree("/home/ubuntu/.calvin/security/test/{}/others".format("evil"), ignore_errors=True)
-                os.mkdir("/home/ubuntu/.calvin/security/test/{}/others".format("evil"))
+                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "evil")
+                shutil.rmtree(os.path.join(name_dir, "others"), ignore_errors=True)
+                os.mkdir(os.path.join(name_dir, "others"))
                 server.stop()
                 yield threads.defer_to_thread(time.sleep, 5)
