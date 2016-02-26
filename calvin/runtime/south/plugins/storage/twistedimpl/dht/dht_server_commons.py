@@ -18,6 +18,7 @@ import pytest
 import sys
 import os
 import traceback
+import random
 import pydot
 import hashlib
 import twisted
@@ -26,9 +27,9 @@ import time
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.append_server import *
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.dht_server import *
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp import *
+from calvin.runtime.south.plugins.storage.twistedimpl.dht import append_server
+from calvin.runtime.south.plugins.storage.twistedimpl.dht import dht_server
+from calvin.runtime.south.plugins.storage.twistedimpl.dht import service_discovery_ssdp
 
 #import calvin.runtime.south.plugins.storage.twistedimpl.dht.certificate
 
@@ -58,7 +59,9 @@ class IDServerApp(object):
         self.kserver = self.server_type(id=self.id)
         self.kserver.bootstrap(bootstrap)
 
-        self.port = reactor.listenUDP(port, self.kserver.protocol, interface=iface)
+        self.port = service_discovery_ssdp.reactor.listenUDP(port,
+                                                            self.kserver.protocol,
+                                                            interface=iface)
 
         return self.port.getHost().host, self.port.getHost().port
 
@@ -76,7 +79,7 @@ class IDServerApp(object):
         if self.port:
             return self.port.stopListening()
 
-class niceAutoDHTServer(AutoDHTServer):
+class niceAutoDHTServer(dht_server.AutoDHTServer):
     def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None):
         if bootstrap is None:
             bootstrap = []
@@ -103,7 +106,8 @@ class niceAutoDHTServer(AutoDHTServer):
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = SSDPServiceDiscovery(iface, cert=certstr)
+        self._ssdps = service_discovery_ssdp.SSDPServiceDiscovery(iface,
+                                                                 cert=certstr)
         dlist += self._ssdps.start()
 
         _log.debug("Register service %s %s:%s" % (network, ip, port))
@@ -112,15 +116,19 @@ class niceAutoDHTServer(AutoDHTServer):
         _log.debug("Set client filter %s" % (network))
         self._ssdps.set_client_filter(network)
 
-        start_cb = defer.Deferred()
+        start_cb = service_discovery_ssdp.defer.Deferred()
 
         def bootstrap_proxy(addrs):
             def started(args):
                 _log.debug("DHT Started %s" % (args))
                 if not self._started:
-                    reactor.callLater(.2, start_cb.callback, True)
+                    service_discovery_ssdp.reactor.callLater(.2,
+                                                            start_cb.callback,
+                                                            True)
                 if cb:
-                    reactor.callLater(.2, cb, True)
+                    service_discovery_ssdp.reactor.callLater(.2,
+                                                            cb,
+                                                            True)
                 self._started = True
 
             def failed(args):
@@ -134,13 +142,13 @@ class niceAutoDHTServer(AutoDHTServer):
 
         def start_msearch(args):
             _log.debug("** msearch %s args: %s" % (self, repr(args)))
-            reactor.callLater(0,
-                             self._ssdps.start_search,
-                             bootstrap_proxy,
-                             stop=False)
+            service_discovery_ssdp.reactor.callLater(0,
+                                                    self._ssdps.start_search,
+                                                    bootstrap_proxy,
+                                                    stop=False)
 
         # Wait until servers all listen
-        dl = defer.DeferredList(dlist)
+        dl = service_discovery_ssdp.defer.DeferredList(dlist)
         dl.addBoth(start_msearch)
         self.dht_server.kserver.protocol.sourceNode.port = port
         self.dht_server.kserver.protocol.sourceNode.ip = "0.0.0.0"
@@ -152,9 +160,9 @@ class niceAutoDHTServer(AutoDHTServer):
         return start_cb
 
 
-class niceKademliaProtocolAppend(KademliaProtocolAppend):
+class niceKademliaProtocolAppend(append_server.KademliaProtocolAppend):
     def __init__(self, *args, **kwargs):
-        KademliaProtocol.__init__(self, *args, **kwargs)
+        append_server.KademliaProtocol.__init__(self, *args, **kwargs)
         self.set_keys=set([])
         try:
             self.trustedStore = OpenSSL.crypto.X509Store() # Contains all trusted CA-certificates.
@@ -917,7 +925,7 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
                     # ds.append(self.callStore(node, key, value))
                     self.callStore(node, key, value)
                     return None
-        return defer.gatherResults(ds)
+        return service_discovery_ssdp.defer.gatherResults(ds)
 
     def storeOwnCert(self, cert):
         """
@@ -962,10 +970,14 @@ class niceKademliaProtocolAppend(KademliaProtocolAppend):
         return self.storage[digest("{}cert".format(sourceNodeIdHex))]
 
 
-class niceAppendServer(AppendServer):
+class niceAppendServer(append_server.AppendServer):
     def __init__(self, ksize=5, alpha=3, id=None, storage=None):
-        storage = storage or ForgetfulStorageFix()
-        Server.__init__(self, ksize, alpha, id, storage=storage)
+        storage = storage or append_server.ForgetfulStorageFix()
+        append_server.Server.__init__(self,
+                                     ksize,
+                                     alpha,
+                                     id,
+                                     storage=storage)
         self.protocol = niceKademliaProtocolAppend(self.node,
                                                   self.storage,
                                                   ksize)
@@ -979,7 +991,10 @@ class niceAppendServer(AppendServer):
         """
         # if the transport hasn't been initialized yet, wait a second
         if self.protocol.transport is None:
-            return task.deferLater(reactor, 1, self.bootstrap, addrs)
+            return append_server.task.deferLater(service_discovery_ssdp.reactor,
+                                                1,
+                                                self.bootstrap,
+                                                addrs)
 
         def initTable(results, challenge, id):
             nodes = []
@@ -1048,7 +1063,7 @@ class niceAppendServer(AppendServer):
                                                    id)
         return deferredDict(ds)
 
-class evilAutoDHTServer(AutoDHTServer):
+class evilAutoDHTServer(dht_server.AutoDHTServer):
     def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None):
         if bootstrap is None:
             bootstrap = []
@@ -1078,7 +1093,8 @@ class evilAutoDHTServer(AutoDHTServer):
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = SSDPServiceDiscovery(iface, cert=certstr)
+        self._ssdps = service_discovery_ssdp.SSDPServiceDiscovery(iface,
+                                                                 cert=certstr)
         dlist += self._ssdps.start()
 
         _log.debug("Register service %s %s:%s" % (network, ip, port))
@@ -1087,15 +1103,19 @@ class evilAutoDHTServer(AutoDHTServer):
         _log.debug("Set client filter %s" % (network))
         self._ssdps.set_client_filter(network)
 
-        start_cb = defer.Deferred()
+        start_cb = service_discovery_ssdp.defer.Deferred()
 
         def bootstrap_proxy(addrs):
             def started(args):
                 _log.debug("DHT Started %s" % (args))
                 if not self._started:
-                    reactor.callLater(.2, start_cb.callback, True)
+                    service_discovery_ssdp.reactor.callLater(.2,
+                                                            start_cb.callback,
+                                                            True)
                 if cb:
-                    reactor.callLater(.2, cb, True)
+                    service_discovery_ssdp.reactor.callLater(.2,
+                                                            cb,
+                                                            True)
                 self._started = True
 
             def failed(args):
@@ -1109,10 +1129,13 @@ class evilAutoDHTServer(AutoDHTServer):
 
         def start_msearch(args):
             _log.debug("** msearch %s args: %s" % (self, repr(args)))
-            reactor.callLater(0, self._ssdps.start_search, bootstrap_proxy, stop=False)
+            service_discovery_ssdp.reactor.callLater(0,
+                                                    self._ssdps.start_search,
+                                                    bootstrap_proxy,
+                                                    stop=False)
 
         # Wait until servers all listen
-        dl = defer.DeferredList(dlist)
+        dl = service_discovery_ssdp.defer.DeferredList(dlist)
         dl.addBoth(start_msearch)
         self.dht_server.kserver.protocol.evilType = type
         self.dht_server.kserver.protocol.sourceNode.port = port
@@ -1352,8 +1375,12 @@ class evilKademliaProtocolAppend(niceKademliaProtocolAppend):
 
 class evilAppendServer(niceAppendServer):
     def __init__(self, ksize=20, alpha=3, id=None, storage=None):
-        storage = storage or ForgetfulStorageFix()
-        Server.__init__(self, ksize, alpha, id, storage=storage)
+        storage = storage or append_server.ForgetfulStorageFix()
+        append_server.Server.__init__(self,
+                                     ksize,
+                                     alpha,
+                                     id,
+                                     storage=storage)
         self.protocol = evilKademliaProtocolAppend(self.node,
                                                   self.storage,
                                                   ksize)
@@ -1368,7 +1395,10 @@ class evilAppendServer(niceAppendServer):
         # if the transport hasn't been initialized yet, wait a second
         # _log.debug("bootstrap"
         if self.protocol.transport is None:
-            return task.deferLater(reactor, 1, self.bootstrap, addrs)
+            return append_server.task.deferLater(service_discovery_ssdp.reactor,
+                                                1,
+                                                self.bootstrap,
+                                                addrs)
 
         def initTable(results, challenge, id):
             nodes = []
