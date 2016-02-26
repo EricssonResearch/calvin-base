@@ -12,7 +12,7 @@ There are a few [Ericsson Research blog](http://www.ericsson.com/research-blog/)
 
 If you could not attend the [Mobile World Congress 2016](https://www.mobileworldcongress.com) in person there is at least a teaser of what our team showed there: [Calvin smart IoT development]()
 
-When you have gone through the material above, read the quick start section below or go to the [wiki](https://github.com/EricssonResearch/calvin-base/wiki) for more detailed information.
+When you have gone through the material above and want to try it yourself, read the quick start section below or go to the [wiki](https://github.com/EricssonResearch/calvin-base/wiki) for more detailed information.
 
 ## Contact
 This is a community project that was started by a team in Ericsson Research. If you have any suggestions, questions, or just want to say hello, you can send an e-mail to <calvinteam@ericsson.com>.
