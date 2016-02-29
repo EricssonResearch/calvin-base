@@ -18,6 +18,7 @@ import os
 import json
 import string
 import glob
+import sys
 try:
     import OpenSSL.crypto
     HAS_OPENSSL = True
@@ -30,7 +31,13 @@ try:
     HAS_PYRAD = True
 except:
     HAS_PYRAD = False
-
+try:
+    import jwt
+    from datetime import datetime, timedelta
+    HAS_JWT = True
+except:
+    HAS_JWT = False
+from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 from calvin.utilities.utils import get_home
@@ -101,7 +108,7 @@ class Security(object):
                 _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
                             "NB! NO AUTHENTICATION USED")
                 return False
-            _log.info("Security: Radius authtentication method chosen")
+            _log.info("Security: Radius authentication method chosen")
             return self.authenticate_using_radius_server()
         _log.info("Security: No security config, so authentication disabled")
         return True
@@ -162,38 +169,101 @@ class Security(object):
         self.auth['user'] = auth
         return any(auth)
 
-    def check_security_actor_requirements(self, requires):
-        _log.debug("Security: check_security_actor_requirements")
-        if self.sec_conf and self.sec_conf['access_control_enabled'] == "True":
-            for req in requires:
-                if not self.check_security_policy_actor(req, "user", self.principal):
+    def check_security_policy_actor(self, requires):
+        _log.debug("Security: check_security_policy_actor")
+        if self.sec_conf and self.sec_conf['access_control_enabled']:
+            request = self.create_authorization_request(requires, self.principal)
+            # Check if the authorization server is local (the runtime itself) or external
+            if self.sec_conf['authorization']['procedure'] == "external":
+                if not HAS_JWT:
+                    _log.error("Security: Install JWT to use external server as authorization method.\n" +
+                            "NB! NO AUTHORIZATION USED")
                     return False
-        #no security config, so access control is disabled
+                _log.debug("Security: external authorization method chosen")
+                return self.authorize_using_external_server(request)
+            else: 
+                _log.debug("Security: local file authorization method chosen")
+                return self.authorize_using_local_policy_files(request)
+        # No security config, so access control is disabled
         return True
 
-    def check_security_policy_actor(self, req, principal_type, principal):
-        """ Checks that the requirement is allowed by the security policy """
-        _log.debug("Security: check_security_policy_actor")
-        #Calling function shall already have checked that self.sec_conf exist
-        #create list, e.g., ['calvinsys','media','camera','lense']
-        temp = req.split(".")
-        while len(temp) >0:
-            temp2 = '.'.join(temp)
-            # Satisfied when one principal match in one policy
-            for plcy in [p for p in self.sec_policy.values() if temp2 in p['resource']]:
-                if any([principal_name in plcy['principal'][principal_type]
-                            for principal_type, principal_names in principal.iteritems()
-                                if principal_type in plcy['principal']
-                            for principal_name, auth in zip(principal_names, self.auth[principal_type])
-                                if auth]):
-                    _log.debug("Security: found a match for %s against %s" % (req, temp2))
+    def create_authorization_request(self, requires, subject, node_id="12345"):
+        # The following JSON code is inspired by the XACML JSON Profile but has been simplified (to be more compact)
+        # FIXME: where do we get the attributes from?
+        request = {
+            "access_subject": {
+                "user": subject["user"][0],
+                "email": subject["user"][0] + "@ericsson.com",
+                "organization": "Ericsson"
+            },
+            "action": {
+                "requires": requires 
+            },
+            "resource": {
+                "runtime_id": node_id,
+                "organization": "Ericsson",
+                "country": "SE"
+            }
+        }
+        return request
+
+    def authorize_using_external_server(self, request):
+        ip_addr = "0.0.0.0:8080"
+        node_id = "12345"  # FIXME: how to get node id?
+        payload = {
+            "iss": node_id,
+            "aud": ip_addr, 
+            "iat": datetime.utcnow(), 
+            "exp": datetime.utcnow() + timedelta(seconds=60),
+            "request": request
+        }
+        # FIXME: how are the keys stored and retrieved?
+        private_key = open('../keys/private_key.pem', 'rb').read()
+        pub_key_auth_server = open('../keys/public_key_2.pem', 'rb').read()
+        token = jwt.encode(payload, private_key, algorithm='RS256')
+        try:
+            response = requests.post("http://" + ip_addr + "/authorization/pdp", json={"jwt": token})
+            if response.status_code != 200:
+                print "Security: authorization server error - %s %s: %s" % (response.status_code, response.reason, response.json()["error"])
+                return False
+            else:
+                json_data = response.json()
+                decoded = jwt.decode(json_data['jwt'], pub_key_auth_server, algorithms=['RS256'], issuer=ip_addr, audience=node_id)
+                decision = decoded['response']['decision']
+                if decision == "permit":
+                    _log.debug("Security: access permitted to resources")
                     return True
-            #Let's go up in hierarchy, e.g. if we found no policy for calvinsys.media.camera
-            #let's now try calvinsys.media instead
-            temp.pop()
-        #The user is not in the list of allowed users for the resource
-        _log.debug("Security: the principal does not have access rights to resource: %s" % req)
-        return False
+                elif decision == "deny":
+                    _log.debug("Security: access denied to resources")
+                    return False
+                elif decision == "indeterminate":
+                    _log.debug("Security: access denied to resources. Error occured when evaluating policies.")
+                    return False
+                else:
+                    _log.debug("Security: access denied to resources. No matching policies.")
+                    return False
+        except:
+            e = sys.exc_info()[1]
+            _log.error("Security: error when sending request to authorization server: %s" % str(e))
+            return False
+
+    def authorize_using_local_policy_files(self, request):
+        self.pdp = PolicyDecisionPoint()
+        response = self.pdp.authorize(request)
+        decision = response['decision']
+        if decision == "permit":
+            _log.debug("Security: access permitted to resources")
+            return True
+        elif decision == "deny":
+            _log.debug("Security: access denied to resources")
+            print 
+            return False
+        elif decision == "indeterminate":
+            _log.debug("Security: access denied to resources. Error occured when evaluating policies.")
+            return False
+        else:
+            _log.debug("Security: access denied to resources. No matching policies.")
+            return False
 
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):

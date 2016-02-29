@@ -409,17 +409,17 @@ class Actor(object):
     @verify_status([STATUS.LOADED])
     def check_requirements(self):
         """ Checks that all requirements are available and accessable in calvinsys """
-        # Check the runtime and calvinsys execution access rights
-        # Note when no credentials set no verification done
-        if hasattr(self, 'sec') and not self.sec.check_security_actor_requirements(['runtime'] +
-                                            (self.requires if hasattr(self, "requires") else [])):
-            _log.debug("Security check on actor requirements failed")
-            raise Exception('actor calvinsys security requirement not fullfilled')
-        # Check availability of calvinsys subsystems
+        # Check availability of calvinsys subsystems before checking security policies.
         if hasattr(self, "requires"):
             for req in self.requires:
                 if not self._calvinsys.has_capability(req):
                     raise Exception("%s requires %s" % (self.id, req))
+        # Check the runtime and calvinsys execution access rights
+        # Note when no credentials set no verification done
+        if hasattr(self, 'sec') and not self.sec.check_security_policy_actor(['runtime'] +
+                                            (self.requires if hasattr(self, "requires") else [])):
+            _log.debug("Security policy check for actor failed")
+            raise Exception("Security policy check for actor failed")
 
     def __getitem__(self, attr):
         if attr in self._using:
