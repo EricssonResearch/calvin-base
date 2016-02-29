@@ -23,7 +23,7 @@ import netifaces
 
 from calvin.utilities import calvinlogger
 
-from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery import ServiceDiscoveryBase
+from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery import ServiceDiscoveryBase
 
 from twisted.internet.protocol import DatagramProtocol
 from twisted.web.http import datetimeToString
@@ -71,7 +71,7 @@ def parse_http_response(data):
 
 
 class ServerBase(DatagramProtocol):
-    def __init__(self, ips, cert, d=None):
+    def __init__(self, ips, cert=None, d=None):
         self._services = {}
         self._dstarted = d
         self.ignore_list = []
@@ -102,9 +102,10 @@ class ServerBase(DatagramProtocol):
 
                             response = MS_RESP % ('%s:%d' % addr, str(time.time()),
                                                   k, datetimeToString())
-                            response += "CERTIFICATE: "
-                            response += self.cert
-                            response += "\r\n\r\n"
+                            if self.cert != None:
+                                response = "{}CERTIFICATE: ".format(response)
+                                response = "{}{}".format(response, self.cert)
+                            response = "{}\r\n\r\n".format(response)
 
                             _log.debug("Sending response: %s" % repr(response))
                             delay = random.randint(0, min(5, int(headers['mx'])))
@@ -167,9 +168,11 @@ class ClientBase(DatagramProtocol):
             if SERVICE_UUID in headers['st']:
                 c_address = headers['server'].split(':')
                 c_address[1] = int(c_address[1])
-                cert = headers['certificate'].split(':')
-                c_address.extend(cert)
-
+                try:
+                    cert = headers['certificate'].split(':')
+                    c_address.extend(cert)
+                except KeyError:
+                    pass
                 # Filter on service calvin networks
                 if self._service is None or \
                    self._service == headers['service']:
