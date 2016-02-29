@@ -15,18 +15,21 @@
 # limitations under the License.
 
 import pytest
+import sys
 import os
 import traceback
+import hashlib
 import twisted
 import shutil
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.append_server import *
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.dht_server import *
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp import *
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.dht_server_commons import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server_commons import *
 from kademlia.node import Node
+from kademlia.utils import deferredDict, digest
 
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities import calvinconfig
@@ -38,10 +41,11 @@ _conf.set("security", "certificate_conf", _conf_file)
 _conf.set("security", "certificate_domain", "test")
 _cert_conf = certificate.Config(_conf_file, "test").configuration
 _log = calvinlogger.get_logger(__name__)
-
-reactor.suggestThreadPoolSize(30)
+name = "node2:"
 
 @pytest.fixture(scope="session", autouse=True)
+
+
 def cleanup(request):
     def fin():
         reactor.callFromThread(reactor.stop)
@@ -70,22 +74,18 @@ class TestDHT(object):
             q.put([aa,args])
 
         try:
-            amount_of_servers = 1
+            amount_of_servers = 5
             # Twisted is using 20 threads so having > 20 server
             # causes threadlocks really easily.
 
             servers = []
             callbacks = []
             for servno in range(0, amount_of_servers):
-                a = evilAutoDHTServer()
+                a = niceAutoDHTServer()
                 servers.append(a)
                 callback = CalvinCB(server_started, str(servno))
-                servers[servno].start(iface, network="Niklas", cb=callback, type="poison", name="evil")
-                # servers[servno].start(iface, network="Hej", cb=callback, type="eclipse", name="evil")
-                # servers[servno].start(iface, network="Hej", cb=callback, type="sybil")
-                # servers[servno].start(iface, network="Hej", cb=callback, type="insert")
+                servers[servno].start(iface, network="Niklas", cb=callback, name=name + "{}".format(servno))
                 callbacks.append(callback)
-            print("Starting {}".format(servers[servno].dht_server.port.getHost().port))
                 
             # Wait for start
             started = []
@@ -108,36 +108,49 @@ class TestDHT(object):
             _log.debug("All {} out of {} started".format(started,
                                                      len(started),
                                                      amount_of_servers))
-            
             for servno in range(0, amount_of_servers):
                 assert [str(servno), self._sucess_start] in started
             
             yield threads.defer_to_thread(q.queue.clear)
-            yield threads.defer_to_thread(time.sleep, 15)
+            yield threads.defer_to_thread(time.sleep, 8)
+            key = "APA"
+            value = "banan"
+            set_def = servers[0].set(key=key, value=value)
+            set_value = yield threads.defer_to_thread(set_def.wait, 10)
+            assert set_value
+            print("Node with port {} posted key={}, value={}".format(servers[0].dht_server.port.getHost().port, key, value))
+            get_def = servers[0].get(key="APA")
+            get_value = yield threads.defer_to_thread(get_def.wait, 10)
+            assert get_value == "banan"
+            print("Node with port {} confirmed key={}, value={} was reachable".format(servers[0].dht_server.port.getHost().port, key, value))
 
-            evilPort = servers[0].dht_server.port.getHost().port
-            drawNetworkState("start_graph.png", servers, amount_of_servers)
-            servers[0].dht_server.kserver.protocol.turn_evil(evilPort)
-            print("Node with port {} turned evil".format(servers[servno].dht_server.port.getHost().port))
-            
-            yield threads.defer_to_thread(time.sleep, 12)
-            # assert get_value[0] == "banan"
-            # assert get_value[1] == "bambu"
-            # assert get_value[2] == "morot"
-            yield threads.defer_to_thread(time.sleep, 5)
-            print("Attacking node exiting")
+            drawNetworkState("2nice_graph.png", servers, amount_of_servers)
+            yield threads.defer_to_thread(time.sleep, 7)
+            drawNetworkState("2middle_graph.png", servers, amount_of_servers)
+            yield threads.defer_to_thread(time.sleep, 7)
+            drawNetworkState("2end_graph.png", servers, amount_of_servers)
+
+            get_def = servers[0].get(key="APA")
+            get_value = yield threads.defer_to_thread(get_def.wait, 10)
+            assert get_value == "banan"
+            print("Node with port {} got right value: {}".format(servers[0].dht_server.port.getHost().port, get_value))
+            for i in range(0, amount_of_servers):
+                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))
+                filenames = os.listdir(os.path.join(name_dir, "others"))
+                print("Node with port {} has {} certificates in store".format(servers[i].dht_server.port.getHost().port, len(filenames)))
 
         except AssertionError as e:
-            print("Server {} with port {} got wrong value".format(servno, servers[servno].dht_server.port.getHost().port))
+            print("Node with port {} got wrong value: {}, should have been {}".format(servers[0].dht_server.port.getHost().port, get_value, value))
             pytest.fail(traceback.format_exc())
-
         except Exception as e:
             traceback.print_exc()
             pytest.fail(traceback.format_exc())
         finally:
+            yield threads.defer_to_thread(time.sleep, 10)
+            i = 0
             for server in servers:
-                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "evil")
+                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))
                 shutil.rmtree(os.path.join(name_dir, "others"), ignore_errors=True)
                 os.mkdir(os.path.join(name_dir, "others"))
+                i += 1
                 server.stop()
-                yield threads.defer_to_thread(time.sleep, 5)

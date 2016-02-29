@@ -24,10 +24,10 @@ import shutil
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.append_server import *
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.dht_server import *
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp import *
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.dht_server_commons import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server_commons import *
 from kademlia.node import Node
 from kademlia.utils import deferredDict, digest
 
@@ -41,7 +41,7 @@ _conf.set("security", "certificate_conf", _conf_file)
 _conf.set("security", "certificate_domain", "test")
 _cert_conf = certificate.Config(_conf_file, "test").configuration
 _log = calvinlogger.get_logger(__name__)
-name = "node2:"
+name = "node3:"
 
 @pytest.fixture(scope="session", autouse=True)
 
@@ -113,26 +113,27 @@ class TestDHT(object):
             
             yield threads.defer_to_thread(q.queue.clear)
             yield threads.defer_to_thread(time.sleep, 8)
-            key = "APA"
-            value = "banan"
+
+            key = "KOALA"
+            value = "bambu"
             set_def = servers[0].set(key=key, value=value)
             set_value = yield threads.defer_to_thread(set_def.wait, 10)
             assert set_value
             print("Node with port {} posted key={}, value={}".format(servers[0].dht_server.port.getHost().port, key, value))
-            get_def = servers[0].get(key="APA")
+            get_def = servers[0].get(key="KOALA")
             get_value = yield threads.defer_to_thread(get_def.wait, 10)
-            assert get_value == "banan"
+            assert get_value == "bambu"
             print("Node with port {} confirmed key={}, value={} was reachable".format(servers[0].dht_server.port.getHost().port, key, value))
 
-            drawNetworkState("2nice_graph.png", servers, amount_of_servers)
+            drawNetworkState("3nice_graph.png", servers, amount_of_servers)
             yield threads.defer_to_thread(time.sleep, 7)
-            drawNetworkState("2middle_graph.png", servers, amount_of_servers)
+            drawNetworkState("3middle_graph.png", servers, amount_of_servers)
             yield threads.defer_to_thread(time.sleep, 7)
-            drawNetworkState("2end_graph.png", servers, amount_of_servers)
+            drawNetworkState("3end_graph.png", servers, amount_of_servers)
 
-            get_def = servers[0].get(key="APA")
+            get_def = servers[0].get(key="KOALA")
             get_value = yield threads.defer_to_thread(get_def.wait, 10)
-            assert get_value == "banan"
+            assert get_value == "bambu"
             print("Node with port {} got right value: {}".format(servers[0].dht_server.port.getHost().port, get_value))
             for i in range(0, amount_of_servers):
                 name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))

@@ -25,11 +25,11 @@ import hashlib
 import OpenSSL.crypto
 
 from calvin.utilities import calvinlogger
-from calvin.runtime.south.plugins.storage.twistedimpl.dht import append_server
-from calvin.runtime.south.plugins.storage.twistedimpl.dht import dht_server
-from calvin.runtime.south.plugins.storage.twistedimpl.dht import service_discovery_ssdp
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht import append_server
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht import dht_server
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht import service_discovery_ssdp
 # FIXME refactor to calvin.runtime.north.certificate
-from calvin.runtime.south.plugins.storage.twistedimpl.dht import certificate
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht import certificate
 
 from kademlia.node import Node
 from kademlia.utils import deferredDict, digest
