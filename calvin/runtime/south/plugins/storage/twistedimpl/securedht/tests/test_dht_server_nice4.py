@@ -21,6 +21,7 @@ import traceback
 import hashlib
 import twisted
 import shutil
+import json
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
@@ -40,8 +41,9 @@ _conf_file = os.path.join(os.getenv("HOME"), ".calvin/security/test/openssl.conf
 _conf.set("security", "certificate_conf", _conf_file)
 _conf.set("security", "certificate_domain", "test")
 _cert_conf = certificate.Config(_conf_file, "test").configuration
+
 _log = calvinlogger.get_logger(__name__)
-name = "node3:"
+name = "node4:"
 
 @pytest.fixture(scope="session", autouse=True)
 
@@ -97,15 +99,15 @@ class TestDHT(object):
                     #raise    
                 if server not in started:
                     started.append(server)
-                    _log.debug("DHT Servers added: {}".format(started))
+                    #print("DHT Servers added: {}".format(started))
                     callbacks[int(server[0][0])].func = lambda *args, **kvargs:None
                 else:
-                    _log.debug("Server: {} already started." \
+                    print("Server: {} already started." \
                                " {} out of {}".format(started,
                                                      len(started),
                                                      amount_of_servers))
 
-            _log.debug("All {} out of {} started".format(started,
+            print("All {} out of {} started".format(started,
                                                      len(started),
                                                      amount_of_servers))
             for servno in range(0, amount_of_servers):
@@ -114,26 +116,40 @@ class TestDHT(object):
             yield threads.defer_to_thread(q.queue.clear)
             yield threads.defer_to_thread(time.sleep, 8)
 
-            key = "KOALA"
-            value = "bambu"
-            set_def = servers[0].set(key=key, value=value)
+            key = "HARE"
+            value = json.dumps(["morot"])
+            set_def = servers[0].append(key=key, value=value)
             set_value = yield threads.defer_to_thread(set_def.wait, 10)
             assert set_value
-            print("Node with port {} posted key={}, value={}".format(servers[0].dht_server.port.getHost().port, key, value))
-            get_def = servers[0].get(key="KOALA")
+            print("Node with port {} posted append key={}, value={}".format(servers[0].dht_server.port.getHost().port, key, value))
+            value = json.dumps(["selleri"])
+            set_def = servers[0].append(key=key, value=value)
+            set_value = yield threads.defer_to_thread(set_def.wait, 10)
+            assert set_value
+            print("Node with port {} posted append key={}, value={}".format(servers[0].dht_server.port.getHost().port, key, value))
+            get_def = servers[0].get_concat(key=key)
             get_value = yield threads.defer_to_thread(get_def.wait, 10)
-            assert get_value == "bambu"
-            print("Node with port {} confirmed key={}, value={} was reachable".format(servers[0].dht_server.port.getHost().port, key, value))
+            assert set(json.loads(get_value)) == set(["morot", "selleri"])
+            print("Node with port {} confirmed key={}, value={} was reachable".format(servers[0].dht_server.port.getHost().port, key, get_value))
 
-            drawNetworkState("3nice_graph.png", servers, amount_of_servers)
+            drawNetworkState("1nice_graph.png", servers, amount_of_servers)
             yield threads.defer_to_thread(time.sleep, 7)
-            drawNetworkState("3middle_graph.png", servers, amount_of_servers)
+            drawNetworkState("1middle_graph.png", servers, amount_of_servers)
             yield threads.defer_to_thread(time.sleep, 7)
-            drawNetworkState("3end_graph.png", servers, amount_of_servers)
+            drawNetworkState("1end_graph.png", servers, amount_of_servers)
 
-            get_def = servers[0].get(key="KOALA")
+            get_def = servers[0].get_concat(key=key)
             get_value = yield threads.defer_to_thread(get_def.wait, 10)
-            assert get_value == "bambu"
+            assert set(json.loads(get_value)) == set(["morot", "selleri"])
+            print("Node with port {} got right value: {}".format(servers[0].dht_server.port.getHost().port, get_value))
+            value = json.dumps(["morot"])
+            set_def = servers[0].remove(key=key, value=value)
+            set_value = yield threads.defer_to_thread(set_def.wait, 10)
+            assert set_value
+            print("Node with port {} posted remove key={}, value={}".format(servers[0].dht_server.port.getHost().port, key, value))
+            get_def = servers[1].get_concat(key=key)
+            get_value = yield threads.defer_to_thread(get_def.wait, 10)
+            assert set(json.loads(get_value)) == set(["selleri"])
             print("Node with port {} got right value: {}".format(servers[0].dht_server.port.getHost().port, get_value))
             for i in range(0, amount_of_servers):
                 name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))
@@ -150,7 +166,7 @@ class TestDHT(object):
             yield threads.defer_to_thread(time.sleep, 10)
             i = 0
             for server in servers:
-                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))
+                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], name + "{}".format(i))
                 shutil.rmtree(os.path.join(name_dir, "others"), ignore_errors=True)
                 os.mkdir(os.path.join(name_dir, "others"))
                 i += 1

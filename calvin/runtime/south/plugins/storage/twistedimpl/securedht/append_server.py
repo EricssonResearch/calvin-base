@@ -21,20 +21,44 @@
 import json
 import uuid
 import types
+import os
+import hashlib
+import OpenSSL.crypto
+import base64
+from collections import Counter
 
 from twisted.internet import defer, task, reactor
 from kademlia.network import Server
 from kademlia.protocol import KademliaProtocol
 from kademlia.crawling import NodeSpiderCrawl, ValueSpiderCrawl, RPCFindResponse
-from kademlia.utils import digest
+from kademlia.utils import deferredDict, digest
 from kademlia.storage import ForgetfulStorage
 from kademlia.node import Node
 from kademlia import version as kademlia_version
-from collections import Counter
+# FIXME refactor to calvin.runtime.north.certificate
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht import certificate
 
 from calvin.utilities import calvinlogger
-import base64
+from calvin.utilities import calvinconfig
+
+_conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)
+
+
+def logger(node, message, level=None):
+    _log.debug("{}:{}:{} - {}".format(node.id.encode("hex").upper(),
+                                     node.ip,
+                                     node.port,
+                                     message))
+    #print("{}:{}:{} - {}".format(node.id.encode("hex").upper(),
+    #                                 node.ip,
+    #                                 node.port,
+    #                                 message))
+
+def generate_challenge():
+    """ Generate a random challenge of 8 bytes, hex string formated"""
+    return os.urandom(8).encode("hex")
+
 
 # Fix for None types in storage
 class ForgetfulStorageFix(ForgetfulStorage):
@@ -50,153 +74,1009 @@ class KademliaProtocolAppend(KademliaProtocol):
     def __init__(self, *args, **kwargs):
         self.set_keys = kwargs.pop('set_keys', set([]))
         KademliaProtocol.__init__(self, *args, **kwargs)
+        self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
+                                            _conf.get("security", "certificate_domain")).configuration
+        try:
+            self.trustedStore = OpenSSL.crypto.X509Store() # Contains all trusted CA-certificates.
+        except:
+            logger(self.sourceNode, "Failed to create trustedStore")
+        self.addCACert()
 
-    ###############################################################################
-    # TODO remove this when kademlia v0.6 available, bug fixes, see upstream Kademlia
-    def handleCallResponse(self, result, node):
-         """
-         If we get a response, add the node to the routing table.  If
-         we get no response, make sure it's removed from the routing table.
-         """
-         if result[0]:
-             self.log.info("got response from %s, adding to router" % node)
-             _log.debug("got response from %s, adding to router" % node)
-             if self.router.isNewNode(node):
-                 self.transferKeyValues(node)
-             self.router.addContact(node)
-         else:
-             self.log.debug("no response from %s, removing from router" % node)
-             _log.debug("no response from %s, removing from router" % node)
-             self.router.removeContact(node)
-         return result
+    #####################
+    # Call Functions    #
+    #####################
 
-    def maybeTransferKeyValues(self, node):
-        if self.router.isNewNode(node):
-            self.transferKeyValues(node)
+    def callCertFindValue(self, nodeToAsk, nodeToFind):
+        """
+        Asks 'nodeToAsk' for its certificate.
+        """
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        challenge = generate_challenge()
+        try:
+            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                     self.priv_key,
+                                                     '')
+            signature = OpenSSL.crypto.sign(private,
+                                            nodeToAsk.id.encode("hex").upper() + challenge,
+                                            "sha256")
+        except:
+            logger(self.sourceNode, "Signing of certFindValue failed")
+            return None
+        d = self.find_value(address,
+                           self.sourceNode.id,
+                           nodeToFind.id,
+                           challenge,
+                           signature,
+                           self.getOwnCert())
+        return d.addCallback(self.handleCertCallResponse,
+                            nodeToAsk,
+                            challenge)
 
-    def rpc_ping(self, sender, nodeid):
+
+    def callFindNode(self, nodeToAsk, nodeToFind):
+        """
+        Asks 'nodeToAsk' for the value 'nodeToFind.id'
+        """
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        challenge = generate_challenge()
+        try:
+            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                     self.priv_key,
+                                                     '')
+            signature = OpenSSL.crypto.sign(private,
+                                           nodeToAsk.id.encode("hex").upper() + challenge,
+                                           "sha256")
+        except:
+            logger(self.sourceNode, "Signing of findNode failed")
+            return None
+        d = self.find_node(address,
+                          self.sourceNode.id,
+                          nodeToFind.id,
+                          challenge,
+                          signature)
+        return d.addCallback(self.handleSignedBucketResponse,
+                            nodeToAsk,
+                            challenge)
+
+    def callFindValue(self, nodeToAsk, nodeToFind):
+        """
+        Asks 'nodeToAsk' for the information regarding the node 'nodeToFind'
+        """
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        challenge = generate_challenge()
+        try:
+            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                    self.priv_key,
+                                                    '')
+            signature = OpenSSL.crypto.sign(private,
+                                           nodeToAsk.id.encode("hex").upper() + challenge,
+                                           "sha256")
+        except:
+            logger(self.sourceNode, "Signing of findValue failed")
+            return None
+        d = self.find_value(address,
+                           self.sourceNode.id,
+                           nodeToFind.id,
+                           challenge,
+                           signature)
+        return d.addCallback(self.handleSignedValueResponse,
+                            nodeToAsk,
+                            challenge)
+
+    def callPing(self, nodeToAsk, cert=None):
+        """
+        Sends a ping message to 'nodeToAsk'
+        """        
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        challenge = generate_challenge()
+        try:
+            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                    self.priv_key,
+                                                    '')
+            signature = OpenSSL.crypto.sign(private,
+                                           nodeToAsk.id.encode("hex").upper() + challenge,
+                                           "sha256")
+        except:
+            logger(self.sourceNode, "Signing of ping failed")
+            return None
+        d = self.ping(address,
+                     self.sourceNode.id,
+                     challenge,
+                     signature,
+                     cert)
+        return d.addCallback(self.handleSignedPingResponse,
+                            nodeToAsk,
+                            challenge)
+
+    def callStore(self, nodeToAsk, key, value):
+        """
+        Sends a request for 'nodeToAsk' to store value 'value' with key 'key'
+        """   
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        challenge = generate_challenge()
+        try:
+            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                    self.priv_key,
+                                                    '')
+            signature = OpenSSL.crypto.sign(private,
+                                           nodeToAsk.id.encode("hex").upper() + challenge,
+                                           "sha256")
+        except:
+            logger(self.sourceNode, "Signing of store failed")
+            return None
+        d = self.store(address,
+                      self.sourceNode.id,
+                      key,
+                      value,
+                      challenge,
+                      signature)
+        logger(self.sourceNode, "callStore initiated")
+        return d.addCallback(self.handleSignedStoreResponse,
+                            nodeToAsk,
+                            challenge)
+
+    def callAppend(self, nodeToAsk, key, value):
+        """
+        Sends a request for 'nodeToAsk' to add value 'value' to key 'key' set
+        """   
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        challenge = generate_challenge()
+        try:
+            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                    self.priv_key,
+                                                    '')
+            signature = OpenSSL.crypto.sign(private,
+                                           nodeToAsk.id.encode("hex").upper() + challenge,
+                                           "sha256")
+        except:
+            logger(self.sourceNode, "Signing of append failed")
+            return None
+        d = self.append(address,
+                        self.sourceNode.id,
+                        key,
+                        value,
+                        challenge,
+                        signature)
+        return d.addCallback(self.handleSignedStoreResponse, nodeToAsk, challenge)
+
+    def callRemove(self, nodeToAsk, key, value):
+        """
+        Sends a request for 'nodeToAsk' to remove value 'value' from key 'key' set
+        """   
+        address = (nodeToAsk.ip, nodeToAsk.port)
+        challenge = generate_challenge()
+        try:
+            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                    self.priv_key,
+                                                    '')
+            signature = OpenSSL.crypto.sign(private,
+                                           nodeToAsk.id.encode("hex").upper() + challenge,
+                                           "sha256")
+        except:
+            logger(self.sourceNode, "Signing of append failed")
+            return None
+        d = self.remove(address,
+                        self.sourceNode.id,
+                        key,
+                        value,
+                        challenge,
+                        signature)
+        return d.addCallback(self.handleSignedStoreResponse, nodeToAsk, challenge)
+
+    #####################
+    # Response handlers #
+    #####################
+
+    def handleCertCallResponse(self, result, node, challenge):
+        """
+        Handle Certificate responses. `result` is a response value array
+        Element 0 contains ??, Element 1 is a dictionary that contains a
+        certificate.
+
+        `node` is responding node and `challenge` is the returned
+        challenge value.
+        Raise ?? exceptions at ?? occation.
+        Return results if signatures are valid?
+        """
+        logger(self.sourceNode, "handleCertCallResponse {}".format(str(result)))
+        if 'value' in result[1]:
+            try:
+                cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                      result[1]['value'])
+            except:
+                logger(self.sourceNode, "Invalid certificate "
+                                        "response from {}".format(node))
+                return None
+            fingerprint = cert.digest("sha256")
+            id = fingerprint.replace(":","")[-40:]
+            if node.id.encode('hex').upper() == id:
+                try:
+                    OpenSSL.crypto.verify(cert,
+                                         result[1]['signature'],
+                                         challenge,
+                                         "sha256")
+                except:
+                    logger(self.sourceNode,
+                          "Invalid signature on certificate "
+                          "response from {}".format(node))
+                self.router.addContact(node)
+                self.storeCert(result[1]['value'], id)
+                if self.router.isNewNode(node):
+                    self.transferKeyValues(node)
+            else:
+                # logger(self.sourceNode, "Certificate from {} does not match claimed node id".format(node))
+                return None
+        else:
+            self.router.removeContact(node)
+        return result
+
+    def handleSignedBucketResponse(self, result, node, challenge):
+        """
+        ???
+        `result` is an array and element 1 contains a dict.
+        Return None if any error occur and dont tell anyone.
+        """
+        logger(self.sourceNode, "handleSignedBucketResponse {}".format(str(result)))
+        nodeIdHex = node.id.encode('hex').upper()
+        if result[0]:
+            if "NACK" in result[1]:
+                return self.handleSignedNACKResponse(result, node, challenge)
+            elif 'bucket' in result[1] and 'signature' in result[1]:
+                cert_stored = self.searchForCertificate(nodeIdHex)
+                if cert_stored == None:
+                    logger(self.sourceNode,
+                           "Certificate for sender of bucket:"
+                           " {} not present in store".format(node))
+                    return None
+                try:
+                    OpenSSL.crypto.verify(cert_stored,
+                                         result[1]['signature'],
+                                         challenge,
+                                         "sha256")
+                    self.router.addContact(node)
+                    newbucket = list()
+                    for bucketnode in result[1]['bucket']:
+                        buId = bucketnode[0]
+                        buIdHex = buId.encode('hex').upper()
+                        buIp = bucketnode[1]
+                        buPort = bucketnode[2]
+                        if not self.certificateExists(buIdHex):
+                            nonCertifiedNode = Node(buId,
+                                                    buIp,
+                                                    buPort)
+                            buIdDigest = digest(str(buIdHex))
+                            buIdReq = "{}cert".format(Node(buIdDigest))
+                            self.callCertFindValue(nonCertifiedNode,
+                                                  buIdReq)
+                        else:
+                            newbucket.append(bucketnode)
+                    return (result[0], newbucket)
+                except:
+                    logger(self.sourceNode,
+                          "Bad signature for"
+                          " sender of bucket: {}".format(node))
+                    return None
+            else:
+                if not result[1]['signature']:
+                    logger(self.sourceNode,
+                          "Signature not present"
+                          " for sender of bucket: {}".format(node))
+                return None
+        else:
+            logger(self.sourceNode,
+                  "No response from {},"
+                  " removing from bucket".format(node))
+            self.router.removeContact(node)
+        return None
+
+    def handleSignedPingResponse(self, result, node, challenge):
+        """
+        Handler for signed ping responses.
+        `result` contains an array
+            Element 0 contains ??
+            Element 1 contains a dict with message fields.
+        Return None on error.
+        Return identity of ping response if signature is valid.
+        """
+        logger(self.sourceNode, "handleSignedPingResponse {}".format(str(result)))
+        if result[0]:
+            if "NACK" in result[1]:
+                return self.handleSignedNACKResponse(result,
+                                                    node,
+                                                    challenge)
+            elif 'id' in result[1] and 'signature' in result[1]:
+                if result[1]['id'] != node.id:
+                    logger(self.sourceNode,
+                          "Pong ID return "
+                          "mismatch for {}".format(node))
+                    return None
+                nodeIdHex = node.id.encode('hex').upper()
+                cert_stored = self.searchForCertificate(nodeIdHex)
+                if cert_stored == None:
+                    logger(self.sourceNode,
+                          "Certificate for sender of pong: {} "
+                          "not present in store".format(node))
+                    return None
+                try: 
+                    OpenSSL.crypto.verify(cert_stored,
+                                         result[1]['signature'],
+                                         challenge,
+                                         "sha256")
+                    self.router.addContact(node)
+                    return result[1]['id']
+                except:
+                    logger(self.sourceNode,
+                          "Bad signature for sender"
+                          " of pong: {}".format(node))
+                    return None
+            else:
+                logger(self.sourceNode,
+                      "Signature not present for sender"
+                      " of pong: {}".format(node))
+                return None
+        else:
+            logger(self.sourceNode,
+                  "No pong from {}, removing"
+                  " from bucket".format(node))
+            self.router.removeContact(node)
+        return None
+
+    def handleSignedStoreResponse(self, result, node, challenge):
+        """
+        If we get a response and correctly signed challenge, add
+        the node to the routing table.  If we get no response,
+        make sure it's removed from the routing table.
+        """
+        logger(self.sourceNode, "handleSignedStoreResponse {}".format(str(result)))
+        if result[0]:
+            if "NACK" in result[1]:
+                return self.handleSignedNACKResponse(result,
+                                                    node,
+                                                    challenge)
+            nodeIdHex = node.id.encode('hex').upper()
+            cert_stored = self.searchForCertificate(nodeIdHex)
+            if cert_stored == None:
+                logger(self.sourceNode,
+                "Certificate for sender of store confirmation: {}"
+                " not present in store".format(node))
+                return None
+            try: 
+                OpenSSL.crypto.verify(cert_stored,
+                                     result[1],
+                                     challenge,
+                                     "sha256")
+                self.router.addContact(node)
+                logger(self.sourceNode, "handleSignedStoreResponse - finished OK")
+                return (True, True)
+            except:
+                logger(self.sourceNode,
+                      "Bad signature for sender of store"
+                      " confirmation: {}".format(node))
+                return None
+        else:
+            logger(self.sourceNode,
+                  "No store confirmation from {},"
+                  " removing from bucket".format(node))
+            self.router.removeContact(node)
+        return None
+
+    def handleSignedValueResponse(self, result, node, challenge):
+        logger(self.sourceNode, "handleSignedValueResponse {}".format(str(result)))
+        if result[0]:
+            if "NACK" in result[1]:
+                return self.handleSignedNACKResponse(result,
+                                                    node,
+                                                    challenge)
+            elif 'bucket' in result[1]:
+                return self.handleSignedBucketResponse(result,
+                                                      node,
+                                                      challenge)
+            elif 'value' in result[1] and 'signature' in result[1]:
+                nodeIdHex = node.id.encode('hex').upper()
+                cert_stored = self.searchForCertificate(nodeIdHex)
+                if cert_stored == None:
+                    logger(self.sourceNode,
+                          "Certificate for sender of value response: {}"
+                          " not present in store".format(node))
+                    return None
+                try: 
+                    OpenSSL.crypto.verify(cert_stored,
+                                         result[1]['signature'],
+                                         challenge,
+                                         "sha256")
+                    self.router.addContact(node)
+                    return result
+                except:
+                    logger(self.sourceNode,
+                          "Bad signature for sender of "
+                          "value response: {}".format(node))
+                    return None
+            else:
+                logger(self.sourceNode,
+                      "Signature not present for sender "
+                      "of value response: {}".format(node))
+                return None
+        else:
+            logger(self.sourceNode,
+                  "No value response from {}, "
+                  "removing from bucket".format(node))
+            self.router.removeContact(node)
+        return None
+
+    def handleSignedNACKResponse(self, result, node, challenge):
+        nodeIdHex = node.id.encode('hex').upper()
+        cert_stored = self.searchForCertificate(nodeIdHex)
+        if cert_stored == None:
+            logger(self.sourceNode,
+                  "Certificate for sender of NACK: {} "
+                  "not present in store".format(node))
+        if "NACK" in result[1]:
+            logger(self.sourceNode,
+                  "NACK in Value response")
+            try:
+                OpenSSL.crypto.verify(cert_stored,
+                                     result[1]['signature'],
+                                     challenge,
+                                     "sha256")
+                self.callPing(node, self.getOwnCert())
+                logger(self.sourceNode, "Certificate sent!")
+            except:
+                logger(self.sourceNode,
+                      "Bad signature for sender "
+                      "of NACK: {}".format(node))
+        return None
+
+
+    #####################
+    # RPC Functions     #
+    #####################
+
+    def rpc_store(self, sender, nodeid, key, value, challenge, signature):
         source = Node(nodeid, sender[0], sender[1])
-        _log.debug("rpc_ping sender=%s, source=%s" % (sender, source))
-        self.maybeTransferKeyValues(source)
-        self.router.addContact(source)
-        return self.sourceNode.id
+        logger(self.sourceNode,
+              "rpc_store {} ".format(str(sender)))
+        nodeIdHex = nodeid.encode('hex').upper()
+        cert_stored = self.searchForCertificate(nodeIdHex)
+        if cert_stored == None:
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                      self.priv_key,
+                                                      '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                return None
+            logger(self.sourceNode,
+                  "Certificate for {} not "
+                  "found in store".format(source))
+            return {'NACK' : None, "signature" : signature}
+        else:
+            try:
+                sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
+                payload = "{}{}".format(sourceNodeIdHex, challenge)
+                OpenSSL.crypto.verify(cert_stored,
+                                     signature,
+                                     payload,
+                                     "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Bad signature for sender of "
+                      "store request: {}".format(source))
+                return None
+            self.router.addContact(source)
+            self.storage[key] = value
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                        self.priv_key,
+                                                        '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Signing of rpc_store failed")
+                return None
+            logger(self.sourceNode, "Signing of rpc_store success")
+            return signature
 
-    def rpc_store(self, sender, nodeid, key, value):
+    def rpc_append(self, sender, nodeid, key, value, challenge, signature):
         source = Node(nodeid, sender[0], sender[1])
-        _log.debug("rpc_store sender=%s, source=%s, key=%s, value=%s" % (sender, source, base64.b64encode(key), str(value)))
-        self.maybeTransferKeyValues(source)
-        self.router.addContact(source)
-        self.log.debug("got a store request from %s, storing value" % str(sender))
-        self.storage[key] = value
-        return True
+        logger(self.sourceNode, "rpc_append {} ".format(str(sender)))
+        nodeIdHex = nodeid.encode('hex').upper()
+        cert_stored = self.searchForCertificate(nodeIdHex)
+        if cert_stored == None:
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                      self.priv_key,
+                                                      '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                return None
+            logger(self.sourceNode,
+                  "Certificate for {} not "
+                  "found in store".format(source))
+            return {'NACK' : None, "signature" : signature}
+        else:
+            try:
+                sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
+                payload = "{}{}".format(sourceNodeIdHex, challenge)
+                OpenSSL.crypto.verify(cert_stored,
+                                     signature,
+                                     payload,
+                                     "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Bad signature for sender of "
+                      "store request: {}".format(source))
+                return None
+            self.router.addContact(source)
+            try:
+                pvalue = json.loads(value)
+                self.set_keys.add(key)
+                if key not in self.storage:
+                    logger(self.sourceNode, "append key: %s not in storage set value: %s" %
+                                            (base64.b64encode(key), pvalue))
+                    self.storage[key] = value
+                else:
+                    old_value_ = self.storage[key]
+                    old_value = json.loads(old_value_)
+                    new_value = list(set(old_value + pvalue))
+                    logger(self.sourceNode, "append key: %s old: %s add: %s new: %s" %
+                                            (base64.b64encode(key), old_value, pvalue, new_value))
+                    self.storage[key] = json.dumps(new_value)
+            except:
+                _log.debug("Trying to append something not a JSON coded list %s" % value, exc_info=True)
+                return None
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                        self.priv_key,
+                                                        '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Signing of rpc_store failed")
+                return None
+            return signature
 
-    def rpc_find_node(self, sender, nodeid, key):
-        self.log.info("finding neighbors of %i in local table" % long(nodeid.encode('hex'), 16))
+
+
+    def rpc_remove(self, sender, nodeid, key, value, challenge, signature):
         source = Node(nodeid, sender[0], sender[1])
-        _log.debug("rpc_find_node sender=%s, source=%s, key=%s" % (sender, source, base64.b64encode(key)))
-        self.maybeTransferKeyValues(source)
+        logger(self.sourceNode, "rpc_remove {} ".format(str(sender)))
+        nodeIdHex = nodeid.encode('hex').upper()
+        cert_stored = self.searchForCertificate(nodeIdHex)
+        if cert_stored == None:
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                      self.priv_key,
+                                                      '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                return None
+            logger(self.sourceNode,
+                  "Certificate for {} not "
+                  "found in store".format(source))
+            return {'NACK' : None, "signature" : signature}
+        else:
+            try:
+                sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
+                payload = "{}{}".format(sourceNodeIdHex, challenge)
+                OpenSSL.crypto.verify(cert_stored,
+                                     signature,
+                                     payload,
+                                     "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Bad signature for sender of "
+                      "store request: {}".format(source))
+                return None
+            self.router.addContact(source)
+            try:
+                pvalue = json.loads(value)
+                self.set_keys.add(key)
+                if key in self.storage:
+                    old_value = json.loads(self.storage[key])
+                    new_value = list(set(old_value) - set(pvalue))
+                    self.storage[key] = json.dumps(new_value)
+                    logger(self.sourceNode, "remove key: %s old: %s add: %s new: %s" %
+                                            (base64.b64encode(key), old_value, pvalue, new_value))
+            except:
+                _log.debug("Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
+                return None
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                        self.priv_key,
+                                                        '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Signing of rpc_store failed")
+                return None
+            return signature
+
+    def rpc_find_node(self, sender, nodeid, key, challenge, signature):
+        nodeIdHex = nodeid.encode('hex').upper()
+        logger(self.sourceNode,
+              "finding neighbors of {} "
+              "in local table".format(long(nodeIdHex, 16)))
+
+        source = Node(nodeid, sender[0], sender[1])
+        cert_stored = self.searchForCertificate(nodeIdHex)
+        if cert_stored == None:
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                      self.priv_key,
+                                                      '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                return None
+            logger(self.sourceNode,
+                  "Certificate for {} not found "
+                  "in store".format(source))
+            return {'NACK' : None, "signature" : signature}
+        else:
+            try:
+                sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
+                payload = "{}{}".format(sourceNodeIdHex, challenge)
+                OpenSSL.crypto.verify(cert_stored,
+                                     signature,
+                                     payload,
+                                     "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Bad signature for sender of "
+                      "find_node: {}".format(source))
+                return None
+            self.router.addContact(source)
+            node = Node(key)
+            bucket = map(list, self.router.findNeighbors(node, exclude=source))
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                        self.priv_key,
+                                                        '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Signing of rpc_find_node failed")
+                return None
+            value = {'bucket': bucket, 'signature': signature}
+            return value
+
+    def rpc_find_value(self, sender, nodeid, key, challenge, signature, certString=None):
+        """
+        ???
+        Verifying received `challenge` and `signature` using
+        supplied signature or stored signature derived from `nodeid`.
+        """
+        source = Node(nodeid, sender[0], sender[1])
+        nodeIdHex = nodeid.encode('hex').upper()
+        cert_stored = self.searchForCertificate(nodeIdHex)
+        if cert_stored == None:
+            sourceNodeIdHex = self.sourceNode.id.encode("hex").upper()
+
+            if key == digest("{}cert".format(sourceNodeIdHex)) and \
+                                                        certString != None:
+            # If the senders certificate is not in store,
+            # the only allowed action is to ask it for its certificate
+                try:
+                    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                          certString)
+                    store_ctx = OpenSSL.crypto.X509StoreContext(self.trustedStore,
+                                                               cert)
+                    store_ctx.verify_certificate()
+                    # Ensure that the CA of the received certificate is trusted
+
+                    fingerprint = cert.digest("sha256")
+                    id = fingerprint.replace(":", "")[-40:]
+                    if id != nodeIdHex:
+                        logger(self.sourceNode,
+                              "Explicit certificate in find_value "
+                              "from {} does not match nodeid".format(source))
+                        return None
+                    sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
+                    payload = "{}{}".format(sourceNodeIdHex, challenge)
+                    OpenSSL.crypto.verify(cert,
+                                         signature,
+                                         payload,
+                                         "sha256")
+                    self.storeCert(certString, nodeIdHex)
+                except:
+                    logger(self.sourceNode,
+                          "Invalid certificate "
+                          "request: {}".format(source))
+                    return None
+            else:
+                try:
+                    private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                            self.priv_key,
+                                                            '')
+                    signature = OpenSSL.crypto.sign(private,
+                                    challenge,
+                                    "sha256")
+                except:
+                    return None
+                logger(self.sourceNode,
+                      "Certificate for {} not "
+                      "found in store".format(source))
+                return { 'NACK' : None, 'signature': signature}
+        else:
+            try:
+                sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
+                payload = "{}{}".format(sourceNodeIdHex, challenge)
+                # Verifying stored certificate with signature.
+                OpenSSL.crypto.verify(cert_stored,
+                                     signature,
+                                     payload,
+                                     "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Bad signature for sender of "
+                      "find_value: {}".format(source))
+                return None
+
         self.router.addContact(source)
-        node = Node(key)
-        return map(tuple, self.router.findNeighbors(node, exclude=source))
-    #
-    ###############################################################################
+        exists, value = self.storage.get(key, None)
+        if not exists:
+            logger(self.sourceNode,
+                  "Key {} not in store, forwarding").format(key)
+            return self.rpc_find_node(sender,
+                                     nodeid,
+                                     key,
+                                     challenge,
+                                     signature)
+        else:
+            try:
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                        self.priv_key,
+                                                        '')
+                signature = OpenSSL.crypto.sign(private,
+                                               challenge,
+                                               "sha256")
+            except:
+                logger(self.sourceNode,
+                      "Signing of rpc_find_value failed")
+                return None
+            return { 'value': value, 'signature': signature }
+
+    def rpc_ping(self, sender, nodeid, challenge, signature, certString=None):
+        """
+        This function is ???
+        Verify `certString` certificate with CA from trust store.
+        Verify `signature` of `challenge`.
+        Store certificate if `certString` is verified.
+
+        """
+        source = Node(nodeid, sender[0], sender[1])
+        nodeIdHex = nodeid.encode("hex").upper()
+        if certString != None:
+            try:
+                cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                      certString)
+                store_ctx = OpenSSL.crypto.X509StoreContext(self.trustedStore,
+                                                           cert)
+                store_ctx.verify_certificate()
+                # Ensure that the CA of the received certificate is trusted
+                fingerprint = cert.digest("sha256")
+                id = fingerprint.replace(":", "")[-40:]
+                if id != nodeIdHex:
+                    logger(self.sourceNode,
+                          "Explicit certificate in ping from {} "
+                          "does not match nodeid".format(source))
+                    return None
+                sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
+                payload = "{}{}".format(sourceNodeIdHex, challenge)
+                OpenSSL.crypto.verify(cert,
+                                     signature,
+                                     payload,
+                                     "sha256")
+                if not self.certificateExists(nodeIdHex):
+                    self.storeCert(certString, nodeIdHex)
+                    self.transferKeyValues(source)
+            except:
+                logger(self.sourceNode,
+                      "Bad signature for sender of ping with "
+                      "explicit certificate: {}".format(source))
+                return None
+        else:
+            cert_stored = self.searchForCertificate(nodeIdHex)
+            if cert_stored == None:
+                try:
+                    private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                          self.priv_key,
+                                                          '')
+                    signature = OpenSSL.crypto.sign(private,
+                                                   challenge,
+                                                   "sha256")
+                except:
+                    return None
+                logger(self.sourceNode,
+                      "Certificate for {} not found "
+                      "in store".format(source))
+                return {'NACK' : None, "signature" : signature}
+            else:
+                try:
+                    sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
+                    payload = "{}{}".format(sourceNodeIdHex, challenge)
+                    OpenSSL.crypto.verify(cert_stored,
+                                         signature,
+                                         payload,
+                                         "sha256")
+                except:
+                    logger(self.sourceNode,
+                          "Bad signature for sender of "
+                          "ping: {}".format(source))
+                    return None
+        try:
+            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                    self.priv_key,
+                                                    '')
+            signature = OpenSSL.crypto.sign(private,
+                                           challenge,
+                                           "sha256")
+        except:
+            logger(self.sourceNode, "Signing of rpc_ping failed")
+            return None
+        return { 'id': self.sourceNode.id, 'signature': signature }
+
+
+    #####################
+    # MISC              #
+    #####################
+
+    def certificateExists(self, id):
+        """
+        Returns however the certificate for a
+        given id exists in the own DHT storage.
+        """
+        return digest("{}cert".format(id)) in self.storage
+
+    def searchForCertificate(self, id):
+        """
+        Seaches the internal storage for the certificate
+        for a node with a given ID. If only one certificate
+        is found to match the ID, this is returned.
+        If none or several is found, None is returned.
+        """
+        if digest("{}cert".format(id)) in self.storage:
+            data = self.storage.get(digest("{}cert".format(id)))
+            try:
+                return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                      data[1])
+            except:
+                return None
+        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
+        filename = os.listdir(os.path.join(name_dir, "others"))
+        matching = [s for s in filename if id in s]
+        if len(matching) == 1:
+            file = open(os.path.join(name_dir, "others", matching[0]), 'rt')
+            st_cert = file.read()
+            try:
+                cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                    st_cert)
+            except:
+                logger(self.sourceNode,
+                      "Loading error for certificate "
+                      "with id: {}".format(id))
+                return None
+            file.close()
+            return cert
+        else:
+            return None
+
+    def setPrivateKey(self):
+        '''
+        Retrieves the nodes private key from disk and
+        stores it at priv_key.
+        '''
+        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
+        file = open(os.path.join(name_dir, "private", "private.key"), 'rt')
+        self.priv_key = file.read()
+
+    def addCACert(self):
+        """
+        Collects the CA-certificate from disk and adds
+        it to the trustedStore.
+        """
+        try:
+            # Read CA's cacert.pem file
+            cafile = open(self.cert_conf["CA_default"]["certificate"], 'rt')
+            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                  cafile.read())
+            self.trustedStore.add_cert(cert)
+        except:
+            logger(self.sourceNode, "Failed to load CA-cert")
+
+    def _timeout(self, msgID):
+        self._outstanding[msgID][0].callback((False, None))
+        del self._outstanding[msgID]
 
     def transferKeyValues(self, node):
         """
-        Given a new node, send it all the keys/values it should be storing.
-
-        @param node: A new node that just joined (or that we just found out
-        about).
-
+        Given a new node, send it all the keys/values it
+        should be storing. @param node: A new node that
+        just joined (or that we just found out about).
         Process:
-        For each key in storage, get k closest nodes.  If newnode is closer
-        than the furtherst in that list, and the node for this server
-        is closer than the closest in that list, then store the key/value
+        For each key in storage, get k closest nodes.
+        If newnode is closer than the furtherst in that
+        list, and the node for this server is closer than
+        the closest in that list, then store the key/value
         on the new node (per section 2.5 of the paper)
         """
-        _log.debug("**** transfer key values %s ****" % node)
+        logger(self.sourceNode, "**** transfer key values ****")
+        # FIXME Why are we no longer populating ds, but return a None?
         ds = []
         for key, value in self.storage.iteritems():
             keynode = Node(digest(key))
             neighbors = self.router.findNeighbors(keynode)
-            _log.debug("transfer? nbr neighbors=%d, key=%s, value=%s" % (len(neighbors), base64.b64encode(key), str(value)))
             if len(neighbors) > 0:
                 newNodeClose = node.distanceTo(keynode) < neighbors[-1].distanceTo(keynode)
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
             if len(neighbors) == 0 or (newNodeClose and thisNodeClosest):
                 if key in self.set_keys:
-                    _log.debug("transfer append key value key=%s, value=%s" % (base64.b64encode(key), str(value)))
-                    ds.append(self.callAppend(node, key, value))
+                    #ds.append(self.callAppend(node, key, value))
+                    self.callAppend(node, key, value)
+                    return None
                 else:
-                    _log.debug("transfer store key value key=%s, value=%s" % (base64.b64encode(key), str(value)))
-                    ds.append(self.callStore(node, key, value))
+                    # ds.append(self.callStore(node, key, value))
+                    self.callStore(node, key, value)
+                    return None
         return defer.gatherResults(ds)
 
-    # Fix for None in values for delete
-    def rpc_find_value(self, sender, nodeid, key):
-        source = Node(nodeid, sender[0], sender[1])
-        _log.debug("rpc_find_value sender=%s, source=%s, key=%s" % (sender, source, base64.b64encode(key)))
-        self.maybeTransferKeyValues(source)
-        self.router.addContact(source)
-        exists, value = self.storage.get(key, None)
-        if not exists:
-            return self.rpc_find_node(sender, nodeid, key)
-        return { 'value': value }
+    def storeOwnCert(self, cert):
+        """
+        Stores the string representation of the nodes own
+        certificate in the DHT.
+        """
+        sourceNodeIdHex = self.sourceNode.id.encode("hex").upper()
+        self.storage[digest("{}cert".format(sourceNodeIdHex))] = cert
 
-    def rpc_append(self, sender, nodeid, key, value):
-        source = Node(nodeid, sender[0], sender[1])
-        _log.debug("rpc_append sender=%s, source=%s, key=%s, value=%s" % (sender, source, base64.b64encode(key), str(value)))
-        self.maybeTransferKeyValues(source)
-        self.router.addContact(source)
-
+    def storeCert(self, certString, id):
+        """
+        Takes a string representation of a PEM-encoded certificate and
+        a nodeid as input. If the string is a valid PEM-encoded certificate
+        and the CA of the the certificate is present in the trustedStore of
+        this node, the certificate is stored in the DHT and written to disk
+        for later use.
+        """
         try:
-            pvalue = json.loads(value)
-            self.set_keys.add(key)
-            if key not in self.storage:
-                _log.debug("%s append key: %s not in storage set value: %s" % (base64.b64encode(nodeid), base64.b64encode(key), pvalue))
-                self.storage[key] = value
-            else:
-                old_value_ = self.storage[key]
-                old_value = json.loads(old_value_)
-                new_value = list(set(old_value + pvalue))
-                _log.debug("%s append key: %s old: %s add: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
-                self.storage[key] = json.dumps(new_value)
-            return True
-
+            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                  certString)
+            store_ctx = OpenSSL.crypto.X509StoreContext(self.trustedStore,
+                                                       cert)
+            store_ctx.verify_certificate()
         except:
-            _log.debug("Trying to append something not a JSON coded list %s" % value, exc_info=True)
-            return False
+            logger(self.sourceNode,
+                  "The certificate for {} is not signed "
+                  "by a trusted CA!".format(id))
+            return
+        exists = self.storage.get(digest("{}cert".format(id)))
+        if not exists[0]:
+            self.storage[digest("{}cert".format(id))] = certString
+            name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
+            file = open(os.path.join(name_dir, "others", "{}.pem".format(id)), 'w')
+            file.write(certString)
+            file.close()
 
-    def callAppend(self, nodeToAsk, key, value):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.append(address, self.sourceNode.id, key, value)
-        return d.addCallback(self.handleCallResponse, nodeToAsk)
-
-    def rpc_remove(self, sender, nodeid, key, value):
-        source = Node(nodeid, sender[0], sender[1])
-        _log.debug("rpc_remove sender=%s, source=%s, key=%s, value=%s" % (sender, source, base64.b64encode(key), str(value)))
-        self.maybeTransferKeyValues(source)
-        self.router.addContact(source)
-
-        try:
-            pvalue = json.loads(value)
-            self.set_keys.add(key)
-            if key in self.storage:
-                old_value = json.loads(self.storage[key])
-                new_value = list(set(old_value) - set(pvalue))
-                self.storage[key] = json.dumps(new_value)
-                _log.debug("%s remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
-
-            return True
-
-        except:
-            _log.debug("Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
-            return False
-
-    def callRemove(self, nodeToAsk, key, value):
-        address = (nodeToAsk.ip, nodeToAsk.port)
-        d = self.remove(address, self.sourceNode.id, key, value)
-        return d.addCallback(self.handleCallResponse, nodeToAsk)
+    def getOwnCert(self):
+        """
+        Retrieves the nodes own certificate from the nodes DHT-storage and
+        returns it.
+        """
+        sourceNodeIdHex = self.sourceNode.id.encode("hex").upper()
+        return self.storage[digest("{}cert".format(sourceNodeIdHex))]
 
 
 class AppendServer(Server):
@@ -221,9 +1101,78 @@ class AppendServer(Server):
         """
         # if the transport hasn't been initialized yet, wait a second
         if self.protocol.transport is None:
-            return task.deferLater(reactor, .2, self.bootstrap, addrs)
-        else:
-            return Server.bootstrap(self, addrs)
+            return task.deferLater(reactor,
+                                    1,
+                                    self.bootstrap,
+                                    addrs)
+
+        def initTable(results, challenge, id):
+            nodes = []
+            for addr, result in results.items():
+                ip = addr[0]
+                port = addr[1]
+                if result[0]:
+                    resultSign = result[1]['signature']
+                    resultId = result[1]['id']
+                    resultIdHex = resultId.encode('hex').upper()
+                    data = self.protocol.certificateExists(resultIdHex)
+                    if not data:
+                        identifier = digest("{}cert".format(resultIdHex))
+                        self.protocol.callCertFindValue(Node(resultId,
+                                                            ip,
+                                                            port),
+                                                       Node(identifier))
+                    else:
+                        cert_stored = self.protocol.searchForCertificate(resultIdHex)
+                        try:
+                            OpenSSL.crypto.verify(cert_stored,
+                                                 resultSign,
+                                                 challenge,
+                                                 "sha256")
+                        except:
+                            logger(self.protocol.sourceNode, "Failed verification of challenge during bootstrap")
+                        nodes.append(Node(resultId,
+                                         ip,
+                                         port))
+            spider = NodeSpiderCrawl(self.protocol,
+                                    self.node,
+                                    nodes,
+                                    self.ksize,
+                                    self.alpha)
+            return spider.find()
+
+        ds = {}
+        challenge = generate_challenge()
+        id = None
+        if addrs:
+            data = addrs[0]
+            addr = (data[0], data[1])
+            logger(self.protocol.sourceNode, "\n########### DOING BOOTSTRAP ###########")
+            try:
+                cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                      data[2])
+                fingerprint = cert.digest("sha256")
+                id = fingerprint.replace(":", "")[-40:]
+                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                      self.protocol.priv_key,
+                                                      '')
+                signature = OpenSSL.crypto.sign(private,
+                                               "{}{}".format(id, challenge),
+                                               "sha256")
+                ds[addr] = self.protocol.ping(addr,
+                                             self.node.id,
+                                             challenge,
+                                             signature,
+                                             self.protocol.getOwnCert())
+            except:
+                logger(self.protocol.sourceNode, "Certificate creation failed")
+            self.protocol.storeCert(data[2], id)
+            node = Node(id.decode("hex"), data[0], data[1])
+            if self.protocol.router.isNewNode(node):
+                return deferredDict(ds).addCallback(initTable,
+                                                   challenge,
+                                                   id)
+        return deferredDict(ds)
 
     def append(self, key, value):
         """

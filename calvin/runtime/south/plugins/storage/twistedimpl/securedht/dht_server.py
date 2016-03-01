@@ -18,11 +18,15 @@ import sys
 import traceback
 import time
 import Queue
+import os
+import OpenSSL.crypto
 
 from twisted.internet import reactor, defer, threads
 
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import AppendServer
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import SSDPServiceDiscovery
+# FIXME refactor to calvin.runtime.north.certificate
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht import certificate
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
@@ -31,20 +35,29 @@ _conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)
 
 
+def logger(message):
+    _log.debug(message)
+    #print message
+
+
 class ServerApp(object):
 
-    def __init__(self, server_type):
+    def __init__(self, server_type, identifier):
         self.kserver = None
         self.port = None
         self.server_type = server_type
+        self.id = identifier
 
     def start(self, port=0, iface='', bootstrap=None):
         if bootstrap is None:
             bootstrap = []
-        self.kserver = self.server_type()
+
+        self.kserver = self.server_type(id=self.id)
         self.kserver.bootstrap(bootstrap)
 
-        self.port = reactor.listenUDP(port, self.kserver.protocol, interface=iface)
+        self.port = reactor.listenUDP(port,
+                                        self.kserver.protocol,
+                                        interface=iface)
 
         return self.port.getHost().host, self.port.getHost().port
 
@@ -119,7 +132,7 @@ class TwistedWaitObject(object):
         try:
             value = self._q.get(timeout=timeout)
         except Queue.Empty:
-            _log.debug("Timeout in %s(%s)" % (self._func, self._kwargs))
+            logger("Timeout in %s(%s)" % (self._func, self._kwargs))
             raise
         return value
 
@@ -133,34 +146,50 @@ class AutoDHTServer(StorageBase):
         self.dht_server = None
         self._ssdps = None
         self._started = False
+        self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
+                                            _conf.get("security", "certificate_domain")).configuration
 
-    def start(self, iface='', network=None, bootstrap=None, cb=None):
+    def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None):
         if bootstrap is None:
             bootstrap = []
+        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)
+        filename = os.listdir(os.path.join(name_dir, "mine"))
+        st_cert = open(os.path.join(name_dir, "mine", filename[0]), 'rt').read()
+        cert_part = st_cert.split(certificate.BEGIN_LINE)
+        certstr = "{}{}".format(certificate.BEGIN_LINE, cert_part[1])
+
+        try:
+            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                  certstr)
+        except:
+            raise
+        key = cert.digest("sha256")
+        newkey = key.replace(":", "")
+        bytekey = newkey.decode("hex")
 
         if network is None:
             network = _conf.get_in_order("dht_network_filter", "ALL")
 
-        self.dht_server = ServerApp(AppendServer)
+        self.dht_server = ServerApp(AppendServer, bytekey[-20:])
         ip, port = self.dht_server.start(iface=iface)
 
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = SSDPServiceDiscovery(iface)
+        self._ssdps = SSDPServiceDiscovery(iface, cert=certstr)
         dlist += self._ssdps.start()
 
-        _log.debug("Register service %s %s:%s" % (network, ip, port))
+        logger("Register service %s %s:%s" % (network, ip, port))
         self._ssdps.register_service(network, ip, port)
 
-        _log.debug("Set client filter %s" % (network))
+        logger("Set client filter %s" % (network))
         self._ssdps.set_client_filter(network)
 
         start_cb = defer.Deferred()
 
         def bootstrap_proxy(addrs):
             def started(args):
-                _log.debug("DHT Started %s" % (args))
+                logger("DHT Started %s" % (args))
                 if not self._started:
                     reactor.callLater(.2, start_cb.callback, True)
                 if cb:
@@ -168,21 +197,31 @@ class AutoDHTServer(StorageBase):
                 self._started = True
 
             def failed(args):
-                _log.debug("DHT failed to bootstrap %s" % (args))
+                logger("DHT failed to bootstrap %s" % (args))
                 #reactor.callLater(.5, bootstrap_proxy, addrs)
 
-            _log.debug("Trying to bootstrap with %s" % (repr(addrs)))
+            logger("Trying to bootstrap with %s" % (repr(addrs)))
             d = self.dht_server.bootstrap(addrs)
             d.addCallback(started)
             d.addErrback(failed)
 
         def start_msearch(args):
-            _log.debug("** msearch %s args: %s" % (self, repr(args)))
-            reactor.callLater(0, self._ssdps.start_search, bootstrap_proxy, stop=False)
+            logger("** msearch %s args: %s" % (self, repr(args)))
+            reactor.callLater(0,
+                                self._ssdps.start_search,
+                                bootstrap_proxy,
+                                stop=False)
 
         # Wait until servers all listen
         dl = defer.DeferredList(dlist)
         dl.addBoth(start_msearch)
+        #FIXME handle inside IDServerApp
+        self.dht_server.kserver.protocol.sourceNode.port = port
+        self.dht_server.kserver.protocol.sourceNode.ip = "0.0.0.0"
+        self.dht_server.kserver.name = name
+        self.dht_server.kserver.protocol.name = name
+        self.dht_server.kserver.protocol.storeOwnCert(certstr)
+        self.dht_server.kserver.protocol.setPrivateKey()
 
         return start_cb
 

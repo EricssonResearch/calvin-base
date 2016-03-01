@@ -27,7 +27,7 @@ from calvin.utilities import calvinlogger
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import *
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server import *
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import *
-from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server_commons import *
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server_commons import drawNetworkState
 from kademlia.node import Node
 from kademlia.utils import deferredDict, digest
 
@@ -81,7 +81,7 @@ class TestDHT(object):
             servers = []
             callbacks = []
             for servno in range(0, amount_of_servers):
-                a = niceAutoDHTServer()
+                a = AutoDHTServer()
                 servers.append(a)
                 callback = CalvinCB(server_started, str(servno))
                 servers[servno].start(iface, network="Niklas", cb=callback, name=name + "{}".format(servno))

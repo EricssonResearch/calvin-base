@@ -12,7 +12,7 @@ certificate.new_domain(testconfig)
 # certificate.new_domain(testconfig2)
 print "Created new domain."
 
-for i in range(1, 4):
+for i in range(1, 5):
     for j in range(0, 6):
         name = "node{}:{}".format(i, j)
         certreq = certificate.new_runtime(testconfig, name)
