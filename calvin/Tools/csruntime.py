@@ -35,6 +35,10 @@ Start runtime, compile calvinscript and deploy application.
 
     argparser = argparse.ArgumentParser(description=long_description)
 
+    argparser.add_argument('--name', metavar='<name>', type=str, 
+                            help="shortcut for attribute indexed_public/node_name/name",
+                            dest='name')
+                            
     argparser.add_argument('-n', '--host', metavar='<host>', type=str,
                            help='ip address/hostname of calvin runtime',
                            dest='host')
@@ -220,28 +224,34 @@ def main():
         print "At least one listening interface is needed"
         return -1
 
-    attr_ = None
-    if args.attr:
-        try:
-            attr_ = json.loads(args.attr)
-        except Exception as e:
-            print "Attributes not JSON:\n", e
-            return -1
+    # Attributes
+    runtime_attr = {}
 
     if args.attr_file:
         try:
-            attr_ = json.load(open(args.attr_file))
+            runtime_attr = json.load(open(args.attr_file))
         except Exception as e:
             print "Attribute file not JSON:\n", e
             return -1
 
+    if args.attr:
+        try:
+            runtime_attr = json.loads(args.attr)
+        except Exception as e:
+            print "Attributes not JSON:\n", e
+            return -1
+
+    # We let --name override node_name:name (if present)
+    if args.name :
+        runtime_attr.setdefault("indexed_public",{}).setdefault("node_name",{})['name'] = args.name
+
     if app_info:
-        dispatch_and_deploy(app_info, args.wait, uris, control_uri, attr_)
+        dispatch_and_deploy(app_info, args.wait, uris, control_uri, runtime_attr)
     else:
         if args.storage:
-            storage_runtime(uris, control_uri, attr_, dispatch=False)
+            storage_runtime(uris, control_uri, runtime_attr, dispatch=False)
         else:
-            runtime(uris, control_uri, attr_, dispatch=False)
+            runtime(uris, control_uri, runtime_attr, dispatch=False)
     return 0
 
 
