@@ -805,9 +805,6 @@ class Deployer(object):
         if not self.deployable['valid']:
             raise Exception("Deploy information is not valid")
 
-        # Authenticate Security instance once
-        self.sec.authenticate_subject()
-
         unhandled = {}
 
         for actor_name, info in self.deployable['actors'].iteritems():

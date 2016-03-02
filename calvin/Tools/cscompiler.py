@@ -47,7 +47,8 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
             # This error reason is detected in calvin control and gives proper REST response
             errors.append({'reason': "401: UNAUTHORIZED", 'line': 0, 'col': 0})
             return deployable, errors, warnings
-        if not sec.verify_signature_content(content, "application"):
+        if not sec.verify_signature_content(content, "application") or not sec.get_authorization_decision():
+            # Verification not OK if sign or cert not OK or if the signer is denied by security policies
             _log.error("Check credentials...failed application verification")
             # This error reason is detected in calvin control and gives proper REST response
             errors.append({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None})

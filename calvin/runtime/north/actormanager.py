@@ -103,7 +103,7 @@ class ActorManager(object):
             sec = None
         (found, is_primitive, class_) = ActorStore(security=sec).lookup(actor_type)
         if not found:
-            # Here assume a primtive actor, now become shadow actor
+            # Here assume a primitive actor, now become shadow actor
             _log.analyze(self.node.id, "+ NOT FOUND CREATE SHADOW ACTOR", {'class': class_})
             found = True
             is_primitive = True

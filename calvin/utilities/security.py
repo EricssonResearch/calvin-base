@@ -169,36 +169,28 @@ class Security(object):
         return any(auth)
 
     def get_authenticated_subject_attributes(self):
-        return {key: authenticated_value for key, values in self.subject.iteritems()
-                    for authenticated_value, auth in zip(values, self.auth.get(key, [])) if auth}
+        return {key: [self.subject[key][i] for i, auth in enumerate(values) if auth] 
+                for key, values in self.auth.iteritems() if any(values)}
 
     def check_security_policy_actor(self, requires):
         _log.debug("Security: check_security_policy_actor")
         if self.sec_conf and self.sec_conf['access_control_enabled']:
-            return self.get_authorization_decision(self.get_authenticated_subject_attributes(), requires)
+            return self.get_authorization_decision(requires)
         # No security config, so access control is disabled
         return True
 
-    def get_authorization_decision(self, subject, requires=None):
-        # The following JSON code is inspired by the XACML JSON Profile but has been simplified (to be more compact)
+    def get_authorization_decision(self, requires=None):
+        # The JSON code in the request is inspired by the XACML JSON Profile but has been simplified to be more compact
+        request = {}
+        request["subject"] = self.get_authenticated_subject_attributes()
         # FIXME: how to get resource/runtime attributes?
-        resource = {
+        request["resource"] = {
             "organization": "Ericsson",
             "country": "SE"
         }
-        if requires is None:
-            request = {
-                "subject": subject,
-                "resource": resource
-            }
-        else:
-            request = {
-                "subject": subject,
-                "action": {
-                    "requires": requires 
-                },
-                "resource": resource
-            }
+        if requires is not None:
+            request["action"] = {"requires": requires}
+        _log.debug("Security: authorization request: %s" % request)
 
         # Check if the authorization server is local (the runtime itself) or external
         if self.sec_conf['authorization']['procedure'] == "external":
@@ -293,50 +285,45 @@ class Security(object):
     def verify_signature_content(self, content, flag):
         _log.debug("Security: verify %s signature of %s" % (flag, content))
         if not self.sec_conf:
-            _log.debug("Security: no signature verification required: %s"% content['file'])
+            _log.debug("Security: no signature verification required: %s" % content['file'])
             return True
 
         if flag not in ["application", "actor"]:
             # TODO add component verification
             raise NotImplementedError
 
-        subject = self.get_authenticated_subject_attributes()
-        subject[flag + "_signer"] = self.get_certificate_issuer(content)
+        self.auth[flag + "_signer"] = [True]  # Needed to include the signer attribute in authorization requests
 
-        # Verification OK if sign and cert OK and the signer is permitted by a matching policy
-        if self.get_authorization_decision(subject):
-            _log.debug("Security: the signer is permitted by the security policy")
-            return True
-        else:
-            _log.debug("Security: the signer is not permitted by the security policy")
-            return False
-
-    def get_certificate_issuer(self, content):
         if content is None or not content['sign']:
             _log.debug("Security: signature information missing")
-            return "__unsigned__"
+            self.subject[flag + "_signer"] = ["__unsigned__"]
+            return True  # True is returned to allow authorization request with the signer attribute '__unsigned__'.
 
         if not HAS_OPENSSL:
             _log.error("Security: install OpenSSL to allow verification of signatures and certificates")
-            _log.error("Security: verification of signature failed")
-            return "__unsigned__"
+            _log.error("Security: verification of %s signature failed" % flag)
+            self.subject[flag + "_signer"] = ["__invalid__"]
+            return False
 
-        _log.debug("Security:get_certificate_issuer")
+        # If any of the signatures is verified correctly, True is returned.
         for cert_hash, signature in content['sign'].iteritems():
             try:
                 # Check if the certificate is stored in the truststore (name is <cert_hash>.0)
-                trusted_cert = os.path.join(self.sec_conf['signature_trust_store'], cert_hash + ".0")
-                with open(trusted_cert, 'rt') as f:
-                    string_trusted_cert = f.read()
-                    trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, string_trusted_cert)
+                trusted_cert_path = os.path.join(self.sec_conf['signature_trust_store'], cert_hash + ".0")
+                with open(trusted_cert_path, 'rt') as f:
+                    trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
                     try:
                         OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
                         _log.debug("Security: signature correct")
+                        self.subject[flag + "_signer"] = [trusted_cert.get_issuer().CN]  # The Common Name field for the issuer
+                        return True
                     except Exception as e:
                         _log.debug("Security: OpenSSL verification error", exc_info=True)
-                        _log.error("Security: verification of signature failed")
-                        return "__unsigned__"
-                    return trusted_cert.get_issuer().CN  # The Common Name field for the issuer
+                        continue
             except Exception as e:
                 _log.debug("Security: error opening one of the needed certificates", exc_info=True)
-                return "__unsigned__"
+                continue
+        _log.error("Security: verification of %s signature failed" % flag)
+        self.subject[flag + "_signer"] = ["__invalid__"]
+        return False
+        
