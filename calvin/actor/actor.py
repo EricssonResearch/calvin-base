@@ -372,8 +372,8 @@ class Actor(object):
             self.sec = security
         else:
             self.sec = Security()
-            self.sec.set_principal(self.credentials)
-            self.sec.authenticate_principal()
+            self.sec.set_subject(self.credentials)
+            self.sec.authenticate_subject()
 
     def get_credentials(self):
         _log.debug("actor.py: get_credentials: %s" % self.credentials)

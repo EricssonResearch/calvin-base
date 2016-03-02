@@ -97,8 +97,8 @@ class ActorManager(object):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         if credentials is not None:
             sec = Security()
-            sec.set_principal(credentials)
-            sec.authenticate_principal()
+            sec.set_subject(credentials)
+            sec.authenticate_subject()
         else:
             sec = None
         (found, is_primitive, class_) = ActorStore(security=sec).lookup(actor_type)

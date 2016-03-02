@@ -41,8 +41,8 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
     if credentials:
         _log.debug("Check credentials...")
         sec = Security()
-        sec.set_principal(credentials)
-        if not sec.authenticate_principal():
+        sec.set_subject(credentials)
+        if not sec.authenticate_subject():
             _log.error("Check credentials...failed authentication")
             # This error reason is detected in calvin control and gives proper REST response
             errors.append({'reason': "401: UNAUTHORIZED", 'line': 0, 'col': 0})

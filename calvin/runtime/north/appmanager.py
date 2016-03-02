@@ -565,7 +565,7 @@ class Deployer(object):
         self.deploy_info = deploy_info
         self.credentials = credentials
         self.sec = Security()
-        self.sec.set_principal(self.credentials)
+        self.sec.set_subject(self.credentials)
         self.actorstore = ActorStore(security=self.sec)
         self.actor_map = {}
         self.actor_connections = {}
@@ -806,7 +806,7 @@ class Deployer(object):
             raise Exception("Deploy information is not valid")
 
         # Authenticate Security instance once
-        self.sec.authenticate_principal()
+        self.sec.authenticate_subject()
 
         unhandled = {}
 

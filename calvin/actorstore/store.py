@@ -137,11 +137,11 @@ class Store(object):
         _log.debug("Store load_pymodule SECURITY %s" % str(self.sec))
         try:
             if self.sec:
-                _log.debug("Verify credentials for %s actor with credentials %s" % (name, self.sec.principal))
+                _log.debug("Verify credentials for %s actor with credentials %s" % (name, self.sec.subject))
                 if not self.sec.verify_signature(path, "actor"):
                     _log.debug("Failed verification of credentials for %s actor with credentials %s" %
-                                    (name, self.sec.principal))
-                    raise Exception("Actor security signature incorrect")
+                                    (name, self.sec.subject))
+                    raise Exception("Actor security signature verification failed")
             pymodule = imp.load_source(name, path)
             # Check if we have a module or not
             if not isinstance(pymodule, ModuleType):

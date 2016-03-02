@@ -49,21 +49,24 @@ class PolicyDecisionPoint(object):
         # If database is used: policies are indexed based on their Target constraints
         decision = None
         policy_decisions = []
-        policies = self.prp.get_policies(self.config["policy_name_pattern"])
-        for policy in policies: 
-            # Check policy target
-            if "target" not in policy or self.target_matches(policy["target"], request):
-                decision = self.policy_decision(policy, request)
-                if ((decision == "permit" and self.config["policy_combining"] == "permit_overrides") or 
-                  (decision == "deny" and self.config["policy_combining"] == "deny_overrides")):
-                    return self.create_response(decision)  # Stop checking further policies
-                policy_decisions.append(decision)
-        if "indeterminate" in policy_decisions:
+        try:
+            policies = self.prp.get_policies(self.config["policy_name_pattern"])
+            for policy in policies: 
+                # Check policy target
+                if "target" not in policy or self.target_matches(policy["target"], request):
+                    decision = self.policy_decision(policy, request)
+                    if ((decision == "permit" and self.config["policy_combining"] == "permit_overrides") or 
+                      (decision == "deny" and self.config["policy_combining"] == "deny_overrides")):
+                        return self.create_response(decision)  # Stop checking further policies
+                    policy_decisions.append(decision)
+            if "indeterminate" in policy_decisions:
+                return self.create_response("indeterminate")
+            if not all(x == "not_applicable" for x in policy_decisions):
+                return self.create_response("deny") if self.config["policy_combining"] == "permit_overrides" else self.create_response("permit")
+            else:
+                return self.create_response("not_applicable")
+        except:
             return self.create_response("indeterminate")
-        if not all(x == "not_applicable" for x in policy_decisions):
-            return self.create_response("deny") if self.config["policy_combining"] == "permit_overrides" else self.create_response("permit")
-        else:
-            return self.create_response("not_applicable")
 
     def create_response(self, decision):
         # The following JSON code is inspired by the XACML JSON Profile but has been simplified (to be more compact).
@@ -72,7 +75,7 @@ class PolicyDecisionPoint(object):
             "decision": decision
         }
 
-    def target_matches(self, target, request):        
+    def target_matches(self, target, request):     
         for attribute_type in target:
             for attribute in target[attribute_type]:
                 # Accept both single object and lists by turning single objects into a list
@@ -143,7 +146,6 @@ class PolicyDecisionPoint(object):
         
     def evaluate_function(self, func, args, request):
         # Check each function argument
-        _log.info("Args %s" % args)
         for index, arg in enumerate(args):
             if isinstance(arg, basestring):
                 if arg.startswith("attr"):

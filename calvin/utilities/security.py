@@ -72,32 +72,31 @@ class Security(object):
     def __init__(self):
         _log.debug("Security: _init_")
         self.sec_conf = _conf.get("security","security_conf")
-        self.sec_policy = _conf.get("security","security_policy")
         if self.sec_conf is not None and not self.sec_conf.get('signature_trust_store', None):
             # Set default directory for trust store
             homefolder = get_home()
             truststore_dir = os.path.join(homefolder, ".calvin", "security", "trustStore")
             self.sec_conf['signature_trust_store'] = truststore_dir
-        self.principal = {}
+        self.subject = {}
         self.auth = {}
 
     def __str__(self):
-        return "Principal: %s\nAuth: %s" % (self.principal, self.auth)
+        return "Subject: %s\nAuth: %s" % (self.subject, self.auth)
 
-    def set_principal(self, principal):
-        _log.debug("Security: set_principal %s" % principal)
-        if not isinstance(principal, dict):
+    def set_subject(self, subject):
+        _log.debug("Security: set_subject %s" % subject)
+        if not isinstance(subject, dict):
             return False
-        # Make sure all principal values are lists
-        self.principal = {k: list(v) if isinstance(v, (list, tuple, set)) else [v]
-                            for k, v in principal.iteritems()}
-        # All default to unauthorized
-        self.auth = {k: [False]*len(v) for k, v in self.principal.iteritems()}
+        # Make sure all subject values are lists
+        self.subject = {k: list(v) if isinstance(v, (list, tuple, set)) else [v]
+                            for k, v in subject.iteritems()}
+        # All default to unauthenticated
+        self.auth = {k: [False]*len(v) for k, v in self.subject.iteritems()}
 
-    def authenticate_principal(self):
-        _log.debug("Security: authenticate_principal")
+    def authenticate_subject(self):
+        _log.debug("Security: authenticate_subject")
         if not security_needed_check():
-            _log.debug("Security: authenticate_principal no security needed")
+            _log.debug("Security: authenticate_subject no security needed")
             return True
 
         if self.sec_conf['authentication']['procedure'] == "local_file":
@@ -116,14 +115,14 @@ class Security(object):
 
     def authenticate_using_radius_server(self):
         auth = []
-        if self.principal['user']:
+        if self.subject['user']:
             srv=Client(server=self.sec_conf['authentication']['server_ip'], 
                         secret= bytes(self.sec_conf['authentication']['secret']),
                         dict=Dictionary("extras/pyrad_dicts/dictionary", "extras/pyrad_dicts/dictionary.acc"))
             req=srv.CreateAuthPacket(code=pyrad.packet.AccessRequest,
-                        User_Name=self.principal['user'][0],
+                        User_Name=self.subject['user'][0],
                         NAS_Identifier="localhost")
-            req["User-Password"]=req.PwCrypt(self.principal['password'][0])
+            req["User-Password"]=req.PwCrypt(self.subject['password'][0])
             # FIXME is this over socket? then we should not block here
             reply=srv.SendPacket(req)
             _log.debug("Attributes returned by server:")
@@ -141,7 +140,7 @@ class Security(object):
         return any(auth)
 
     def authenticate_using_local_database(self):
-        """ Authenticate a principal against config stored information
+        """ Authenticate a subject against config stored information
             This is primarily intended for testing purposes,
             since passwords arn't stored securily.
         """
@@ -149,14 +148,14 @@ class Security(object):
             _log.debug("local_users not found in security_conf: %s" % self.sec_conf['authentication'])
             return False
         # Verify users against stored passwords
-        # TODO expand with other principal types
+        # TODO expand with other subject types
         d = self.sec_conf['authentication']['local_users']
-        if not ('user' in self.principal and 'password' in self.principal):
+        if not ('user' in self.subject and 'password' in self.subject):
             return False
-        if len(self.principal['user']) != len(self.principal['password']):
+        if len(self.subject['user']) != len(self.subject['password']):
             return False
         auth = []
-        for user, password in zip(self.principal['user'], self.principal['password']):
+        for user, password in zip(self.subject['user'], self.subject['password']):
             if user in d.keys():
                 if d[user] == password:
                     _log.debug("Security: found user: %s",user)
@@ -169,45 +168,65 @@ class Security(object):
         self.auth['user'] = auth
         return any(auth)
 
+    def get_authenticated_subject_attributes(self):
+        return {key: authenticated_value for key, values in self.subject.iteritems()
+                    for authenticated_value, auth in zip(values, self.auth.get(key, [])) if auth}
+
     def check_security_policy_actor(self, requires):
         _log.debug("Security: check_security_policy_actor")
         if self.sec_conf and self.sec_conf['access_control_enabled']:
-            request = self.create_authorization_request(requires, self.principal)
-            # Check if the authorization server is local (the runtime itself) or external
-            if self.sec_conf['authorization']['procedure'] == "external":
-                if not HAS_JWT:
-                    _log.error("Security: Install JWT to use external server as authorization method.\n" +
-                            "NB! NO AUTHORIZATION USED")
-                    return False
-                _log.debug("Security: external authorization method chosen")
-                return self.authorize_using_external_server(request)
-            else: 
-                _log.debug("Security: local file authorization method chosen")
-                return self.authorize_using_local_policy_files(request)
+            return self.get_authorization_decision(self.get_authenticated_subject_attributes(), requires)
         # No security config, so access control is disabled
         return True
 
-    def create_authorization_request(self, requires, subject, node_id="12345"):
+    def get_authorization_decision(self, subject, requires=None):
         # The following JSON code is inspired by the XACML JSON Profile but has been simplified (to be more compact)
-        # FIXME: where do we get the attributes from?
-        request = {
-            "access_subject": {
-                "user": subject["user"][0],
-                "email": subject["user"][0] + "@ericsson.com",
-                "organization": "Ericsson"
-            },
-            "action": {
-                "requires": requires 
-            },
-            "resource": {
-                "runtime_id": node_id,
-                "organization": "Ericsson",
-                "country": "SE"
-            }
+        # FIXME: how to get resource/runtime attributes?
+        resource = {
+            "organization": "Ericsson",
+            "country": "SE"
         }
-        return request
+        if requires is None:
+            request = {
+                "subject": subject,
+                "resource": resource
+            }
+        else:
+            request = {
+                "subject": subject,
+                "action": {
+                    "requires": requires 
+                },
+                "resource": resource
+            }
+
+        # Check if the authorization server is local (the runtime itself) or external
+        if self.sec_conf['authorization']['procedure'] == "external":
+            if not HAS_JWT:
+                _log.error("Security: Install JWT to use external server as authorization method.\n" +
+                        "NB! NO AUTHORIZATION USED")
+                return False
+            _log.debug("Security: external authorization method chosen")
+            decision = self.authorize_using_external_server(request)
+        else: 
+            _log.debug("Security: local file authorization method chosen")
+            decision = self.authorize_using_local_policy_files(request)
+
+        if decision == "permit":
+            _log.debug("Security: access permitted to resources")
+            return True
+        elif decision == "deny":
+            _log.debug("Security: access denied to resources")
+            return False
+        elif decision == "indeterminate":
+            _log.debug("Security: access denied to resources. Error occured when evaluating policies.")
+            return False
+        else:
+            _log.debug("Security: access denied to resources. No matching policies.")
+            return False
 
     def authorize_using_external_server(self, request):
+        # TODO: use async request to external server to not block here
         ip_addr = "0.0.0.0:8080"
         node_id = "12345"  # FIXME: how to get node id?
         payload = {
@@ -225,45 +244,20 @@ class Security(object):
             response = requests.post("http://" + ip_addr + "/authorization/pdp", json={"jwt": token})
             if response.status_code != 200:
                 print "Security: authorization server error - %s %s: %s" % (response.status_code, response.reason, response.json()["error"])
-                return False
+                return "indeterminate"
             else:
                 json_data = response.json()
                 decoded = jwt.decode(json_data['jwt'], pub_key_auth_server, algorithms=['RS256'], issuer=ip_addr, audience=node_id)
-                decision = decoded['response']['decision']
-                if decision == "permit":
-                    _log.debug("Security: access permitted to resources")
-                    return True
-                elif decision == "deny":
-                    _log.debug("Security: access denied to resources")
-                    return False
-                elif decision == "indeterminate":
-                    _log.debug("Security: access denied to resources. Error occured when evaluating policies.")
-                    return False
-                else:
-                    _log.debug("Security: access denied to resources. No matching policies.")
-                    return False
+                return decoded['response']['decision']
         except:
             e = sys.exc_info()[1]
             _log.error("Security: error when sending request to authorization server: %s" % str(e))
-            return False
+            return "indeterminate"
 
     def authorize_using_local_policy_files(self, request):
         self.pdp = PolicyDecisionPoint()
         response = self.pdp.authorize(request)
-        decision = response['decision']
-        if decision == "permit":
-            _log.debug("Security: access permitted to resources")
-            return True
-        elif decision == "deny":
-            _log.debug("Security: access denied to resources")
-            print 
-            return False
-        elif decision == "indeterminate":
-            _log.debug("Security: access denied to resources. Error occured when evaluating policies.")
-            return False
-        else:
-            _log.debug("Security: access denied to resources. No matching policies.")
-            return False
+        return response['decision']
 
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):
@@ -271,6 +265,7 @@ class Security(object):
         sign_filenames = filename + ".sign.*"
         sign_content = {}
         file_content = ""
+        # Filename is *.sign.<cert_hash>
         sign_files = {os.path.basename(f).split(".sign.")[1]: f for f in glob.glob(sign_filenames)}
         for cert_hash, sign_filename in sign_files.iteritems():
             try:
@@ -305,84 +300,43 @@ class Security(object):
             # TODO add component verification
             raise NotImplementedError
 
-        # loop through the policies until one is found that applies to the principal
-        # Verification OK if sign and cert OK for any principal matching policy
-        # that have previously been authorized
-        for plcy in self.sec_policy.values():
-            _log.debug("Security: verify_signature policy: %s\nprincipal: %s\nauth:%s" %
-                        (plcy, self.principal, self.auth))
-            if any([principal_name in plcy['principal'][principal_type]
-                        for principal_type, principal_names in self.principal.iteritems()
-                            if principal_type in plcy['principal']
-                        for principal_name, auth in zip(principal_names, self.auth[principal_type])
-                            if auth]):
-                _log.debug("Security: found a policy with matching principal")
-                if (flag + '_signature') in plcy:
-                    if self.verify_signature_and_certificate(content, plcy, flag):
-                        _log.debug("Security: signature verification successfull")
-                        return True
-        _log.error("Security: verification of %s signature failed 1" % flag)
-        return False
+        subject = self.get_authenticated_subject_attributes()
+        subject[flag + "_signer"] = self.get_certificate_issuer(content)
 
-    def verify_signature_and_certificate(self, content, plcy, flag):
-        if "__unsigned__" in plcy[flag + '_signature']:
-            _log.debug("Security: %s is allowed unsigned" % flag)
+        # Verification OK if sign and cert OK and the signer is permitted by a matching policy
+        if self.get_authorization_decision(subject):
+            _log.debug("Security: the signer is permitted by the security policy")
             return True
-
-        if content is None:
-            _log.debug("Security: %s need file and signature with certificate hash" % flag)
+        else:
+            _log.debug("Security: the signer is not permitted by the security policy")
             return False
 
-        if not content['sign']:
-            _log.debug("Security: %s signature information missing" % flag)
-            return False
+    def get_certificate_issuer(self, content):
+        if content is None or not content['sign']:
+            _log.debug("Security: signature information missing")
+            return "__unsigned__"
 
         if not HAS_OPENSSL:
-            _log.error("Security: Install openssl to allow verification of signatures and certificates")
-            _log.error("Security: verification of %s signature failed 2" % flag)
-            return False
+            _log.error("Security: install OpenSSL to allow verification of signatures and certificates")
+            _log.error("Security: verification of signature failed")
+            return "__unsigned__"
 
-        _log.debug("Security:verify_signature_and_certificate")
+        _log.debug("Security:get_certificate_issuer")
         for cert_hash, signature in content['sign'].iteritems():
             try:
+                # Check if the certificate is stored in the truststore (name is <cert_hash>.0)
                 trusted_cert = os.path.join(self.sec_conf['signature_trust_store'], cert_hash + ".0")
                 with open(trusted_cert, 'rt') as f:
                     string_trusted_cert = f.read()
                     trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, string_trusted_cert)
-                    if self.check_signature_policy(trusted_cert, flag, plcy):
-                        try:
-                            OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
-                            _log.debug("Security: %s signature correct" % flag)
-                            return True
-                        except Exception as e:
-                            _log.debug("Security: OpenSSL verification error", exc_info=True)
-                            continue
-                    else:
-                        _log.debug("Security: signature policy not fulfilled")
-                        continue
+                    try:
+                        OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
+                        _log.debug("Security: signature correct")
+                    except Exception as e:
+                        _log.debug("Security: OpenSSL verification error", exc_info=True)
+                        _log.error("Security: verification of signature failed")
+                        return "__unsigned__"
+                    return trusted_cert.get_issuer().CN  # The Common Name field for the issuer
             except Exception as e:
                 _log.debug("Security: error opening one of the needed certificates", exc_info=True)
-                continue
-        _log.error("Security: verification of %s signature failed 3" % flag)
-        return False
-
-    def check_signature_policy(self, cert, flag, plcy):
-        """ Checks that if the signer is allowed by the security policy """
-        _log.debug("Security:check_signature_policy")
-        if flag=="application":
-            if 'application_signature' in plcy:
-                if cert.get_issuer().CN not in plcy['application_signature']:
-                    _log.debug("Security: application signer not allowed")
-                    return False
-            else:
-                _log.debug("Security: no application_signature element, unsigned applications allowed")
-        elif flag=="actor":
-            if 'actor_signature' in plcy:
-                if cert.get_issuer().CN not in plcy['actor_signature']:
-                    _log.debug("Security: actor signer not allowed")
-                    return False
-            else:
-                _log.debug("Security: no actor_signature element, unsigned applications allowed")
-        return True
-
-
+                return "__unsigned__"
