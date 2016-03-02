@@ -100,7 +100,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                             nodeToAsk.id.encode("hex").upper() + challenge,
                                             "sha256")
         except:
-            logger(self.sourceNode, "Signing of certFindValue failed")
+            logger(self.sourceNode, "RETNONE: Signing of certFindValue failed")
             return None
         d = self.find_value(address,
                            self.sourceNode.id,
@@ -127,7 +127,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                            nodeToAsk.id.encode("hex").upper() + challenge,
                                            "sha256")
         except:
-            logger(self.sourceNode, "Signing of findNode failed")
+            logger(self.sourceNode, "RETNONE: Signing of findNode failed")
             return None
         d = self.find_node(address,
                           self.sourceNode.id,
@@ -152,7 +152,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                            nodeToAsk.id.encode("hex").upper() + challenge,
                                            "sha256")
         except:
-            logger(self.sourceNode, "Signing of findValue failed")
+            logger(self.sourceNode, "RETNONE: Signing of findValue failed")
             return None
         d = self.find_value(address,
                            self.sourceNode.id,
@@ -177,7 +177,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                            nodeToAsk.id.encode("hex").upper() + challenge,
                                            "sha256")
         except:
-            logger(self.sourceNode, "Signing of ping failed")
+            logger(self.sourceNode, "RETNONE: Signing of ping failed")
             return None
         d = self.ping(address,
                      self.sourceNode.id,
@@ -202,7 +202,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                            nodeToAsk.id.encode("hex").upper() + challenge,
                                            "sha256")
         except:
-            logger(self.sourceNode, "Signing of store failed")
+            logger(self.sourceNode, "RETNONE: Signing of store failed")
             return None
         d = self.store(address,
                       self.sourceNode.id,
@@ -229,7 +229,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                            nodeToAsk.id.encode("hex").upper() + challenge,
                                            "sha256")
         except:
-            logger(self.sourceNode, "Signing of append failed")
+            logger(self.sourceNode, "RETNONE: Signing of append failed")
             return None
         d = self.append(address,
                         self.sourceNode.id,
@@ -253,7 +253,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                            nodeToAsk.id.encode("hex").upper() + challenge,
                                            "sha256")
         except:
-            logger(self.sourceNode, "Signing of append failed")
+            logger(self.sourceNode, "RETNONE: Signing of append failed")
             return None
         d = self.remove(address,
                         self.sourceNode.id,
@@ -284,7 +284,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                 cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                                       result[1]['value'])
             except:
-                logger(self.sourceNode, "Invalid certificate "
+                logger(self.sourceNode, "RETNONE: Invalid certificate "
                                         "response from {}".format(node))
                 return None
             fingerprint = cert.digest("sha256")
@@ -304,7 +304,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                 if self.router.isNewNode(node):
                     self.transferKeyValues(node)
             else:
-                # logger(self.sourceNode, "Certificate from {} does not match claimed node id".format(node))
+                logger(self.sourceNode, "RETNONE: Certificate from {} does not match claimed node id".format(node))
                 return None
         else:
             self.router.removeContact(node)
@@ -325,7 +325,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                 cert_stored = self.searchForCertificate(nodeIdHex)
                 if cert_stored == None:
                     logger(self.sourceNode,
-                           "Certificate for sender of bucket:"
+                           "RETNONE: Certificate for sender of bucket:"
                            " {} not present in store".format(node))
                     return None
                 try:
@@ -353,18 +353,18 @@ class KademliaProtocolAppend(KademliaProtocol):
                     return (result[0], newbucket)
                 except:
                     logger(self.sourceNode,
-                          "Bad signature for"
+                          "RETNONE: Bad signature for"
                           " sender of bucket: {}".format(node))
                     return None
             else:
                 if not result[1]['signature']:
                     logger(self.sourceNode,
-                          "Signature not present"
+                          "RETNONE: Signature not present"
                           " for sender of bucket: {}".format(node))
                 return None
         else:
             logger(self.sourceNode,
-                  "No response from {},"
+                  "RETNONE: No response from {},"
                   " removing from bucket".format(node))
             self.router.removeContact(node)
         return None
@@ -387,14 +387,14 @@ class KademliaProtocolAppend(KademliaProtocol):
             elif 'id' in result[1] and 'signature' in result[1]:
                 if result[1]['id'] != node.id:
                     logger(self.sourceNode,
-                          "Pong ID return "
+                          "RETNONE: Pong ID return "
                           "mismatch for {}".format(node))
                     return None
                 nodeIdHex = node.id.encode('hex').upper()
                 cert_stored = self.searchForCertificate(nodeIdHex)
                 if cert_stored == None:
                     logger(self.sourceNode,
-                          "Certificate for sender of pong: {} "
+                          "RETNONE: Certificate for sender of pong: {} "
                           "not present in store".format(node))
                     return None
                 try: 
@@ -406,17 +406,17 @@ class KademliaProtocolAppend(KademliaProtocol):
                     return result[1]['id']
                 except:
                     logger(self.sourceNode,
-                          "Bad signature for sender"
+                          "RETNONE: Bad signature for sender"
                           " of pong: {}".format(node))
                     return None
             else:
                 logger(self.sourceNode,
-                      "Signature not present for sender"
+                      "RETNONE: Signature not present for sender"
                       " of pong: {}".format(node))
                 return None
         else:
             logger(self.sourceNode,
-                  "No pong from {}, removing"
+                  "RETNONE: No pong from {}, removing"
                   " from bucket".format(node))
             self.router.removeContact(node)
         return None
@@ -437,7 +437,7 @@ class KademliaProtocolAppend(KademliaProtocol):
             cert_stored = self.searchForCertificate(nodeIdHex)
             if cert_stored == None:
                 logger(self.sourceNode,
-                "Certificate for sender of store confirmation: {}"
+                "RETNONE: Certificate for sender of store confirmation: {}"
                 " not present in store".format(node))
                 return None
             try: 
@@ -450,12 +450,12 @@ class KademliaProtocolAppend(KademliaProtocol):
                 return (True, True)
             except:
                 logger(self.sourceNode,
-                      "Bad signature for sender of store"
+                      "RETNONE: Bad signature for sender of store"
                       " confirmation: {}".format(node))
                 return None
         else:
             logger(self.sourceNode,
-                  "No store confirmation from {},"
+                  "RETNONE: No store confirmation from {},"
                   " removing from bucket".format(node))
             self.router.removeContact(node)
         return None
@@ -476,7 +476,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                 cert_stored = self.searchForCertificate(nodeIdHex)
                 if cert_stored == None:
                     logger(self.sourceNode,
-                          "Certificate for sender of value response: {}"
+                          "RETNONE: Certificate for sender of value response: {}"
                           " not present in store".format(node))
                     return None
                 try: 
@@ -488,12 +488,12 @@ class KademliaProtocolAppend(KademliaProtocol):
                     return result
                 except:
                     logger(self.sourceNode,
-                          "Bad signature for sender of "
+                          "RETNONE: Bad signature for sender of "
                           "value response: {}".format(node))
                     return None
             else:
                 logger(self.sourceNode,
-                      "Signature not present for sender "
+                      "RETNONE: Signature not present for sender "
                       "of value response: {}".format(node))
                 return None
         else:
@@ -501,7 +501,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                   "No value response from {}, "
                   "removing from bucket".format(node))
             self.router.removeContact(node)
-        return None
+        return (False, None) #None
 
     def handleSignedNACKResponse(self, result, node, challenge):
         nodeIdHex = node.id.encode('hex').upper()
@@ -524,6 +524,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                 logger(self.sourceNode,
                       "Bad signature for sender "
                       "of NACK: {}".format(node))
+        logger(self.sourceNode, "RETNONE: handleSignedNACKResponse")
         return None
 
 
@@ -546,6 +547,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                challenge,
                                                "sha256")
             except:
+                logger(self.sourceNode, "RETNONE: Failed make signature for store")
                 return None
             logger(self.sourceNode,
                   "Certificate for {} not "
@@ -561,7 +563,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                      "sha256")
             except:
                 logger(self.sourceNode,
-                      "Bad signature for sender of "
+                      "RETNONE: Bad signature for sender of "
                       "store request: {}".format(source))
                 return None
             self.router.addContact(source)
@@ -575,7 +577,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                "sha256")
             except:
                 logger(self.sourceNode,
-                      "Signing of rpc_store failed")
+                      "RETNONE: Signing of rpc_store failed")
                 return None
             logger(self.sourceNode, "Signing of rpc_store success")
             return signature
@@ -594,6 +596,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                challenge,
                                                "sha256")
             except:
+                logger(self.sourceNode, "RETNONE: Failed make signature for append")
                 return None
             logger(self.sourceNode,
                   "Certificate for {} not "
@@ -609,8 +612,8 @@ class KademliaProtocolAppend(KademliaProtocol):
                                      "sha256")
             except:
                 logger(self.sourceNode,
-                      "Bad signature for sender of "
-                      "store request: {}".format(source))
+                      "RETNONE: Bad signature for sender of "
+                      "append request: {}".format(source))
                 return None
             self.router.addContact(source)
             try:
@@ -628,7 +631,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                             (base64.b64encode(key), old_value, pvalue, new_value))
                     self.storage[key] = json.dumps(new_value)
             except:
-                _log.debug("Trying to append something not a JSON coded list %s" % value, exc_info=True)
+                _log.debug("RETNONE: Trying to append something not a JSON coded list %s" % value, exc_info=True)
                 return None
             try:
                 private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
@@ -639,7 +642,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                "sha256")
             except:
                 logger(self.sourceNode,
-                      "Signing of rpc_store failed")
+                      "RETNONE: Signing of rpc_append failed")
                 return None
             return signature
 
@@ -659,6 +662,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                challenge,
                                                "sha256")
             except:
+                logger(self.sourceNode, "RETNONE: Failed make signature for remove")
                 return None
             logger(self.sourceNode,
                   "Certificate for {} not "
@@ -674,8 +678,8 @@ class KademliaProtocolAppend(KademliaProtocol):
                                      "sha256")
             except:
                 logger(self.sourceNode,
-                      "Bad signature for sender of "
-                      "store request: {}".format(source))
+                      "RETNONE: Bad signature for sender of "
+                      "remove request: {}".format(source))
                 return None
             self.router.addContact(source)
             try:
@@ -688,7 +692,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                     logger(self.sourceNode, "remove key: %s old: %s add: %s new: %s" %
                                             (base64.b64encode(key), old_value, pvalue, new_value))
             except:
-                _log.debug("Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
+                _log.debug("RETNONE: Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
                 return None
             try:
                 private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
@@ -699,7 +703,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                "sha256")
             except:
                 logger(self.sourceNode,
-                      "Signing of rpc_store failed")
+                      "RETNONE: Signing of rpc_remove failed")
                 return None
             return signature
 
@@ -720,6 +724,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                challenge,
                                                "sha256")
             except:
+                logger(self.sourceNode, "RETNONE: Failed make signature for find node")
                 return None
             logger(self.sourceNode,
                   "Certificate for {} not found "
@@ -735,7 +740,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                      "sha256")
             except:
                 logger(self.sourceNode,
-                      "Bad signature for sender of "
+                      "RETNONE: Bad signature for sender of "
                       "find_node: {}".format(source))
                 return None
             self.router.addContact(source)
@@ -750,7 +755,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                "sha256")
             except:
                 logger(self.sourceNode,
-                      "Signing of rpc_find_node failed")
+                      "RETNONE: Signing of rpc_find_node failed")
                 return None
             value = {'bucket': bucket, 'signature': signature}
             return value
@@ -783,7 +788,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                     id = fingerprint.replace(":", "")[-40:]
                     if id != nodeIdHex:
                         logger(self.sourceNode,
-                              "Explicit certificate in find_value "
+                              "RETNONE: Explicit certificate in find_value "
                               "from {} does not match nodeid".format(source))
                         return None
                     sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
@@ -795,7 +800,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                     self.storeCert(certString, nodeIdHex)
                 except:
                     logger(self.sourceNode,
-                          "Invalid certificate "
+                          "RETNONE: Invalid certificate "
                           "request: {}".format(source))
                     return None
             else:
@@ -807,6 +812,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                     challenge,
                                     "sha256")
                 except:
+                    logger(self.sourceNode, "RETNONE: Failed make signature for find value")
                     return None
                 logger(self.sourceNode,
                       "Certificate for {} not "
@@ -823,7 +829,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                      "sha256")
             except:
                 logger(self.sourceNode,
-                      "Bad signature for sender of "
+                      "RETNONE: Bad signature for sender of "
                       "find_value: {}".format(source))
                 return None
 
@@ -831,7 +837,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         exists, value = self.storage.get(key, None)
         if not exists:
             logger(self.sourceNode,
-                  "Key {} not in store, forwarding").format(key)
+                  "Key {} not in store, forwarding".format(key))
             return self.rpc_find_node(sender,
                                      nodeid,
                                      key,
@@ -847,7 +853,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                "sha256")
             except:
                 logger(self.sourceNode,
-                      "Signing of rpc_find_value failed")
+                      "RETNONE: Signing of rpc_find_value failed")
                 return None
             return { 'value': value, 'signature': signature }
 
@@ -873,7 +879,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                 id = fingerprint.replace(":", "")[-40:]
                 if id != nodeIdHex:
                     logger(self.sourceNode,
-                          "Explicit certificate in ping from {} "
+                          "RETNONE: Explicit certificate in ping from {} "
                           "does not match nodeid".format(source))
                     return None
                 sourceNodeIdHex = self.sourceNode.id.encode('hex').upper()
@@ -887,7 +893,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                     self.transferKeyValues(source)
             except:
                 logger(self.sourceNode,
-                      "Bad signature for sender of ping with "
+                      "RETNONE: Bad signature for sender of ping with "
                       "explicit certificate: {}".format(source))
                 return None
         else:
@@ -901,6 +907,8 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                    challenge,
                                                    "sha256")
                 except:
+                    logger(self.sourceNode,
+                          "RETNONE: Failed make signature for ping")
                     return None
                 logger(self.sourceNode,
                       "Certificate for {} not found "
@@ -916,7 +924,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                          "sha256")
                 except:
                     logger(self.sourceNode,
-                          "Bad signature for sender of "
+                          "RETNONE: Bad signature for sender of "
                           "ping: {}".format(source))
                     return None
         try:
@@ -927,7 +935,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                            challenge,
                                            "sha256")
         except:
-            logger(self.sourceNode, "Signing of rpc_ping failed")
+            logger(self.sourceNode, "RETNONE: Signing of rpc_ping failed")
             return None
         return { 'id': self.sourceNode.id, 'signature': signature }
 
