@@ -1024,8 +1024,6 @@ class KademliaProtocolAppend(KademliaProtocol):
         on the new node (per section 2.5 of the paper)
         """
         logger(self.sourceNode, "**** transfer key values ****")
-        # FIXME Why are we no longer populating ds, but return a None?
-        ds = []
         for key, value in self.storage.iteritems():
             keynode = Node(digest(key))
             neighbors = self.router.findNeighbors(keynode)
@@ -1034,14 +1032,11 @@ class KademliaProtocolAppend(KademliaProtocol):
                 thisNodeClosest = self.sourceNode.distanceTo(keynode) < neighbors[0].distanceTo(keynode)
             if len(neighbors) == 0 or (newNodeClose and thisNodeClosest):
                 if key in self.set_keys:
-                    #ds.append(self.callAppend(node, key, value))
                     self.callAppend(node, key, value)
                     return None
                 else:
-                    # ds.append(self.callStore(node, key, value))
                     self.callStore(node, key, value)
                     return None
-        return defer.gatherResults(ds)
 
     def storeOwnCert(self, cert):
         """
