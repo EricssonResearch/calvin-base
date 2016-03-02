@@ -41,11 +41,12 @@ class Storage(object):
         self.localstore_sets = {}
         self.started = False
         self.node = node
-        self.proxy = _conf.get(None, 'storage_proxy')
+        storage_type = _conf.get(None, 'storage_type')
+        self.proxy = _conf.get(None, 'storage_proxy') if storage_type == 'proxy' else None
         _log.analyze(self.node.id, "+", {'proxy': self.proxy})
         self.tunnel = {}
-        self.starting = _conf.get(None, 'storage_start')
-        self.storage = storage_factory.get("proxy" if self.proxy else "dht", node) if self.starting else None
+        self.starting = storage_type != 'local'
+        self.storage = storage_factory.get(storage_type, node)
         self.coder = message_coder_factory.get("json")  # TODO: always json? append/remove requires json at the moment
         self.flush_delayedcall = None
         self.reset_flush_timeout()
@@ -118,7 +119,11 @@ class Storage(object):
         """
         _log.analyze(self.node.id, "+", None)
         if self.starting:
-            self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb))
+            name = self.node.attributes.get_node_name_as_str() or self.node.id
+            try:
+                self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name)
+            except:
+                _log.exception("Failed start of storage for name={}, switches to local".format(name))
 
         if not self.proxy:
             self._init_proxy()

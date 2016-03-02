@@ -741,7 +741,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         rt1_conf = copy.deepcopy(_conf)
         rt1_conf.set('global', 'capabilities_blacklist', ['calvinsys.events.timer'])
         if use_proxy_storage:
-            rt1_conf.set('global', 'storage_start', False)
+            rt1_conf.set('global', 'storage_type', 'local')
         rt1_conf.save("/tmp/calvin5000.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5000"
@@ -760,6 +760,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
 
         rt2_3_conf = copy.deepcopy(_conf)
         if use_proxy_storage:
+            rt2_3_conf.set('global', 'storage_type', 'proxy')
             rt2_3_conf.set('global', 'storage_proxy', "calvinip://%s:5000" % ip_addr)
         rt2_3_conf.save("/tmp/calvin5001.conf")
         try:

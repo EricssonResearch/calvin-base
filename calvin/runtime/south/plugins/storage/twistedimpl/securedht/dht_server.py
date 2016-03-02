@@ -149,7 +149,7 @@ class AutoDHTServer(StorageBase):
         self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
                                             _conf.get("security", "certificate_domain")).configuration
 
-    def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None):
+    def start(self, iface='', network=None, bootstrap=None, cb=None, name=None):
         if bootstrap is None:
             bootstrap = []
         name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)

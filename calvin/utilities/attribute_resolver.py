@@ -265,6 +265,17 @@ class AttributeResolver(object):
         # Return all indexes encoded for storage as a list of lists
         return [AttributeResolverHelper.encode_index([AttributeResolverHelper._to_unicode(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
 
+    def get_node_name_as_str(self):
+        """ Generate a string corresponding to the attribute node name
+            The sub-parts are concatenated by '+' to be able to use it as
+            a filename.
+        """
+        try:
+            return '+'.join(["" if i is None else i for i in self.attr['indexed_public']['node_name']])
+        except:
+            return None
+
+
 if __name__ == "__main__":
     ar = AttributeResolver({"indexed_public": {
                             "address": {"country": "SE", "locality": "Lund", "street": u"Sölvegatan", "streetNumber": 53},
