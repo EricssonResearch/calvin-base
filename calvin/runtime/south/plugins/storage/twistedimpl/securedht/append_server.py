@@ -284,9 +284,9 @@ class KademliaProtocolAppend(KademliaProtocol):
                 cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                                       result[1]['value'])
             except:
-                logger(self.sourceNode, "RETNONE: Invalid certificate "
+                logger(self.sourceNode, "RETFALSENONE: Invalid certificate "
                                         "response from {}".format(node))
-                return None
+                return (False, None)
             fingerprint = cert.digest("sha256")
             id = fingerprint.replace(":","")[-40:]
             if node.id.encode('hex').upper() == id:
@@ -304,8 +304,8 @@ class KademliaProtocolAppend(KademliaProtocol):
                 if self.router.isNewNode(node):
                     self.transferKeyValues(node)
             else:
-                logger(self.sourceNode, "RETNONE: Certificate from {} does not match claimed node id".format(node))
-                return None
+                logger(self.sourceNode, "RETFALSENONE: Certificate from {} does not match claimed node id".format(node))
+                return (False, None)
         else:
             self.router.removeContact(node)
         return result
@@ -320,14 +320,14 @@ class KademliaProtocolAppend(KademliaProtocol):
         nodeIdHex = node.id.encode('hex').upper()
         if result[0]:
             if "NACK" in result[1]:
-                return self.handleSignedNACKResponse(result, node, challenge)
+                return (False, self.handleSignedNACKResponse(result, node, challenge))
             elif 'bucket' in result[1] and 'signature' in result[1]:
                 cert_stored = self.searchForCertificate(nodeIdHex)
                 if cert_stored == None:
                     logger(self.sourceNode,
-                           "RETNONE: Certificate for sender of bucket:"
+                           "RETFALSENONE: Certificate for sender of bucket:"
                            " {} not present in store".format(node))
-                    return None
+                    return (False, None)
                 try:
                     OpenSSL.crypto.verify(cert_stored,
                                          result[1]['signature'],
@@ -353,21 +353,21 @@ class KademliaProtocolAppend(KademliaProtocol):
                     return (result[0], newbucket)
                 except:
                     logger(self.sourceNode,
-                          "RETNONE: Bad signature for"
+                          "RETFALSENONE: Bad signature for"
                           " sender of bucket: {}".format(node))
-                    return None
+                    return (False, None)
             else:
                 if not result[1]['signature']:
                     logger(self.sourceNode,
-                          "RETNONE: Signature not present"
+                          "RETFALSENONE: Signature not present"
                           " for sender of bucket: {}".format(node))
-                return None
+                return (False, None)
         else:
             logger(self.sourceNode,
-                  "RETNONE: No response from {},"
+                  "RETFALSENONE: No response from {},"
                   " removing from bucket".format(node))
             self.router.removeContact(node)
-        return None
+        return (False, None)
 
     def handleSignedPingResponse(self, result, node, challenge):
         """
@@ -430,16 +430,16 @@ class KademliaProtocolAppend(KademliaProtocol):
         logger(self.sourceNode, "handleSignedStoreResponse {}".format(str(result)))
         if result[0]:
             if "NACK" in result[1]:
-                return self.handleSignedNACKResponse(result,
-                                                    node,
-                                                    challenge)
+                return (False, self.handleSignedNACKResponse(result,
+                                                            node,
+                                                            challenge))
             nodeIdHex = node.id.encode('hex').upper()
             cert_stored = self.searchForCertificate(nodeIdHex)
             if cert_stored == None:
                 logger(self.sourceNode,
-                "RETNONE: Certificate for sender of store confirmation: {}"
+                "RETFALSENONE: Certificate for sender of store confirmation: {}"
                 " not present in store".format(node))
-                return None
+                return (False, None)
             try: 
                 OpenSSL.crypto.verify(cert_stored,
                                      result[1],
@@ -450,23 +450,23 @@ class KademliaProtocolAppend(KademliaProtocol):
                 return (True, True)
             except:
                 logger(self.sourceNode,
-                      "RETNONE: Bad signature for sender of store"
+                      "RETFALSENONE: Bad signature for sender of store"
                       " confirmation: {}".format(node))
-                return None
+                return (False, None)
         else:
             logger(self.sourceNode,
-                  "RETNONE: No store confirmation from {},"
+                  "RETFALSENONE: No store confirmation from {},"
                   " removing from bucket".format(node))
             self.router.removeContact(node)
-        return None
+        return (False, None)
 
     def handleSignedValueResponse(self, result, node, challenge):
         logger(self.sourceNode, "handleSignedValueResponse {}".format(str(result)))
         if result[0]:
             if "NACK" in result[1]:
-                return self.handleSignedNACKResponse(result,
-                                                    node,
-                                                    challenge)
+                return (False, self.handleSignedNACKResponse(result,
+                                                            node,
+                                                            challenge))
             elif 'bucket' in result[1]:
                 return self.handleSignedBucketResponse(result,
                                                       node,
@@ -476,9 +476,9 @@ class KademliaProtocolAppend(KademliaProtocol):
                 cert_stored = self.searchForCertificate(nodeIdHex)
                 if cert_stored == None:
                     logger(self.sourceNode,
-                          "RETNONE: Certificate for sender of value response: {}"
+                          "RETFALSENONE: Certificate for sender of value response: {}"
                           " not present in store".format(node))
-                    return None
+                    return (False, None)
                 try: 
                     OpenSSL.crypto.verify(cert_stored,
                                          result[1]['signature'],
@@ -488,20 +488,20 @@ class KademliaProtocolAppend(KademliaProtocol):
                     return result
                 except:
                     logger(self.sourceNode,
-                          "RETNONE: Bad signature for sender of "
+                          "RETFALSENONE: Bad signature for sender of "
                           "value response: {}".format(node))
-                    return None
+                    return (False, None)
             else:
                 logger(self.sourceNode,
-                      "RETNONE: Signature not present for sender "
+                      "RETFALSENONE: Signature not present for sender "
                       "of value response: {}".format(node))
-                return None
+                return (False, None)
         else:
             logger(self.sourceNode,
                   "No value response from {}, "
                   "removing from bucket".format(node))
             self.router.removeContact(node)
-        return (False, None) #None
+        return (False, None)
 
     def handleSignedNACKResponse(self, result, node, challenge):
         nodeIdHex = node.id.encode('hex').upper()
