@@ -26,9 +26,10 @@ import json
 from calvin.requests.request_handler import RequestHandler, RT
 from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
 from calvin.utilities.attribute_resolver import format_index_string
-from calvin.runtime.south.plugins.storage.twistedimpl.securedht import certificate
+from calvin.utilities import certificate
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
+from calvin.utilities import calvinuuid
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
@@ -71,10 +72,12 @@ class TestSecureDht(unittest.TestCase):
         print "Creating new domain."
         certificate.new_domain(testconfig)
         print "Created new domain."
-        for i in range(3):
-            name = "++++node{}".format(i)
-            certreq = certificate.new_runtime(testconfig, name)
-            certificate.sign_req(testconfig, os.path.basename(certreq), name)
+        # Now handled within runtime
+        #for i in range(3):
+        #    name = "++++node{}".format(i)
+        #    nodeid = calvinuuid.uuid("NODE")
+        #    certreq = certificate.new_runtime(testconfig, name, nodeid=nodeid)
+        #    certificate.sign_req(testconfig, os.path.basename(certreq), name)
 
         global rt1
         global rt2

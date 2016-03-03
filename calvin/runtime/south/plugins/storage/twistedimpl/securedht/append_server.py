@@ -35,8 +35,7 @@ from kademlia.utils import deferredDict, digest
 from kademlia.storage import ForgetfulStorage
 from kademlia.node import Node, NodeHeap
 from kademlia import version as kademlia_version
-# FIXME refactor to calvin.runtime.north.certificate
-from calvin.runtime.south.plugins.storage.twistedimpl.securedht import certificate
+from calvin.utilities import certificate
 
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig

@@ -36,6 +36,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinuuid
+from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 _log = get_logger(__name__)
@@ -66,7 +67,8 @@ class Node(object):
         except:
             _log.exception("Attributes not correct, uses empty attribute!")
             self.attributes = AttributeResolver(None)
-        self.id = calvinuuid.uuid("NODE")
+        # Obtain node id, when using security also handle runtime certificate
+        self.id = certificate.obtain_cert_node_info(self.attributes.get_node_name_as_str())['id']
         self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)

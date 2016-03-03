@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from calvin.runtime.south.plugins.storage.twistedimpl.securedht import certificate
+from calvin.utilities import certificate
 import os
 print "Trying to create a new domain configuration."
 testconfig = certificate.Config(domain="test")

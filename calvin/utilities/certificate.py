@@ -23,8 +23,7 @@ import os
 import subprocess
 import sys
 import tempfile
-
-import confsort
+from calvin.utilities import confsort
 
 BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
 
@@ -87,6 +86,7 @@ class Config():
                               'organizationName': 'supplied',  # match
                               'emailAddress': 'optional',
                               'commonName': 'supplied',
+                              'dnQualifier': 'optional',
                               'stateOrProvinceName': 'optional'}}
     # TODO Find out why the policy does not match equal org names.
 
@@ -222,7 +222,7 @@ def fingerprint(filename):
     return fingerprint
 
 
-def new_runtime(conf, name):
+def new_runtime(conf, name, nodeid=None):
     """
     Create new runtime certificate.
     Return name of certificate signing request file.
@@ -255,7 +255,8 @@ def new_runtime(conf, name):
 
     organization = conf.domain
     commonname = name
-    subject = "/O={}/CN={}".format(organization, commonname)
+    dnQualifier =  "any" if nodeid is None else nodeid
+    subject = "/O={}/CN={}/dnQualifier={}".format(organization, commonname, dnQualifier)
     # Creates ECC-based certificate
     log = subprocess.Popen(["openssl", "ecparam", "-genkey",
                             "-name", "prime256v1",
@@ -437,3 +438,60 @@ def sign_req(conf, req, name):
     print(signed)
     print(newkeyname)
     os.rename(signed, newkeyname)
+
+
+###########################################################
+# Linking a runtime name on a host to a persistent node-id
+# This linkage is included in CSR and signed by CA
+###########################################################
+import OpenSSL
+from calvin.utilities import calvinuuid
+from calvin.utilities import calvinconfig
+from calvin.utilities.calvinlogger import get_logger
+_log = get_logger(__name__)
+_conf = calvinconfig.get()
+
+def obtain_cert_node_info(name):
+    """ Obtain node id based on name and domain from config
+        Return dict with domain, node name and node id
+    """
+    cert_conffile = _conf.get("security", "certificate_conf")
+    domain = _conf.get("security", "certificate_domain")
+    if domain is None or name is None:
+        # No security or name specified just use standard node UUID
+        _log.debug("OBTAINING no security domain={}, name={}".format(domain, name))
+        return {'domain': None, 'name': name, 'id': calvinuuid.uuid("NODE")}
+
+    cert_conf = Config(cert_conffile, domain)
+    name_dir = os.path.join(cert_conf.configuration["CA_default"]["runtimes_dir"], name)
+    # Does existing signed runtime certificate exist, return info
+    try:
+        filenames = os.listdir(os.path.join(name_dir, "mine"))
+        content = open(os.path.join(name_dir, "mine", filenames[0]), 'rt').read()
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                              content)
+        subject = cert.get_subject()
+        if subject.commonName != name or subject.organizationName != domain:
+            raise
+        _log.debug("OBTAINING existing security domain={}, name={}".format(domain, name))
+        return {'domain': domain, 'name': name, 'id': subject.dnQualifier}
+    except:
+        pass
+        #_log.exception("OBTAINING fail existing security domain={}, name={}".format(domain, name))
+
+    # Create new CSR
+    csrfile = new_runtime(cert_conf, name, nodeid=calvinuuid.uuid("NODE"))
+    _log.debug("OBTAINING new security csr={}, domain={}, name={}".format(csrfile, domain, name))
+    try:
+        content = open(csrfile, 'rt').read()
+        cert = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM,
+                                                      content)
+        subject = cert.get_subject()
+        # TODO multicast signing of CSR, now just sign it assuming local CA
+        sign_req(cert_conf, os.path.basename(csrfile), name)
+        _log.debug("OBTAINING new security domain={}, name={}".format(domain, name))
+        return {'domain': domain, 'name': name, 'id': subject.dnQualifier}
+    except:
+        #_log.exception("OBTAINING fail new security domain={}, name={}".format(domain, name))
+        return {'domain': None, 'name': name, 'id': calvinuuid.uuid("NODE")}
+

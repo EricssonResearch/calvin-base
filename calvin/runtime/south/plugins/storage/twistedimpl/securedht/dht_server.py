@@ -25,8 +25,7 @@ from twisted.internet import reactor, defer, threads
 
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import AppendServer
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import SSDPServiceDiscovery
-# FIXME refactor to calvin.runtime.north.certificate
-from calvin.runtime.south.plugins.storage.twistedimpl.securedht import certificate
+from calvin.utilities import certificate
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
