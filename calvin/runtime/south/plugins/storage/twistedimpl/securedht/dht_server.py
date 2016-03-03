@@ -163,6 +163,7 @@ class AutoDHTServer(StorageBase):
                                                   certstr)
         except:
             raise
+        # Derive DHT node id
         key = cert.digest("sha256")
         newkey = key.replace(":", "")
         bytekey = newkey.decode("hex")
@@ -215,9 +216,10 @@ class AutoDHTServer(StorageBase):
         # Wait until servers all listen
         dl = defer.DeferredList(dlist)
         dl.addBoth(start_msearch)
-        #FIXME handle inside IDServerApp
+        # Only for logging
         self.dht_server.kserver.protocol.sourceNode.port = port
         self.dht_server.kserver.protocol.sourceNode.ip = "0.0.0.0"
+        #FIXME handle inside ServerApp
         self.dht_server.kserver.name = name
         self.dht_server.kserver.protocol.name = name
         self.dht_server.kserver.protocol.storeOwnCert(certstr)
