@@ -30,10 +30,10 @@ from collections import Counter
 from twisted.internet import defer, task, reactor
 from kademlia.network import Server
 from kademlia.protocol import KademliaProtocol
-from kademlia.crawling import NodeSpiderCrawl, ValueSpiderCrawl, RPCFindResponse
+from kademlia import crawling
 from kademlia.utils import deferredDict, digest
 from kademlia.storage import ForgetfulStorage
-from kademlia.node import Node
+from kademlia.node import Node, NodeHeap
 from kademlia import version as kademlia_version
 # FIXME refactor to calvin.runtime.north.certificate
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht import certificate
@@ -1289,6 +1289,74 @@ class AppendServer(Server):
                                       local_value=value if exists else None)
         return spider.find()
 
+
+class SpiderCrawl(crawling.SpiderCrawl):
+    def __init__(self, protocol, node, peers, ksize, alpha):
+        """
+        Create a new C{SpiderCrawl}er.
+
+        Args:
+            protocol: A :class:`~kademlia.protocol.KademliaProtocol` instance.
+            node: A :class:`~kademlia.node.Node` representing the key we're looking for
+            peers: A list of :class:`~kademlia.node.Node` instances that provide the entry point for the network
+            ksize: The value for k based on the paper
+            alpha: The value for alpha based on the paper
+        """
+        from kademlia.log import Logger
+        self.protocol = protocol
+        self.ksize = ksize
+        self.alpha = alpha
+        self.node = node
+        # Changed from ksize to (ksize + 1) * ksize
+        self.nearest = NodeHeap(self.node, (self.ksize+1) * self.ksize)
+        self.lastIDsCrawled = []
+        self.log = Logger(system=self)
+        self.log.info("creating spider with peers: %s" % peers)
+        self.nearest.push(peers)
+
+
+class NodeSpiderCrawl(SpiderCrawl, crawling.NodeSpiderCrawl):
+    # Make sure that our SpiderCrawl __init__ gets called (crawling.NodeSpiderCrawl don't have __init__)
+    pass
+
+
+class ValueSpiderCrawl(SpiderCrawl, crawling.ValueSpiderCrawl):
+    def __init__(self, protocol, node, peers, ksize, alpha):
+        # Make sure that our SpiderCrawl __init__ gets called
+        SpiderCrawl.__init__(self, protocol, node, peers, ksize, alpha)
+        # copy crawling.ValueSpiderCrawl statement besides calling original SpiderCrawl.__init__
+        self.nearestWithoutValue = NodeHeap(self.node, 1)
+
+    def _nodesFound(self, responses):
+        """
+        Handle the result of an iteration in _find.
+        """
+        toremove = []
+        foundValues = []
+        for peerid, response in responses.items():
+            response = crawling.RPCFindResponse(response)
+            if not response.happened():
+                toremove.append(peerid)
+            elif response.hasValue():
+                foundValues.append(response.getValue())
+            else:
+                peer = self.nearest.getNodeById(peerid)
+                self.nearestWithoutValue.push(peer)
+                self.nearest.push(response.getNodeList())
+        self.nearest.remove(toremove)
+
+        # Changed that first try to wait for alpha responses
+        if len(foundValues) >= self.alpha: 
+            return self._handleFoundValues(foundValues) 
+        if self.nearest.allBeenContacted():
+            if len(foundValues) > 0: 
+                return self._handleFoundValues(foundValues) 
+            else:
+                return None
+
+        return self.find()
+
+
 class ValueListSpiderCrawl(ValueSpiderCrawl):
 
     def __init__(self, *args, **kwargs):
@@ -1302,7 +1370,7 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
         toremove = []
         foundValues = []
         for peerid, response in responses.items():
-            response = RPCFindResponse(response)
+            response = crawling.RPCFindResponse(response)
             if not response.happened():
                 toremove.append(peerid)
             elif response.hasValue():
@@ -1315,15 +1383,20 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
                     (self.nearestWithoutValue.getIDs(), self.nearest.getIDs(), toremove))
         self.nearest.remove(toremove)
 
-        if len(foundValues) > 0:
-            return self._handleFoundValues(foundValues)
+        # Changed that first try to wait for alpha responses
+        if len(foundValues) >= self.alpha: 
+            return self._handleFoundValues(foundValues) 
         if self.nearest.allBeenContacted():
-            # not found at neighbours!
-            if self.local_value:
-                # but we had it
-                return self.local_value
+            if len(foundValues) > 0: 
+                return self._handleFoundValues(foundValues) 
             else:
-                return None
+                # not found at neighbours!
+                if self.local_value:
+                    # but we had it
+                    return self.local_value
+                else:
+                    return None
+
         return self.find()
 
     def _handleFoundValues(self, jvalues):
