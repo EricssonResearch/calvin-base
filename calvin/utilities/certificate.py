@@ -114,6 +114,9 @@ class Config():
                 self.configuration = self.parse_opensslconf()
                 print "Made new configuration at " \
                       "{}".format(self.configfile)
+        else:
+            raise Exception("Missing argument, neither domain nor "
+                            "configfile supplied.")
 
     def new_opensslconf(self):
         """
@@ -424,7 +427,7 @@ def sign_req(conf, req, name):
 
     fp = fingerprint(signed)
     newcert = "{}.pem".format(fp.replace(":", "")[-40:])
-    
+
     try:
         os.makedirs(os.path.join(name_dir, "mine"))
     except OSError:
@@ -438,7 +441,7 @@ def sign_req(conf, req, name):
     print(signed)
     print(newkeyname)
     os.rename(signed, newkeyname)
-
+    return newkeyname
 
 ###########################################################
 # Linking a runtime name on a host to a persistent node-id
