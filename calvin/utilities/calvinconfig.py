@@ -121,8 +121,10 @@ class CalvinConfig(object):
             _section = 'global' if section is None else section.lower()
             _option = option.lower()
             return self.config[_section][_option]
+        except KeyError:
+            _log.info("Option {}.{} not set".format(_section, _option ))
         except Exception as e:
-            _log.error("Error while getting value {}".format(e))
+            _log.error("Error reading option %s.%s: %r" % (_section, _option, e))
             return None
 
     def set(self, section, option, value):
