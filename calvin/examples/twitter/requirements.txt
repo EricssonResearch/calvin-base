@@ -1,0 +1,2 @@
+tweepy=3.5.0
+oauthlib==1.0.3

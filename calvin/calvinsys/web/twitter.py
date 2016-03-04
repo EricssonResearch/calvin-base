@@ -22,6 +22,28 @@ _log = get_logger(__name__)
 
 
 class Twitter(object):
+    """
+        A calvinsys module for posting tweets. Requires twitter credentials of the form
+        { 
+            "customer_key": "<key>",
+            "customer_secret": "<secret>",
+            "access_token_key": "<key>",
+            "access_token_secret": "<secret">,
+        }
+        The keys and secrets should be as per the twitter api documentation.
+        
+        The credentials are added either as a private runtime attribute, i.e
+        
+        /private/web/twitter/
+        
+        or supplied by the actor before trying to tweet, i.e.
+        
+        actor.use('calvinsys.web.twitter', shorthand='twitter')
+        actor['twitter'].set_credentials({...})
+        
+        Note: Currently, credentials can only be supplied once and cannot be changed once in use.
+    """
+    
     def __init__(self, node, actor):
         self._node = node
         self._actor = actor
@@ -34,10 +56,18 @@ class Twitter(object):
             self._tweeter = None
             
         
+    def set_credentials(self, twitter_credentials):
+        if not self._tweeter:
+            self._tweeter = twitter.Twitter(twitter_credentials)
+            success = True
+        else :
+            _log.warning("Credentials already supplied - ignoring")
+            success = False
+        return success
         
     def post_update(self, text):
         if not self._tweeter:
-            _log.warning("Cannot tweet")
+            _log.warning("Credentials not set, cannot tweet")
             return
         self._tweeter.post_update(text)
 

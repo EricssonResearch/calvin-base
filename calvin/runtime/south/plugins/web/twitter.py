@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,10 +34,6 @@ class Twitter(object):
         self._in_progress = None
         self._next_message = None
         self._previous_message = None
-        self._consumer_key = credentials['consumer_key']
-        self._consumer_secret = credentials['consumer_secret']
-        self._access_token_key = credentials['access_token_key']
-        self._access_token_secret = credentials['access_token_secret']
         auth = tweepy.OAuthHandler(credentials['consumer_key'], credentials['consumer_secret'])
         auth.set_access_token(credentials['access_token_key'], credentials['access_token_secret'])
         self._api = tweepy.API(auth)
