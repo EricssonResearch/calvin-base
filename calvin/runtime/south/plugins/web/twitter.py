@@ -34,7 +34,6 @@ class Twitter(object):
         self._in_progress = None
         self._next_message = None
         self._previous_message = None
-        print("{}".format(credentials))
         self._consumer_key = credentials['consumer_key']
         self._consumer_secret = credentials['consumer_secret']
         self._access_token_key = credentials['access_token_key']
