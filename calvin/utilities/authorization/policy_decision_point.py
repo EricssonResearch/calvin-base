@@ -16,6 +16,7 @@
 
 import re
 from calvin.utilities.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
+from calvin.utilities.authorization.policy_information_point import PolicyInformationPoint
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -40,8 +41,7 @@ class PolicyDecisionPoint(object):
         #    self.prp = DbPolicyRetrievalPoint(self.config["policy_storage_path"])
         #else:
         self.prp = FilePolicyRetrievalPoint(self.config["policy_storage_path"])
-        # TODO: write AttributeFinder()
-        #self.pip = AttributeFinder()
+        self.pip = PolicyInformationPoint()
 
     def authorize(self, request):
         if "action" in request and "requires" in request["action"]:
@@ -99,14 +99,13 @@ class PolicyDecisionPoint(object):
                 try:
                     request_value = request[attribute_type][attribute]
                 except KeyError:
-                    return False
-                    # TODO: Try to fetch missing attribute from AttributeFinder (PIP)
-                    #try:
-                    #    # TODO: cache this value. Same value should be used for future tests in this policy or other policies when handling this request
-                    #    request_value = self.pip.get_attribute_value(attribute_type, attribute)
-                    #except KeyError:
-                    #    _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (attribute_type, attribute))
-                    #    return False # Or indeterminate (if MustBePresent is True and none of the other targets return False)?
+                    # Try to fetch missing attribute from Policy Information Point (PIP)
+                    try:
+                        # TODO: cache this value. Same value should be used for future tests in this policy or other policies when handling this request
+                        request_value = self.pip.get_attribute_value(attribute_type, attribute)
+                    except KeyError:
+                        _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (attribute_type, attribute))
+                        return False  # Or 'indeterminate' (if MustBePresent is True and none of the other targets return False)?
                 if not isinstance(request_value, list):
                     request_value = [request_value]
                 policy_value = target[attribute_type][attribute]
@@ -171,10 +170,14 @@ class PolicyDecisionPoint(object):
                     try:
                         args[index] = request[path[1]][path[2]]  # path[0] is "attr"
                     except KeyError:
-                        return False
                         # TODO: check in attribute cache first
-                        # TODO: Try to fetch missing attribute from AttributeFinder (PIP)
-                        # args[index] = self.pip.get_attribute_value(path[1], path[2])
+                        # Try to fetch missing attribute from Policy Information Point (PIP)
+                        try:
+                            # TODO: cache this value. Same value should be used for future tests in this policy or other policies when handling this request
+                            args[index] = self.pip.get_attribute_value(path[1], path[2])
+                        except KeyError:
+                            _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (path[1], path[2]))
+                            return False
                 # Accept both strings and lists by turning strings into single element lists
                 if isinstance(args[index], basestring):
                     args[index] = [args[index]]

@@ -61,7 +61,7 @@ class FilePolicyRetrievalPoint(PolicyRetrievalPoint):
         # Replace ~ by the user's home directory and add trailing slash if it is not already there
         self.path = os.path.join(os.path.expanduser(path), '') 
     
-    # Use get_policies instead and do the matching in authorization.py?
+    # Use get_policies instead and do the matching in policy_decision_point.py?
     def get_matching_policies(self, request, name_pattern):
         """Return policies where policy target matches request"""
         return

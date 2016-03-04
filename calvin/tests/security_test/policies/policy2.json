@@ -11,12 +11,25 @@
 	"rules": [
 		{
 			"id": "policy2_rule1",
-			"description": "Permit access to 'calvinsys.events.timer', 'calvinsys.io.*' and 'runtime'",
+			"description": "Permit access to 'calvinsys.events.timer', 'calvinsys.io.*' and 'runtime' if condition is true",
 			"effect": "permit",
 			"target": {
 				"action": {
 					"requires": ["calvinsys.events.timer", "calvinsys.io.*", "runtime"]
 				}
+			},
+			"condition": {
+				"function": "and",
+				"attributes": [
+					{
+						"function": "equal",
+						"attributes": ["attr:resource:country", ["SE", "DK"]]
+					},
+					{
+						"function": "greater_than_or_equal",
+						"attributes": ["attr:environment:current_date", "2016-03-04"]
+					} 
+				]
 			}
 		}
 	]
