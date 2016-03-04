@@ -23,6 +23,8 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
+import random
 from calvin.utilities import confsort
 
 BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
@@ -408,25 +410,48 @@ def sign_req(conf, req, name):
     except OSError:
         pass
 
-    serial = incr(conf.configuration["CA_default"]["serial"])
+    fname_lock = "{}.lock".format(conf.configuration["CA_default"]["serial"])
+    fdlock = None
+    try:
+        # Take primitive lock
+        while True:
+            try:
+                fdlock = os.open(fname_lock, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+            except OSError:
+                # Try again
+                time.sleep(random.random()*0.2)
+                continue
+            break
 
-    log = subprocess.Popen(["openssl", "ca",
-                            "-in", request,
-                            "-utf8",
-                            "-config", conf.configfile,
-                            "-out", signed,
-                            "-passin", "file:" + password_file],
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
-                           stdin=subprocess.PIPE)
+        serial = incr(conf.configuration["CA_default"]["serial"])
 
-    log.stdin.write("y\r\n")
-    stdout, stderr = log.communicate("y\r\n")
-    if log.returncode != 0:
-        raise IOError(stderr)
+        log = subprocess.Popen(["openssl", "ca",
+                                "-in", request,
+                                "-utf8",
+                                "-config", conf.configfile,
+                                "-out", signed,
+                                "-passin", "file:" + password_file],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE,
+                               stdin=subprocess.PIPE)
 
-    fp = fingerprint(signed)
-    newcert = "{}.pem".format(fp.replace(":", "")[-40:])
+        log.stdin.write("y\r\n")
+        stdout, stderr = log.communicate("y\r\n")
+        if log.returncode != 0:
+            raise IOError(stderr)
+
+        fp = fingerprint(signed)
+        newcert = "{}.pem".format(fp.replace(":", "")[-40:])
+    except:
+        pass
+    finally:
+        # Release primitive lock
+        if fdlock:
+            try:
+                os.close(fdlock)
+                os.remove(fname_lock)
+            except:
+                pass
 
     try:
         os.makedirs(os.path.join(name_dir, "mine"))
