@@ -1,0 +1,23 @@
+{
+	"id": "policy1",
+	"description": "Security policy for user1 with actor signed by 'signer'",
+	"rule_combining": "permit_overrides",
+	"target": {
+		"subject": {
+			"user": "user1",
+			"actor_signer": "signer"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy1_rule1",
+			"description": "Permit access to 'runtime' and 'calvinsys.io.*'",
+			"effect": "permit",
+			"target": {
+				"action": {
+					"requires": ["runtime", "calvinsys.io.*"]
+				}
+			}
+		}
+	]
+}

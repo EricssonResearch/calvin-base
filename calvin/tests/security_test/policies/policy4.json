@@ -1,0 +1,18 @@
+{
+	"id": "policy4",
+	"description": "All possible application signers (or unsigned) permitted for user2 and user3",
+	"rule_combining": "permit_overrides",
+	"target": {
+		"subject": {
+			"user": ["user2", "user3"],
+			"application_signer": ".*"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy4_rule1",
+			"description": "Permit if policy target matches",
+			"effect": "permit"
+		}
+	]
+}

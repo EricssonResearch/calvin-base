@@ -1,0 +1,23 @@
+{
+	"id": "policy2",
+	"description": "Security policy for user2/radius_user1 with actor signed by 'signer'",
+	"rule_combining": "permit_overrides",
+	"target": {
+		"subject": {
+			"user": ["user2", "radius_user1"],
+			"actor_signer": "signer"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy2_rule1",
+			"description": "Permit access to 'calvinsys.events.timer', 'calvinsys.io.*' and 'runtime'",
+			"effect": "permit",
+			"target": {
+				"action": {
+					"requires": ["calvinsys.events.timer", "calvinsys.io.*", "runtime"]
+				}
+			}
+		}
+	]
+}

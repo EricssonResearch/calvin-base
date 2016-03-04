@@ -1,0 +1,18 @@
+{
+	"id": "policy5",
+	"description": "Only application signer 'signer' permitted for user1, user4, radius_user1",
+	"rule_combining": "permit_overrides",
+	"target": {
+		"subject": {
+			"user": ["user1", "user4", "radius_user1"],
+			"application_signer": "signer"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy5_rule1",
+			"description": "Permit if policy target matches",
+			"effect": "permit"
+		}
+	]
+}

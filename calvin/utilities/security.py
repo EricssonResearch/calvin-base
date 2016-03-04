@@ -107,11 +107,10 @@ class Security(object):
                 _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
                             "NB! NO AUTHENTICATION USED")
                 return False
-            _log.info("Security: Radius authentication method chosen")
+            _log.debug("Security: Radius authentication method chosen")
             return self.authenticate_using_radius_server()
-        _log.info("Security: No security config, so authentication disabled")
+        _log.debug("Security: No security config, so authentication disabled")
         return True
-
 
     def authenticate_using_radius_server(self):
         auth = []
@@ -129,7 +128,7 @@ class Security(object):
             for i in reply.keys():
                 _log.debug("%s: %s" % (i, reply[i]))
             if reply.code==pyrad.packet.AccessAccept:
-                _log.debug("Security:access accepted")
+                _log.debug("Security: access accepted")
                 auth.append(True)
 #                return True
             else:
@@ -247,7 +246,7 @@ class Security(object):
             return "indeterminate"
 
     def authorize_using_local_policy_files(self, request):
-        self.pdp = PolicyDecisionPoint()
+        self.pdp = PolicyDecisionPoint(self.sec_conf['authorization'])
         response = self.pdp.authorize(request)
         return response['decision']
 
@@ -313,6 +312,7 @@ class Security(object):
                 with open(trusted_cert_path, 'rt') as f:
                     trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
                     try:
+                        # Verify signature
                         OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
                         _log.debug("Security: signature correct")
                         self.subject[flag + "_signer"] = [trusted_cert.get_issuer().CN]  # The Common Name field for the issuer
@@ -326,4 +326,3 @@ class Security(object):
         _log.error("Security: verification of %s signature failed" % flag)
         self.subject[flag + "_signer"] = ["__invalid__"]
         return False
-        

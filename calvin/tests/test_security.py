@@ -68,44 +68,14 @@ class TestSecurity(unittest.TestCase):
         rt1_conf.set("security", "security_conf", {
                         "comment": "Experimental security settings",
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
-                        "access_control_enabled": "False",
+                        "access_control_enabled": False,
                         "authentication": {
                             "procedure": "local_file",
                             "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
-                            }
-                    })
-        rt1_conf.set("security", "security_policy", {
-                        "policy1": {
-                            "principal": {
-                                "user": ["user1"]
-                            },
-                            "application_signature": ["signer"],
-                            "actor_signature": ["signer"],
-                            "resource": ["calvinsys"]
                         },
-                        "policy2":{
-                            "principal": {
-                                "user": ["user2"],
-                            },
-                            "application_signature": ["__unsigned__"],
-                            "actor_signature": ["signer"],
-                            "resource": ["calvinsys", "runtime"]
-                        },
-                        "policy3": {
-                            "principal": {
-                                "user": ["user3"],
-                            },
-                            "application_signature": ["__unsigned__"],
-                            "actor_signature": ["__unsigned__"],
-                            "resource": ["calvinsys", "runtime"]
-                        },
-                        "policy4": {
-                            "principal": {
-                                "user": ["user4"],
-                            },
-                            "application_signature": ["signer"],
-                            "actor_signature": ["unsigner"],
-                            "resource": ["runtime"]
+                        "authorization": {
+                            "procedure": "local_file",
+                            "policy_storage_path": security_test_dir + "policies"
                         }
                     })
         rt1_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
@@ -130,50 +100,19 @@ class TestSecurity(unittest.TestCase):
 
 
 
-        
         rt2_conf = copy.deepcopy(_conf)
         rt2_conf.add_section("security")
         rt2_conf.set("security", "security_conf", {
                         "comment": "Experimental security settings",
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
-                        "access_control_enabled": "False",
+                        "access_control_enabled": True,
                         "authentication": {
                             "procedure": "local_file",
                             "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
-                            }
-                    })
-        rt2_conf.set("security", "security_policy", {
-                        "policy1": {
-                            "principal": {
-                                "user": ["user1"]
-                            },
-                            "application_signature": ["signer"],
-                            "actor_signature": ["signer"],
-                            "resource": ["calvinsys"]
                         },
-                        "policy2":{
-                            "principal": {
-                                "user": ["user2"],
-                            },
-                            "application_signature": ["__unsigned__"],
-                            "actor_signature": ["signer"],
-                            "resource": ["calvinsys", "runtime"]
-                        },
-                        "policy3": {
-                            "principal": {
-                                "user": ["user3"],
-                            },
-                            "application_signature": ["__unsigned__"],
-                            "actor_signature": ["__unsigned__"],
-                            "resource": ["calvinsys", "runtime"]
-                        },
-                        "policy4": {
-                            "principal": {
-                                "user": ["user4"],
-                            },
-                            "application_signature": ["signer"],
-                            "actor_signature": ["unsigner"],
-                            "resource": ["runtime"]
+                        "authorization": {
+                            "procedure": "local_file",
+                            "policy_storage_path": security_test_dir + "policies"
                         }
                     })
         rt2_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
@@ -203,22 +142,15 @@ class TestSecurity(unittest.TestCase):
         rt3_conf.set("security", "security_conf", {
                         "comment": "Experimental security settings",
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
-                        "access_control_enabled": "True",
-                        "authentication_method": "radius",
+                        "access_control_enabled": True,
                         "authentication": {
                             "procedure": "radius", 
-                            "server_ip": "136.225.129.50", 
+                            "server_ip": "localhost", 
                             "secret": "elxghyc5lz1_passwd"
-                            }
-                    })
-        rt3_conf.set("security", "security_policy", {
-                        "policy1": {
-                            "principal": {
-                                "user": ["radius_user1"],
-                            },
-                            "application_signature": ["signer"],
-                            "actor_signature": ["signer"],
-                            "resource": ["calvinsys", "runtime"]
+                        },
+                        "authorization": {
+                            "procedure": "local_file",
+                            "policy_storage_path": security_test_dir + "policies"
                         }
                     })
         rt3_conf.set('global', 'actor_paths', [security_test_dir + "/store"])
@@ -289,7 +221,7 @@ class TestSecurity(unittest.TestCase):
         rt_ids = set([rt1_id, rt2_id, rt3_id])
         for i in range(30):
             try:
-                if not (rt1_id in caps1  and rt2_id in caps1 and rt3_id in caps1):
+                if not (rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1):
                     caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
                     caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
@@ -304,12 +236,13 @@ class TestSecurity(unittest.TestCase):
                 time.sleep(0.1)
         assert not failed
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
-        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
         _log.analyze("TESTRUN", "+ RT1 INDEX", {})
-        assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
-        _log.analyze("TESTRUN", "+ rt2 INDEX", {})
-        assert request_handler.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
-        _log.analyze("TESTRUN", "+ rt3 INDEX", {})
+        assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+        _log.analyze("TESTRUN", "+ RT2 INDEX", {})
+        assert request_handler.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
+        _log.analyze("TESTRUN", "+ RT3 INDEX", {})
+
 
 ###################################
 #   Signature related tests
@@ -325,7 +258,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
@@ -336,10 +269,9 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-        #print "RESULT:", result
         time.sleep(2)
 
-        # For example verify that actors exist like this
+        # Verify that actors exist like this
         actors = request_handler.get_actors(rt1)
         assert result['actor_map']['test_security1_correctly_signed:src'] in actors
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
@@ -349,8 +281,6 @@ class TestSecurity(unittest.TestCase):
         assert len(actual) > 5
 
         request_handler.delete_application(rt1, result['application_id'])
-
-
 
     @pytest.mark.slow
     def testSecurity_NEGATIVE_IncorrectlySignedApp(self):
@@ -362,10 +292,10 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_incorrectly_signed.calvin")
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_incorrectly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt1, "test_security1_incorrectly_signed", content['file'], 
                         credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
                         check=True)
         except Exception as e:
@@ -386,7 +316,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctlySignedApp_incorrectlySignedActor.calvin")
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_correctlySignedApp_incorrectlySignedActor.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_correctlySignedApp_incorrectlySignedActor", content['file'], 
@@ -395,10 +325,9 @@ class TestSecurity(unittest.TestCase):
         except Exception as e:
             _log.debug(str(e))
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor")
+                raise Exception("Failed security verification of app test_security1_correctlySignedApp_incorrectlySignedActor")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor, no use to verify if requirements fulfilled")
-        #print "RESULT:", result
+            raise Exception("Failed deployment of app test_security1_correctlySignedApp_incorrectlySignedActor, no use to verify if requirements fulfilled")
         time.sleep(2)
 
         # Verify that actors exist like this
@@ -408,84 +337,122 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'] in actors
 
         actual = request_handler.report(rt1, result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'])
-        assert len(actual) == 0
+        assert len(actual) == 0  # Means that the incorrectly signed actor was not accepted
 
         request_handler.delete_application(rt1, result['application_id'])
+
 
 ###################################
 #   Policy related tests
 ###################################
+
     @pytest.mark.slow
-    def testSecurity_POSITIVE_Allow_UnsignedApp_SignedActors(self):
+    def testSecurity_POSITIVE_Permit_UnsignedApp_SignedActors(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt1
+        global rt2
         global security_test_dir
 
         self.verify_storage()
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_unsignedApp_signedActors.calvin")
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_unsignedApp_signedActors.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = request_handler.deploy_application(rt1, "test_security1_unsignedApp_signedActors", content['file'], 
+            result = request_handler.deploy_application(rt2, "test_security1_unsignedApp_signedActors", content['file'], 
                         credentials={"user": ["user2"], "password": ["pass2"]}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_unsigned")
+                raise Exception("Failed security verification of app test_security1_unsignedApp_signedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_unsignedApp_signedActors, no use to verify if requirements fulfilled")
-        #print "RESULT:", result
         time.sleep(2)
 
-        # For example verify that actors exist like this
-        actors = request_handler.get_actors(rt1)
+        # Verify that actors exist like this
+        actors = request_handler.get_actors(rt2)
         assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors
         assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors
         assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors
 
-        actual = request_handler.report(rt1, result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
+        actual = request_handler.report(rt2, result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
         assert len(actual) > 5
 
-        request_handler.delete_application(rt1, result['application_id'])
-
+        request_handler.delete_application(rt2, result['application_id'])
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_Allow_UnsignedApp_Unsigned_Actor(self):
+    def testSecurity_POSITIVE_Permit_UnsignedApp_Unsigned_Actor(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt1
+        global rt2
         global security_test_dir
 
         self.verify_storage()
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_unsignedApp_unsignedActors.calvin")
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_unsignedApp_unsignedActors.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            result = request_handler.deploy_application(rt1, "test_security1_unsignedApp_unsignedActors", content['file'], 
+            result = request_handler.deploy_application(rt2, "test_security1_unsignedApp_unsignedActors", content['file'], 
                         credentials={"user": ["user3"], "password": ["pass3"]}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app test_security1_unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-        #print "RESULT:", result
+            raise Exception("Failed deployment of app test_security1_unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
         time.sleep(2)
 
-        # For example verify that actors exist like this
-        actors = request_handler.get_actors(rt1)
+        # Verify that actors exist like this
+        actors = request_handler.get_actors(rt2)
         assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors
         assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors
         assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors
 
-        actual = request_handler.report(rt1, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
+        actual = request_handler.report(rt2, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
         assert len(actual) > 5
 
-        request_handler.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt2, result['application_id'])
 
+    @pytest.mark.slow
+    def testSecurity_NEGATIVE_Deny_SignedApp_SignedActor_UnallowedRequirement(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt2
+        global security_test_dir
+
+        self.verify_storage()
+
+        result = {}
+        try:
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_correctly_signed.calvin")
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
+                        credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
+                        check=True)
+        except Exception as e:
+            _log.debug(str(e))
+            if e.message.startswith("401"):
+                raise Exception("Failed security verification of app test_security1_correctly_signed")
+            _log.exception("Test deploy failed")
+            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+        time.sleep(2)
+
+        # Verify that actors exist like this
+        actors = request_handler.get_actors(rt2)
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
+
+        actual = request_handler.report(rt2, result['actor_map']['test_security1_correctly_signed:snk'])
+        assert len(actual) == 0  # Means that the actor with unallowed requirements was not accepted
+
+        request_handler.delete_application(rt2, result['application_id'])
+
+
+###################################
+#   Authentication related tests
+###################################
 
     @pytest.mark.slow
     def testSecurity_NEGATIVE_UnallowedUser(self):
@@ -497,7 +464,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
@@ -509,7 +476,7 @@ class TestSecurity(unittest.TestCase):
                 return
             _log.exception("Test deploy failed for non security reasons")
 
-        raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")  
+        raise Exception("Deployment of app test_security1_correctly_signed did not fail for security reasons")  
 
     @pytest.mark.slow
     def testSecurity_NEGATIVE_IncorrectPassword(self):
@@ -521,7 +488,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
@@ -535,9 +502,6 @@ class TestSecurity(unittest.TestCase):
 
         raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")  
 
-###################################
-#   Authentication related tests
-###################################
     @pytest.mark.slow
     def testSecurity_POSITIVE_RADIUS_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
@@ -548,7 +512,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(security_test_dir + "/scripts/test_security1_correctly_signed.calvin")
+            content = Security.verify_signature_get_files(security_test_dir + "scripts/test_security1_correctly_signed.calvin")
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt3, "test_security1_correctly_signed", content['file'], 
@@ -559,10 +523,9 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-        #print "RESULT:", result
         time.sleep(2)
 
-        # For example verify that actors exist like this
+        # Verify that actors exist like this
         actors = request_handler.get_actors(rt3)
         assert result['actor_map']['test_security1_correctly_signed:src'] in actors
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
@@ -572,4 +535,3 @@ class TestSecurity(unittest.TestCase):
         assert len(actual) > 5
 
         request_handler.delete_application(rt3, result['application_id'])
-

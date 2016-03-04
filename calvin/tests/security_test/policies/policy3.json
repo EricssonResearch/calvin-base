@@ -1,0 +1,23 @@
+{
+	"id": "policy3",
+	"description": "Security policy for user3",
+	"rule_combining": "permit_overrides",
+	"target": {
+		"subject": {
+			"user": "user3",
+			"actor_signer": ".*"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy3_rule1",
+			"description": "Permit access to 'calvinsys.*', and 'runtime'",
+			"effect": "permit",
+			"target": {
+				"action": {
+					"requires": ["calvinsys.*", "runtime"]
+				}
+			}
+		}
+	]
+}

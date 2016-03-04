@@ -44,10 +44,27 @@ class PolicyDecisionPoint(object):
         #self.pip = AttributeFinder()
 
     def authorize(self, request):
+        if "action" in request and "requires" in request["action"]:
+            requires = request["action"]["requires"]
+            _log.debug("PolicyDecisionPoint: Requires %s" % requires)
+            if len(requires) > 1:
+                decisions = []
+                # Create one request for each requirement
+                for req in requires:
+                    requirement_request = request.copy()
+                    requirement_request["action"]["requires"] = [req]
+                    decisions.append(self.combined_policy_decision(requirement_request))
+                # If the policy decisions for all requirements are the same, respond with that decision
+                if all(x == decisions[0] for x in decisions):
+                    return self.create_response(decisions[0])
+                else:
+                    return self.create_response("indeterminate")
+        return self.create_response(self.combined_policy_decision(request))
+
+    def combined_policy_decision(self, request):
         # Get policies from PRP (Policy Retrieval Point). Policy needs to be signed if external PRP is used.
         # In most cases the PRP and the PDP will be located on the same physical machine.
         # If database is used: policies are indexed based on their Target constraints
-        decision = None
         policy_decisions = []
         try:
             policies = self.prp.get_policies(self.config["policy_name_pattern"])
@@ -57,20 +74,20 @@ class PolicyDecisionPoint(object):
                     decision = self.policy_decision(policy, request)
                     if ((decision == "permit" and self.config["policy_combining"] == "permit_overrides") or 
                       (decision == "deny" and self.config["policy_combining"] == "deny_overrides")):
-                        return self.create_response(decision)  # Stop checking further policies
+                        return decision  # Stop checking further policies
                     policy_decisions.append(decision)
             if "indeterminate" in policy_decisions:
-                return self.create_response("indeterminate")
+                return "indeterminate"
             if not all(x == "not_applicable" for x in policy_decisions):
-                return self.create_response("deny") if self.config["policy_combining"] == "permit_overrides" else self.create_response("permit")
+                return "deny" if self.config["policy_combining"] == "permit_overrides" else "permit"
             else:
-                return self.create_response("not_applicable")
+                return "not_applicable"
         except:
-            return self.create_response("indeterminate")
+            return "indeterminate"
 
     def create_response(self, decision):
         # The following JSON code is inspired by the XACML JSON Profile but has been simplified (to be more compact).
-        # TODO: include more information to make it possible to send the response to other nodes withing the domain when an actor is migrated
+        # TODO: include more information to make it possible to send the response to other nodes within the domain when an actor is migrated
         return {
             "decision": decision
         }
@@ -102,7 +119,7 @@ class PolicyDecisionPoint(object):
                     if not any([re.match(r+'$', x) for r in policy_value for x in request_value]):
                         _log.debug("PolicyDecisionPoint: Not matching: %s %s %s" % (attribute_type, attribute, policy_value))
                         return False
-                except TypeError: # If the value is not a string
+                except TypeError:  # If the value is not a string
                     if set(request_value).isdisjoint(policy_value):
                         _log.debug("PolicyDecisionPoint: Not matching: %s %s %s" % (attribute_type, attribute, policy_value))
                         return False
@@ -130,7 +147,7 @@ class PolicyDecisionPoint(object):
             try:
                 args = []
                 for attribute in rule["condition"]["attributes"]:
-                    if isinstance(attribute, dict): # Contains another function
+                    if isinstance(attribute, dict):  # Contains another function
                         args.append(self.evaluate_function(attribute["function"], attribute["attributes"], request))
                     else:
                         args.append(attribute)
@@ -152,7 +169,7 @@ class PolicyDecisionPoint(object):
                     # Get value from request if the argument starts with "attr"
                     path = arg.split(":")
                     try:
-                        args[index] = request[path[1]][path[2]] # path[0] is "attr"
+                        args[index] = request[path[1]][path[2]]  # path[0] is "attr"
                     except KeyError:
                         return False
                         # TODO: check in attribute cache first
@@ -167,7 +184,7 @@ class PolicyDecisionPoint(object):
                 # Regular expressions (has to be args[1]) are allowed for strings in policies
                 # (re.match checks for a match at the beginning of the string, $ marks the end of the string)
                 return any([re.match(r+'$', x) for r in args[1] for x in args[0]])
-            except TypeError: # If the value is not a string
+            except TypeError:  # If the value is not a string
                 return not set(args[0]).isdisjoint(args[1])
         elif func == "not_equal":
             try:
@@ -175,12 +192,12 @@ class PolicyDecisionPoint(object):
                 # Regular expressions (has to be args[1]) are allowed for strings in policies
                 # (re.match checks for a match at the beginning of the string, $ marks the end of the string)
                 return not any([re.match(r+'$', x) for r in args[1] for x in args[0]])
-            except TypeError: # If the value is not a string
+            except TypeError:  # If the value is not a string
                 return set(args[0]).isdisjoint(args[1])
         elif func == "and":
-            return all(args) # True if all elements of the list are True
+            return all(args)  # True if all elements of the list are True
         elif func == "or":
-            return True in args # True if any True exists in the list
+            return True in args  # True if any True exists in the list
         elif func == "less_than_or_equal":
             # FIXME: What should happen here if request_value and/or policy_value is a list?
             # FIXME: compare date/time should be supported. Enough with string comparison if standard date/time format is used?
