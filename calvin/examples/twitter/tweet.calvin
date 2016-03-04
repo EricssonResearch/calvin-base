@@ -1,0 +1,4 @@
+msg : std.Constant(data="This is another test, please ignore.")
+out : web.Twitter()
+
+msg.token > out.status
