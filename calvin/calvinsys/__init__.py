@@ -25,8 +25,7 @@ class Sys(object):
 
         packages = pkgutil.walk_packages(path, name + '.')
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
-        node_id = node.id if node else "<no node>"
-        _log.analyze(node_id, "+ BLACKLIST", {'blacklist': blacklist})
+        _log.analyze(node.id if node else None, "+ BLACKLIST", {'blacklist': blacklist})
         for package in packages:
             if not package[2]:
                 (_, _, package_name) = package[1].partition(".")
