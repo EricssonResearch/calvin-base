@@ -61,6 +61,10 @@ class Node(object):
         super(Node, self).__init__()
         self.uri = uri
         self.control_uri = control_uri
+        self.external_uri = attributes.pop('external_uri', self.uri) \
+            if attributes else self.uri
+        self.external_control_uri = attributes.pop('external_control_uri', self.control_uri) \
+            if attributes else self.control_uri
         try:
             self.attributes = AttributeResolver(attributes)
         except:
@@ -71,6 +75,8 @@ class Node(object):
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
         self.control = calvincontrol.get_calvincontrol()
+        
+        
         _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         self.sched = _scheduler(self, self.am, self.monitor)
         self.async_msg_ids = {}

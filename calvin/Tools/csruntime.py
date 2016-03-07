@@ -35,6 +35,10 @@ Start runtime, compile calvinscript and deploy application.
 
     argparser = argparse.ArgumentParser(description=long_description)
 
+    argparser.add_argument('--name', metavar='<name>', type=str, 
+                            help="shortcut for attribute indexed_public/node_name/name",
+                            dest='name')
+                            
     argparser.add_argument('-n', '--host', metavar='<host>', type=str,
                            help='ip address/hostname of calvin runtime',
                            dest='host')
@@ -63,7 +67,15 @@ Start runtime, compile calvinscript and deploy application.
 
     argparser.add_argument('-w', '--wait', dest='wait', metavar='sec', default=2, type=int,
                            help='wait for sec seconds before quitting (0 means forever).')
-
+    
+    argparser.add_argument('-x', '--external', metavar='<calvinip>', type=str,             
+                            help="exposed external calvin ip (e.g. outside of container)", 
+                            dest='ext')
+                            
+    argparser.add_argument('-y', '--external-control', metavar='<url>', type=str,            
+                           help="exposed external control url (e.g. outside of container)", 
+                           dest='control_ext')                                              
+    
     argparser.add_argument('--keep-alive', dest='wait', action='store_const', const=0,
                            help='run forever (equivalent to -w 0 option).')
 
@@ -91,6 +103,7 @@ Start runtime, compile calvinscript and deploy application.
 
 def runtime(uri, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_node, start_node
+
     kwargs = {'attributes': attributes} if attributes else {}
     if dispatch:
         return dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
@@ -220,7 +233,8 @@ def main():
         print "At least one listening interface is needed"
         return -1
 
-    attr_ = None
+    attr_ = {}
+    
     if args.attr:
         try:
             attr_ = json.loads(args.attr)
@@ -235,6 +249,16 @@ def main():
             print "Attribute file not JSON:\n", e
             return -1
 
+    if args.ext:
+        attr_['external_uri'] = args.ext
+        
+    if args.control_ext:
+        attr_['external_control_uri'] = args.control_ext
+    
+    if args.name :
+        # Will override any already supplied name
+        attr_.setdefault("indexed_public", {}).setdefault("node_name", {})['name'] = args.name
+    
     if app_info:
         dispatch_and_deploy(app_info, args.wait, uris, control_uri, attr_)
     else:

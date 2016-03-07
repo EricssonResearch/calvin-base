@@ -419,8 +419,8 @@ class Storage(object):
         Add node to storage
         """
         self.set(prefix="node-", key=node.id,
-                  value={"uri": node.uri,
-                         "control_uri": node.control_uri,
+                  value={"uri": node.external_uri,
+                         "control_uri": node.external_control_uri,
                          "attributes": {'public': node.attributes.get_public(),
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
         self._add_node_index(node)
