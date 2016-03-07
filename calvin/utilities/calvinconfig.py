@@ -122,7 +122,7 @@ class CalvinConfig(object):
             _option = option.lower()
             return self.config[_section][_option]
         except Exception as e:
-            _log.error("Error while getting value {}".format(e))
+            _log.info("Config could not get value of {}, uses None".format(e))
             return None
 
     def set(self, section, option, value):
