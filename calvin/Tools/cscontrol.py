@@ -174,7 +174,7 @@ def parse_args():
                            help="one of %s" % ", ".join(node_commands))
     info_group = cmd_nodes.add_argument_group('info')
     info_group.add_argument('id', metavar='<node id>', nargs='?', help="id of node to get info about")
-    list_group = cmd_nodes.add_argument_group('list, add, stop')
+    list_group = cmd_nodes.add_argument_group('add')
     list_group.add_argument('peerlist', metavar='<peerlist>', nargs='*', default=[],
                             help="list of peers of the form calvinip://<address>:<port>")
     cmd_nodes.set_defaults(func=control_nodes)
