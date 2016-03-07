@@ -29,10 +29,11 @@ class Deployer(object):
     Deploys an application to a runtime.
     """
 
-    def __init__(self, runtime, deployable, verify=True):
+    def __init__(self, runtime, deployable, credentials=None, verify=True):
         super(Deployer, self).__init__()
         self.runtime = runtime
         self.deployable = deployable
+        self.credentials = credentials
         self.actor_map = {}
         self.app_id = None
         self.verify = verify
@@ -49,7 +50,8 @@ class Deployer(object):
         if not self.deployable['valid']:
             raise Exception("Deploy information is not valid")
 
-        result = self.request_handler.deploy_app_info(self.runtime, self.name, self.deployable, check=self.verify)
+        result = self.request_handler.deploy_app_info(self.runtime, self.name, self.deployable,
+                                       credentials=self.credentials, check=self.verify)
         self.app_id = result['application_id']
         self.actor_map = result['actor_map']
 

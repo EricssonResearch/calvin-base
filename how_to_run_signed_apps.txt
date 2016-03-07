@@ -1,0 +1,17 @@
+The steps below are needed to verify the code in the calvin/scripts/test1.calvin example:
+
+generate private key and x509 certificate:
+openssl req -x509 -newkey rsa:2048 -keyout ~/eric-calvin/privkey.pem -out ~/eric-calvin/cert.pem
+
+extract pulic key (only needed for cmd-line verification of signatures):
+openssl rsa -in ~/eric-calvin/privkey.pem -pubout > ~/eric-calvin/pubkey.pem
+
+sign actor:
+openssl dgst -sha256 -sign ~/eric-calvin/privkey.pem -out ~/eric-calvin/calvin/actorstore/systemactors/std/CountTimer.sign ~/eric-calvin/calvin/actorstore/systemactors/std/CountTimer.py
+openssl dgst -sha256 -sign ~/eric-calvin/privkey.pem -out ~/eric-calvin/calvin/actorstore/systemactors/io/StandardOut.sign ~/eric-calvin/calvin/actorstore/systemactors/io/StandardOut.py
+
+sign calvin script:
+openssl dgst -sha256 -sign ~/eric-calvin/privkey.pem -out ~/eric-calvin/calvin/scripts/test1.sign ~/eric-calvin/calvin/scripts/test1.calvin
+
+(Not really needed) Example procedure of how to verify a signature in openssl:
+openssl dgst -sha256 -verify ~/eric-calvin/pubkey.pem  -signature ~/eric-calvin/calvin/scripts/test1.sign ~/eric-calvin/calvin/scripts/test1.calvin

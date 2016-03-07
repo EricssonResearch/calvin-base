@@ -18,6 +18,7 @@ import wrapt
 import functools
 import time
 from calvin.utilities import calvinuuid
+from calvin.utilities.security import Security
 from calvin.actor import actorport
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import enum
@@ -335,13 +336,14 @@ class Actor(object):
         self._deployment_requirements = []
         self._signature = None
         self._component_members = set([self.id])  # We are only part of component if this is extended
-        self._managed = set(('id', 'name', '_deployment_requirements', '_signature'))
+        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'credentials'))
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
         self.metering = metering.get_metering()
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._last_time_warning = 0.0
+        self.credentials = None
 
         self.inports = {p: actorport.InPort(p, self) for p in self.inport_names}
         self.outports = {p: actorport.OutPort(p, self) for p in self.outport_names}
@@ -355,6 +357,27 @@ class Actor(object):
                              disable_transition_checks=disable_transition_checks,
                              disable_state_checks=disable_state_checks)
         self.metering.add_actor_info(self)
+
+    def set_credentials(self, credentials, security=None):
+        """ Sets the credentials the actor operates under
+            This will trigger an authentication of the credentials
+            Optionally an authenticated Security instance can be supplied,
+            to reduce the needed authentication processing.
+        """
+        _log.debug("actor.py: set_credentials: %s" % credentials)
+        if credentials is None:
+            return
+        self.credentials = credentials
+        if security:
+            self.sec = security
+        else:
+            self.sec = Security()
+            self.sec.set_principal(self.credentials)
+            self.sec.authenticate_principal()
+
+    def get_credentials(self):
+        _log.debug("actor.py: get_credentials: %s" % self.credentials)
+        return self.credentials
 
     @verify_status([STATUS.LOADED])
     def setup_complete(self):
@@ -385,7 +408,14 @@ class Actor(object):
 
     @verify_status([STATUS.LOADED])
     def check_requirements(self):
-        """ Checks that all requirements are available in calvinsys """
+        """ Checks that all requirements are available and accessable in calvinsys """
+        # Check the runtime and calvinsys execution access rights
+        # Note when no credentials set no verification done
+        if hasattr(self, 'sec') and not self.sec.check_security_actor_requirements(['runtime'] +
+                                            (self.requires if hasattr(self, "requires") else [])):
+            _log.debug("Security check on actor requirements failed")
+            raise Exception('actor calvinsys security requirement not fullfilled')
+        # Check availability of calvinsys subsystems
         if hasattr(self, "requires"):
             for req in self.requires:
                 if not self._calvinsys.has_capability(req):

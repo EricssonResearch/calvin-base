@@ -26,6 +26,8 @@ import hashlib
 from calvin.utilities import calvinconfig
 from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities.security import Security
+from calvin.utilities.calvin_callback import CalvinCB
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
@@ -102,6 +104,7 @@ class Store(object):
 
     def update(self):
         """Should be called after a module has been added at runtime."""
+        _log.debug("Store update SECURITY %s" % str(self.sec))
         self._MODULE_CACHE = self.find_all_modules()
 
 
@@ -131,7 +134,14 @@ class Store(object):
         if not os.path.isfile(path):
             return None
         pymodule = None
+        _log.debug("Store load_pymodule SECURITY %s" % str(self.sec))
         try:
+            if self.sec:
+                _log.debug("Verify credentials for %s actor with credentials %s" % (name, self.sec.principal))
+                if not self.sec.verify_signature(path, "actor"):
+                    _log.debug("Failed verification of credentials for %s actor with credentials %s" %
+                                    (name, self.sec.principal))
+                    raise Exception("Actor security signature incorrect")
             pymodule = imp.load_source(name, path)
             # Check if we have a module or not
             if not isinstance(pymodule, ModuleType):
@@ -187,11 +197,12 @@ class Store(object):
 # Actor Store
 #
 class ActorStore(Store):
-    __metaclass__ = Singleton
 
-    def __init__(self):
+    def __init__(self, security=None):
         self.conf_paths_name = 'actor_paths'
         super(ActorStore, self).__init__()
+        self.sec = security
+        _log.debug("ActorStore init SECURITY %s" % str(self.sec))
         self.update()
 
 
@@ -212,6 +223,7 @@ class ActorStore(Store):
     def lookup(self, qualified_name):
         """
         Look up actor using qualified_name, e.g. foo.bar.Actor
+        If self.sec is set use it to verify access rights
         Return a tuple (found, is_primitive, info) where
             found:         boolean
             is_primitive:  boolean
@@ -219,6 +231,7 @@ class ActorStore(Store):
                             True  => actor object
                             False => component definition dictionary
         """
+        _log.debug("ActorStore lookup SECURITY %s" % str(self.sec))
         namespace, _, actor_type = qualified_name.rpartition('.')
         # Search in the order given by config
         for path in self.paths_for_module(namespace):
@@ -229,6 +242,7 @@ class ActorStore(Store):
                 return (True, True, actor_class)
         for path in self.paths_for_module(namespace):
             actor_path = os.path.join(path, actor_type + '.comp')
+            # TODO add credential verification of components
             comp = self.load_component(actor_type, actor_path)
             if comp:
                 return (True, False, comp)

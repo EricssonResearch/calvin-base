@@ -19,6 +19,7 @@ import time
 import copy
 import multiprocessing
 import pytest
+from collections import namedtuple
 from calvin.requests.request_handler import RequestHandler, RT
 from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
 from calvin.utilities.attribute_resolver import format_index_string
@@ -44,6 +45,7 @@ rt1_id = None
 rt2_id = None
 rt3_id = None
 test_script_dir = None
+DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
 
 def absolute_filename(filename):
     import os.path
@@ -155,15 +157,14 @@ class TestDeployScript(unittest.TestCase):
         self.verify_storage()
         
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy1.deployjson", check=True)
+                                reqs=test_script_dir+"test_deploy1.deployjson", check=True, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
@@ -179,15 +180,14 @@ class TestDeployScript(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy2.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy2.deployjson", check=True)
+                                reqs=test_script_dir+"test_deploy2.deployjson", check=True, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
@@ -206,15 +206,14 @@ class TestDeployScript(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy3.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy3.deployjson", check=True)
+                                reqs=test_script_dir+"test_deploy3.deployjson", check=True, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
@@ -335,15 +334,14 @@ class TestDeployShadow(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow1.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow1.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         #print "RESULT:", result
         time.sleep(2)
@@ -369,15 +367,14 @@ class TestDeployShadow(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow2.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow2.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         #print "RESULT:", result
         time.sleep(2)
@@ -403,11 +400,9 @@ class TestDeployShadow(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow3.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow2.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow2.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -433,15 +428,14 @@ class TestDeployShadow(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadowcomponent1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadowcomponent1.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadowcomponent1.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         time.sleep(2)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2)]
@@ -611,15 +605,14 @@ class TestSepDeployShadow(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow1.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow1.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
         except:
+            _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
         #print "RESULT:", result
         assert result['requirements_fulfilled']
@@ -651,11 +644,9 @@ class TestSepDeployShadow(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5004' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=None, check=False)
+                                reqs=None, check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -710,11 +701,9 @@ class TestSepDeployShadow(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5004' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow6.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow6.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -872,11 +861,9 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -908,11 +895,9 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -955,11 +940,9 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -1022,11 +1005,9 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow5.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False)
+                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -1090,11 +1071,9 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy4.deployjson", check=False)
+                                reqs=test_script_dir+"test_deploy4.deployjson", check=False, credentials=None)
         result = {}
         try:
             result = deploy_app(args)

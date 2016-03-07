@@ -22,17 +22,37 @@ import argparse
 from calvin.csparser.parser import calvin_parser
 from calvin.csparser.checker import check
 from calvin.csparser.analyzer import generate_app_info
+from calvin.utilities.security import Security
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
 
-def compile(source_text, filename='', verify=True):
+def compile(source_text, filename='', content=None, credentials=None, verify=True):
     # Steps taken:
-    # 1) parser .calvin file -> IR. May produce syntax errors/warnings
-    # 2) checker IR -> IR. May produce syntax errors/warnings
-    # 3) analyzer IR -> app. Should not fail. Sets 'valid' property of IR to True/False
+    # 1) Verify signature when credentials supplied
+    # 2) parser .calvin file -> IR. May produce syntax errors/warnings
+    # 3) checker IR -> IR. May produce syntax errors/warnings
+    # 4) analyzer IR -> app. Should not fail. Sets 'valid' property of IR to True/False
+
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
+    errors = [] #TODO: fill in something meaningful
+    warnings = []
+    if credentials:
+        _log.debug("Check credentials...")
+        sec = Security()
+        sec.set_principal(credentials)
+        if not sec.authenticate_principal():
+            _log.error("Check credentials...failed authentication")
+            # This error reason is detected in calvin control and gives proper REST response
+            errors.append({'reason': "401: UNAUTHORIZED", 'line': 0, 'col': 0})
+            return deployable, errors, warnings
+        if not sec.verify_signature_content(content, "application"):
+            _log.error("Check credentials...failed application verification")
+            # This error reason is detected in calvin control and gives proper REST response
+            errors.append({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None})
+            return deployable, errors, warnings
+
     _log.debug("Parsing...")
     ir, errors, warnings = calvin_parser(source_text, filename)
     _log.debug("Parsed %s, %s, %s" % (ir, errors, warnings))
@@ -48,10 +68,15 @@ def compile(source_text, filename='', verify=True):
     return deployable, errors, warnings
 
 
-def compile_file(file):
+def compile_file(file, credentials=None):
     with open(file, 'r') as source:
         sourceText = source.read()
-        return compile(sourceText, file)
+        content = None
+        if credentials:
+            content = Security.verify_signature_get_files(file, skip_file=True)
+            if content:
+                content['file'] = sourceText
+        return compile(sourceText, file, content=content, credentials=credentials)
 
 
 def compile_generator(files):
