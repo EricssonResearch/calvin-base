@@ -40,7 +40,7 @@ _conf.add_section("security")
 _conf_file = os.path.join(os.getenv("HOME"), ".calvin/security/test/openssl.conf")
 _conf.set("security", "certificate_conf", _conf_file)
 _conf.set("security", "certificate_domain", "test")
-_cert_conf = certificate.Config(_conf_file, "test").configuration
+_cert_conf = None
 
 _log = calvinlogger.get_logger(__name__)
 name = "node4:"
@@ -58,6 +58,11 @@ def cleanup(request):
 class TestDHT(object):
     test_nodes = 2
     _sucess_start = (True,)
+
+    @pytest.fixture(autouse=True, scope="class")
+    def setup(self, request):
+        global _cert_conf
+        _cert_conf = certificate.Config(_conf_file, "test").configuration
 
     @pytest.inlineCallbacks
     def test_dht_multi(self, monkeypatch):

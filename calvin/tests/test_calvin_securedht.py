@@ -64,7 +64,10 @@ class TestSecureDht(unittest.TestCase):
         domain = "rttest"
         configdir = os.path.join(homefolder, ".calvin",
                                        "security", domain)
-        shutil.rmtree(configdir)
+        try:
+            shutil.rmtree(configdir)
+        except:
+            pass
         print "Trying to create a new test domain configuration."
         testconfig = certificate.Config(domain=domain)
         print "Reading configuration successfull."
