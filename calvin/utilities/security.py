@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import os
-import requests
 import json
 import string
 try:
@@ -39,8 +38,6 @@ _log = get_logger(__name__)
 
 #default timeout
 TIMEOUT=5
-
-STUB=False
 
 def security_modules_check():
     if _conf.get("security","security_conf") or _conf.get("security","security_policy"):
@@ -74,21 +71,16 @@ class Security(object):
         return "Principal: %s\nAuth: %s" % (self.principal, self.auth)
 
     def set_principal(self, principal):
-        if STUB:
-            return True
-        else:
-            _log.debug("Security: set_principal %s" % principal)
-            if not isinstance(principal, dict):
-                return False
-            # Make sure all principal values are lists
-            self.principal = {k: list(v) if isinstance(v, (list, tuple, set)) else [v]
-                                for k, v in principal.iteritems()}
-            # All default to unauthorized
-            self.auth = {k: [False]*len(v) for k, v in self.principal.iteritems()}
+        _log.debug("Security: set_principal %s" % principal)
+        if not isinstance(principal, dict):
+            return False
+        # Make sure all principal values are lists
+        self.principal = {k: list(v) if isinstance(v, (list, tuple, set)) else [v]
+                            for k, v in principal.iteritems()}
+        # All default to unauthorized
+        self.auth = {k: [False]*len(v) for k, v in self.principal.iteritems()}
 
     def authenticate_principal(self):
-        if STUB:
-            return True
         _log.debug("Security: authenticate_principal")
         if not security_needed_check():
             _log.debug("Security: authenticate_principal no security needed")
@@ -164,8 +156,6 @@ class Security(object):
         return any(auth)
 
     def check_security_actor_requirements(self, requires):
-        if STUB:
-            return True
         _log.debug("Security: check_security_actor_requirements")
         if self.sec_conf and self.sec_conf['access_control_enabled'] == "True":
             for req in requires:
@@ -176,8 +166,6 @@ class Security(object):
 
     def check_security_policy_actor(self, req, principal_type, principal):
         """ Checks that the requirement is allowed by the security policy """
-        if STUB:
-            return True
         _log.debug("Security: check_security_policy_actor")
         #Calling function shall already have checked that self.sec_conf exist
         #create list, e.g., ['calvinsys','media','camera','lense']
@@ -202,8 +190,6 @@ class Security(object):
 
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):
-        if STUB:
-            return True
         # Get the data
         sign_filename = filename + ".sign"
         cert_filename = filename + ".cert"
@@ -241,8 +227,6 @@ class Security(object):
             return False
 
     def verify_signature_content(self, content, flag):
-        if STUB:
-            return True
         _log.debug("Security: verify_signature")
         if not self.sec_conf:
             _log.debug("Security: no signature verification required: %s"% content['file'])
@@ -272,9 +256,6 @@ class Security(object):
         return False
 
     def verify_signature_and_certificate(self, content, plcy, flag):
-        if STUB:
-            return True
-
         if "__unsigned__" in plcy[flag + '_signature']:
             _log.debug("Security: %s is allowed unsigned" % flag)
             return True
@@ -324,8 +305,6 @@ class Security(object):
 
     def check_signature_policy(self, cert, flag, plcy):
         """ Checks that if the signer is allowed by the security policy """
-        if STUB:
-            return True
         _log.debug("Security:check_signature_policy")
         if flag=="application":
             if 'application_signature' in plcy:
