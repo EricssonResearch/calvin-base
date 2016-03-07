@@ -98,7 +98,7 @@ def testit():
 def run_check():
     # Configure for virtualenv
     cwd = "/Users/eperspe/Source/calvin-base"
-    env_activate = "/Users/eperspe/.virtualenvs/calvin-dev/bin/activate_this.py"
+    env_activate = "/Users/eperspe/.virtualenvs/calvin/bin/activate_this.py"
     calvin_root = "/Users/eperspe/Source/calvin-base"
 
     import sys

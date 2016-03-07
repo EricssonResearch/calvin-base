@@ -126,8 +126,8 @@ def p_assignment(p):
 
 
 def p_link(p):
-    """link : port GT port"""
-    # FIXME: Add implicit ports
+    """link : port GT port
+            | argument GT port"""
     p[0] = ast.Link(p[1], p[3])
 
 
@@ -332,7 +332,7 @@ define FOO=1
 define BAR=FOO
 src : std.CountTimer(delay=1, foo=2)
 snk : io.StandardOut()
-src.integer > snk.token
+1 > snk.token
 # component Foo(a) in -> out {
 # """Docs"""
 # i : std.Identity()
