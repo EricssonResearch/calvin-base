@@ -17,6 +17,7 @@
 import os
 import json
 import string
+import glob
 try:
     import OpenSSL.crypto
     HAS_OPENSSL = True
@@ -64,6 +65,11 @@ class Security(object):
         _log.debug("Security: _init_")
         self.sec_conf = _conf.get("security","security_conf")
         self.sec_policy = _conf.get("security","security_policy")
+        if self.sec_conf is not None and not self.sec_conf.get('signature_trust_store', None):
+            # Set default directory for trust store
+            homefolder = os.getenv("HOME")
+            truststore_dir = os.path.join(homefolder, ".calvin", "security", "trustStore")
+            self.sec_conf['signature_trust_store'] = truststore_dir
         self.principal = {}
         self.auth = {}
 
@@ -191,25 +197,17 @@ class Security(object):
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):
         # Get the data
-        sign_filename = filename + ".sign"
-        cert_filename = filename + ".cert"
-        cert_content = ""
-        sign_content = ""
+        sign_filenames = filename + ".sign.*"
+        sign_content = {}
         file_content = ""
-        try:
-            with open(cert_filename, 'rt') as f:
-                cert_content = f.read()
-                _log.debug("Security: found certificate")
-        except:
-            cert_content = None
-            _log.debug("Security: no certificate file")
-        try:
-            with open(sign_filename, 'rt') as f:
-                sign_content = f.read()
-                _log.debug("Security: found signature")
-        except:
-            sign_filename = None
-            _log.debug("Security: no signature file")
+        sign_files = {os.path.basename(f).split(".sign.")[1]: f for f in glob.glob(sign_filenames)}
+        for cert_hash, sign_filename in sign_files.iteritems():
+            try:
+                with open(sign_filename, 'rt') as f:
+                    sign_content[cert_hash] = f.read()
+                    _log.debug("Security: found signature for %s" % cert_hash)
+            except:
+                pass
         if not skip_file:
             try:
                 with open(filename, 'rt') as f:
@@ -217,7 +215,7 @@ class Security(object):
             except:
                 return None
                 _log.debug("Security: file can't be opened")
-        return {'cert': cert_content, 'sign': sign_content, 'file': file_content}
+        return {'sign': sign_content, 'file': file_content}
 
     def verify_signature(self, file, flag):
         content = Security.verify_signature_get_files(file)
@@ -227,7 +225,7 @@ class Security(object):
             return False
 
     def verify_signature_content(self, content, flag):
-        _log.debug("Security: verify_signature")
+        _log.debug("Security: verify %s signature of %s" % (flag, content))
         if not self.sec_conf:
             _log.debug("Security: no signature verification required: %s"% content['file'])
             return True
@@ -252,7 +250,7 @@ class Security(object):
                     if self.verify_signature_and_certificate(content, plcy, flag):
                         _log.debug("Security: signature verification successfull")
                         return True
-        _log.error("Security: verification of %s signature failed" % flag)
+        _log.error("Security: verification of %s signature failed 1" % flag)
         return False
 
     def verify_signature_and_certificate(self, content, plcy, flag):
@@ -261,47 +259,41 @@ class Security(object):
             return True
 
         if content is None:
-            _log.debug("Security: %s need file, sign and cert" % flag)
+            _log.debug("Security: %s need file and signature with certificate hash" % flag)
             return False
 
-        if content['cert'] is None:
-            _log.debug("Security: %s cert" % flag)
-            return False
-
-        if content['sign'] is None:
-            _log.debug("Security: %s sign" % flag)
+        if not content['sign']:
+            _log.debug("Security: %s signature information missing" % flag)
             return False
 
         if not HAS_OPENSSL:
             _log.error("Security: Install openssl to allow verification of signatures and certificates")
-            _log.error("Security: verification of %s signature failed" % flag)
+            _log.error("Security: verification of %s signature failed 2" % flag)
             return False
 
         _log.debug("Security:verify_signature_and_certificate")
-        try:
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, content['cert'])
-            #let's see if the certificate is stored in the truststore (name is <hash(CN)>.0)
-            trusted_cert = self.sec_conf['signature_trust_store'] + format(cert.subject_name_hash(),'x') + ".0"
-            with open(trusted_cert, 'rt') as f:
-                string_trusted_cert = f.read()
-                trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, string_trusted_cert)
-                if self.check_signature_policy(trusted_cert, flag, plcy):
-                    try:
-                        OpenSSL.crypto.verify(trusted_cert, content['sign'], content['file'], 'sha256')
-                        _log.debug("Security: %s signature correct" % flag)
-                        return True
-                    except Exception as e:
-                        _log.exception("Security: OpenSSL verification error")
-                        _log.error("Security: verification of %s signature failed" % flag)
-                        return False
-                else:
-                    _log.debug("Security: signature policy not fulfilled")
-                    _log.error("Security: verification of %s signature failed" % flag)
-                    return False
-        except Exception as e:
-            _log.exception("Security: error opening one of the needed certificates")
-            _log.error("Security: verification of %s signature failed" % flag)
-            return False
+        for cert_hash, signature in content['sign'].iteritems():
+            try:
+                trusted_cert = os.path.join(self.sec_conf['signature_trust_store'], cert_hash + ".0")
+                with open(trusted_cert, 'rt') as f:
+                    string_trusted_cert = f.read()
+                    trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, string_trusted_cert)
+                    if self.check_signature_policy(trusted_cert, flag, plcy):
+                        try:
+                            OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
+                            _log.debug("Security: %s signature correct" % flag)
+                            return True
+                        except Exception as e:
+                            _log.debug("Security: OpenSSL verification error", exc_info=True)
+                            continue
+                    else:
+                        _log.debug("Security: signature policy not fulfilled")
+                        continue
+            except Exception as e:
+                _log.debug("Security: error opening one of the needed certificates", exc_info=True)
+                continue
+        _log.error("Security: verification of %s signature failed 3" % flag)
+        return False
 
     def check_signature_policy(self, cert, flag, plcy):
         """ Checks that if the signer is allowed by the security policy """

@@ -333,8 +333,7 @@ control_api_doc += \
         "name": <application name>,
         "script": <calvin script>  # alternativly "app_info"
         "app_info": <compiled script as app_info>  # alternativly "script"
-        "sec_sign": <security signature of script> # optional and only with "script"
-        "sec_cert": <security ceritificate used> # optional and only with "script"
+        "sec_sign": {<cert hash>: <security signature of script>, ...} # optional and only with "script"
         "sec_credentials": <security credentials of user> # optional
         "deploy_info":
            {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
@@ -1074,10 +1073,10 @@ class CalvinControl(object):
                 # Supply security verification data when available
                 if "sec_credentials" in data:
                     kwargs['credentials'] = data['sec_credentials']
-                    if "sec_sign" in data and "sec_cert" in data:
-                        kwargs['content'] = {'file': data["script"],
-                                             'cert': data['sec_cert'],
-                                             'sign': data['sec_sign'].decode('hex_codec')}
+                    if "sec_sign" in data:
+                        kwargs['content'] = {
+                            'file': data["script"],
+                            'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
                 app_info, errors, warnings = compiler.compile(data["script"], filename=data["name"],
                         verify=data["check"] if "check" in data else True, **kwargs)
                 if errors:
