@@ -142,11 +142,11 @@ class RequestHandler(object):
         r = self._post(rt, timeout, async, PEER_SETUP, data)
         return self.check_response(r)
 
-    def new_actor(self, rt, actor_type, actor_name, timeout=DEFAULT_TIMEOUT, async=False):
+    def new_actor(self, rt, actor_type, actor_name, credentials=None, timeout=DEFAULT_TIMEOUT, async=False):
         data = {
             'actor_type': actor_type,
             'args': {'name': actor_name},
-            'deploy_args': None
+            'deploy_args': {'credentials': credentials} if credentials else None
         }
 
         r = self._post(rt, timeout, async, ACTOR, data)
@@ -262,13 +262,31 @@ class RequestHandler(object):
         r = self._delete(rt, timeout, async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
-    def deploy_application(self, rt, name, script, deploy_info=None, check=True, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {"name": name, "script": script, 'deploy_info': deploy_info, "check": check}
+    def deploy_application(self, rt, name, script, deploy_info=None, credentials=None, content=None,
+                           check=True, timeout=DEFAULT_TIMEOUT, async=False):
+        data = {
+            "name": name,
+            "script": script,
+            "sec_credentials": credentials,
+            "deploy_info": deploy_info,
+            "check": check
+        }
+        if content and 'sign' in content:
+            data["sec_sign"] = {}
+            for cert_hash, signature in content['sign'].iteritems():
+                data["sec_sign"][cert_hash] = signature.encode('hex_codec')
         r = self._post(rt, timeout, async, DEPLOY, data)
         return self.check_response(r)
 
-    def deploy_app_info(self, rt, name, app_info, deploy_info=None, check=True, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {"name": name, "app_info": app_info, 'deploy_info': deploy_info, "check": check}
+    def deploy_app_info(self, rt, name, app_info, deploy_info=None, credentials=None, check=True,
+                        timeout=DEFAULT_TIMEOUT, async=False):
+        data = {
+            "name": name,
+            "app_info": app_info,
+            "sec_credentials": credentials,
+            "deploy_info": deploy_info,
+            "check": check
+        }
         r = self._post(rt, timeout, async, DEPLOY, data=data)
         return self.check_response(r)
 

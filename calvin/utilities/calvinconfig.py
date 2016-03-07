@@ -81,8 +81,8 @@ class CalvinConfig(object):
                 'comment': 'User definable section',
                 'actor_paths': ['systemactors'],
                 'framework': 'twistedimpl',
+                'storage_type': 'dht', # supports dht, securedht, local, and proxy
                 'storage_proxy': None,
-                'storage_start': True,
                 'capabilities_blacklist': [],
                 'remote_coder_negotiator': 'static',
                 'static_coder': 'json',
@@ -124,7 +124,7 @@ class CalvinConfig(object):
         except KeyError:
             _log.info("Option {}.{} not set".format(_section, _option ))
         except Exception as e:
-            _log.error("Error reading option %s.%s: %r" % (_section, _option, e))
+            _log.error("Error reading option {}.{}: {}".format(_section, _option, e))
             return None
 
     def set(self, section, option, value):

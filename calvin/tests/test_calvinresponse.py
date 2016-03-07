@@ -16,7 +16,7 @@
 
 import pytest
 
-from calvin.utilities.calvinresponse import RESPONSE_CODES, CalvinResponse
+from calvin.requests.calvinresponse import RESPONSE_CODES, CalvinResponse
 
 pytestmark = pytest.mark.unittest
 

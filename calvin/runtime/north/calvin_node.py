@@ -35,7 +35,9 @@ from calvin.runtime.south.monitor import Event_Monitor
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.utilities.security import security_modules_check
 from calvin.utilities import calvinuuid
+from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 _log = get_logger(__name__)
@@ -70,7 +72,8 @@ class Node(object):
         except:
             _log.exception("Attributes not correct, uses empty attribute!")
             self.attributes = AttributeResolver(None)
-        self.id = calvinuuid.uuid("NODE")
+        # Obtain node id, when using security also handle runtime certificate
+        self.id = certificate.obtain_cert_node_info(self.attributes.get_node_name_as_str())['id']
         self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
@@ -156,7 +159,8 @@ class Node(object):
     def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None):
         # TODO requirements should be input to am.new
         actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
-                        signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None)
+                        signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None,
+                        credentials=deploy_args['credentials'] if deploy_args and 'credentials' in deploy_args else None)
         if deploy_args:
             app_id = deploy_args['app_id']
             if 'app_name' not in deploy_args:
@@ -166,10 +170,6 @@ class Node(object):
             self.app_manager.add(app_id, actor_id,
                                  deploy_info = deploy_args['deploy_info'] if 'deploy_info' in deploy_args else None)
         return actor_id
-
-    def deployment_control(self, app_id, actor_id, deploy_args):
-        """ Updates an actor's deployment """
-        self.am.deployment_control(app_id, actor_id, deploy_args)
 
     def calvinsys(self):
         """Return a CalvinSys instance"""
@@ -251,6 +251,8 @@ def create_tracing_node(uri, control_uri, attributes=None):
 
 
 def start_node(uri, control_uri, trace_exec=False, attributes=None):
+    if not security_modules_check():
+        raise Exception("Security module missing")
     _create_node = create_tracing_node if trace_exec else create_node
     p = Process(target=_create_node, args=(uri, control_uri, attributes))
     p.daemon = True

@@ -134,7 +134,7 @@ class AutoDHTServer(StorageBase):
         self._ssdps = None
         self._started = False
 
-    def start(self, iface='', network=None, bootstrap=None, cb=None):
+    def start(self, iface='', network=None, bootstrap=None, cb=None, name=None):
         if bootstrap is None:
             bootstrap = []
 

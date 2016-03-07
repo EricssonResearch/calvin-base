@@ -1,0 +1,6 @@
+src : std.CountTimerUnsigned()
+sum : std.SumUnsigned()
+snk : io.StandardOutUnsigned(store_tokens=true)
+
+src.integer > sum.integer
+sum.integer > snk.token

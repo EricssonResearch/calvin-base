@@ -1,0 +1,12 @@
+#!/bin/bash
+#To be able to run it easily from calvin-base dir
+SECDHT_TESTDIR=calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests
+echo $SECDHT_TESTDIR
+pushd ~/.calvin/security/test/
+rm -r private runtimes newcerts certs index* node* serial* evil* cacert.pem
+popd
+python $SECDHT_TESTDIR/cert_script.py
+py.test --twisted --runslow --runinteractive $SECDHT_TESTDIR/test_dht_server_nice2.py -s &
+py.test --twisted --runslow --runinteractive $SECDHT_TESTDIR/test_dht_server_nice.py -s &
+py.test --twisted --runslow --runinteractive $SECDHT_TESTDIR/test_dht_server_nice3.py -s &
+py.test --twisted --runslow --runinteractive $SECDHT_TESTDIR/test_dht_server_nice4.py -s &

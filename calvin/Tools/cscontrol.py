@@ -18,6 +18,7 @@
 import argparse
 import json
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities.security import Security
 
 _log = get_logger(__name__)
 _request_handler = None
@@ -65,8 +66,22 @@ def control_deploy(args):
     response = None
     print args
     reqs = requirements_file(args.reqs) if args.reqs else None
+    sourceText = args.script.read()
+    credentials_ = None
+    content = None
+    if args.credentials:
+        try:
+            credentials_ = json.loads(args.credentials)
+        except Exception as e:
+            print "Credentials not JSON:\n", e
+            return -1
+        if credentials_:
+            content = Security.verify_signature_get_files(file, skip_file=True)
+            if content:
+                content['file'] = sourceText
     try:
-        response = get_request_handler().deploy_application(args.node, args.script.name, args.script.read(), reqs, args.check)
+        response = get_request_handler().deploy_application(args.node, args.script.name, sourceText, reqs,
+                                            credentials=credentials_, content=content, check=args.check)
     except Exception as e:
         print e
     return response
@@ -157,10 +172,11 @@ def parse_args():
     cmd_nodes = cmdparsers.add_parser('nodes', help='handle node peers')
     cmd_nodes.add_argument('cmd', metavar='<command>', choices=node_commands, type=str,
                            help="one of %s" % ", ".join(node_commands))
-    cmd_nodes.add_argument('id', metavar="<node id>", type=str, nargs='?', default=None,
-                           help="id of node")
-    cmd_nodes.add_argument('peerlist', metavar='<peer>', nargs='*', default=[],
-                           help="list of peers of the form calvinip://<address>:<port>")
+    info_group = cmd_nodes.add_argument_group('info')
+    info_group.add_argument('id', metavar='<node id>', nargs='?', help="id of node to get info about")
+    list_group = cmd_nodes.add_argument_group('add')
+    list_group.add_argument('peerlist', metavar='<peerlist>', nargs='*', default=[],
+                            help="list of peers of the form calvinip://<address>:<port>")
     cmd_nodes.set_defaults(func=control_nodes)
 
     # parser for deploy
@@ -170,6 +186,10 @@ def parse_args():
     cmd_deploy.add_argument('-c', '--no-check', dest='check', action='store_false', default=True,
                            help='Don\'t verify if actors or components are correct, ' +
                                 'allows deployment of actors not known on the node')
+    argparser.add_argument('--credentials', metavar='<credentials>', type=str,
+                           help='Supply credentials to run program under '
+                                'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
+                           dest='credentials', default=None)
 
     cmd_deploy.add_argument('--reqs', metavar='<reqs>', type=str,
                             help='deploy script, currently JSON coded data file',
