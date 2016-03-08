@@ -29,9 +29,9 @@ class BracePrinter(object):
 
     @visitor.when(ast.Node)
     def visit(self, node):
-        def f(n):
+        def f(node):
             print "{}( {}".format(self._indentation(), node.__class__.__name__)
-        def g(n):
+        def g(node):
             print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)
 
@@ -45,8 +45,12 @@ class BracePrinter(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        def f(n): print "{}( {} {} {}".format(self._indentation(), node.__class__.__name__, node.ident, node.actor_type)
-        def g(n): print "{})".format(self._indentation())
+        def f(node):
+            print "{}( {} {} {}".format(self._indentation(), node.__class__.__name__, node.ident, node.actor_type)
+            self.indent += 1
+        def g(node):
+            self.indent -= 1
+            print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)
 
     @visitor.when(ast.Port)
@@ -59,7 +63,11 @@ class BracePrinter(object):
 
     @visitor.when(ast.Component)
     def visit(self, node):
-        def f(n): print "{}( {} {}".format(self._indentation(), node.__class__.__name__, node.name)
-        def g(n): print "{})".format(self._indentation())
+        def f(node):
+            print "{}( {} {}".format(self._indentation(), node.__class__.__name__, node.name)
+            self.indent += 1
+        def g(node):
+            self.indent -= 1
+            print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)
 
