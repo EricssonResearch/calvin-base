@@ -30,7 +30,7 @@ class CodeGen(object):
         self.ast = ast_root
         self.script_name = script_name
         self.constants = {}
-        self.app_info = {}
+        self.app_info = {'name':script_name}
 
         self.run()
 
