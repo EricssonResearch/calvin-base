@@ -29,17 +29,13 @@ def full_port_name(namespace, actor_name, port_name):
     return namespace + '.' + port_name
 
 
-def _create_signature(actor_name, actor_type, connections):
+# FIXME: Signature (and actor_type) should be class variables => no need to compute it here
+def _create_signature(actor_class, actor_type):
     # Create the actor signature to be able to look it up in the GlobalStore if neccessary
     signature_desc = {'is_primitive': True,
                       'actor_type': actor_type,
-                      'inports': [],
-                      'outports': []}
-    for c in connections:
-        if actor_name == c['src'] and c['src_port'] not in signature_desc['outports']:
-            signature_desc['outports'].append(c['src_port'])
-        elif actor_name == c['dst'] and c['dst_port'] not in signature_desc['inports']:
-            signature_desc['inports'].append(c['dst_port'])
+                      'inports': actor_class.inport_names,
+                      'outports': actor_class.outport_names}
     return GlobalStore.actor_signature(signature_desc)
 
 
@@ -230,7 +226,7 @@ class Analyzer(object):
                 self.actors[qualified_name] = {
                     'actor_type': actor_def['actor_type'],
                     'args': args,
-                    'signature': _create_signature(actor_name, actor_def['actor_type'], structure['connections'])
+                    'signature': _create_signature(info, actor_def['actor_type'])
                 }
             else:
                 # Recurse into components
