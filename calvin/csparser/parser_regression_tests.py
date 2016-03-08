@@ -51,7 +51,7 @@ def testit():
 
     crashers = []
     expected_diff = []
-    tests = ['test1', 'test2', 'test3']
+    tests = ['test1', 'test2', 'test3', 'test4', 'test5']
 
     res = {}
     for test in tests:
