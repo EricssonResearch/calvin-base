@@ -207,7 +207,7 @@ def p_members(p):
 
 def p_member(p):
     """member : STRING COLON value"""
-    p[0] = (p[1], p[3])
+    p[0] = (p[1], p[3].value)
 
 
 def p_values(p):
@@ -217,7 +217,7 @@ def p_values(p):
     if len(p) == 1:
         p[0] = list()
     else:
-        p[1].append(p[2])
+        p[1].append(p[2].value)
         p[0] = p[1]
 
 
@@ -328,11 +328,11 @@ if __name__ == '__main__':
         script = 'inline'
         source_text = \
 '''
-define FOO=1
-define BAR=FOO
+define FOO={"a":"b"}
+define BAR=[1,2,3]
 src : std.CountTimer(delay=1, foo=2)
 snk : io.StandardOut()
-1 > snk.token
+{"foo":[1,2,3]} > snk.token
 # component Foo(a) in -> out {
 # """Docs"""
 # i : std.Identity()
