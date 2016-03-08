@@ -1,6 +1,18 @@
 import astnode as ast
 import visitor
 import astprint
+from calvin.actorstore.store import ActorStore, GlobalStore
+
+
+def _create_signature(actor_class, actor_type):
+    # Create the actor signature to be able to look it up in the GlobalStore if neccessary
+    signature_desc = {'is_primitive': True,
+                      'actor_type': actor_type,
+                      'inports': actor_class.inport_names,
+                      'outports': actor_class.outport_names}
+    return GlobalStore.actor_signature(signature_desc)
+
+
 
 class Finder(object):
     def __init__(self, kind, maxdepth):
@@ -27,12 +39,35 @@ class CodeGen(object):
     """docstring for CodeGen"""
     def __init__(self, ast_root, script_name):
         super(CodeGen, self).__init__()
+        self.actorstore = ActorStore()
         self.ast = ast_root
         self.script_name = script_name
         self.constants = {}
         self.app_info = {'name':script_name}
 
         self.run()
+
+    def lookup(self, actor_type):
+        """
+        Search for the definition of 'actor_type'.
+        Returns a tuple (found, is_primitive, info) where info is either a
+        class (primitive) or a dictionary with component definition
+        Search order:
+          1 - components defined in the current script: self.local_components
+          2 - primitive actors in the order defined by actor store
+          3 - components in the order defined by actor store
+        Steps 2 and 3 are handled by generic lookup in actor store
+        """
+        # if actor_type in self.local_components:
+        #     compdef = self.local_components[actor_type]
+        #     return compdef, False
+
+        found, is_actor, info = self.actorstore.lookup(actor_type)
+        # if self.verify and not found:
+        #     msg = 'Actor "{}" not found.'.format(actor_type)
+        #     raise Exception(msg)
+        return info, is_actor and found
+
 
     def run(self):
         # Add sections
@@ -51,8 +86,10 @@ class CodeGen(object):
     def add_actor(self, actor, namespace):
         key = "{}:{}".format(namespace, actor.ident)
         value = {}
+        actor_class, is_actor = self.lookup(actor.actor_type)
         value['actor_type'] = actor.actor_type
         value['args'] = {} # FIXME: process args
+        value['signature'] = _create_signature(actor_class, actor.actor_type)
         self.app_info['actors'][key] = value
 
     def add_link(self, link, namespace):
