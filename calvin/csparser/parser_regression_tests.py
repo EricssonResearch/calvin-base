@@ -55,37 +55,40 @@ def testit():
 
     res = {}
     for test in tests:
-        filename = 'calvin/csparser/testscripts/%s.calvin' % test
-        print test,
+        try:
+            filename = 'calvin/csparser/testscripts/%s.calvin' % test
+            print test,
 
-        with open(filename, 'r') as f:
-            source = f.read()
+            with open(filename, 'r') as f:
+                source = f.read()
 
-        header = source.splitlines()[0].lstrip('/ ')
-        print header,
-        res[test] = [header]
-        if test in crashers:
-            res[test].append("CRASHER")
-            print "CRASHER"
-            continue
+            header = source.splitlines()[0].lstrip('/ ')
+            print header,
+            res[test] = [header]
+            if test in crashers:
+                res[test].append("CRASHER")
+                print "CRASHER"
+                continue
 
-        a1 = analyzer_old.Analyzer(old_ir(source, test))
-        a2 = codegen.CodeGen(ast(source), test)
+            a1 = analyzer_old.Analyzer(old_ir(source, test))
+            a2 = codegen.CodeGen(ast(source), test)
 
-        # print "======= DONE ========"
+            # print "======= DONE ========"
 
-        if a1.app_info == a2.app_info:
-            output = "EXPECTED DIFF" if test in expected_diff else "IDENTICAL"
-            print output
-        else:
-            output = "EXPECTED DIFF" if test in expected_diff else "DIFFERENCE"
-            print output
-            out1 = json.dumps(a1.app_info, indent=4, sort_keys=True)
-            out2 = json.dumps(a2.app_info, indent=4, sort_keys=True)
-            diff = difflib.unified_diff(out1.splitlines(), out2.splitlines())
-            print '\n'.join(list(diff))
+            if a1.app_info == a2.app_info:
+                output = "EXPECTED DIFF" if test in expected_diff else "IDENTICAL"
+                print output
+            else:
+                output = "EXPECTED DIFF" if test in expected_diff else "DIFFERENCE"
+                print output
+                out1 = json.dumps(a1.app_info, indent=4, sort_keys=True)
+                out2 = json.dumps(a2.app_info, indent=4, sort_keys=True)
+                diff = difflib.unified_diff(out1.splitlines(), out2.splitlines())
+                print '\n'.join(list(diff))
 
-        res[test].append(output)
+            res[test].append(output)
+        except Exception as e:
+            print "Error", e
 
 
     print
