@@ -127,8 +127,13 @@ def p_assignment(p):
 
 def p_link(p):
     """link : port GT port
-            | argument GT port"""
+            | implicit_port GT port"""
     p[0] = ast.Link(p[1], p[3])
+
+
+def p_implicit_port(p):
+    """implicit_port : argument"""
+    p[0] = ast.ImplicitPort(p[1])
 
 
 def p_port(p):
@@ -332,7 +337,8 @@ define FOO={"a":"b"}
 define BAR=[1,2,3]
 src : std.CountTimer(delay=1, foo=2)
 snk : io.StandardOut()
-{"foo":[1,2,3]} > snk.token
+FOO > snk.token
+[1, 2] > snk.token
 # component Foo(a) in -> out {
 # """Docs"""
 # i : std.Identity()
