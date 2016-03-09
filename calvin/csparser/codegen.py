@@ -85,7 +85,6 @@ class ImplicitPortRewrite(Visitor):
     @visitor.when(ast.Block)
     def visit(self, node):
         def g(node):
-            print "self.real_constants", self.real_constants
             if self.real_constants:
                 node.children.extend(self.real_constants)
             self.real_constants = []
