@@ -97,11 +97,10 @@ class ImplicitPortRewrite(Visitor):
     def visit(self, node):
         def g(node):
             if self.implicit_port:
-                removed = node.children.pop(0)
+                removed = node.outport
                 if removed != self.implicit_port:
                     print "ERROR"
-                node.children.insert(0, self.real_port)
-                node.outport = node.children[0]
+                node.outport = self.real_port
                 self.real_port = None
                 self.implicit_port = None
         self._visit(node, postorder=g)
