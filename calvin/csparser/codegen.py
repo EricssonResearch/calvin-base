@@ -34,6 +34,62 @@ class Finder(object):
             map(self.visit, node.children)
             self.depth -= 1
 
+class ImplicitPortRewrite(object):
+    def __init__(self, maxdepth):
+        self.depth = 0
+        self.kind = ast.ImplicitPort
+        self.maxdepth = maxdepth
+        self.implicit_port = None
+        self.real_port = None
+        self.real_constants = []
+        self.counter = 0
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if self.depth < self.maxdepth:
+            self.depth += 1
+            map(self.visit, node.children)
+            self.depth -= 1
+
+    @visitor.when(ast.Block)
+    def visit(self, node):
+        if self.depth < self.maxdepth:
+            self.depth += 1
+            map(self.visit, node.children)
+            self.depth -= 1
+        if self.real_constants:
+            node.children.extend(self.real_constants)
+            self.real_constants = []
+
+    @visitor.when(ast.Link)
+    def visit(self, node):
+        if self.depth < self.maxdepth:
+            self.depth += 1
+            map(self.visit, node.children)
+            self.depth -= 1
+            if self.implicit_port:
+                removed = node.children.pop(0)
+                if removed != self.implicit_port:
+                    print "ERROR"
+                node.children.insert(0, self.real_port)
+                node.outport = node.children[0]
+                self.real_port = None
+                self.implicit_port = None
+
+    @visitor.when(ast.ImplicitPort)
+    def visit(self, node):
+        # self.arg = node.children[0]
+        self.implicit_port = node
+        args = [ ast.NamedArg('data', node.children[0]) ]
+        self.counter += 1
+        const_name = '_literal_const_'+str(self.counter)
+        self.real_constants.append(ast.Assignment(const_name, 'std.Constant', args))
+        self.real_port = ast.Port(const_name, 'token')
+
 
 class CodeGen(object):
     """docstring for CodeGen"""
@@ -79,6 +135,12 @@ class CodeGen(object):
         c = self.query(ast.Constant, self.ast, maxdepth=1)
         self.process_constants(c)
 
+        blocks = self.query(ast.Block, self.ast)
+        for b in blocks:
+            iprw = ImplicitPortRewrite(maxdepth=1024)
+            iprw.visit(b)
+
+
         m = self.query(ast.Block, self.ast, maxdepth=1)
         if len(m) == 1:
             self.process_main(m[0])
@@ -93,7 +155,6 @@ class CodeGen(object):
         self.app_info['actors'][key] = value
 
     def add_link(self, link, namespace):
-        print link.outport.actor, link.inport.port
         key = "{}:{}.{}".format(namespace, link.outport.actor, link.outport.port)
         value = "{}:{}.{}".format(namespace, link.inport.actor, link.inport.port)
         self.app_info['connections'].setdefault(key, []).append(value)
@@ -105,6 +166,9 @@ class CodeGen(object):
             _id, _val = c.children
             if type(_val) is ast.Value:
                 self.constants[_id.ident] = _val.value
+
+    def rewrite_implicit_ports(self):
+        pass
 
     def process_main(self, main):
         actors = self.query(ast.Assignment, main)
