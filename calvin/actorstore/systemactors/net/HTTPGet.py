@@ -42,11 +42,14 @@ class HTTPGet(Actor):
         self.setup()
 
     def setup(self):
+        self.request = None
         self.reset_request()
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
 
     def reset_request(self):
-        self.request = None
+        if self.request:
+            self['http'].finalize(self.request)
+            self.request = None
         self.received_headers = False
 
     @condition(action_input=['URL', 'params', 'header'])

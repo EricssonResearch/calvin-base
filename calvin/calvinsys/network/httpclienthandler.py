@@ -76,6 +76,8 @@ class HTTPClientHandler(object):
     def phrase(self, handle):
         return self._requests[handle].phrase()
 
+    def finalize(self, handle):
+        self._requests.pop(handle, None)
 
 def register(node, actor):
     """

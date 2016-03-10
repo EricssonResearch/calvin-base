@@ -67,8 +67,9 @@ class HTTPPost(Actor):
     @guard(lambda self: self.received_headers and self['http'].received_body(self.request))
     def handle_body(self):
         body = self['http'].body(self.request)
-        self.request = None
         self.received_headers = False
+        self['http'].finalize(self.request)
+        self.request = None
         return ActionResult(production=(body,))
 
     action_priority = (handle_body, handle_headers, new_request)
