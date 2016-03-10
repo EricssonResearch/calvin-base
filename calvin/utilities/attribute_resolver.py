@@ -17,6 +17,10 @@
 # import copy
 import re
 
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
+
 # The order of the address fields
 address_keys = ["country", "stateOrProvince", "locality", "street", "streetNumber", "building", "floor", "room"]
 address_help = {"country": 'ISO 3166-1 alpha2 coded country name string',
@@ -255,11 +259,46 @@ class AttributeResolver(object):
         else:
             return {}
 
-    def get_private(self):
-        return self.attr["private"]
+    def _get_attribute_helper(self, indices, value):
+        if indices == []:
+            return value
+        else:
+            return self._get_attribute_helper(indices[1:], value[indices[0]])
+    
+    def _get_attribute(self, index, which):
+        indices = [idx for idx in index.split("/") if idx] # remove extra /'s
+        try:
+            return self._get_attribute_helper(indices, self.attr[which])
+        except KeyError:
+            _log.warning("Warning: No such attribute '%r'" % (index,))
+            return {}
+        except:
+            _log.error("Error: Invalid attribute '%r'" % (index,))
 
-    def get_public(self):
-        return self.attr["public"]
+    def _has_attribute(self, index, which):
+        indices = [idx for idx in index.split("/") if idx] # remove extra /'s
+        try:
+            return self._get_attribute_helper(indices, self.attr[which]) or True
+        except KeyError:
+            return False
+        except:
+            _log.error("Error: Invalid attribute '%r'" % (index,))
+        
+    def has_private_attribute(self, index):
+        return self._has_attribute(index, "private")
+        
+    def has_public_attribute(self, index):
+        return self._has_attribute(index, "public")
+        
+    def get_private(self, index=None):
+        if not index:
+            return self.attr["private"]
+        return self._get_attribute(index, "private")            
+
+    def get_public(self, index=None):
+        if not index:
+            return self.attr["public"]
+        return self._get_attribute(index, "public")
 
     def get_indexed_public(self, as_list=False):
         # Return all indexes encoded for storage as a list of lists

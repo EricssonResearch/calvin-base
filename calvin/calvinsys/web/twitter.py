@@ -34,7 +34,7 @@ class Twitter(object):
         
         The credentials are added either as a private runtime attribute, i.e
         
-        /private/web/twitter/
+        /private/web/twitter.com/
         
         or supplied by the actor before trying to tweet, i.e.
         
@@ -47,15 +47,14 @@ class Twitter(object):
     def __init__(self, node, actor):
         self._node = node
         self._actor = actor
-        private_attributes = node.attributes.get_private()
-        try:
-            twitter_credentials = private_attributes["web"]["twitter"]
+        
+        twitter_credentials = self._node.attributes.get_private("/web/twitter.com")
+        if twitter_credentials :
             self._tweeter = twitter.Twitter(twitter_credentials)
-        except KeyError:
-            _log.warning("Expected credentials /private/web/twitter not found")
+        else :
+            _log.warning("Expected credentials /private/web/twitter.com not found")
             self._tweeter = None
             
-        
     def set_credentials(self, twitter_credentials):
         if not self._tweeter:
             self._tweeter = twitter.Twitter(twitter_credentials)
