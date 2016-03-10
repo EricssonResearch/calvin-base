@@ -61,8 +61,8 @@ class OpenWeatherMap(Actor):
         result['country'] = data['sys']['country']
         result['weather'] = data['weather'][0]['description']
         temperature = data['main']['temp']
-        temperature = int(10*temperature)/10.0 # One decimal
         temperature -= 273.15 # Centigrade
+        temperature = int(10*temperature)/10.0 # One decimal
         result['temperature'] = temperature
         return result
         
