@@ -1,0 +1,8 @@
+weather : web.OpenWeatherMap()
+city : std.Constant(data="Ystad", n=1)
+forecast : io.Print()
+status: io.Print()
+
+city.token > weather.city
+weather.forecast > forecast.token
+weather.status > status.token
