@@ -64,7 +64,6 @@ class TestSecurity(unittest.TestCase):
 
 
         rt1_conf = copy.deepcopy(_conf)
-        rt1_conf.add_section("security")
         rt1_conf.set("security", "security_conf", {
                         "comment": "Experimental security settings",
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
@@ -101,7 +100,6 @@ class TestSecurity(unittest.TestCase):
 
 
         rt2_conf = copy.deepcopy(_conf)
-        rt2_conf.add_section("security")
         rt2_conf.set("security", "security_conf", {
                         "comment": "Experimental security settings",
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
@@ -138,7 +136,6 @@ class TestSecurity(unittest.TestCase):
 
 
         rt3_conf = copy.deepcopy(_conf)
-        rt3_conf.add_section("security")
         rt3_conf.set("security", "security_conf", {
                         "comment": "Experimental security settings",
                         "signature_trust_store": security_test_dir + "keys/app_signer/truststore/",
@@ -448,6 +445,8 @@ class TestSecurity(unittest.TestCase):
         assert len(actual) == 0  # Means that the actor with unallowed requirements was not accepted
 
         request_handler.delete_application(rt2, result['application_id'])
+
+    # TODO: add test for external authorization
 
 
 ###################################

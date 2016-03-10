@@ -96,7 +96,7 @@ class ActorManager(object):
     def _new_actor(self, actor_type, actor_id=None, credentials=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         if credentials is not None:
-            sec = Security()
+            sec = Security(self.node)
             sec.set_subject(credentials)
             sec.authenticate_subject()
         else:

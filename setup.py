@@ -74,7 +74,8 @@ setup(name='calvin',
               'csinstall=calvin.Tools.csinstaller:main',
               'csmanage=calvin.Tools.csmanage:main',
               'csweb=calvin.Tools.www.csweb:main',
-              'csviz=calvin.Tools.csviz:main'
+              'csviz=calvin.Tools.csviz:main',
+              'csauthzserver=calvin.Tools.csauthzserver:main'
           ]
       }
       )

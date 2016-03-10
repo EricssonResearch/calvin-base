@@ -1077,7 +1077,7 @@ class CalvinControl(object):
                         kwargs['content'] = {
                             'file': data["script"],
                             'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
-                app_info, errors, warnings = compiler.compile(data["script"], filename=data["name"],
+                app_info, errors, warnings = compiler.compile(data["script"], filename=data["name"], node=self.node,
                         verify=data["check"] if "check" in data else True, **kwargs)
                 if errors:
                     if any([e['reason'].startswith("401:") for e in errors]):

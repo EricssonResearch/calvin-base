@@ -23,7 +23,7 @@
 				"attributes": [
 					{
 						"function": "equal",
-						"attributes": ["attr:resource:country", ["SE", "DK"]]
+						"attributes": ["attr:resource:address.country", ["SE", "DK"]]
 					},
 					{
 						"function": "greater_than_or_equal",

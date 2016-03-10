@@ -202,7 +202,9 @@ attr_resolver = {"owner": AttributeResolverHelper.owner_resolver,
                  "address": AttributeResolverHelper.address_resolver,
                  "user_extra": AttributeResolverHelper.extra_resolver}
 
-
+keys = {"owner": owner_keys,
+        "node_name": node_name_keys,
+        "address": address_keys}
 
 def format_index_string(attr, trim=True):
     ''' To format the index search string an attribute resolver function needs to be used:
@@ -305,15 +307,26 @@ class AttributeResolver(object):
         return [AttributeResolverHelper.encode_index([AttributeResolverHelper._to_unicode(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
 
     def get_node_name_as_str(self):
-        """ Generate a string corresponding to the attribute node name
-            The sub-parts are concatenated by '+' to be able to use it as
-            a filename.
+        """
+        Generate a string corresponding to the attribute node name.
+
+        The sub-parts are concatenated by '+' to be able to use it as a filename.
         """
         try:
             return '+'.join(["" if i is None else i for i in self.attr['indexed_public']['node_name']])
         except:
             return None
 
+    def get_indexed_public_with_keys(self):
+        """
+        Return a dictionary with all indexed_public attributes that have been set.
+
+        The attribute type (e.g. "owner") and the attribute name (e.g. "organization")
+        are concatenated using "." to form the key (e.g. "owner.organization").
+        """
+        return {attr_type + "." + keys[attr_type][i]: value 
+                for attr_type, value_list in self.attr["indexed_public"].iteritems() 
+                for i, value in enumerate(value_list) if value is not None}
 
 if __name__ == "__main__":
     ar = AttributeResolver({"indexed_public": {

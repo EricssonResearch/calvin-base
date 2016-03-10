@@ -28,7 +28,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-def compile(source_text, filename='', content=None, credentials=None, verify=True):
+def compile(source_text, filename='', content=None, credentials=None, verify=True, node=None):
     # Steps taken:
     # 1) Verify signature when credentials supplied
     # 2) parser .calvin file -> IR. May produce syntax errors/warnings
@@ -40,7 +40,7 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
     warnings = []
     if credentials:
         _log.debug("Check credentials...")
-        sec = Security()
+        sec = Security(node)
         sec.set_subject(credentials)
         if not sec.authenticate_subject():
             _log.error("Check credentials...failed authentication")

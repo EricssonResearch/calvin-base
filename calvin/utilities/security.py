@@ -15,10 +15,9 @@
 # limitations under the License.
 
 import os
-import json
-import string
 import glob
-import sys
+from datetime import datetime, timedelta
+import requests
 try:
     import OpenSSL.crypto
     HAS_OPENSSL = True
@@ -33,7 +32,6 @@ except:
     HAS_PYRAD = False
 try:
     import jwt
-    from datetime import datetime, timedelta
     HAS_JWT = True
 except:
     HAS_JWT = False
@@ -44,15 +42,16 @@ from calvin.utilities.utils import get_home
 
 _conf = calvinconfig.get()
 _log = get_logger(__name__)
-#default timeout
+
+# Default timeout
 TIMEOUT=5
 
 
 def security_modules_check():
-    if _conf.get("security","security_conf") or _conf.get("security","security_policy"):
+    if _conf.get("security","security_conf"):
         # Want security
         if not HAS_OPENSSL:
-            # Miss open ssl
+            # Miss OpenSSL
             _log.error("Security: Install openssl to allow verification of signatures and certificates")
             return False
             _conf.get("security","security_conf")['authentication']
@@ -62,14 +61,15 @@ def security_modules_check():
     return True
 
 def security_needed_check():
-    if _conf.get("security","security_conf") or _conf.get("security","security_policy"):
+    if _conf.get("security","security_conf"):
         # Want security
         return True
     else:
         return False
 
 class Security(object):
-    def __init__(self):
+
+    def __init__(self, node):
         _log.debug("Security: _init_")
         self.sec_conf = _conf.get("security","security_conf")
         if self.sec_conf is not None and not self.sec_conf.get('signature_trust_store', None):
@@ -77,6 +77,7 @@ class Security(object):
             homefolder = get_home()
             truststore_dir = os.path.join(homefolder, ".calvin", "security", "trustStore")
             self.sec_conf['signature_trust_store'] = truststore_dir
+        self.node = node
         self.subject = {}
         self.auth = {}
 
@@ -84,16 +85,18 @@ class Security(object):
         return "Subject: %s\nAuth: %s" % (self.subject, self.auth)
 
     def set_subject(self, subject):
+        """Set subject attributes and mark them as unauthenticated"""
         _log.debug("Security: set_subject %s" % subject)
         if not isinstance(subject, dict):
             return False
-        # Make sure all subject values are lists
+        # Make sure that all subject values are lists.
         self.subject = {k: list(v) if isinstance(v, (list, tuple, set)) else [v]
                             for k, v in subject.iteritems()}
-        # All default to unauthenticated
+        # Set the corresponding values of self.auth to False to indicate that they are unauthenticated.
         self.auth = {k: [False]*len(v) for k, v in self.subject.iteritems()}
 
     def authenticate_subject(self):
+        """Authenticate subject using the authentication procedure specified in config."""
         _log.debug("Security: authenticate_subject")
         if not security_needed_check():
             _log.debug("Security: authenticate_subject no security needed")
@@ -105,7 +108,7 @@ class Security(object):
         if self.sec_conf['authentication']['procedure'] == "radius":
             if not HAS_PYRAD:
                 _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
-                            "NB! NO AUTHENTICATION USED")
+                            "Note! NO AUTHENTICATION USED")
                 return False
             _log.debug("Security: Radius authentication method chosen")
             return self.authenticate_using_radius_server()
@@ -113,6 +116,12 @@ class Security(object):
         return True
 
     def authenticate_using_radius_server(self):
+        """
+        Authenticate a subject using a RADIUS server.
+
+        The corresponding value in self.auth is set to True
+        if authentication is successful.
+        """
         auth = []
         if self.subject['user']:
             srv=Client(server=self.sec_conf['authentication']['server_ip'], 
@@ -139,9 +148,14 @@ class Security(object):
         return any(auth)
 
     def authenticate_using_local_database(self):
-        """ Authenticate a subject against config stored information
-            This is primarily intended for testing purposes,
-            since passwords arn't stored securily.
+        """
+        Authenticate a subject against information stored in config.
+
+        The corresponding value in self.auth is set to True
+        if authentication is successful.
+
+        This is primarily intended for testing purposes,
+        since passwords aren't stored securely.
         """
         if 'local_users' not in self.sec_conf['authentication']:
             _log.debug("local_users not found in security_conf: %s" % self.sec_conf['authentication'])
@@ -168,10 +182,12 @@ class Security(object):
         return any(auth)
 
     def get_authenticated_subject_attributes(self):
+        """Return a dictionary with all authenticated subject attributes."""
         return {key: [self.subject[key][i] for i, auth in enumerate(values) if auth] 
                 for key, values in self.auth.iteritems() if any(values)}
 
     def check_security_policy_actor(self, requires):
+        """Check if access is permitted for the actor by the security policy"""
         _log.debug("Security: check_security_policy_actor")
         if self.sec_conf and self.sec_conf['access_control_enabled']:
             return self.get_authorization_decision(requires)
@@ -179,29 +195,26 @@ class Security(object):
         return True
 
     def get_authorization_decision(self, requires=None):
-        # The JSON code in the request is inspired by the XACML JSON Profile but has been simplified to be more compact
+        """Get authorization decision using the authorization procedure specified in config."""
+        # The JSON code in the request is inspired by the XACML JSON Profile but has been simplified to be more compact.
         request = {}
         request["subject"] = self.get_authenticated_subject_attributes()
-        # FIXME: how to get resource/runtime attributes?
-        request["resource"] = {
-            "organization": "Ericsson",
-            "country": "SE"
-        }
+        request["resource"] = self.node.attributes.get_indexed_public_with_keys()
         if requires is not None:
             request["action"] = {"requires": requires}
         _log.debug("Security: authorization request: %s" % request)
 
-        # Check if the authorization server is local (the runtime itself) or external
+        # Check if the authorization server is local (the runtime itself) or external.
         if self.sec_conf['authorization']['procedure'] == "external":
             if not HAS_JWT:
                 _log.error("Security: Install JWT to use external server as authorization method.\n" +
-                        "NB! NO AUTHORIZATION USED")
+                        "Note: NO AUTHORIZATION USED")
                 return False
             _log.debug("Security: external authorization method chosen")
             decision = self.authorize_using_external_server(request)
         else: 
             _log.debug("Security: local file authorization method chosen")
-            decision = self.authorize_using_local_policy_files(request)
+            decision = self.authorize_using_local_policies(request)
 
         if decision == "permit":
             _log.debug("Security: access permitted to resources")
@@ -217,41 +230,51 @@ class Security(object):
             return False
 
     def authorize_using_external_server(self, request):
-        # TODO: use async request to external server to not block here
-        ip_addr = "0.0.0.0:8080"
-        node_id = "12345"  # FIXME: how to get node id?
+        """
+        Authorize access using an external authorization server.
+
+        The request is put in a JSON Web Token (JWT) that is signed
+        and includes timestamps and information about sender and receiver.
+        """
+        ip_addr = self.sec_conf['authorization']['server_ip']
+        port = self.sec_conf['authorization']['server_port']
+        # FIXME: use name from certificate as issuer/audience (use certificate.obtain_cert_node_info(self.attributes.get_node_name_as_str())['id'])
         payload = {
-            "iss": node_id,
+            "iss": self.node.id,
             "aud": ip_addr, 
             "iat": datetime.utcnow(), 
             "exp": datetime.utcnow() + timedelta(seconds=60),
             "request": request
         }
         # FIXME: how are the keys stored and retrieved?
-        private_key = open('../keys/private_key.pem', 'rb').read()
-        pub_key_auth_server = open('../keys/public_key_2.pem', 'rb').read()
+        key_storage_path = os.path.join(os.path.expanduser("~/.calvin/security/keys/"), '')
+        private_key = open(key_storage_path + 'private_key.pem', 'rb').read()
+        pub_key_auth_server = open(key_storage_path + 'public_key_2.pem', 'rb').read()
         token = jwt.encode(payload, private_key, algorithm='RS256')
+        # TODO: use async request to external server to not block here?
         try:
-            response = requests.post("http://" + ip_addr + "/authorization/pdp", json={"jwt": token})
+            response = requests.post("http://%s:%d/authorization/pdp" % (ip_addr, port), json={"jwt": token})
             if response.status_code != 200:
                 print "Security: authorization server error - %s %s: %s" % (response.status_code, response.reason, response.json()["error"])
                 return "indeterminate"
             else:
                 json_data = response.json()
-                decoded = jwt.decode(json_data['jwt'], pub_key_auth_server, algorithms=['RS256'], issuer=ip_addr, audience=node_id)
+                # FIXME: use name from certificate as issuer/audience (use obtain_cert_node_info in certificate.py, see Github)
+                decoded = jwt.decode(json_data['jwt'], pub_key_auth_server, algorithms=['RS256'], issuer=ip_addr, audience=self.node.id)
                 return decoded['response']['decision']
-        except:
-            e = sys.exc_info()[1]
+        except Exception as e:
             _log.error("Security: error when sending request to authorization server: %s" % str(e))
             return "indeterminate"
 
-    def authorize_using_local_policy_files(self, request):
+    def authorize_using_local_policies(self, request):
+        """Authorize access using a local Policy Decision Point (PDP)."""
         self.pdp = PolicyDecisionPoint(self.sec_conf['authorization'])
         response = self.pdp.authorize(request)
         return response['decision']
 
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):
+        """Get files needed for signature verification of the specified file."""
         # Get the data
         sign_filenames = filename + ".sign.*"
         sign_content = {}
@@ -275,6 +298,7 @@ class Security(object):
         return {'sign': sign_content, 'file': file_content}
 
     def verify_signature(self, file, flag):
+        """Verify the signature of the specified file of type flag."""
         content = Security.verify_signature_get_files(file)
         if content:
             return self.verify_signature_content(content, flag)
@@ -282,6 +306,7 @@ class Security(object):
             return False
 
     def verify_signature_content(self, content, flag):
+        """Verify the signature of the content of type flag."""
         _log.debug("Security: verify %s signature of %s" % (flag, content))
         if not self.sec_conf:
             _log.debug("Security: no signature verification required: %s" % content['file'])
@@ -291,7 +316,7 @@ class Security(object):
             # TODO add component verification
             raise NotImplementedError
 
-        self.auth[flag + "_signer"] = [True]  # Needed to include the signer attribute in authorization requests
+        self.auth[flag + "_signer"] = [True]  # Needed to include the signer attribute in authorization requests.
 
         if content is None or not content['sign']:
             _log.debug("Security: signature information missing")

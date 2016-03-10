@@ -359,10 +359,12 @@ class Actor(object):
         self.metering.add_actor_info(self)
 
     def set_credentials(self, credentials, security=None):
-        """ Sets the credentials the actor operates under
-            This will trigger an authentication of the credentials
-            Optionally an authenticated Security instance can be supplied,
-            to reduce the needed authentication processing.
+        """
+        Set the credentials the actor operates under.
+
+        This will trigger an authentication of the credentials.
+        Optionally an authenticated Security instance can be supplied,
+        to reduce the needed authentication processing.
         """
         _log.debug("actor.py: set_credentials: %s" % credentials)
         if credentials is None:
@@ -371,9 +373,10 @@ class Actor(object):
         if security:
             self.sec = security
         else:
-            self.sec = Security()
-            self.sec.set_subject(self.credentials)
-            self.sec.authenticate_subject()
+            if self._calvinsys is not None:
+                self.sec = Security(self._calvinsys._node)
+                self.sec.set_subject(self.credentials)
+                self.sec.authenticate_subject()
 
     def get_credentials(self):
         _log.debug("actor.py: get_credentials: %s" % self.credentials)
@@ -408,14 +411,14 @@ class Actor(object):
 
     @verify_status([STATUS.LOADED])
     def check_requirements(self):
-        """ Checks that all requirements are available and accessable in calvinsys """
+        """Check that all requirements are available and accessible in calvinsys."""
         # Check availability of calvinsys subsystems before checking security policies.
         if hasattr(self, "requires"):
             for req in self.requires:
                 if not self._calvinsys.has_capability(req):
                     raise Exception("%s requires %s" % (self.id, req))
-        # Check the runtime and calvinsys execution access rights
-        # Note when no credentials set no verification done
+        # Check the runtime and calvinsys execution access rights.
+        # Note: when no credentials are set, no verification is done.
         if hasattr(self, 'sec') and not self.sec.check_security_policy_actor(['runtime'] +
                                             (self.requires if hasattr(self, "requires") else [])):
             _log.debug("Security policy check for actor failed")

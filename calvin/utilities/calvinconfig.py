@@ -109,7 +109,8 @@ class CalvinConfig(object):
             },
             'developer': {
                 'comment': 'Experimental settings',
-            }
+            },
+            'security': {}
         }
         return default
 

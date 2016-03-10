@@ -564,7 +564,7 @@ class Deployer(object):
         self.deployable = deployable
         self.deploy_info = deploy_info
         self.credentials = credentials
-        self.sec = Security()
+        self.sec = Security(node)
         self.sec.set_subject(self.credentials)
         self.actorstore = ActorStore(security=self.sec)
         self.actor_map = {}
