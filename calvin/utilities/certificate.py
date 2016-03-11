@@ -25,7 +25,14 @@ import sys
 import tempfile
 import time
 import random
+import shutil
 from calvin.utilities import confsort
+import OpenSSL
+from calvin.utilities import calvinuuid
+from calvin.utilities import calvinconfig
+from calvin.utilities.calvinlogger import get_logger
+_log = get_logger(__name__)
+_conf = calvinconfig.get()
 
 BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
 
@@ -92,8 +99,9 @@ class Config():
                               'stateOrProvinceName': 'optional'}}
     # TODO Find out why the policy does not match equal org names.
 
-    def __init__(self, configfile=None, domain=None):
+    def __init__(self, configfile=None, domain=None, commonName=None, force=False, readonly=False):
         self.configfile = configfile
+        self.commonName = commonName or 'runtime'
         self.config = ConfigParser.SafeConfigParser()
         self.config.optionxform = str
         os.umask(0077)
@@ -107,7 +115,10 @@ class Config():
             self.configfile = os.path.join(homefolder, ".calvin",
                                            "security", domain,
                                            "openssl.conf")
-            if os.path.isfile(self.configfile):
+            exist = os.path.isfile(self.configfile)
+            if not exist and readonly:
+                raise Exception("Configuration file does not exist, create CA first")
+            if exist and not force:
                 self.configuration = self.parse_opensslconf()
                 print "Configuration already exists " \
                       "using {}".format(self.configfile)
@@ -134,6 +145,8 @@ class Config():
                     value = self.domain
                 elif option == "dir":
                     value = directory
+                elif section == 'req_distinguished_name' and option == 'commonName':
+                    value = self.commonName
                 else:
                     value = self.__class__.DEFAULT[section][option]
                 self.config.set(section, option, value)
@@ -299,6 +312,16 @@ def new_runtime(conf, name, nodeid=None):
     #     raise IOError(stderr)
     # return out
 
+def remove_domain(domain, directory=None):
+    """
+    Remove an existing domain uses default security
+    directory if not supplied.
+    """
+    homefolder = os.getenv("HOME")
+    domaindir = directory or os.path.join(homefolder, ".calvin", "security", domain)
+    configfile = os.path.join(domaindir, "openssl.conf")
+    if os.path.isfile(configfile):
+        shutil.rmtree(domaindir, ignore_errors=True)
 
 def new_domain(conf):
     """
@@ -375,6 +398,65 @@ def new_domain(conf):
         raise IOError(stderr)
     return out
 
+def copy_cert(conf, path):
+    """
+    Copy the certificate giving it the name that can be stored in
+    trustStore for verification of signatures. 
+    file is the out file
+
+    """
+    cert_file = conf.configuration["CA_default"]["certificate"]
+    
+    try:
+        with open(cert_file, 'rt') as f:
+            cert_str = f.read()
+            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_str)
+            cert_hash = format(cert.subject_name_hash(),'x')
+    except:
+        _log.exception("Failed to get certificate hash")
+        raise Exception("Failed to get certificate hash")
+    out_file = os.path.join(path, cert_hash + ".0")
+    shutil.copyfile(cert_file, out_file)
+    return out_file
+
+def sign_file(conf, file):
+    """
+    Sign an actor, component or application. 
+    Store the signature in <file>.sign.<hash-cert>
+    Conf is a Config object with a loaded openssl.conf configuration.
+    File is the file to be signed.
+
+    Equivalent of:
+    openssl dgst -sha256 -sign "$private_key"
+                -out "$file.sign.<cert-hash>"
+                -passin file:$private_dir/ca_password
+                 "$file"
+    """
+    private = conf.configuration["CA_default"]["private_dir"]
+    cert_file = conf.configuration["CA_default"]["certificate"]
+    private_key = conf.configuration["CA_default"]["private_key"]
+    password_file = os.path.join(private, "ca_password")
+    
+    try:
+        with open(cert_file, 'rt') as f:
+            cert_str = f.read()
+            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_str)
+            cert_hash = format(cert.subject_name_hash(),'x')
+    except:
+        _log.exception("Failed to get certificate hash")
+        raise Exception("Failed to get certificate hash")
+    sign_file = file + ".sign." + cert_hash
+    log = subprocess.Popen(["openssl", "dgst", "-sha256",
+                            "-sign", private_key,
+                            "-passin", "file:" + password_file,
+                            "-out", sign_file,
+                            file],
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    stdout, stderr = log.communicate()
+    if log.returncode != 0:
+        raise IOError(stderr)
+    return sign_file
 
 def sign_req(conf, req, name):
     """
@@ -472,12 +554,6 @@ def sign_req(conf, req, name):
 # Linking a runtime name on a host to a persistent node-id
 # This linkage is included in CSR and signed by CA
 ###########################################################
-import OpenSSL
-from calvin.utilities import calvinuuid
-from calvin.utilities import calvinconfig
-from calvin.utilities.calvinlogger import get_logger
-_log = get_logger(__name__)
-_conf = calvinconfig.get()
 
 def obtain_cert_node_info(name):
     """ Obtain node id based on name and domain from config

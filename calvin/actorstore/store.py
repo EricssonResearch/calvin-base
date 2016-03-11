@@ -93,7 +93,7 @@ class Store(object):
         """
             Subclass must set 'conf_paths_name' before calling superclass init.
         """
-        base_path = os.path.dirname(__file__)
+        base_path = os.path.abspath(os.path.dirname(__file__))
         # paths = [p for p in _conf.get('global', self.conf_paths_name) if not os.path.isabs(p)]
         # abs_paths = [p for p in _conf.get('global', self.conf_paths_name) if os.path.isabs(p)]
         paths = _conf.get('global', self.conf_paths_name)
@@ -114,15 +114,15 @@ class Store(object):
             if not os.path.exists(path):
                 continue
 
-            for dir, subdirs, _ in os.walk(path):
-                rel_path = os.path.relpath(dir, path)
+            for current, subdirs, _ in os.walk(path):
+                rel_path = os.path.relpath(current, path)
                 # Skip top directory
                 if rel_path == '.':
                     continue
                 namespace = _rel_path_to_namespace(rel_path)
-                files = _files_in_dir(dir, ('.py', '.comp'))
+                files = _files_in_dir(current, ('.py', '.comp'))
 
-                yield (dir, namespace, files)
+                yield (current, namespace, files)
 
                 # Exclude special directories
                 for exclude in self._excluded_dirs:
@@ -350,6 +350,22 @@ class ActorStore(Store):
         for path in self.paths_for_module(namespace):
             actors = actors + [_basename(x) for x in _files_in_dir(path, ('.py', '.comp')) if '__init__.py' not in x]
         return actors
+
+    def actor_paths(self, module):
+        # Depth first
+        l = []
+        prefix = module + "." if module else ""
+        for m in self.modules(module):
+            l = l + self.actor_paths(prefix + m)
+        actors = []
+        for path in self.paths_for_module(module):
+            actors = actors + [x for x in _files_in_dir(path, ('.py', '.comp')) if '__init__.py' not in x]
+        if not l and not actors:
+            # Fully qualifying name?
+            namespace, name = module.rsplit('.', 1)
+            for path in self.paths_for_module(namespace):
+                actors = actors + [x for x in _files_in_dir(path, ('.py', '.comp')) if _basename(x) == name]
+        return l + actors
 
 
 class DocumentationStore(ActorStore):

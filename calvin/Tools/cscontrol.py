@@ -19,6 +19,7 @@ import argparse
 import json
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.security import Security
+from calvin.utilities import certificate
 
 _log = get_logger(__name__)
 _request_handler = None
@@ -66,6 +67,9 @@ def control_deploy(args):
     response = None
     print args
     reqs = requirements_file(args.reqs) if args.reqs else None
+    if args.domain:
+        conf = certificate.Config(configfile=None, domain=args.domain, readonly=True)
+        certificate.sign_file(conf, args.script.name)
     sourceText = args.script.read()
     credentials_ = None
     content = None
@@ -76,7 +80,7 @@ def control_deploy(args):
             print "Credentials not JSON:\n", e
             return -1
         if credentials_:
-            content = Security.verify_signature_get_files(file, skip_file=True)
+            content = Security.verify_signature_get_files(args.script.name, skip_file=True)
             if content:
                 content['file'] = sourceText
     try:
@@ -186,10 +190,14 @@ def parse_args():
     cmd_deploy.add_argument('-c', '--no-check', dest='check', action='store_false', default=True,
                            help='Don\'t verify if actors or components are correct, ' +
                                 'allows deployment of actors not known on the node')
-    argparser.add_argument('--credentials', metavar='<credentials>', type=str,
+    cmd_deploy.add_argument('--credentials', metavar='<credentials>', type=str,
                            help='Supply credentials to run program under '
                                 'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
                            dest='credentials', default=None)
+
+    cmd_deploy.add_argument('--sign-domain', metavar='<domain>', type=str,
+                           help='Sign the app before deploy using this domain',
+                           dest='domain', default=None)
 
     cmd_deploy.add_argument('--reqs', metavar='<reqs>', type=str,
                             help='deploy script, currently JSON coded data file',
