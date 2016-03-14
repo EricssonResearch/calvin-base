@@ -67,8 +67,8 @@ def control_deploy(args):
     response = None
     print args
     reqs = requirements_file(args.reqs) if args.reqs else None
-    if args.domain:
-        conf = certificate.Config(configfile=None, domain=args.domain, readonly=True)
+    if args.signer:
+        conf = certificate.Config(configfile=None, domain=args.signer, readonly=True)
         certificate.sign_file(conf, args.script.name)
     sourceText = args.script.read()
     credentials_ = None
@@ -195,9 +195,9 @@ def parse_args():
                                 'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
                            dest='credentials', default=None)
 
-    cmd_deploy.add_argument('--sign-domain', metavar='<domain>', type=str,
-                           help='Sign the app before deploy using this domain',
-                           dest='domain', default=None)
+    cmd_deploy.add_argument('--sign-org', metavar='<signer>', type=str,
+                           help='Sign the app before deploy, using this code signing organization name supplied',
+                           dest='signer', default=None)
 
     cmd_deploy.add_argument('--reqs', metavar='<reqs>', type=str,
                             help='deploy script, currently JSON coded data file',

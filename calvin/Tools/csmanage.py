@@ -66,8 +66,8 @@ def parse_args():
                            help='overwrite components or actor that exists at destination')
     cmd_install.add_argument('--sign', dest='sign', action='store_true',
                            help='sign actor or component')
-    cmd_install.add_argument('--domain', metavar='<name>', dest='domain', type=str,
-                           help='CA domain name used, assumes default location when no calvin.conf')
+    cmd_install.add_argument('--org', metavar='<name>', dest='org', type=str,
+                           help='Code Signer org name used, assumes default location when no calvin.conf')
     cmd_install.add_argument('--namespace', metavar='<ns.sub-ns>', type=str, required=True,
                            help='namespace to install actor or components under')
     aargs = cmd_install.add_argument_group("actor")
@@ -87,6 +87,18 @@ def parse_args():
 
     cmd_install.set_defaults(func=manage_install)
 
+    # parser for trust cmd
+    trust_commands = ['trust']
+
+    cmd_trust = cmdparsers.add_parser('trust', help='manage trusted certificates')
+    etargs = cmd_trust.add_argument_group("mandatory argument")
+    etargs.add_argument('--path', metavar='<path>', type=str,
+                           help='certificate to trust')
+    cmd_trust.add_argument('--dir', metavar='<directory>', type=str, default="",
+                           help='security directory, defaults to ~/.calvin/security')
+
+    cmd_trust.set_defaults(func=manage_trust)
+
     # parser for sign cmd
     # Might later need to specify what is signed to add extra verification
     # sign_commands = ['app', 'component', 'actor']
@@ -94,8 +106,8 @@ def parse_args():
     cmd_sign = cmdparsers.add_parser('sign', help='sign a file')
     # cmd_sign.add_argument('cmd', metavar='<command>', choices=sign_commands, type=str,
     #                        help="one of %s" % ", ".join(sign_commands))
-    cmd_sign.add_argument('--domain', metavar='<name>', dest='domain', type=str, required=True,
-                           help='CA domain name used')
+    cmd_sign.add_argument('--org', metavar='<name>', dest='org', type=str, required=True,
+                           help='Code Signer org name used')
     cmd_sign.add_argument('--dir', metavar='<directory>', type=str, default="",
                            help='security directory, defaults to ~/.calvin/security')
     cmd_sign.add_argument('--file', metavar='<path>', action='append', default=[],
@@ -106,15 +118,15 @@ def parse_args():
 
     cmd_sign.set_defaults(func=manage_sign)
 
-    # parser for CA cmd
-    ca_commands = ['create', 'remove', 'export', 'trust']
+     # parser for CA cmd
+    ca_commands = ['create', 'remove', 'export']
 
     cmd_ca = cmdparsers.add_parser('ca', help='manage CA')
     cmd_ca.add_argument('cmd', metavar='<command>', choices=ca_commands, type=str,
                            help="one of %s" % ", ".join(ca_commands))
     etargs = cmd_ca.add_argument_group("export and trust")
     etargs.add_argument('--path', metavar='<path>', type=str,
-                           help='export to directory or certificate to trust')
+                           help='export to directory')
     cargs = cmd_ca.add_argument_group("create")
     cmd_ca.add_argument('--force', dest='force', action='store_true',
                            help='overwrite file that exists at destination')
@@ -126,6 +138,27 @@ def parse_args():
                            help='security directory, defaults to ~/.calvin/security')
 
     cmd_ca.set_defaults(func=manage_ca)
+
+    # parser for code_signer cmd
+    cs_commands = ['create', 'remove', 'export']
+
+    cmd_cs = cmdparsers.add_parser('code_signer', help='manage Code Signer')
+    cmd_cs.add_argument('cmd', metavar='<command>', choices=cs_commands, type=str,
+                           help="one of %s" % ", ".join(cs_commands))
+    etargs = cmd_cs.add_argument_group("export")
+    etargs.add_argument('--path', metavar='<path>', type=str,
+                           help='export to directory')
+    cargs = cmd_cs.add_argument_group("create")
+    cmd_cs.add_argument('--force', dest='force', action='store_true',
+                           help='overwrite file that exists at destination')
+    cmd_cs.add_argument('--org', metavar='<name>', dest='org', type=str, required=True,
+                           help='Organizational name used')
+    cargs.add_argument('--name', metavar='<commonName>', type=str,
+                           help='common name of Code Signer')
+    cmd_cs.add_argument('--dir', metavar='<directory>', type=str, default="",
+                           help='security directory, defaults to ~/.calvin/security')
+
+    cmd_cs.set_defaults(func=manage_cs)
 
     return argparser.parse_args()
 
@@ -155,6 +188,19 @@ def manage_install(args):
         report_issues(errors, 'Error', args.script)
         return 1
 
+def manage_trust(args):
+    if not args.path:
+        raise Exception("No path supplied")
+    cert_name = os.path.basename(args.path)
+    if args.dir:
+        truststore_cert = os.path.join(args.dir, "trustStore", cert_name)
+    else:
+        homefolder = os.getenv("HOME")
+        truststore_cert = os.path.join(homefolder, ".calvin", "security", "trustStore", cert_name)
+    if not os.path.isdir(os.path.dirname(truststore_cert)):
+        os.makedirs(os.path.dirname(truststore_cert), 0700)
+    shutil.copy(args.path, truststore_cert)
+
 def manage_sign(args):
     # Collect files to sign
     files = []
@@ -169,11 +215,11 @@ def manage_sign(args):
     files = [f for f in files if f.endswith(('.calvin', '.comp', '.py')) and not f.endswith('__init__.py')]
     if not files:
         raise Exception("No (*.calvin, *.comp, *py) files supplied")
-    if not args.domain:
-        raise Exception("No domain supplied")
-    configfile = os.path.join(args.dir, args.domain, "openssl.conf") if args.dir else None
+    if not args.org:
+        raise Exception("No org supplied")
+    configfile = os.path.join(args.dir, args.org, "openssl.conf") if args.dir else None
     # When conf missing the exception is printed by main
-    conf = certificate.Config(configfile=configfile, domain=args.domain, readonly=True)
+    conf = certificate.Config(configfile=configfile, domain=args.org, readonly=True)
     exceptions = []
     for f in files:
         try:
@@ -203,17 +249,27 @@ def manage_ca(args):
         configfile = os.path.join(args.dir, args.domain, "openssl.conf") if args.dir else None
         conf = certificate.Config(configfile=configfile, domain=args.domain, readonly=True)
         certificate.copy_cert(conf, args.path)
-    elif args.cmd == 'trust':
+
+def manage_cs(args):
+    if args.cmd == 'create' and args.org and args.name:
+        if not args.org:
+            raise Exception("No organization supplied")
+        configfile = os.path.join(args.dir, args.org, "openssl.conf") if args.dir else None
+        conf = certificate.Config(configfile=configfile, domain=args.org, commonName=args.name, force=args.force)
+        certificate.new_domain(conf)
+    elif args.cmd == 'remove':
+        if not args.org:
+            raise Exception("No organization supplied")
+        orgdir = os.path.join(args.dir, args.org) if args.dir else None
+        certificate.remove_domain(orgdir, args.org)
+    elif args.cmd == 'export':
+        if not args.org:
+            raise Exception("No organization supplied")
         if not args.path:
             raise Exception("No path supplied")
-        cert_name = os.path.basename(args.path)
-        if args.dir:
-            truststore_cert = os.path.join(args.dir, "trustStore", cert_name)
-        else:
-            homefolder = os.getenv("HOME")
-            truststore_cert = os.path.join(homefolder, ".calvin", "security", "trustStore", cert_name)
-        os.makedirs(os.path.dirname(truststore_cert), 0700)
-        shutil.copy(args.path, truststore_cert)
+        configfile = os.path.join(args.dir, args.org, "openssl.conf") if args.dir else None
+        conf = certificate.Config(configfile=configfile, domain=args.org, readonly=True)
+        certificate.copy_cert(conf, args.path)
 
 def main():
     args = parse_args()
