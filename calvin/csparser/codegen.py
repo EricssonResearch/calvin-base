@@ -78,6 +78,11 @@ class Visitor(object):
 
 
 class ImplicitPortRewrite(Visitor):
+    """
+    ImplicitPortRewrite takes care of the construct
+        <value> > foo.in
+    by replacing <value> with a std.Constant(data=<value>) actor.
+    """
     def __init__(self, maxdepth):
         super(ImplicitPortRewrite, self).__init__(maxdepth)
         self.kind = ast.ImplicitPort
@@ -120,7 +125,7 @@ class ImplicitPortRewrite(Visitor):
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
         self.implicit_port = node
-        args = [ ast.NamedArg('data', node.children[0]) ]
+        args = [ ast.NamedArg(ast.Id('data'), node.children[0]) ]
         self.counter += 1
         const_name = '_literal_const_'+str(self.counter)
         self.real_constants.append(ast.Assignment(const_name, 'std.Constant', args))
@@ -186,7 +191,12 @@ class CodeGen(object):
         value = {}
         actor_class, is_actor = self.lookup(actor.actor_type)
         value['actor_type'] = actor.actor_type
-        value['args'] = {} # FIXME: process args
+        args = {}
+        argnodes = self.query(ast.NamedArg, actor)
+        for n in argnodes:
+            k, v = n.children
+            args[k.ident] = v.value
+        value['args'] = args
         value['signature'] = _create_signature(actor_class, actor.actor_type)
         self.app_info['actors'][key] = value
 
