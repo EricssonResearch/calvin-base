@@ -80,8 +80,7 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = service_discovery_ssdp.SSDPServiceDiscovery(iface,
-                                                                 cert=certstr)
+        self._ssdps = service_discovery_ssdp.SSDPServiceDiscovery(iface)
         dlist += self._ssdps.start()
 
         _log.debug("Register service %s %s:%s" % (network, ip, port))
@@ -116,10 +115,11 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
 
         def start_msearch(args):
             _log.debug("** msearch %s args: %s" % (self, repr(args)))
-            service_discovery_ssdp.reactor.callLater(0,
-                                                    self._ssdps.start_search,
-                                                    bootstrap_proxy,
-                                                    stop=False)
+            def _later_start():
+                self._ssdps.start_search(service_discovery_ssdp.SERVICE_UUID, callback=bootstrap_proxy, stop=False)
+                self._ssdps.update_server_params(service_discovery_ssdp.SERVICE_UUID, cert=certstr)
+
+            service_discovery_ssdp.reactor.callLater(0, _later_start)
 
         # Wait until servers all listen
         dl = service_discovery_ssdp.defer.DeferredList(dlist)
@@ -442,9 +442,11 @@ class evilAppendServer(append_server.AppendServer):
                                              challenge,
                                              signature,
                                              self.protocol.getOwnCert())
+                self.protocol.storeCert(data[2], id)
             except:
                 logger(self.protocol.sourceNode, "Certificate creation failed")
-            self.protocol.storeCert(data[2], id)
+            if not id:
+                return deferredDict(ds)
             node = Node(id.decode("hex"), data[0], data[1])
             if self.protocol.router.isNewNode(node):
                 return deferredDict(ds).addCallback(initTable, challenge, id)

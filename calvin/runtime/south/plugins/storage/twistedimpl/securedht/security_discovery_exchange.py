@@ -211,10 +211,11 @@ class Client(object):
         STATE.CERTIFICATE_STORED -> STATE.SATISFIED;
         STATE.CERTIFICATE_STORED -> STATE.CSR_GENERATED;
     }
-
     """
+
     # TODO: Add a state and function to verify that the received certificate
     # is the one issued by this csr.
+
     def __init__(self, name):
         """Maintain state of a Node and store `configuration`."""
         self.state = STATE.NEW
@@ -275,7 +276,7 @@ class Client(object):
 
     def verify_configuration(self):
         """
-        Verify that the self.confifguration contains required fields.
+        Verify that the self.configuration contains required fields.
         Raise ConfigurationMalformed is any required field is missing.
         """
         try:
@@ -514,7 +515,7 @@ class Ca(object):
             cert_conf_file = self.conf.get("security", "certificate_conf")
             self.domain = self.conf.get("security", "certificate_domain")
             self.cert_conf = certificate.Config(cert_conf_file,
-                                                domain).configuration
+                                                self.domain).configuration
 
             if self.cert_conf['CA_default']['certificate'] is None:
                 raise ConfigurationMalformed("Missing `CA_default`."

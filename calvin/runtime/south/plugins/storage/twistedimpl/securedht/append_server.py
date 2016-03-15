@@ -1098,7 +1098,7 @@ class AppendServer(Server):
         Bootstrap the server by connecting to other known nodes in the network.
 
         Args:
-            addrs: A `list` of (ip, port) `tuple` pairs.  Note that only IP addresses
+            addrs: A `list` of (ip, port, cert) tuples.  Note that only IP addresses
                    are acceptable - hostnames will cause an error.
         """
         # if the transport hasn't been initialized yet, wait a second
@@ -1166,9 +1166,11 @@ class AppendServer(Server):
                                              challenge,
                                              signature,
                                              self.protocol.getOwnCert())
+                self.protocol.storeCert(data[2], id)
             except:
                 logger(self.protocol.sourceNode, "Certificate creation failed")
-            self.protocol.storeCert(data[2], id)
+            if not id:
+                return deferredDict(ds)
             node = Node(id.decode("hex"), data[0], data[1])
             if self.protocol.router.isNewNode(node):
                 return deferredDict(ds).addCallback(initTable,

@@ -24,7 +24,8 @@ import OpenSSL.crypto
 from twisted.internet import reactor, defer, threads
 
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import AppendServer
-from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import SSDPServiceDiscovery
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import SSDPServiceDiscovery,\
+                                                                                              SERVICE_UUID
 from calvin.utilities import certificate
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.utilities import calvinlogger
@@ -176,7 +177,7 @@ class AutoDHTServer(StorageBase):
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = SSDPServiceDiscovery(iface, cert=certstr)
+        self._ssdps = SSDPServiceDiscovery(iface)
         dlist += self._ssdps.start()
 
         logger("Register service %s %s:%s" % (network, ip, port))
@@ -206,11 +207,12 @@ class AutoDHTServer(StorageBase):
             d.addErrback(failed)
 
         def start_msearch(args):
+            def _later_start():
+                self._ssdps.start_search(SERVICE_UUID, callback=bootstrap_proxy, stop=False)
+                self._ssdps.update_server_params(SERVICE_UUID, cert=certstr)
+                
             logger("** msearch %s args: %s" % (self, repr(args)))
-            reactor.callLater(0,
-                                self._ssdps.start_search,
-                                bootstrap_proxy,
-                                stop=False)
+            reactor.callLater(0, _later_start)
 
         # Wait until servers all listen
         dl = defer.DeferredList(dlist)
@@ -244,7 +246,7 @@ class AutoDHTServer(StorageBase):
     def bootstrap(self, addrs, cb=None):
         return TwistedWaitObject(self.dht_server.bootstrap, addr=addrs, cb=cb)
 
-    def stop_search(self):
+    def stop_all_search(self):
         return self._ssdps.stop_search()
 
     def stop(self, cb=None):

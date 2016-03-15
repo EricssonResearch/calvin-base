@@ -42,17 +42,26 @@ SERVER_ID = ','.join([platform.system(),
                       'UPnP/1.0,Calvin UPnP framework',
                       __version__])
 SERVICE_UUID = '1693326a-abb9-11e4-8dfb-9cb654a16426'
+CA_SERVICE_UUID = '58532fde-e793-11e5-965d-7cd1c3da1305'
 
-MS =    ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r\n' +
+MS_BOOTSTRAP =    ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r\n' +
          'MX: 2\r\nST: uuid:%s\r\n\r\n') %\
         (SSDP_ADDR, SSDP_PORT, SERVICE_UUID)
 
-MS_RESP =   'HTTP/1.1 200 OK\r\n' + \
+MS_CSR = ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r\n' +
+         'MX: 2\r\nST: uuid:%s\r\nCALVIN_CSR: {csr}\r\nCALVIN_FP: {fp}\r\n\r\n') %\
+        (SSDP_ADDR, SSDP_PORT, CA_SERVICE_UUID)
+
+MS = {SERVICE_UUID: MS_BOOTSTRAP, CA_SERVICE_UUID: MS_CSR}
+
+MS_BOOTSTRAP_RESP =   'HTTP/1.1 200 OK\r\n' + \
             'USN: %s::upnp:rootdevice\r\n' % SERVICE_UUID + \
             'SERVER: %s\r\nlast-seen: %s\r\nEXT: \r\nSERVICE: %s\r\n' + \
             'LOCATION: http://calvin@github.se/%s/description-0.0.1.xml\r\n' % SERVICE_UUID + \
             'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % SERVICE_UUID + \
             'DATE: %s\r\n'
+
+MS_RESP = {SERVICE_UUID: MS_BOOTSTRAP_RESP, CA_SERVICE_UUID: None}
 
 def parse_http_response(data):
 
@@ -71,12 +80,12 @@ def parse_http_response(data):
 
 
 class ServerBase(DatagramProtocol):
-    def __init__(self, ips, cert=None, d=None):
+    def __init__(self, ips, dserver=None):
         self._services = {}
-        self._dstarted = d
+        self._dstarted = dserver
         self.ignore_list = []
         self.ips = ips
-        self.cert = cert
+        self._msearches_resp = {sid: {} for sid in MS.keys()}
 
     def startProtocol(self):
         if self._dstarted:
@@ -100,19 +109,20 @@ class ServerBase(DatagramProtocol):
                             if addr[0] == "127.0.0.1" and address[0] != "127.0.0.1":
                                 continue
 
-                            response = MS_RESP % ('%s:%d' % addr, str(time.time()),
+                            response = MS_RESP[SERVICE_UUID] % ('%s:%d' % addr, str(time.time()),
                                                   k, datetimeToString())
-                            if self.cert != None:
-                                response = "{}CERTIFICATE: ".format(response)
-                                response = "{}{}".format(response, self.cert)
-                            response = "{}\r\n\r\n".format(response)
-
+                            if "cert" in self._msearches_resp[SERVICE_UUID].keys():
+                                response += "CERTIFICATE: {}\r\n\r\n".format(self._msearches_resp[SERVICE_UUID]["cert"])
                             _log.debug("Sending response: %s" % repr(response))
                             delay = random.randint(0, min(5, int(headers['mx'])))
                             reactor.callLater(delay, self.send_it,
                                                   response, address)
+                # TODO elif CA_SERVICE_UUID
         except:
             _log.exception("Error datagram received")
+
+    def update_params(self, service_uuid, **kwargs):
+        self._msearches_resp[service_uuid].update(kwargs)
 
     def add_service(self, service, ip, port):
         # Service on all interfaces
@@ -146,13 +156,10 @@ class ServerBase(DatagramProtocol):
 
 
 class ClientBase(DatagramProtocol):
-    def __init__(self, d=None):
+    def __init__(self, dclient=None):
+        self._dstarted = dclient
         self._service = None
-        self._mserach_cb = None
-        self._msearch_stopped = False
-        self._msearch_stop = False
-        self._dstarted = d
-        self._msearch_cb = None
+        self._msearches = {sid: {'cb': None, 'stopped': False, 'stop': False} for sid in MS.keys()}
 
     def startProtocol(self):
         if self._dstarted:
@@ -174,45 +181,44 @@ class ClientBase(DatagramProtocol):
                 except KeyError:
                     pass
                 # Filter on service calvin networks
-                if self._service is None or \
-                   self._service == headers['service']:
+                if self._service is None or self._service == headers['service']:
 
                     _log.debug("Received service %s from %s" %
                                (headers['service'], c_address, ))
 
                     if c_address:
-                        if self._msearch_cb:
-                            self._msearch_cb([tuple(c_address)])
-                        if self._msearch_stop:
-                            self.stop()
+                        if self._msearches[SERVICE_UUID]['cb']:
+                            self._msearches[SERVICE_UUID]['cb']([tuple(c_address)])
+                        if self._msearches[SERVICE_UUID]['stop']:
+                            self.stop(SERVICE_UUID)
+            # TODO elif CA_SERVICE_UUID
 
-    def set_callback(self, callback):
-        self._msearch_cb = callback
+    def set_callback(self, service_uuid, callback):
+        self._msearches[service_uuid]['cb'] = callback
 
     def set_service(self, service):
         self._service = service
 
-    def is_stopped(self):
-        return self._msearch_stopped
+    def is_stopped(self, service_uuid):
+        return self._msearches[service_uuid]['stopped']
 
-    def set_autostop(self, stop=True):
-        self._msearch_stop = stop
+    def set_autostop(self, service_uuid, stop=True):
+        self._msearches[service_uuid]['stop'] = stop
 
-    def stop(self):
-        self._msearch_stopped = True
+    def stop(self, service_uuid):
+        self._msearches[service_uuid]['stopped'] = True
 
 
 class SSDPServiceDiscovery(ServiceDiscoveryBase):
-    def __init__(self, iface='', cert=None, ignore_self=True):
+    def __init__(self, iface='', ignore_self=True):
         super(SSDPServiceDiscovery, self).__init__()
 
         self.ignore_self = ignore_self
         self.iface = '' #iface
         self.ssdp = None
         self.port = None
-        self._backoff = .2
+        self.searches = {}
         self.iface_send_list = []
-        self.cert = cert
 
         if self.iface in ["0.0.0.0", ""]:
             for a in netifaces.interfaces():
@@ -228,8 +234,8 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         dserver = defer.Deferred()
         dclient = defer.Deferred()
         try:
-            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.iface_send_list, cert=self.cert, d=dserver),
-                                                interface=self.iface, listenMultiple=True)
+            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.iface_send_list,
+                                                dserver=dserver), interface=self.iface, listenMultiple=True)
             self.ssdp.setLoopbackMode(1)
             self.ssdp.joinGroup(SSDP_ADDR, interface=self.iface)
         except:
@@ -237,7 +243,7 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
             # Dont start server some one is alerady running locally
 
         # TODO: Do we need this ?
-        self.port = reactor.listenMulticast(0, ClientBase(d=dclient), interface=self.iface)
+        self.port = reactor.listenMulticast(0, ClientBase(dclient=dclient), interface=self.iface)
         _log.debug("SSDP Host: %s" % repr(self.port.getHost()))
 
         # Set ignore port and ips
@@ -246,21 +252,26 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
 
         return dserver, dclient
 
-    def start_search(self, callback=None, stop=False):
+    def update_server_params(self, service_uuid, **kwargs):
+        self.ssdp.protocol.update_params(service_uuid, **kwargs)
 
+    def start_search(self, service_uuid, **kwargs):
+        callback = kwargs.pop('callback', None)
+        stop = kwargs.pop('stop', False)
         # Restart backoff
-        self._backoff = .2
+        self.searches.setdefault(service_uuid, {})["backoff"] = .2
 
-        def local_start_msearch(stop):
-            self.port.protocol.set_callback(callback)
-            self.port.protocol.set_autostop(stop)
-            self._send_msearch(once=False)
+        def local_start_msearch():
+            self.port.protocol.set_callback(service_uuid, callback)
+            self.port.protocol.set_autostop(service_uuid, stop)
+            self._send_msearch(service_uuid, once=False, kwargs=kwargs)
 
-        reactor.callLater(0, local_start_msearch, stop=stop)
+        reactor.callLater(0, local_start_msearch)
 
-    def stop_search(self):
-        self.port.protocol.set_callback(None)
-        self.port.protocol.stop()
+    def stop_all_search(self):
+        for service_uuid in MS.keys():
+            self.port.protocol.set_callback(service_uuid, None)
+            self.port.protocol.stop(service_uuid)
 
     def set_client_filter(self, service):
         self.port.protocol.set_service(service)
@@ -271,22 +282,25 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
     def unregister_service(self, service):
         self.ssdp.protocol.remove_service(service)
 
-    def _send_msearch(self, once=True):
+    def _send_msearch(self, service_uuid, once=True, kwargs=None):
+        if kwargs is None:
+            kwargs={}
         if self.port:
             for src_ip in self.iface_send_list:
                 self.port.protocol.transport.setOutgoingInterface(src_ip)
                 _log.debug("Sending  M-SEARCH... on %s", src_ip)
-                self.port.write(MS, (SSDP_ADDR, SSDP_PORT))
+                self.port.write(MS[service_uuid].format(**kwargs), (SSDP_ADDR, SSDP_PORT))
 
-            if not once and not self.port.protocol.is_stopped():
-                reactor.callLater(self._backoff, self._send_msearch, once=False)
-                _log.debug("Next M-SEARCH in %s seconds" % self._backoff)
-                self._backoff = min(600, self._backoff * 1.5)
+            if not once and not self.port.protocol.is_stopped(service_uuid):
+                reactor.callLater(self.searches[service_uuid]["backoff"], self._send_msearch,
+                                    service_uuid, once=False, kwargs=kwargs)
+                _log.debug("Next M-SEARCH in %s seconds" % self.searches[service_uuid]["backoff"])
+                self.searches[service_uuid]["backoff"] = min(600, self.searches[service_uuid]["backoff"] * 1.5)
         else:
             _log.debug(traceback.format_stack())
 
-    def search(self):
-        self._send_msearch(once=True)
+    def search(self, service_uuid, **kwargs):
+        self._send_msearch(service_uuid, once=True, kwargs=kwargs)
 
     def stop(self):
         dlist = []
@@ -295,7 +309,7 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
             dlist.append(self.ssdp.stopListening())
             self.ssdp = None
         if self.port:
-            self.stop_search()
+            self.stop_all_search()
             dlist.append(self.port.stopListening())
             self.port = None
         return defer.DeferredList(dlist)
