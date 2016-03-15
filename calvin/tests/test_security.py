@@ -289,7 +289,7 @@ class TestSecurity(unittest.TestCase):
         rt_ids = set([rt1_id, rt2_id, rt3_id])
         for i in range(30):
             try:
-                if not (rt1_id in caps1  and rt2_id in caps2 and rt3_id in caps1):
+                if not (rt1_id in caps1  and rt2_id in caps1 and rt3_id in caps1):
                     caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
                     caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
