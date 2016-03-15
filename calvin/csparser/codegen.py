@@ -125,7 +125,7 @@ class ImplicitPortRewrite(Visitor):
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
         self.implicit_port = node
-        args = [ ast.NamedArg(ast.Id('data'), node.children[0]) ]
+        args = [ ast.NamedArg(ast.Id('data'), node.children[0]),  ast.NamedArg(ast.Id('n'), ast.Value(-1))]
         self.counter += 1
         const_name = '_literal_const_'+str(self.counter)
         self.real_constants.append(ast.Assignment(const_name, 'std.Constant', args))
@@ -186,17 +186,22 @@ class CodeGen(object):
         if len(m) == 1:
             self.process_main(m[0])
 
+    def get_named_args(self, node):
+        """
+        Return a dictionary with named args rooted in <node> as key/value-pairs
+        """
+        args = {}
+        argnodes = self.query(ast.NamedArg, node)
+        for n in argnodes:
+            k, v = n.children
+            args[k.ident] = v.value
+        return args
     def add_actor(self, actor, namespace):
         key = "{}:{}".format(namespace, actor.ident)
         value = {}
         actor_class, is_actor = self.lookup(actor.actor_type)
         value['actor_type'] = actor.actor_type
-        args = {}
-        argnodes = self.query(ast.NamedArg, actor)
-        for n in argnodes:
-            k, v = n.children
-            args[k.ident] = v.value
-        value['args'] = args
+        value['args'] = self.get_named_args(actor)
         value['signature'] = _create_signature(actor_class, actor.actor_type)
         self.app_info['actors'][key] = value
 
