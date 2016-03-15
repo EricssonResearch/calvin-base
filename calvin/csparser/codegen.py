@@ -133,13 +133,17 @@ class ImplicitPortRewrite(Visitor):
 
 
 class CodeGen(object):
-    """docstring for CodeGen"""
+    """
+    Generate code from a source file
+    FIXME: Use a writer class to generate output in various formats
+    """
     def __init__(self, ast_root, script_name):
         super(CodeGen, self).__init__()
         self.actorstore = ActorStore()
         self.ast = ast_root
         self.script_name = script_name
         self.constants = {}
+        self.components = {}
         self.app_info = {'name':script_name}
 
         self.run()
@@ -175,6 +179,10 @@ class CodeGen(object):
 
         c = self.query(ast.Constant, self.ast, maxdepth=1)
         self.process_constants(c)
+
+        components = self.query(ast.Component, self.ast, maxdepth=1)
+        for c in components:
+            self.components[c.name] = c
 
         blocks = self.query(ast.Block, self.ast)
         for b in blocks:
