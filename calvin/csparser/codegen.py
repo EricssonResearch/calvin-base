@@ -15,11 +15,12 @@ def _create_signature(actor_class, actor_type):
 
 
 class Finder(object):
-    def __init__(self, kind, maxdepth):
-        self.depth = 0
-        self.kind = kind
-        self.maxdepth = maxdepth
-        self.matches = []
+    """
+    Perform queries on the tree
+    FIXME: Make subclass of Visitor
+    """
+    def __init__(self):
+        pass
 
     @visitor.on('node')
     def visit(self, node):
@@ -33,6 +34,17 @@ class Finder(object):
             self.depth += 1
             map(self.visit, node.children)
             self.depth -= 1
+
+    def find_all(self, kind, node, maxdepth):
+        """
+        Return a list of all nodes matching <kind>, at most <maxdepth> levels
+        down from the starting node <node>
+        """
+        self.depth = 0
+        self.kind = kind
+        self.maxdepth = maxdepth
+        self.matches = []
+        self.visit(node)
 
 class Visitor(object):
     def __init__(self, maxdepth=1024):
@@ -203,8 +215,8 @@ class CodeGen(object):
             self.add_link(link, self.script_name)
 
     def query(self, kind, root, maxdepth=1024):
-        finder = Finder(kind, maxdepth=maxdepth)
-        finder.visit(root)
+        finder = Finder()
+        finder.find_all(kind, root, maxdepth=maxdepth)
         return finder.matches
 
 
