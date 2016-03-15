@@ -95,7 +95,7 @@ def testit():
     print "SUMMARY"
     print "---------------------"
     for test in tests:
-        print test, res[test][1]
+        print test, res[test][1] if len(res[test])>1 else "--- CRASH ---"
 
 
 def run_check():
