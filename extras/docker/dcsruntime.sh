@@ -5,6 +5,8 @@ usage() {
     -i <image>[:<tag>   : Docker image (and tag) to use
     -l                  : Limit docker CPU and memory\n\
     -p                  : Make the proxy node\n\
+    -s                  : Run privileged
+    -g                  : Enable Raspberry Pi gpio (implies -s)
     -m <storage-proxy>  : address of proxy\n\
     -e <external-ip>    : external IP to use\n\
     -n <name>           : Name of docker and attribute of csruntime\n\
@@ -15,9 +17,17 @@ PROXY=""
 ARGS=""
 NAME=""
 LIMIT=""
+ENV=""
 
-while getopts "lpe:m:i:o:n:-:" opt; do
+while getopts "sglpe:m:i:o:n:-:" opt; do
 	case $opt in
+        s)
+            ENV="$ENV --privileged"
+            ;;
+        g)
+            ENV="$ENV -e CALVIN_GLOBAL_GPIO_PLUGIN=\"platform/raspberry_pi/rpigpio_impl\""
+            ENV="$ENV --device /dev/ttyAMA0:/dev/ttyAMA0 --device /dev/mem:/dev/mem --privileged"
+            ;;
         i) 
             TAG=$OPTARG
             ;;
@@ -86,7 +96,6 @@ fi
 # Should be an option, really
 # docker pull erctcalvin/calvin-test:demo
 
-ENV=""
 
 if [ "$PROXY" ]; then
 	ENV="$ENV -e CALVIN_GLOBAL_STORAGE_TYPE=\"local\" -p 5001:5001 -p 5000:5000"
