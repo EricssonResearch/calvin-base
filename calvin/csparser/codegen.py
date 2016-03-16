@@ -132,6 +132,36 @@ class ImplicitPortRewrite(Visitor):
         self.real_port = ast.Port(const_name, 'token')
 
 
+class WrapInNamespace(Visitor):
+    """docstring for WrapInNamespace"""
+    def __init__(self):
+        super(WrapInNamespace, self).__init__()
+
+    def wrap(self, node, namespace):
+        self.namespace = namespace
+        self._visit(node)
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        self._visit(node)
+
+    @visitor.when(ast.Port)
+    def visit(self, node):
+        node.actor = self.namespace + "." + node.actor
+
+    @visitor.when(ast.InternalPort)
+    def visit(self, node):
+        node.port = self.namespace + "." + node.port
+
+    @visitor.when(ast.Assignment)
+    def visit(self, node):
+        node.ident = self.namespace + "." + node.ident
+
+
 class CodeGen(object):
     """
     Generate code from a source file
@@ -206,6 +236,10 @@ class CodeGen(object):
             k, v = n.children
             args[k.ident] = v.value
         return args
+
+    def wrap_in_namespace(self, block, namespace):
+        wr = WrapInNamespace()
+        wr.wrap(block, namespace)
     def add_actor(self, actor, namespace):
         key = "{}:{}".format(namespace, actor.ident)
         value = {}
