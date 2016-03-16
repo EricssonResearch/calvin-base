@@ -1,0 +1,6 @@
+rotary : sensor.RotaryEncoder()
+knob : io.Print()
+button: io.Print()
+
+rotary.direction > knob.token
+rotary.button > button.token
