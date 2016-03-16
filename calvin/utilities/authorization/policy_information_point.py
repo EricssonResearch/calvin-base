@@ -26,4 +26,5 @@ class PolicyInformationPoint(object):
     }
 
     def get_attribute_value(self, attribute_type, attribute):
+    	"""Return the specified attribute if it exists in attributes dictionary"""
         return PolicyInformationPoint.attributes[attribute_type][attribute]

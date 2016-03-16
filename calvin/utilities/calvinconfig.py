@@ -264,7 +264,7 @@ class CalvinConfig(object):
         for wildcard in wildcards:
             parts = wildcard.split('_', 2)
             if len(parts) < 3 or parts[1] not in ['GLOBAL', 'TESTING', 'DEVELOPER', 'ARGUMENTS']:
-                _log.info("Malformed evironment variable {}, skipping.".format(wildcard))
+                _log.info("Malformed environment variable {}, skipping.".format(wildcard))
                 continue
             section, option = parts[1:3]
             value = os.environ[wildcard]
@@ -272,7 +272,7 @@ class CalvinConfig(object):
                 self.set(section, option, json.loads(value))
                 self.wildcards.append(wildcard)
             except Exception as e:
-                _log.warning("Value {} of evironment variable {} is malformed, skipping.".format(repr(value), wildcard))
+                _log.warning("Value {} of environment variable {} is malformed, skipping.".format(repr(value), wildcard))
 
     def save(self, path, skip_arguments=True):
         json.dump({k: v for k, v in self.config.iteritems() if k != "arguments" or not skip_arguments}, open(path, 'w'))

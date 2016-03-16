@@ -17,10 +17,17 @@
 import re
 import time
 import json
+from datetime import datetime, timedelta
+try:
+    import jwt
+    HAS_JWT = True
+except:
+    HAS_JWT = False
 from random import randint
 from calvin.Tools import cscompiler as compiler
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north import metering
+from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection, async
@@ -29,7 +36,10 @@ from calvin.requests import calvinresponse
 from calvin.utilities.security import security_needed_check
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
+from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
+from calvin.utilities import certificate
 
+_conf = calvinconfig.get()
 _log = get_logger(__name__)
 
 uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
@@ -593,6 +603,24 @@ re_post_storage = re.compile(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
     """
+    POST /authorization/pdp
+    Return a response to an authorization request
+    Body:
+    {
+        "jwt": <request as JSON Web Token>,
+        "cert_name": <runtime certificate filename>
+    }
+    Response status code: OK or INTERNAL_ERROR
+    Response: 
+    {
+        "jwt": <response as JSON Web Token>,
+        "cert_name": <authorization server certificate filename>
+    }
+"""
+re_post_authorization_pdp = re.compile(r"POST /authorization/pdp\sHTTP/1")
+
+control_api_doc += \
+    """
     OPTIONS /url
     Request for information about the communication options available on url
     Response status code: OK
@@ -692,6 +720,7 @@ class CalvinControl(object):
             (re_get_index, self.handle_get_index),
             (re_get_storage, self.handle_get_storage),
             (re_post_storage, self.handle_post_storage),
+            (re_post_authorization_pdp, self.handle_post_authorization_pdp),
             (re_options, self.handle_options)
         ]
 
@@ -701,6 +730,8 @@ class CalvinControl(object):
         """
         self.metering = metering.get_metering()
         self.node = node
+        if hasattr(self.node, "pdp") and not HAS_JWT:
+            _log.error("Install JWT to use this runtime as authorization server.")
         schema, _ = uri.split(':', 1)
         if tunnel:
             # Connect to tunnel server
@@ -1254,6 +1285,46 @@ class CalvinControl(object):
         """
         self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
 
+    def handle_post_authorization_pdp(self, handle, connection, match, data, hdr):
+        """
+        Return a response to the authorization request included in the data.
+
+        Signed JSON Web Tokens (JWT) with timestamps and information about 
+        sender and receiver are used for both the request and response.
+        A Policy Decision Point (PDP) is used to determine if access is permitted.
+        """
+        try:
+            cert_conffile = _conf.get("security", "certificate_conf")
+            domain = _conf.get("security", "certificate_domain")
+            cert_conf = certificate.Config(cert_conffile, domain)
+            node_name = self.node.attributes.get_node_name_as_str()
+            private_key = certificate.get_private_key(cert_conf, node_name)
+            certificate_runtime = certificate.get_other_certificate(cert_conf, node_name, data["cert_name"])
+            public_key_runtime = certificate.get_public_key(certificate_runtime)
+            runtime_id = certificate_runtime.get_subject().dnQualifier
+            # Decode the JSON Web Token in the request from the runtime.
+            # The signature is verified using the Elliptic Curve public key of the runtime. 
+            # Exception raised if signature verification fails or if issuer is incorrect.
+            decoded = jwt.decode(data["jwt"], public_key_runtime, algorithms=['ES256'], issuer=runtime_id)
+            payload = {
+                "iss": self.node.id,
+                "aud": decoded["iss"], 
+                "iat": datetime.utcnow(), 
+                "exp": datetime.utcnow() + timedelta(seconds=60),
+                "response": self.node.pdp.authorize(decoded["request"])
+            }
+            # Create a JSON Web Token signed using the authorization server's Elliptic Curve private key.
+            jwt_response = jwt.encode(payload, private_key, algorithm='ES256')
+            # cert_name is the authorization server's certificate filename (without file extension)
+            cert_name = certificate.get_own_cert_name(cert_conf, node_name)
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_post_authorization_pdp")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, 
+                           json.dumps({"jwt": jwt_response, "cert_name": cert_name}) if status == calvinresponse.OK else None, 
+                           status=status)
+
     def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_consumed, production):
         """ Trace actor firing
         """
@@ -1433,7 +1504,7 @@ class CalvinControlTunnelServer(object):
         self.node = node
         self.tunnels = {}
         self.controltunnels = {}
-        # Register for incomming control proxy requests
+        # Register for incoming control proxy requests
         self.node.proto.register_tunnel_handler("control", CalvinCB(self.tunnel_request_handles))
 
     def stop(self):

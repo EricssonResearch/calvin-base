@@ -17,7 +17,6 @@
 import os
 import glob
 from datetime import datetime, timedelta
-import requests
 try:
     import OpenSSL.crypto
     HAS_OPENSSL = True
@@ -36,9 +35,11 @@ try:
 except:
     HAS_JWT = False
 from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
+from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 from calvin.utilities.utils import get_home
+from calvin.requests.request_handler import RequestHandler
 
 _conf = calvinconfig.get()
 _log = get_logger(__name__)
@@ -80,6 +81,7 @@ class Security(object):
         self.node = node
         self.subject = {}
         self.auth = {}
+        self.request_handler = RequestHandler()
 
     def __str__(self):
         return "Subject: %s\nAuth: %s" % (self.subject, self.auth)
@@ -196,7 +198,6 @@ class Security(object):
 
     def get_authorization_decision(self, requires=None):
         """Get authorization decision using the authorization procedure specified in config."""
-        # The JSON code in the request is inspired by the XACML JSON Profile but has been simplified to be more compact.
         request = {}
         request["subject"] = self.get_authenticated_subject_attributes()
         request["resource"] = self.node.attributes.get_indexed_public_with_keys()
@@ -231,39 +232,51 @@ class Security(object):
 
     def authorize_using_external_server(self, request):
         """
-        Authorize access using an external authorization server.
+        Access authorization using an external authorization server.
 
         The request is put in a JSON Web Token (JWT) that is signed
         and includes timestamps and information about sender and receiver.
         """
         ip_addr = self.sec_conf['authorization']['server_ip']
         port = self.sec_conf['authorization']['server_port']
-        # FIXME: use name from certificate as issuer/audience (use certificate.obtain_cert_node_info(self.attributes.get_node_name_as_str())['id'])
+        # Alternative: specify node_id/dnQualifier instead in sec_conf and create a tunnel for the 
+        # runtime-to-runtime communication (see calvin_proto.py). Could also add node_id as "aud" (audience) in jwt payload.
+        authorization_server_uri = "http://%s:%d" % (ip_addr, port) 
         payload = {
-            "iss": self.node.id,
-            "aud": ip_addr, 
+            "iss": self.node.id, 
             "iat": datetime.utcnow(), 
             "exp": datetime.utcnow() + timedelta(seconds=60),
             "request": request
         }
-        # FIXME: how are the keys stored and retrieved?
-        key_storage_path = os.path.join(os.path.expanduser("~/.calvin/security/keys/"), '')
-        private_key = open(key_storage_path + 'private_key.pem', 'rb').read()
-        pub_key_auth_server = open(key_storage_path + 'public_key_2.pem', 'rb').read()
-        token = jwt.encode(payload, private_key, algorithm='RS256')
-        # TODO: use async request to external server to not block here?
+        cert_conffile = _conf.get("security", "certificate_conf")
+        domain = _conf.get("security", "certificate_domain")
+        cert_conf = certificate.Config(cert_conffile, domain)
+        node_name = self.node.attributes.get_node_name_as_str()
+        private_key = certificate.get_private_key(cert_conf, node_name)
+        # Create a JSON Web Token signed using the node's Elliptic Curve private key.
+        jwt_request = jwt.encode(payload, private_key, algorithm='ES256')
+        # cert_name is this node's certificate filename (without file extension)
+        cert_name = certificate.get_own_cert_name(cert_conf, node_name)
         try:
-            response = requests.post("http://%s:%d/authorization/pdp" % (ip_addr, port), json={"jwt": token})
-            if response.status_code != 200:
-                print "Security: authorization server error - %s %s: %s" % (response.status_code, response.reason, response.json()["error"])
-                return "indeterminate"
-            else:
-                json_data = response.json()
-                # FIXME: use name from certificate as issuer/audience (use obtain_cert_node_info in certificate.py, see Github)
-                decoded = jwt.decode(json_data['jwt'], pub_key_auth_server, algorithms=['RS256'], issuer=ip_addr, audience=self.node.id)
-                return decoded['response']['decision']
+            # Send request to authorization server.
+            response = self.request_handler.get_authorization_decision(authorization_server_uri, jwt_request, cert_name)
         except Exception as e:
-            _log.error("Security: error when sending request to authorization server: %s" % str(e))
+            _log.error("Security: authorization server error - %s" % str(e))
+            return "indeterminate"
+        try:
+            # Get authorization server certificate from disk. 
+            # TODO: get certificate from DHT if it wasn't found on disk.
+            certificate_authz_server = certificate.get_other_certificate(cert_conf, node_name, response["cert_name"])
+            public_key_authz_server = certificate.get_public_key(certificate_authz_server)
+            authz_server_id = certificate_authz_server.get_subject().dnQualifier
+            # Decode the JSON Web Token returned from the authorization server.
+            # The signature is verified using the Elliptic Curve public key of the authorization server. 
+            # Exception raised if signature verification fails or if issuer and/or audience are incorrect.
+            decoded = jwt.decode(response["jwt"], public_key_authz_server, algorithms=['ES256'], 
+                                 issuer=authz_server_id, audience=self.node.id)
+            return decoded['response']['decision']
+        except Exception as e:
+            _log.error("Security: JWT decoding error - %s" % str(e))
             return "indeterminate"
 
     def authorize_using_local_policies(self, request):

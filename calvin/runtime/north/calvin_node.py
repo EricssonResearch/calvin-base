@@ -36,6 +36,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.security import security_modules_check
+from calvin.utilities.authorization.authorization_server import PolicyDecisionPoint
 from calvin.utilities import calvinuuid
 from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
@@ -57,9 +58,10 @@ class Node(object):
        the control_uri is the local console
        attributes is a supplied list of external defined attributes that will be used as the key when storing index
        such as name of node
+       authz_server is True if the runtime can act as an authorization server
     """
 
-    def __init__(self, uri, control_uri, attributes=None):
+    def __init__(self, uri, control_uri, attributes=None, authz_server=False):
         super(Node, self).__init__()
         self.uri = uri
         self.control_uri = control_uri
@@ -72,13 +74,14 @@ class Node(object):
         except:
             _log.exception("Attributes not correct, uses empty attribute!")
             self.attributes = AttributeResolver(None)
+        if authz_server:
+            self.pdp = PolicyDecisionPoint(_conf.get("security","security_conf")['authorization'])
         # Obtain node id, when using security also handle runtime certificate
         self.id = certificate.obtain_cert_node_info(self.attributes.get_node_name_as_str())['id']
         self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
         self.control = calvincontrol.get_calvincontrol()
-        
         
         _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         self.sched = _scheduler(self, self.am, self.monitor)
@@ -194,7 +197,7 @@ class Node(object):
         self.storage.start()
         self.storage.add_node(self)
 
-        # Start control api
+        # Start control API
         proxy_control_uri = _conf.get(None, 'control_proxy')
         _log.debug("Start control API on %s with uri: %s and proxy: %s" % (self.id, self.control_uri, proxy_control_uri))
         if proxy_control_uri is not None:
@@ -220,18 +223,18 @@ class Node(object):
         self.storage.delete_node(self, cb=deleted_node)
 
 
-def create_node(uri, control_uri, attributes=None):
-    n = Node(uri, control_uri, attributes)
+def create_node(uri, control_uri, attributes=None, authz_server=False):
+    n = Node(uri, control_uri, attributes, authz_server)
     n.run()
     _log.info('Quitting node "%s"' % n.uri)
 
 
-def create_tracing_node(uri, control_uri, attributes=None):
+def create_tracing_node(uri, control_uri, attributes=None, authz_server=False):
     """
     Same as create_node, but will trace every line of execution.
     Creates trace dump in output file '<host>_<port>.trace'
     """
-    n = Node(uri, control_uri, attributes)
+    n = Node(uri, control_uri, attributes, authz_server)
     _, host = uri.split('://')
     with open("%s.trace" % (host, ), "w") as f:
         tmp = sys.stdout
@@ -250,11 +253,11 @@ def create_tracing_node(uri, control_uri, attributes=None):
     _log.info('Quitting node "%s"' % n.uri)
 
 
-def start_node(uri, control_uri, trace_exec=False, attributes=None):
+def start_node(uri, control_uri, trace_exec=False, attributes=None, authz_server=False):
     if not security_modules_check():
         raise Exception("Security module missing")
     _create_node = create_tracing_node if trace_exec else create_node
-    p = Process(target=_create_node, args=(uri, control_uri, attributes))
+    p = Process(target=_create_node, args=(uri, control_uri, attributes, authz_server))
     p.daemon = True
     p.start()
     return p

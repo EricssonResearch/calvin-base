@@ -28,6 +28,8 @@ import random
 import shutil
 from calvin.utilities import confsort
 import OpenSSL
+from cryptography.x509 import load_pem_x509_certificate
+from cryptography.hazmat.backends import default_backend
 from calvin.utilities import calvinuuid
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
@@ -558,6 +560,51 @@ def sign_req(conf, req, name, other=False):
     print(newkeyname)
     os.rename(signed, newkeyname)
     return newkeyname
+
+def verify_certificate(conf, certificate):
+    """Verify certificate using the CA certificate"""
+    # Create a certificate store and add the CA certificate
+    trusted_certs = OpenSSL.crypto.X509Store()
+    cacert_path = conf.configuration["CA_default"]["certificate"]
+    with open(cacert_path, 'rb') as f:
+        cacert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
+        trusted_certs.add_cert(cacert)
+    
+    store_ctx = OpenSSL.crypto.X509StoreContext(trusted_certs, certificate)
+    # Verify the certificate. Raises X509StoreContextError on error.
+    store_ctx.verify_certificate()
+
+def get_other_certificate(conf, my_node_name, cert_name):
+    """Return certificate with name cert_name from 'others' directory for runtime my_node_name"""
+    runtime_dir = os.path.join(conf.configuration["CA_default"]["runtimes_dir"], my_node_name)
+    files = os.listdir(os.path.join(runtime_dir, "others"))
+    matching = [s for s in files if cert_name in s]
+    try:
+        with open(os.path.join(runtime_dir, "others", matching[0]), 'rb') as f:
+            certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
+            verify_certificate(conf, certificate)
+            return certificate
+    except Exception:
+        return None
+
+def get_private_key(conf, node_name):
+    """Return the node's private key"""
+    runtime_dir = os.path.join(conf.configuration["CA_default"]["runtimes_dir"], node_name)
+    with open(os.path.join(runtime_dir, "private", "private.key"), 'rb') as f:
+        return f.read()
+
+def get_own_cert_name(conf, node_name):
+    """Return the node's own certificate name without file extension"""
+    runtime_dir = os.path.join(conf.configuration["CA_default"]["runtimes_dir"], node_name)
+    return os.path.splitext(os.listdir(os.path.join(runtime_dir, "mine"))[0])[0]
+
+def get_public_key(certificate):
+    """Return the public key from certificate"""
+    cert_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
+    cert = load_pem_x509_certificate(cert_pem, default_backend())
+    return cert.public_key()
+    # The following line can replace the two lines above in pyOpenSSL version 16.0.0 (unreleased):
+    # return OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, certificate.get_pubkey())
 
 ###########################################################
 # Linking a runtime name on a host to a persistent node-id
