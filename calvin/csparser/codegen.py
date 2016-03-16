@@ -170,7 +170,9 @@ class CodeGen(object):
         return info, is_actor and found
 
 
-    def run(self):
+    def run(self, verbose=True):
+        ast.Node._verbose_desc = verbose
+
         # Add sections
         ai = self.app_info
         ai['actors'] = {}

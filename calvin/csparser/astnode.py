@@ -2,10 +2,19 @@ from copy import copy, deepcopy
 
 
 class Node(object):
+
+    _verbose_desc = False
+
     """Base class for all nodes in CS AST"""
     def __init__(self):
         super(Node, self).__init__()
         self.children = []
+
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {}".format(self.__class__.__name__, hex(id(self)))
+        else:
+            return "{}".format(self.__class__.__name__)
 
 class Constant(Node):
     """docstring for ConstNode"""
@@ -121,6 +130,7 @@ class Component(Node):
         self.children = [Block(program)]
 
 if __name__ == '__main__':
+    # Node._verbose_desc = True
     l = Link(Port('foo', 'out'), Port('bar', 'in'))
     a = Assignment('foo', 'std.Source', [NamedArg('n', 10), NamedArg('str', 'hello')])
     print l, l.outport, l.inport
