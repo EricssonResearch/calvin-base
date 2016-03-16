@@ -1,4 +1,4 @@
-
+from copy import copy, deepcopy
 
 
 class Node(object):
@@ -33,17 +33,28 @@ class Assignment(Node):
         self.actor_type = actor_type
         self.children = args
 
+    def __copy__(self):
+        return Assignment(copy(self.ident), copy(self.actor_type), deepcopy(self.children))
+
 class NamedArg(Node):
     """docstring for ConstNode"""
     def __init__(self, ident, arg):
         super(NamedArg, self).__init__()
         self.children = [ident, arg]
 
+    def __copy__(self, memo):
+        print "NamedArg.copy"
+        return  NamedArg(copy(self.children[0]), copy(self.children[1]))
+
 class Link(Node):
     """docstring for LinkNode"""
     def __init__(self, outport, inport):
         super(Link, self).__init__()
         self.children = [outport, inport]
+
+    def __copy__(self):
+        print "Link", self.outport, copy(self.outport)
+        return Link(copy(self.outport), copy(self.inport))
 
     @property
     def outport(self):
@@ -83,9 +94,13 @@ class InternalPort(Node):
 
 class Block(Node):
     """docstring for ComponentNode"""
-    def __init__(self, program):
+    def __init__(self, program = None):
         super(Block, self).__init__()
-        self.children = program
+        self.children = program or []
+
+
+    def __copy__(self):
+        return Block(deepcopy(self.children))
 
 
 class Component(Node):
@@ -98,5 +113,18 @@ class Component(Node):
         self.outports = outports
         self.docstring = docstring
         self.children = [Block(program)]
+
+if __name__ == '__main__':
+    l = Link(Port('foo', 'out'), Port('bar', 'in'))
+    a = Assignment('foo', 'std.Source', [NamedArg('n', 10), NamedArg('str', 'hello')])
+    print l, l.outport, l.inport
+    lc = copy(l)
+    print lc, lc.outport, lc.inport
+
+    print a, a.ident, a.actor_type, id(a.children), a.children[0], a.children[1]
+    ac = copy(a)
+    print ac, ac.ident, ac.actor_type, id(ac.children), ac.children[0], ac.children[1]
+    ac.children[0].children[1] = 42
+    print a.children[0].children[1], ac.children[0].children[1]
 
 
