@@ -98,6 +98,12 @@ class Block(Node):
         super(Block, self).__init__()
         self.children = program or []
 
+    def append(self, node):
+        index = 0 if type(node) is Assignment else len(self.children)
+        self.children.insert(index, node)
+
+    def remove(self, node):
+        self.children.remove(node)
 
     def __copy__(self):
         return Block(deepcopy(self.children))
