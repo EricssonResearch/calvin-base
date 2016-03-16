@@ -1,0 +1,10 @@
+{
+	"private": {
+		"hardware": {
+			"sr04_ultrasonic": {
+				"echo_pin": 24,
+				"trig_pin": 23
+			}
+		}
+	}
+}

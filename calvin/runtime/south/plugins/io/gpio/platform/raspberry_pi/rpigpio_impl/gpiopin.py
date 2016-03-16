@@ -60,6 +60,9 @@ class GPIOPin(base_gpiopin.GPIOPinBase):
         elif edge == "b":
             GPIO.add_event_detect(self.pin, GPIO.BOTH, callback=self.cb_detect_edge)
 
+    def stop_detect(self):
+        GPIO.remove_event_detect(self.pin)
+        
     def edge_detected(self):
         return self.has_changed
 

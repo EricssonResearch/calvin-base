@@ -29,6 +29,9 @@ class DelayedCall(object):
     def reset(self):
         self.delayedCall = reactor.callLater(self.delay, self.callback, *self._args, **self._kwargs)
 
+    def active(self):
+        return self.delayedCall.active()
+        
     def cancel(self):
         if self.delayedCall.active():
             self.delayedCall.cancel()
