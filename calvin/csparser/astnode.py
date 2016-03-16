@@ -153,7 +153,7 @@ class Component(Node):
         self.inports = inports
         self.outports = outports
         self.docstring = docstring
-        self.add_child = Block(program)
+        self.add_child(Block(program))
 
 if __name__ == '__main__':
     # Node._verbose_desc = True
