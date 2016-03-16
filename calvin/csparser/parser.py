@@ -333,18 +333,17 @@ if __name__ == '__main__':
         script = 'inline'
         source_text = \
 '''
-define FOO={"a":"b"}
-define BAR=[1,2,3]
-src : std.CountTimer(delay=1, foo=2)
+# Test 6: comp w arguements
+component Foo(delay, n) -> out {
+    src : std.CountTimer(sleep = delay, steps = n)
+
+    src.integer > .out
+}
+
+src : Foo(delay=0.1, n=10)
 snk : io.StandardOut()
-FOO > snk.token
-[1, 2] > snk.token
-# component Foo(a) in -> out {
-# """Docs"""
-# i : std.Identity()
-# .in > i.token
-# i.token > .out
-# }
+
+src.out > snk.token
 '''
     else:
         script = sys.argv[1]

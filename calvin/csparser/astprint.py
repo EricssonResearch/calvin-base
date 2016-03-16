@@ -83,3 +83,11 @@ class BracePrinter(object):
             print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)
 
+if __name__ == '__main__':
+    ast.Node._verbose_desc = True
+
+    n = ast.Node()
+    bp = BracePrinter()
+    bp.visit(n)
+
+
