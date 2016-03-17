@@ -30,7 +30,7 @@ class PolicyDecisionPoint(object):
             "policy_combining": "permit_overrides",
             "policy_storage": "files",
             "policy_storage_path": "~/.calvin/security/policies",
-            "policy_name_pattern": "policy*.json"
+            "policy_name_pattern": "*"
         }
         if config is not None:
             # Change some of the default values of the config.

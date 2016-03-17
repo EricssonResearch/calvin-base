@@ -18,6 +18,7 @@ from abc import ABCMeta, abstractmethod
 import os
 import glob
 import json
+from calvin.utilities import calvinuuid
 
 # This is an abstract class for the PRP (Policy Retrieval Point)
 class PolicyRetrievalPoint(object):
@@ -58,45 +59,44 @@ class FilePolicyRetrievalPoint(PolicyRetrievalPoint):
 
     def __init__(self, path):
         # TODO: path may be located on other server. How to handle that?
-        # Replace ~ by the user's home directory and add trailing slash if it is not already there
-        self.path = os.path.join(os.path.expanduser(path), '') 
+        # Replace ~ by the user's home directory.
+        self.path = os.path.expanduser(path)
     
     # Use get_policies instead and do the matching in policy_decision_point.py?
     def get_matching_policies(self, request, name_pattern):
         """Return policies where policy target matches request"""
         return
 
-    def get_policy(self, filename):
-        """Return the policy identified by filename"""
-        with open(self.path + filename, 'rb') as data:
+    def get_policy(self, policy_id):
+        """Return the policy identified by policy_id"""
+        with open(os.path.join(self.path, policy_id + ".json"), 'rt') as data:
             return json.load(data)
 
-    def get_policies(self, name_pattern='*.json'):
+    def get_policies(self, name_pattern='*'):
         """Return all policies found using the name_pattern"""
-        policies = []
-        for filename in glob.glob(self.path + name_pattern): 
+        policies = {}
+        for filename in glob.glob(os.path.join(self.path, name_pattern + ".json")): 
             with open(filename, 'rb') as data:
-                policies.append(json.load(data))
+                policy_id = os.path.splitext(os.path.basename(filename))[0]
+                policies[policy_id] = json.load(data)
         return policies
 
-    def create_policy(self, data, filename):
-        """Create policy named filename based on the JSON representation in data"""
-        file_path = self.path + filename
-        if not os.path.isfile(file_path):
-            with open(file_path, "w") as f:
-                f.write(data)
-        else:
-            raise  # Raise exception if policy named filename already exists
+    def create_policy(self, data):
+        """Create policy based on the JSON representation in data"""
+        policy_id = calvinuuid.uuid("POLICY")
+        with open(os.path.join(self.path, policy_id + ".json"), "w") as file:
+            json.dump(data, file)
+        return policy_id
 
-    def update_policy(self, data, filename):
-        """Change the content of the policy identified by filename to data (JSON representation of policy)"""
-        file_path = self.path + filename
+    def update_policy(self, data, policy_id):
+        """Change the content of the policy identified by policy_id to data (JSON representation of policy)"""
+        file_path = os.path.join(self.path, policy_id + ".json")
         if os.path.isfile(file_path):
-            with open(file_path, "w") as f:
-                f.write(data)
+            with open(file_path, "w") as file:
+                json.dump(data, file)
         else:
-            raise  # Raise exception if policy named filename doesn't exist
+            raise IOError  # Raise exception if policy named filename doesn't exist
 
-    def delete_policy(self, filename):
-        """Delete the policy named filename"""
-        os.remove(self.path + filename)
+    def delete_policy(self, policy_id):
+        """Delete the policy named policy_id"""
+        os.remove(os.path.join(self.path, policy_id + ".json"))

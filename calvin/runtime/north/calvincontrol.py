@@ -37,6 +37,7 @@ from calvin.utilities.security import security_needed_check
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
 from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
+from calvin.utilities.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
 from calvin.utilities import certificate
 
 _conf = calvinconfig.get()
@@ -223,7 +224,7 @@ control_api_doc += \
         "type": <actor type>,
         "name": <actor name>,
         "outports": list of outports
-     }
+    }
 """
 re_get_actor = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
@@ -621,6 +622,59 @@ re_post_authorization_pdp = re.compile(r"POST /authorization/pdp\sHTTP/1")
 
 control_api_doc += \
     """
+    POST /authorization/policies
+    Create a new policy
+    Body: policy in JSON format
+    Response status code: OK or INTERNAL_ERROR
+    Response: {"policy_id": <policy-id>}
+"""
+re_post_new_authorization_policy = re.compile(r"POST /authorization/policies\sHTTP/1")
+
+control_api_doc += \
+    """
+    GET /authorization/policies
+    Get all policies on this runtime
+    Response status code: OK
+    Response: 
+    {
+        "policies": {
+            <policy-id>: policy in JSON format,
+            ...
+        }
+    }
+"""
+re_get_authorization_policies = re.compile(r"GET /authorization/policies\sHTTP/1")
+
+control_api_doc += \
+    """
+    GET /authorization/policies/{policy-id}
+    Get policy
+    Response status code: OK or NOT_FOUND
+    Response: {"policy": policy in JSON format}
+"""
+re_get_authorization_policy = re.compile(r"GET /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+
+control_api_doc += \
+    """
+    PUT /authorization/policies/{policy-id}
+    Update policy 
+    Body: new policy in JSON format
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
+    Response: none
+"""
+re_edit_authorization_policy = re.compile(r"PUT /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+
+control_api_doc += \
+    """
+    DELETE /authorization/policies/{policy-id}
+    Delete policy
+    Response status code: OK or NOT_FOUND
+    Response: none
+"""
+re_del_authorization_policy = re.compile(r"DELETE /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+
+control_api_doc += \
+    """
     OPTIONS /url
     Request for information about the communication options available on url
     Response status code: OK
@@ -681,6 +735,7 @@ class CalvinControl(object):
         self.tunnel_server = None
         self.tunnel_client = None
         self.metering = None
+        self.prp = None
 
         # Set routes for requests
         self.routes = [
@@ -721,6 +776,11 @@ class CalvinControl(object):
             (re_get_storage, self.handle_get_storage),
             (re_post_storage, self.handle_post_storage),
             (re_post_authorization_pdp, self.handle_post_authorization_pdp),
+            (re_post_new_authorization_policy, self.handle_new_authorization_policy),
+            (re_get_authorization_policies, self.handle_get_authorization_policies),
+            (re_get_authorization_policy, self.handle_get_authorization_policy),
+            (re_edit_authorization_policy, self.handle_edit_authorization_policy),
+            (re_del_authorization_policy, self.handle_del_authorization_policy),
             (re_options, self.handle_options)
         ]
 
@@ -732,6 +792,14 @@ class CalvinControl(object):
         self.node = node
         if hasattr(self.node, "pdp") and not HAS_JWT:
             _log.error("Install JWT to use this runtime as authorization server.")
+        security_conf = _conf.get("security","security_conf")
+        if security_conf and "authorization" in security_conf:
+            # TODO: should be possible to use any kind of PolicyRetrievalPoint
+            try:
+                self.prp = FilePolicyRetrievalPoint(security_conf['authorization']["policy_storage_path"])
+            except:
+                homefolder = os.getenv("HOME")
+                self.prp = FilePolicyRetrievalPoint(os.path.join(homefolder, ".calvin", "security", "policies"))
         schema, _ = uri.split(':', 1)
         if tunnel:
             # Connect to tunnel server
@@ -1324,6 +1392,59 @@ class CalvinControl(object):
         self.send_response(handle, connection, 
                            json.dumps({"jwt": jwt_response, "cert_name": cert_name}) if status == calvinresponse.OK else None, 
                            status=status)
+
+    def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
+        """Create authorization policy"""
+        # TODO: need some kind of authentication for policy management
+        try:
+            policy_id = self.prp.create_policy(data)
+            status = calvinresponse.OK
+        except:
+            policy_id = None
+            _log.exception("handle_new_authorization_policy")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, None if policy_id is None else json.dumps({'policy_id': policy_id}),
+                           status=status)
+
+    def handle_get_authorization_policies(self, handle, connection, match, data, hdr):
+        """Get all authorization policies on this runtime"""
+        self.send_response(handle, connection, json.dumps({"policies": self.prp.get_policies()}))
+
+    def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
+        """Get authorization policy identified by id"""
+        try:
+            data = self.prp.get_policy(match.group(1))
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_get_authorization_policy")
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, json.dumps({"policy": data}) if status == calvinresponse.OK else None, 
+                           status=status)
+
+    def handle_edit_authorization_policy(self, handle, connection, match, data, hdr):
+        """Edit authorization policy identified by id"""
+        # TODO: need some kind of authentication for policy management
+        try:
+            self.prp.update_policy(data, match.group(1))
+            status = calvinresponse.OK
+        except IOError:
+            _log.exception("handle_edit_authorization_policy")
+            status = calvinresponse.NOT_FOUND
+        except:
+            _log.exception("handle_edit_authorization_policy")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, None, status=status)
+
+    def handle_del_authorization_policy(self, handle, connection, match, data, hdr):
+        """ Delete authorization policy identified by id"""
+        # TODO: need some kind of authentication for policy management
+        try:
+            self.prp.delete_policy(match.group(1))
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_del_authorization_policy")
+            status = calvinresponse.NOT_FOUND
+        self.send_response(handle, connection, None, status=status)
 
     def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_consumed, production):
         """ Trace actor firing
