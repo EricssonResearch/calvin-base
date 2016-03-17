@@ -1,5 +1,4 @@
-from copy import copy, deepcopy
-
+from copy import deepcopy
 
 class Node(object):
 
@@ -31,6 +30,8 @@ class Node(object):
             self.children.remove(child)
             child.parent = None
 
+    def clone(self):
+        return deepcopy(self)
 
     def __str__(self):
         if self._verbose_desc:
@@ -66,28 +67,17 @@ class Assignment(Node):
         self.actor_type = actor_type
         self.add_children(args)
 
-    def __copy__(self):
-        return Assignment(copy(self.ident), copy(self.actor_type), deepcopy(self.children))
-
 class NamedArg(Node):
     """docstring for ConstNode"""
     def __init__(self, ident, arg):
         super(NamedArg, self).__init__()
         self.add_children([ident, arg])
 
-    def __copy__(self, memo):
-        print "NamedArg.copy"
-        return  NamedArg(copy(self.children[0]), copy(self.children[1]))
-
 class Link(Node):
     """docstring for LinkNode"""
     def __init__(self, outport, inport):
         super(Link, self).__init__()
         self.add_children([outport, inport])
-
-    def __copy__(self):
-        print "Link", self.outport, copy(self.outport)
-        return Link(copy(self.outport), copy(self.inport))
 
     def remove_child(self, child):
         raise Exception("Can't remove child from {}".format(self))
@@ -140,10 +130,6 @@ class Block(Node):
         super(Block, self).__init__()
         self.add_children(program or [])
 
-    def __copy__(self):
-        return Block(deepcopy(self.children))
-
-
 class Component(Node):
     """docstring for ComponentNode"""
     def __init__(self, name, arg_names, inports, outports, docstring, program):
@@ -156,16 +142,16 @@ class Component(Node):
         self.add_child(Block(program))
 
 if __name__ == '__main__':
-    # Node._verbose_desc = True
+    Node._verbose_desc = True
     p = Port('foo', 'out')
     l = Link(p, Port('bar', 'in'))
     a = Assignment('foo', 'std.Source', [NamedArg(Id('n'), Value(10)), NamedArg(Id('str'), Value('hello'))])
     print l, l.outport, l.inport
-    lc = copy(l)
+    lc = l.clone()
     print lc, lc.outport, lc.inport
 
     print a, a.ident, a.actor_type, id(a.children), a.children[0], a.children[1]
-    ac = copy(a)
+    ac = a.clone()
     print ac, ac.ident, ac.actor_type, id(ac.children), ac.children[0], ac.children[1]
     ac.children[0].children[1] = 42
     print a.children[0].children[1], ac.children[0].children[1]
