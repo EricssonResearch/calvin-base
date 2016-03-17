@@ -1187,7 +1187,7 @@ class AppendServer(Server):
 
         def append_(nodes):
             # if this node is close too, then store here as well
-            if self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+            if not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
                 try:
                     pvalue = json.loads(value)
                     self.set_keys.add(dkey)
@@ -1213,6 +1213,29 @@ class AppendServer(Server):
 
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(append_)
+
+    def set(self, key, value):
+        """
+        Set the given key to the given value in the network.
+        """
+        _log.debug("setting '%s' = '%s' on network" % (key, value))
+        dkey = digest(key)
+        node = Node(dkey)
+
+        def store(nodes):
+            _log.debug("setting '%s' on %s" % (key, map(str, nodes)))
+            # if this node is close too, then store here as well
+            if not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+                self.storage[dkey] = value
+            ds = [self.protocol.callStore(n, dkey, value) for n in nodes]
+            return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
+
+        nearest = self.protocol.router.findNeighbors(node)
+        if len(nearest) == 0:
+            _log.warning("There are no known neighbors to set key %s" % key)
+            return defer.succeed(False)
+        spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
+        return spider.find().addCallback(store)
 
     def get(self, key):
         """
@@ -1245,7 +1268,7 @@ class AppendServer(Server):
 
         def remove_(nodes):
             # if this node is close too, then store here as well
-            if self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+            if not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
                 try:
                     pvalue = json.loads(value)
                     self.set_keys.add(dkey)
