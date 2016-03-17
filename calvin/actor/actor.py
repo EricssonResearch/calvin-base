@@ -419,7 +419,7 @@ class Actor(object):
                     raise Exception("%s requires %s" % (self.id, req))
         # Check the runtime and calvinsys execution access rights.
         # Note: when no credentials are set, no verification is done.
-        if hasattr(self, 'sec') and not self.sec.check_security_policy_actor(['runtime'] +
+        if hasattr(self, 'sec') and not self.sec.check_security_policy(['runtime'] +
                                             (self.requires if hasattr(self, "requires") else [])):
             _log.debug("Security policy check for actor failed")
             raise Exception("Security policy check for actor failed")

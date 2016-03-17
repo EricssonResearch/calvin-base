@@ -68,25 +68,25 @@ class Config():
                'ca': {'default_ca': 'CA_default'},
                'CA_default': {'dir': '~/.calvin/security/',
                               'preserve': 'no',
-                              'crl_dir': '$dir/crl',
-                              'RANDFILE': '$dir/private/.rand',
-                              'certificate': '$dir/cacert.pem',
-                              'database': '$dir/index.txt',
-                              'private_dir': '$dir/private/',
-                              'new_certs_dir': '$dir/newcerts',
-                              'private_key': '$dir/private/ca.key',
-                              'runtimes_dir': '$dir/runtimes',
+                              'crl_dir': '%(dir)s/crl',
+                              'RANDFILE': '%(dir)s/private/.rand',
+                              'certificate': '%(dir)s/cacert.pem',
+                              'database': '%(dir)s/index.txt',
+                              'private_dir': '%(dir)s/private/',
+                              'new_certs_dir': '%(dir)s/newcerts',
+                              'private_key': '%(dir)s/private/ca.key',
+                              'runtimes_dir': '%(dir)s/runtimes',
                               'email_in_dn': 'no',
                               'x509_extensions': 'usr_cert',
                               'copy_extensions': 'none',
-                              'certs': '$dir/certs',
+                              'certs': '%(dir)s/certs',
                               'default_days': '365',
                               'policy': 'policy_any',
                               'cert_opt': 'ca_default',
-                              'serial': '$dir/serial',
+                              'serial': '%(dir)s/serial',
                               'default_crl_days': '30',
                               'name_opt': 'ca_default',
-                              'crl': '$dir/crl.pem',
+                              'crl': '%(dir)s/crl.pem',
                               'default_md': 'sha256'},
                'v3_ca': {'subjectKeyIdentifier': 'hash',
                          'authorityKeyIdentifier':
@@ -183,12 +183,9 @@ class Config():
                 raw = self.config.get(section, option)
                 value = raw.split("#")[0].strip()  # Remove comments
 
-                if "$" in value:  # Manage openssl variables
-                    variable = "".join(value.split("$")[1:])
-                    variable = variable.split("/")[0]
+                if "$calvin_dir" in value:  # Variable in OpenSSL conf
                     path = "/" + "/".join(value.split("/")[1:])
-                    varvalue = self.config.get(section, variable)
-                    value = varvalue.split("#")[0].strip() + path
+                    value = _conf.install_location() + path
                 try:
                     configuration[section].update({option: value})
                 except KeyError:

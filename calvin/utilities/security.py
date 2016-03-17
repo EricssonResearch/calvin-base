@@ -126,9 +126,11 @@ class Security(object):
         """
         auth = []
         if self.subject['user']:
+            root_dir = os.path.abspath(os.path.join(_conf.install_location(), '..'))
             srv=Client(server=self.sec_conf['authentication']['server_ip'], 
                         secret= bytes(self.sec_conf['authentication']['secret']),
-                        dict=Dictionary("extras/pyrad_dicts/dictionary", "extras/pyrad_dicts/dictionary.acc"))
+                        dict=Dictionary(os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary"), 
+                                        os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary.acc")))
             req=srv.CreateAuthPacket(code=pyrad.packet.AccessRequest,
                         User_Name=self.subject['user'][0],
                         NAS_Identifier="localhost")
@@ -188,10 +190,10 @@ class Security(object):
         return {key: [self.subject[key][i] for i, auth in enumerate(values) if auth] 
                 for key, values in self.auth.iteritems() if any(values)}
 
-    def check_security_policy_actor(self, requires):
+    def check_security_policy(self, requires=None):
         """Check if access is permitted for the actor by the security policy"""
-        _log.debug("Security: check_security_policy_actor")
-        if self.sec_conf and self.sec_conf['access_control_enabled']:
+        _log.debug("Security: check_security_policy")
+        if self.sec_conf and "authorization" in self.sec_conf:
             return self.get_authorization_decision(requires)
         # No security config, so access control is disabled
         return True
