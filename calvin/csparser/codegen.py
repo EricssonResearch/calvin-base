@@ -30,7 +30,7 @@ class Finder(object):
     def visit(self, node):
         if not self.kind or type(node) is self.kind:
             self.matches.append(node)
-        if self.depth < self.maxdepth:
+        if node.children is not None and self.depth < self.maxdepth:
             self.depth += 1
             map(self.visit, node.children)
             self.depth -= 1
@@ -52,8 +52,8 @@ class Visitor(object):
         self.depth = 0
 
     def _visit(self, node, preorder=None, inorder=None, postorder=None):
-        if self.depth > self.maxdepth:
-            print "maxdepth ({}) exceeded".format(self.depth)
+        if node.children is None or self.depth > self.maxdepth:
+            # print "maxdepth ({}) exceeded".format(self.depth)
             return
         if preorder: preorder(node)
         left, last = node.children[0:-1], node.children[-1:]
