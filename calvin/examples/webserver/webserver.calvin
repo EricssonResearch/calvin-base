@@ -149,7 +149,7 @@ component HTTPFileReader() filename -> resource, status {
   read_html : io.FileReader()
   concat : text.LineJoin()
   exception_handler : exception.ExceptionHandler()
-  is_eos : exception.IsEOS()
+  is_eos : std.Compare(op="=")
   status_mapper : std.Deselect()
 
 
@@ -157,8 +157,9 @@ component HTTPFileReader() filename -> resource, status {
   read_html.out > exception_handler.token
   exception_handler.token > concat.line
   concat.text > .resource
-  exception_handler.status > is_eos.token
-  is_eos.status > status_mapper.select
+  exception_handler.status > is_eos.a
+  "End of stream" > is_eos.b
+  is_eos.result > status_mapper.select
   OK > status_mapper.case_true
   NOT_FOUND > status_mapper.case_false
   status_mapper.data > .status
