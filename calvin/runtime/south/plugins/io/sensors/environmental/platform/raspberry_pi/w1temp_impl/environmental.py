@@ -16,8 +16,7 @@
 
 import glob
 from calvin.runtime.south.plugins.io.sensors.environmental import base_environmental
-from calvin.runtime.south.plugins.async import filedescriptor
-    
+
 """
 Read 1-wire temperature sensor. Needs w1-gpio and w1-therm modules:
     modprobe w1-gpio
@@ -33,36 +32,26 @@ class Environmental(base_environmental.EnvironmentalBase):
     w1temp temperature sensor
     """
 
-    def __init__(self, trigger):
+    def __init__(self):
         super(Environmental, self).__init__()
-        self._trigger = trigger
-        self._fd = None
-        self._running = False
         self._base_dir = '/sys/bus/w1/devices/'
         self._device_folder = glob.glob(self._base_dir + '28*')[0]
         self._device_file = self._device_folder + '/w1_slave'
         self._temperature = None
         
     def _read_temp_raw(self):
-        print("Reading temp...")
         try:
-            self._fd = filedescriptor(self._read_temp, self._device_file, 'r')
-            # with open(self._device_file, 'r') as fp:
-            #    return fp.readlines()
+            with open(self._device_file, 'r') as fp:
+                return fp.readlines()
         except:
             return None
         
     def _read_temp(self):
-        lines = self.fd.read()
+        lines = self._read_temp_raw()
         if not lines:
-            print("Nohing to read")
             return 
-        lines = lines.split('\n')
         if lines and lines[0].strip()[-3:] != 'YES':
-            # Nothing to read, try later
-            print("Nothing to read, retry")
-            if self._running:
-                self._read_temp_raw()
+            # Nothing to read, will try later
             return
 
         equals_pos = lines[1].find('t=')
@@ -72,20 +61,8 @@ class Environmental(base_environmental.EnvironmentalBase):
             self._temperature = float(temp_string) / 1000.0
             # Round to nearest half-degree
             self._temperature = round(2*self._temperature, 0)/2.0
-            self._trigger()
-        if self._running:
-            # go again
-            self._read_temp_raw()
-        
-
-    def start(self):
-        self._running = True
-        self._read_temp_raw()
-        
-    def stop(self):
-        self._running = False
         
     def get_temperature(self):
-        if self._running:
-            return self._temperature
+        self._read_temp()
+        return self._temperature
             
