@@ -23,8 +23,11 @@ class Environmental(object):
     Environmental sensor
     """
 
-    def __init__(self):
-        self.sensor = environmental.Environmental()
+    def __init__(self, node, actor):
+        self.trigger = node.sched.trigger_loop
+        self.actor = actor
+        self.sensor = environmental.Environmental(self.trigger)
+        self.sensor.start()
 
     def get_temperature(self):
         """
@@ -49,4 +52,4 @@ def register(node=None, actor=None):
     """
         Called when the system object is first created.
     """
-    return Environmental()
+    return Environmental(node, actor)
