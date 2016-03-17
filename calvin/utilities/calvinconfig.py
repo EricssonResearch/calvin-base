@@ -34,14 +34,21 @@ class CalvinConfig(object):
     5. current working directory ($CWD)
     If $CWD is outside of $HOME, only (1) through (3) are searched.
 
-    Simple values are overridden by later configs, whereas lists are prepended by later configs.
+    The environment variable CALVIN_CONFIG_PATH can be set to a colon-separated list of paths that
+    will be searched after directories (1) through (5) above.
 
-    If the environment variable CALVIN_CONFIG_PATH is set, it will be taken as a path to the ONLY
-    configuration file, overriding even built-ins.
+    All config files found in the above locations will be read, and merged into a single config.
+    Note that the last config file read has the highest preceedence. The following rules apply:
+    New key/value pairs are ADDED, but for existing keys, simple values are OVERRIDDEN by later configs,
+    whereas lists are PREPENDED by values from later configs.
+
+    In order to completely bypass the standard config paths, the environment variable CALVIN_CONFIG
+    can be set to point to a config FILE that will be taken as the ONLY configuration file,
+    disregarding even the built-in settings.
 
     Finally, wildcard environment variables on the form CALVIN_<SECTION>_<OPTION> may override
-    options read from defaults or config files. <SECTION> must be one of GLOBAL, TESTING, or DEVELOPER,
-    e.g. CALVIN_TESTING_UNITTEST_LOOPS=42
+    options read from defaults or config files. <SECTION> must be one of GLOBAL, TESTING, DEVELOPER, or
+    ARGUMENTS e.g. CALVIN_TESTING_UNITTEST_LOOPS=42
 
     Printing the config object provides a great deal of information about the configuration.
     """
@@ -50,16 +57,18 @@ class CalvinConfig(object):
 
         self.config = {}
         self.wildcards = []
-        self.override_path = os.environ.get('CALVIN_CONFIG_PATH', None)
+        self.override_path = os.environ.get('CALVIN_CONFIG', None)
+        self.extra_paths = os.environ.get('CALVIN_CONFIG_PATH', None)
 
-        # Setting CALVIN_CONFIG_PATH takes preceedence over all other configs
+
+        # Setting CALVIN_CONFIG takes preceedence over all other configs
         if self.override_path is not None:
-            config = self.config_at_path(self.override_path)
+            config = self.read_config(self.override_path)
             if config is not None:
-                self.set_config(self.config_at_path(self.override_path))
+                self.set_config(config)
             else:
                 self.override_path = None
-                _log.info("CALVIN_CONFIG_PATH does not point to a valid config file.")
+                _log.info("CALVIN_CONFIG does not point to a valid config file.")
 
         # This is the normal config procedure
         if self.override_path is None:
@@ -185,13 +194,16 @@ class CalvinConfig(object):
             confpath = path
         else:
             return None
+        return self.read_config(confpath)
 
+    def read_config(self, filepath):
         try:
-            with open(confpath) as f:
+            with open(filepath) as f:
                 conf = json.loads(f.read())
+                path = os.path.dirname(filepath)
                 self._expand_actor_paths(conf, path)
         except Exception as e:
-            _log.info("Could not read config at '{}': {}".format(confpath, e))
+            _log.info("Could not read config at '{}': {}".format(filepath, e))
             conf = None
         return conf
 
@@ -218,8 +230,7 @@ class CalvinConfig(object):
 
     def config_paths(self):
         """
-        Return the install dir and list of paths from $HOME to the current working directory (CWD),
-        unless CWD is not rooted in $HOME in which case only install dir and $HOME is returned.
+        Return the list of paths to search for configs.
         If install dir is in the path from $HOME to CWD it is not included a second time.
         """
         if self.override_path is not None:
@@ -228,23 +239,26 @@ class CalvinConfig(object):
         inst_loc = self.install_location()
         curr_loc = os.getcwd()
         home = os.environ.get('HOME', curr_loc)
-        paths = [home, inst_loc]
-        if not curr_loc.startswith(home):
-            return paths
+        paths = [inst_loc, home]
 
-        dpaths = []
-        while len(curr_loc) > len(home):
-            if curr_loc != inst_loc:
-                dpaths.append(curr_loc)
-            curr_loc, part = curr_loc.rsplit('/', 1)
-        return dpaths + paths
+        insert_index = len(paths)
+        if curr_loc.startswith(home):
+            while len(curr_loc) > len(home):
+                if curr_loc != inst_loc:
+                    paths.insert(insert_index, curr_loc)
+                curr_loc, part = curr_loc.rsplit('/', 1)
+
+        epaths = self.extra_paths.split(':') if self.extra_paths else []
+        paths.extend(epaths)
+
+        return paths
 
     def set_wildcards(self):
         """
         Allow environment variables on the form CALVIN_<SECTION>_<OPTION> to override options
         read from defaults or config files. <SECTION> must be one of GLOBAL, TESTING, or DEVELOPER.
         """
-        wildcards = [e for e in os.environ if e.startswith('CALVIN_') and e != 'CALVIN_CONFIG_PATH']
+        wildcards = [e for e in os.environ if e.startswith('CALVIN_') and not e.startswith('CALVIN_CONFIG')]
         for wildcard in wildcards:
             parts = wildcard.split('_', 2)
             if len(parts) < 3 or parts[1] not in ['GLOBAL', 'TESTING', 'DEVELOPER', 'ARGUMENTS']:
@@ -266,7 +280,8 @@ class CalvinConfig(object):
         d['config searchpaths'] = self.config_paths(),
         d['config paths'] = [p for p in self.config_paths() if self.config_at_path(p) is not None],
         d['config'] = self.config
-        d['CALVIN_CONFIG_PATH'] = self.override_path
+        d['CALVIN_CONFIG'] = self.override_path
+        d['CALVIN_CONFIG_PATH'] = self.extra_paths
         d['wildcards'] = self.wildcards
         return self.__class__.__name__ + " : " + json.dumps(d, indent=4, sort_keys=True)
 
