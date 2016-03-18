@@ -36,9 +36,7 @@ class CalvinEOFError(Exception):
 def p_script(p):
     """script : opt_constdefs opt_compdefs opt_program"""
     s = ast.Node()
-    s.children.extend(p[1])
-    s.children.extend(p[2])
-    s.children.extend(p[3])
+    s.add_children(p[1] + p[2] + p[3])
     p[0] = s
 
 
