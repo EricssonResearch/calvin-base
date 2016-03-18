@@ -35,6 +35,14 @@ class BracePrinter(object):
             print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)
 
+    @visitor.when(ast.Block)
+    def visit(self, node):
+        def f(node):
+            print "{}( {} namespace: {}".format(self._indentation(), node, node.namespace)
+        def g(node):
+            print "{})".format(self._indentation())
+        self._visit(node, preorder=f, postorder=g)
+
     @visitor.when(ast.Id)
     def visit(self, node):
         print "{}( {} {} )".format(self._indentation(), node, node.ident)

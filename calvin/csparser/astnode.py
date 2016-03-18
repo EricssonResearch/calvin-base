@@ -126,8 +126,9 @@ class InternalPort(Node):
 
 class Block(Node):
     """docstring for ComponentNode"""
-    def __init__(self, program = None):
+    def __init__(self, program = None, namespace=""):
         super(Block, self).__init__()
+        self.namespace = namespace
         self.add_children(program or [])
 
 class Component(Node):
