@@ -30,6 +30,16 @@ class Node(object):
             self.children.remove(child)
             child.parent = None
 
+    def replace_child(self, old, new):
+        if self.is_leaf():
+            raise Exception("Can't replace child in leaf node {}".format(self))
+        if not old in self.children:
+            return False
+        i = self.children.index(old)
+        self.children[i] = new
+        new.parent = self
+        return True
+
     def clone(self):
         x = deepcopy(self)
         x.parent = None
