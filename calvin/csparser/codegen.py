@@ -30,7 +30,7 @@ class Finder(object):
     def visit(self, node):
         if not self.kind or type(node) is self.kind:
             self.matches.append(node)
-        if node.children is not None and self.depth < self.maxdepth:
+        if not node.is_leaf() and self.depth < self.maxdepth:
             self.depth += 1
             map(self.visit, node.children)
             self.depth -= 1
@@ -52,7 +52,7 @@ class Visitor(object):
         self.depth = 0
 
     def _visit(self, node, preorder=None, inorder=None, postorder=None):
-        if node.children is None or self.depth > self.maxdepth:
+        if node.is_leaf() or self.depth > self.maxdepth:
             # print "maxdepth ({}) exceeded".format(self.depth)
             return
         if preorder: preorder(node)
@@ -240,6 +240,7 @@ class CodeGen(object):
     def wrap_in_namespace(self, block, namespace):
         wr = WrapInNamespace()
         wr.wrap(block, namespace)
+
     def add_actor(self, actor, namespace):
         key = "{}:{}".format(namespace, actor.ident)
         value = {}
