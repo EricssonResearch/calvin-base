@@ -31,7 +31,9 @@ class Node(object):
             child.parent = None
 
     def clone(self):
-        return deepcopy(self)
+        x = deepcopy(self)
+        x.parent = None
+        return x
 
     def __str__(self):
         if self._verbose_desc:
