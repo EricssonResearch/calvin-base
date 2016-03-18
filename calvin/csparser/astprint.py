@@ -23,6 +23,9 @@ class BracePrinter(object):
     def _indentation(self):
         return "    "*self.indent
 
+    def process(self, node):
+        self.visit(node)
+
     @visitor.on('node')
     def visit(self, node):
         pass

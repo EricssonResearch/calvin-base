@@ -213,6 +213,7 @@ class CodeGen(object):
         self.constants = {}
         self.local_components = {}
         self.app_info = {'name':script_name}
+        self.printer = astprint.BracePrinter()
 
         self.run()
 
@@ -254,6 +255,8 @@ class CodeGen(object):
         ##
         # Tree re-write
         #
+        print
+        self.printer.process(self.ast)
         ##
         # 1. Expand components
         #
@@ -264,6 +267,7 @@ class CodeGen(object):
         expander = Expander(self.local_components)
         expander.visit(self.ast)
 
+        self.printer.process(self.ast)
 
         #
         # "code" generation
