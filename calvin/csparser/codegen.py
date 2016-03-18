@@ -162,6 +162,44 @@ class WrapInNamespace(Visitor):
         node.ident = self.namespace + "." + node.ident
 
 
+class Expander(object):
+    """
+    Expands a tree with components provided as a dictionary
+    """
+    def __init__(self, components):
+        self.components = components
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if node.children is None:
+            return
+        map(self.visit, node.children)
+
+    @visitor.when(ast.Assignment)
+    def visit(self, node):
+        if node.actor_type not in self.components:
+            map(self.visit, node.children)
+            return
+        # Clone assignment to clone the arguments
+        # FIXME: Should args be a node rather than a list?
+        ca = node.clone()
+        args = ca.children
+        # Clone block from component definition
+        # FIXME: should block be a propery?
+        block = self.components[node.actor_type].children[0]
+        new = block.clone()
+        new.namespace = node.ident
+        # Add arguments from assignment to block
+        new.add_children(args)
+        node.parent.replace_child(node, new)
+        # Recurse
+        map(self.visit, new.children)
+
+
 class CodeGen(object):
     """
     Generate code from a source file
@@ -173,7 +211,7 @@ class CodeGen(object):
         self.ast = ast_root
         self.script_name = script_name
         self.constants = {}
-        self.components = {}
+        self.local_components = {}
         self.app_info = {'name':script_name}
 
         self.run()
@@ -189,9 +227,9 @@ class CodeGen(object):
           3 - components in the order defined by actor store
         Steps 2 and 3 are handled by generic lookup in actor store
         """
-        # if actor_type in self.local_components:
-        #     compdef = self.local_components[actor_type]
-        #     return compdef, False
+        if actor_type in self.local_components:
+            compdef = self.local_components[actor_type]
+            return compdef, False
 
         found, is_actor, info = self.actorstore.lookup(actor_type)
         # if self.verify and not found:
@@ -209,22 +247,27 @@ class CodeGen(object):
         ai['connections'] = {}
         ai['valid'] = True
 
-        c = self.query(ast.Constant, self.ast, maxdepth=1)
-        self.process_constants(c)
+        ##
+        # Check for errors
+        #
 
+        ##
+        # Tree re-write
+        #
+        ##
+        # 1. Expand components
+        #
         components = self.query(ast.Component, self.ast, maxdepth=1)
         for c in components:
-            self.components[c.name] = c
+            self.local_components[c.name] = c
 
-        blocks = self.query(ast.Block, self.ast)
-        for b in blocks:
-            iprw = ImplicitPortRewrite(maxdepth=1024)
-            iprw.visit(b)
+        expander = Expander(self.local_components)
+        expander.visit(self.ast)
 
 
-        m = self.query(ast.Block, self.ast, maxdepth=1)
-        if len(m) == 1:
-            self.process_main(m[0])
+        #
+        # "code" generation
+        #
 
     def get_named_args(self, node):
         """
