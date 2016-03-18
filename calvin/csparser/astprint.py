@@ -1,6 +1,68 @@
 import visitor
 import astnode as ast
 
+class DotPrinter(object):
+    """docstring for DotPrinter"""
+    def __init__(self):
+        super(DotPrinter, self).__init__()
+        self.statements = []
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        self.vertex(node)
+        self.decorate(node)
+        self.properties(node)
+        self.edges(node)
+        if node.children:
+            map(self.visit, node.children)
+
+    def add(self, stmt):
+        self.statements.append(stmt)
+
+    def vertex(self, node):
+        stmt = '"{}" [label="{}"];'.format(hex(id(node)), node.__class__.__name__)
+        self.add(stmt)
+
+    def edges(self, node):
+        for child in node.children or []:
+            stmt = '"{}" -> "{}";'.format(hex(id(node)), hex(id(child)))
+            self.add(stmt)
+
+    def decorate(self, node):
+        pass
+
+    def properties(self, node):
+        pass
+
+    def process(self, node):
+        self.add('digraph TMP {')
+        self.visit(node)
+        self.add('}')
+        print "\n".join(self.statements)
+
+
+class DotDebugPrinter(DotPrinter):
+    """docstring for DotDebugPrinter"""
+    def __init__(self):
+        super(DotDebugPrinter, self).__init__()
+
+    def decorate(self, node):
+        if node.parent:
+            stmt = '"{}" -> "{}" [color=red];'.format(hex(id(node)), hex(id(node.parent)))
+            self.add(stmt)
+
+    def properties(self, node):
+        if type(node) is ast.Value:
+            stmt = '"{}" -> "{}";'.format(hex(id(node)), hex(id(node))+"_value")
+            self.add(stmt)
+            stmt = '"{}" [shape=box, label="{}"];'.format(hex(id(node))+"_value", node.value)
+            self.add(stmt)
+
+
 class BracePrinter(object):
     def __init__(self):
         self.indent = 0
@@ -100,5 +162,8 @@ if __name__ == '__main__':
     n = ast.Node()
     bp = BracePrinter()
     bp.visit(n)
+
+    dp = DotPrinter()
+    dp.process(n)
 
 
