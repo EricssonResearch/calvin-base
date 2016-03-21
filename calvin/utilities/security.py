@@ -111,7 +111,7 @@ class Security(object):
         if self.principal['user']:
             srv=Client(server=self.sec_conf['authentication']['server_ip'], 
                         secret= bytes(self.sec_conf['authentication']['secret']),
-                        dict=Dictionary("pyrad_dicts/dictionary", "pyrad_dicts/dictionary.acc"))
+                        dict=Dictionary("extras/pyrad_dicts/dictionary", "extras/pyrad_dicts/dictionary.acc"))
             req=srv.CreateAuthPacket(code=pyrad.packet.AccessRequest,
                         User_Name=self.principal['user'][0],
                         NAS_Identifier="localhost")
