@@ -9,7 +9,7 @@ block = []
 print "# Calvin Control API"
 for line in lines:
     if not line and block:
-        print '- __' + block.pop(1).strip() + '__'
+        print '- __' + block.pop(1).strip().replace('_', '\_') + '__' + "\n"
         print "```\n" + "\n".join(s for s in block) + "\n```"
         block =  []
     elif line:
