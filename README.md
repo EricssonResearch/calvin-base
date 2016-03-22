@@ -25,7 +25,7 @@ There are now a couple of examples of how to use Calvin with [Dockers](http://ww
 
 ### Capabilities ###
 
-There is now support for some new webservices, such as [tweeting](http://twitter.com), and checking the [forecast](http://www.openweatherapi.com). There is also support for some new hardware.
+There is now support for some new webservices, such as [tweeting](http://twitter.com), and checking the [forecast](http://www.openweathermap.com). There is also support for some new hardware.
 
 ### Examples ###
 
