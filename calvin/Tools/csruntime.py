@@ -309,7 +309,7 @@ def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, at
     call += (" &> %s" % outfile) if outfile else ""
     call += " &"
     if configfile:
-        call = "CALVIN_CONFIG_PATH=%s " % configfile + call
+        call = "CALVIN_CONFIG=%s " % configfile + call
     return os.system(call)
 
 

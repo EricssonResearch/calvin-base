@@ -45,7 +45,7 @@ rt1_id = None
 rt2_id = None
 rt3_id = None
 test_script_dir = None
-DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials'])
+DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials', 'signer'])
 
 def absolute_filename(filename):
     import os.path
@@ -159,7 +159,8 @@ class TestDeployScript(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy1.deployjson", check=True, credentials=None)
+                                reqs=test_script_dir+"test_deploy1.deployjson",
+                                check=True, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -182,7 +183,8 @@ class TestDeployScript(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy2.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy2.deployjson", check=True, credentials=None)
+                                reqs=test_script_dir+"test_deploy2.deployjson",
+                                check=True, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -208,7 +210,8 @@ class TestDeployScript(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy3.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy3.deployjson", check=True, credentials=None)
+                                reqs=test_script_dir+"test_deploy3.deployjson",
+                                check=True, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -336,7 +339,8 @@ class TestDeployShadow(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow1.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow1.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -369,7 +373,8 @@ class TestDeployShadow(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow2.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow2.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -402,7 +407,8 @@ class TestDeployShadow(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow3.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow2.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow2.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -430,7 +436,8 @@ class TestDeployShadow(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadowcomponent1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadowcomponent1.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadowcomponent1.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -607,7 +614,8 @@ class TestSepDeployShadow(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow1.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow1.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -646,7 +654,7 @@ class TestSepDeployShadow(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5004' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=None, check=False, credentials=None)
+                                reqs=None, check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -703,7 +711,8 @@ class TestSepDeployShadow(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5004' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow6.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow6.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -863,7 +872,8 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow4.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -897,7 +907,8 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow4.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -942,7 +953,8 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow4.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -1007,7 +1019,8 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow5.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow4.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_shadow4.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
@@ -1073,7 +1086,8 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_deploy4.deployjson", check=False, credentials=None)
+                                reqs=test_script_dir+"test_deploy4.deployjson",
+                                check=False, credentials=None, signer=None)
         result = {}
         try:
             result = deploy_app(args)
