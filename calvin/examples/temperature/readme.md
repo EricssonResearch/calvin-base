@@ -1,6 +1,8 @@
+# Temperature example #
+
 Read 1-wire temperature sensor. 
 
-On Raspberry Pi, this eeds w1-gpio and w1-therm modules:
+On Raspberry Pi, this needs w1-gpio and w1-therm modules:
 
     modprobe w1-gpio
     modprobe w1-therm
