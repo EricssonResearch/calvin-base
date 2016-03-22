@@ -63,9 +63,6 @@ setup(name='calvin',
           "Intended Audience :: Developers",
           "Topic :: Software Development",
       ],
-      extras_require={
-          'crypto': 'pyOpenSSL==0.15.1'
-      },
       entry_points={
           'console_scripts': [
               'csruntime=calvin.Tools.csruntime:main',

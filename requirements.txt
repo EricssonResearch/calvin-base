@@ -1,9 +1,11 @@
-colorlog>=2.6.0
-kademlia>=0.5
-ply>=3.4
-Twisted>=15.0.0
-requests >= 2.6.0
-infi.traceback>=0.3.11
+colorlog==2.6.1
+kademlia==0.5
+ply==3.8
+Twisted==15.5.0
+requests==2.9.1
+infi.traceback==0.3.12
 wrapt==1.10.2
-pyserial>=2.6
-netifaces>=0.10.4
+pyserial==3.0.1
+netifaces==0.10.4
+pyOpenSSL==0.15.1
+service-identity==16.0.0
