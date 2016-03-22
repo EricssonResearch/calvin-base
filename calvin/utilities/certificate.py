@@ -31,10 +31,12 @@ import OpenSSL
 from calvin.utilities import calvinuuid
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities.utils import get_home
+
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
-
 BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
+
 
 class Config():
     """
@@ -111,7 +113,7 @@ class Config():
 
         elif configfile is None and domain is not None:
             self.domain = domain
-            homefolder = os.getenv("HOME")
+            homefolder = get_home()
             self.configfile = os.path.join(homefolder, ".calvin",
                                            "security", domain,
                                            "openssl.conf")
@@ -317,7 +319,7 @@ def remove_domain(domain, directory=None):
     Remove an existing domain uses default security
     directory if not supplied.
     """
-    homefolder = os.getenv("HOME")
+    homefolder = get_home()
     domaindir = directory or os.path.join(homefolder, ".calvin", "security", domain)
     configfile = os.path.join(domaindir, "openssl.conf")
     if os.path.isfile(configfile):
@@ -401,12 +403,12 @@ def new_domain(conf):
 def copy_cert(conf, path):
     """
     Copy the certificate giving it the name that can be stored in
-    trustStore for verification of signatures. 
+    trustStore for verification of signatures.
     file is the out file
 
     """
     cert_file = conf.configuration["CA_default"]["certificate"]
-    
+
     try:
         with open(cert_file, 'rt') as f:
             cert_str = f.read()
@@ -421,7 +423,7 @@ def copy_cert(conf, path):
 
 def sign_file(conf, file):
     """
-    Sign an actor, component or application. 
+    Sign an actor, component or application.
     Store the signature in <file>.sign.<hash-cert>
     Conf is a Config object with a loaded openssl.conf configuration.
     File is the file to be signed.
@@ -436,7 +438,7 @@ def sign_file(conf, file):
     cert_file = conf.configuration["CA_default"]["certificate"]
     private_key = conf.configuration["CA_default"]["private_key"]
     password_file = os.path.join(private, "ca_password")
-    
+
     try:
         with open(cert_file, 'rt') as f:
             cert_str = f.read()

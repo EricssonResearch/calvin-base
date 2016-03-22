@@ -33,12 +33,13 @@ except:
 
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
+from calvin.utilities.utils import get_home
 
 _conf = calvinconfig.get()
 _log = get_logger(__name__)
-
 #default timeout
 TIMEOUT=5
+
 
 def security_modules_check():
     if _conf.get("security","security_conf") or _conf.get("security","security_policy"):
@@ -67,7 +68,7 @@ class Security(object):
         self.sec_policy = _conf.get("security","security_policy")
         if self.sec_conf is not None and not self.sec_conf.get('signature_trust_store', None):
             # Set default directory for trust store
-            homefolder = os.getenv("HOME")
+            homefolder = get_home()
             truststore_dir = os.path.join(homefolder, ".calvin", "security", "trustStore")
             self.sec_conf['signature_trust_store'] = truststore_dir
         self.principal = {}

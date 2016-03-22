@@ -17,6 +17,7 @@
 import os
 import json
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities.utils import get_home
 
 _log = get_logger(__name__)
 _config = None
@@ -29,10 +30,10 @@ class CalvinConfig(object):
     Looks for calvin.conf or .calvin.conf files in:
     1. Built-ins
     2. Calvin's install directory
-    3. $HOME
-    4. all directories between $CWD and $HOME
+    3. home folder
+    4. all directories between $CWD and home folder
     5. current working directory ($CWD)
-    If $CWD is outside of $HOME, only (1) through (3) are searched.
+    If $CWD is outside of home folder, only (1) through (3) are searched.
 
     The environment variable CALVIN_CONFIG_PATH can be set to a colon-separated list of paths that
     will be searched after directories (1) through (5) above.
@@ -231,14 +232,14 @@ class CalvinConfig(object):
     def config_paths(self):
         """
         Return the list of paths to search for configs.
-        If install dir is in the path from $HOME to CWD it is not included a second time.
+        If install dir is in the path from home folder to CWD it is not included a second time.
         """
         if self.override_path is not None:
             return [self.override_path]
 
         inst_loc = self.install_location()
         curr_loc = os.getcwd()
-        home = os.environ.get('HOME', curr_loc)
+        home = get_home() or curr_loc
         paths = [inst_loc, home]
 
         insert_index = len(paths)

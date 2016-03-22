@@ -24,6 +24,7 @@ import shutil
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
+from calvin.utilities.utils import get_home
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import *
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server import *
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import *
@@ -36,7 +37,7 @@ from calvin.utilities import calvinconfig
 
 _conf = calvinconfig.get()
 _conf.add_section("security")
-_conf_file = os.path.join(os.getenv("HOME"), ".calvin/security/test/openssl.conf")
+_conf_file = os.path.join(get_home(), ".calvin/security/test/openssl.conf")
 _conf.set("security", "certificate_conf", _conf_file)
 _conf.set("security", "certificate_domain", "test")
 _cert_conf = None

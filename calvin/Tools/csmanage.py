@@ -24,6 +24,7 @@ from calvin.csparser.parser import calvin_parser
 from calvin.csparser.checker import check
 from calvin.actorstore import store
 from calvin.utilities import certificate
+from calvin.utilities.utils import get_home
 from calvin.actorstore.store import ActorStore
 
 
@@ -195,7 +196,7 @@ def manage_trust(args):
     if args.dir:
         truststore_cert = os.path.join(args.dir, "trustStore", cert_name)
     else:
-        homefolder = os.getenv("HOME")
+        homefolder = get_home()
         truststore_cert = os.path.join(homefolder, ".calvin", "security", "trustStore", cert_name)
     if not os.path.isdir(os.path.dirname(truststore_cert)):
         os.makedirs(os.path.dirname(truststore_cert), 0700)

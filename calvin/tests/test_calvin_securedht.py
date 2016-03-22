@@ -30,6 +30,7 @@ from calvin.utilities import certificate
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 from calvin.utilities import calvinuuid
+from calvin.utilities.utils import get_home
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
@@ -60,7 +61,7 @@ class TestSecureDht(unittest.TestCase):
     def setup(self, request):
         from calvin.Tools.csruntime import csruntime
         from conftest import _config_pytest
-        homefolder = os.getenv("HOME")
+        homefolder = get_home()
         domain = "rttest"
         configdir = os.path.join(homefolder, ".calvin",
                                        "security", domain)
