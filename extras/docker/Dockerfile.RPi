@@ -5,12 +5,11 @@ RUN apt-get update && apt-get install -y \
 	libssl-dev python-smbus wget ca-certificates git \
 	--no-install-recommends && rm -rf /var/lib/apt/lists/*
 RUN wget https://bootstrap.pypa.io/ez_setup.py -O - | python && easy_install -U pip
-RUN pip install requests service_identity RPi.GPIO
-RUN pip install tweepy
-# RUN git clone -b develop https://github.com/EricssonResearch/calvin-base calvin-base
-RUN git clone https://github.com/EricssonResearch/calvin-base calvin-base
+RUN pip install requests RPi.GPIO tweepy
+RUN git clone -b develop https://github.com/EricssonResearch/calvin-base calvin-base
+# RUN git clone https://github.com/EricssonResearch/calvin-base calvin-base
 COPY docker-runtime.sh /calvin-base/
 WORKDIR /calvin-base
-RUN pip install -r /calvin-base/requirements.txt -r /calvin-base/crypto-requirements.txt -e .
+RUN pip install --upgrade -r requirements.txt -r test-requirements.txt -e .
 
 EXPOSE 5000 5001
