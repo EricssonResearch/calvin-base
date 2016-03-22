@@ -24,7 +24,7 @@ def read_description(fname):
 
 
 setup(name='calvin',
-      version='0.4',
+      version='0.5',
       url="http://github.com/EricssonResearch/calvin-base",
       license="Apache Software License",
       author="Ericsson Research",
@@ -35,15 +35,17 @@ setup(name='calvin',
           'pytest-twisted'
       ],
       install_requires=[
-          'colorlog>=2.6.0',
-          'kademlia>=0.4',
-          'ply>=3.6',
-          'Twisted>=15.0.0',
-          'requests >= 2.6.0',
-          'infi.traceback>=0.3.11',
+          'colorlog==2.6.1',
+          'kademlia==0.5',
+          'ply==3.8',
+          'Twisted==15.5.0',
+          'requests==2.9.1',
+          'infi.traceback==0.3.12',
           'wrapt==1.10.2',
-          'pyserial>=2.6',
-          'netifaces>=0.10.4'
+          'pyserial==3.0.1',
+          'netifaces==0.10.4',
+          'pyOpenSSL==0.15.1',
+          'service-identity==16.0.0'
       ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
