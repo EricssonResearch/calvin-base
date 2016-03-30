@@ -65,7 +65,7 @@ class TestSecurity(unittest.TestCase):
         rt1_conf = copy.deepcopy(_conf)
         rt1_conf.set("security", "security_conf", {
                         "comment": "Local authentication, no authorization",
-                        "signature_trust_store": os.path.join(security_test_dir, "keys", "app_signer", "truststore"),
+                        "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
                             "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
@@ -98,7 +98,7 @@ class TestSecurity(unittest.TestCase):
         rt2_conf = copy.deepcopy(_conf)
         rt2_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
-                        "signature_trust_store": os.path.join(security_test_dir, "keys", "app_signer", "truststore"),
+                        "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
                             "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
@@ -134,7 +134,7 @@ class TestSecurity(unittest.TestCase):
         rt3_conf = copy.deepcopy(_conf)
         rt3_conf.set("security", "security_conf", {
                         "comment": "RADIUS authentication, local authorization",
-                        "signature_trust_store": os.path.join(security_test_dir, "keys", "app_signer", "truststore"),
+                        "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "radius", 
                             "server_ip": "localhost", 
@@ -170,7 +170,7 @@ class TestSecurity(unittest.TestCase):
         rt4_conf = copy.deepcopy(_conf)
         rt4_conf.set("security", "security_conf", {
                         "comment": "Local authentication, external authorization",
-                        "signature_trust_store": os.path.join(security_test_dir, "keys", "app_signer", "truststore"),
+                        "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
                             "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}

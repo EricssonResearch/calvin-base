@@ -176,7 +176,9 @@ class Config():
         """
         Parse the openssl.conf file to find relevant paths.
         """
-        self.config.read(self.configfile)
+        if not self.config.read(self.configfile):
+            # Empty openssl.conf file or could not successfully parse the file.
+            self.new_opensslconf()
         configuration = {}
         for section in self.__class__.DEFAULT.keys():
             for option in self.__class__.DEFAULT[section].keys():
