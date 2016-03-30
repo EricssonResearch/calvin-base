@@ -104,8 +104,8 @@ class Security(object):
             _log.debug("Security: authenticate_subject no security needed")
             return True
 
-        if self.sec_conf['authentication']['procedure'] == "local_file":
-            _log.debug("Security: local file authentication method chosen")
+        if self.sec_conf['authentication']['procedure'] == "local":
+            _log.debug("Security: local authentication method chosen")
             return self.authenticate_using_local_database()
         if self.sec_conf['authentication']['procedure'] == "radius":
             if not HAS_PYRAD:
@@ -216,7 +216,7 @@ class Security(object):
             _log.debug("Security: external authorization method chosen")
             decision = self.authorize_using_external_server(request)
         else: 
-            _log.debug("Security: local file authorization method chosen")
+            _log.debug("Security: local authorization method chosen")
             decision = self.authorize_using_local_policies(request)
 
         if decision == "permit":

@@ -67,7 +67,7 @@ class TestSecurity(unittest.TestCase):
                         "comment": "Local authentication, no authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "keys", "app_signer", "truststore"),
                         "authentication": {
-                            "procedure": "local_file",
+                            "procedure": "local",
                             "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
                         }
                     })
@@ -100,11 +100,11 @@ class TestSecurity(unittest.TestCase):
                         "comment": "Local authentication, local authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "keys", "app_signer", "truststore"),
                         "authentication": {
-                            "procedure": "local_file",
+                            "procedure": "local",
                             "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
                         },
                         "authorization": {
-                            "procedure": "local_file",
+                            "procedure": "local",
                             "policy_storage_path": os.path.join(security_test_dir, "policies")
                         }
                     })
@@ -141,7 +141,7 @@ class TestSecurity(unittest.TestCase):
                             "secret": "elxghyc5lz1_passwd"
                         },
                         "authorization": {
-                            "procedure": "local_file",
+                            "procedure": "local",
                             "policy_storage_path": os.path.join(security_test_dir, "policies")
                         }
                     })
@@ -172,7 +172,7 @@ class TestSecurity(unittest.TestCase):
                         "comment": "Local authentication, external authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "keys", "app_signer", "truststore"),
                         "authentication": {
-                            "procedure": "local_file",
+                            "procedure": "local",
                             "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
                         },
                         "authorization": {

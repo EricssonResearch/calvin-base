@@ -209,7 +209,6 @@ def incr(fname):
     fhandle.close()
     return current
 
-
 def touch(fname, times=None):
     """
     Touch a file to update the file timestamp.
@@ -219,7 +218,6 @@ def touch(fname, times=None):
         os.utime(fname, times)
     finally:
         fhandle.close()
-
 
 def fingerprint(filename):
     """
@@ -247,6 +245,11 @@ def fingerprint(filename):
 
     return fingerprint
 
+def cert_hash(cert_file):
+    """Return the hash of the certificate subject"""
+    with open(cert_file, 'rt') as f:
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
+        return format(cert.subject_name_hash(),'x')
 
 def new_runtime(conf, name, nodeid=None):
     """
@@ -416,14 +419,11 @@ def copy_cert(conf, path):
     cert_file = conf.configuration["CA_default"]["certificate"]
 
     try:
-        with open(cert_file, 'rt') as f:
-            cert_str = f.read()
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_str)
-            cert_hash = format(cert.subject_name_hash(),'x')
+        certificate_hash = cert_hash(cert_file)
     except:
         _log.exception("Failed to get certificate hash")
         raise Exception("Failed to get certificate hash")
-    out_file = os.path.join(path, cert_hash + ".0")
+    out_file = os.path.join(path, certificate_hash + ".0")
     shutil.copyfile(cert_file, out_file)
     return out_file
 
@@ -446,14 +446,11 @@ def sign_file(conf, file):
     password_file = os.path.join(private, "ca_password")
 
     try:
-        with open(cert_file, 'rt') as f:
-            cert_str = f.read()
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_str)
-            cert_hash = format(cert.subject_name_hash(),'x')
+        certificate_hash = cert_hash(cert_file)
     except:
         _log.exception("Failed to get certificate hash")
         raise Exception("Failed to get certificate hash")
-    sign_file = file + ".sign." + cert_hash
+    sign_file = file + ".sign." + certificate_hash
     log = subprocess.Popen(["openssl", "dgst", "-sha256",
                             "-sign", private_key,
                             "-passin", "file:" + password_file,

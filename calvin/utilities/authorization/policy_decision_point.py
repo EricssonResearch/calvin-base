@@ -53,7 +53,7 @@ class PolicyDecisionPoint(object):
         {
             "subject": {
                 "user": ["user1"],
-                "actor_signer": ["signer"']
+                "actor_signer": ["signer"]
             },
             "action": {
                 "requires": ["runtime", "calvinsys.events.timer"]
@@ -146,7 +146,8 @@ class PolicyDecisionPoint(object):
             # In most cases the PRP and the PDP will be located on the same physical machine.
             # TODO: if database is used, policies should be indexed based on their Target constraints
             policies = self.prp.get_policies(self.config["policy_name_pattern"])
-            for policy in policies: 
+            for policy_id in policies: 
+                policy = policies[policy_id]
                 # Check if policy target matches (policy without target matches everything).
                 if "target" not in policy or self.target_matches(policy["target"], request):
                     # Get a policy decision if target matches.

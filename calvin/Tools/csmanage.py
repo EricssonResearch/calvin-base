@@ -125,7 +125,7 @@ def parse_args():
     cmd_ca = cmdparsers.add_parser('ca', help='manage CA')
     cmd_ca.add_argument('cmd', metavar='<command>', choices=ca_commands, type=str,
                            help="one of %s" % ", ".join(ca_commands))
-    etargs = cmd_ca.add_argument_group("export and trust")
+    etargs = cmd_ca.add_argument_group("export")
     etargs.add_argument('--path', metavar='<path>', type=str,
                            help='export to directory')
     cargs = cmd_ca.add_argument_group("create")
@@ -241,7 +241,7 @@ def manage_ca(args):
         if not args.domain:
             raise Exception("No domain supplied")
         domaindir = os.path.join(args.dir, args.domain) if args.dir else None
-        certificate.remove_domain(domaindir, args.domain)
+        certificate.remove_domain(args.domain, domaindir)
     elif args.cmd == 'export':
         if not args.domain:
             raise Exception("No domain supplied")
@@ -258,11 +258,33 @@ def manage_cs(args):
         configfile = os.path.join(args.dir, args.org, "openssl.conf") if args.dir else None
         conf = certificate.Config(configfile=configfile, domain=args.org, commonName=args.name, force=args.force)
         certificate.new_domain(conf)
+        # Add certificate to truststore
+        if args.dir:
+            truststore_path = os.path.join(args.dir, "trustStore")
+        else:
+            homefolder = os.getenv("HOME")
+            truststore_path = os.path.join(homefolder, ".calvin", "security", "trustStore")
+        if not os.path.isdir(truststore_path):
+            os.makedirs(truststore_path, 0700)
+        certificate.copy_cert(conf, truststore_path)
     elif args.cmd == 'remove':
         if not args.org:
             raise Exception("No organization supplied")
         orgdir = os.path.join(args.dir, args.org) if args.dir else None
-        certificate.remove_domain(orgdir, args.org)
+        # Remove certificate from truststore
+        configfile = os.path.join(orgdir, "openssl.conf") if args.dir else None
+        conf = certificate.Config(configfile=configfile, domain=args.org, readonly=True)
+        cert_file = conf.configuration["CA_default"]["certificate"]
+        if args.dir:
+            truststore_path = os.path.join(args.dir, "trustStore")
+        else:
+            homefolder = os.getenv("HOME")
+            truststore_path = os.path.join(homefolder, ".calvin", "security", "trustStore")
+        try:
+            os.remove(os.path.join(truststore_path, certificate.cert_hash(cert_file) + ".0"))
+        except OSError:
+            pass  # The certificate is not in the truststore
+        certificate.remove_domain(args.org, orgdir)
     elif args.cmd == 'export':
         if not args.org:
             raise Exception("No organization supplied")
