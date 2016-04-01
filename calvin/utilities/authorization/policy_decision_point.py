@@ -68,7 +68,16 @@ class PolicyDecisionPoint(object):
 
         Response (example):
         {
-            "decision": "permit"
+            "decision": "permit",
+            "obligations": [
+                {
+                    "id": "time_range",
+                    "attributes": {
+                        "start_time": "09:00",
+                        "end_time": "17:00"
+                    }
+                }
+            ]
         }
         """
         _log.info("Authorization request received: %s" % request)
@@ -77,21 +86,25 @@ class PolicyDecisionPoint(object):
             _log.debug("PolicyDecisionPoint: Requires %s" % requires)
             if len(requires) > 1:
                 decisions = []
+                obligations = []
                 # Create one request for each requirement.
                 for req in requires:
                     requirement_request = request.copy()
                     requirement_request["action"]["requires"] = [req]
-                    decisions.append(self.combined_policy_decision(requirement_request))
+                    policy_decision, policy_obligations = self.combined_policy_decision(requirement_request)
+                    decisions.append(policy_decision)
+                    if policy_obligations:
+                        obligations.append(policy_obligations)
                 # If the policy decisions for all requirements are the same, respond with that decision.
                 if all(x == decisions[0] for x in decisions):
-                    return self.create_response(decisions[0])
+                    return self.create_response(decisions[0], obligations)
                 else:
-                    return self.create_response("indeterminate")
-        return self.create_response(self.combined_policy_decision(request))
+                    return self.create_response("indeterminate", [])
+        return self.create_response(*self.combined_policy_decision(request))
 
     def combined_policy_decision(self, request):
         """
-        Return decision for request using policy combining algorithm in config.
+        Return (decision, obligations) for request using policy combining algorithm in config.
 
         Possible decisions: permit, deny, indeterminate, not_applicable
 
@@ -111,8 +124,8 @@ class PolicyDecisionPoint(object):
                 {
                     "id": "policy1_rule1",
                     "description": "Permit access to 'calvinsys.events.timer', 
-                                    'calvinsys.io.*' and 'runtime' 
-                                    if condition is true",
+                                    'calvinsys.io.*' and 'runtime' between 
+                                    09:00 and 17:00 if condition is true",
                     "effect": "permit",
                     "target": {
                         "action": {
@@ -134,12 +147,22 @@ class PolicyDecisionPoint(object):
                                                "2016-03-04"]
                             } 
                         ]
-                    }
+                    },
+                    "obligations": [
+                        {
+                            "id": "time_range",
+                            "attributes": {
+                                "start_time": "09:00",
+                                "end_time": "17:00"
+                            }
+                        }
+                    ]
                 }
             ]
         }
         """
         policy_decisions = []
+        policy_obligations = []
         try:
             # Get policies from PRP (Policy Retrieval Point). 
             # TODO: policy needs to be signed if external PRP is used.
@@ -151,27 +174,35 @@ class PolicyDecisionPoint(object):
                 # Check if policy target matches (policy without target matches everything).
                 if "target" not in policy or self.target_matches(policy["target"], request):
                     # Get a policy decision if target matches.
-                    decision = self.policy_decision(policy, request)
-                    if ((decision == "permit" and self.config["policy_combining"] == "permit_overrides") or 
+                    decision, obligations = self.policy_decision(policy, request)
+                    if ((decision == "permit" and not obligations and self.config["policy_combining"] == "permit_overrides") or 
                       (decision == "deny" and self.config["policy_combining"] == "deny_overrides")):
-                        return decision  # Stop checking further policies.
+                        # Stop checking further rules.
+                        # If "permit" with obligations, continue since "permit" without obligations may be found.
+                        return (decision, [])
                     policy_decisions.append(decision)
+                    policy_obligations += obligations
             if "indeterminate" in policy_decisions:
-                return "indeterminate"
+                return ("indeterminate", [])
             if not all(x == "not_applicable" for x in policy_decisions):
-                return "deny" if self.config["policy_combining"] == "permit_overrides" else "permit"
+                if self.config["policy_combining"] == "deny_overrides" or policy_obligations:
+                    return ("permit", policy_obligations)
+                else:
+                    return ("deny", [])
             else:
-                return "not_applicable"
+                return ("not_applicable", [])
         except Exception:
-            return "indeterminate"
+            return ("indeterminate", [])
 
-    def create_response(self, decision):
-        """Return authorization response including the decision."""
+    def create_response(self, decision, obligations):
+        """Return authorization response including decision and obligations."""
         # TODO: include more information to make it possible to send the response to other nodes within the domain 
-        # when an actor is migrated, e.g. node IDs for which the decision is valid and time range when it is valid.
-        return {
-            "decision": decision
-        }
+        # when an actor is migrated, e.g. node IDs for which the decision is valid.
+        response = {}
+        response["decision"] = decision
+        if obligations:
+            response["obligations"] = obligations
+        return response
 
     def target_matches(self, target, request):
         """Return True if policy target matches request, else False."""
@@ -209,26 +240,35 @@ class PolicyDecisionPoint(object):
         return True
 
     def policy_decision(self, policy, request):
-        """Use the policy to return access decision for the request."""
+        """Use policy to return (access decision, obligations) for the request."""
         rule_decisions = []
+        rule_obligations = []
         for rule in policy["rules"]:
             # Check if rule target matches (rule without target matches everything).
             if "target" not in rule or self.target_matches(rule["target"], request):
                 # Get a rule decision if target matches.
-                effect = self.rule_decision(rule, request)
-                if ((effect == "permit" and policy["rule_combining"] == "permit_overrides") or 
-                  (effect == "deny" and policy["rule_combining"] == "deny_overrides")):
-                    return effect  # Stop checking further rules.
-                rule_decisions.append(effect)
+                decision, obligations = self.rule_decision(rule, request)
+                if ((decision == "permit" and not obligations and policy["rule_combining"] == "permit_overrides") or 
+                  (decision == "deny" and policy["rule_combining"] == "deny_overrides")):
+                    # Stop checking further rules.
+                    # If "permit" with obligations, continue since "permit" without obligations may be found.
+                    return (decision, [])
+                rule_decisions.append(decision)
+                if decision == "permit" and obligations:
+                    # Obligations are only accepted if the decision is "permit".
+                    rule_obligations += obligations
         if "indeterminate" in rule_decisions:
-            return "indeterminate"
+            return ("indeterminate", [])
         if not all(x == "not_applicable" for x in rule_decisions):
-            return "deny" if policy["rule_combining"] == "permit_overrides" else "permit"
+            if policy["rule_combining"] == "deny_overrides" or rule_obligations:
+                return ("permit", rule_obligations)
+            else:
+                return ("deny", [])
         else:
-            return "not_applicable"
+            return ("not_applicable", [])
 
     def rule_decision(self, rule, request):
-        """Return rule decision for the request"""
+        """Return (rule decision, obligations) for the request"""
         # Check condition if it exists.
         if "condition" in rule:
             try:
@@ -240,14 +280,14 @@ class PolicyDecisionPoint(object):
                         args.append(attribute)
                 rule_satisfied = self.evaluate_function(rule["condition"]["function"], args, request)
                 if rule_satisfied:
-                    return rule["effect"]
+                    return (rule["effect"], rule.get("obligations", []))
                 else:
-                    return "not_applicable"
+                    return ("not_applicable", [])
             except Exception:
-                return "indeterminate"
+                return ("indeterminate", [])
         else:
             # If no condition in the rule, return the rule effect directly.
-            return rule["effect"]
+            return (rule["effect"], rule.get("obligations", []))
         
     def evaluate_function(self, func, args, request):
         """

@@ -36,7 +36,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.security import security_modules_check
-from calvin.utilities.authorization.authorization_server import PolicyDecisionPoint
+from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
 from calvin.utilities import calvinuuid
 from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger

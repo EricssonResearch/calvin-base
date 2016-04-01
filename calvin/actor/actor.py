@@ -25,6 +25,7 @@ from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
+from calvin.runtime.north.plugins.authorization import authz_plugins
 
 _log = get_logger(__name__)
 
@@ -344,6 +345,7 @@ class Actor(object):
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._last_time_warning = 0.0
         self.credentials = None
+        self.authorization_plugins = None
 
         self.inports = {p: actorport.InPort(p, self) for p in self.inport_names}
         self.outports = {p: actorport.OutPort(p, self) for p in self.outport_names}
@@ -419,10 +421,15 @@ class Actor(object):
                     raise Exception("%s requires %s" % (self.id, req))
         # Check the runtime and calvinsys execution access rights.
         # Note: when no credentials are set, no verification is done.
-        if hasattr(self, 'sec') and not self.sec.check_security_policy(['runtime'] +
-                                            (self.requires if hasattr(self, "requires") else [])):
-            _log.debug("Security policy check for actor failed")
-            raise Exception("Security policy check for actor failed")
+        if hasattr(self, 'sec'):
+            access_decision = self.sec.check_security_policy(['runtime'] +
+                       (self.requires if hasattr(self, "requires") else []))
+            if isinstance(access_decision, tuple):
+                # Only a tuple if access was granted. No need to check access_decision[0].
+                self.authorization_plugins = access_decision[1]
+            elif not access_decision:
+                _log.debug("Security policy check for actor failed")
+                raise Exception("Security policy check for actor failed")
 
     def __getitem__(self, attr):
         if attr in self._using:
@@ -515,6 +522,11 @@ class Actor(object):
         start_time = time.time()
         total_result = ActionResult(did_fire=False)
         while True:
+            if not self.check_authorization_decision():
+                # The authorization decision is not valid anymore.
+                # TODO: try to migrate actor.
+                _log.info("Access denied for actor %s(%s)" % ( self._type, self.id))
+                return total_result
             # Re-try action in list order after EVERY firing
             for action_method in self.__class__.action_priority:
                 action_result = action_method(self)
@@ -522,7 +534,7 @@ class Actor(object):
                 # Action firing should fire the first action that can fire,
                 # hence when fired start from the beginning
                 if action_result.did_fire:
-                    # FIXME: Make this a hook for the runtime too use, don't
+                    # FIXME: Make this a hook for the runtime to use, don't
                     #        import and use calvin_control or metering in actor
                     self.metering.fired(self.id, action_method.__name__)
                     self.control.log_actor_firing(
@@ -545,7 +557,7 @@ class Actor(object):
                     _log.warning("%s (%s) actor blocked for %f sec" % (self.name, self._type, diff))
                 # We reached the end of the list without ANY firing => return
                 return total_result
-        # Redundant as of now, kept as reminder for when rewriting exeption handling.
+        # Redundant as of now, kept as reminder for when rewriting exception handling.
         raise Exception('Exit from fire should ALWAYS be from previous line.')
 
     def enabled(self):
@@ -677,6 +689,29 @@ class Actor(object):
     def signature_set(self, signature):
         if self._signature is None:
             self._signature = signature
+
+    def check_authorization_decision(self):
+        """Check if authorization decision is still valid"""
+        if self.authorization_plugins:
+            if any(isinstance(elem, list) for elem in self.authorization_plugins):
+                # If list of lists, True must be found in each list.
+                for plugin_list in self.authorization_plugins:
+                    if not self.check_authorization_plugin_list(plugin_list):
+                        return False
+                return True
+            else:
+                return self.check_authorization_plugin_list(self.authorization_plugins)
+        return True
+
+    def check_authorization_plugin_list(self, plugin_list):
+        authorization_results = []
+        for plugin in plugin_list:
+            try:
+                authorization_results.append(authz_plugins[plugin["id"]].authorization_check(**plugin["attributes"]))
+            except Exception:
+                return False
+        # At least one of the authorization checks for the plugins must return True.
+        return True in authorization_results
 
 
 class ShadowActor(Actor):

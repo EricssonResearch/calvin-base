@@ -61,6 +61,12 @@ class FilePolicyRetrievalPoint(PolicyRetrievalPoint):
         # TODO: path may be located on other server. How to handle that?
         # Replace ~ by the user's home directory.
         self.path = os.path.expanduser(path)
+        if not os.path.exists(self.path):
+            try:
+                os.makedirs(self.path)
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
     
     # Use get_policies instead and do the matching in policy_decision_point.py?
     def get_matching_policies(self, request, name_pattern):

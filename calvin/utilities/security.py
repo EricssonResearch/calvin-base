@@ -214,13 +214,15 @@ class Security(object):
                         "Note: NO AUTHORIZATION USED")
                 return False
             _log.debug("Security: external authorization method chosen")
-            decision = self.authorize_using_external_server(request)
+            decision, obligations = self.authorize_using_external_server(request)
         else: 
             _log.debug("Security: local authorization method chosen")
-            decision = self.authorize_using_local_policies(request)
+            decision, obligations = self.authorize_using_local_policies(request)
 
         if decision == "permit":
             _log.debug("Security: access permitted to resources")
+            if obligations:
+                return (True, obligations)
             return True
         elif decision == "deny":
             _log.debug("Security: access denied to resources")
@@ -264,7 +266,7 @@ class Security(object):
             response = self.request_handler.get_authorization_decision(authorization_server_uri, jwt_request, cert_name)
         except Exception as e:
             _log.error("Security: authorization server error - %s" % str(e))
-            return "indeterminate"
+            return ("indeterminate", [])
         try:
             # Get authorization server certificate from disk. 
             # TODO: get certificate from DHT if it wasn't found on disk.
@@ -276,16 +278,17 @@ class Security(object):
             # Exception raised if signature verification fails or if issuer and/or audience are incorrect.
             decoded = jwt.decode(response["jwt"], public_key_authz_server, algorithms=['ES256'], 
                                  issuer=authz_server_id, audience=self.node.id)
-            return decoded['response']['decision']
+            response = decoded['response']
+            return (response['decision'], response.get("obligations", []))
         except Exception as e:
             _log.error("Security: JWT decoding error - %s" % str(e))
-            return "indeterminate"
+            return ("indeterminate", [])
 
     def authorize_using_local_policies(self, request):
         """Authorize access using a local Policy Decision Point (PDP)."""
         self.pdp = PolicyDecisionPoint(self.sec_conf['authorization'])
         response = self.pdp.authorize(request)
-        return response['decision']
+        return (response['decision'], response.get("obligations", []))
 
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):
