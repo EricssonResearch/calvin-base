@@ -202,7 +202,7 @@ class Security(object):
         """Get authorization decision using the authorization procedure specified in config."""
         request = {}
         request["subject"] = self.get_authenticated_subject_attributes()
-        request["resource"] = self.node.attributes.get_indexed_public_with_keys()
+        request["resource"] = {"node_id": self.node.id}
         if requires is not None:
             request["action"] = {"requires": requires}
         _log.debug("Security: authorization request: %s" % request)
@@ -286,9 +286,12 @@ class Security(object):
 
     def authorize_using_local_policies(self, request):
         """Authorize access using a local Policy Decision Point (PDP)."""
-        self.pdp = PolicyDecisionPoint(self.sec_conf['authorization'])
-        response = self.pdp.authorize(request)
-        return (response['decision'], response.get("obligations", []))
+        try:
+            response = self.node.pdp.authorize(request)
+            return (response['decision'], response.get("obligations", []))
+        except Exception as e:
+            _log.error("Security: local authorization error - %s" % str(e))
+            return ("indeterminate", [])
 
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):

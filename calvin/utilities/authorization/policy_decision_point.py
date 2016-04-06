@@ -41,6 +41,21 @@ class PolicyDecisionPoint(object):
         # else:
         self.prp = FilePolicyRetrievalPoint(self.config["policy_storage_path"])
         self.pip = PolicyInformationPoint()
+        self.registered_nodes = {}
+
+    def register_node(self, node_id, node_attributes):
+        """
+        Register node attributes for authorization.
+
+        Node attributes example:
+        {
+            "node_name.name": "testNode",
+            "node_name.organization": "com.ericsson",
+            "owner.organization": "com.ericsson",
+            "address.country": "SE"
+        }
+        """
+        self.registered_nodes[node_id] = node_attributes
 
     def authorize(self, request):
         """
@@ -59,10 +74,7 @@ class PolicyDecisionPoint(object):
                 "requires": ["runtime", "calvinsys.events.timer"]
             },
             "resource": {
-                "node_name.name": "testNode",
-                "node_name.organization": "com.ericsson",
-                "owner.organization": "com.ericsson",
-                "address.country": "SE"
+                "node_id": "a77c0687-dce8-496f-8d81-571333be6116"
             }
         }
 
@@ -81,6 +93,11 @@ class PolicyDecisionPoint(object):
         }
         """
         _log.info("Authorization request received: %s" % request)
+        if "resource" in request and "node_id" in request["resource"]:
+            try:
+                request["resource"] = self.registered_nodes[request["resource"]["node_id"]]
+            except Exception:
+                request["resource"] = {}
         if "action" in request and "requires" in request["action"]:
             requires = request["action"]["requires"]
             _log.debug("PolicyDecisionPoint: Requires %s" % requires)

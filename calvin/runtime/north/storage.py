@@ -492,6 +492,23 @@ class Storage(object):
             _log.debug("Delete node index not finished but call callback anyway")
             org_cb()
 
+    def add_authz_server(self, node, cb=None):
+        """Add node id to authorization server index."""
+        try:
+            self.add_index(['node', 'authz_server'], node.id, root_prefix_level=1)
+        except:
+            _log.debug("Add node id to authorization server index failed", exc_info=True)
+            pass
+
+    def delete_authz_server(self, node, cb=None):
+        """Delete node id from authorization server index."""
+        _log.info("Delete node id")
+        try:
+            self.remove_index("node/authz_server", node.id, root_prefix_level=1)
+        except:
+            _log.debug("Delete node id from authorization server index failed", exc_info=True)
+            pass
+
     def add_application(self, application, cb=None):
         """
         Add application to storage
@@ -696,7 +713,7 @@ class Storage(object):
                partial results. Currently only called once.
 
         Since storage might be eventually consistent caller must expect that the
-        list can containe node ids that are removed and node ids have not yet reached
+        list can contain node ids that are removed and node ids have not yet reached
         the storage.
         """
 
@@ -725,7 +742,7 @@ class Storage(object):
                node/affiliation/name/com.ericsson/laptop
 
         Since storage might be eventually consistent caller must expect that the
-        list can containe node ids that are removed and node ids have not yet reached
+        list can contain node ids that are removed and node ids have not yet reached
         the storage.
         """
 

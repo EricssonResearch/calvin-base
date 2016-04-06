@@ -37,6 +37,7 @@ from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.security import security_modules_check
 from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
+from calvin.utilities import authorization
 from calvin.utilities import calvinuuid
 from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
@@ -74,8 +75,12 @@ class Node(object):
         except:
             _log.exception("Attributes not correct, uses empty attribute!")
             self.attributes = AttributeResolver(None)
-        if authz_server:
-            self.pdp = PolicyDecisionPoint(_conf.get("security","security_conf")['authorization'])
+        try:
+            self.sec_conf = _conf.get("security","security_conf")
+            if authz_server or self.sec_conf['authorization']['procedure'] == "local":
+                self.pdp = PolicyDecisionPoint(self.sec_conf['authorization'])
+        except:
+            self.sec_conf = None
         # Obtain node id, when using security also handle runtime certificate
         self.id = certificate.obtain_cert_node_info(self.attributes.get_node_name_as_str())['id']
         self.metering = metering.set_metering(metering.Metering(self))
@@ -196,6 +201,10 @@ class Node(object):
         # Start storage after network, proto etc since storage proxy expects them
         self.storage.start()
         self.storage.add_node(self)
+        if hasattr(self, "pdp"):
+            self.storage.add_authz_server(self)
+        if self.sec_conf and "authorization" in self.sec_conf:
+            authorization.register_node(self)
 
         # Start control API
         proxy_control_uri = _conf.get(None, 'control_proxy')
@@ -220,6 +229,9 @@ class Node(object):
             self.storage.stop(stopped)
 
         _log.analyze(self.id, "+", {})
+        # FIXME: this function is never called when the node quits
+        if hasattr(self, "pdp"):
+            self.storage.delete_authz_server(self)
         self.storage.delete_node(self, cb=deleted_node)
 
 

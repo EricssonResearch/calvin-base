@@ -605,6 +605,20 @@ re_post_storage = re.compile(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
     """
+    POST /authorization/register
+    Register runtime attributes for authorization
+    Body:
+    {
+        "jwt": <request as JSON Web Token>,
+        "cert_name": <runtime certificate filename>
+    }
+    Response status code: OK or INTERNAL_ERROR
+    Response: none
+"""
+re_post_authorization_register = re.compile(r"POST /authorization/register\sHTTP/1")
+
+control_api_doc += \
+    """
     POST /authorization/pdp
     Return a response to an authorization request
     Body:
@@ -635,7 +649,7 @@ control_api_doc += \
     """
     GET /authorization/policies
     Get all policies on this runtime
-    Response status code: OK
+    Response status code: OK or INTERNAL_ERROR
     Response: 
     {
         "policies": {
@@ -650,7 +664,7 @@ control_api_doc += \
     """
     GET /authorization/policies/{policy-id}
     Get policy
-    Response status code: OK or NOT_FOUND
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
     Response: {"policy": policy in JSON format}
 """
 re_get_authorization_policy = re.compile(r"GET /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
@@ -669,7 +683,7 @@ control_api_doc += \
     """
     DELETE /authorization/policies/{policy-id}
     Delete policy
-    Response status code: OK or NOT_FOUND
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
     Response: none
 """
 re_del_authorization_policy = re.compile(r"DELETE /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
@@ -776,6 +790,7 @@ class CalvinControl(object):
             (re_get_index, self.handle_get_index),
             (re_get_storage, self.handle_get_storage),
             (re_post_storage, self.handle_post_storage),
+            (re_post_authorization_register, self.handle_post_authorization_register),
             (re_post_authorization_pdp, self.handle_post_authorization_pdp),
             (re_post_new_authorization_policy, self.handle_new_authorization_policy),
             (re_get_authorization_policies, self.handle_get_authorization_policies),
@@ -799,7 +814,7 @@ class CalvinControl(object):
             try:
                 self.prp = FilePolicyRetrievalPoint(security_conf['authorization']["policy_storage_path"])
             except:
-                homefolder = os.getenv("HOME")
+                homefolder = os.path.expanduser("~")
                 self.prp = FilePolicyRetrievalPoint(os.path.join(homefolder, ".calvin", "security", "policies"))
         schema, _ = uri.split(':', 1)
         if tunnel:
@@ -1354,6 +1369,32 @@ class CalvinControl(object):
         """
         self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
 
+    def handle_post_authorization_register(self, handle, connection, match, data, hdr):
+        """
+        Register node attributes in data for authorization.
+
+        Signed JSON Web Token (JWT) is used for the data.
+        """
+        try:
+            cert_conffile = _conf.get("security", "certificate_conf")
+            domain = _conf.get("security", "certificate_domain")
+            cert_conf = certificate.Config(cert_conffile, domain)
+            node_name = self.node.attributes.get_node_name_as_str()
+            private_key = certificate.get_private_key(cert_conf, node_name)
+            certificate_runtime = certificate.get_other_certificate(cert_conf, node_name, data["cert_name"])
+            public_key_runtime = certificate.get_public_key(certificate_runtime)
+            runtime_id = certificate_runtime.get_subject().dnQualifier
+            # Decode the JSON Web Token in the request from the runtime.
+            # The signature is verified using the Elliptic Curve public key of the runtime. 
+            # Exception raised if signature verification fails or if issuer is incorrect.
+            decoded = jwt.decode(data["jwt"], public_key_runtime, algorithms=['ES256'], issuer=runtime_id)
+            self.node.pdp.register_node(runtime_id, decoded["attributes"])
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_post_authorization_register")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, None, status=status)
+
     def handle_post_authorization_pdp(self, handle, connection, match, data, hdr):
         """
         Return a response to the authorization request included in the data.
@@ -1409,16 +1450,26 @@ class CalvinControl(object):
 
     def handle_get_authorization_policies(self, handle, connection, match, data, hdr):
         """Get all authorization policies on this runtime"""
-        self.send_response(handle, connection, json.dumps({"policies": self.prp.get_policies()}))
+        try:
+            policies = self.prp.get_policies()
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_get_authorization_policies")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, json.dumps({"policies": policies}) if status == calvinresponse.OK else None, 
+                           status=status)
 
     def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
         """Get authorization policy identified by id"""
         try:
             data = self.prp.get_policy(match.group(1))
             status = calvinresponse.OK
-        except:
+        except IOError:
             _log.exception("handle_get_authorization_policy")
             status = calvinresponse.NOT_FOUND
+        except:
+            _log.exception("handle_get_authorization_policy")
+            status = calvinresponse.INTERNAL_ERROR
         self.send_response(handle, connection, json.dumps({"policy": data}) if status == calvinresponse.OK else None, 
                            status=status)
 
@@ -1442,9 +1493,12 @@ class CalvinControl(object):
         try:
             self.prp.delete_policy(match.group(1))
             status = calvinresponse.OK
-        except:
+        except OSError:
             _log.exception("handle_del_authorization_policy")
             status = calvinresponse.NOT_FOUND
+        except:
+            _log.exception("handle_del_authorization_policy")
+            status = calvinresponse.INTERNAL_ERROR
         self.send_response(handle, connection, None, status=status)
 
     def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_consumed, production):
