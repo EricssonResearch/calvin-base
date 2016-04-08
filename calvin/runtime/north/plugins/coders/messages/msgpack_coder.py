@@ -14,18 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Coders
-import json_coder
-import msgpack_coder
+import msgpack
+from message_coder import MessageCoderBase
 
-def get_prio_list():
-    return ['json', 'msgpack']
+# set of functions to encode/decode data tokens to/from a json description
+class MessageCoder(MessageCoderBase):
 
-def get(type_):
-    if type_ == "json":
-        return json_coder.MessageCoder()
+    def encode(self, data):
+        print "Encoding: "
+        print data
+        return msgpack.packb(data)
 
-    if type_ == "msgpack":
-        return msgpack_coder.MessageCoder()
-
-    raise Exception("Coder {} requested is not supported".format(type_))
+    def decode(self, data):
+        data = msgpack.unpackb(data)
+        print "Decoded: "
+        print data
+        return data
