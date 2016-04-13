@@ -31,13 +31,13 @@ from calvin.runtime.north import metering
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
+from calvin.runtime.north.plugins.authorization.policy_decision_point import PolicyDecisionPoint
+from calvin.runtime.north.plugins.authorization import authorization_registration
 from calvin.runtime.south.monitor import Event_Monitor
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.security import security_modules_check
-from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
-from calvin.utilities.authorization import authorization_registration
 from calvin.utilities import calvinuuid
 from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger

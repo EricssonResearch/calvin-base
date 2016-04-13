@@ -34,7 +34,6 @@ try:
     HAS_JWT = True
 except:
     HAS_JWT = False
-from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
 from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig

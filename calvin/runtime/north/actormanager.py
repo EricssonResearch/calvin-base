@@ -125,7 +125,7 @@ class ActorManager(object):
             if sec:
                 if isinstance(access_decision, tuple):
                     # Only a tuple if access was granted. No need to check access_decision[0].
-                    a.set_authorization_plugins(access_decision[1])
+                    a.set_authorization_checks(access_decision[1])
                 elif not access_decision:
                     _log.debug("Security policy check for actor failed")
                     raise Exception("Security policy check for actor failed")

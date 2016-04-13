@@ -25,7 +25,7 @@ from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
-from calvin.runtime.north.plugins.authorization import authz_plugins
+from calvin.runtime.north.plugins.authorization.local_condition_checks import authz_plugins
 
 _log = get_logger(__name__)
 
@@ -345,7 +345,7 @@ class Actor(object):
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._last_time_warning = 0.0
         self.credentials = None
-        self.authorization_plugins = None
+        self.authorization_checks = None
 
         self.inports = {p: actorport.InPort(p, self) for p in self.inport_names}
         self.outports = {p: actorport.OutPort(p, self) for p in self.outport_names}
@@ -384,8 +384,8 @@ class Actor(object):
         _log.debug("actor.py: get_credentials: %s" % self.credentials)
         return self.credentials
 
-    def set_authorization_plugins(self, authorization_plugins):
-        self.authorization_plugins = authorization_plugins
+    def set_authorization_checks(self, authorization_checks):
+        self.authorization_checks = authorization_checks
 
     @verify_status([STATUS.LOADED])
     def setup_complete(self):
@@ -675,15 +675,15 @@ class Actor(object):
 
     def check_authorization_decision(self):
         """Check if authorization decision is still valid"""
-        if self.authorization_plugins:
-            if any(isinstance(elem, list) for elem in self.authorization_plugins):
+        if self.authorization_checks:
+            if any(isinstance(elem, list) for elem in self.authorization_checks):
                 # If list of lists, True must be found in each list.
-                for plugin_list in self.authorization_plugins:
+                for plugin_list in self.authorization_checks:
                     if not self.check_authorization_plugin_list(plugin_list):
                         return False
                 return True
             else:
-                return self.check_authorization_plugin_list(self.authorization_plugins)
+                return self.check_authorization_plugin_list(self.authorization_checks)
         return True
 
     def check_authorization_plugin_list(self, plugin_list):

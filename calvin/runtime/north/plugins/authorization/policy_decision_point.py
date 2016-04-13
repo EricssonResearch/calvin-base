@@ -15,8 +15,9 @@
 # limitations under the License.
 
 import re
-from calvin.utilities.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
-from calvin.utilities.authorization.policy_information_point import PolicyInformationPoint
+import os
+from calvin.runtime.north.plugins.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
+from calvin.runtime.north.plugins.authorization.policy_information_point import PolicyInformationPoint
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -29,7 +30,7 @@ class PolicyDecisionPoint(object):
         self.config = {
             "policy_combining": "permit_overrides",
             "policy_storage": "files",
-            "policy_storage_path": "~/.calvin/security/policies",
+            "policy_storage_path": os.path.join(os.path.expanduser("~"), ".calvin", "security", "policies"),
             "policy_name_pattern": "*"
         }
         if config is not None:

@@ -28,6 +28,7 @@ from random import randint
 from calvin.Tools import cscompiler as compiler
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north import metering
+from calvin.runtime.north.plugins.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
@@ -37,7 +38,6 @@ from calvin.requests import calvinresponse
 from calvin.utilities.security import security_needed_check
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
-from calvin.utilities.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
 from calvin.utilities import certificate
 
 _conf = calvinconfig.get()
