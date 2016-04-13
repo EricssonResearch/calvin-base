@@ -83,7 +83,7 @@ class ImplicitPortRewrite(Visitor):
         <value> > foo.in
     by replacing <value> with a std.Constant(data=<value>) actor.
     """
-    def __init__(self, maxdepth):
+    def __init__(self, maxdepth=1024):
         super(ImplicitPortRewrite, self).__init__(maxdepth)
         self.kind = ast.ImplicitPort
         self.implicit_port = None
@@ -260,18 +260,31 @@ class CodeGen(object):
         ##
         # 1. Expand components
         #
+
         components = self.query(ast.Component, self.ast, maxdepth=1)
         for c in components:
             self.local_components[c.name] = c
 
         expander = Expander(self.local_components)
         expander.visit(self.ast)
-
+        # All component definitions can now be removed
+        comps = self.query(ast.Component, self.ast)
+        if comps:
+            print "WARNING: unused components. ", comps
+        for comp in comps:
+            comp.delete()
         self.printer.process(self.ast)
+
+        ##
+        # 2. Implicit port rewrite
+        rw = ImplicitPortRewrite()
+        rw.visit(self.ast)
 
         #
         # "code" generation
         #
+        self.process_main(self.ast)
+
 
     def get_named_args(self, node):
         """
