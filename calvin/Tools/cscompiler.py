@@ -23,37 +23,62 @@ from calvin.csparser.parser import calvin_parser
 from calvin.csparser.checker import check
 from calvin.csparser.analyzer import generate_app_info
 from calvin.utilities.security import Security
+from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
 
-def compile(source_text, filename='', content=None, credentials=None, verify=True, node=None):
+def compile(source_text, filename='', content=None, credentials=None, verify=True, node=None, cb=None):
     # Steps taken:
-    # 1) Verify signature when credentials supplied
+    # 1) Authenticate subject, verify signature and check security policy when credentials supplied
     # 2) parser .calvin file -> IR. May produce syntax errors/warnings
     # 3) checker IR -> IR. May produce syntax errors/warnings
     # 4) analyzer IR -> app. Should not fail. Sets 'valid' property of IR to True/False
-
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
-    errors = [] #TODO: fill in something meaningful
+    errors = [] # TODO: fill in something meaningful
     warnings = []
     if credentials:
         _log.debug("Check credentials...")
         sec = Security(node)
         sec.set_subject(credentials)
+        # TODO: authenticate_subject should also be async and have a callback.
         if not sec.authenticate_subject():
             _log.error("Check credentials...failed authentication")
             # This error reason is detected in calvin control and gives proper REST response
             errors.append({'reason': "401: UNAUTHORIZED", 'line': 0, 'col': 0})
-            return deployable, errors, warnings
-        if (not sec.verify_signature_content(content, "application") or not sec.check_security_policy()):
-            # Verification not OK if sign or cert not OK or if the signer is denied by security policies
+            if cb:
+                cb(deployable, errors, warnings)
+                return
+            else:
+                return deployable, errors, warnings
+        if not sec.verify_signature_content(content, "application"):
+            # Verification not OK if sign or cert not OK.
             _log.error("Check credentials...failed application verification")
             # This error reason is detected in calvin control and gives proper REST response
             errors.append({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None})
-            return deployable, errors, warnings
+            if cb:
+                cb(deployable, errors, warnings)
+                return
+            else:
+                return deployable, errors, warnings
+        sec.check_security_policy(callback=CalvinCB(_compile_cont, source_text, filename, verify, org_cb=cb))
+    else:
+        _compile_cont(source_text, filename, verify, True, org_cb=cb)
 
+def _compile_cont(source_text, filename, verify, access_decision, org_cb=None):
+    deployable = {'valid': False, 'actors': {}, 'connections': {}}
+    errors = [] # TODO: fill in something meaningful
+    warnings = []
+    if not access_decision:
+        _log.error("Access denied")
+        # This error reason is detected in calvin control and gives proper REST response
+        errors.append({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None})
+        if org_cb:
+            org_cb(deployable, errors, warnings)
+            return
+        else:
+            return deployable, errors, warnings
     _log.debug("Parsing...")
     ir, errors, warnings = calvin_parser(source_text, filename)
     _log.debug("Parsed %s, %s, %s" % (ir, errors, warnings))
@@ -66,8 +91,10 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
         if errors:
             deployable['valid'] = False
     _log.debug("Compiled %s, %s, %s" % (deployable, errors, warnings))
-    return deployable, errors, warnings
-
+    if org_cb:
+        org_cb(deployable, errors, warnings)
+    else:
+        return deployable, errors, warnings
 
 def compile_file(file, credentials=None):
     with open(file, 'r') as source:
@@ -79,12 +106,10 @@ def compile_file(file, credentials=None):
                 content['file'] = sourceText
         return compile(sourceText, file, content=content, credentials=credentials)
 
-
 def compile_generator(files):
     for file in files:
         deployable, errors, warnings = compile_file(file)
         yield((deployable, errors, warnings, file))
-
 
 def remove_debug_info(deployable):
     pass
@@ -95,7 +120,6 @@ def remove_debug_info(deployable):
     # elif type(d)==type([]):
     #     for item in d:
     #         _remove_debug_symbols(item)
-
 
 def main():
     long_description = """
@@ -153,7 +177,6 @@ def main():
                 f.write(string_rep)
 
     return exit_code
-
 
 if __name__ == '__main__':
     sys.exit(main())

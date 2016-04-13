@@ -60,8 +60,6 @@ METER_PATH = '/meter/{}'
 METER_PATH_TIMED = '/meter/{}/timed'
 METER_PATH_AGGREGATED = '/meter/{}/aggregated'
 METER_PATH_METAINFO = '/meter/{}/metainfo'
-AUTHORIZATION_REGISTER = '/authorization/register'
-AUTHORIZATION_PDP = '/authorization/pdp'
 
 
 def get_runtime(value):
@@ -337,16 +335,6 @@ class RequestHandler(object):
         data = {'value': value}
         path = STORAGE_PATH.format(key)
         r = self._post(rt, timeout, async, path, data)
-        return self.check_response(r)
-
-    def register_node_authorization(self, rt, jwt_request, cert_name, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {"jwt": jwt_request, "cert_name": cert_name}
-        r = self._post(rt, timeout, async, AUTHORIZATION_REGISTER, data)
-        return self.check_response(r)
-
-    def get_authorization_decision(self, rt, jwt_request, cert_name, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {"jwt": jwt_request, "cert_name": cert_name}
-        r = self._post(rt, timeout, async, AUTHORIZATION_PDP, data)
         return self.check_response(r)
 
     def async_response(self, response):

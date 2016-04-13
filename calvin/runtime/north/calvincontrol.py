@@ -37,7 +37,6 @@ from calvin.requests import calvinresponse
 from calvin.utilities.security import security_needed_check
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
-from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
 from calvin.utilities.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
 from calvin.utilities import certificate
 
@@ -605,38 +604,6 @@ re_post_storage = re.compile(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
     """
-    POST /authorization/register
-    Register runtime attributes for authorization
-    Body:
-    {
-        "jwt": <request as JSON Web Token>,
-        "cert_name": <runtime certificate filename>
-    }
-    Response status code: OK or INTERNAL_ERROR
-    Response: none
-"""
-re_post_authorization_register = re.compile(r"POST /authorization/register\sHTTP/1")
-
-control_api_doc += \
-    """
-    POST /authorization/pdp
-    Return a response to an authorization request
-    Body:
-    {
-        "jwt": <request as JSON Web Token>,
-        "cert_name": <runtime certificate filename>
-    }
-    Response status code: OK or INTERNAL_ERROR
-    Response: 
-    {
-        "jwt": <response as JSON Web Token>,
-        "cert_name": <authorization server certificate filename>
-    }
-"""
-re_post_authorization_pdp = re.compile(r"POST /authorization/pdp\sHTTP/1")
-
-control_api_doc += \
-    """
     POST /authorization/policies
     Create a new policy
     Body: policy in JSON format
@@ -790,8 +757,6 @@ class CalvinControl(object):
             (re_get_index, self.handle_get_index),
             (re_get_storage, self.handle_get_storage),
             (re_post_storage, self.handle_post_storage),
-            (re_post_authorization_register, self.handle_post_authorization_register),
-            (re_post_authorization_pdp, self.handle_post_authorization_pdp),
             (re_post_new_authorization_policy, self.handle_new_authorization_policy),
             (re_get_authorization_policies, self.handle_get_authorization_policies),
             (re_get_authorization_policy, self.handle_get_authorization_policy),
@@ -806,8 +771,6 @@ class CalvinControl(object):
         """
         self.metering = metering.get_metering()
         self.node = node
-        if hasattr(self.node, "pdp") and not HAS_JWT:
-            _log.error("Install JWT to use this runtime as authorization server.")
         security_conf = _conf.get("security","security_conf")
         if security_conf and "authorization" in security_conf:
             # TODO: should be possible to use any kind of PolicyRetrievalPoint
@@ -1192,17 +1155,10 @@ class CalvinControl(object):
                         kwargs['content'] = {
                             'file': data["script"],
                             'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
-                app_info, errors, warnings = compiler.compile(data["script"], filename=data["name"], node=self.node,
-                        verify=data["check"] if "check" in data else True, **kwargs)
-                if errors:
-                    if any([e['reason'].startswith("401:") for e in errors]):
-                        _log.error("Security verification of script failed")
-                        self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
-                    else:
-                        _log.exception("Compilation failed")
-                        self.send_response(handle, connection, json.dumps({'errors': errors, 'warnings': warnings}),
-                                            status=calvinresponse.BAD_REQUEST)
-                    return
+                compiler.compile(data["script"], filename=data["name"], node=self.node, 
+                                 verify=(data["check"] if "check" in data else True), 
+                                 cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
+                                 **kwargs)
             else:
                 # Supplying app_info is for backward compatibility hence abort if node configured security
                 # Main user is csruntime when deploying script at the same time and some tests used
@@ -1215,13 +1171,30 @@ class CalvinControl(object):
                 app_info = data['app_info']
                 errors = [""]
                 warnings = [""]
+                self.handle_deploy_cont(app_info, errors, warnings, handle, connection, data)
+        except Exception as e:
+            _log.exception("Deployer failed")
+            self.send_response(handle, connection, json.dumps({'exception': str(e)}),
+                               status=calvinresponse.INTERNAL_ERROR)
+
+    def handle_deploy_cont(self, app_info, errors, warnings, handle, connection, data):
+        try:
+            if errors:
+                if any([e['reason'].startswith("401:") for e in errors]):
+                    _log.error("Security verification of script failed")
+                    self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
+                else:
+                    _log.exception("Compilation failed")
+                    self.send_response(handle, connection, json.dumps({'errors': errors, 'warnings': warnings}),
+                                       status=calvinresponse.BAD_REQUEST)
+                return
             _log.analyze(self.node.id, "+ COMPILED", {'app_info': app_info, 'errors': errors, 'warnings': warnings})
             d = Deployer(deployable=app_info, deploy_info=data["deploy_info"] if "deploy_info" in data else None,
                          node=self.node, name=data["name"] if "name" in data else None,
                          credentials=data["sec_credentials"] if "sec_credentials" in data else None,
                          verify=data["check"] if "check" in data else True,
                          cb=CalvinCB(self.handle_deploy_cb, handle, connection))
-            _log.analyze(self.node.id, "+ Deployer instanciated", {})
+            _log.analyze(self.node.id, "+ Deployer instantiated", {})
             d.deploy()
             _log.analyze(self.node.id, "+ DEPLOYING", {})
         except Exception as e:
@@ -1368,72 +1341,6 @@ class CalvinControl(object):
         """ Get from storage
         """
         self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
-
-    def handle_post_authorization_register(self, handle, connection, match, data, hdr):
-        """
-        Register node attributes in data for authorization.
-
-        Signed JSON Web Token (JWT) is used for the data.
-        """
-        try:
-            cert_conffile = _conf.get("security", "certificate_conf")
-            domain = _conf.get("security", "certificate_domain")
-            cert_conf = certificate.Config(cert_conffile, domain)
-            node_name = self.node.attributes.get_node_name_as_str()
-            private_key = certificate.get_private_key(cert_conf, node_name)
-            certificate_runtime = certificate.get_other_certificate(cert_conf, node_name, data["cert_name"])
-            public_key_runtime = certificate.get_public_key(certificate_runtime)
-            runtime_id = certificate_runtime.get_subject().dnQualifier
-            # Decode the JSON Web Token in the request from the runtime.
-            # The signature is verified using the Elliptic Curve public key of the runtime. 
-            # Exception raised if signature verification fails or if issuer is incorrect.
-            decoded = jwt.decode(data["jwt"], public_key_runtime, algorithms=['ES256'], issuer=runtime_id)
-            self.node.pdp.register_node(runtime_id, decoded["attributes"])
-            status = calvinresponse.OK
-        except:
-            _log.exception("handle_post_authorization_register")
-            status = calvinresponse.INTERNAL_ERROR
-        self.send_response(handle, connection, None, status=status)
-
-    def handle_post_authorization_pdp(self, handle, connection, match, data, hdr):
-        """
-        Return a response to the authorization request included in the data.
-
-        Signed JSON Web Tokens (JWT) with timestamps and information about 
-        sender and receiver are used for both the request and response.
-        A Policy Decision Point (PDP) is used to determine if access is permitted.
-        """
-        try:
-            cert_conffile = _conf.get("security", "certificate_conf")
-            domain = _conf.get("security", "certificate_domain")
-            cert_conf = certificate.Config(cert_conffile, domain)
-            node_name = self.node.attributes.get_node_name_as_str()
-            private_key = certificate.get_private_key(cert_conf, node_name)
-            certificate_runtime = certificate.get_other_certificate(cert_conf, node_name, data["cert_name"])
-            public_key_runtime = certificate.get_public_key(certificate_runtime)
-            runtime_id = certificate_runtime.get_subject().dnQualifier
-            # Decode the JSON Web Token in the request from the runtime.
-            # The signature is verified using the Elliptic Curve public key of the runtime. 
-            # Exception raised if signature verification fails or if issuer is incorrect.
-            decoded = jwt.decode(data["jwt"], public_key_runtime, algorithms=['ES256'], issuer=runtime_id)
-            payload = {
-                "iss": self.node.id,
-                "aud": decoded["iss"], 
-                "iat": datetime.utcnow(), 
-                "exp": datetime.utcnow() + timedelta(seconds=60),
-                "response": self.node.pdp.authorize(decoded["request"])
-            }
-            # Create a JSON Web Token signed using the authorization server's Elliptic Curve private key.
-            jwt_response = jwt.encode(payload, private_key, algorithm='ES256')
-            # cert_name is the authorization server's certificate filename (without file extension)
-            cert_name = certificate.get_own_cert_name(cert_conf, node_name)
-            status = calvinresponse.OK
-        except:
-            _log.exception("handle_post_authorization_pdp")
-            status = calvinresponse.INTERNAL_ERROR
-        self.send_response(handle, connection, 
-                           json.dumps({"jwt": jwt_response, "cert_name": cert_name}) if status == calvinresponse.OK else None, 
-                           status=status)
 
     def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
         """Create authorization policy"""

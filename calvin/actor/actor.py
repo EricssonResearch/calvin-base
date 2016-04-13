@@ -376,13 +376,16 @@ class Actor(object):
             self.sec = security
         else:
             if self._calvinsys is not None:
-                self.sec = Security(self._calvinsys._node)
+                self.sec = Security(self._calvinsys.get_node())
                 self.sec.set_subject(self.credentials)
                 self.sec.authenticate_subject()
 
     def get_credentials(self):
         _log.debug("actor.py: get_credentials: %s" % self.credentials)
         return self.credentials
+
+    def set_authorization_plugins(self, authorization_plugins):
+        self.authorization_plugins = authorization_plugins
 
     @verify_status([STATUS.LOADED])
     def setup_complete(self):
@@ -410,26 +413,6 @@ class Actor(object):
     def will_end(self):
         """Override in actor subclass if actions need to be taken before destruction."""
         pass
-
-    @verify_status([STATUS.LOADED])
-    def check_requirements(self):
-        """Check that all requirements are available and accessible in calvinsys."""
-        # Check availability of calvinsys subsystems before checking security policies.
-        if hasattr(self, "requires"):
-            for req in self.requires:
-                if not self._calvinsys.has_capability(req):
-                    raise Exception("%s requires %s" % (self.id, req))
-        # Check the runtime and calvinsys execution access rights.
-        # Note: when no credentials are set, no verification is done.
-        if hasattr(self, 'sec'):
-            access_decision = self.sec.check_security_policy(['runtime'] +
-                       (self.requires if hasattr(self, "requires") else []))
-            if isinstance(access_decision, tuple):
-                # Only a tuple if access was granted. No need to check access_decision[0].
-                self.authorization_plugins = access_decision[1]
-            elif not access_decision:
-                _log.debug("Security policy check for actor failed")
-                raise Exception("Security policy check for actor failed")
 
     def __getitem__(self, attr):
         if attr in self._using:

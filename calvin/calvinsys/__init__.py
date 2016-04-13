@@ -74,3 +74,6 @@ class Sys(object):
         Returns list of requirements this system satisfies
         """
         return [cap for cap in self.modules.keys() if self.has_capability(cap)]
+
+    def get_node(self):
+        return self._node

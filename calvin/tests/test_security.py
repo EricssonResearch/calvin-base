@@ -177,8 +177,7 @@ class TestSecurity(unittest.TestCase):
                         },
                         "authorization": {
                             "procedure": "external",
-                            "server_ip": ip_addr,
-                            "server_port": 5022
+                            "server_uuid": "5cf1dedf-ce32-4838-b6fe-b922ef3bbad6"
                         }
                     })
         rt4_conf.set('global', 'actor_paths', [os.path.join(security_test_dir, "store")])

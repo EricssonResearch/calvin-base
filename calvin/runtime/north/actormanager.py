@@ -45,7 +45,7 @@ class ActorManager(object):
         raise Exception("Actor '{}' not found".format(actor_id))
 
     def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None,
-            signature=None, credentials=None):
+            signature=None, credentials=None, access_decision=None):
         """
         Instantiate an actor of type 'actor_type'. Parameters are passed in 'args',
         'name' is an optional parameter in 'args', specifying a human readable name.
@@ -63,9 +63,9 @@ class ActorManager(object):
 
         try:
             if state:
-                a = self._new_from_state(actor_type, state)
+                a = self._new_from_state(actor_type, state, access_decision)
             else:
-                a = self._new(actor_type, args, credentials)
+                a = self._new(actor_type, args, credentials, access_decision)
         except Exception as e:
             _log.exception("Actor creation failed")
             raise(e)
@@ -93,7 +93,7 @@ class ActorManager(object):
             else:
                 return a.id
 
-    def _new_actor(self, actor_type, actor_id=None, credentials=None):
+    def _new_actor(self, actor_type, actor_id=None, credentials=None, access_decision=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         if credentials is not None:
             sec = Security(self.node)
@@ -101,6 +101,7 @@ class ActorManager(object):
             sec.authenticate_subject()
         else:
             sec = None
+
         (found, is_primitive, class_) = ActorStore(security=sec).lookup(actor_type)
         if not found:
             # Here assume a primitive actor, now become shadow actor
@@ -121,7 +122,13 @@ class ActorManager(object):
         try:
             a.set_credentials(credentials, security=sec)
             a._calvinsys = self.node.calvinsys()
-            a.check_requirements()
+            if sec:
+                if isinstance(access_decision, tuple):
+                    # Only a tuple if access was granted. No need to check access_decision[0].
+                    a.set_authorization_plugins(access_decision[1])
+                elif not access_decision:
+                    _log.debug("Security policy check for actor failed")
+                    raise Exception("Security policy check for actor failed")
         except Exception as e:
             _log.exception("Catched new from state")
             _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
@@ -130,11 +137,10 @@ class ActorManager(object):
             a._calvinsys = self.node.calvinsys()
         return a
 
-
-    def _new(self, actor_type, args, credentials=None):
+    def _new(self, actor_type, args, credentials=None, access_decision=None):
         """Return an initialized actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type, credentials=credentials)
+            a = self._new_actor(actor_type, credentials=credentials, access_decision=access_decision)
             # Now that required APIs are attached we can call init() which may use the APIs
             human_readable_name = args.pop('name', '')
             a.name = human_readable_name
@@ -146,8 +152,7 @@ class ActorManager(object):
             raise(e)
         return a
 
-
-    def _new_from_state(self, actor_type, state):
+    def _new_from_state(self, actor_type, state, access_decision):
         """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
             _log.analyze(self.node.id, "+", state)
@@ -156,7 +161,7 @@ class ActorManager(object):
                 state['_managed'].remove('credentials')
             except:
                 pass
-            a = self._new_actor(actor_type, actor_id=state['id'], credentials=credentials)
+            a = self._new_actor(actor_type, actor_id=state['id'], credentials=credentials, access_decision=access_decision)
             if '_shadow_args' in state:
                 # We were a shadow, do a full init
                 args = state.pop('_shadow_args')

@@ -18,6 +18,10 @@ from calvin.utilities import calvinuuid
 from calvin.utilities.utils import enum
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
+from calvin.utilities.security import Security
+from calvin.actorstore.store import ActorStore
+from calvin.utilities.security import encode_jwt, decode_jwt
+from datetime import datetime, timedelta
 import calvin.requests.calvinresponse as response
 
 _log = calvinlogger.get_logger(__name__)
@@ -160,7 +164,9 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_NEW': [CalvinCB(self.tunnel_new_handler)],
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
-            'REPLY': [CalvinCB(self.reply_handler)]})
+            'REPLY': [CalvinCB(self.reply_handler)],
+            'AUTHORIZATION_REGISTER': [CalvinCB(self.authorization_register_handler)],
+            'AUTHORIZATION_DECISION': [CalvinCB(self.authorization_decision_handler)]})
 
         self.rt_id = node.id
         self.node = node
@@ -230,13 +236,39 @@ class CalvinProto(CalvinCBClass):
     def actor_new_handler(self, payload):
         """ Peer request new actor with state and connections """
         _log.analyze(self.rt_id, "+", payload, tb=True)
+        # TODO: access_decision could be included in payload in a smart migration. 
+        #       Else, get actor_signer and requires list from actor store.
+        self.sec = Security(self.node)
+        credentials = payload['state']['actor_state']['credentials']
+        self.sec.set_subject(credentials)
+        # TODO: authenticate_subject should also be async and have a callback.
+        self.sec.authenticate_subject()
+        found, is_primitive, actor_def = ActorStore(security=self.sec).lookup(payload['state']['actor_type'])
+        if not found or not is_primitive:
+            # FIXME: still want to create shadow actor.
+            raise Exception("Not known actor type: %s" % actor_type)
+        # Check availability of calvinsys subsystems before checking security policies.
+        if hasattr(actor_def, "requires"):
+            for actor_req in actor_def.requires:
+                if not self.node.calvinsys().has_capability(actor_req):
+                    # FIXME: still want to create shadow actor.
+                    raise Exception("%s requires %s" % (actor_name, actor_req))
+        # Check the runtime and calvinsys execution access rights.
+        # Will continue directly with _actor_new_handler_cont() if authorization is not enabled.
+        self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
+                                       requires=['runtime'] + 
+                                       (actor_def.requires if hasattr(actor_def, "requires") else []))
+
+    def _actor_new_handler_cont(self, payload, access_decision=None):
+        # TODO: use authenticated sec object as argument instead of credentials in the actor_state?
         self.node.am.new(payload['state']['actor_type'],
                          None,
                          payload['state']['actor_state'],
                          payload['state']['prev_connections'],
-                         callback=CalvinCB(self._actor_new_handler, payload))
+                         callback=CalvinCB(self._actor_new_handler_reply, payload),
+                         access_decision=access_decision)
 
-    def _actor_new_handler(self, payload, status, **kwargs):
+    def _actor_new_handler_reply(self, payload, status, **kwargs):
         """ Potentially created actor, reply to requesting node """
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
@@ -505,6 +537,101 @@ class CalvinProto(CalvinCBClass):
     def port_disconnect_handler(self, payload):
         """ Reguest for port disconnect """
         reply = self.node.pm.disconnection_request(payload)
+        # Send reply
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
+    #### AUTHORIZATION ####
+
+    def authorization_register(self, authz_server_uuid, callback, jwt):
+        """
+        Register node attributes for authorization.
+
+        authz_server_uuid: node uuid for the runtime that acts as authorization server 
+        callback: called when finished with the registration
+        jwt: signed JSON Web Token (JWT) containing the node attributes
+        """
+        if self.node.network.link_request(authz_server_uuid, 
+                                          CalvinCB(self._authorization_register,
+                                                   authz_server_uuid=authz_server_uuid,
+                                                   callback=callback,
+                                                   jwt=jwt)):
+            # Already have link, just continue in _authorization_register.
+            self._authorization_register(authz_server_uuid, callback, jwt, status=response.CalvinResponse(True))
+
+    def _authorization_register(self, authz_server_uuid, callback, jwt, status, peer_node_id=None, uri=None):
+        """Got link? Continue authorization register"""
+        if status:
+            msg = {'cmd': 'AUTHORIZATION_REGISTER', 'jwt': jwt, 'cert_name': self.node.cert_name}
+            self.network.links[authz_server_uuid].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def authorization_register_handler(self, payload):
+        """
+        Register node attributes in payload for authorization.
+
+        Signed JSON Web Token (JWT) is used to send the attributes.
+        """
+        try:
+            # Decode the JSON Web Token in the message from the runtime.
+            decoded = decode_jwt(payload["jwt"], payload["cert_name"], self.node.node_name, self.node.id)
+            self.node.pdp.register_node(decoded["iss"], decoded["attributes"])
+            reply = response.CalvinResponse(response.OK)
+        except Exception:
+            reply = response.CalvinResponse(response.INTERNAL_ERROR)
+        # Send reply
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def authorization_decision(self, authz_server_uuid, callback, jwt):
+        """ 
+        Return a response to an authorization request.
+
+        authz_server_uuid: node uuid for the runtime that acts as authorization server 
+        callback: called when finished with the authorization decision
+        jwt: signed JSON Web Token (JWT) containing the authorization request
+        """
+        if self.node.network.link_request(authz_server_uuid, 
+                                          CalvinCB(self._authorization_decision,
+                                                   authz_server_uuid=authz_server_uuid,
+                                                   callback=callback,
+                                                   jwt=jwt)):
+            # Already have link, just continue in _authorization_decision.
+            self._authorization_decision(authz_server_uuid, callback, jwt, status=response.CalvinResponse(True))
+
+    def _authorization_decision(self, authz_uuid, callback, jwt, status, peer_node_id=None, uri=None):
+        """Got link? Continue authorization decision"""
+        if status:
+            msg = {'cmd': 'AUTHORIZATION_DECISION', 'jwt': jwt, 'cert_name': self.node.cert_name}
+            self.network.links[authz_uuid].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def authorization_decision_handler(self, payload):
+        """
+        Return a response to the authorization request in the payload.
+
+        Signed JSON Web Tokens (JWT) with timestamps and information about 
+        sender and receiver are used for both the request and response.
+        A Policy Decision Point (PDP) is used to determine if access is permitted.
+        """
+        try:
+            # Decode the JSON Web Token in the request from the runtime.
+            decoded = decode_jwt(payload["jwt"], payload["cert_name"], self.node.node_name, self.node.id)
+            jwt_payload = {
+                "iss": self.node.id,
+                "aud": decoded["iss"], 
+                "iat": datetime.utcnow(), 
+                "exp": datetime.utcnow() + timedelta(seconds=60),
+                "response": self.node.pdp.authorize(decoded["request"])
+            }
+            # Create a JSON Web Token signed using the authorization server's private key.
+            jwt_response = encode_jwt(jwt_payload, self.node.node_name)
+            data_response = {"jwt": jwt_response, "cert_name": self.node.cert_name}
+            reply = response.CalvinResponse(response.OK, data_response)
+        except Exception:
+            reply = response.CalvinResponse(response.INTERNAL_ERROR)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)

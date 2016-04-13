@@ -579,6 +579,7 @@ def verify_certificate(conf, certificate):
 
 def get_other_certificate(conf, my_node_name, cert_name):
     """Return certificate with name cert_name from 'others' directory for runtime my_node_name"""
+    # TODO: get certificate from DHT (alternative to getting from disk).
     runtime_dir = os.path.join(conf.configuration["CA_default"]["runtimes_dir"], my_node_name)
     files = os.listdir(os.path.join(runtime_dir, "others"))
     matching = [s for s in files if cert_name in s]

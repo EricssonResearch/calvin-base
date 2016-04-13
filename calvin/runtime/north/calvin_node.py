@@ -37,7 +37,7 @@ from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.security import security_modules_check
 from calvin.utilities.authorization.policy_decision_point import PolicyDecisionPoint
-from calvin.utilities import authorization
+from calvin.utilities.authorization import authorization_registration
 from calvin.utilities import calvinuuid
 from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
@@ -81,8 +81,17 @@ class Node(object):
                 self.pdp = PolicyDecisionPoint(self.sec_conf['authorization'])
         except:
             self.sec_conf = None
+        self.node_name = self.attributes.get_node_name_as_str()
         # Obtain node id, when using security also handle runtime certificate
-        self.id = certificate.obtain_cert_node_info(self.attributes.get_node_name_as_str())['id']
+        self.id = certificate.obtain_cert_node_info(self.node_name)['id']
+        try:
+            cert_conffile = _conf.get("security", "certificate_conf")
+            domain = _conf.get("security", "certificate_domain")
+            cert_conf = certificate.Config(cert_conffile, domain)
+            # cert_name is the node's certificate filename (without file extension)
+            self.cert_name = certificate.get_own_cert_name(cert_conf, self.node_name)
+        except:
+            self.cert_name = None
         self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
@@ -199,12 +208,10 @@ class Node(object):
         self.network.register(interfaces, ['json'])
         self.network.start_listeners(self.uri)
         # Start storage after network, proto etc since storage proxy expects them
-        self.storage.start()
+        self.storage.start(cb=CalvinCB(self._storage_started_cb))
         self.storage.add_node(self)
         if hasattr(self, "pdp"):
             self.storage.add_authz_server(self)
-        if self.sec_conf and "authorization" in self.sec_conf:
-            authorization.register_node(self)
 
         # Start control API
         proxy_control_uri = _conf.get(None, 'control_proxy')
@@ -233,6 +240,10 @@ class Node(object):
         if hasattr(self, "pdp"):
             self.storage.delete_authz_server(self)
         self.storage.delete_node(self, cb=deleted_node)
+
+    def _storage_started_cb(self, *args, **kwargs):
+        if self.sec_conf and "authorization" in self.sec_conf:
+            authorization_registration.register_node(self)
 
 
 def create_node(uri, control_uri, attributes=None, authz_server=False):

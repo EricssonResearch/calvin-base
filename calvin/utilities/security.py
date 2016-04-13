@@ -40,6 +40,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 from calvin.utilities.utils import get_home
 from calvin.requests.request_handler import RequestHandler
+from calvin.utilities.calvin_callback import CalvinCB
 
 _conf = calvinconfig.get()
 _log = get_logger(__name__)
@@ -47,6 +48,9 @@ _log = get_logger(__name__)
 # Default timeout
 TIMEOUT=5
 
+_cert_conffile = _conf.get("security", "certificate_conf")
+_domain = _conf.get("security", "certificate_domain")
+_cert_conf = certificate.Config(_cert_conffile, _domain)
 
 def security_modules_check():
     if _conf.get("security","security_conf"):
@@ -68,6 +72,26 @@ def security_needed_check():
     else:
         return False
 
+def encode_jwt(payload, node_name):
+    """Encode JSON Web Token"""
+    private_key = certificate.get_private_key(_cert_conf, node_name)
+    # Create a JSON Web Token signed using the node's Elliptic Curve private key.
+    return jwt.encode(payload, private_key, algorithm='ES256')
+    
+def decode_jwt(token, sender_cert_name, node_name, node_id, actor_id=None):
+    """Decode JSON Web Token"""
+    # Get authorization server certificate from disk. 
+    sender_certificate = certificate.get_other_certificate(_cert_conf, node_name, sender_cert_name)
+    sender_public_key = certificate.get_public_key(sender_certificate)
+    sender_node_id = sender_certificate.get_subject().dnQualifier
+    # The signature is verified using the Elliptic Curve public key of the sender. 
+    # Exception raised if signature verification fails or if issuer and/or audience are incorrect.
+    decoded = jwt.decode(token, sender_public_key, algorithms=['ES256'], 
+                         issuer=sender_node_id, audience=node_id)
+    if actor_id and decoded["sub"] != actor_id:
+        raise  # Exception raised if subject (actor_id) is incorrect.
+    return decoded
+
 class Security(object):
 
     def __init__(self, node):
@@ -81,7 +105,6 @@ class Security(object):
         self.node = node
         self.subject = {}
         self.auth = {}
-        self.request_handler = RequestHandler()
 
     def __str__(self):
         return "Subject: %s\nAuth: %s" % (self.subject, self.auth)
@@ -190,15 +213,16 @@ class Security(object):
         return {key: [self.subject[key][i] for i, auth in enumerate(values) if auth] 
                 for key, values in self.auth.iteritems() if any(values)}
 
-    def check_security_policy(self, requires=None):
-        """Check if access is permitted for the actor by the security policy"""
+    def check_security_policy(self, callback, requires=None):
+        """Check if access is permitted for the actor by the security policy."""
         _log.debug("Security: check_security_policy")
         if self.sec_conf and "authorization" in self.sec_conf:
-            return self.get_authorization_decision(requires)
-        # No security config, so access control is disabled
-        return True
+            self.get_authorization_decision(callback, requires)
+            return
+        # No security config, so access control is disabled.
+        return callback(access_decision=True)
 
-    def get_authorization_decision(self, requires=None):
+    def get_authorization_decision(self, callback, requires=None):
         """Get authorization decision using the authorization procedure specified in config."""
         request = {}
         request["subject"] = self.get_authenticated_subject_attributes()
@@ -214,84 +238,80 @@ class Security(object):
                         "Note: NO AUTHORIZATION USED")
                 return False
             _log.debug("Security: external authorization method chosen")
-            decision, obligations = self.authorize_using_external_server(request)
+            self.authorize_using_external_server(request, callback)
         else: 
             _log.debug("Security: local authorization method chosen")
-            decision, obligations = self.authorize_using_local_policies(request)
+            self.authorize_using_local_policies(request, callback)
 
+    def _return_authorization_decision(self, decision, obligations, callback):
+        _log.info("Authorization response received: %s, obligations %s" % (decision, obligations))
         if decision == "permit":
             _log.debug("Security: access permitted to resources")
             if obligations:
-                return (True, obligations)
-            return True
+                callback(access_decision=(True, obligations))
+            else:
+                callback(access_decision=True)
         elif decision == "deny":
             _log.debug("Security: access denied to resources")
-            return False
+            callback(access_decision=False)
         elif decision == "indeterminate":
             _log.debug("Security: access denied to resources. Error occured when evaluating policies.")
-            return False
+            callback(access_decision=False)
         else:
             _log.debug("Security: access denied to resources. No matching policies.")
-            return False
+            callback(access_decision=False)
 
-    def authorize_using_external_server(self, request):
+    def authorize_using_external_server(self, request, callback):
         """
         Access authorization using an external authorization server.
 
         The request is put in a JSON Web Token (JWT) that is signed
         and includes timestamps and information about sender and receiver.
         """
-        ip_addr = self.sec_conf['authorization']['server_ip']
-        port = self.sec_conf['authorization']['server_port']
-        # Alternative: specify node_id/dnQualifier instead in sec_conf and create a tunnel for the 
-        # runtime-to-runtime communication (see calvin_proto.py). Could also add node_id as "aud" (audience) in jwt payload.
-        authorization_server_uri = "http://%s:%d" % (ip_addr, port) 
-        payload = {
-            "iss": self.node.id, 
-            "iat": datetime.utcnow(), 
-            "exp": datetime.utcnow() + timedelta(seconds=60),
-            "request": request
-        }
-        cert_conffile = _conf.get("security", "certificate_conf")
-        domain = _conf.get("security", "certificate_domain")
-        cert_conf = certificate.Config(cert_conffile, domain)
-        node_name = self.node.attributes.get_node_name_as_str()
-        private_key = certificate.get_private_key(cert_conf, node_name)
-        # Create a JSON Web Token signed using the node's Elliptic Curve private key.
-        jwt_request = jwt.encode(payload, private_key, algorithm='ES256')
-        # cert_name is this node's certificate filename (without file extension)
-        cert_name = certificate.get_own_cert_name(cert_conf, node_name)
         try:
+            authz_server_id = self.sec_conf['authorization']['server_uuid']
+            payload = {
+                "iss": self.node.id, 
+                "aud": authz_server_id, 
+                "iat": datetime.utcnow(), 
+                "exp": datetime.utcnow() + timedelta(seconds=60),
+                "request": request
+            }
+            # Create a JSON Web Token signed using the node's Elliptic Curve private key.
+            jwt_request = encode_jwt(payload, self.node.node_name)
             # Send request to authorization server.
-            response = self.request_handler.get_authorization_decision(authorization_server_uri, jwt_request, cert_name)
+            self.node.proto.authorization_decision(authz_server_id, 
+                                                   CalvinCB(self._handle_authorization_response, 
+                                                            callback=callback), 
+                                                   jwt_request)
         except Exception as e:
-            _log.error("Security: authorization server error - %s" % str(e))
-            return ("indeterminate", [])
+            _log.error("Security: authorization error - %s" % str(e))
+            self._return_authorization_decision("indeterminate", [], callback)
+
+    def _handle_authorization_response(self, reply, callback):
+        if reply.status != 200:
+            _log.error("Security: authorization server error")
+            self._return_authorization_decision("indeterminate", [], callback)
+            return
         try:
-            # Get authorization server certificate from disk. 
-            # TODO: get certificate from DHT if it wasn't found on disk.
-            certificate_authz_server = certificate.get_other_certificate(cert_conf, node_name, response["cert_name"])
-            public_key_authz_server = certificate.get_public_key(certificate_authz_server)
-            authz_server_id = certificate_authz_server.get_subject().dnQualifier
-            # Decode the JSON Web Token returned from the authorization server.
-            # The signature is verified using the Elliptic Curve public key of the authorization server. 
-            # Exception raised if signature verification fails or if issuer and/or audience are incorrect.
-            decoded = jwt.decode(response["jwt"], public_key_authz_server, algorithms=['ES256'], 
-                                 issuer=authz_server_id, audience=self.node.id)
-            response = decoded['response']
-            return (response['decision'], response.get("obligations", []))
+            # Decode JSON Web Token, which contains the authorization response.
+            decoded = decode_jwt(reply.data["jwt"], reply.data["cert_name"], self.node.node_name, self.node.id)
+            authorization_response = decoded['response']
+            self._return_authorization_decision(authorization_response['decision'], 
+                                                authorization_response.get("obligations", []), 
+                                                callback)
         except Exception as e:
             _log.error("Security: JWT decoding error - %s" % str(e))
-            return ("indeterminate", [])
+            self._return_authorization_decision("indeterminate", [], callback)
 
-    def authorize_using_local_policies(self, request):
+    def authorize_using_local_policies(self, request, callback):
         """Authorize access using a local Policy Decision Point (PDP)."""
         try:
             response = self.node.pdp.authorize(request)
-            return (response['decision'], response.get("obligations", []))
+            self._return_authorization_decision(response['decision'], response.get("obligations", []), callback)
         except Exception as e:
             _log.error("Security: local authorization error - %s" % str(e))
-            return ("indeterminate", [])
+            self._return_authorization_decision("indeterminate", [], callback)
 
     @staticmethod
     def verify_signature_get_files(filename, skip_file=False):
