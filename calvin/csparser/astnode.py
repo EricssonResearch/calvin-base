@@ -30,6 +30,11 @@ class Node(object):
             self.children.remove(child)
             child.parent = None
 
+    def delete(self):
+        if not self.parent:
+            raise Exception("Can't remove root node {}".format(self))
+        self.parent.remove_child(self)
+
     def replace_child(self, old, new):
         if self.is_leaf():
             raise Exception("Can't replace child in leaf node {}".format(self))
