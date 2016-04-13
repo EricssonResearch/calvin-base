@@ -342,5 +342,5 @@ class CodeGen(object):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check()
+    run_check(tests=['local_component'])
 
