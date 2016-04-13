@@ -1,0 +1,4 @@
+# Test 2: constants
+define FOO = 1
+define BAR = 2
+define BAZ = BAR

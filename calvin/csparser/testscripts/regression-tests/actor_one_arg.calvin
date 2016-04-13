@@ -1,0 +1,7 @@
+src:std.CountTimer()
+filter:std.Constantify(constant={"FOO":"Hello", "bar":1})
+snk:io.Print()
+
+src.integer > filter.in
+filter.out > snk.token
+

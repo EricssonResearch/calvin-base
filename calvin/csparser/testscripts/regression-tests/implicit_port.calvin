@@ -1,0 +1,4 @@
+# Test 4: program
+snk : io.StandardOut()
+
+[1, 2] > snk.token

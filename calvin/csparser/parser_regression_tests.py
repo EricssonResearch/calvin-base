@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-def testit():
+def testit(testlist, print_diff, print_script):
     import json
     import difflib
 
@@ -51,20 +51,30 @@ def testit():
 
     crashers = []
     expected_diff = []
-    tests = ['test1', 'test2', 'test3', 'test4', 'test5']
+    tests = testlist or [
+        'empty_script',
+        'define_constants',
+        'two_actors',
+        'three_actors',
+        'implicit_port',
+        'actor_one_arg',
+        'actor_two_args',
+        'define_component',
+        'local_component'
+    ]
 
     res = {}
     for test in tests:
         try:
-            filename = 'calvin/csparser/testscripts/%s.calvin' % test
+            filename = 'calvin/csparser/testscripts/regression-tests/%s.calvin' % test
             print test,
 
             with open(filename, 'r') as f:
                 source = f.read()
 
-            header = source.splitlines()[0].lstrip('/ ')
-            print header,
-            res[test] = [header]
+            #header = source.splitlines()[0].lstrip('/ ')
+            # print header,
+            res[test] = [test]
             if test in crashers:
                 res[test].append("CRASHER")
                 print "CRASHER"
@@ -76,15 +86,20 @@ def testit():
             # print "======= DONE ========"
 
             if a1.app_info == a2.app_info:
-                output = "EXPECTED DIFF" if test in expected_diff else "IDENTICAL"
+                output = "IDENTICAL {}".format("(SURPRISE)" if test in expected_diff else "")
                 print output
             else:
-                output = "EXPECTED DIFF" if test in expected_diff else "DIFFERENCE"
+                if print_script:
+                    print source
+                    print
+
+                output = "DIFFERENCE {}".format("(EXPECTED)" if test in expected_diff else "")
                 print output
-                out1 = json.dumps(a1.app_info, indent=4, sort_keys=True)
-                out2 = json.dumps(a2.app_info, indent=4, sort_keys=True)
-                diff = difflib.unified_diff(out1.splitlines(), out2.splitlines())
-                print '\n'.join(list(diff))
+                if print_diff:
+                    out1 = json.dumps(a1.app_info, indent=4, sort_keys=True)
+                    out2 = json.dumps(a2.app_info, indent=4, sort_keys=True)
+                    diff = difflib.unified_diff(out1.splitlines(), out2.splitlines())
+                    print '\n'.join(list(diff))
 
             res[test].append(output)
         except Exception as e:
@@ -104,7 +119,7 @@ def testit():
         print test, res[test][1] if len(res[test])>1 else "--- CRASH ---"
 
 
-def run_check():
+def run_check(tests=None, print_diff=True, print_script=False):
     # Configure for virtualenv
     cwd = "/Users/eperspe/Source/calvin-base"
     env_activate = "/Users/eperspe/.virtualenvs/calvin/bin/activate_this.py"
@@ -117,7 +132,7 @@ def run_check():
     sys.path[:0] = [calvin_root]
 
     # Run regression checks
-    testit()
+    testit(tests, print_diff, print_script)
 
 if __name__ == '__main__':
     run_check()

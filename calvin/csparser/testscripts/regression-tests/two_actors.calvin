@@ -1,0 +1,4 @@
+src:std.CountTimer()
+snk:io.Print()
+
+src.integer > snk.token

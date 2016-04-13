@@ -1,0 +1,8 @@
+component Foo() -> {
+    src : std.Counter()
+    snk : io.StandardOut()
+
+    src.integer > snk.token
+}
+
+foo:Foo()
