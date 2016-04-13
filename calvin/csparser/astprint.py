@@ -96,7 +96,9 @@ class BracePrinter(object):
     def visit(self, node):
         def f(node):
             print "{}( {}".format(self._indentation(), node)
+            self.indent += 1
         def g(node):
+            self.indent -= 1
             print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)
 
