@@ -209,7 +209,7 @@ class CodeGen(object):
     def __init__(self, ast_root, script_name):
         super(CodeGen, self).__init__()
         self.actorstore = ActorStore()
-        self.ast = ast_root
+        self.root = ast_root
         self.script_name = script_name
         self.constants = {}
         self.local_components = {}
@@ -257,34 +257,34 @@ class CodeGen(object):
         # Tree re-write
         #
         print
-        self.printer.process(self.ast)
+        self.printer.process(self.root)
         ##
         # 1. Expand components
         #
 
-        components = self.query(self.ast, kind=ast.Component, maxdepth=1)
+        components = self.query(self.root, kind=ast.Component, maxdepth=1)
         for c in components:
             self.local_components[c.name] = c
 
         expander = Expander(self.local_components)
-        expander.visit(self.ast)
+        expander.visit(self.root)
         # All component definitions can now be removed
-        comps = self.query(self.ast, kind=ast.Component)
+        comps = self.query(self.root, kind=ast.Component)
         if comps:
             print "WARNING: unused components. ", comps
         for comp in comps:
             comp.delete()
-        self.printer.process(self.ast)
+        self.printer.process(self.root)
 
         ##
         # 2. Implicit port rewrite
         rw = ImplicitPortRewrite()
-        rw.visit(self.ast)
+        rw.visit(self.root)
 
         #
         # "code" generation
         #
-        self.process_main(self.ast)
+        self.process_main(self.root)
 
 
     def get_named_args(self, node):
