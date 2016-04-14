@@ -1,3 +1,4 @@
+import inspect
 from copy import deepcopy
 
 class Node(object):
@@ -15,14 +16,18 @@ class Node(object):
         Return True if node type is <kind> and its attributes matches <attr_dict>
         If <kind> or <attr_dict> evaluates to False it will match anything,
         if both evaluates to False this method will always return True.
+        If an attribute value is a class, it will match of the property is an instance of that class
         """
         if kind and type(self) is not kind:
             return False
         if not attr_dict:
             # No or empty attr dict matches.
             return True
-        for key, value in attr_dict:
-            if value != getattr(self, key, None):
+        for key, value in attr_dict.iteritems():
+            attr_value = getattr(self, key, None)
+            if inspect.isclass(value):
+                attr_value = type(attr_value)
+            if value != attr_value:
                 return False
         return True
 
