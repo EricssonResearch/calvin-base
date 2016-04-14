@@ -28,14 +28,14 @@ class Finder(object):
 
     @visitor.when(ast.Node)
     def visit(self, node):
-        if not self.kind or type(node) is self.kind:
+        if node.matches(self.kind, self.attributes):
             self.matches.append(node)
         if not node.is_leaf() and self.depth < self.maxdepth:
             self.depth += 1
             map(self.visit, node.children)
             self.depth -= 1
 
-    def find_all(self, kind, node, maxdepth):
+    def find_all(self, root, kind=None, attributes=None, maxdepth=1024):
         """
         Return a list of all nodes matching <kind>, at most <maxdepth> levels
         down from the starting node <node>
@@ -44,7 +44,8 @@ class Finder(object):
         self.kind = kind
         self.maxdepth = maxdepth
         self.matches = []
-        self.visit(node)
+        self.attributes = attributes
+        self.visit(root)
 
 class Visitor(object):
     def __init__(self, maxdepth=1024):
@@ -261,14 +262,14 @@ class CodeGen(object):
         # 1. Expand components
         #
 
-        components = self.query(ast.Component, self.ast, maxdepth=1)
+        components = self.query(self.ast, kind=ast.Component, maxdepth=1)
         for c in components:
             self.local_components[c.name] = c
 
         expander = Expander(self.local_components)
         expander.visit(self.ast)
         # All component definitions can now be removed
-        comps = self.query(ast.Component, self.ast)
+        comps = self.query(self.ast, kind=ast.Component)
         if comps:
             print "WARNING: unused components. ", comps
         for comp in comps:
@@ -291,7 +292,7 @@ class CodeGen(object):
         Return a dictionary with named args rooted in <node> as key/value-pairs
         """
         args = {}
-        argnodes = self.query(ast.NamedArg, node)
+        argnodes = self.query(node, kind=ast.NamedArg)
         for n in argnodes:
             k, v = n.children
             args[k.ident] = v.value
@@ -327,20 +328,20 @@ class CodeGen(object):
         pass
 
     def process_main(self, main):
-        actors = self.query(ast.Assignment, main)
-        links = self.query(ast.Link, main)
+        actors = self.query(main, kind=ast.Assignment)
+        links = self.query(main, kind=ast.Link)
         for actor in actors:
             self.add_actor(actor, self.script_name)
         for link in links:
             self.add_link(link, self.script_name)
 
-    def query(self, kind, root, maxdepth=1024):
+    def query(self, root, kind=None, attributes=None, maxdepth=1024):
         finder = Finder()
-        finder.find_all(kind, root, maxdepth=maxdepth)
+        finder.find_all(root, kind, attributes=attributes, maxdepth=maxdepth)
         return finder.matches
 
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check(tests=['local_component'])
+    run_check(tests=['use_component_twice'], print_diff=True, print_script=True)
 
