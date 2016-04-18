@@ -146,7 +146,7 @@ class BracePrinter(object):
 
     @visitor.when(ast.InternalPort)
     def visit(self, node):
-        print "{}( {} {} )".format(self._indentation(), node, node.port)
+        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
 
     @visitor.when(ast.Component)
     def visit(self, node):

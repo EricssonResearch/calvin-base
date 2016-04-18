@@ -46,6 +46,7 @@ class Finder(object):
         self.matches = []
         self.attributes = attributes
         self.visit(root)
+        return self.matches
 
 class Visitor(object):
     def __init__(self, maxdepth=1024):
@@ -200,6 +201,49 @@ class Expander(object):
         # Recurse
         map(self.visit, new.children)
 
+class Flatten(object):
+    """
+    Flattens a block by wrapping everything in the block's namespace
+    and propagating arguments before removing the block
+    """
+    def __init__(self):
+        self.finder = Finder()
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children)
+
+    @visitor.when(ast.Block)
+    def visit(self, node):
+        if node.children:
+            map(self.visit, node.children)
+        # Flatten this block
+        if node.args:
+            print "NOT IMPLEMENTED: Argument propagation"
+        if not node.namespace:
+            # FIXME: Yuck!
+            return
+        instances = self.finder.find_all(node, kind=ast.Assignment, maxdepth=1)
+        for instance in instances:
+            instance.ident = node.namespace + ":" + instance.ident
+        links = self.finder.find_all(node, kind=ast.Link, maxdepth=1)
+        for link in links:
+            # FIXME: No semicolon if actor is ""
+            if link.outport.actor:
+                link.outport.actor = node.namespace + ":" + link.outport.actor
+            else:
+                link.outport.actor = node.namespace
+            if link.inport.actor:
+                link.inport.actor = node.namespace + ":" + link.inport.actor
+            else:
+                link.inport.actor = node.namespace
+
+
 
 class CodeGen(object):
     """
@@ -274,13 +318,47 @@ class CodeGen(object):
             print "WARNING: unused components. ", comps
         for comp in comps:
             comp.delete()
+
+        ##
+        # 2. Flatten blocks
+        flattener = Flatten()
+        flattener.visit(self.root)
+
         self.printer.process(self.root)
 
         ##
-        # 2. Implicit port rewrite
+        # 3. Implicit port rewrite
         rw = ImplicitPortRewrite()
         rw.visit(self.root)
 
+
+        ##
+        # Find internal ports
+        # iports = self.query(self.root, kind=ast.InternalPort)
+        # print iports
+        #
+        # # Test finding links to internal ports
+        # comp = self.query(self.root, kind=ast.Block, attributes={"namespace":"foo"})
+        # print comp
+
+        # Test finding links to internal ports
+        internal_inport_links = self.query(self.root, kind=ast.Link, attributes={"inport":ast.InternalPort})
+        internal_outport_links = self.query(self.root, kind=ast.Link, attributes={"outport":ast.InternalPort})
+        for link in internal_inport_links:
+            # Find any links whose outport is the internal inport and replace
+            outport_links = self.query(self.root, kind=ast.Link, attributes={"outport":ast.Port})
+            for opl in outport_links:
+                if opl.outport.actor == link.inport.actor and opl.outport.port == link.inport.port:
+                    opl.outport = link.outport
+        for link in internal_outport_links:
+            # Find any links whose outport is the internal inport and replace
+            inport_links = self.query(self.root, kind=ast.Link, attributes={"inport":ast.Port})
+            for ipl in inport_links:
+                if ipl.inport.actor == link.outport.actor and ipl.inport.port == link.outport.port:
+                    ipl.inport = link.inport
+
+        for link in internal_inport_links + internal_outport_links:
+            link.delete()
         #
         # "code" generation
         #
@@ -343,5 +421,5 @@ class CodeGen(object):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check(tests=['use_component_twice'], print_diff=True, print_script=True)
+    run_check(tests=['use_component'], print_diff=True, print_script=True)
 

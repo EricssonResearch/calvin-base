@@ -155,18 +155,17 @@ class ImplicitPort(Node):
         super(ImplicitPort, self).__init__()
         self.add_child(arg)
 
-class InternalPort(Node):
+class InternalPort(Port):
     """docstring for InternalPortNode"""
     def __init__(self, port):
-        super(InternalPort, self).__init__()
-        self.children = None
-        self.port = port
+        super(InternalPort, self).__init__('', port)
 
 class Block(Node):
     """docstring for ComponentNode"""
-    def __init__(self, program = None, namespace=""):
+    def __init__(self, program = None, namespace="", args=None):
         super(Block, self).__init__()
         self.namespace = namespace
+        self.args = args or {}
         self.add_children(program or [])
 
 class Component(Node):
