@@ -21,12 +21,8 @@ from message_coder import MessageCoderBase
 class MessageCoder(MessageCoderBase):
 
     def encode(self, data):
-        print "Encoding: "
-        print data
         return msgpack.packb(data)
 
     def decode(self, data):
         data = msgpack.unpackb(data)
-        print "Decoded: "
-        print data
         return data
