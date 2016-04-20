@@ -39,6 +39,9 @@ class Sys(object):
     def scheduler_wakeup(self):
         self._node.sched.trigger_loop()
 
+    def scheduler_maintenance_wakeup(self, delay=False):
+        self._node.sched.trigger_maintenance_loop(delay)
+
     def _loadmodule(self, modulename):
         if self.modules[modulename]['module'] or self.modules[modulename]['error']:
             return

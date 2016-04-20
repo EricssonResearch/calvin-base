@@ -23,6 +23,7 @@ from calvin.actor import actorport
 from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
 from calvin.actorstore.store import GlobalStore
+from calvin.utilities.security import Security
 from calvin.utilities import dynops
 import re
 
@@ -429,11 +430,12 @@ class Storage(object):
         self.set(prefix="node-", key=node.id,
                   value={"uri": node.external_uri,
                          "control_uri": node.external_control_uri,
+                         "authz_server": node.authz_server_id,
                          "attributes": {'public': node.attributes.get_public(),
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
         self._add_node_index(node)
         # Store all actors on this node in storage
-        GlobalStore(node=node).export()
+        GlobalStore(node=node, security=Security(node)).export()
 
     def _add_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()
@@ -491,23 +493,6 @@ class Storage(object):
         if counter[0] > 0:
             _log.debug("Delete node index not finished but call callback anyway")
             org_cb()
-
-    def add_authz_server(self, node, cb=None):
-        """Add node id to authorization server index."""
-        try:
-            self.add_index(['node', 'authz_server'], node.id, root_prefix_level=1)
-        except:
-            _log.debug("Add node id to authorization server index failed", exc_info=True)
-            pass
-
-    def delete_authz_server(self, node, cb=None):
-        """Delete node id from authorization server index."""
-        _log.info("Delete node id")
-        try:
-            self.remove_index("node/authz_server", node.id, root_prefix_level=1)
-        except:
-            _log.debug("Delete node id from authorization server index failed", exc_info=True)
-            pass
 
     def add_application(self, application, cb=None):
         """

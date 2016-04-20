@@ -21,6 +21,7 @@ try:
 except:
     HAS_JWT = False
 from calvin.utilities.security import encode_jwt
+from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 
@@ -51,16 +52,20 @@ def register_node(node):
 def register_node_external(node):
     """Register node attributes for external authorization"""
     # FIXME: should this include certificate exchange?
-    authz_server_id = sec_conf['authorization']['server_uuid']
     payload = {
         "iss": node.id, 
-        "aud": authz_server_id, 
+        "aud": node.authz_server_id, 
         "iat": datetime.utcnow(), 
         "exp": datetime.utcnow() + timedelta(seconds=60),
         "attributes": node.attributes.get_indexed_public_with_keys()
     }
     # Create a JSON Web Token signed using the node's Elliptic Curve private key.
     jwt_request = encode_jwt(payload, node.node_name)
-    # Send request to authorization server.
-    # TODO: add callback
-    node.proto.authorization_register(authz_server_id, None, jwt_request)
+    # Send registration request to authorization server.
+    node.proto.authorization_register(node.authz_server_id, 
+                                      CalvinCB(_register_node_external_cb), 
+                                      jwt_request)
+
+def _register_node_external_cb(reply):
+    if reply.status != 200:
+        _log.error("Node could not be registered for authorization")

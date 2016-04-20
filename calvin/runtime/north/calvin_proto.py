@@ -166,7 +166,8 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
             'REPLY': [CalvinCB(self.reply_handler)],
             'AUTHORIZATION_REGISTER': [CalvinCB(self.authorization_register_handler)],
-            'AUTHORIZATION_DECISION': [CalvinCB(self.authorization_decision_handler)]})
+            'AUTHORIZATION_DECISION': [CalvinCB(self.authorization_decision_handler)],
+            'AUTHORIZATION_SEARCH': [CalvinCB(self.authorization_search_handler)]})
 
         self.rt_id = node.id
         self.node = node
@@ -238,26 +239,32 @@ class CalvinProto(CalvinCBClass):
         _log.analyze(self.rt_id, "+", payload, tb=True)
         # TODO: access_decision could be included in payload in a smart migration. 
         #       Else, get actor_signer and requires list from actor store.
+        migration_info = payload['state']['actor_state'].get('migration_info', None)
+        actor_id = payload['state']['actor_state'].get('id', None)
         self.sec = Security(self.node)
-        credentials = payload['state']['actor_state']['credentials']
+        credentials = payload['state']['actor_state'].get('credentials', None)
         self.sec.set_subject(credentials)
         # TODO: authenticate_subject should also be async and have a callback.
         self.sec.authenticate_subject()
-        found, is_primitive, actor_def = ActorStore(security=self.sec).lookup(payload['state']['actor_type'])
-        if not found or not is_primitive:
-            # FIXME: still want to create shadow actor.
-            raise Exception("Not known actor type: %s" % actor_type)
-        # Check availability of calvinsys subsystems before checking security policies.
-        if hasattr(actor_def, "requires"):
-            for actor_req in actor_def.requires:
-                if not self.node.calvinsys().has_capability(actor_req):
-                    # FIXME: still want to create shadow actor.
-                    raise Exception("%s requires %s" % (actor_name, actor_req))
-        # Check the runtime and calvinsys execution access rights.
-        # Will continue directly with _actor_new_handler_cont() if authorization is not enabled.
-        self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
-                                       requires=['runtime'] + 
-                                       (actor_def.requires if hasattr(actor_def, "requires") else []))
+        if migration_info is not None:
+            self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
+                                           actor_id=actor_id, decision_from_migration=migration_info)
+        else:
+            found, is_primitive, actor_def = ActorStore(security=self.sec).lookup(payload['state']['actor_type'])
+            if not found or not is_primitive:
+                # FIXME: still want to create shadow actor.
+                raise Exception("Not known actor type: %s" % actor_type)
+            # Check availability of calvinsys subsystems before checking security policies.
+            if hasattr(actor_def, "requires"):
+                for actor_req in actor_def.requires:
+                    if not self.node.calvinsys().has_capability(actor_req):
+                        # FIXME: still want to create shadow actor.
+                        raise Exception("%s requires %s" % (actor_name, actor_req))
+            # Check the runtime and calvinsys execution access rights.
+            # Will continue directly with _actor_new_handler_cont() if authorization is not enabled.
+            self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
+                                           requires=['runtime'] + 
+                                           (actor_def.requires if hasattr(actor_def, "requires") else []))
 
     def _actor_new_handler_cont(self, payload, access_decision=None):
         # TODO: use authenticated sec object as argument instead of credentials in the actor_state?
@@ -600,11 +607,11 @@ class CalvinProto(CalvinCBClass):
             # Already have link, just continue in _authorization_decision.
             self._authorization_decision(authz_server_uuid, callback, jwt, status=response.CalvinResponse(True))
 
-    def _authorization_decision(self, authz_uuid, callback, jwt, status, peer_node_id=None, uri=None):
+    def _authorization_decision(self, authz_server_uuid, callback, jwt, status, peer_node_id=None, uri=None):
         """Got link? Continue authorization decision"""
         if status:
             msg = {'cmd': 'AUTHORIZATION_DECISION', 'jwt': jwt, 'cert_name': self.node.cert_name}
-            self.network.links[authz_uuid].send_with_reply(callback, msg)
+            self.network.links[authz_server_uuid].send_with_reply(callback, msg)
         elif callback:
             callback(status=status)
 
@@ -619,13 +626,25 @@ class CalvinProto(CalvinCBClass):
         try:
             # Decode the JSON Web Token in the request from the runtime.
             decoded = decode_jwt(payload["jwt"], payload["cert_name"], self.node.node_name, self.node.id)
+            self.node.pdp.authorize(decoded["request"], 
+                                    callback=CalvinCB(self._authorization_decision_handler, payload, decoded))
+        except Exception:
+            reply = response.CalvinResponse(response.INTERNAL_ERROR)
+            # Send reply
+            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+            self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def _authorization_decision_handler(self, payload, decoded_jwt, authz_response):
+        try:
             jwt_payload = {
-                "iss": self.node.id,
-                "aud": decoded["iss"], 
+                "iss": self.node.id, 
+                "aud": decoded_jwt["iss"], 
                 "iat": datetime.utcnow(), 
                 "exp": datetime.utcnow() + timedelta(seconds=60),
-                "response": self.node.pdp.authorize(decoded["request"])
+                "response": authz_response
             }
+            if "sub" in decoded_jwt:
+                jwt_payload["sub"] = decoded_jwt["sub"]
             # Create a JSON Web Token signed using the authorization server's private key.
             jwt_response = encode_jwt(jwt_payload, self.node.node_name)
             data_response = {"jwt": jwt_response, "cert_name": self.node.cert_name}
@@ -635,6 +654,75 @@ class CalvinProto(CalvinCBClass):
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def authorization_search(self, authz_server_uuid, callback, jwt):
+        """
+        Search for runtime where the decision for the authorization request is 'permit'.
+
+        authz_server_uuid: node uuid for the runtime that acts as authorization server 
+        callback: called when finished with the search
+        jwt: signed JSON Web Token (JWT) containing the authorization request
+        """
+        if self.node.network.link_request(authz_server_uuid, 
+                                          CalvinCB(self._authorization_search,
+                                                   authz_server_uuid=authz_server_uuid,
+                                                   callback=callback,
+                                                   jwt=jwt)):
+            # Already have link, just continue in _authorization_search.
+            self._authorization_search(authz_server_uuid, callback, jwt, status=response.CalvinResponse(True))
+
+    def _authorization_search(self, authz_server_uuid, callback, jwt, status, peer_node_id=None, uri=None):
+        """Got link? Continue authorization search"""
+        if status:
+            msg = {'cmd': 'AUTHORIZATION_SEARCH', 'jwt': jwt, 'cert_name': self.node.cert_name}
+            self.network.links[authz_server_uuid].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def authorization_search_handler(self, payload):
+        """
+        Return a response to the authorization search request in the payload.
+
+        Signed JSON Web Tokens (JWT) with timestamps and information about 
+        sender and receiver are used for both the request and response.
+        A Policy Decision Point (PDP) is used for the authorization search.
+        """
+        try:
+            # Decode the JSON Web Token in the request from the runtime.
+            decoded = decode_jwt(payload["jwt"], payload["cert_name"], self.node.node_name, self.node.id)
+            self.node.pdp.runtime_search(decoded["request"], decoded["whitelist"], 
+                                         CalvinCB(self._authorization_search_handler, payload, decoded))
+        except Exception:
+            reply = response.CalvinResponse(response.INTERNAL_ERROR)
+            # Send reply
+            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+            self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def _authorization_search_handler(self, payload, decoded_jwt, search_result):
+        try:
+            if search_result is None:
+                runtime_id = None
+                data_response = {"node_id": runtime_id}
+            else:
+                runtime_id = search_result[0]     
+                jwt_payload = {
+                    "iss": self.node.id,
+                    "sub": decoded_jwt["sub"],
+                    "aud": runtime_id, 
+                    "iat": datetime.utcnow(), 
+                    "exp": datetime.utcnow() + timedelta(seconds=60),
+                    "response": search_result[1]
+                }
+                # Create a JSON Web Token signed using the authorization server's private key.
+                jwt_response = encode_jwt(jwt_payload, self.node.node_name)
+                data_response = {"node_id": runtime_id, "jwt": jwt_response, "cert_name": self.node.cert_name}
+            reply = response.CalvinResponse(response.OK, data_response)
+        except Exception:
+            reply = response.CalvinResponse(response.INTERNAL_ERROR)
+        # Send reply
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
 
 if __name__ == '__main__':
     import pytest

@@ -577,19 +577,26 @@ def verify_certificate(conf, certificate):
     # Verify the certificate. Raises X509StoreContextError on error.
     store_ctx.verify_certificate()
 
-def get_other_certificate(conf, my_node_name, cert_name):
-    """Return certificate with name cert_name from 'others' directory for runtime my_node_name"""
+def get_certificate(conf, my_node_name, cert_name):
+    """Return certificate with name cert_name from disk for runtime my_node_name"""
     # TODO: get certificate from DHT (alternative to getting from disk).
     runtime_dir = os.path.join(conf.configuration["CA_default"]["runtimes_dir"], my_node_name)
-    files = os.listdir(os.path.join(runtime_dir, "others"))
-    matching = [s for s in files if cert_name in s]
     try:
+        # Check if the certificate is in the 'others' folder for runtime my_node_name.
+        files = os.listdir(os.path.join(runtime_dir, "others"))
+        matching = [s for s in files if cert_name in s]
         with open(os.path.join(runtime_dir, "others", matching[0]), 'rb') as f:
             certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
             verify_certificate(conf, certificate)
             return certificate
     except Exception:
-        return None
+        # Check if cert_name is the runtime's own certificate.
+        files = os.listdir(os.path.join(runtime_dir, "mine"))
+        matching = [s for s in files if cert_name in s]
+        with open(os.path.join(runtime_dir, "mine", matching[0]), 'rb') as f:
+            certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
+            verify_certificate(conf, certificate)
+            return certificate
 
 def get_private_key(conf, node_name):
     """Return the node's private key"""

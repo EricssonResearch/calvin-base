@@ -157,8 +157,10 @@ class ActorManager(object):
         try:
             _log.analyze(self.node.id, "+", state)
             credentials = state.pop('credentials', None)
+            migration_info = state.pop('migration_info', None)
             try:
                 state['_managed'].remove('credentials')
+                state['_managed'].remove('migration_info')
             except:
                 pass
             a = self._new_actor(actor_type, actor_id=state['id'], credentials=credentials, access_decision=access_decision)
@@ -196,14 +198,14 @@ class ActorManager(object):
         del self.actors[actor_id]
         self.node.control.log_actor_destroy(a.id)
 
-    # DEPRECATED: Enabling of an actor is dependent on wether it's connected or not
+    # DEPRECATED: Enabling of an actor is dependent on whether it's connected or not
     def enable(self, actor_id):
         if actor_id not in self.actors:
             self._actor_not_found(actor_id)
 
         self.actors[actor_id].enable()
 
-    # DEPRECATED: Disabling of an actor is dependent on wether it's connected or not
+    # DEPRECATED: Disabling of an actor is dependent on whether it's connected or not
     def disable(self, actor_id):
         if actor_id not in self.actors:
             _log.info("!!!FAILED to disable %s", actor_id)
@@ -211,7 +213,8 @@ class ActorManager(object):
 
         self.actors[actor_id].disable()
 
-    def update_requirements(self, actor_id, requirements, extend=False, move=False, callback=None):
+    def update_requirements(self, actor_id, requirements, extend=False, move=False, 
+                            authorization_check=False, callback=None):
         """ Update requirements and trigger a potential migration """
         if actor_id not in self.actors:
             # Can only migrate actors from our node
@@ -220,7 +223,7 @@ class ActorManager(object):
                 callback(status=response.CalvinResponse(False))
             return
         if not isinstance(requirements, (list, tuple)):
-            # requirements need to be list
+            # Requirements need to be list
             _log.analyze(self.node.id, "+ NO REQ LIST", {'actor_id': actor_id})
             if callback:
                 callback(status=response.CalvinResponse(response.BAD_REQUEST))
@@ -234,14 +237,15 @@ class ActorManager(object):
         possible_placements = set([])
         done = [False]
         node_iter.set_cb(self._update_requirements_placements, node_iter, actor_id, possible_placements,
-                         move=move, cb=callback, done=done)
+                         move=move, authorization_check=authorization_check, cb=callback, done=done)
         _log.analyze(self.node.id, "+ CALL CB", {'actor_id': actor_id, 'node_iter': str(node_iter)})
         # Must call it since the triggers might already have released before cb set
         self._update_requirements_placements(node_iter, actor_id, possible_placements,
-                                 move=move, cb=callback, done=done)
+                                 move=move, authorization_check=authorization_check, cb=callback, done=done)
         _log.analyze(self.node.id, "+ END", {'actor_id': actor_id, 'node_iter': str(node_iter)})
 
-    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False, cb=None):
+    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False, 
+                                        authorization_check=False, cb=None):
         _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
         actor = self.actors[actor_id]
         if actor._collect_placement_cb:
@@ -268,11 +272,14 @@ class ActorManager(object):
                                                      move=move, cb=cb)
             return
         except StopIteration:
-            # all possible actor placements derived
+            # All possible actor placements derived
             _log.analyze(self.node.id, "+ ALL", {})
             done[0] = True
             if move and len(possible_placements)>1:
                 possible_placements.discard(self.node.id)
+            if authorization_check:
+                cb(possible_placements=list(possible_placements))
+                return
             if not possible_placements:
                 if cb:
                     cb(status=response.CalvinResponse(False))
@@ -283,6 +290,7 @@ class ActorManager(object):
                     cb(status=response.CalvinResponse(True))
                 return
             # TODO do a better selection between possible nodes
+            # TODO: should also ask authorization server before selecting node to migrate to.
             self.migrate(actor_id, possible_placements.pop(), callback=cb)
             _log.analyze(self.node.id, "+ END", {})
         except:
@@ -432,6 +440,12 @@ class ActorManager(object):
 
     def enabled_actors(self):
         return [actor for actor in self.actors.values() if actor.enabled()]
+
+    def denied_actors(self):
+        return [actor for actor in self.actors.values() if actor.denied()]
+
+    def migratable_actors(self):
+        return [actor for actor in self.actors.values() if actor.migratable()]
 
     def list_actors(self):
         return self.actors.keys()

@@ -18,14 +18,15 @@ import re
 import os
 from calvin.runtime.north.plugins.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
 from calvin.runtime.north.plugins.authorization.policy_information_point import PolicyInformationPoint
-
+from calvin.runtime.north.plugins.authorization.local_condition_checks import check_authorization_plugin_list
+from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
 class PolicyDecisionPoint(object):
 
-    def __init__(self, config=None):
+    def __init__(self, node, config=None):
         # Default config
         self.config = {
             "policy_combining": "permit_overrides",
@@ -36,12 +37,12 @@ class PolicyDecisionPoint(object):
         if config is not None:
             # Change some of the default values of the config.
             self.config.update(config)
+        self.node = node
         # TODO: implement other policy storage alternatives
         # if self.config["policy_storage"] == "db":
         #     self.prp = DbPolicyRetrievalPoint(self.config["policy_storage_path"])
         # else:
         self.prp = FilePolicyRetrievalPoint(self.config["policy_storage_path"])
-        self.pip = PolicyInformationPoint()
         self.registered_nodes = {}
 
     def register_node(self, node_id, node_attributes):
@@ -56,9 +57,10 @@ class PolicyDecisionPoint(object):
             "address.country": "SE"
         }
         """
+        _log.info("Register node %s: %s" % (node_id, node_attributes))
         self.registered_nodes[node_id] = node_attributes
 
-    def authorize(self, request):
+    def authorize(self, request, callback):
         """
         Use policies to return access decision for the request.
 
@@ -94,33 +96,54 @@ class PolicyDecisionPoint(object):
         }
         """
         _log.info("Authorization request received: %s" % request)
+        # Create a new PolicyInformationPoint instance for every request.
+        pip = PolicyInformationPoint(self.node, request)
+        try:
+            # Get actor_desc from storage if actorstore_signature is included in request.
+            pip.actor_desc_lookup(request["subject"]["actorstore_signature"], 
+                                  callback=CalvinCB(self._authorize_cont, request, callback=callback))
+        except Exception:
+            self._authorize_cont(request, pip, callback)
+        # Wait for PolicyInformationPoint to be ready, then continue with authorization.
+
+    def _authorize_cont(self, request, pip, callback):
         if "resource" in request and "node_id" in request["resource"]:
             try:
-                request["resource"] = self.registered_nodes[request["resource"]["node_id"]]
+                node_id = request["resource"]["node_id"]
+                request["resource"] = self.registered_nodes[node_id]
+                request["resource"]["node_id"] = node_id
             except Exception:
-                request["resource"] = {}
-        if "action" in request and "requires" in request["action"]:
+                pass
+        try:
             requires = request["action"]["requires"]
-            _log.debug("PolicyDecisionPoint: Requires %s" % requires)
-            if len(requires) > 1:
-                decisions = []
-                obligations = []
-                # Create one request for each requirement.
-                for req in requires:
-                    requirement_request = request.copy()
-                    requirement_request["action"]["requires"] = [req]
-                    policy_decision, policy_obligations = self.combined_policy_decision(requirement_request)
-                    decisions.append(policy_decision)
-                    if policy_obligations:
-                        obligations.append(policy_obligations)
-                # If the policy decisions for all requirements are the same, respond with that decision.
-                if all(x == decisions[0] for x in decisions):
-                    return self.create_response(decisions[0], obligations)
-                else:
-                    return self.create_response("indeterminate", [])
-        return self.create_response(*self.combined_policy_decision(request))
+        except KeyError:
+            try:
+                # Try to fetch missing attribute from Policy Information Point (PIP).
+                requires = pip.get_attribute_value("action", "requires")
+                request["action"] = {
+                    "requires": requires
+                }
+            except Exception:
+                requires = None
+        if requires is not None and len(requires) > 1:
+            decisions = []
+            obligations = []
+            # Create one request for each requirement.
+            for req in requires:
+                requirement_request = request.copy()
+                requirement_request["action"]["requires"] = [req]
+                policy_decision, policy_obligations = self.combined_policy_decision(requirement_request, pip)
+                decisions.append(policy_decision)
+                if policy_obligations:
+                    obligations.append(policy_obligations)
+            # If the policy decisions for all requirements are the same, respond with that decision.
+            if all(x == decisions[0] for x in decisions):
+                callback(authz_response=self.create_response(decisions[0], obligations))
+            else:
+                callback(authz_response=self.create_response("indeterminate", []))
+        callback(authz_response=self.create_response(*self.combined_policy_decision(request, pip)))
 
-    def combined_policy_decision(self, request):
+    def combined_policy_decision(self, request, pip):
         """
         Return (decision, obligations) for request using policy combining algorithm in config.
 
@@ -190,9 +213,9 @@ class PolicyDecisionPoint(object):
             for policy_id in policies: 
                 policy = policies[policy_id]
                 # Check if policy target matches (policy without target matches everything).
-                if "target" not in policy or self.target_matches(policy["target"], request):
+                if "target" not in policy or self.target_matches(policy["target"], request, pip):
                     # Get a policy decision if target matches.
-                    decision, obligations = self.policy_decision(policy, request)
+                    decision, obligations = self.policy_decision(policy, request, pip)
                     if ((decision == "permit" and not obligations and self.config["policy_combining"] == "permit_overrides") or 
                       (decision == "deny" and self.config["policy_combining"] == "deny_overrides")):
                         # Stop checking further rules.
@@ -214,15 +237,13 @@ class PolicyDecisionPoint(object):
 
     def create_response(self, decision, obligations):
         """Return authorization response including decision and obligations."""
-        # TODO: include more information to make it possible to send the response to other nodes within the domain 
-        # when an actor is migrated, e.g. node IDs for which the decision is valid.
         response = {}
         response["decision"] = decision
         if obligations:
             response["obligations"] = obligations
         return response
 
-    def target_matches(self, target, request):
+    def target_matches(self, target, request, pip):
         """Return True if policy target matches request, else False."""
         for attribute_type in target:
             for attribute in target[attribute_type]:
@@ -231,10 +252,8 @@ class PolicyDecisionPoint(object):
                 except KeyError:
                     try:
                         # Try to fetch missing attribute from Policy Information Point (PIP).
-                        # TODO: cache this value. 
-                        # Same value should be used for future tests in this policy or other policies when handling this request.
-                        request_value = self.pip.get_attribute_value(attribute_type, attribute)
-                    except KeyError:
+                        request_value = pip.get_attribute_value(attribute_type, attribute)
+                    except Exception:
                         _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (attribute_type, attribute))
                         return False  # Or 'indeterminate' (if MustBePresent is True and none of the other targets return False)?
                 # Accept both single object and lists by turning single objects into a list.
@@ -257,15 +276,15 @@ class PolicyDecisionPoint(object):
         # True is returned if every attribute in the policy target matches the corresponding request attribute.
         return True
 
-    def policy_decision(self, policy, request):
+    def policy_decision(self, policy, request, pip):
         """Use policy to return (access decision, obligations) for the request."""
         rule_decisions = []
         rule_obligations = []
         for rule in policy["rules"]:
             # Check if rule target matches (rule without target matches everything).
-            if "target" not in rule or self.target_matches(rule["target"], request):
+            if "target" not in rule or self.target_matches(rule["target"], request, pip):
                 # Get a rule decision if target matches.
-                decision, obligations = self.rule_decision(rule, request)
+                decision, obligations = self.rule_decision(rule, request, pip)
                 if ((decision == "permit" and not obligations and policy["rule_combining"] == "permit_overrides") or 
                   (decision == "deny" and policy["rule_combining"] == "deny_overrides")):
                     # Stop checking further rules.
@@ -285,7 +304,7 @@ class PolicyDecisionPoint(object):
         else:
             return ("not_applicable", [])
 
-    def rule_decision(self, rule, request):
+    def rule_decision(self, rule, request, pip):
         """Return (rule decision, obligations) for the request"""
         # Check condition if it exists.
         if "condition" in rule:
@@ -293,10 +312,11 @@ class PolicyDecisionPoint(object):
                 args = []
                 for attribute in rule["condition"]["attributes"]:
                     if isinstance(attribute, dict):  # Contains another function
-                        args.append(self.evaluate_function(attribute["function"], attribute["attributes"], request))
+                        args.append(self.evaluate_function(attribute["function"], 
+                                    attribute["attributes"], request, pip))
                     else:
                         args.append(attribute)
-                rule_satisfied = self.evaluate_function(rule["condition"]["function"], args, request)
+                rule_satisfied = self.evaluate_function(rule["condition"]["function"], args, request, pip)
                 if rule_satisfied:
                     return (rule["effect"], rule.get("obligations", []))
                 else:
@@ -307,7 +327,7 @@ class PolicyDecisionPoint(object):
             # If no condition in the rule, return the rule effect directly.
             return (rule["effect"], rule.get("obligations", []))
         
-    def evaluate_function(self, func, args, request):
+    def evaluate_function(self, func, args, request, pip):
         """
         Return result of function func with arguments args.
 
@@ -323,13 +343,10 @@ class PolicyDecisionPoint(object):
                     try:
                         args[index] = request[path[1]][path[2]]  # path[0] is "attr"
                     except KeyError:
-                        # TODO: check in attribute cache first
                         try:
                             # Try to fetch missing attribute from Policy Information Point (PIP).
-                            # TODO: cache this value. 
-                            # Same value should be used for future tests in this policy or other policies when handling this request
-                            args[index] = self.pip.get_attribute_value(path[1], path[2])
-                        except KeyError:
+                            args[index] = pip.get_attribute_value(path[1], path[2])
+                        except Exception:
                             _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (path[1], path[2]))
                             return False
                 # Accept both strings and lists by turning strings into single element lists.
@@ -359,3 +376,67 @@ class PolicyDecisionPoint(object):
             return args[0] <= args[1]
         elif func == "greater_than_or_equal":
             return args[0] >= args[1]
+
+    def runtime_search(self, request, runtime_whitelist, callback):
+        """
+        Search for runtime where the decision for the request is 'permit'.
+
+        Request (example):
+        {
+            "subject": {
+                "user": ["user1"],
+                "actorstore_signature: "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+            }
+        }
+
+        Response contains (node_id, authorization response) for the first match 
+        or None if no runtime is found.
+        """
+        # TODO: translate subject attributes when crossing domain.
+        # Other runtime might have other actor_signer and other requires list.
+        forbidden_keys = [("subject", "actor_signer"), ("action", "requires")]
+        for key in forbidden_keys:
+            try:
+                del request[key[0]][key[1]]
+            except Exception:
+                pass
+        if not runtime_whitelist:
+            # Use all registered nodes as possible nodes when no whitelist is provided.
+            runtime_whitelist = self.registered_nodes
+        possible_nodes = [node for node in self.registered_nodes if node in runtime_whitelist]
+        self._runtime_search_authorize(request, possible_nodes, callback)
+
+    def _runtime_search_authorize(self, request, possible_nodes, callback, counter=0):
+        node_id = possible_nodes[counter]
+        node_request = request.copy()
+        node_request["resource"] = {
+            "node_id": node_id
+        }
+        self.authorize(node_request, 
+                       callback=CalvinCB(self._runtime_search_cont, node_id, callback=callback, 
+                                         request=request, possible_nodes=possible_nodes, counter=counter))
+
+    def _runtime_search_cont(self, node_id, authz_response, callback, request, possible_nodes, counter):
+        if authz_response["decision"] == "permit":
+            valid = True
+            if authz_response.get("obligations", []):
+                # Look at obligations to check if authorization decision is valid right now.
+                if any(isinstance(elem, list) for elem in authz_response["obligations"]):
+                    # If list of lists, True must be found in each list.
+                    for plugin_list in authz_response["obligations"]:
+                        if not check_authorization_plugin_list(plugin_list):
+                            valid = False
+                            break
+                else:
+                    if not check_authorization_plugin_list(authz_response["obligations"]):
+                        valid = False
+            if valid:
+                callback(search_result=(node_id, authz_response))
+                return
+        counter += 1
+        if counter < len(possible_nodes):
+            # Continue searching
+            self._runtime_search_authorize(request, possible_nodes, callback, counter)
+            return
+        else:
+            callback(search_result=None)

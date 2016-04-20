@@ -19,9 +19,12 @@ import time
 
 from calvin.actor.actor import ActionResult
 from calvin.runtime.south.plugins.async import async
+from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities import calvinconfig
 
 _log = get_logger(__name__)
+_conf = calvinconfig.get()
 
 
 class Scheduler(object):
@@ -40,6 +43,8 @@ class Scheduler(object):
         self._trigger_set = set()
         self._heartbeat_loop = None
         self._heartbeat = 1
+        self._maintenance_loop = None
+        self._maintenance_delay = _conf.get(None, "maintenance_delay") or 300
 
     def run(self):
         async.run_ioloop()
@@ -79,21 +84,18 @@ class Scheduler(object):
 
     def trigger_loop(self, delay=0, actor_ids=None):
         """ Trigger the loop_once potentially after waiting delay seconds """
-
         if delay > 0:
             _log.debug("Delayed trigger %s" % delay)
             async.DelayedCall(delay, self.loop_once, True)
         else:
             # Never have more then one outstanding loop_once
-
             if actor_ids is None:
                 if self._loop_once is not None:
                     self._loop_once.cancel()
                 self._loop_once = async.DelayedCall(0, self.loop_once, True)
             else:
                 self._trigger_set.update(actor_ids)
-
-                # Dont run None jobs
+                # Don't run None jobs
                 if self._trigger_set == set([None]):
                     _log.debug("Ignoring fire")
                     return
@@ -122,6 +124,27 @@ class Scheduler(object):
                 self._log_exception_during_fire(e)
         self.idle = not total.did_fire
         return total
+
+    def maintenance_loop(self):
+        # Migrate denied actors
+        for actor in self.actor_mgr.migratable_actors():
+            self.actor_mgr.migrate(actor.id, actor.migration_info["node_id"], 
+                                   callback=CalvinCB(actor.remove_migration_info))
+        # Enable denied actors again if access is permitted. Will try to migrate if access still denied.
+        for actor in self.actor_mgr.denied_actors():
+            actor.enable_or_migrate()
+        # TODO: try to migrate shadow actors as well.
+        self._maintenance_loop = None
+        self.trigger_maintenance_loop(delay=True)
+
+    def trigger_maintenance_loop(self, delay=False):
+        if delay:
+            async.DelayedCall(self._maintenance_delay, self.maintenance_loop)
+        else:
+             # Never have more then one maintenance loop.
+            if self._maintenance_loop is not None:
+                self._maintenance_loop.cancel()
+            self._maintenance_loop = async.DelayedCall(0, self.maintenance_loop)
 
 
 class DebugScheduler(Scheduler):

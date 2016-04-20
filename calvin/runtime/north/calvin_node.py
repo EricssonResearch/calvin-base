@@ -75,22 +75,26 @@ class Node(object):
         except:
             _log.exception("Attributes not correct, uses empty attribute!")
             self.attributes = AttributeResolver(None)
-        try:
-            self.sec_conf = _conf.get("security","security_conf")
-            if authz_server or self.sec_conf['authorization']['procedure'] == "local":
-                self.pdp = PolicyDecisionPoint(self.sec_conf['authorization'])
-        except:
-            self.sec_conf = None
         self.node_name = self.attributes.get_node_name_as_str()
         # Obtain node id, when using security also handle runtime certificate
         self.id = certificate.obtain_cert_node_info(self.node_name)['id']
+        self.sec_conf = _conf.get("security","security_conf")
+        try:
+            if authz_server or self.sec_conf['authorization']['procedure'] == "local":
+                self.pdp = PolicyDecisionPoint(self, self.sec_conf['authorization'] if self.sec_conf else None)
+                self.authz_server_id = self.id
+            else:
+                self.authz_server_id = self.sec_conf['authorization']['server_uuid']
+        except:
+            self.authz_server_id = None
         try:
             cert_conffile = _conf.get("security", "certificate_conf")
-            domain = _conf.get("security", "certificate_domain")
-            cert_conf = certificate.Config(cert_conffile, domain)
+            self.domain = _conf.get("security", "certificate_domain")
+            cert_conf = certificate.Config(cert_conffile, self.domain)
             # cert_name is the node's certificate filename (without file extension)
             self.cert_name = certificate.get_own_cert_name(cert_conf, self.node_name)
         except:
+            self.domain = None
             self.cert_name = None
         self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
@@ -210,8 +214,6 @@ class Node(object):
         # Start storage after network, proto etc since storage proxy expects them
         self.storage.start(cb=CalvinCB(self._storage_started_cb))
         self.storage.add_node(self)
-        if hasattr(self, "pdp"):
-            self.storage.add_authz_server(self)
 
         # Start control API
         proxy_control_uri = _conf.get(None, 'control_proxy')
@@ -236,13 +238,12 @@ class Node(object):
             self.storage.stop(stopped)
 
         _log.analyze(self.id, "+", {})
-        # FIXME: this function is never called when the node quits
-        if hasattr(self, "pdp"):
-            self.storage.delete_authz_server(self)
         self.storage.delete_node(self, cb=deleted_node)
 
     def _storage_started_cb(self, *args, **kwargs):
         if self.sec_conf and "authorization" in self.sec_conf:
+            # TODO: the node should contact the authz server once a day, 
+            #       otherwise it should be removed from the registered_nodes list on the authz server.
             authorization_registration.register_node(self)
 
 

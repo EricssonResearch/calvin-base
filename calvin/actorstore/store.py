@@ -26,7 +26,6 @@ import hashlib
 from calvin.utilities import calvinconfig
 from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.security import Security
 from calvin.utilities.calvin_callback import CalvinCB
 
 _log = get_logger(__name__)
@@ -137,10 +136,9 @@ class Store(object):
         _log.debug("Store load_pymodule SECURITY %s" % str(self.sec))
         try:
             if self.sec:
-                _log.debug("Verify credentials for %s actor with credentials %s" % (name, self.sec.subject))
+                _log.debug("Verify signature for %s actor" % name)
                 if not self.sec.verify_signature(path, "actor"):
-                    _log.debug("Failed verification of credentials for %s actor with credentials %s" %
-                                    (name, self.sec.subject))
+                    _log.debug("Failed verification of signature for %s actor" % name)
                     raise Exception("Actor security signature verification failed")
             pymodule = imp.load_source(name, path)
             # Check if we have a module or not
@@ -613,8 +611,8 @@ class GlobalStore(ActorStore):
         Currently supports meta information on actors and full components
     """
 
-    def __init__(self, node=None, runtime=None):
-        super(GlobalStore, self).__init__()
+    def __init__(self, node=None, runtime=None, security=None):
+        super(GlobalStore, self).__init__(security)
         self.node = node  # Used inside runtime
         # FIXME this is not implemented
         self.rt = runtime  # Use Control API from outside runtime
@@ -666,7 +664,7 @@ class GlobalStore(ActorStore):
         hash = self.actor_hash(desc)
         if self.node:
             # FIXME should have callback to verify OK
-            self.node.storage.add_index(['actor', 'signature', signature], hash, root_prefix_level=3)
+            self.node.storage.add_index(['actor', 'signature', signature, self.node.id], hash, root_prefix_level=3)
             # FIXME should have callback to verify OK
             self.node.storage.set('actor_type-', hash, desc, None)
         else:
@@ -688,7 +686,8 @@ class GlobalStore(ActorStore):
                         'args': args,
                         'inports': [p[0] for p in inputs],
                         'outports': [p[0] for p in outputs],
-                        'requires': actor.requires if hasattr(actor, 'requires') else []}
+                        'requires': actor.requires if hasattr(actor, 'requires') else [],
+                        'signer': self.sec.get_signer('actor')}
             else:
                 desc = {'is_primitive': is_primitive, 
                         'actor_type': a,
@@ -744,13 +743,16 @@ class GlobalStore(ActorStore):
         if final[0]:
             out_iter.final()
 
-    def global_lookup_iter(self, signature, param_names=None):
+    def global_lookup_iter(self, signature, param_names=None, node_id=None):
         """ Lookup the described actor type
             signature is the actor/component signature
             param_names is optional list argument to filter out any descriptions which does not support the params
             returns a dynops iterator with all found matching descriptions
         """
-        sign_iter = self.node.storage.get_index_iter(['actor', 'signature', signature]).set_name("signature")
+        if node_id is None:
+            sign_iter = self.node.storage.get_index_iter(['actor', 'signature', signature]).set_name("signature")
+        else:
+            sign_iter = self.node.storage.get_index_iter(['actor', 'signature', signature, node_id]).set_name("signature")
         actor_type_iter = dynops.Map(self.global_lookup_actor, sign_iter, counter=0, eager=True)
         if param_names is None:
             actor_type_iter.set_name("global_lookup")

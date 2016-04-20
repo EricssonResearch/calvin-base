@@ -39,3 +39,12 @@ for m in modules:
         continue
     _log.debug("Imported condition check plugin %s" % (m,))
 
+def check_authorization_plugin_list(plugin_list):
+    authorization_results = []
+    for plugin in plugin_list:
+        try:
+            authorization_results.append(authz_plugins[plugin["id"]].authorization_check(**plugin["attributes"]))
+        except Exception:
+            return False
+    # At least one of the authorization checks for the plugins must return True.
+    return True in authorization_results

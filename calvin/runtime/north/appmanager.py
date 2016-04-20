@@ -459,6 +459,7 @@ class AppManager(object):
             # Get first node with highest weight
             # FIXME should verify that the node actually exist also
             # TODO should select from a resource sharing perspective also, instead of picking first max
+            # TODO: should also ask authorization server before selecting node to migrate to.
             _log.analyze(self._node.id, "+ WEIGHTS", {'actor_id': actor_id, 'weights': weights})
             weighted_actor_placement[actor_id] = node_ids[weights.index(max(weights))]
 

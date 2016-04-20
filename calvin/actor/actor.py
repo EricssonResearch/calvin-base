@@ -25,7 +25,8 @@ from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
-from calvin.runtime.north.plugins.authorization.local_condition_checks import authz_plugins
+from calvin.runtime.north.plugins.authorization.local_condition_checks import check_authorization_plugin_list
+from calvin.utilities.calvin_callback import CalvinCB
 
 _log = get_logger(__name__)
 
@@ -313,13 +314,15 @@ class Actor(object):
         def __str__(self):
             return self.printable(self._state)
 
-    STATUS = enum('LOADED', 'READY', 'PENDING', 'ENABLED')
+    STATUS = enum('LOADED', 'READY', 'PENDING', 'ENABLED', 'DENIED', 'MIGRATABLE')
 
     VALID_TRANSITIONS = {
-        STATUS.LOADED : [STATUS.READY],
-        STATUS.READY  : [STATUS.PENDING, STATUS.ENABLED],
-        STATUS.PENDING: [STATUS.READY, STATUS.PENDING, STATUS.ENABLED],
-        STATUS.ENABLED: [STATUS.READY, STATUS.PENDING]
+        STATUS.LOADED    : [STATUS.READY],
+        STATUS.READY     : [STATUS.PENDING, STATUS.ENABLED, STATUS.DENIED],
+        STATUS.PENDING   : [STATUS.READY, STATUS.PENDING, STATUS.ENABLED],
+        STATUS.ENABLED   : [STATUS.READY, STATUS.PENDING, STATUS.DENIED],
+        STATUS.DENIED    : [STATUS.ENABLED, STATUS.MIGRATABLE, STATUS.PENDING],
+        STATUS.MIGRATABLE: [STATUS.READY, STATUS.DENIED]
     }
 
     test_args = ()
@@ -337,11 +340,12 @@ class Actor(object):
         self._deployment_requirements = []
         self._signature = None
         self._component_members = set([self.id])  # We are only part of component if this is extended
-        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'credentials'))
+        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'credentials', 'migration_info'))
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
         self.metering = metering.get_metering()
+        self.migration_info = None
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._last_time_warning = 0.0
         self.credentials = None
@@ -456,7 +460,7 @@ class Actor(object):
     @verify_status([STATUS.READY, STATUS.PENDING])
     def did_connect(self, port):
         """Called when a port is connected, checks actor is fully connected."""
-        # If we happen to by in READY, go to PENDING
+        # If we happen to be in READY, go to PENDING
         if self.fsm.state() == Actor.STATUS.READY:
             self.fsm.transition_to(Actor.STATUS.PENDING)
         # Three non-patological options:
@@ -478,11 +482,14 @@ class Actor(object):
         # Actor enabled, inform scheduler
         self._calvinsys.scheduler_wakeup()
 
-    @verify_status([STATUS.ENABLED, STATUS.PENDING])
+    @verify_status([STATUS.ENABLED, STATUS.PENDING, STATUS.DENIED, STATUS.MIGRATABLE])
     def did_disconnect(self, port):
         """Called when a port is disconnected, checks actor is fully disconnected."""
-        # If we happen to by in ENABLED, go to PENDING
-        if self.fsm.state() == Actor.STATUS.ENABLED:
+        # If the actor is MIGRATABLE, return since it will be migrated soon.
+        if self.fsm.state() == Actor.STATUS.MIGRATABLE:
+            return
+        # If we happen to be in ENABLED/DENIED, go to PENDING
+        if self.fsm.state() != Actor.STATUS.PENDING:
             self.fsm.transition_to(Actor.STATUS.PENDING)
 
         # Three non-patological options:
@@ -506,9 +513,12 @@ class Actor(object):
         total_result = ActionResult(did_fire=False)
         while True:
             if not self.check_authorization_decision():
-                # The authorization decision is not valid anymore.
-                # TODO: try to migrate actor.
                 _log.info("Access denied for actor %s(%s)" % ( self._type, self.id))
+                # The authorization decision is not valid anymore.
+                # Change actor status to DENIED.
+                self.fsm.transition_to(Actor.STATUS.DENIED)
+                # Try to migrate actor.
+                self.sec.authorization_runtime_search(self.id, self._signature, callback=CalvinCB(self.set_migration_info))
                 return total_result
             # Re-try action in list order after EVERY firing
             for action_method in self.__class__.action_priority:
@@ -546,6 +556,21 @@ class Actor(object):
     def enabled(self):
         return self.fsm.state() == Actor.STATUS.ENABLED
 
+    def denied(self):
+        return self.fsm.state() == Actor.STATUS.DENIED
+
+    def migratable(self):
+        return self.fsm.state() == Actor.STATUS.MIGRATABLE
+
+    @verify_status([STATUS.DENIED])
+    def enable_or_migrate(self):
+        """Enable actor if access is permitted. Try to migrate if access still denied."""
+        if self.check_authorization_decision():
+            self.fsm.transition_to(Actor.STATUS.ENABLED)
+        else:
+            # Try to migrate actor.
+            self.sec.authorization_runtime_search(self.id, self._signature, callback=CalvinCB(self.set_migration_info))
+
     # DEPRECATED: Only here for backwards compatibility
     @verify_status([STATUS.ENABLED])
     def enable(self):
@@ -556,7 +581,7 @@ class Actor(object):
     def disable(self):
         self.fsm.transition_to(Actor.STATUS.PENDING)
 
-    @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING])
+    @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING, STATUS.MIGRATABLE])
     def state(self):
         state = {}
         # Manual state handling
@@ -607,7 +632,7 @@ class Actor(object):
         self._component_members= set(state['_component_members'])
 
     # TODO verify status should only allow reading connections when and after being fully connected (enabled)
-    @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING])
+    @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING, STATUS.MIGRATABLE])
     def connections(self, node_id):
         c = {'actor_id': self.id, 'actor_name': self.name}
         inports = {}
@@ -679,22 +704,31 @@ class Actor(object):
             if any(isinstance(elem, list) for elem in self.authorization_checks):
                 # If list of lists, True must be found in each list.
                 for plugin_list in self.authorization_checks:
-                    if not self.check_authorization_plugin_list(plugin_list):
+                    if not check_authorization_plugin_list(plugin_list):
                         return False
                 return True
             else:
-                return self.check_authorization_plugin_list(self.authorization_checks)
+                return check_authorization_plugin_list(self.authorization_checks)
         return True
 
-    def check_authorization_plugin_list(self, plugin_list):
-        authorization_results = []
-        for plugin in plugin_list:
-            try:
-                authorization_results.append(authz_plugins[plugin["id"]].authorization_check(**plugin["attributes"]))
-            except Exception:
-                return False
-        # At least one of the authorization checks for the plugins must return True.
-        return True in authorization_results
+    @verify_status([STATUS.DENIED])
+    def set_migration_info(self, reply):
+        if reply and reply.status == 200 and reply.data["node_id"]:
+            self.migration_info = reply.data
+            self.fsm.transition_to(Actor.STATUS.MIGRATABLE)
+            # Inform the scheduler that the actor is ready to migrate.
+            self._calvinsys.scheduler_maintenance_wakeup()
+        else:
+            # Try to enable/migrate actor again after a delay.
+            self._calvinsys.scheduler_maintenance_wakeup(delay=True)
+
+    @verify_status([STATUS.MIGRATABLE, STATUS.READY])
+    def remove_migration_info(self, status):
+        if status.status != 200:
+            self.migration_info = None
+            # FIXME: destroy() in actormanager.py was called before trying to migrate. 
+            #        Need to make the actor runnable again before transition to DENIED.
+            #self.fsm.transition_to(Actor.STATUS.DENIED)
 
 
 class ShadowActor(Actor):
