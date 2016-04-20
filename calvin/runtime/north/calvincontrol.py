@@ -823,20 +823,23 @@ class CalvinControl(object):
                 self.route_request(handle, connection, command, headers, data)
 
     def route_request(self, handle, connection, command, headers, data):
-        found = False
-        for route in self.routes:
-            match = route[0].match(command)
-            if match:
-                if data:
-                    data = json.loads(data)
-                _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
-                route[1](handle, connection, match, data, headers)
-                found = True
-                break
+        try:
+            found = False
+            for route in self.routes:
+                match = route[0].match(command)
+                if match:
+                    if data:
+                        data = json.loads(data)
+                    _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
+                    route[1](handle, connection, match, data, headers)
+                    found = True
+                    break
 
-        if not found:
-            _log.error("No route found for: %s\n%s" % (command, data))
-            self.send_response(handle, connection, None, status=404)
+            if not found:
+                _log.error("No route found for: %s\n%s" % (command, data))
+                self.send_response(handle, connection, None, status=404)
+        except:
+            self.send_response(handle, connection, None, status=calvinresponse.BAD_REQUEST)
 
     def send_response(self, handle, connection, data, status=200):
         """ Send response header text/html
