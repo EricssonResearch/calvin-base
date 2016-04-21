@@ -62,9 +62,11 @@ def testit(testlist, print_diff, print_script):
         'define_component',
         'local_component',
         'use_component',
+        'use_component_same_portnames',
         'use_component_twice',
         'nested_components',
-        'use_component_with_args'
+        'use_component_with_args',
+        'nested_components_with_args'
     ]
 
     res = {}

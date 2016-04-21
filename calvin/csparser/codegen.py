@@ -250,6 +250,17 @@ class Flatten(object):
 
     @visitor.when(ast.Block)
     def visit(self, node):
+        for key, value_node in node.args.iteritems():
+            if type(value_node) is ast.Id:
+                # Get value from parent (block)
+                block = node.parent
+                parent_key = value_node.ident
+                if parent_key not in block.args:
+                    print "WARNING: Missing symbol '{}'".format(parent_key)
+                else:
+                    value = block.args[parent_key]
+                    node.args[key] = value
+
         if node.namespace:
             self.stack.append(node.namespace)
         # Iterate over a copy of children since we manipulate the list
