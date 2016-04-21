@@ -33,6 +33,9 @@ class DisplayBase(object):
         """
         raise NotImplementedError()
 
+    def show(self, text, textcolor, bgcolor):
+        raise NotImplementedError()
+        
     def clear(self):
         """
         Clear display

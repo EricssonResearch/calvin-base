@@ -32,12 +32,15 @@ class Display(object):
         """
         self.display.enable(enable)
 
-    def show_text(self, text):
+    def show(self, text, textcolor, bgcolor):
         """
         Display text
         """
-        self.display.show_text(text)
+        self.display.show(text, textcolor, bgcolor)
 
+    def show_text(self, text):
+        self.display.show(text, None, None)
+        
     def clear(self):
         """
         Clear display
