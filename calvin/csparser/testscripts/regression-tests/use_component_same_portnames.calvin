@@ -1,0 +1,13 @@
+component Foo() in -> out {
+    sum : std.Sum()
+
+    .in > sum.integer
+    sum.integer > .out
+
+}
+src : std.Counter()
+foo : Foo()
+snk : io.Print()
+
+src.integer > foo.in
+foo.out > snk.token

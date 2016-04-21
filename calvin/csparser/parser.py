@@ -114,7 +114,8 @@ def p_program(p):
 
 def p_statement(p):
     """statement : assignment
-                 | link"""
+                 | link
+                 | portmap"""
     p[0] = p[1]
 
 
@@ -129,18 +130,25 @@ def p_link(p):
     p[0] = ast.Link(p[1], p[3])
 
 
+def p_portmap(p):
+    """portmap : port GT internal_port
+               | internal_port GT port"""
+    p[0] = ast.Portmap(p[1], p[3])
+
+
 def p_implicit_port(p):
     """implicit_port : argument"""
     p[0] = ast.ImplicitPort(p[1])
 
 
 def p_port(p):
-    """port : IDENTIFIER DOT IDENTIFIER
-            | DOT IDENTIFIER"""
-    if len(p) == 3:
-        p[0] = ast.InternalPort(p[2])
-    else:
-        p[0] = ast.Port(p[1], p[3])
+    """port : IDENTIFIER DOT IDENTIFIER"""
+    p[0] = ast.Port(p[1], p[3])
+
+
+def p_internal_port(p):
+    """internal_port : DOT IDENTIFIER"""
+    p[0] = ast.InternalPort(p[2])
 
 
 def p_named_args(p):

@@ -1,0 +1,23 @@
+component Foo() in -> out {
+    sum : std.Sum()
+
+    .in > sum.integer
+    sum.integer > .out
+
+}
+
+component Bar(delta) in -> out {
+    foo : Foo()
+    delay : std.Delay(delay=delta)
+
+    .in > foo.in
+    foo.out > delay.token
+    delay.token > .out
+}
+
+src : std.Counter()
+bar : Bar(delta=2)
+snk : io.Print()
+
+src.integer > bar.in
+bar.out > snk.token

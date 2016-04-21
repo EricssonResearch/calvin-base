@@ -140,6 +140,10 @@ class Link(Node):
         self.inport.parent = None
         self.children[1] = value
 
+class Portmap(Link):
+    """docstring for Portmap"""
+    def __init__(self, outport, inport):
+        super(Portmap, self).__init__(outport, inport)
 
 class Port(Node):
     """docstring for LinkNode"""

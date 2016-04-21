@@ -1,0 +1,13 @@
+component Foo() in -> out {
+    str : std.Stringify()
+
+    .in > str.in
+    str.out > .out
+
+}
+src : std.Counter()
+foo : Foo()
+snk : io.Print()
+
+src.integer > foo.in
+foo.out > snk.token

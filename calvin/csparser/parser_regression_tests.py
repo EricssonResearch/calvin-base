@@ -60,7 +60,10 @@ def testit(testlist, print_diff, print_script):
         'actor_one_arg',
         'actor_two_args',
         'define_component',
-        'local_component'
+        'local_component',
+        'use_component',
+        'use_component_twice',
+        'nested_components'
     ]
 
     res = {}
