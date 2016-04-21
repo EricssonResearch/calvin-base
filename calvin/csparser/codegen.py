@@ -218,7 +218,7 @@ class Flatten(object):
     @visitor.when(ast.Node)
     def visit(self, node):
         if not node.is_leaf():
-            map(self.visit, node.children)
+            map(self.visit, node.children[:])
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
@@ -226,13 +226,13 @@ class Flatten(object):
         node.ident = ':'.join(self.stack)
         self.stack.pop()
 
-    @visitor.when(ast.Link)
+    @visitor.when(ast.InternalPort)
     def visit(self, node):
-        for port in [node.outport, node.inport]:
-            if port.actor:
-                port.actor = ':'.join(self.stack + [port.actor])
-            else:
-                port.actor = ':'.join(self.stack)
+        node.actor = ':'.join(self.stack)
+
+    @visitor.when(ast.Port)
+    def visit(self, node):
+        node.actor = ':'.join(self.stack + [node.actor])
 
     @visitor.when(ast.Block)
     def visit(self, node):
@@ -416,5 +416,5 @@ class CodeGen(object):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check(tests=['use_component_same_portnames'], print_diff=True, print_script=True)
+    run_check(tests=['use_component'], print_diff=True, print_script=True)
 
