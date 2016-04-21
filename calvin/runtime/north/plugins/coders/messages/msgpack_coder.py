@@ -14,15 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import msgpack
+import umsgpack
 from message_coder import MessageCoderBase
+
+umsgpack.compatibility = True
 
 # set of functions to encode/decode data tokens to/from a json description
 class MessageCoder(MessageCoderBase):
 
     def encode(self, data):
-        return msgpack.packb(data)
+        return umsgpack.packb(data)
 
     def decode(self, data):
-        data = msgpack.unpackb(data)
+        data = umsgpack.unpackb(data)
         return data
