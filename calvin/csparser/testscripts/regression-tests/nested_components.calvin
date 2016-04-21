@@ -6,9 +6,9 @@ component Foo() in -> out {
 
 }
 
-component Bar(delta) in -> out {
+component Bar() in -> out {
     foo : Foo()
-    delay : std.Delay(delay=delta)
+    delay : std.Delay(delay=1)
 
     .in > foo.in
     foo.out > delay.token
@@ -16,7 +16,7 @@ component Bar(delta) in -> out {
 }
 
 src : std.Counter()
-bar : Bar(delta=2)
+bar : Bar()
 snk : io.Print()
 
 src.integer > bar.in

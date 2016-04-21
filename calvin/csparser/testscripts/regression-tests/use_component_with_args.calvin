@@ -1,0 +1,13 @@
+component Foo(delta) in -> out {
+    fcn : std.Delay(delay=delta)
+
+    .in > fcn.token
+    fcn.token > .out
+
+}
+src : std.Counter()
+foo : Foo(delta=10)
+snk : io.Print()
+
+src.integer > foo.in
+foo.out > snk.token
