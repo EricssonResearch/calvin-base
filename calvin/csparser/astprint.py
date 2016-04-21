@@ -105,7 +105,7 @@ class BracePrinter(object):
     @visitor.when(ast.Block)
     def visit(self, node):
         def f(node):
-            print "{}( {} namespace: {}".format(self._indentation(), node, node.namespace)
+            print "{}( {} namespace: {}, args: {}".format(self._indentation(), node, node.namespace, node.args)
         def g(node):
             print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)

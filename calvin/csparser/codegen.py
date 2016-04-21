@@ -187,7 +187,6 @@ class Expander(object):
             map(self.visit, node.children)
             return
         # Clone assignment to clone the arguments
-        # FIXME: Should args be a node rather than a list?
         ca = node.clone()
         args = ca.children
         # Clone block from component definition
@@ -196,7 +195,7 @@ class Expander(object):
         new = block.clone()
         new.namespace = node.ident
         # Add arguments from assignment to block
-        new.add_children(args)
+        new.args = {x.children[0].ident: x.children[1] for x in args}
         node.parent.replace_child(node, new)
         # Recurse
         map(self.visit, new.children)
@@ -225,6 +224,21 @@ class Flatten(object):
         self.stack.append(node.ident)
         node.ident = ':'.join(self.stack)
         self.stack.pop()
+        map(self.visit, node.children[:])
+
+
+    @visitor.when(ast.NamedArg)
+    def visit(self, node):
+        value_node = node.children[1]
+        if type(value_node) is ast.Id:
+            # Get value from grandparent (block)
+            block = node.parent.parent
+            key = value_node.ident
+            if key not in block.args:
+                print "WARNING: Missing symbol '{}'".format(key)
+            else:
+                value = block.args[key]
+                node.replace_child(value_node, value)
 
     @visitor.when(ast.InternalPort)
     def visit(self, node):
@@ -236,9 +250,6 @@ class Flatten(object):
 
     @visitor.when(ast.Block)
     def visit(self, node):
-        if node.args:
-            print "NOT IMPLEMENTED: Argument propagation"
-
         if node.namespace:
             self.stack.append(node.namespace)
         # Iterate over a copy of children since we manipulate the list
@@ -416,5 +427,5 @@ class CodeGen(object):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check(tests=['use_component'], print_diff=True, print_script=True)
+    run_check(tests=['use_component_with_args'], print_diff=True, print_script=True)
 
