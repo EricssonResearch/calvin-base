@@ -272,6 +272,50 @@ class Flatten(object):
         node.parent.add_children(node.children)
         node.delete()
 
+class AppInfo(object):
+    """docstring for AppInfo"""
+    def __init__(self, script_name):
+        super(AppInfo, self).__init__()
+        self.actorstore = ActorStore()
+        self.app_info = {
+            'name':script_name,
+            'actors': {},
+            'connections': {},
+            'valid': True
+        }
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children)
+
+    @visitor.when(ast.Assignment)
+    def visit(self, node):
+        namespace = self.app_info['name']
+        key = "{}:{}".format(namespace, node.ident)
+        value = {}
+        found, is_actor, actor_class = self.actorstore.lookup(node.actor_type)
+        value['actor_type'] = node.actor_type
+        args = {}
+        for arg_node in node.children:
+            if type(arg_node) is ast.NamedArg:
+                arg_id, arg_val = arg_node.children
+                args[arg_id.ident] = arg_val.value
+        value['args'] = args
+        value['signature'] = _create_signature(actor_class, node.actor_type)
+        self.app_info['actors'][key] = value
+
+    @visitor.when(ast.Link)
+    def visit(self, node):
+        namespace = self.app_info['name']
+        key = "{}:{}.{}".format(namespace, node.outport.actor, node.outport.port)
+        value = "{}:{}.{}".format(namespace, node.inport.actor, node.inport.port)
+        self.app_info['connections'].setdefault(key, []).append(value)
+
 
 class CodeGen(object):
     """
@@ -285,7 +329,7 @@ class CodeGen(object):
         self.script_name = script_name
         self.constants = {}
         self.local_components = {}
-        self.app_info = {'name':script_name}
+        # self.app_info = {'name':script_name}
         self.printer = astprint.BracePrinter()
 
         self.run()
@@ -316,10 +360,10 @@ class CodeGen(object):
         ast.Node._verbose_desc = verbose
 
         # Add sections
-        ai = self.app_info
-        ai['actors'] = {}
-        ai['connections'] = {}
-        ai['valid'] = True
+        # ai = self.app_info
+        # ai['actors'] = {}
+        # ai['connections'] = {}
+        # ai['valid'] = True
 
         ##
         # Check for errors
@@ -350,6 +394,8 @@ class CodeGen(object):
         rw = ImplicitPortRewrite()
         rw.visit(self.root)
 
+        self.printer.process(self.root)
+
         ##
         # Flatten blocks
         flattener = Flatten()
@@ -375,11 +421,14 @@ class CodeGen(object):
                 link.inport = replacement
 
 
-        # self.printer.process(self.root)
+        self.printer.process(self.root)
 
         ##
         # "code" generation
-        self.process_main(self.root)
+        ## self.process_main(self.root)
+        gen_app_info = AppInfo(self.script_name)
+        gen_app_info.visit(self.root)
+        self.app_info = gen_app_info.app_info
 
 
     def get_named_args(self, node):
@@ -438,5 +487,5 @@ class CodeGen(object):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check(tests=['use_component_with_args'], print_diff=True, print_script=True)
+    run_check(tests=['nested_components_with_args'], print_diff=True, print_script=True)
 
