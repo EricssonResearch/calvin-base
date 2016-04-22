@@ -28,3 +28,4 @@ class Timestamp(Actor):
         return ActionResult(production=(self['time'].timestamp(),))
 
     action_priority = (action,)
+    requires = ['calvinsys.native.python-time']

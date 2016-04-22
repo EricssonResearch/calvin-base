@@ -29,3 +29,4 @@ class Datetime(Actor):
         return ActionResult(production=(self['time'].datetime(),))
 
     action_priority = (action,)
+    requires = ['calvinsys.native.python-time']
