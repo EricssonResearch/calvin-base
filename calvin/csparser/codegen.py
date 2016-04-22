@@ -134,36 +134,6 @@ class ImplicitPortRewrite(Visitor):
         self.real_port = ast.Port(const_name, 'token')
 
 
-class WrapInNamespace(Visitor):
-    """docstring for WrapInNamespace"""
-    def __init__(self):
-        super(WrapInNamespace, self).__init__()
-
-    def wrap(self, node, namespace):
-        self.namespace = namespace
-        self._visit(node)
-
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        self._visit(node)
-
-    @visitor.when(ast.Port)
-    def visit(self, node):
-        node.actor = self.namespace + "." + node.actor
-
-    @visitor.when(ast.InternalPort)
-    def visit(self, node):
-        node.port = self.namespace + "." + node.port
-
-    @visitor.when(ast.Assignment)
-    def visit(self, node):
-        node.ident = self.namespace + "." + node.ident
-
-
 class Expander(object):
     """
     Expands a tree with components provided as a dictionary
@@ -207,7 +177,6 @@ class Flatten(object):
     and propagating arguments before removing the block
     """
     def __init__(self):
-        self.finder = Finder()
         self.stack = []
 
     @visitor.on('node')
@@ -334,36 +303,9 @@ class CodeGen(object):
 
         self.run()
 
-    def lookup(self, actor_type):
-        """
-        Search for the definition of 'actor_type'.
-        Returns a tuple (found, is_primitive, info) where info is either a
-        class (primitive) or a dictionary with component definition
-        Search order:
-          1 - components defined in the current script: self.local_components
-          2 - primitive actors in the order defined by actor store
-          3 - components in the order defined by actor store
-        Steps 2 and 3 are handled by generic lookup in actor store
-        """
-        if actor_type in self.local_components:
-            compdef = self.local_components[actor_type]
-            return compdef, False
-
-        found, is_actor, info = self.actorstore.lookup(actor_type)
-        # if self.verify and not found:
-        #     msg = 'Actor "{}" not found.'.format(actor_type)
-        #     raise Exception(msg)
-        return info, is_actor and found
-
 
     def run(self, verbose=True):
         ast.Node._verbose_desc = verbose
-
-        # Add sections
-        # ai = self.app_info
-        # ai['actors'] = {}
-        # ai['connections'] = {}
-        # ai['valid'] = True
 
         ##
         # Check for errors
@@ -420,64 +362,13 @@ class CodeGen(object):
                 link = replace.parent
                 link.inport = replacement
 
-
         self.printer.process(self.root)
 
         ##
         # "code" generation
-        ## self.process_main(self.root)
         gen_app_info = AppInfo(self.script_name)
         gen_app_info.visit(self.root)
         self.app_info = gen_app_info.app_info
-
-
-    def get_named_args(self, node):
-        """
-        Return a dictionary with named args rooted in <node> as key/value-pairs
-        """
-        args = {}
-        argnodes = self.query(node, kind=ast.NamedArg)
-        for n in argnodes:
-            k, v = n.children
-            args[k.ident] = v.value
-        return args
-
-    def wrap_in_namespace(self, block, namespace):
-        wr = WrapInNamespace()
-        wr.wrap(block, namespace)
-
-    def add_actor(self, actor, namespace):
-        key = "{}:{}".format(namespace, actor.ident)
-        value = {}
-        actor_class, is_actor = self.lookup(actor.actor_type)
-        value['actor_type'] = actor.actor_type
-        value['args'] = self.get_named_args(actor)
-        value['signature'] = _create_signature(actor_class, actor.actor_type)
-        self.app_info['actors'][key] = value
-
-    def add_link(self, link, namespace):
-        key = "{}:{}.{}".format(namespace, link.outport.actor, link.outport.port)
-        value = "{}:{}.{}".format(namespace, link.inport.actor, link.inport.port)
-        self.app_info['connections'].setdefault(key, []).append(value)
-
-    def process_constants(self, unresolved):
-        # FIXME: Handle define FOO = BAR etc. including infinite recursion
-        resolved = {}
-        for c in unresolved:
-            _id, _val = c.children
-            if type(_val) is ast.Value:
-                self.constants[_id.ident] = _val.value
-
-    def rewrite_implicit_ports(self):
-        pass
-
-    def process_main(self, main):
-        actors = self.query(main, kind=ast.Assignment)
-        links = self.query(main, kind=ast.Link)
-        for actor in actors:
-            self.add_actor(actor, self.script_name)
-        for link in links:
-            self.add_link(link, self.script_name)
 
     def query(self, root, kind=None, attributes=None, maxdepth=1024):
         finder = Finder()
