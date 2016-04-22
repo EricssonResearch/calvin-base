@@ -57,10 +57,6 @@ class ImplicitPortRewrite(object):
     """
     def __init__(self):
         super(ImplicitPortRewrite, self).__init__()
-        self.kind = ast.ImplicitPort
-        self.implicit_port = None
-        self.real_port = None
-        self.real_constants = []
         self.counter = 0
 
     @visitor.on('node')
@@ -69,35 +65,22 @@ class ImplicitPortRewrite(object):
 
     @visitor.when(ast.Node)
     def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children[:])
-
-    @visitor.when(ast.Block)
-    def visit(self, node):
+        if node.is_leaf():
+            return
         map(self.visit, node.children[:])
-        if self.real_constants:
-            node.children.extend(self.real_constants)
-        self.real_constants = []
-
-    @visitor.when(ast.Link)
-    def visit(self, node):
-        map(self.visit, node.children[:])
-        if self.implicit_port:
-            removed = node.outport
-            if removed != self.implicit_port:
-                print "ERROR"
-            node.outport = self.real_port
-            self.real_port = None
-            self.implicit_port = None
 
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
-        self.implicit_port = node
-        args = [ ast.NamedArg(ast.Id('data'), node.children[0]),  ast.NamedArg(ast.Id('n'), ast.Value(-1))]
+        const_value = node.children[0]
+        args = [ ast.NamedArg(ast.Id('data'), const_value),  ast.NamedArg(ast.Id('n'), ast.Value(-1))]
         self.counter += 1
         const_name = '_literal_const_'+str(self.counter)
-        self.real_constants.append(ast.Assignment(const_name, 'std.Constant', args))
-        self.real_port = ast.Port(const_name, 'token')
+        const_actor = ast.Assignment(const_name, 'std.Constant', args)
+        const_actor_port = ast.Port(const_name, 'token')
+        link = node.parent
+        link.replace_child(node, const_actor_port)
+        block = link.parent
+        block.add_child(const_actor)
 
 
 class Expander(object):
