@@ -48,45 +48,15 @@ class Finder(object):
         self.visit(root)
         return self.matches
 
-class Visitor(object):
-    def __init__(self, maxdepth=1024):
-        self.maxdepth = maxdepth
-        self.depth = 0
 
-    def _visit(self, node, preorder=None, inorder=None, postorder=None):
-        if node.is_leaf() or self.depth > self.maxdepth:
-            # print "maxdepth ({}) exceeded".format(self.depth)
-            return
-        if preorder: preorder(node)
-        left, last = node.children[0:-1], node.children[-1:]
-        if not left:
-            if last: self.visit(last[0])
-            if inorder: inorder(node)
-        else:
-            self.depth +=1
-            for child in left:
-                self.visit(child)
-                if inorder: inorder(node)
-            self.visit(last[0])
-            self.depth -=1
-        if postorder: postorder(node)
-
-    def _indentation(self):
-        return "    "*self.depth
-
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-
-class ImplicitPortRewrite(Visitor):
+class ImplicitPortRewrite(object):
     """
     ImplicitPortRewrite takes care of the construct
         <value> > foo.in
     by replacing <value> with a std.Constant(data=<value>) actor.
     """
-    def __init__(self, maxdepth=1024):
-        super(ImplicitPortRewrite, self).__init__(maxdepth)
+    def __init__(self):
+        super(ImplicitPortRewrite, self).__init__()
         self.kind = ast.ImplicitPort
         self.implicit_port = None
         self.real_port = None
@@ -99,30 +69,26 @@ class ImplicitPortRewrite(Visitor):
 
     @visitor.when(ast.Node)
     def visit(self, node):
-        self._visit(node)
+        if not node.is_leaf():
+            map(self.visit, node.children[:])
 
     @visitor.when(ast.Block)
     def visit(self, node):
-        def g(node):
-            if self.real_constants:
-                node.children.extend(self.real_constants)
-            self.real_constants = []
-
-        self._visit(node, postorder=g)
-
+        map(self.visit, node.children[:])
+        if self.real_constants:
+            node.children.extend(self.real_constants)
+        self.real_constants = []
 
     @visitor.when(ast.Link)
     def visit(self, node):
-        def g(node):
-            if self.implicit_port:
-                removed = node.outport
-                if removed != self.implicit_port:
-                    print "ERROR"
-                node.outport = self.real_port
-                self.real_port = None
-                self.implicit_port = None
-        self._visit(node, postorder=g)
-
+        map(self.visit, node.children[:])
+        if self.implicit_port:
+            removed = node.outport
+            if removed != self.implicit_port:
+                print "ERROR"
+            node.outport = self.real_port
+            self.real_port = None
+            self.implicit_port = None
 
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
