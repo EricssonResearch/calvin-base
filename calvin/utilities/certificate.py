@@ -357,7 +357,7 @@ def new_domain(conf):
     echo 1000 > $dir/serial
     touch $dir/index.txt
     openssl rand -out $private_dir/ca_password 20
-    openssl req -new -x509 -config $OPENSSL_CONF \
+    openssl req -new -x509 -days 1825 -config $OPENSSL_CONF \
             -keyout $private_key -out $certificate \
             -passout file:$private_dir/ca_password
     """
@@ -406,6 +406,7 @@ def new_domain(conf):
                             "-new",
                             "-config", conf.configfile,
                             "-x509",
+                            "-days", "1825",
                             "-utf8",
                             "-subj", subject,
                             "-passout",
