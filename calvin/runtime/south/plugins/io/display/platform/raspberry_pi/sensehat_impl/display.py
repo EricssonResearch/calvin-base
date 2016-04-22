@@ -33,9 +33,17 @@ class Display(base_display.DisplayBase):
         self.defer = None
 
     def show_text(self, text):
+        self.show(text, None, None)
+        
+    def show(self, text, textcolor, bgcolor):
+        if not textcolor:
+            textcolor = (0xff,0xff,0xff)
+        if not bgcolor:
+            bgcolor = (0,0,0)
+            
         if self.defer is None:
             self.sense.set_rotation(90, False)
-            self.defer = threads.defer_to_thread(self.sense.show_message, text)
+            self.defer = threads.defer_to_thread(self.sense.show_message, text, text_colour=textcolor, back_colour=bgcolor)
             self.defer.addCallback(self.cb_show_text)
             self.defer.addErrback(self.cb_show_text)
 

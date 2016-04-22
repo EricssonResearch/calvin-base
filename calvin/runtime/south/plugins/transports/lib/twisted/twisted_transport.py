@@ -72,7 +72,7 @@ class CalvinTransport(base_transport.BaseTransport):
             # Send
             raw_payload = tcoder.encode(payload)
 
-            _log.debug('raw_send_message %s => %s "%s"' % (self._rt_id, self._remote_rt_id, raw_payload))
+#            _log.debug('raw_send_message %s => %s "%s"' % (self._rt_id, self._remote_rt_id, raw_payload))
             self._callback_execute('raw_send_message', self, raw_payload)
             self._transport.send(raw_payload)
             # TODO: Set timeout of send

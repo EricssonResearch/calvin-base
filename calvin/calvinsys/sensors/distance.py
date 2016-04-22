@@ -27,6 +27,7 @@ class Distance(object):
         self._node = node
         self._actor = actor
         self._distance = distance.Distance(node, self._new_measurement)
+        self._has_data = False
         
     def _new_measurement(self, measurement):
         self._measurement = measurement

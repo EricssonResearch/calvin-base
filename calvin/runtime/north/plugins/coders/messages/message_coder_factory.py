@@ -16,12 +16,16 @@
 
 # Coders
 import json_coder
+import msgpack_coder
 
 def get_prio_list():
-    return ['json']
+    return ['json', 'msgpack']
 
 def get(type_):
     if type_ == "json":
         return json_coder.MessageCoder()
+
+    if type_ == "msgpack":
+        return msgpack_coder.MessageCoder()
 
     raise Exception("Coder {} requested is not supported".format(type_))
