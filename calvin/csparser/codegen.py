@@ -96,14 +96,13 @@ class Expander(object):
 
     @visitor.when(ast.Node)
     def visit(self, node):
-        if node.children is None:
+        if node.is_leaf():
             return
-        map(self.visit, node.children)
+        map(self.visit, node.children[:])
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
         if node.actor_type not in self.components:
-            map(self.visit, node.children)
             return
         # Clone assignment to clone the arguments
         ca = node.clone()
@@ -190,6 +189,7 @@ class Flatten(object):
         node.parent.add_children(node.children)
         node.delete()
 
+
 class AppInfo(object):
     """docstring for AppInfo"""
     def __init__(self, script_name):
@@ -266,7 +266,7 @@ class CodeGen(object):
         print
         # self.printer.process(self.root)
         ##
-        # Expand components
+        # Expand local components
         #
 
         components = self.query(self.root, kind=ast.Component, maxdepth=1)
@@ -276,8 +276,7 @@ class CodeGen(object):
         expander = Expander(self.local_components)
         expander.visit(self.root)
         # All component definitions can now be removed
-        comps = self.query(self.root, kind=ast.Component)
-        for comp in comps:
+        for comp in components:
             comp.delete()
 
         ##
@@ -294,6 +293,7 @@ class CodeGen(object):
 
         ##
         # Resolve portmaps
+        # FIXME: Clean up this mess.
         portmaps = self.query(self.root, kind=ast.Portmap)
         outportmaps = [(p.inport.actor, p.inport.port, p.outport) for p in portmaps if type(p.inport) is ast.InternalPort]
         inportmaps = [(p.outport.actor, p.outport.port, p.inport) for p in portmaps if type(p.outport) is ast.InternalPort]
