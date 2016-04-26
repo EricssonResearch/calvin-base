@@ -23,7 +23,7 @@ from calvin.actor import actorport
 from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
 from calvin.actorstore.store import GlobalStore
-from calvin.utilities.security import Security
+from calvin.utilities.security import Security, security_needed_check
 from calvin.utilities import dynops
 import re
 
@@ -435,7 +435,7 @@ class Storage(object):
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
         self._add_node_index(node)
         # Store all actors on this node in storage
-        GlobalStore(node=node, security=Security(node)).export()
+        GlobalStore(node=node, security=Security(node) if security_needed_check() else None, verify=False).export()
 
     def _add_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()

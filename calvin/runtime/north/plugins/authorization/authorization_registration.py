@@ -66,6 +66,6 @@ def register_node_external(node):
                                       CalvinCB(_register_node_external_cb), 
                                       jwt_request)
 
-def _register_node_external_cb(reply):
-    if reply.status != 200:
+def _register_node_external_cb(status):
+    if not status or status.status != 200:
         _log.error("Node could not be registered for authorization")

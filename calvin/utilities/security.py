@@ -47,9 +47,12 @@ _log = get_logger(__name__)
 # Default timeout
 TIMEOUT=5
 
-_cert_conffile = _conf.get("security", "certificate_conf")
-_domain = _conf.get("security", "certificate_domain")
-_cert_conf = certificate.Config(_cert_conffile, _domain)
+try:
+    _cert_conffile = _conf.get("security", "certificate_conf")
+    _domain = _conf.get("security", "certificate_domain")
+    _cert_conf = certificate.Config(_cert_conffile, _domain)
+except:
+    _cert_conf = None
 
 def security_modules_check():
     if _conf.get("security","security_conf"):
@@ -123,8 +126,8 @@ class Security(object):
     def authenticate_subject(self):
         """Authenticate subject using the authentication procedure specified in config."""
         _log.debug("Security: authenticate_subject")
-        if not security_needed_check():
-            _log.debug("Security: authenticate_subject no security needed")
+        if not security_needed_check() or not self.subject:
+            _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
 
         if self.sec_conf['authentication']['procedure'] == "local":
@@ -213,17 +216,17 @@ class Security(object):
         return {key: [self.subject[key][i] for i, auth in enumerate(values) if auth] 
                 for key, values in self.auth.iteritems() if any(values)}
 
-    def check_security_policy(self, callback, actor_id=None, requires=None, decision_from_migration=None):
+    def check_security_policy(self, callback, actor_id=None, requires=None, signer=None, decision_from_migration=None):
         """Check if access is permitted for the actor by the security policy."""
         # Can't use id for application since it is not assigned when the policy is checked. 
         _log.debug("Security: check_security_policy")
         if self.sec_conf and "authorization" in self.sec_conf:
-            self.get_authorization_decision(callback, actor_id, requires, decision_from_migration)
+            self.get_authorization_decision(callback, actor_id, requires, signer, decision_from_migration)
             return
         # No security config, so access control is disabled.
         return callback(access_decision=True)
 
-    def get_authorization_decision(self, callback, actor_id=None, requires=None, decision_from_migration=None):
+    def get_authorization_decision(self, callback, actor_id=None, requires=None, signer=None, decision_from_migration=None):
         """Get authorization decision using the authorization procedure specified in config."""
         if decision_from_migration:
             try:
@@ -242,6 +245,8 @@ class Security(object):
         else:
             request = {}
             request["subject"] = self.get_authenticated_subject_attributes()
+            if signer is not None:
+                request["subject"].update(signer)
             request["resource"] = {"node_id": self.node.id}
             if requires is not None:
                 request["action"] = {"requires": requires}
@@ -251,7 +256,7 @@ class Security(object):
             if self.sec_conf['authorization']['procedure'] == "external":
                 if not HAS_JWT:
                     _log.error("Security: Install JWT to use external server as authorization method.\n" +
-                            "Note: NO AUTHORIZATION USED")
+                               "Note: NO AUTHORIZATION USED")
                     return False
                 _log.debug("Security: external authorization method chosen")
                 self.authorize_using_external_server(request, callback, actor_id)
@@ -440,36 +445,43 @@ class Security(object):
         return {'sign': sign_content, 'file': file_content}
 
     def verify_signature(self, file, flag):
-        """Verify the signature of the specified file of type flag."""
+        """
+        Verify the signature of the specified file of type flag.
+
+        A tuple (verified True/False, signer) is returned.
+        """
         content = Security.verify_signature_get_files(file)
         if content:
             return self.verify_signature_content(content, flag)
         else:
-            return False
+            return (False, None)
 
     def verify_signature_content(self, content, flag):
-        """Verify the signature of the content of type flag."""
+        """
+        Verify the signature of the content of type flag.
+
+        A tuple (verified True/False, signer) is returned.
+        """
         _log.debug("Security: verify %s signature of %s" % (flag, content))
         if not self.sec_conf:
             _log.debug("Security: no signature verification required: %s" % content['file'])
-            return True
+            return (True, None)
 
         if flag not in ["application", "actor"]:
             # TODO add component verification
             raise NotImplementedError
 
-        self.auth[flag + "_signer"] = [True]  # Needed to include the signer attribute in authorization requests.
+        signer = None
 
         if content is None or not content['sign']:
             _log.debug("Security: signature information missing")
-            self.subject[flag + "_signer"] = ["__unsigned__"]
-            return True  # True is returned to allow authorization request with the signer attribute '__unsigned__'.
+            signer = {flag + "_signer": ["__unsigned__"]}
+            return (True, signer)  # True is returned to allow authorization request with the signer attribute '__unsigned__'.
 
         if not HAS_OPENSSL:
             _log.error("Security: install OpenSSL to allow verification of signatures and certificates")
             _log.error("Security: verification of %s signature failed" % flag)
-            self.subject[flag + "_signer"] = ["__invalid__"]
-            return False
+            return (False, None)
 
         # If any of the signatures is verified correctly, True is returned.
         for cert_hash, signature in content['sign'].iteritems():
@@ -479,11 +491,11 @@ class Security(object):
                 with open(trusted_cert_path, 'rt') as f:
                     trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
                     try:
+                        signer = {flag + "_signer": [trusted_cert.get_issuer().CN]}  # The Common Name field for the issuer
                         # Verify signature
                         OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
                         _log.debug("Security: signature correct")
-                        self.subject[flag + "_signer"] = [trusted_cert.get_issuer().CN]  # The Common Name field for the issuer
-                        return True
+                        return (True, signer)
                     except Exception as e:
                         _log.debug("Security: OpenSSL verification error", exc_info=True)
                         continue
@@ -491,9 +503,4 @@ class Security(object):
                 _log.debug("Security: error opening one of the needed certificates", exc_info=True)
                 continue
         _log.error("Security: verification of %s signature failed" % flag)
-        self.subject[flag + "_signer"] = ["__invalid__"]
-        return False
-
-    def get_signer(self, flag):
-        """Return signer of type 'flag' (actor/application) if present."""
-        return self.subject[flag + "_signer"] if flag + "_signer" in self.subject else []
+        return (False, signer)

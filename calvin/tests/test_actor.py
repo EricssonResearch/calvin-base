@@ -90,7 +90,7 @@ def test_did_disconnect(actor, inport_ret_val, outport_ret_val, expected):
     if expected:
         actor.fsm.transition_to.assert_called_with(Actor.STATUS.READY)
     else:
-        assert not actor.fsm.transition_to.called
+        assert not (actor.fsm.transition_to.called and Actor.STATUS.READY in actor.fsm.transition_to.call_args[0])
 
 
 def test_enabled(actor):
@@ -129,7 +129,7 @@ def test_state(actor):
     correct_state = {
         '_component_members': set([actor.id]),
         '_deployment_requirements': [],
-        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name', 'credentials']),
+        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name', 'credentials', 'migration_info']),
         '_signature': None,
         'dump': False,
         'id': actor.id,

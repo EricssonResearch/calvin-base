@@ -717,7 +717,7 @@ class CalvinControl(object):
         self.tunnel_server = None
         self.tunnel_client = None
         self.metering = None
-        self.prp = None
+        self.prp = None  # TODO: change to self.node.prp?
 
         # Set routes for requests
         self.routes = [
@@ -1011,7 +1011,8 @@ class CalvinControl(object):
             actor_id = self.node.new(actor_type=data['actor_type'], args=data[
                                      'args'], deploy_args=data['deploy_args'])
             status = calvinresponse.OK
-        except:
+        except Exception as e:
+            _log.info(e)
             actor_id = None
             status = calvinresponse.INTERNAL_ERROR
         self.send_response(
@@ -1172,15 +1173,15 @@ class CalvinControl(object):
                     self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
                     return
                 app_info = data['app_info']
-                errors = [""]
-                warnings = [""]
+                errors = []
+                warnings = []
                 self.handle_deploy_cont(app_info, errors, warnings, handle, connection, data)
         except Exception as e:
             _log.exception("Deployer failed")
             self.send_response(handle, connection, json.dumps({'exception': str(e)}),
                                status=calvinresponse.INTERNAL_ERROR)
 
-    def handle_deploy_cont(self, app_info, errors, warnings, handle, connection, data):
+    def handle_deploy_cont(self, app_info, errors, warnings, handle, connection, data, security=None):
         try:
             if errors:
                 if any([e['reason'].startswith("401:") for e in errors]):
@@ -1194,8 +1195,7 @@ class CalvinControl(object):
             _log.analyze(self.node.id, "+ COMPILED", {'app_info': app_info, 'errors': errors, 'warnings': warnings})
             d = Deployer(deployable=app_info, deploy_info=data["deploy_info"] if "deploy_info" in data else None,
                          node=self.node, name=data["name"] if "name" in data else None,
-                         credentials=data["sec_credentials"] if "sec_credentials" in data else None,
-                         verify=data["check"] if "check" in data else True,
+                         security=security, verify=data["check"] if "check" in data else True,
                          cb=CalvinCB(self.handle_deploy_cb, handle, connection))
             _log.analyze(self.node.id, "+ Deployer instantiated", {})
             d.deploy()

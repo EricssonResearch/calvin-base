@@ -131,13 +131,15 @@ class Store(object):
 
     def _load_pymodule(self, name, path):
         if not os.path.isfile(path):
-            return None
+            return (None, None)
         pymodule = None
+        signer = None
         _log.debug("Store load_pymodule SECURITY %s" % str(self.sec))
         try:
             if self.sec:
                 _log.debug("Verify signature for %s actor" % name)
-                if not self.sec.verify_signature(path, "actor"):
+                verified, signer = self.sec.verify_signature(path, "actor")
+                if self.verify and not verified:
                     _log.debug("Failed verification of signature for %s actor" % name)
                     raise Exception("Actor security signature verification failed")
             pymodule = imp.load_source(name, path)
@@ -148,17 +150,17 @@ class Store(object):
         except Exception as e:
             _log.exception("Could not load python module")
         finally:
-            return pymodule
+            return (pymodule, signer)
 
 
     def _load_pyclass(self, name, path):
         if not os.path.isfile(path):
-            return None
-        pymodule = self._load_pymodule(name, path)
+            return (None, None)
+        pymodule, signer = self._load_pymodule(name, path)
         pyclass = pymodule and pymodule.__dict__.get(name, None)
         if not pyclass:
             _log.debug("No entry %s in %s" % (name, path))
-        return pyclass
+        return (pyclass, signer)
 
 
     def find_all_modules(self):
@@ -196,10 +198,11 @@ class Store(object):
 #
 class ActorStore(Store):
 
-    def __init__(self, security=None):
+    def __init__(self, security=None, verify=True):
         self.conf_paths_name = 'actor_paths'
         super(ActorStore, self).__init__()
         self.sec = security
+        self.verify = verify
         _log.debug("ActorStore init SECURITY %s" % str(self.sec))
         self.update()
 
@@ -210,12 +213,12 @@ class ActorStore(Store):
 
 
     def load_actor(self, actor_type, actor_path):
-        actor_class = self._load_pyclass(actor_type, actor_path)
+        actor_class, signer = self._load_pyclass(actor_type, actor_path)
         if actor_class:
             inports, outports = self._gather_ports(actor_class)
             actor_class.inport_names = inports
             actor_class.outport_names = outports
-        return actor_class
+        return actor_class, signer
 
 
     def lookup(self, qualified_name):
@@ -235,16 +238,16 @@ class ActorStore(Store):
         for path in self.paths_for_module(namespace):
             # Primitives has precedence over components
             actor_path = os.path.join(path, actor_type + '.py')
-            actor_class = self.load_actor(actor_type, actor_path)
+            actor_class, signer = self.load_actor(actor_type, actor_path)
             if actor_class:
-                return (True, True, actor_class)
+                return (True, True, actor_class, signer)
         for path in self.paths_for_module(namespace):
             actor_path = os.path.join(path, actor_type + '.comp')
             # TODO add credential verification of components
             comp = self.load_component(actor_type, actor_path)
             if comp:
-                return (True, False, comp)
-        return (False, False, None)
+                return (True, False, comp, None)
+        return (False, False, None, None)
 
 
     def _parse_docstring(self, class_):
@@ -399,7 +402,7 @@ class DocumentationStore(ActorStore):
 
 
     def actor_docs(self, actor_type):
-        found, is_primitive, actor = self.lookup(actor_type)
+        found, is_primitive, actor, signer = self.lookup(actor_type)
         if not found:
             return None
         if is_primitive:
@@ -611,8 +614,8 @@ class GlobalStore(ActorStore):
         Currently supports meta information on actors and full components
     """
 
-    def __init__(self, node=None, runtime=None, security=None):
-        super(GlobalStore, self).__init__(security)
+    def __init__(self, node=None, runtime=None, security=None, verify=True):
+        super(GlobalStore, self).__init__(security, verify)
         self.node = node  # Used inside runtime
         # FIXME this is not implemented
         self.rt = runtime  # Use Control API from outside runtime
@@ -674,7 +677,7 @@ class GlobalStore(ActorStore):
         self.qualified_actor_list = []
         self._collect()
         for a in self.qualified_actor_list:
-            found, is_primitive, actor = self.lookup(a)
+            found, is_primitive, actor, signer = self.lookup(a)
             if not found:
                 continue
             # Currently only args and requires differences that would generate multiple hits
@@ -687,7 +690,7 @@ class GlobalStore(ActorStore):
                         'inports': [p[0] for p in inputs],
                         'outports': [p[0] for p in outputs],
                         'requires': actor.requires if hasattr(actor, 'requires') else [],
-                        'signer': self.sec.get_signer('actor')}
+                        'signer': signer}
             else:
                 desc = {'is_primitive': is_primitive, 
                         'actor_type': a,

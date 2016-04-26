@@ -560,23 +560,20 @@ class Deployer(object):
     produce a running calvin application.
     """
 
-    def __init__(self, deployable, node, name=None, deploy_info=None, credentials=None, verify=True, cb=None):
+    def __init__(self, deployable, node, name=None, deploy_info=None, security=None, verify=True, cb=None):
         super(Deployer, self).__init__()
         self.deployable = deployable
         self.deploy_info = deploy_info
-        self.credentials = credentials
-        self.sec = Security(node)
-        self.sec.set_subject(self.credentials)
-        # TODO: authenticate_subject should also be async and have a callback.
-        self.sec.authenticate_subject()
+        self.sec = security
         self.actorstore = ActorStore(security=self.sec)
         self.actor_map = {}
         self.actor_connections = {}
         self.node = node
-        self.verify = verify
+        #self.verify = verify  # FIXME: what is this used for?
         self.cb = cb
+        self._verified_actors = {}
         self._deploy_counter = 0
-        self._deploy_finalized = False
+        self._instantiate_counter = 0
         self._unhandled = {}
         if name:
             self.name = name
@@ -620,62 +617,74 @@ class Deployer(object):
         return self.deploy_info['requirements'][name] if (self.deploy_info and 'requirements' in self.deploy_info
                                                             and name in self.deploy_info['requirements']) else []
 
-    def instantiate(self, actor_name, actor_type, argd, signature=None, cb=None):
+    def verify(self, actor_name, info, cb=None):
+        """
+        Verify actor in actor store.
+          - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
+          - 'info' is information about the actor
+        """
+        actor_type = info['actor_type']
+        found, is_primitive, actor_def, signer = self.actorstore.lookup(actor_type)
+        if not found or not is_primitive:
+            _log.debug("Not known actor type: %s" % actor_type)
+            self.resolve_remote(actor_name, info, cb)
+        else:
+            info['signer'] = signer
+            info['requires'] = actor_def.requires if hasattr(actor_def, "requires") else []
+            self._verified_actors[actor_name] = info
+            if cb:
+                cb()
+
+    def check_requires_and_sec_policy(self, actor_name, info, cb=None):
+        """
+        Check requirements and security policy for actor.
+          - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
+          - 'info' is information about the actor
+        """
+        try:
+            if not 'shadow_actor' in info:
+                # Check if node has the capabilities required by the actor.
+                self.node.am.check_requirements(info['requires'])
+                if self.sec is not None:
+                    # Check if access is permitted for the actor by the security policy.
+                    # Will continue directly with _instantiate_cont() if authorization is not enabled.
+                    self.sec.check_security_policy(callback=CalvinCB(self.instantiate, 
+                                                                     actor_name, info, cb=cb),
+                                                   requires=['runtime'] + info['requires'], signer=info['signer'])
+                    return
+            self.instantiate(actor_name, info, cb=cb)
+        except Exception:
+            # Still want to create shadow actor.
+            info['shadow_actor'] = True
+            self.instantiate(actor_name, info, cb=cb)
+
+    def instantiate(self, actor_name, info, access_decision=None, cb=None):
         """
         Instantiate an actor.
           - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
-          - 'actor_type' is the actor class to instantiate
-          - 'argd' is a dictionary with <actor_name>:<argdict> pairs
-          - 'signature' is the GlobalStore actor-signature to lookup the actor
-        """
+          - 'info' is information about the actor
+             info['args'] is a dictionary of key-value arguments for this instance
+             info['signature'] is the GlobalStore actor-signature to lookup the actor
+          - 'access_decision' is a boolean indicating if access is permitted
+        """    
         try:
-            _log.analyze(self.node.id, "+ SECURITY", {'sec': str(self.sec)})
-            found, is_primitive, actor_def = self.actorstore.lookup(actor_type)
-            if not found or not is_primitive:
-                raise Exception("Not known actor type: %s" % actor_type)
-            # Check availability of calvinsys subsystems before checking security policies.
-            if hasattr(actor_def, "requires"):
-                for actor_req in actor_def.requires:
-                    if not self.node.calvinsys().has_capability(actor_req):
-                        # FIXME: still want to create shadow actor.
-                        raise Exception("%s requires %s" % (actor_name, actor_req))
-            deploy_req = self.get_req(actor_name)
-            # Check the runtime and calvinsys execution access rights.
-            # Will continue directly with _instantiate_cont() if authorization is not enabled.
-            self.sec.check_security_policy(callback=CalvinCB(self._instantiate_cont, actor_name, actor_type, 
-                                                             argd, deploy_req, signature, org_cb=cb),
-                                           requires=['runtime'] + 
-                                           (actor_def.requires if hasattr(actor_def, "requires") else []))
-        except Exception:
-            if cb:
-                cb(errors=True, actor_name=actor_name)
-
-    def _instantiate_cont(self, actor_name, actor_type, argd, req, signature=None, access_decision=None, org_cb=None):
-        errors = False
-        try:
-            actor_id = self.instantiate_primitive(actor_name, actor_type, argd, req, signature, access_decision)
+            info['args']['name'] = actor_name
+            actor_id = self.node.am.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'], 
+                                        subject_attributes=self.sec.subject if self.sec else None, 
+                                        access_decision=access_decision, shadow_actor='shadow_actor' in info)
             if not actor_id:
-                raise Exception(
-                    "Could not instantiate actor of type: %s" % actor_type)
+                raise Exception("Could not instantiate actor %s" % actor_name)
+            deploy_req = self.get_req(actor_name)
+            if deploy_req:
+                self.node.am.actors[actor_id].requirements_add(deploy_req, extend=False)
             self.actor_map[actor_name] = actor_id
             self.node.app_manager.add(self.app_id, actor_id)
-        except Exception:
-            errors = True
+        except Exception as e:
+            # FIXME: what should happen here?
+            raise e
         finally:
-            if org_cb:
-                org_cb(errors=errors, actor_name=actor_name)
-
-    def instantiate_primitive(self, actor_name, actor_type, args, req=None, signature=None, access_decision=None):
-        # name is <namespace>:<identifier>, e.g. app:src, or app:component:src
-        # args is a **dictionary** of key-value arguments for this instance
-        # signature is the GlobalStore actor-signature to lookup the actor
-        args['name'] = actor_name
-        # TODO: use authenticated sec object as argument instead of credentials?
-        actor_id = self.node.am.new(actor_type=actor_type, args=args, signature=signature, credentials=self.credentials, 
-                                    access_decision=access_decision)
-        if req:
-            self.node.am.actors[actor_id].requirements_add(req, extend=False)
-        return actor_id
+            if cb:
+                cb()
 
     def connectid(self, connection):
         src_actor, src_port, dst_actor, dst_port = connection
@@ -709,7 +718,8 @@ class Deployer(object):
             return
         desc = comp_name_desc[1]
         try:
-            # List of (found, is_primitive, info)
+            # List of (found, is_primitive, info, signer)
+            # TODO: call verify() instead
             actor_types = [self.actorstore.lookup(actor['actor_type'])
                                 for actor in desc['component']['structure']['actors'].values()]
         except KeyError:
@@ -719,7 +729,6 @@ class Deployer(object):
             comp_name_desc[1]['shadow_actor'] = True
             return
         except Exception as e:
-            # FIXME Handled when security verification failed
             _log.exception("select_actor desc: %s" % desc)
             raise e
         if all([a[0] and a[1] for a in actor_types]):
@@ -733,53 +742,41 @@ class Deployer(object):
         kwargs['priority'][comp_name_desc[0]].append(comp_name_desc)
         comp_name_desc[1]['shadow_component'] = actor_types
 
-    def resolve_remote(self, deployables):
+    def resolve_remote(self, actor_name, info, cb=None):
+        # FIXME: no list needed since it is only done for one actor
         all_desc_iters = dynops.List()
         store = GlobalStore(node=self.node)
-        for actor_name, info in deployables.iteritems():
-            desc_iter = store.global_lookup_iter(info['signature'], info['args'].keys())
-            all_desc_iters.append((actor_name, desc_iter), trigger_iter=desc_iter)
+        desc_iter = store.global_lookup_iter(info['signature'], info['args'].keys())
+        all_desc_iters.append((actor_name, desc_iter), trigger_iter=desc_iter)
         all_desc_iters.final()
         collect_desc_iter = dynops.Collect(all_desc_iters).set_name("collected_desc")
         select_iter = dynops.Map(self.select_actor, collect_desc_iter, done=False,
-                                                         priority={k:[] for k in self.deployable['actors'].keys()},
-                                                         eager=True).set_name("select_actor")
-        select_iter.set_cb(self.deploy_unhandled_actors, select_iter)
-        self.deploy_unhandled_actors(select_iter)
+                                 priority={k:[] for k in self.deployable['actors'].keys()},
+                                 eager=True).set_name("select_actor")
+        select_iter.set_cb(self.deploy_unhandled_actor, select_iter, cb)
+        self.deploy_unhandled_actor(select_iter, cb)
 
-    def deploy_unhandled_actors(self, comp_name_desc):
+    def deploy_unhandled_actor(self, comp_name_desc, cb=None):
         while True:
             try:
                 name, desc = comp_name_desc.next()
                 _log.analyze(self.node.id, "+", {'name': name, 'desc': desc}, tb=True)
             except StopIteration:
-                # Done. _deploy_finalize() is called from _deploy_unhandled_actors_cont()
                 return
-                #if self._deploy_finalized:
-                #    return
-                #self.group_components()
-                #_log.analyze(self.node.id, "+ DONE", {'deployable': self.deployable, 'components': self.components})
-                #self._deploy_finalize()
-                #return
             except dynops.PauseIteration:
                 return
             if 'shadow_actor' in desc:
                 _log.analyze(self.node.id, "+ SHADOW ACTOR", {'name': name})
-                # It was a normal primitive shadow actor, just check security policy and instantiate.
-                req = self.get_req(name)
+                # It was a normal primitive shadow actor, just add to list of verified actors.
                 info = self.deployable['actors'][name]
-                # Do we need to check security policy again here or just call _instantiate_cont()?
-                self.sec.check_security_policy(callback=CalvinCB(self._instantiate_cont, name, info['actor_type'], 
-                                                                 info['args'], req, info['signature'], 
-                                                                 org_cb=CalvinCB(self._deploy_unhandled_actors_cont)),
-                                               requires=['runtime'] + desc['requires'])
+                info['shadow_actor'] = True
+                self._verified_actors[name] = info
             elif 'shadow_component' in desc:
                 _log.analyze(self.node.id, "+ SHADOW COMPONENT", {'name': name})
                 # A component that needs to be broken up into individual primitive actors
-                # First get the info and remove the component
+                # First, get the component requirements and info
                 req = self.get_req(name)
                 info = self.deployable['actors'][name]
-                self.deployable['actors'].pop(name)
                 # Then add the new primitive actors
                 for actor_name, actor_desc in desc['component']['structure']['actors'].iteritems():
                     args = {k: v[1] if v[0] == 'VALUE' else info['args'][v[1]] for k, v in actor_desc['args'].iteritems()}
@@ -790,10 +787,10 @@ class Deployer(object):
                                  'inports': inports[:],
                                  'outports': outports[:]}
                     sign = GlobalStore.actor_signature(sign_desc)
-                    self.deployable['actors'][name + ":" + actor_name] = {'args': args,
-                                                                          'actor_type': actor_desc['actor_type'],
-                                                                          'signature_desc': sign_desc,
-                                                                          'signature': sign}
+                    self._verified_actors[name + ":" + actor_name] = {'args': args,
+                                                                      'actor_type': actor_desc['actor_type'],
+                                                                      'signature_desc': sign_desc,
+                                                                      'signature': sign}
                     # Replace component connections with actor connection
                     #   outports
                     comp_outports = [(c['dst_port'], c['src_port']) for c in desc['component']['structure']['connections']
@@ -821,42 +818,29 @@ class Deployer(object):
                                 name + ":" + actor_name + "." + connection['src_port'], []).append(
                                     name + ":" + connection['dst'] + "." + connection['dst_port'])
                     _log.analyze(self.node.id, "+ ADDED PORTS", {'connections': self.deployable['connections']})
-                    # Check security policy and instantiate.
-                    self.sec.check_security_policy(callback=CalvinCB(self._instantiate_cont, name + ":" + actor_name, 
-                                                                     actor_desc['actor_type'], args, req, sign, 
-                                                                     org_cb=CalvinCB(self._deploy_unhandled_actors_cont)),
-                                                   requires=['runtime'] + actor_desc['requires'])
-
-    def _deploy_unhandled_actors_cont(self, errors=False, actor_name=None):
-        # FIXME: need to check if all unhandled actors have been handled before calling _deploy_finalize(). Use dynops?
-        # FIXME: actor is already enabled when did_connect() is called. Is _deploy_finalize() called to early?
-        self.group_components()
-        _log.analyze(self.node.id, "+ DONE", {'deployable': self.deployable, 'components': self.components})
-        self._deploy_finalize()
+                self.group_components()
+            if cb:
+                cb()
 
     def deploy(self):
-        """
-        Instantiate actors and link them together.
-        """
+        """Verify actors, instantiate and link them together."""
         if not self.deployable['valid']:
             raise Exception("Deploy information is not valid")
 
         for actor_name, info in self.deployable['actors'].iteritems():
-            self.instantiate(actor_name, info['actor_type'], info['args'], signature=info['signature'], cb=CalvinCB(self._deploy_cont))
+            self.verify(actor_name, info, cb=CalvinCB(self._deploy_instantiate))
 
-    def _deploy_cont(self, errors=False, actor_name=None):
-        if errors:
-            self._unhandled[actor_name] = self.deployable['actors'][actor_name]
+    def _deploy_instantiate(self):
         self._deploy_counter += 1
         if self._deploy_counter < len(self.deployable['actors']):
             return
-        if self._unhandled:
-            _log.analyze(self.node.id, "+ UNHANDLED", {'unhandled': self._unhandled})
-            self.resolve_remote(self._unhandled)
-            return
-        self._deploy_finalize()
+        for actor_name, info in self._verified_actors.iteritems():
+            self.check_requires_and_sec_policy(actor_name, info, cb=CalvinCB(self._deploy_finalize))
 
     def _deploy_finalize(self):
+        self._instantiate_counter += 1
+        if self._instantiate_counter < len(self._verified_actors):
+            return
         for component_name, actor_names in self.components.iteritems():
             actor_ids = [self.actor_map[n] for n in actor_names]
             for actor_id in actor_ids:
@@ -873,8 +857,6 @@ class Deployer(object):
                 dst_actor, dst_port = dst.split('.')
                 c = (src_actor, src_port, dst_actor, dst_port)
                 self.connectid(c)
-
-        self._deploy_finalized = True
 
         self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False,
                                        cb=CalvinCB(self.cb, deployer=self))

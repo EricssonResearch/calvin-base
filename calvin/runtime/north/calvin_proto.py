@@ -237,8 +237,7 @@ class CalvinProto(CalvinCBClass):
     def actor_new_handler(self, payload):
         """ Peer request new actor with state and connections """
         _log.analyze(self.rt_id, "+", payload, tb=True)
-        # TODO: access_decision could be included in payload in a smart migration. 
-        #       Else, get actor_signer and requires list from actor store.
+        # TODO: move this to actor manager
         migration_info = payload['state']['actor_state'].get('migration_info', None)
         actor_id = payload['state']['actor_state'].get('id', None)
         self.sec = Security(self.node)
@@ -250,30 +249,29 @@ class CalvinProto(CalvinCBClass):
             self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
                                            actor_id=actor_id, decision_from_migration=migration_info)
         else:
-            found, is_primitive, actor_def = ActorStore(security=self.sec).lookup(payload['state']['actor_type'])
-            if not found or not is_primitive:
-                # FIXME: still want to create shadow actor.
-                raise Exception("Not known actor type: %s" % actor_type)
-            # Check availability of calvinsys subsystems before checking security policies.
-            if hasattr(actor_def, "requires"):
-                for actor_req in actor_def.requires:
-                    if not self.node.calvinsys().has_capability(actor_req):
-                        # FIXME: still want to create shadow actor.
-                        raise Exception("%s requires %s" % (actor_name, actor_req))
-            # Check the runtime and calvinsys execution access rights.
-            # Will continue directly with _actor_new_handler_cont() if authorization is not enabled.
-            self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
-                                           requires=['runtime'] + 
-                                           (actor_def.requires if hasattr(actor_def, "requires") else []))
+            found, is_primitive, actor_def, signer = ActorStore(security=self.sec).lookup(payload['state']['actor_type'])
+            try:
+                if not found or not is_primitive:
+                    raise Exception("Not known actor type: %s" % actor_type)
+                requirements = actor_def.requires if hasattr(actor_def, "requires") else []
+                # Check if node has the capabilities required by the actor.
+                self.node.am.check_requirements(requirements)
+                # Check if access is permitted for the actor by the security policy.
+                # Will continue directly with _actor_new_handler_cont() if authorization is not enabled.
+                self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
+                                               requires=['runtime'] + requirements, signer=signer)
+            except Exception:
+                # Still want to create shadow actor.
+                self._actor_new_handler_cont(payload, shadow_actor=True)
 
-    def _actor_new_handler_cont(self, payload, access_decision=None):
+    def _actor_new_handler_cont(self, payload, access_decision=None, shadow_actor=False):
         # TODO: use authenticated sec object as argument instead of credentials in the actor_state?
         self.node.am.new(payload['state']['actor_type'],
                          None,
                          payload['state']['actor_state'],
                          payload['state']['prev_connections'],
                          callback=CalvinCB(self._actor_new_handler_reply, payload),
-                         access_decision=access_decision)
+                         access_decision=access_decision, shadow_actor=shadow_actor)
 
     def _actor_new_handler_reply(self, payload, status, **kwargs):
         """ Potentially created actor, reply to requesting node """

@@ -45,6 +45,7 @@ rt1_id = None
 rt2_id = None
 rt3_id = None
 test_script_dir = None
+
 deploy_attr = ['node', 'attr', 'script','reqs', 'check', 'credentials', 'signer']
 DeployArgsTuple = namedtuple('DeployArgs', deploy_attr)
 def DeployArgs(**kwargs):
@@ -164,7 +165,7 @@ class TestDeployScript(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy1.calvin"), attr=None,
                                 reqs=test_script_dir+"test_deploy1.deployjson",
-                                check=True, credentials=None, signer=None)
+                                check=True)
         result = {}
         try:
             result = deploy_app(args)
@@ -188,7 +189,7 @@ class TestDeployScript(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy2.calvin"), attr=None,
                                 reqs=test_script_dir+"test_deploy2.deployjson",
-                                check=True, credentials=None, signer=None)
+                                check=True)
         result = {}
         try:
             result = deploy_app(args)
@@ -215,7 +216,7 @@ class TestDeployScript(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy3.calvin"), attr=None,
                                 reqs=test_script_dir+"test_deploy3.deployjson",
-                                check=True, credentials=None, signer=None)
+                                check=True)
         result = {}
         try:
             result = deploy_app(args)
@@ -344,7 +345,7 @@ class TestDeployShadow(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow1.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -378,7 +379,7 @@ class TestDeployShadow(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow2.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -412,7 +413,7 @@ class TestDeployShadow(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow3.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow2.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -441,7 +442,7 @@ class TestDeployShadow(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadowcomponent1.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadowcomponent1.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -539,9 +540,9 @@ class TestSepDeployShadow(unittest.TestCase):
         for p in multiprocessing.active_children():
             p.terminate()
         # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
-        os.system("pkill -9 -f -l 'csruntime -n %s -p 5000'" % (ip_addr,))
-        os.system("pkill -9 -f -l 'csruntime -n %s -p 5001'" % (ip_addr,))
-        os.system("pkill -9 -f -l 'csruntime -n %s -p 5002'" % (ip_addr,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5000'" % (ip_addr,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5001'" % (ip_addr,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5002'" % (ip_addr,))
         time.sleep(0.2)
 
     def verify_storage(self):
@@ -619,7 +620,7 @@ class TestSepDeployShadow(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow1.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -658,7 +659,7 @@ class TestSepDeployShadow(unittest.TestCase):
         from calvin.Tools.cscontrol import control_deploy as deploy_app
         args = DeployArgs(node='http://%s:5004' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=None, check=False, credentials=None, signer=None)
+                                reqs=None, check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -716,7 +717,7 @@ class TestSepDeployShadow(unittest.TestCase):
         args = DeployArgs(node='http://%s:5004' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow6.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -877,7 +878,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow4.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -912,7 +913,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow4.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -958,7 +959,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow4.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow4.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -1024,7 +1025,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_shadow5.calvin"), attr=None,
                                 reqs=test_script_dir+"test_shadow4.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)
@@ -1091,7 +1092,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         args = DeployArgs(node='http://%s:5003' % ip_addr,
                           script=open(test_script_dir+"test_deploy1.calvin"), attr=None,
                                 reqs=test_script_dir+"test_deploy4.deployjson",
-                                check=False, credentials=None, signer=None)
+                                check=False)
         result = {}
         try:
             result = deploy_app(args)

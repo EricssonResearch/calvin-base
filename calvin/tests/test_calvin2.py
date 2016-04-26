@@ -566,15 +566,15 @@ class TestAppLifeCycle(CalvinTestBase):
         for a in range(0, 20):
             all_removed = None
             try:
-                self.assertIsNone(request_handler.get_actor(self.rt1, src))
-                self.assertIsNone(request_handler.get_actor(self.rt1, csum))
-                self.assertIsNone(request_handler.get_actor(self.rt1, snk))
-                self.assertIsNone(request_handler.get_actor(self.rt2, src))
-                self.assertIsNone(request_handler.get_actor(self.rt2, csum))
-                self.assertIsNone(request_handler.get_actor(self.rt2, snk))
-                self.assertIsNone(request_handler.get_actor(self.rt3, src))
-                self.assertIsNone(request_handler.get_actor(self.rt3, csum))
-                self.assertIsNone(request_handler.get_actor(self.rt3, snk))
+                self.assertFalse(request_handler.get_actor(self.rt1, src))
+                self.assertFalse(request_handler.get_actor(self.rt1, csum))
+                self.assertFalse(request_handler.get_actor(self.rt1, snk))
+                self.assertFalse(request_handler.get_actor(self.rt2, src))
+                self.assertFalse(request_handler.get_actor(self.rt2, csum))
+                self.assertFalse(request_handler.get_actor(self.rt2, snk))
+                self.assertFalse(request_handler.get_actor(self.rt3, src))
+                self.assertFalse(request_handler.get_actor(self.rt3, csum))
+                self.assertFalse(request_handler.get_actor(self.rt3, snk))
             except AssertionError as e:
                 print a, e
                 all_removed = e
@@ -585,9 +585,9 @@ class TestAppLifeCycle(CalvinTestBase):
         if all_removed:
             raise all_removed
 
-        self.assertIsNone(request_handler.get_application(self.rt1, d.app_id))
-        self.assertIsNone(request_handler.get_application(self.rt2, d.app_id))
-        self.assertIsNone(request_handler.get_application(self.rt3, d.app_id))
+        self.assertFalse(request_handler.get_application(self.rt1, d.app_id))
+        self.assertFalse(request_handler.get_application(self.rt2, d.app_id))
+        self.assertFalse(request_handler.get_application(self.rt3, d.app_id))
 
     def testAppDestructionAllRemote(self):
         _log.analyze("TESTRUN", "+", {})
@@ -623,14 +623,14 @@ class TestAppLifeCycle(CalvinTestBase):
         for a in range(20):
             all_removed = None
             try:
-                self.assertIsNone(request_handler.get_actor(self.rt1, csum))
-                self.assertIsNone(request_handler.get_actor(self.rt1, snk))
-                self.assertIsNone(request_handler.get_actor(self.rt2, src))
-                self.assertIsNone(request_handler.get_actor(self.rt2, csum))
-                self.assertIsNone(request_handler.get_actor(self.rt2, snk))
-                self.assertIsNone(request_handler.get_actor(self.rt3, src))
-                self.assertIsNone(request_handler.get_actor(self.rt3, csum))
-                self.assertIsNone(request_handler.get_actor(self.rt3, snk))
+                self.assertFalse(request_handler.get_actor(self.rt1, csum))
+                self.assertFalse(request_handler.get_actor(self.rt1, snk))
+                self.assertFalse(request_handler.get_actor(self.rt2, src))
+                self.assertFalse(request_handler.get_actor(self.rt2, csum))
+                self.assertFalse(request_handler.get_actor(self.rt2, snk))
+                self.assertFalse(request_handler.get_actor(self.rt3, src))
+                self.assertFalse(request_handler.get_actor(self.rt3, csum))
+                self.assertFalse(request_handler.get_actor(self.rt3, snk))
             except AssertionError as e:
                 print a, e
                 all_removed = e
@@ -641,9 +641,9 @@ class TestAppLifeCycle(CalvinTestBase):
         if all_removed:
             raise all_removed
 
-        self.assertIsNone(request_handler.get_application(self.rt1, d.app_id))
-        self.assertIsNone(request_handler.get_application(self.rt2, d.app_id))
-        self.assertIsNone(request_handler.get_application(self.rt3, d.app_id))
+        self.assertFalse(request_handler.get_application(self.rt1, d.app_id))
+        self.assertFalse(request_handler.get_application(self.rt2, d.app_id))
+        self.assertFalse(request_handler.get_application(self.rt3, d.app_id))
 
 
 @pytest.mark.essential

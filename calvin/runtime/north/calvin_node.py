@@ -181,7 +181,7 @@ class Node(object):
         # TODO requirements should be input to am.new
         actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
                         signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None,
-                        credentials=deploy_args['credentials'] if deploy_args and 'credentials' in deploy_args else None)
+                        subject_attributes=deploy_args['credentials'] if deploy_args and 'credentials' in deploy_args else None)
         if deploy_args:
             app_id = deploy_args['app_id']
             if 'app_name' not in deploy_args:

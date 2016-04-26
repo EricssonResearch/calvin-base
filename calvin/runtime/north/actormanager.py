@@ -20,7 +20,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
-from calvin.utilities.security import Security
+from calvin.utilities.security import Security, security_needed_check
 from calvin.actor.actor import ShadowActor
 
 _log = get_logger(__name__)
@@ -45,7 +45,7 @@ class ActorManager(object):
         raise Exception("Actor '{}' not found".format(actor_id))
 
     def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None,
-            signature=None, credentials=None, access_decision=None):
+            signature=None, subject_attributes=None, access_decision=None, shadow_actor=False):
         """
         Instantiate an actor of type 'actor_type'. Parameters are passed in 'args',
         'name' is an optional parameter in 'args', specifying a human readable name.
@@ -63,9 +63,9 @@ class ActorManager(object):
 
         try:
             if state:
-                a = self._new_from_state(actor_type, state, access_decision)
+                a = self._new_from_state(actor_type, state, access_decision, shadow_actor)
             else:
-                a = self._new(actor_type, args, credentials, access_decision)
+                a = self._new(actor_type, args, subject_attributes, access_decision, shadow_actor)
         except Exception as e:
             _log.exception("Actor creation failed")
             raise(e)
@@ -93,16 +93,22 @@ class ActorManager(object):
             else:
                 return a.id
 
-    def _new_actor(self, actor_type, actor_id=None, credentials=None, access_decision=None):
+    def _new_actor(self, actor_type, actor_id=None, subject_attributes=None, access_decision=None, shadow_actor=False):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
-        if credentials is not None:
+        if security_needed_check():
             sec = Security(self.node)
-            sec.set_subject(credentials)
-            sec.authenticate_subject()
+            sec.set_subject(subject_attributes)
+            sec.authenticate_subject()  # TODO: remove this when new code for authentication has been added
         else:
             sec = None
 
-        (found, is_primitive, class_) = ActorStore(security=sec).lookup(actor_type)
+        if shadow_actor:
+            a = ShadowActor(actor_type, actor_id=actor_id)
+            a.set_credentials(subject_attributes, security=sec)
+            a._calvinsys = self.node.calvinsys()
+            return a
+
+        (found, is_primitive, class_, signer) = ActorStore(security=sec).lookup(actor_type)
         if not found:
             # Here assume a primitive actor, now become shadow actor
             _log.analyze(self.node.id, "+ NOT FOUND CREATE SHADOW ACTOR", {'class': class_})
@@ -120,7 +126,7 @@ class ActorManager(object):
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
             raise(e)
         try:
-            a.set_credentials(credentials, security=sec)
+            a.set_credentials(subject_attributes, security=sec)
             a._calvinsys = self.node.calvinsys()
             if sec:
                 if isinstance(access_decision, tuple):
@@ -133,14 +139,15 @@ class ActorManager(object):
             _log.exception("Catched new from state")
             _log.analyze(self.node.id, "+ FAILED REQS CREATE SHADOW ACTOR", {'class': class_})
             a = ShadowActor(actor_type, actor_id=actor_id)
-            a.set_credentials(credentials, security=sec)
+            a.set_credentials(subject_attributes, security=sec)
             a._calvinsys = self.node.calvinsys()
         return a
 
-    def _new(self, actor_type, args, credentials=None, access_decision=None):
+    def _new(self, actor_type, args, subject_attributes=None, access_decision=None, shadow_actor=False):
         """Return an initialized actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type, credentials=credentials, access_decision=access_decision)
+            a = self._new_actor(actor_type, subject_attributes=subject_attributes, 
+                                access_decision=access_decision, shadow_actor=shadow_actor)
             # Now that required APIs are attached we can call init() which may use the APIs
             human_readable_name = args.pop('name', '')
             a.name = human_readable_name
@@ -152,7 +159,7 @@ class ActorManager(object):
             raise(e)
         return a
 
-    def _new_from_state(self, actor_type, state, access_decision):
+    def _new_from_state(self, actor_type, state, access_decision, shadow_actor=False):
         """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
             _log.analyze(self.node.id, "+", state)
@@ -163,7 +170,8 @@ class ActorManager(object):
                 state['_managed'].remove('migration_info')
             except:
                 pass
-            a = self._new_actor(actor_type, actor_id=state['id'], credentials=credentials, access_decision=access_decision)
+            a = self._new_actor(actor_type, actor_id=state['id'], subject_attributes=credentials, 
+                                access_decision=access_decision, shadow_actor=shadow_actor)
             if '_shadow_args' in state:
                 # We were a shadow, do a full init
                 args = state.pop('_shadow_args')
@@ -212,6 +220,12 @@ class ActorManager(object):
             self._actor_not_found(actor_id)
 
         self.actors[actor_id].disable()
+
+    def check_requirements(self, requirements):
+        """Checks if node has the capabilities required by the actor."""
+        for req in requirements:
+            if not self.node.calvinsys().has_capability(req):
+                raise Exception("Actor requires %s" % req)
 
     def update_requirements(self, actor_id, requirements, extend=False, move=False, 
                             authorization_check=False, callback=None):

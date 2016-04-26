@@ -139,8 +139,10 @@ class PolicyDecisionPoint(object):
             # If the policy decisions for all requirements are the same, respond with that decision.
             if all(x == decisions[0] for x in decisions):
                 callback(authz_response=self.create_response(decisions[0], obligations))
+                return
             else:
                 callback(authz_response=self.create_response("indeterminate", []))
+                return
         callback(authz_response=self.create_response(*self.combined_policy_decision(request, pip)))
 
     def combined_policy_decision(self, request, pip):

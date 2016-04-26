@@ -22,7 +22,7 @@ import argparse
 from calvin.csparser.parser import calvin_parser
 from calvin.csparser.checker import check
 from calvin.csparser.analyzer import generate_app_info
-from calvin.utilities.security import Security
+from calvin.utilities.security import Security, security_needed_check
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 
@@ -31,15 +31,14 @@ _log = get_logger(__name__)
 
 def compile(source_text, filename='', content=None, credentials=None, verify=True, node=None, cb=None):
     # Steps taken:
-    # 1) Authenticate subject, verify signature and check security policy when credentials supplied
+    # 1) Authenticate subject, verify signature and check security policy if security is enabled
     # 2) parser .calvin file -> IR. May produce syntax errors/warnings
     # 3) checker IR -> IR. May produce syntax errors/warnings
     # 4) analyzer IR -> app. Should not fail. Sets 'valid' property of IR to True/False
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
     errors = [] # TODO: fill in something meaningful
     warnings = []
-    if credentials:
-        _log.debug("Check credentials...")
+    if node is not None and security_needed_check():
         sec = Security(node)
         sec.set_subject(credentials)
         # TODO: authenticate_subject should also be async and have a callback.
@@ -52,9 +51,10 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
                 return
             else:
                 return deployable, errors, warnings
-        if not sec.verify_signature_content(content, "application"):
+        verified, signer = sec.verify_signature_content(content, "application")
+        if not verified:
             # Verification not OK if sign or cert not OK.
-            _log.error("Check credentials...failed application verification")
+            _log.error("Failed application verification")
             # This error reason is detected in calvin control and gives proper REST response
             errors.append({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None})
             if cb:
@@ -62,11 +62,15 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
                 return
             else:
                 return deployable, errors, warnings
-        sec.check_security_policy(callback=CalvinCB(_compile_cont, source_text, filename, verify, org_cb=cb))
+        sec.check_security_policy(callback=CalvinCB(_compile_cont, source_text, filename, verify, 
+                                                    security=sec, org_cb=cb), signer=signer)
     else:
-        _compile_cont(source_text, filename, verify, True, org_cb=cb)
+        if cb:
+            _compile_cont(source_text, filename, verify, True, org_cb=cb)
+        else:
+            return _compile_cont(source_text, filename, verify, True)
 
-def _compile_cont(source_text, filename, verify, access_decision, org_cb=None):
+def _compile_cont(source_text, filename, verify, access_decision, security=None, org_cb=None):
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
     errors = [] # TODO: fill in something meaningful
     warnings = []
@@ -92,7 +96,7 @@ def _compile_cont(source_text, filename, verify, access_decision, org_cb=None):
             deployable['valid'] = False
     _log.debug("Compiled %s, %s, %s" % (deployable, errors, warnings))
     if org_cb:
-        org_cb(deployable, errors, warnings)
+        org_cb(deployable, errors, warnings, security=security)
     else:
         return deployable, errors, warnings
 

@@ -247,7 +247,7 @@ class ActorTester(object):
 
     def instantiate_actors(self):
         for a in self.actor_names:
-            found, primitive, actorclass = self.store.lookup(a)
+            found, primitive, actorclass, signer = self.store.lookup(a)
             if found and primitive:
                 self.instantiate_actor(actorclass, a)
             elif found and not primitive:
