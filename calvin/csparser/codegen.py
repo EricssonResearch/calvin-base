@@ -126,10 +126,17 @@ class Flatten(object):
     """
     def __init__(self):
         self.stack = []
+        self.constants = {}
 
     @visitor.on('node')
     def visit(self, node):
         pass
+
+    @visitor.when(ast.Constant)
+    def visit(self, node):
+        key = node.children[0].ident
+        value_node = node.children[1]
+        self.constants[key] = value_node
 
     @visitor.when(ast.Node)
     def visit(self, node):
@@ -152,10 +159,14 @@ class Flatten(object):
             block = node.parent.parent
             key = value_node.ident
             if key not in block.args:
-                print "WARNING: Missing symbol '{}'".format(key)
+                # Check constants
+                if key not in self.constants:
+                    print "WARNING: Missing symbol '{}'".format(key)
+                    return
+                value = self.constants[key]
             else:
                 value = block.args[key]
-                node.replace_child(value_node, value)
+            node.replace_child(value_node, value)
 
     @visitor.when(ast.InternalPort)
     def visit(self, node):
