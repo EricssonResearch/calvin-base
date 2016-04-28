@@ -143,18 +143,15 @@ class ActorManager(object):
         try:
             _log.analyze(self.node.id, "+", state)
             subject_attributes = state.pop('subject_attributes', None)
-#            credentials = state.pop('credentials', None)
             migration_info = state.pop('migration_info', None)
             try:
                 state['_managed'].remove('subject_attributes')
-#                state['_managed'].remove('credentials')
                 state['_managed'].remove('migration_info')
             except:
                 pass
             if security_needed_check():
                 security = Security(self.node)
-                # TODO: authenticate_subject should also be async and have a callback.
-                self.sec.set_subject_attributes(subject_attributes)
+                security.set_subject_attributes(subject_attributes)
             else:
                 security = None
             actor_def, signer = self.lookup_and_verify(actor_type, security)
