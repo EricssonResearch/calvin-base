@@ -340,7 +340,7 @@ class Actor(object):
         self._deployment_requirements = []
         self._signature = None
         self._component_members = set([self.id])  # We are only part of component if this is extended
-        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'credentials', 'migration_info'))
+        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'subject_attributes','migration_info'))
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
@@ -348,7 +348,7 @@ class Actor(object):
         self.migration_info = None
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._last_time_warning = 0.0
-        self.credentials = None
+        self.subject_attributes = None
         self.authorization_checks = None
 
         self.inports = {p: actorport.InPort(p, self) for p in self.inport_names}
@@ -364,30 +364,22 @@ class Actor(object):
                              disable_state_checks=disable_state_checks)
         self.metering.add_actor_info(self)
 
-    def set_credentials(self, credentials, security=None):
+    def set_subject_attributes(self, subject_attributes):
         """
-        Set the credentials the actor operates under.
-
-        This will trigger an authentication of the credentials.
-        Optionally an authenticated Security instance can be supplied,
-        to reduce the needed authentication processing.
+        Set the subject_attributes the actor operates under.
         """
-        _log.debug("actor.py: set_credentials: %s" % credentials)
+        _log.debug("actor.py: set_subject_attributes: %s" % subject_attributes)
         # TODO: change this when new authentication code has been added.
-        if credentials is None:
+        if subject_attributes is None:
             return
-        self.credentials = credentials
-        if security:
-            self.sec = security
-        else:
-            if self._calvinsys is not None:
-                self.sec = Security(self._calvinsys.get_node())
-                self.sec.set_subject(self.credentials)
-                self.sec.authenticate_subject()
+        self.subject_attributes = subject_attributes
+        if self._calvinsys is not None:
+            self.sec = Security(self._calvinsys.get_node())
+            self.sec.set_subject_attributes(self.subject_attributes)
 
-    def get_credentials(self):
-        _log.debug("actor.py: get_credentials: %s" % self.credentials)
-        return self.credentials
+    def get_subject_attributes(self):
+        _log.debug("actor.py: get_subject_attributes: %s" % self.subject_attributes)
+        return self.subject_attributes
 
     def set_authorization_checks(self, authorization_checks):
         self.authorization_checks = authorization_checks

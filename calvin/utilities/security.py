@@ -16,6 +16,7 @@
 
 import os
 import glob
+import json
 from datetime import datetime, timedelta
 try:
     import OpenSSL.crypto
@@ -109,44 +110,42 @@ class Security(object):
             truststore_dir = os.path.join(homefolder, ".calvin", "security", "trustStore")
             self.sec_conf['signature_trust_store'] = truststore_dir
         self.node = node
+        self.subject_attributes = {}
         self.subject = {}
         self.auth = {}
 
     def __str__(self):
-        return "Subject: %s\nAuth: %s" % (self.subject, self.auth)
+        return "Subject: %s:" % self.subject_attributes
 
-    def set_subject(self, subject):
+    def set_subject_attributes(self, subject_attributes):
         """Set subject attributes and mark them as unauthenticated"""
-        _log.debug("Security: set_subject %s" % subject)
-        if not isinstance(subject, dict):
+        _log.debug("Security: set_subject %s" % subject_attributes)
+        if not isinstance(subject_attributes, dict):
             return False
         # Make sure that all subject values are lists.
-        self.subject = {k: list(v) if isinstance(v, (list, tuple, set)) else [v]
-                            for k, v in subject.iteritems()}
-        # Set the corresponding values of self.auth to False to indicate that they are unauthenticated.
-        self.auth = {k: [False]*len(v) for k, v in self.subject.iteritems()}
+        self.subject_attributes = subject_attributes
 
-    def authenticate_subject(self):
+    def authenticate_subject(self, credentials):
         """Authenticate subject using the authentication procedure specified in config."""
         _log.debug("Security: authenticate_subject")
-        if not security_needed_check() or not self.subject:
+        if not security_needed_check():
             _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
 
         if self.sec_conf['authentication']['procedure'] == "local":
             _log.debug("Security: local authentication method chosen")
-            return self.authenticate_using_local_database()
+            return self.authenticate_using_local_database(credentials)
         if self.sec_conf['authentication']['procedure'] == "radius":
             if not HAS_PYRAD:
                 _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
                             "Note! NO AUTHENTICATION USED")
                 return False
             _log.debug("Security: Radius authentication method chosen")
-            return self.authenticate_using_radius_server()
+            return self.authenticate_using_radius_server(credentials)
         _log.debug("Security: No security config, so authentication disabled")
         return True
 
-    def authenticate_using_radius_server(self):
+    def authenticate_using_radius_server(self, credentials):
         """
         Authenticate a subject using a RADIUS server.
 
@@ -161,9 +160,9 @@ class Security(object):
                         dict=Dictionary(os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary"), 
                                         os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary.acc")))
             req=srv.CreateAuthPacket(code=pyrad.packet.AccessRequest,
-                        User_Name=self.subject['user'][0],
+                        User_Name=credentials['user'][0],
                         NAS_Identifier="localhost")
-            req["User-Password"]=req.PwCrypt(self.subject['password'][0])
+            req["User-Password"]=req.PwCrypt(credentials['password'][0])
             # FIXME is this over socket? then we should not block here
             reply=srv.SendPacket(req)
             _log.debug("Attributes returned by server:")
@@ -180,7 +179,7 @@ class Security(object):
         self.auth['user']=auth
         return any(auth)
 
-    def authenticate_using_local_database(self):
+    def authenticate_using_local_database(self, credentials):
         """
         Authenticate a subject against information stored in config.
 
@@ -190,34 +189,52 @@ class Security(object):
         This is primarily intended for testing purposes,
         since passwords aren't stored securely.
         """
-        if 'local_users' not in self.sec_conf['authentication']:
-            _log.debug("local_users not found in security_conf: %s" % self.sec_conf['authentication'])
+        if 'local_users_database_path' not in self.sec_conf['authentication']:
+            console.error("No user database path supplied")
             return False
-        # Verify users against stored passwords
-        # TODO expand with other subject types
-        d = self.sec_conf['authentication']['local_users']
-        if not ('user' in self.subject and 'password' in self.subject):
-            return False
-        if len(self.subject['user']) != len(self.subject['password']):
-            return False
-        auth = []
-        for user, password in zip(self.subject['user'], self.subject['password']):
-            if user in d.keys():
-                if d[user] == password:
-                    _log.debug("Security: found user: %s",user)
-                    auth.append(True)
-                else:
-                    _log.debug("Security: incorrect username or password")
-                    auth.append(False)
+        else:
+            self.path=self.sec_conf['authentication']['local_users_database_path']
+
+        if not os.path.exists(self.path):
+                console.error("No user database found")
+                return False
+
+        with open(self.path, 'rt') as data:
+            if data:
+                local_users=json.load(data)
             else:
-                auth.append(False)
-        self.auth['user'] = auth
-        return any(auth)
+                return False
+
+        if 'local_groups_database_path' not in self.sec_conf['authentication']:
+                console.error("No groups database path supplied")
+                return False
+        else:
+            self.path=self.sec_conf['authentication']['local_groups_database_path']
+
+        if not os.path.exists(self.path):
+            console.error("No groups database found")
+            return False
+
+        with open(self.path, 'rt') as data:
+            if data:
+                local_groups=json.load(data)
+ 
+        # Verify users against stored passwords
+        for user in local_users:
+            _log.info("looping:%s" % user)
+            if credentials['user'] == user['username']:
+                if credentials['password'] == user['password']:
+                    for key in user['attributes']:
+                        self.subject_attributes[key]=user['attributes'][key]
+                     #TODO: add attributes for groups which user is member of
+                    _log.info("correct password, here are attributes")
+                    _log.info(self.subject_attributes)
+                    return True
+        return False
 
     def get_authenticated_subject_attributes(self):
         """Return a dictionary with all authenticated subject attributes."""
-        return {key: [self.subject[key][i] for i, auth in enumerate(values) if auth] 
-                for key, values in self.auth.iteritems() if any(values)}
+        return self.subject_attributes
 
     def check_security_policy(self, callback, element_type, actor_id=None, requires=None, signer=None, decision_from_migration=None):
         """Check if access is permitted by the security policy."""

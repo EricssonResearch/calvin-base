@@ -40,9 +40,8 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
     warnings = []
     if node is not None and security_needed_check():
         sec = Security(node)
-        sec.set_subject(credentials)
         # TODO: authenticate_subject should also be async and have a callback.
-        if not sec.authenticate_subject():
+        if not sec.authenticate_subject(credentials):
             _log.error("Check credentials...failed authentication")
             # This error reason is detected in calvin control and gives proper REST response
             errors.append({'reason': "401: UNAUTHORIZED", 'line': 0, 'col': 0})

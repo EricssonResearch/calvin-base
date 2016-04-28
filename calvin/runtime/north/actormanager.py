@@ -116,8 +116,7 @@ class ActorManager(object):
             raise(e)
         a._calvinsys = self.node.calvinsys()
         if security:
-            # TODO: change this when new authentication code has been added.
-            a.set_credentials(security.subject, security=security)
+            a.set_subject_attributes(security.get_authenticated_subject_attributes())
             if isinstance(access_decision, tuple):
                 # Authorization checks needed if access_decision is a tuple.
                 a.set_authorization_checks(access_decision[1])
@@ -143,18 +142,19 @@ class ActorManager(object):
         """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
-            credentials = state.pop('credentials', None)
+            subject_attributes = state.pop('subject_attributes', None)
+#            credentials = state.pop('credentials', None)
             migration_info = state.pop('migration_info', None)
             try:
-                state['_managed'].remove('credentials')
+                state['_managed'].remove('subject_attributes')
+#                state['_managed'].remove('credentials')
                 state['_managed'].remove('migration_info')
             except:
                 pass
             if security_needed_check():
                 security = Security(self.node)
-                security.set_subject(credentials)
                 # TODO: authenticate_subject should also be async and have a callback.
-                security.authenticate_subject()
+                self.sec.set_subject_attributes(subject_attributes)
             else:
                 security = None
             actor_def, signer = self.lookup_and_verify(actor_type, security)
