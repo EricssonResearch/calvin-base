@@ -22,9 +22,9 @@ from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
 CONDITION_CHECKS_PATH = os.path.dirname(__file__)
-CONDITION_CHECKS_NS = "calvin.runtime.north.plugins.authorization.local_condition_checks"
+CONDITION_CHECKS_NS = "calvin.runtime.north.plugins.authorization_checks"
 
-# Find python files in plugins/authorization/local_condition_checks
+# Find python files in plugins/authorization_checks
 module_paths = glob.glob(os.path.join(CONDITION_CHECKS_PATH, "*.py"))
 modules = [os.path.basename(f)[:-3] for f in module_paths 
 		   if not os.path.basename(f).startswith('_') and os.path.isfile(f)]

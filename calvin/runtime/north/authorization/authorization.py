@@ -44,10 +44,10 @@ class Authorization(object):
                 except:
                     self.prp = FilePolicyRetrievalPoint(os.path.join(os.path.expanduser("~"), 
                                                                      ".calvin", "security", "policies"))
-                self.authz_server_id = self.id
+                self.authz_server_id = self.node.id
             else:
                 self.authz_server_id = _sec_conf['authorization']['server_uuid']
-        except:
+        except Exception:
             self.authz_server_id = None
 
     def decode_request(self, data):

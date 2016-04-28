@@ -1,0 +1,27 @@
+{
+	"id": "policy7",
+	"description": "Security policy for user4 for all possible actor signers",
+	"rule_combining": "permit_overrides",
+	"target": {
+		"subject": {
+			"user": "user4",
+			"actor_signer": ".*"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy7_rule1",
+			"description": "Permit access to 'calvinsys.*', and 'runtime' if condition is true",
+			"effect": "permit",
+			"target": {
+				"action": {
+					"requires": ["calvinsys.*", "runtime"]
+				}
+			},
+			"condition": {
+				"function": "not_equal",
+				"attributes": ["attr:resource:address.street", "otherStreet"]
+			}
+		}
+	]
+}

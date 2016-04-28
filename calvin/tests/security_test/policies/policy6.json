@@ -1,0 +1,45 @@
+{
+	"id": "policy6",
+	"description": "Policy for otherStreet with incorrect obligation (00 should be used instead of 24) to force migration",
+	"rule_combining": "permit_overrides",
+	"target": {
+		"subject": {
+			"user": "user4",
+			"actor_signer": "signer"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy6_rule1",
+			"description": "Permit access if condition is true. Response includes obligation that will be checked locally on the runtime",
+			"effect": "permit",
+			"target": {
+				"action": {
+					"requires": ["calvinsys.events.timer", "calvinsys.io.*", "runtime"]
+				}
+			},
+			"condition": {
+				"function": "and",
+				"attributes": [
+					{
+						"function": "equal",
+						"attributes": ["attr:resource:address.country", "SE"]
+					},
+					{
+						"function": "equal",
+						"attributes": ["attr:resource:address.street", "otherStreet"]
+					}
+				]
+			},
+			"obligations": [
+				{
+					"id": "time_range",
+					"attributes": {
+						"start_time": "24:00",
+						"end_time": "24:01"
+					}
+				}
+			]
+		}
+	]
+}

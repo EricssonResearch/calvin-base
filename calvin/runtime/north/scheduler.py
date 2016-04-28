@@ -138,12 +138,12 @@ class Scheduler(object):
         self.trigger_maintenance_loop(delay=True)
 
     def trigger_maintenance_loop(self, delay=False):
+        # Never have more then one maintenance loop.
+        if self._maintenance_loop is not None:
+            self._maintenance_loop.cancel()
         if delay:
-            async.DelayedCall(self._maintenance_delay, self.maintenance_loop)
+            self._maintenance_loop = async.DelayedCall(self._maintenance_delay, self.maintenance_loop)
         else:
-             # Never have more then one maintenance loop.
-            if self._maintenance_loop is not None:
-                self._maintenance_loop.cancel()
             self._maintenance_loop = async.DelayedCall(0, self.maintenance_loop)
 
 

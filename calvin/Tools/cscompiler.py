@@ -62,8 +62,8 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
                 return
             else:
                 return deployable, errors, warnings
-        sec.check_security_policy(callback=CalvinCB(_compile_cont, source_text, filename, verify, 
-                                                    security=sec, org_cb=cb), signer=signer)
+        sec.check_security_policy(CalvinCB(_compile_cont, source_text, filename, verify, 
+                                           security=sec, org_cb=cb), "application", signer=signer)
     else:
         if cb:
             _compile_cont(source_text, filename, verify, True, org_cb=cb)

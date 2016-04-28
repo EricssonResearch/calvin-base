@@ -17,5 +17,9 @@
 from datetime import datetime
 
 def authorization_check(start_time, end_time):
+	"""Return True if current time is in the range [start_time, end_time]."""
 	time = datetime.now().strftime('%H:%M')
-	return time >= start_time and time <= end_time
+	if start_time <= end_time:
+		return start_time <= time <= end_time
+	else:
+		return start_time <= time or time <= end_time

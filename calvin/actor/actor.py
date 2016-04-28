@@ -717,9 +717,11 @@ class Actor(object):
         if reply and reply.status == 200 and reply.data["node_id"]:
             self.migration_info = reply.data
             self.fsm.transition_to(Actor.STATUS.MIGRATABLE)
+            _log.info("Migrate actor %s to node %s" % (self.name, self.migration_info["node_id"]))
             # Inform the scheduler that the actor is ready to migrate.
             self._calvinsys.scheduler_maintenance_wakeup()
         else:
+            _log.info("No possible migration destination found for actor %s" % self.name)
             # Try to enable/migrate actor again after a delay.
             self._calvinsys.scheduler_maintenance_wakeup(delay=True)
 

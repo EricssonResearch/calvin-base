@@ -117,7 +117,7 @@ class ActorManager(object):
         a._calvinsys = self.node.calvinsys()
         if security:
             # TODO: change this when new authentication code has been added.
-            a.set_credentials(security.get_authenticated_subject_attributes(), security=security)
+            a.set_credentials(security.subject, security=security)
             if isinstance(access_decision, tuple):
                 # Authorization checks needed if access_decision is a tuple.
                 a.set_authorization_checks(access_decision[1])
@@ -140,7 +140,7 @@ class ActorManager(object):
         return a
 
     def new_from_migration(self, actor_type, state, prev_connections=None, callback=None):
-        """Return a restored actor in PENDING state, raises an exception on failure."""
+        """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
             credentials = state.pop('credentials', None)
@@ -154,7 +154,7 @@ class ActorManager(object):
                 security = Security(self.node)
                 security.set_subject(credentials)
                 # TODO: authenticate_subject should also be async and have a callback.
-                self.sec.authenticate_subject()
+                security.authenticate_subject()
             else:
                 security = None
             actor_def, signer = self.lookup_and_verify(actor_type, security)
@@ -242,8 +242,8 @@ class ActorManager(object):
         if security_needed_check():
             # Check if access is permitted for the actor by the security policy.
             # Will continue directly with callback if authorization is not enabled.
-            security.check_security_policy(callback, actor_id, ['runtime'] + requirements, signer, 
-                                           decision_from_migration)
+            security.check_security_policy(callback, "actor", actor_id, ['runtime'] + requirements, 
+                                           signer, decision_from_migration)
         else:
             callback()
 

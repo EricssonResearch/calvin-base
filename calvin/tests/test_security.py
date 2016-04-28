@@ -95,13 +95,14 @@ class TestSecurity(unittest.TestCase):
 
         # Runtime 2: local authentication, signature verification, local authorization.
         # Can also act as authorization server for other runtimes.
+        # Other street compared to the other runtimes
         rt2_conf = copy.deepcopy(_conf)
         rt2_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
-                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
+                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3", "user4": "pass4"}
                         },
                         "authorization": {
                             "procedure": "local",
@@ -125,7 +126,7 @@ class TestSecurity(unittest.TestCase):
         csruntime(ip_addr, port=5002, controlport=5022, attr={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode2'},
-                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
+                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'otherStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5002.conf")
         rt2 = RT("http://%s:5022" % ip_addr)
@@ -174,7 +175,7 @@ class TestSecurity(unittest.TestCase):
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
-                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
+                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3", "user4": "pass4"}
                         },
                         "authorization": {
                             "procedure": "external",
@@ -193,6 +194,7 @@ class TestSecurity(unittest.TestCase):
         except:
             logfile = None
             outfile = None
+        time.sleep(1)  # Wait to be sure that runtime 2 has started
         csruntime(ip_addr, port=5004, controlport=5024, attr={'indexed_public':
                   {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode4'},
@@ -525,7 +527,38 @@ class TestSecurity(unittest.TestCase):
 
         request_handler.delete_application(rt4, result['application_id'])
 
-    # TODO: add migration test
+    @pytest.mark.slow
+    def testSecurity_POSITIVE_Migration_When_Denied(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt2
+        global rt4
+        global security_test_dir
+
+        self.verify_storage()
+
+        result = {}
+        try:
+            content = Security.verify_signature_get_files(os.path.join(security_test_dir, "scripts", "test_security1_correctly_signed.calvin"))
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
+                        credentials={"user": ["user4"], "password": ["pass4"]}, content=content, 
+                        check=True)
+        except Exception as e:
+            if e.message.startswith("401"):
+                raise Exception("Failed security verification of app test_security1_correctly_signed")
+            _log.exception("Test deploy failed")
+            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+        time.sleep(2)
+
+        # Verify that actors exist like this (all of them should have migrated to rt4)
+        actors = request_handler.get_actors(rt4)
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
+
+        actual = request_handler.report(rt4, result['actor_map']['test_security1_correctly_signed:snk'])
+        assert len(actual) > 5
 
 
 ###################################

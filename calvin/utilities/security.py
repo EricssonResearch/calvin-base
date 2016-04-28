@@ -83,7 +83,10 @@ def encode_jwt(payload, node_name):
 def decode_jwt(token, sender_cert_name, node_name, node_id, actor_id=None):
     """Decode JSON Web Token"""
     # Get authorization server certificate from disk.
-    sender_certificate = certificate.get_certificate(_cert_conf, node_name, sender_cert_name)
+    try:
+        sender_certificate = certificate.get_certificate(_cert_conf, node_name, sender_cert_name)
+    except Exception:
+        raise Exception("Certificate not found.")
     sender_public_key = certificate.get_public_key(sender_certificate)
     sender_node_id = sender_certificate.get_subject().dnQualifier
     # The signature is verified using the Elliptic Curve public key of the sender. 
@@ -216,11 +219,12 @@ class Security(object):
         return {key: [self.subject[key][i] for i, auth in enumerate(values) if auth] 
                 for key, values in self.auth.iteritems() if any(values)}
 
-    def check_security_policy(self, callback, actor_id=None, requires=None, signer=None, decision_from_migration=None):
-        """Check if access is permitted for the actor by the security policy."""
+    def check_security_policy(self, callback, element_type, actor_id=None, requires=None, signer=None, decision_from_migration=None):
+        """Check if access is permitted by the security policy."""
         # Can't use id for application since it is not assigned when the policy is checked. 
         _log.debug("Security: check_security_policy")
         if self.sec_conf and "authorization" in self.sec_conf:
+            signer = {element_type + "_signer": signer}
             self.get_authorization_decision(callback, actor_id, requires, signer, decision_from_migration)
             return
         # No security config, so access control is disabled.
@@ -341,10 +345,13 @@ class Security(object):
     def authorization_runtime_search(self, actor_id, actorstore_signature, callback):
         """Search for runtime where the authorization decision for the actor is 'permit'."""
         # extra_requirement is used to prevent InfiniteElement from being returned.
-        extra_requirement = [{'op': 'actor_reqs_match',
-                        'kwargs': {'requires': ["calvinsys.native.python-json"]},
-                        'type': '+'}]
-        self.node.am.update_requirements(actor_id, extra_requirement, True, True, True, 
+        extra_requirement = [{"op": "actor_reqs_match",
+                              "kwargs": {"requires": ["calvinsys.native.python-json"]},
+                              "type": "+"},
+                             {"op": "current_node", 
+                              "kwargs": {},
+                              "type": "-"}]
+        self.node.am.update_requirements(actor_id, extra_requirement, True, authorization_check=True, 
                                          callback=CalvinCB(self._authorization_runtime_search_cont, 
                                                            actor_id=actor_id, 
                                                            actorstore_signature=actorstore_signature,
@@ -367,7 +374,7 @@ class Security(object):
     def _send_authorization_runtime_search(self, key, value, actor_id, request, possible_placements, 
                                            authz_server_blacklist, callback, counter=0):
         authz_server_id = value["authz_server"]
-        if authz_server_id in authz_server_blacklist:
+        if authz_server_id is None or authz_server_id in authz_server_blacklist:
             counter += 1
             if counter < len(possible_placements):
                 # Try with next runtime instead.
@@ -475,7 +482,7 @@ class Security(object):
 
         if content is None or not content['sign']:
             _log.debug("Security: signature information missing")
-            signer = {flag + "_signer": ["__unsigned__"]}
+            signer = ["__unsigned__"]
             return (True, signer)  # True is returned to allow authorization request with the signer attribute '__unsigned__'.
 
         if not HAS_OPENSSL:
@@ -491,7 +498,7 @@ class Security(object):
                 with open(trusted_cert_path, 'rt') as f:
                     trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
                     try:
-                        signer = {flag + "_signer": [trusted_cert.get_issuer().CN]}  # The Common Name field for the issuer
+                        signer = [trusted_cert.get_issuer().CN]  # The Common Name field for the issuer
                         # Verify signature
                         OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
                         _log.debug("Security: signature correct")
