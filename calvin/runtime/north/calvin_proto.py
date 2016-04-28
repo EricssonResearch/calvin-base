@@ -18,13 +18,14 @@ from calvin.utilities import calvinuuid
 from calvin.utilities.utils import enum
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
+from calvin.utilities import calvinconfig
 from calvin.utilities.security import Security
 from calvin.actorstore.store import ActorStore
-from calvin.utilities.security import encode_jwt, decode_jwt
-from datetime import datetime, timedelta
 import calvin.requests.calvinresponse as response
 
 _log = calvinlogger.get_logger(__name__)
+_conf = calvinconfig.get()
+_sec_conf = _conf.get("security","security_conf")
 
 
 class CalvinTunnel(object):
@@ -237,43 +238,12 @@ class CalvinProto(CalvinCBClass):
     def actor_new_handler(self, payload):
         """ Peer request new actor with state and connections """
         _log.analyze(self.rt_id, "+", payload, tb=True)
-        # TODO: move this to actor manager
-        migration_info = payload['state']['actor_state'].get('migration_info', None)
-        actor_id = payload['state']['actor_state'].get('id', None)
-        self.sec = Security(self.node)
-        credentials = payload['state']['actor_state'].get('credentials', None)
-        self.sec.set_subject(credentials)
-        # TODO: authenticate_subject should also be async and have a callback.
-        self.sec.authenticate_subject()
-        if migration_info is not None:
-            self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
-                                           actor_id=actor_id, decision_from_migration=migration_info)
-        else:
-            found, is_primitive, actor_def, signer = ActorStore(security=self.sec).lookup(payload['state']['actor_type'])
-            try:
-                if not found or not is_primitive:
-                    raise Exception("Not known actor type: %s" % actor_type)
-                requirements = actor_def.requires if hasattr(actor_def, "requires") else []
-                # Check if node has the capabilities required by the actor.
-                self.node.am.check_requirements(requirements)
-                # Check if access is permitted for the actor by the security policy.
-                # Will continue directly with _actor_new_handler_cont() if authorization is not enabled.
-                self.sec.check_security_policy(callback=CalvinCB(self._actor_new_handler_cont, payload),
-                                               requires=['runtime'] + requirements, signer=signer)
-            except Exception:
-                # Still want to create shadow actor.
-                self._actor_new_handler_cont(payload, shadow_actor=True)
+        self.node.am.new_from_migration(payload['state']['actor_type'],
+                                        payload['state']['actor_state'],
+                                        payload['state']['prev_connections'],
+                                        callback=CalvinCB(self._actor_new_handler, payload))
 
-    def _actor_new_handler_cont(self, payload, access_decision=None, shadow_actor=False):
-        # TODO: use authenticated sec object as argument instead of credentials in the actor_state?
-        self.node.am.new(payload['state']['actor_type'],
-                         None,
-                         payload['state']['actor_state'],
-                         payload['state']['prev_connections'],
-                         callback=CalvinCB(self._actor_new_handler_reply, payload),
-                         access_decision=access_decision, shadow_actor=shadow_actor)
-
-    def _actor_new_handler_reply(self, payload, status, **kwargs):
+    def _actor_new_handler(self, payload, status, **kwargs):
         """ Potentially created actor, reply to requesting node """
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
@@ -578,13 +548,15 @@ class CalvinProto(CalvinCBClass):
 
         Signed JSON Web Token (JWT) is used to send the attributes.
         """
-        try:
-            # Decode the JSON Web Token in the message from the runtime.
-            decoded = decode_jwt(payload["jwt"], payload["cert_name"], self.node.node_name, self.node.id)
-            self.node.pdp.register_node(decoded["iss"], decoded["attributes"])
-            reply = response.CalvinResponse(response.OK)
-        except Exception:
-            reply = response.CalvinResponse(response.INTERNAL_ERROR)
+        if not _sec_conf['authorization']['accept_external_requests']:
+            reply = response.CalvinResponse(response.NOT_FOUND)
+        else:
+            try:
+                decoded = self.node.authorization.decode_request(payload)
+                self.node.authorization.pdp.register_node(decoded["iss"], decoded["attributes"])
+                reply = response.CalvinResponse(response.OK)
+            except Exception:
+                reply = response.CalvinResponse(response.INTERNAL_ERROR)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
@@ -621,33 +593,27 @@ class CalvinProto(CalvinCBClass):
         sender and receiver are used for both the request and response.
         A Policy Decision Point (PDP) is used to determine if access is permitted.
         """
-        try:
-            # Decode the JSON Web Token in the request from the runtime.
-            decoded = decode_jwt(payload["jwt"], payload["cert_name"], self.node.node_name, self.node.id)
-            self.node.pdp.authorize(decoded["request"], 
+        if not _sec_conf['authorization']['accept_external_requests']:
+            reply = response.CalvinResponse(response.NOT_FOUND)
+        else:
+            try:
+                decoded = self.node.authorization.decode_request(payload)
+                self.node.authorization.pdp.authorize(decoded["request"], 
                                     callback=CalvinCB(self._authorization_decision_handler, payload, decoded))
-        except Exception:
-            reply = response.CalvinResponse(response.INTERNAL_ERROR)
-            # Send reply
-            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-            self.network.links[payload['from_rt_uuid']].send(msg)
+                return
+            except Exception:
+                reply = response.CalvinResponse(response.INTERNAL_ERROR)
+        # Send reply
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
 
-    def _authorization_decision_handler(self, payload, decoded_jwt, authz_response):
+    def _authorization_decision_handler(self, payload, request, authz_response):
         try:
-            jwt_payload = {
-                "iss": self.node.id, 
-                "aud": decoded_jwt["iss"], 
-                "iat": datetime.utcnow(), 
-                "exp": datetime.utcnow() + timedelta(seconds=60),
-                "response": authz_response
-            }
-            if "sub" in decoded_jwt:
-                jwt_payload["sub"] = decoded_jwt["sub"]
-            # Create a JSON Web Token signed using the authorization server's private key.
-            jwt_response = encode_jwt(jwt_payload, self.node.node_name)
+            jwt_response = self.node.authorization.encode_response(request, authz_response)
             data_response = {"jwt": jwt_response, "cert_name": self.node.cert_name}
             reply = response.CalvinResponse(response.OK, data_response)
-        except Exception:
+        except Exception as e:
+            _log.info(e)
             reply = response.CalvinResponse(response.INTERNAL_ERROR)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
@@ -686,9 +652,8 @@ class CalvinProto(CalvinCBClass):
         A Policy Decision Point (PDP) is used for the authorization search.
         """
         try:
-            # Decode the JSON Web Token in the request from the runtime.
-            decoded = decode_jwt(payload["jwt"], payload["cert_name"], self.node.node_name, self.node.id)
-            self.node.pdp.runtime_search(decoded["request"], decoded["whitelist"], 
+            decoded = self.node.authorization.decode_request(payload)
+            self.node.authorization.pdp.runtime_search(decoded["request"], decoded["whitelist"], 
                                          CalvinCB(self._authorization_search_handler, payload, decoded))
         except Exception:
             reply = response.CalvinResponse(response.INTERNAL_ERROR)
@@ -696,23 +661,14 @@ class CalvinProto(CalvinCBClass):
             msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
             self.network.links[payload['from_rt_uuid']].send(msg)
 
-    def _authorization_search_handler(self, payload, decoded_jwt, search_result):
+    def _authorization_search_handler(self, payload, request, search_result):
         try:
             if search_result is None:
                 runtime_id = None
                 data_response = {"node_id": runtime_id}
             else:
-                runtime_id = search_result[0]     
-                jwt_payload = {
-                    "iss": self.node.id,
-                    "sub": decoded_jwt["sub"],
-                    "aud": runtime_id, 
-                    "iat": datetime.utcnow(), 
-                    "exp": datetime.utcnow() + timedelta(seconds=60),
-                    "response": search_result[1]
-                }
-                # Create a JSON Web Token signed using the authorization server's private key.
-                jwt_response = encode_jwt(jwt_payload, self.node.node_name)
+                runtime_id = search_result[0]
+                jwt_response = self.node.authorization.encode_response(request, search_result[1], runtime_id)
                 data_response = {"node_id": runtime_id, "jwt": jwt_response, "cert_name": self.node.cert_name}
             reply = response.CalvinResponse(response.OK, data_response)
         except Exception:

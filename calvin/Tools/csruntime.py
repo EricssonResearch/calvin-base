@@ -103,20 +103,13 @@ Start runtime, compile calvinscript and deploy application.
                                 'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
                            dest='credentials', default=None)
 
-    argparser.add_argument('--authz-server', dest='authz_server', action='store_true', default=False,
-                           help='Can act as authorization server')
-
     return argparser.parse_args()
 
 
-def runtime(uri, control_uri, attributes=None, dispatch=False, authz_server=False):
+def runtime(uri, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_node, start_node
 
-    kwargs = {}
-    if attributes:
-        kwargs['attributes'] = attributes
-    if authz_server:
-        kwargs['authz_server'] = authz_server   
+    kwargs = {'attributes': attributes} if attributes else {}
     try:
         if dispatch:
             return dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
@@ -289,12 +282,12 @@ def main():
         if args.storage:
             storage_runtime(uris, control_uri, runtime_attr, dispatch=False)
         else:
-            runtime(uris, control_uri, runtime_attr, dispatch=False, authz_server=args.authz_server)
+            runtime(uris, control_uri, runtime_attr, dispatch=False)
     return 0
 
 
 def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False, 
-              credentials=None, authz_server=False, outfile=None, configfile=None):
+              credentials=None, outfile=None, configfile=None):
     """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
         runtimes from the same python script, since some objects otherwise gets unexceptedly shared.
     """
@@ -312,7 +305,6 @@ def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, at
         call += (" --credentials \"%s\"" % (json.dumps(credentials).replace('"',"\\\""), )) if credentials else ""
     except:
         pass
-    call += " --authz-server" if authz_server else ""
     call += " -w 0"
     call += (" &> %s" % outfile) if outfile else ""
     call += " &"

@@ -17,19 +17,10 @@
 import re
 import time
 import json
-import os
-from datetime import datetime, timedelta
-try:
-    import jwt
-    HAS_JWT = True
-except:
-    HAS_JWT = False
 from random import randint
 from calvin.Tools import cscompiler as compiler
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north import metering
-from calvin.runtime.north.plugins.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
-from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection, async
@@ -38,9 +29,7 @@ from calvin.requests import calvinresponse
 from calvin.utilities.security import security_needed_check
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
-from calvin.utilities import certificate
 
-_conf = calvinconfig.get()
 _log = get_logger(__name__)
 
 uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
@@ -717,7 +706,6 @@ class CalvinControl(object):
         self.tunnel_server = None
         self.tunnel_client = None
         self.metering = None
-        self.prp = None  # TODO: change to self.node.prp?
 
         # Set routes for requests
         self.routes = [
@@ -771,14 +759,6 @@ class CalvinControl(object):
         """
         self.metering = metering.get_metering()
         self.node = node
-        security_conf = _conf.get("security","security_conf")
-        if security_conf and "authorization" in security_conf:
-            # TODO: should be possible to use any kind of PolicyRetrievalPoint
-            try:
-                self.prp = FilePolicyRetrievalPoint(security_conf['authorization']["policy_storage_path"])
-            except:
-                homefolder = os.path.expanduser("~")
-                self.prp = FilePolicyRetrievalPoint(os.path.join(homefolder, ".calvin", "security", "policies"))
         schema, _ = uri.split(':', 1)
         if tunnel:
             # Connect to tunnel server
@@ -1011,8 +991,7 @@ class CalvinControl(object):
             actor_id = self.node.new(actor_type=data['actor_type'], args=data[
                                      'args'], deploy_args=data['deploy_args'])
             status = calvinresponse.OK
-        except Exception as e:
-            _log.info(e)
+        except:
             actor_id = None
             status = calvinresponse.INTERNAL_ERROR
         self.send_response(
@@ -1349,7 +1328,7 @@ class CalvinControl(object):
         """Create authorization policy"""
         # TODO: need some kind of authentication for policy management
         try:
-            policy_id = self.prp.create_policy(data)
+            policy_id = self.node.authorization.prp.create_policy(data)
             status = calvinresponse.OK
         except:
             policy_id = None
@@ -1361,7 +1340,7 @@ class CalvinControl(object):
     def handle_get_authorization_policies(self, handle, connection, match, data, hdr):
         """Get all authorization policies on this runtime"""
         try:
-            policies = self.prp.get_policies()
+            policies = self.node.authorization.prp.get_policies()
             status = calvinresponse.OK
         except:
             _log.exception("handle_get_authorization_policies")
@@ -1372,7 +1351,7 @@ class CalvinControl(object):
     def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
         """Get authorization policy identified by id"""
         try:
-            data = self.prp.get_policy(match.group(1))
+            data = self.node.authorization.prp.get_policy(match.group(1))
             status = calvinresponse.OK
         except IOError:
             _log.exception("handle_get_authorization_policy")
@@ -1387,7 +1366,7 @@ class CalvinControl(object):
         """Edit authorization policy identified by id"""
         # TODO: need some kind of authentication for policy management
         try:
-            self.prp.update_policy(data, match.group(1))
+            self.node.authorization.prp.update_policy(data, match.group(1))
             status = calvinresponse.OK
         except IOError:
             _log.exception("handle_edit_authorization_policy")
@@ -1401,7 +1380,7 @@ class CalvinControl(object):
         """ Delete authorization policy identified by id"""
         # TODO: need some kind of authentication for policy management
         try:
-            self.prp.delete_policy(match.group(1))
+            self.node.authorization.prp.delete_policy(match.group(1))
             status = calvinresponse.OK
         except OSError:
             _log.exception("handle_del_authorization_policy")

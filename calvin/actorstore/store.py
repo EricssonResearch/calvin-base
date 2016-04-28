@@ -324,7 +324,7 @@ class ActorStore(Store):
           _log.error('namespace creation not implemented: %s' % namespace)
           return False
       qualified_name = namespace + "." + component_type
-      found, is_primitive, _ = self.lookup(qualified_name)
+      found, is_primitive, _, signer = self.lookup(qualified_name)
       if found and is_primitive:
           _log.error("Can't overwrite actor: %s" % qualified_name)
           return False
@@ -792,7 +792,7 @@ if __name__ == '__main__':
 
     print
     for actor in ['std.Constant', 'std.Join', 'std.Identity', 'io.FileReader']:
-        found, is_primitive, actor_class = a.lookup(actor)
+        found, is_primitive, actor_class, signer = a.lookup(actor)
         if not found or not is_primitive:
             raise Exception('Bad actor')
         print actor, ":", ds._get_args(actor_class)

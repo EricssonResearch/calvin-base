@@ -28,11 +28,10 @@ from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
+from calvin.runtime.north.authorization import authorization
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
-from calvin.runtime.north.plugins.authorization.policy_decision_point import PolicyDecisionPoint
-from calvin.runtime.north.plugins.authorization import authorization_registration
 from calvin.runtime.south.monitor import Event_Monitor
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
@@ -42,6 +41,7 @@ from calvin.utilities import calvinuuid
 from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
+
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
 
@@ -59,10 +59,9 @@ class Node(object):
        the control_uri is the local console
        attributes is a supplied list of external defined attributes that will be used as the key when storing index
        such as name of node
-       authz_server is True if the runtime can act as an authorization server
     """
 
-    def __init__(self, uri, control_uri, attributes=None, authz_server=False):
+    def __init__(self, uri, control_uri, attributes=None):
         super(Node, self).__init__()
         self.uri = uri
         self.control_uri = control_uri
@@ -78,19 +77,10 @@ class Node(object):
         self.node_name = self.attributes.get_node_name_as_str()
         # Obtain node id, when using security also handle runtime certificate
         self.id = certificate.obtain_cert_node_info(self.node_name)['id']
-        self.sec_conf = _conf.get("security","security_conf")
+        self.authorization = authorization.Authorization(self)
         try:
-            if authz_server or self.sec_conf['authorization']['procedure'] == "local":
-                self.pdp = PolicyDecisionPoint(self, self.sec_conf['authorization'] if self.sec_conf else None)
-                self.authz_server_id = self.id
-            else:
-                self.authz_server_id = self.sec_conf['authorization']['server_uuid']
-        except:
-            self.authz_server_id = None
-        try:
-            cert_conffile = _conf.get("security", "certificate_conf")
             self.domain = _conf.get("security", "certificate_domain")
-            cert_conf = certificate.Config(cert_conffile, self.domain)
+            cert_conf = certificate.Config(_conf.get("security", "certificate_conf"), self.domain)
             # cert_name is the node's certificate filename (without file extension)
             self.cert_name = certificate.get_own_cert_name(cert_conf, self.node_name)
         except:
@@ -179,9 +169,11 @@ class Node(object):
 
     def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None):
         # TODO requirements should be input to am.new
+        # TODO: make it possible to use security/credentials here.
+        actor_def, signer = self.am.lookup_and_verify(actor_type)
         actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
-                        signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None,
-                        subject_attributes=deploy_args['credentials'] if deploy_args and 'credentials' in deploy_args else None)
+                               signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None,
+                               actor_def=actor_def)
         if deploy_args:
             app_id = deploy_args['app_id']
             if 'app_name' not in deploy_args:
@@ -241,24 +233,21 @@ class Node(object):
         self.storage.delete_node(self, cb=deleted_node)
 
     def _storage_started_cb(self, *args, **kwargs):
-        if self.sec_conf and "authorization" in self.sec_conf:
-            # TODO: the node should contact the authz server once a day, 
-            #       otherwise it should be removed from the registered_nodes list on the authz server.
-            authorization_registration.register_node(self)
+        self.authorization.register_node()
 
 
-def create_node(uri, control_uri, attributes=None, authz_server=False):
-    n = Node(uri, control_uri, attributes, authz_server)
+def create_node(uri, control_uri, attributes=None):
+    n = Node(uri, control_uri, attributes)
     n.run()
     _log.info('Quitting node "%s"' % n.uri)
 
 
-def create_tracing_node(uri, control_uri, attributes=None, authz_server=False):
+def create_tracing_node(uri, control_uri, attributes=None):
     """
     Same as create_node, but will trace every line of execution.
     Creates trace dump in output file '<host>_<port>.trace'
     """
-    n = Node(uri, control_uri, attributes, authz_server)
+    n = Node(uri, control_uri, attributes)
     _, host = uri.split('://')
     with open("%s.trace" % (host, ), "w") as f:
         tmp = sys.stdout
@@ -277,11 +266,11 @@ def create_tracing_node(uri, control_uri, attributes=None, authz_server=False):
     _log.info('Quitting node "%s"' % n.uri)
 
 
-def start_node(uri, control_uri, trace_exec=False, attributes=None, authz_server=False):
+def start_node(uri, control_uri, trace_exec=False, attributes=None):
     if not security_modules_check():
         raise Exception("Security module missing")
     _create_node = create_tracing_node if trace_exec else create_node
-    p = Process(target=_create_node, args=(uri, control_uri, attributes, authz_server))
+    p = Process(target=_create_node, args=(uri, control_uri, attributes))
     p.daemon = True
     p.start()
     return p

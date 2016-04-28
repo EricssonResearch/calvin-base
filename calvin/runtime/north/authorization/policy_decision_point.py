@@ -16,9 +16,8 @@
 
 import re
 import os
-from calvin.runtime.north.plugins.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
-from calvin.runtime.north.plugins.authorization.policy_information_point import PolicyInformationPoint
-from calvin.runtime.north.plugins.authorization.local_condition_checks import check_authorization_plugin_list
+from calvin.runtime.north.authorization.policy_information_point import PolicyInformationPoint
+from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 
@@ -38,11 +37,6 @@ class PolicyDecisionPoint(object):
             # Change some of the default values of the config.
             self.config.update(config)
         self.node = node
-        # TODO: implement other policy storage alternatives
-        # if self.config["policy_storage"] == "db":
-        #     self.prp = DbPolicyRetrievalPoint(self.config["policy_storage_path"])
-        # else:
-        self.prp = FilePolicyRetrievalPoint(self.config["policy_storage_path"])
         self.registered_nodes = {}
 
     def register_node(self, node_id, node_attributes):
@@ -207,11 +201,8 @@ class PolicyDecisionPoint(object):
         policy_decisions = []
         policy_obligations = []
         try:
-            # Get policies from PRP (Policy Retrieval Point). 
-            # TODO: policy needs to be signed if external PRP is used.
-            # In most cases the PRP and the PDP will be located on the same physical machine.
-            # TODO: if database is used, policies should be indexed based on their Target constraints
-            policies = self.prp.get_policies(self.config["policy_name_pattern"])
+            # Get policies from PRP (Policy Retrieval Point).
+            policies = self.node.authorization.prp.get_policies(self.config["policy_name_pattern"])
             for policy_id in policies: 
                 policy = policies[policy_id]
                 # Check if policy target matches (policy without target matches everything).

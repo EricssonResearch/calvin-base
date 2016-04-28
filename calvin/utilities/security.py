@@ -263,7 +263,7 @@ class Security(object):
             else: 
                 _log.debug("Security: local authorization method chosen")
                 # Authorize access using a local Policy Decision Point (PDP).
-                self.node.pdp.authorize(request, CalvinCB(self._handle_local_authorization_response, 
+                self.node.authorization.pdp.authorize(request, CalvinCB(self._handle_local_authorization_response, 
                                                           callback=callback))
 
     def _return_authorization_decision(self, decision, obligations, callback):

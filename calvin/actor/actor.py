@@ -25,7 +25,7 @@ from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
-from calvin.runtime.north.plugins.authorization.local_condition_checks import check_authorization_plugin_list
+from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
 
 _log = get_logger(__name__)
@@ -373,6 +373,7 @@ class Actor(object):
         to reduce the needed authentication processing.
         """
         _log.debug("actor.py: set_credentials: %s" % credentials)
+        # TODO: change this when new authentication code has been added.
         if credentials is None:
             return
         self.credentials = credentials

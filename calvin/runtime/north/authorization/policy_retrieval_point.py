@@ -23,11 +23,6 @@ from calvin.utilities import calvinuuid
 # This is an abstract class for the PRP (Policy Retrieval Point)
 class PolicyRetrievalPoint(object):
     __metaclass__ = ABCMeta  # Metaclass for defining Abstract Base Classes
-    
-    @abstractmethod
-    def get_matching_policies(self, request):
-        """Return policies where policy target matches request"""
-        return
 
     @abstractmethod
     def get_policy(self, id):
@@ -58,20 +53,14 @@ class PolicyRetrievalPoint(object):
 class FilePolicyRetrievalPoint(PolicyRetrievalPoint):
 
     def __init__(self, path):
-        # TODO: path may be located on other server. How to handle that?
         # Replace ~ by the user's home directory.
         self.path = os.path.expanduser(path)
         if not os.path.exists(self.path):
             try:
                 os.makedirs(self.path)
-            except OSError as exc: # Guard against race condition
+            except OSError as exc:  # Guard against race condition
                 if exc.errno != errno.EEXIST:
                     raise
-    
-    # Use get_policies instead and do the matching in policy_decision_point.py?
-    def get_matching_policies(self, request, name_pattern):
-        """Return policies where policy target matches request"""
-        return
 
     def get_policy(self, policy_id):
         """Return the policy identified by policy_id"""

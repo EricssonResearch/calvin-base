@@ -57,7 +57,7 @@ def node_control(control_uri, barrier=True):
     return NodeControl(control_uri, barrier=barrier)
 
 
-def dispatch_node(uri, control_uri, trace=False, attributes=None, authz_server=False, barrier=True):
+def dispatch_node(uri, control_uri, trace=False, attributes=None, barrier=True):
     """ Dispatch calvin runtime in new process.
         uri: list of uris for rt 2 rt comm
         control_uri: uri to control the rt
@@ -65,15 +65,15 @@ def dispatch_node(uri, control_uri, trace=False, attributes=None, authz_server=F
         attributes: dictionary according to documentation in AttributeResolver
         barrier: when True wait until managed to obtain the id of the runtime
     """
-    p = calvin_node.start_node(uri, control_uri, trace, attributes, authz_server)
+    p = calvin_node.start_node(uri, control_uri, trace, attributes)
     return node_control(control_uri, barrier=barrier), p
 
 
-def start_node(uri, control_uri, trace=False, attributes=None, authz_server=False):
+def start_node(uri, control_uri, trace=False, attributes=None):
     if trace:
-        calvin_node.create_tracing_node(uri, control_uri, trace, attributes, authz_server)
+        calvin_node.create_tracing_node(uri, control_uri, trace, attributes)
     else:
-        calvin_node.create_node(uri, control_uri, attributes, authz_server)
+        calvin_node.create_node(uri, control_uri, attributes)
 
 
 def dispatch_storage_node(uri, control_uri, trace=False, attributes=None):

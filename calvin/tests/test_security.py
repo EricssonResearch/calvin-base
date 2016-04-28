@@ -105,7 +105,8 @@ class TestSecurity(unittest.TestCase):
                         },
                         "authorization": {
                             "procedure": "local",
-                            "policy_storage_path": os.path.join(security_test_dir, "policies")
+                            "policy_storage_path": os.path.join(security_test_dir, "policies"),
+                            "accept_external_requests": True
                         }
                     })
         rt2_conf.set('global', 'actor_paths', [os.path.join(security_test_dir, "store")])
@@ -126,7 +127,7 @@ class TestSecurity(unittest.TestCase):
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode2'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5002.conf", authz_server=True)
+                   configfile="/tmp/calvin5002.conf")
         rt2 = RT("http://%s:5022" % ip_addr)
 
 
@@ -523,6 +524,8 @@ class TestSecurity(unittest.TestCase):
         assert len(actual) > 5
 
         request_handler.delete_application(rt4, result['application_id'])
+
+    # TODO: add migration test
 
 
 ###################################
