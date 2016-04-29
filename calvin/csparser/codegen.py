@@ -275,7 +275,6 @@ class CodeGen(object):
         # Tree re-write
         #
         print
-        # self.printer.process(self.root)
         ##
         # Expand local components
         #
@@ -290,18 +289,19 @@ class CodeGen(object):
         for comp in components:
             comp.delete()
 
+        self.printer.process(self.root)
         ##
         # Implicit port rewrite
         rw = ImplicitPortRewrite()
         rw.visit(self.root)
 
-        self.printer.process(self.root)
 
         ##
         # Flatten blocks
         flattener = Flatten()
         flattener.visit(self.root)
 
+        self.printer.process(self.root)
         ##
         # Resolve portmaps
         # FIXME: Clean up this mess.
@@ -343,6 +343,9 @@ class CodeGen(object):
         gen_app_info.visit(self.root)
         self.app_info = gen_app_info.app_info
 
+        import json
+        print json.dumps(self.app_info, indent=4)
+
     def query(self, root, kind=None, attributes=None, maxdepth=1024):
         finder = Finder()
         finder.find_all(root, kind, attributes=attributes, maxdepth=maxdepth)
@@ -351,5 +354,5 @@ class CodeGen(object):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check(tests=['nested_components_with_args'], print_diff=True, print_script=True)
+    run_check(tests=['test9'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/examples/sample-scripts')
 
