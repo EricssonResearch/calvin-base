@@ -311,16 +311,29 @@ class CodeGen(object):
         for portmap in portmaps:
             portmap.delete()
 
+        consumed_links = set()
         for actor, port, replacement in outportmaps:
             ports = self.query(self.root, kind=ast.Port, attributes={'actor':actor, 'port':port})
             for replace in ports:
                 link = replace.parent
-                link.outport = replacement
+                consumed_links.add(link)
+                # Create a new link
+                new_link = ast.Link(replacement.clone(), link.inport.clone())
+                link.parent.add_child(new_link)
+        for consumed_link in consumed_links:
+            consumed_link.delete()
+
+        consumed_links = set()
         for actor, port, replacement in inportmaps:
             ports = self.query(self.root, kind=ast.Port, attributes={'actor':actor, 'port':port})
             for replace in ports:
                 link = replace.parent
-                link.inport = replacement
+                consumed_links.add(link)
+                # Create a new link
+                new_link = ast.Link(link.outport.clone(), replacement.clone())
+                link.parent.add_child(new_link)
+        for consumed_link in consumed_links:
+            consumed_link.delete()
 
         self.printer.process(self.root)
 
