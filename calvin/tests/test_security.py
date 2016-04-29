@@ -61,14 +61,18 @@ class TestSecurity(unittest.TestCase):
         global security_test_dir
         security_test_dir = os.path.join(os.path.dirname(__file__), "security_test")
 
-        # Runtime 1: local authentication, signature verification, no authorization (no policy check).
+        # Runtime 1: local authentication, signature verification, local authorization.
         rt1_conf = copy.deepcopy(_conf)
         rt1_conf.set("security", "security_conf", {
-                        "comment": "Local authentication, no authorization",
+                        "comment": "Local authentication, local authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
-                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3"}
+                            "local_users_database_path": os.path.join(security_test_dir, "identity_provider", "users.json")
+                        },
+                        "authorization": {
+                            "procedure": "local",
+                            "policy_storage_path": os.path.join(security_test_dir, "policies")
                         }
                     })
         rt1_conf.set('global', 'actor_paths', [os.path.join(security_test_dir, "store")])
@@ -102,7 +106,7 @@ class TestSecurity(unittest.TestCase):
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
-                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3", "user4": "pass4"}
+                            "local_users_database_path": os.path.join(security_test_dir, "identity_provider", "users.json")
                         },
                         "authorization": {
                             "procedure": "local",
@@ -175,7 +179,7 @@ class TestSecurity(unittest.TestCase):
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
-                            "local_users": {"user1": "pass1", "user2": "pass2", "user3": "pass3", "user4": "pass4"}
+                            "local_users_database_path": os.path.join(security_test_dir, "identity_provider", "users.json")
                         },
                         "authorization": {
                             "procedure": "external",
@@ -560,6 +564,8 @@ class TestSecurity(unittest.TestCase):
         actual = request_handler.report(rt4, result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 5
 
+        request_handler.delete_application(rt2, result['application_id'])
+
 
 ###################################
 #   Authentication related tests
@@ -627,7 +633,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt3, "test_security1_correctly_signed", content['file'], 
-                        credentials={"user": ["radius_user1"], "password": ["radius_passwd1"]}, content=content, 
+                        credentials={"user": ["user5"], "password": ["pass5"]}, content=content, 
                         check=True)
         except Exception as e:
             if isinstance(e, Timeout):

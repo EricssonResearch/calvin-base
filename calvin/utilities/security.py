@@ -116,17 +116,21 @@ class Security(object):
         return "Subject: %s:" % self.subject_attributes
 
     def set_subject_attributes(self, subject_attributes):
-        """Set subject attributes and mark them as unauthenticated"""
+        """Set subject attributes."""
         _log.debug("Security: set_subject %s" % subject_attributes)
         if not isinstance(subject_attributes, dict):
             return False
         # Make sure that all subject values are lists.
         self.subject_attributes = subject_attributes
 
+    def get_subject_attributes(self):
+        """Return a dictionary with all authenticated subject attributes."""
+        return self.subject_attributes.copy()
+
     def authenticate_subject(self, credentials):
         """Authenticate subject using the authentication procedure specified in config."""
         _log.debug("Security: authenticate_subject")
-        if not security_needed_check():
+        if not security_needed_check() or not credentials:
             _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
 
@@ -144,13 +148,8 @@ class Security(object):
         return True
 
     def authenticate_using_radius_server(self, credentials):
-        """
-        Authenticate a subject using a RADIUS server.
-
-        The corresponding value in self.auth is set to True
-        if authentication is successful.
-        """
-        if self.subject['user']:
+        """Authenticate a subject using a RADIUS server."""
+        try:
             root_dir = os.path.abspath(os.path.join(_conf.install_location(), '..'))
             srv=Client(server=self.sec_conf['authentication']['server_ip'], 
                         secret= bytes(self.sec_conf['authentication']['secret']),
@@ -162,91 +161,61 @@ class Security(object):
             req["User-Password"]=req.PwCrypt(credentials['password'][0])
             # FIXME is this over socket? then we should not block here
             reply=srv.SendPacket(req)
-            _log.debug("Attributes returned by server:")
-            for i in reply.keys():
-                _log.debug("%s: %s" % (i, reply[i]))
             if reply.code==pyrad.packet.AccessAccept:
                 _log.debug("Security: access accepted")
+                try:
+                    # Save attributes returned by server.
+                    self.subject_attributes = json.loads(reply["Reply-Message"][0])
+                except Exception:
+                    pass
                 return True
-            else:
-                _log.debug("Security: access denied")
-                return False
-        return False
+            _log.debug("Security: access denied")
+            return False
+        except Exception:
+            return False
 
     def authenticate_using_local_database(self, credentials):
         """
         Authenticate a subject against information stored in config.
 
-        The corresponding value in self.auth is set to True
-        if authentication is successful.
-
         This is primarily intended for testing purposes,
         since passwords aren't stored securely.
         """
         if 'local_users_database_path' not in self.sec_conf['authentication']:
-            console.error("No user database path supplied")
+            _log.error("No user database path supplied")
             return False
         else:
-            self.path=self.sec_conf['authentication']['local_users_database_path']
+            path = self.sec_conf['authentication']['local_users_database_path']
 
-        if not os.path.exists(self.path):
-                console.error("No user database found")
-                return False
-
-        with open(self.path, 'rt') as data:
-            if data:
-                local_users=json.load(data)
-            else:
-                return False
-
-        if 'local_groups_database_path' not in self.sec_conf['authentication']:
-                console.error("No groups database path supplied")
-                return False
-        else:
-            self.path=self.sec_conf['authentication']['local_groups_database_path']
-
-        if not os.path.exists(self.path):
-            console.error("No groups database found")
+        try:
+            with open(path, 'rt') as data:
+                local_users = json.load(data)
+        except Exception:
+            _log.error("No user database found")
             return False
 
-        with open(self.path, 'rt') as data:
-            if data:
-                local_groups=json.load(data)
+        if 'local_groups_database_path' in self.sec_conf['authentication']:
+            path = self.sec_conf['authentication']['local_groups_database_path']
+            try:
+                with open(path, 'rt') as data:
+                    local_groups = json.load(data)
+            except Exception:
+                local_groups = []
  
         # Verify users against stored passwords
         for user in local_users:
-            if credentials['user'] == user['username']:
-                if credentials['password'] == user['password']:
-                    for key in user['attributes']:
-                        if key == "groups" and local_groups:
-                            for groupKey in user['attributes']['groups']:
-                                for groupAttribute in local_groups[groupKey]:
-                                    if not groupAttribute in self.subject_attributes:
-                                        #if the is no key, create array and add firs value
-                                        self.subject_attributes.setdefault(groupAttribute, []).append(local_groups[groupKey][groupAttribute])
-                                    elif not local_groups[groupKey][groupAttribute] in self.subject_attributes[groupAttribute]:
-                                        #list exist, make sure we don't add same value several times
-                                        self.subject_attributes[groupAttribute].append(local_groups[groupKey][groupAttribute])
-                        else:
-#                            self.subject_attributes.setdefault(key, []).append(user['attributes'][key])
-                            if not user['attributes'][key] in self.subject_attributes:
-                                #if the is no key, create array and add firsit value
-                                self.subject_attributes.setdefault(key, []).append(user['attributes'][key])
-                            elif not user['attributes'][key] in self.subject_attributes[key]:
-                                #list exist, make sure we don't add same value several times
-                                self.subject_attributes[key].append(user['attributes'][key])
+            if credentials['user'][0] == user['username']:
+                if credentials['password'][0] == user['password']:
+                    self.subject_attributes = user['attributes']
+                    # TODO: add attributes for groups which user is member of
                     return True
         return False
-
-    def get_authenticated_subject_attributes(self):
-        """Return a dictionary with all authenticated subject attributes."""
-        return self.subject_attributes
 
     def check_security_policy(self, callback, element_type, actor_id=None, requires=None, signer=None, decision_from_migration=None):
         """Check if access is permitted by the security policy."""
         # Can't use id for application since it is not assigned when the policy is checked. 
         _log.debug("Security: check_security_policy")
-        if self.sec_conf and "authorization" in self.sec_conf:
+        if self.sec_conf:
             signer = {element_type + "_signer": signer}
             self.get_authorization_decision(callback, actor_id, requires, signer, decision_from_migration)
             return
@@ -271,7 +240,7 @@ class Security(object):
                 return
         else:
             request = {}
-            request["subject"] = self.get_authenticated_subject_attributes()
+            request["subject"] = self.get_subject_attributes()
             if signer is not None:
                 request["subject"].update(signer)
             request["resource"] = {"node_id": self.node.id}
@@ -385,7 +354,7 @@ class Security(object):
             callback(None)
             return
         request = {}
-        request["subject"] = self.get_authenticated_subject_attributes()
+        request["subject"] = self.get_subject_attributes()
         request["subject"]["actorstore_signature"] = actorstore_signature
         self.node.storage.get_node(possible_placements[0], 
                                    cb=CalvinCB(self._send_authorization_runtime_search, 

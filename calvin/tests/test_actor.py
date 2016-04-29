@@ -129,7 +129,7 @@ def test_state(actor):
     correct_state = {
         '_component_members': set([actor.id]),
         '_deployment_requirements': [],
-        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name', 'credentials', 'migration_info']),
+        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name', 'subject_attributes', 'migration_info']),
         '_signature': None,
         'dump': False,
         'id': actor.id,

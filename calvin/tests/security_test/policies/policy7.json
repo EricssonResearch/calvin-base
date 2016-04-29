@@ -1,10 +1,10 @@
 {
 	"id": "policy7",
-	"description": "Security policy for user4 for all possible actor signers",
+	"description": "Security policy for 'David' for all possible actor signers",
 	"rule_combining": "permit_overrides",
 	"target": {
 		"subject": {
-			"user": "user4",
+			"first_name": "David",
 			"actor_signer": ".*"
 		}
 	},

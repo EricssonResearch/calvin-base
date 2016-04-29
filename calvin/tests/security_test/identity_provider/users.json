@@ -1,0 +1,50 @@
+[
+   {
+        "username": "user1", 
+        "password": "pass1",
+        "attributes": {
+            "first_name": "Anders",
+            "last_name": "Andersson",
+            "age": "11"
+        }
+    },
+    {
+        "username": "user2", 
+        "password": "pass2",
+        "attributes": {
+            "first_name": "Berit",
+            "last_name": "Beritsdotter",
+            "age": "22",
+            "groups": ["Ericsson Lund"]
+        }
+    },
+    {
+        "username": "user3", 
+        "password": "pass3",
+        "attributes": {
+            "first_name": "Carl",
+            "last_name": "Carlsson",
+            "age": "33"
+        }
+    },
+    {
+        "username": "user4", 
+        "password": "pass4",
+        "attributes": {
+            "first_name": "David",
+            "last_name": "Davidsson",
+            "age": "44"
+        }
+    },
+    {
+        "username": "user5", 
+        "password": "pass5",
+        "attributes": {
+            "first_name": "Elin",
+            "last_name": "Elinsdotter",
+            "age": "55"
+        }
+    }
+]
+
+

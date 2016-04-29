@@ -1,10 +1,10 @@
 {
 	"id": "policy4",
-	"description": "All possible application signers (or unsigned) permitted for user2 and user3",
+	"description": "All possible application signers (or unsigned) permitted for 'Berit' and 'Carl'",
 	"rule_combining": "permit_overrides",
 	"target": {
 		"subject": {
-			"user": ["user2", "user3"],
+			"first_name": ["Berit", "Carl"],
 			"application_signer": ".*"
 		}
 	},

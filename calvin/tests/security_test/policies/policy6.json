@@ -4,7 +4,7 @@
 	"rule_combining": "permit_overrides",
 	"target": {
 		"subject": {
-			"user": "user4",
+			"first_name": "David",
 			"actor_signer": "signer"
 		}
 	},

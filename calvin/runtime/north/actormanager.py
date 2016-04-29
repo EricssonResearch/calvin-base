@@ -110,16 +110,14 @@ class ActorManager(object):
                 class_ = ShadowActor
         try:
             # Create a 'bare' instance of the actor
-            a = class_(actor_type, actor_id=actor_id)
+            a = class_(actor_type, actor_id=actor_id, security=security)
         except Exception as e:
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
             raise(e)
         a._calvinsys = self.node.calvinsys()
-        if security:
-            a.set_subject_attributes(security.get_authenticated_subject_attributes())
-            if isinstance(access_decision, tuple):
-                # Authorization checks needed if access_decision is a tuple.
-                a.set_authorization_checks(access_decision[1])
+        if isinstance(access_decision, tuple):
+            # Authorization checks needed if access_decision is a tuple.
+            a.set_authorization_checks(access_decision[1])
         return a
 
     def _new(self, actor_type, args, actor_def=None, security=None, access_decision=None, shadow_actor=False):

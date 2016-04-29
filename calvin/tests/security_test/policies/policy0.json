@@ -1,0 +1,17 @@
+{
+	"id": "policy0",
+	"description": "Security policy for runtime 'testNode1'",
+	"rule_combining": "permit_overrides",
+	"target": {
+		"resource": {
+			"node_name.name": "testNode1"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy0_rule1",
+			"description": "Permit if policy target matches",
+			"effect": "permit"
+		}
+	]
+}
