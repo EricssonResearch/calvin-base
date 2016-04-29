@@ -111,8 +111,6 @@ class Security(object):
             self.sec_conf['signature_trust_store'] = truststore_dir
         self.node = node
         self.subject_attributes = {}
-        self.subject = {}
-        self.auth = {}
 
     def __str__(self):
         return "Subject: %s:" % self.subject_attributes
@@ -152,7 +150,6 @@ class Security(object):
         The corresponding value in self.auth is set to True
         if authentication is successful.
         """
-        auth = []
         if self.subject['user']:
             root_dir = os.path.abspath(os.path.join(_conf.install_location(), '..'))
             srv=Client(server=self.sec_conf['authentication']['server_ip'], 
@@ -170,14 +167,11 @@ class Security(object):
                 _log.debug("%s: %s" % (i, reply[i]))
             if reply.code==pyrad.packet.AccessAccept:
                 _log.debug("Security: access accepted")
-                auth.append(True)
-#                return True
+                return True
             else:
                 _log.debug("Security: access denied")
-                auth.append(False)
-#                return False
-        self.auth['user']=auth
-        return any(auth)
+                return False
+        return False
 
     def authenticate_using_local_database(self, credentials):
         """
@@ -221,14 +215,26 @@ class Security(object):
  
         # Verify users against stored passwords
         for user in local_users:
-            _log.info("looping:%s" % user)
             if credentials['user'] == user['username']:
                 if credentials['password'] == user['password']:
                     for key in user['attributes']:
-                        self.subject_attributes[key]=user['attributes'][key]
-                     #TODO: add attributes for groups which user is member of
-                    _log.info("correct password, here are attributes")
-                    _log.info(self.subject_attributes)
+                        if key == "groups" and local_groups:
+                            for groupKey in user['attributes']['groups']:
+                                for groupAttribute in local_groups[groupKey]:
+                                    if not groupAttribute in self.subject_attributes:
+                                        #if the is no key, create array and add firs value
+                                        self.subject_attributes.setdefault(groupAttribute, []).append(local_groups[groupKey][groupAttribute])
+                                    elif not local_groups[groupKey][groupAttribute] in self.subject_attributes[groupAttribute]:
+                                        #list exist, make sure we don't add same value several times
+                                        self.subject_attributes[groupAttribute].append(local_groups[groupKey][groupAttribute])
+                        else:
+#                            self.subject_attributes.setdefault(key, []).append(user['attributes'][key])
+                            if not user['attributes'][key] in self.subject_attributes:
+                                #if the is no key, create array and add firsit value
+                                self.subject_attributes.setdefault(key, []).append(user['attributes'][key])
+                            elif not user['attributes'][key] in self.subject_attributes[key]:
+                                #list exist, make sure we don't add same value several times
+                                self.subject_attributes[key].append(user['attributes'][key])
                     return True
         return False
 
