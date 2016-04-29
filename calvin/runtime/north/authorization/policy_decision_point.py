@@ -64,8 +64,9 @@ class PolicyDecisionPoint(object):
         Request (example):
         {
             "subject": {
-                "user": ["user1"],
-                "actor_signer": ["signer"]
+                "first_name": "Tomas",
+                "last_name": "Nilsson",
+                "actor_signer": "signer"
             },
             "action": {
                 "requires": ["runtime", "calvinsys.events.timer"]
@@ -153,7 +154,8 @@ class PolicyDecisionPoint(object):
             "rule_combining": "permit_overrides",
             "target": {
                 "subject": {
-                    "user": ["user1", "user2"],
+                    "first_name": ["Tomas", "Gustav"],
+                    "last_name": "Nilsson",
                     "actor_signer": "signer"
                 }
             },
