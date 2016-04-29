@@ -1,13 +1,13 @@
 // Component with two arguments
 
 component PrefixFile(prefix, filename) -> out {
-  /* FileReader takes input parameter 'file' */ 
-  file:io.FileReader(file=filename)
+  /* FileReader takes input parameter 'file' */
+  file:io.FileReader()
   /* PrefixStrings as as input the prefix string 'prefix' */
-  prep:std.PrefixString(prefix=prefix)
-
+  prep:text.PrefixString(prefix=prefix)
+  filename > file.filename
   file.out > prep.in
-  prep.out >out
+  prep.out > .out
 }
 
 src:PrefixFile(prefix="--- ", filename="data.txt")

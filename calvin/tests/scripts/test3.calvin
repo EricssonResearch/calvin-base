@@ -1,7 +1,7 @@
 // a -> b(arg) -> c -> d
-src:std.Counter()
+src : std.Counter()
 delay : std.Delay(delay=0.5)
-sum : std.SumActor()
+sum : std.Sum()
 snk : io.StandardOut()
 
 src.integer > delay.token

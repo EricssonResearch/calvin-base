@@ -1,10 +1,10 @@
-// Wrapper component without arguments 
+// Wrapper component without arguments
 
 component Wrapper() in -> out {
-  sum: std.SumActor()
-  
-  in > sum.integer
-  sum.integer > out
+  sum: std.Sum()
+
+  .in > sum.integer
+  sum.integer > .out
 }
 
 src:std.Counter()

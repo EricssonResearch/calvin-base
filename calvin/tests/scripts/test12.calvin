@@ -3,16 +3,16 @@
 component B() in -> out {
   d : I()
   e : I()
-  
-  in > d.in
+
+  .in > d.in
   d.out > e.in
-  e.out > out 
+  e.out > .out
 }
 
 component I() in -> out {
   i : std.Identity()
-  in > i.token
-  i.token > out
+  .in > i.token
+  i.token > .out
 }
 
 a : std.Counter()

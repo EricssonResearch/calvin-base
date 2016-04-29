@@ -1,8 +1,8 @@
 // Passthrough component (in > out)
 
 component Pass() in -> out {
-  
-  in > out
+
+  .in > .out
 }
 
 src:std.Counter()

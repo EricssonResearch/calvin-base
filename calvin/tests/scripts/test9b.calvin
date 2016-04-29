@@ -5,16 +5,16 @@ component E() token -> token {
   f:std.Identity()
   g:std.Identity()
 
-  in > f.token
+  .token > f.token
   f.token > g.token
-  g.token > out
+  g.token > .token
 }
 
 component B() in -> out {
   e:E()
 
-  in > e.in
-  e.out > out
+  .in > e.token
+  e.token > .out
 }
 
 a:std.Counter()

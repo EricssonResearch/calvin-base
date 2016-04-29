@@ -3,9 +3,9 @@
 component TeeSink() in -> {
   snk1 : io.StandardOut()
   snk2 : io.StandardOut()
-  
-  in > snk1.token
-  in > snk2.token
+
+  .in > snk1.token
+  .in > snk2.token
 }
 
 src:std.Counter()

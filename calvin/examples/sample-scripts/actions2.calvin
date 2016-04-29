@@ -1,5 +1,5 @@
 src:std.Counter()
-id:std.Identity()
+dmy:std.Identity()
 del:std.ClassicDelay()
 snk:io.Print()
 

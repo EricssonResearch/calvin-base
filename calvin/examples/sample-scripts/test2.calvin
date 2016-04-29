@@ -7,4 +7,4 @@ snk : io.Print()
 
 /* Connections */
 f.token > src.filename
-src.out>snk.token
+src.out > snk.token

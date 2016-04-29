@@ -1,0 +1,1 @@
+These scripts are malformed, should be handled by parser to produce a helpful error.

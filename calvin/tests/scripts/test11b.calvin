@@ -3,7 +3,7 @@
 component WrappedSrc() -> out {
   src:std.Counter()
 
-  src.integer > out
+  src.integer > .out
 }
 
 snk1 : io.StandardOut()

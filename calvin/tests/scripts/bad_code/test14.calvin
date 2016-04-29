@@ -2,9 +2,9 @@
 
 component B() in -> out {
   c : B()
-  
-  in > c.in
-  c.out > out 
+
+  .in > c.in
+  c.out > .out
 }
 
 a : std.Counter()

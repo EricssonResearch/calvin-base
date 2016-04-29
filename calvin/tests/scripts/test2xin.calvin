@@ -1,8 +1,0 @@
-// a -[2]-> b -> c
-/* Actors */
-src : std.CountTimer()
-add : misc.AddTwo()
-snk : io.StandardOut()
-/* Connections */
-src.integer > add.in
-add.sum > snk.token

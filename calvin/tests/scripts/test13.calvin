@@ -2,15 +2,15 @@
 
 component B() in -> out {
   c : I()
-  
-  in > c.in
-  c.out > out 
+
+  .in > c.in
+  c.out > .out
 }
 
 component I() in -> out {
   i : std.Identity()
-  in > i.token
-  i.token > out
+  .in > i.token
+  i.token > .out
 }
 
 a : std.Counter()

@@ -5,4 +5,4 @@ src:io.FileReader()
 snk:io.StandardOut()
 /* Connections */
 FILE > src.filename
-src.out>snk.token
+src.out > snk.token

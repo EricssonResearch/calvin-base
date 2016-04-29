@@ -1,21 +1,21 @@
 // Nested components taking arguments
 
 component PrefixFile(prefix, file) -> out {
-  /* FileReader takes input parameter 'file' */ 
-  file : io.FileReader(file=file)
-  prep : std.PrefixString(prefix=prefix)
-
+  /* FileReader takes input parameter 'file' */
+  file : io.FileReader()
+  prep : text.PrefixString(prefix=prefix)
+  file > file.filename
   file.out > prep.in
-  prep.out > out
+  prep.out > .out
 }
 
 
 component PrefixFileTwice(file, prefix) -> out {
   prefixedFile : PrefixFile(prefix=prefix, file=file)
-  prefix : std.PrefixString(prefix=prefix)
+  prefix : text.PrefixString(prefix=prefix)
 
   prefixedFile.out > prefix.in
-  prefix.out > out
+  prefix.out > .out
 }
 
 
