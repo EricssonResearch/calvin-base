@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-def testit(testlist, print_diff, print_script):
+def testit(testlist, print_diff, print_script, testdir=None):
     import json
     import difflib
 
@@ -72,7 +72,8 @@ def testit(testlist, print_diff, print_script):
     res = {}
     for test in tests:
         try:
-            filename = 'calvin/csparser/testscripts/regression-tests/%s.calvin' % test
+            testdir = testdir or 'calvin/csparser/testscripts/regression-tests'
+            filename = '{}/{}.calvin'.format(testdir, test)
             print test,
 
             with open(filename, 'r') as f:
@@ -124,8 +125,11 @@ def testit(testlist, print_diff, print_script):
     for test in tests:
         print test, res[test][1] if len(res[test])>1 else "--- CRASH ---"
 
+    return (testdir, res)
 
-def run_check(tests=None, print_diff=True, print_script=False):
+
+
+def run_check(tests=None, print_diff=True, print_script=False, testdir=None):
     # Configure for virtualenv
     cwd = "/Users/eperspe/Source/calvin-base"
     env_activate = "/Users/eperspe/.virtualenvs/calvin/bin/activate_this.py"
@@ -138,10 +142,11 @@ def run_check(tests=None, print_diff=True, print_script=False):
     sys.path[:0] = [calvin_root]
 
     # Run regression checks
-    testit(tests, print_diff, print_script)
+    return testit(tests, print_diff, print_script, testdir)
+
 
 if __name__ == '__main__':
-    run_check()
+    run_check(tests=['test2'], testdir='/Users/eperspe/Source/calvin-base/calvin/tests/scripts')
 
 
 
