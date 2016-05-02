@@ -45,7 +45,11 @@ rt1_id = None
 rt2_id = None
 rt3_id = None
 test_script_dir = None
-DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check', 'credentials', 'signer'])
+deploy_attr = ['node', 'attr', 'script','reqs', 'check', 'credentials', 'signer']
+DeployArgsTuple = namedtuple('DeployArgs', deploy_attr)
+def DeployArgs(**kwargs):
+    deployargs = DeployArgsTuple(*[None]*len(deploy_attr))
+    return deployargs._replace(**kwargs)
 
 def absolute_filename(filename):
     import os.path

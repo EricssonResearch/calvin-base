@@ -23,7 +23,8 @@ import netifaces
 
 from calvin.utilities import calvinlogger
 
-from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery import ServiceDiscoveryBase
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery import ServiceDiscoveryBase
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht.security_discovery_exchange import Ca
 
 from twisted.internet.protocol import DatagramProtocol
 from twisted.web.http import datetimeToString
@@ -49,7 +50,7 @@ MS_BOOTSTRAP =    ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r
         (SSDP_ADDR, SSDP_PORT, SERVICE_UUID)
 
 MS_CSR = ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r\n' +
-         'MX: 2\r\nST: uuid:%s\r\nCALVIN_CSR: {csr}\r\nCALVIN_FP: {fp}\r\n\r\n') %\
+         'MX: 2\r\nST: uuid:%s\r\nCALVIN_CSR: {csr}\r\n\r\n') %\
         (SSDP_ADDR, SSDP_PORT, CA_SERVICE_UUID)
 
 MS = {SERVICE_UUID: MS_BOOTSTRAP, CA_SERVICE_UUID: MS_CSR}
@@ -61,7 +62,15 @@ MS_BOOTSTRAP_RESP =   'HTTP/1.1 200 OK\r\n' + \
             'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % SERVICE_UUID + \
             'DATE: %s\r\n'
 
-MS_RESP = {SERVICE_UUID: MS_BOOTSTRAP_RESP, CA_SERVICE_UUID: None}
+MS_CA_RESP = 'HTTP/1.1 200 OK\r\n' + \
+            'USN: %s::upnp:rootdevice\r\n' % CA_SERVICE_UUID + \
+            'SERVER: %s\r\nlast-seen: %s\r\nEXT: \r\n' + \
+            'LOCATION: http://calvin@github.se/%s/description-0.0.1.xml\r\n' % CA_SERVICE_UUID + \
+            'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % CA_SERVICE_UUID + \
+            'DATE: %s\r\n' + \
+            'CERTIFICATE: %s\r\n\r\n'
+
+MS_RESP = {SERVICE_UUID: MS_BOOTSTRAP_RESP, CA_SERVICE_UUID: MS_CA_RESP}
 
 def parse_http_response(data):
 
@@ -117,7 +126,19 @@ class ServerBase(DatagramProtocol):
                             delay = random.randint(0, min(5, int(headers['mx'])))
                             reactor.callLater(delay, self.send_it,
                                                   response, address)
-                # TODO elif CA_SERVICE_UUID
+                elif CA_SERVICE_UUID in headers['st'] and address not in self.ignore_list\
+                    and self._msearches_resp[CA_SERVICE_UUID]["sign"]:
+                    _log.debug("CA try to sign")
+                    # Raises exception if CA don't sign the CSR
+                    ca = Ca(self._msearches_resp[CA_SERVICE_UUID]["name"], headers["calvin_csr"])
+                    _log.debug("CA signed %s" % ca.signed_cert)
+                    if ca.signed_cert:
+                        response = MS_RESP[CA_SERVICE_UUID] % ('%s:%d' % address, str(time.time()),
+                                              datetimeToString(), ca.signed_cert)
+                        _log.debug("Sending response: %s" % repr(response))
+                        delay = random.randint(0, min(5, int(headers['mx'])))
+                        reactor.callLater(delay, self.send_it,
+                                              response, address)
         except:
             _log.exception("Error datagram received")
 
@@ -170,7 +191,6 @@ class ClientBase(DatagramProtocol):
         cmd, headers = parse_http_response(datagram)
 
         if cmd[0].startswith('HTTP/1.') and cmd[1] == '200':
-
             _log.debug("Received %s from %r" % (headers, address, ))
             if SERVICE_UUID in headers['st']:
                 c_address = headers['server'].split(':')
@@ -191,7 +211,23 @@ class ClientBase(DatagramProtocol):
                             self._msearches[SERVICE_UUID]['cb']([tuple(c_address)])
                         if self._msearches[SERVICE_UUID]['stop']:
                             self.stop(SERVICE_UUID)
-            # TODO elif CA_SERVICE_UUID
+
+            elif CA_SERVICE_UUID in headers['st']:
+                c_address = headers['server'].split(':')
+                c_address[1] = int(c_address[1])
+                try:
+                    cert = headers['certificate']
+                    c_address.append(cert)
+                except KeyError:
+                    pass
+                # FIXME do we need service filtering for signed certificates
+                if c_address:
+                    _log.debug("Signed Cert %s" % c_address)
+                    _log.debug("CA search data: %s" % self._msearches[CA_SERVICE_UUID])
+                    if self._msearches[CA_SERVICE_UUID]['cb']:
+                        self._msearches[CA_SERVICE_UUID]['cb'](tuple(c_address))
+                    if self._msearches[CA_SERVICE_UUID]['stop']:
+                        self.stop(CA_SERVICE_UUID)
 
     def set_callback(self, service_uuid, callback):
         self._msearches[service_uuid]['cb'] = callback
@@ -299,7 +335,8 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         else:
             _log.debug(traceback.format_stack())
 
-    def search(self, service_uuid, **kwargs):
+    def search(self, service_uuid, callback, **kwargs):
+        self.port.protocol.set_callback(service_uuid, callback)
         self._send_msearch(service_uuid, once=True, kwargs=kwargs)
 
     def stop(self):

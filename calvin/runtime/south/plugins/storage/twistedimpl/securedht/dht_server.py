@@ -25,11 +25,14 @@ from twisted.internet import reactor, defer, threads
 
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import AppendServer
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import SSDPServiceDiscovery,\
-                                                                                              SERVICE_UUID
+                                                                                              SERVICE_UUID,\
+                                                                                              CA_SERVICE_UUID
 from calvin.utilities import certificate
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
+from calvin.runtime.south.plugins.storage.twistedimpl.securedht import security_discovery_exchange as sde
+from calvin.utilities.calvin_callback import CalvinCB
 
 _conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)
@@ -149,52 +152,59 @@ class AutoDHTServer(StorageBase):
         self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
                                             _conf.get("security", "certificate_domain")).configuration
 
-    def start(self, iface='', network=None, bootstrap=None, cb=None, name=None):
-        if bootstrap is None:
-            bootstrap = []
-        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)
-        filename = os.listdir(os.path.join(name_dir, "mine"))
-        st_cert = open(os.path.join(name_dir, "mine", filename[0]), 'rt').read()
-        cert_part = st_cert.split(certificate.BEGIN_LINE)
-        certstr = "{}{}".format(certificate.BEGIN_LINE, cert_part[1])
-
+    def _get_cert(self, name):
         try:
+            name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)
+            filename = os.listdir(os.path.join(name_dir, "mine"))
+            st_cert = open(os.path.join(name_dir, "mine", filename[0]), 'rt').read()
+            cert_part = st_cert.split(certificate.BEGIN_LINE)
+            certstr = "{}{}".format(certificate.BEGIN_LINE, cert_part[1])
             cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                                   certstr)
+            return cert, certstr
         except:
-            raise
-        # Derive DHT node id
+            # Certificate not available
+            return None, None
+
+    def _derive_dht_id(self, cert):
         key = cert.digest("sha256")
         newkey = key.replace(":", "")
         bytekey = newkey.decode("hex")
+        return bytekey[-20:]
 
-        if network is None:
-            network = _conf.get_in_order("dht_network_filter", "ALL")
+    def _signed_cert_received(self, addr_certificate):
+        if not addr_certificate:
+            return
+        ip, port, certificate = addr_certificate
+        _log.debug("Received signed cert %s" % certificate)
+        try:
+            self._sde_client.receive_cert_callback(certificate)
+        except:
+            # We got something that we did not like wait for proper response
+            return
+        self._signed_cert_available()
 
-        self.dht_server = ServerApp(AppendServer, bytekey[-20:])
-        ip, port = self.dht_server.start(iface=iface)
+    def _signed_cert_available(self, cert=None, certstr=None):
+        if cert is None:
+            cert, certstr = self._get_cert(self._name)
+        dht_id = self._derive_dht_id(cert)
 
-        dlist = []
-        dlist.append(self.dht_server.bootstrap(bootstrap))
+        self.dht_server = ServerApp(AppendServer, dht_id)
+        ip, port = self.dht_server.start(iface=self._iface)
 
-        self._ssdps = SSDPServiceDiscovery(iface)
-        dlist += self._ssdps.start()
+        self._dlist.append(self.dht_server.bootstrap(self._bootstrap))
 
-        logger("Register service %s %s:%s" % (network, ip, port))
-        self._ssdps.register_service(network, ip, port)
+        logger("Register service %s %s:%s" % (self._network, ip, port))
+        self._ssdps.register_service(self._network, ip, port)
 
-        logger("Set client filter %s" % (network))
-        self._ssdps.set_client_filter(network)
-
-        start_cb = defer.Deferred()
+        logger("Set client filter %s" % (self._network))
+        self._ssdps.set_client_filter(self._network)
 
         def bootstrap_proxy(addrs):
             def started(args):
                 logger("DHT Started %s" % (args))
-                if not self._started:
-                    reactor.callLater(.2, start_cb.callback, True)
-                if cb:
-                    reactor.callLater(.2, cb, True)
+                if not self._started and self._cb:
+                    reactor.callLater(.2, self._cb, True)
                 self._started = True
 
             def failed(args):
@@ -215,18 +225,66 @@ class AutoDHTServer(StorageBase):
             reactor.callLater(0, _later_start)
 
         # Wait until servers all listen
-        dl = defer.DeferredList(dlist)
+        dl = defer.DeferredList(self._dlist)
         dl.addBoth(start_msearch)
         # Only for logging
         self.dht_server.kserver.protocol.sourceNode.port = port
         self.dht_server.kserver.protocol.sourceNode.ip = "0.0.0.0"
         #FIXME handle inside ServerApp
-        self.dht_server.kserver.name = name
-        self.dht_server.kserver.protocol.name = name
+        self.dht_server.kserver.name = self._name
+        self.dht_server.kserver.protocol.name = self._name
         self.dht_server.kserver.protocol.storeOwnCert(certstr)
         self.dht_server.kserver.protocol.setPrivateKey()
 
-        return start_cb
+    def start(self, iface='', network=None, bootstrap=None, cb=None, name=None, nodeid=None):
+        if bootstrap is None:
+            bootstrap = []
+
+        if network is None:
+            network = _conf.get_in_order("dht_network_filter", "ALL")
+        self._network = network
+        self._iface = iface
+        self._bootstrap = bootstrap
+        self._cb = cb
+        self._name = name
+
+        self._dlist = []
+        self._ssdps = SSDPServiceDiscovery(iface)
+        self._dlist += self._ssdps.start()
+        try:
+            cert_conf_file = _conf.get("security", "certificate_conf")
+            domain = _conf.get("security", "certificate_domain")
+            cert_conf_obj = certificate.Config(cert_conf_file, domain)
+            cert_conf = cert_conf_obj.configuration
+            is_ca = os.path.isfile(cert_conf['CA_default']['private_key'])
+        except:
+            is_ca = False
+        self._ssdps.update_server_params(CA_SERVICE_UUID, sign=is_ca, name=name)
+        cert, certstr = self._get_cert(self._name)
+        if not cert:
+            if is_ca:
+                # We are the CA sign it
+                _log.debug("Local CA sign runtime CSR")
+                csrfile = certificate.new_runtime(cert_conf_obj, name, nodeid)
+                try:
+                    content = open(csrfile, 'rt').read()
+                    cert = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM,
+                                                                  content)
+                    certificate.sign_req(cert_conf_obj, os.path.basename(csrfile), name)
+                    return self._signed_cert_available()
+                except:
+                    _log.exception("Failed signing with local CA")
+                    raise
+            else:
+                # Discover the signing CA
+                _log.debug("No signed cert, discover CA signing CSR")
+                self._sde_client = sde.Client(name, nodeid,
+                                          CalvinCB(self._ssdps.search,
+                                                   CA_SERVICE_UUID,
+                                                   callback=self._signed_cert_received),
+                                          self._signed_cert_available)
+        else:
+            self._signed_cert_available(cert=cert, certstr=certstr)
 
     def set(self, key, value, cb=None):
         return TwistedWaitObject(self.dht_server.set, key=key, value=value, cb=cb)

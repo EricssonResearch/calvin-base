@@ -121,7 +121,7 @@ class Storage(object):
         if self.starting:
             name = self.node.attributes.get_node_name_as_str() or self.node.id
             try:
-                self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name)
+                self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
             except:
                 _log.exception("Failed start of storage for name={}, switches to local".format(name))
 
@@ -214,7 +214,8 @@ class Storage(object):
             try:
                 self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
             except:
-                _log.error("Failed to get: %s" % key)
+                if self.started:
+                    _log.error("Failed to get: %s" % key)
                 async.DelayedCall(0, cb, key=key, value=False)
 
     def get_iter_cb(self, key, value, it, org_key, include_key=False):
@@ -245,8 +246,9 @@ class Storage(object):
                     self.storage.get(key=prefix + key,
                                      cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
                 except:
-                    _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
-                    _log.error("Failed to get: %s" % key)
+                    if self.started:
+                        _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
+                        _log.error("Failed to get: %s" % key)
                     it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
 
     def get_concat_cb(self, key, value, org_cb, org_key, local_list):
@@ -279,7 +281,8 @@ class Storage(object):
             self.storage.get_concat(key=prefix + key,
                                     cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
         except:
-            _log.error("Failed to get: %s" % key, exc_info=True)
+            if self.started:
+                _log.error("Failed to get: %s" % key, exc_info=True)
             async.DelayedCall(0, cb, key=key, value=local_list if local_list else None)
 
     def get_concat_iter_cb(self, key, value, org_key, include_key, it):

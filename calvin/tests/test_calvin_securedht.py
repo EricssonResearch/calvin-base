@@ -23,6 +23,7 @@ import socket
 import os
 import shutil
 import json
+from collections import namedtuple
 from calvin.requests.request_handler import RequestHandler, RT
 from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
 from calvin.utilities.attribute_resolver import format_index_string
@@ -48,6 +49,12 @@ rt1_id = None
 rt2_id = None
 rt3_id = None
 test_script_dir = None
+
+deploy_attr = ['node', 'attr', 'script','reqs', 'check', 'credentials', 'domain']
+DeployArgsTuple = namedtuple('DeployArgs', deploy_attr)
+def DeployArgs(**kwargs):
+    deployargs = DeployArgsTuple(*[None]*len(deploy_attr))
+    return deployargs._replace(**kwargs)
 
 def absolute_filename(filename):
     import os.path
@@ -76,12 +83,20 @@ class TestSecureDht(unittest.TestCase):
         print "Creating new domain."
         certificate.new_domain(testconfig)
         print "Created new domain."
-        # Now handled within runtime
-        #for i in range(3):
-        #    name = "++++node{}".format(i)
-        #    nodeid = calvinuuid.uuid("NODE")
-        #    certreq = certificate.new_runtime(testconfig, name, nodeid=nodeid)
-        #    certificate.sign_req(testconfig, os.path.basename(certreq), name)
+        
+        configdir2 = os.path.join(homefolder, ".calvin",
+                                       "security2", domain)
+        try:
+            shutil.rmtree(configdir2)
+        except:
+            pass
+        # copy other setup and remove private directory and openssl.conf file
+        shutil.copytree(configdir, configdir2)
+        shutil.rmtree(os.path.join(configdir2, "private"))
+        configfile2=os.path.join(configdir2, "openssl.conf")
+        os.remove(configfile2)
+        print "Trying to create a second test domain configuration."
+        testconfig = certificate.Config(configfile=configfile2, domain=domain)
 
         global rt1
         global rt2
@@ -90,9 +105,19 @@ class TestSecureDht(unittest.TestCase):
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('global', 'storage_type', 'securedht')
         rt_conf.add_section('security')
-        rt_conf.set('security', "certificate_conf", None)
+        rt_conf.set('security', "certificate_conf", os.path.join(configdir2, "openssl.conf"))
         rt_conf.set('security', "certificate_domain", domain)
-        rt_conf.save("/tmp/calvin500x.conf")
+        rt_conf.save("/tmp/calvin1.conf")
+        rt_conf2 = copy.deepcopy(rt_conf)
+        rt_conf2.set('global', 'actor_paths', [absolute_filename('test_store')])
+        rt_conf2.set('global', 'capabilities_blacklist', ['calvinsys.events.timer'])
+        rt_conf2.save("/tmp/calvin2.conf")
+        rt_ca_conf = copy.deepcopy(_conf)
+        rt_ca_conf.set('global', 'storage_type', 'securedht')
+        rt_ca_conf.add_section('security')
+        rt_ca_conf.set('security', "certificate_conf", os.path.join(configdir, "openssl.conf"))
+        rt_ca_conf.set('security', "certificate_domain", domain)
+        rt_ca_conf.save("/tmp/calvin_ca.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5000"
             outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
@@ -106,7 +131,7 @@ class TestSecureDht(unittest.TestCase):
                    'node_name': {'name': 'node0'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin500x.conf")
+                   configfile="/tmp/calvin_ca.conf")
         rt1 = RT("http://%s:5003" % ip_addr)
         try:
             logfile = _config_pytest.getoption("logfile")+"5001"
@@ -121,7 +146,7 @@ class TestSecureDht(unittest.TestCase):
                    'node_name': {'name': 'node1'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin500x.conf")
+                   configfile="/tmp/calvin1.conf")
         rt2 = RT("http://%s:5004" % ip_addr)
         try:
             logfile = _config_pytest.getoption("logfile")+"5002"
@@ -136,7 +161,7 @@ class TestSecureDht(unittest.TestCase):
                    'node_name': {'name': 'node2'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}},
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin500x.conf")
+                   configfile="/tmp/calvin2.conf")
         rt3 = RT("http://%s:5005" % ip_addr)
 
         test_script_dir = absolute_filename('scripts/')
@@ -191,7 +216,7 @@ class TestSecureDht(unittest.TestCase):
         caps2 = []
         caps3 = []
         rt_ids = set([rt1_id, rt2_id, rt3_id])
-        for i in range(30):
+        for i in range(300):
             try:
                 if not (rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1):
                     caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
@@ -206,6 +231,8 @@ class TestSecureDht(unittest.TestCase):
                     time.sleep(0.1)
             except:
                 time.sleep(0.1)
+        if failed:
+            _log.analyze("TESTRUN", "+ Failed connecting secure DHT", {'caps1': caps1, 'caps2': caps2, 'caps3': caps3})
         assert not failed
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
         # Now check for the values needed by this specific test
@@ -227,9 +254,8 @@ class TestSecureDht(unittest.TestCase):
         self.verify_storage()
 
 
-    """
     @pytest.mark.slow
-    def testDeployStillShadow(self):
+    def testDeployShadow(self):
         _log.analyze("TESTRUN", "+", {})
         global rt1
         global rt2
@@ -242,8 +268,6 @@ class TestSecureDht(unittest.TestCase):
         self.verify_storage()
 
         from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
         args = DeployArgs(node='http://%s:5004' % ip_addr,
                           script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
                                 reqs=None, check=False)
@@ -251,7 +275,8 @@ class TestSecureDht(unittest.TestCase):
         try:
             result = deploy_app(args)
         except:
-            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
+            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled"
+                                % args.script.name)
         #print "RESULT:", result
         assert result['requirements_fulfilled']
         time.sleep(1)
@@ -266,54 +291,14 @@ class TestSecureDht(unittest.TestCase):
 
         actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) == 0
-        request_handler.migrate(rt2, result['actor_map']['test_shadow1:src'], rt3_id)
+        request_handler.migrate(rt2, result['actor_map']['test_shadow1:sum'], rt3_id)
         time.sleep(1)
         actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
         # src -> rt3, sum -> rt2, snk -> rt1
-        assert result['actor_map']['test_shadow1:src'] in actors[2]
-        assert result['actor_map']['test_shadow1:sum'] in actors[1]
-        assert result['actor_map']['test_shadow1:snk'] in actors[0]
-        actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
-        assert len(actual) == 0
-        request_handler.migrate(rt3, result['actor_map']['test_shadow1:src'], rt1_id)
-        time.sleep(1)
-        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
-        # src -> rt1, sum -> rt2, snk -> rt1
-        assert result['actor_map']['test_shadow1:src'] in actors[0]
-        assert result['actor_map']['test_shadow1:sum'] in actors[1]
+        assert result['actor_map']['test_shadow1:src'] in actors[1]
+        assert result['actor_map']['test_shadow1:sum'] in actors[2]
         assert result['actor_map']['test_shadow1:snk'] in actors[0]
         actual = request_handler.report(rt1, result['actor_map']['test_shadow1:snk'])
         assert len(actual) > 3
 
         request_handler.delete_application(rt2, result['application_id'])
-
-    @pytest.mark.slow
-    def testDeployFailReqs(self):
-        _log.analyze("TESTRUN", "+", {})
-        global rt1
-        global rt2
-        global rt3
-        global rt1_id
-        global rt2_id
-        global rt3_id
-        global test_script_dir
-
-        self.verify_storage()
-
-        from calvin.Tools.cscontrol import control_deploy as deploy_app
-        from collections import namedtuple
-        DeployArgs = namedtuple('DeployArgs', ['node', 'attr', 'script','reqs', 'check'])
-        args = DeployArgs(node='http://%s:5004' % ip_addr,
-                          script=open(test_script_dir+"test_shadow1.calvin"), attr=None,
-                                reqs=test_script_dir+"test_shadow6.deployjson", check=False)
-        result = {}
-        try:
-            result = deploy_app(args)
-        except:
-            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
-        #print "RESULT:", result
-        time.sleep(1)
-        assert not result['requirements_fulfilled']
-        request_handler.delete_application(rt2, result['application_id'])
-
-    """

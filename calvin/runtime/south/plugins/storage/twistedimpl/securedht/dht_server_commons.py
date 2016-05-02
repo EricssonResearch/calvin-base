@@ -50,7 +50,7 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
         self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
                                             _conf.get("security", "certificate_domain")).configuration
 
-    def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None):
+    def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None, nodeid=None):
         if bootstrap is None:
             bootstrap = []
         name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)
@@ -89,16 +89,10 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
         _log.debug("Set client filter %s" % (network))
         self._ssdps.set_client_filter(network)
 
-        start_cb = service_discovery_ssdp.defer.Deferred()
-
         def bootstrap_proxy(addrs):
             def started(args):
                 _log.debug("DHT Started %s" % (args))
-                if not self._started:
-                    service_discovery_ssdp.reactor.callLater(.2,
-                                                            start_cb.callback,
-                                                            True)
-                if cb:
+                if not self._started and cb:
                     service_discovery_ssdp.reactor.callLater(.2,
                                                             cb,
                                                             True)
@@ -131,9 +125,6 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
         self.dht_server.kserver.protocol.name = name
         self.dht_server.kserver.protocol.storeOwnCert(certstr)
         self.dht_server.kserver.protocol.setPrivateKey()
-
-        return start_cb
-
 
 
 class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):

@@ -34,7 +34,7 @@ class StorageProxy(StorageBase):
         _log.debug("PROXY init for %s", self.master_uri)
         super(StorageProxy, self).__init__()
 
-    def start(self, iface='', network='', bootstrap=[], cb=None, name=None):
+    def start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
         """
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished

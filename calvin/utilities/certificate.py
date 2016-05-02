@@ -36,6 +36,7 @@ from calvin.utilities.utils import get_home
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
 BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
+BEGIN_CSR_LINE = "-----BEGIN CERTIFICATE REQUEST-----"
 
 
 class Config():
@@ -107,12 +108,18 @@ class Config():
         self.config = ConfigParser.SafeConfigParser()
         self.config.optionxform = str
         os.umask(0077)
+        self.domain = domain
 
-        if configfile is not None:  # Open existing config file
+        if configfile is not None and os.path.isfile(self.configfile):
+            # Open existing config file
             self.configuration = self.parse_opensslconf()
-
+        elif configfile is not None and domain is not None:
+            self.configfile = configfile
+            self.new_opensslconf()
+            self.configuration = self.parse_opensslconf()
+            print "Made new configuration at " \
+                  "{}".format(self.configfile)
         elif configfile is None and domain is not None:
-            self.domain = domain
             homefolder = get_home()
             self.configfile = os.path.join(homefolder, ".calvin",
                                            "security", domain,
@@ -258,7 +265,7 @@ def new_runtime(conf, name, nodeid=None):
     name_dir = os.path.join(conf.configuration["CA_default"]["runtimes_dir"], name)
     private_key = os.path.join(name_dir, "private", "private.key")
     private = os.path.dirname(private_key)
-
+    _log.debug("new_runtime: %s" % name_dir)
     out = os.path.join(outpath, "{}.csr".format(name))
 
     os.umask(0077)
@@ -460,7 +467,7 @@ def sign_file(conf, file):
         raise IOError(stderr)
     return sign_file
 
-def sign_req(conf, req, name):
+def sign_req(conf, req, name, other=False):
     """
     Sign a certificate request.
     Conf is a Config object with a loaded openssl.conf configuration.
@@ -546,7 +553,7 @@ def sign_req(conf, req, name):
     except OSError:
         pass
 
-    newkeyname = os.path.join(name_dir, "mine", newcert)
+    newkeyname = os.path.join(name_dir, "others" if other else "mine", newcert)
     print(signed)
     print(newkeyname)
     os.rename(signed, newkeyname)
@@ -585,19 +592,7 @@ def obtain_cert_node_info(name):
         pass
         #_log.exception("OBTAINING fail existing security domain={}, name={}".format(domain, name))
 
-    # Create new CSR
-    csrfile = new_runtime(cert_conf, name, nodeid=calvinuuid.uuid("NODE"))
-    _log.debug("OBTAINING new security csr={}, domain={}, name={}".format(csrfile, domain, name))
-    try:
-        content = open(csrfile, 'rt').read()
-        cert = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM,
-                                                      content)
-        subject = cert.get_subject()
-        # TODO multicast signing of CSR, now just sign it assuming local CA
-        sign_req(cert_conf, os.path.basename(csrfile), name)
-        _log.debug("OBTAINING new security domain={}, name={}".format(domain, name))
-        return {'domain': domain, 'name': name, 'id': subject.dnQualifier}
-    except:
-        #_log.exception("OBTAINING fail new security domain={}, name={}".format(domain, name))
-        return {'domain': None, 'name': name, 'id': calvinuuid.uuid("NODE")}
+    # No valid signed cert available, create new node id and let user create certificate later
+    nodeid = calvinuuid.uuid("NODE")
+    return {'domain': domain, 'name': name, 'id': nodeid}
 
