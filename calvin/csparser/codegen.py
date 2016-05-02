@@ -100,6 +100,32 @@ class Expander(object):
             return
         map(self.visit, node.children[:])
 
+    # @visitor.when(ast.Portmap)
+    # def visit(self, node):
+    #     if type(node.outport) is ast.InternalPort:
+    #         # Component inport: may map to many real inports inside component
+    #         node.parent.inport_map[node.outport.port] = node.inport.clone()
+    #     else:
+    #         # Component outport - maps to a single outport inside component
+    #         node.parent.outport_map[node.inport.port] = node.outport.clone()
+    #     node.delete()
+
+    # @visitor.when(ast.InternalOutPort)
+    # def visit(self, node):
+    #     # Component inport: may map to many real inports inside component
+    #     link = node.parent
+    #     block = link.parent
+    #     block.inport_map[node.port] = link.inport.clone()
+    #     link.delete()
+    #
+    # @visitor.when(ast.InternalInPort)
+    # def visit(self, node):
+    #     # Component outport - maps to a single outport inside component
+    #     link = node.parent
+    #     block = link.parent
+    #     block.outport_map[node.port] = link.outport.clone()
+    #     link.delete()
+
     @visitor.when(ast.Assignment)
     def visit(self, node):
         if node.actor_type not in self.components:
@@ -116,7 +142,10 @@ class Expander(object):
         new.args = {x.children[0].ident: x.children[1] for x in args}
         node.parent.replace_child(node, new)
         # Recurse
-        map(self.visit, new.children)
+        # map(self.visit, new.children)
+        self.visit(new)
+
+
 
 
 class Flatten(object):
@@ -168,13 +197,17 @@ class Flatten(object):
                 value = block.args[key]
             node.replace_child(value_node, value)
 
-    @visitor.when(ast.InternalPort)
-    def visit(self, node):
-        node.actor = ':'.join(self.stack)
+    # @visitor.when(ast.InternalPort)
+    # def visit(self, node):
+    #     # node.actor = ':'.join(self.stack)
+    #     raise Exception("Error: {} found in {}".format(node, node.parent))
 
     @visitor.when(ast.Port)
     def visit(self, node):
-        node.actor = ':'.join(self.stack + [node.actor])
+        if node.actor:
+            node.actor = ':'.join(self.stack + [node.actor])
+        else:
+            node.actor = ':'.join(self.stack)
 
     @visitor.when(ast.Block)
     def visit(self, node):
@@ -275,6 +308,9 @@ class CodeGen(object):
         # Tree re-write
         #
         print
+        print "========\nROOT\n========"
+        self.printer.process(self.root)
+
         ##
         # Expand local components
         #
@@ -289,52 +325,57 @@ class CodeGen(object):
         for comp in components:
             comp.delete()
 
+        print "========\nEXPANDED\n========"
         self.printer.process(self.root)
         ##
         # Implicit port rewrite
         rw = ImplicitPortRewrite()
         rw.visit(self.root)
 
+        print "========\nPortRewrite\n========"
+        self.printer.process(self.root)
 
         ##
         # Flatten blocks
         flattener = Flatten()
         flattener.visit(self.root)
 
+        print "========\nFLATTENED\n========"
         self.printer.process(self.root)
         ##
-        # Resolve portmaps
-        # FIXME: Clean up this mess.
-        portmaps = self.query(self.root, kind=ast.Portmap)
-        outportmaps = [(p.inport.actor, p.inport.port, p.outport) for p in portmaps if type(p.inport) is ast.InternalPort]
-        inportmaps = [(p.outport.actor, p.outport.port, p.inport) for p in portmaps if type(p.outport) is ast.InternalPort]
-        for portmap in portmaps:
-            portmap.delete()
+        # # Resolve portmaps
+        # # FIXME: Clean up this mess.
+        # portmaps = self.query(self.root, kind=ast.Portmap)
+        # outportmaps = [(p.inport.actor, p.inport.port, p.outport) for p in portmaps if type(p.inport) is ast.InternalPort]
+        # inportmaps = [(p.outport.actor, p.outport.port, p.inport) for p in portmaps if type(p.outport) is ast.InternalPort]
+        # for portmap in portmaps:
+        #     portmap.delete()
+        #
+        # consumed_links = set()
+        # for actor, port, replacement in outportmaps:
+        #     ports = self.query(self.root, kind=ast.Port, attributes={'actor':actor, 'port':port})
+        #     for replace in ports:
+        #         link = replace.parent
+        #         consumed_links.add(link)
+        #         # Create a new link
+        #         new_link = ast.Link(replacement.clone(), link.inport.clone())
+        #         link.parent.add_child(new_link)
+        # for consumed_link in consumed_links:
+        #     consumed_link.delete()
+        #
+        # consumed_links = set()
+        # for actor, port, replacement in inportmaps:
+        #     ports = self.query(self.root, kind=ast.Port, attributes={'actor':actor, 'port':port})
+        #     for replace in ports:
+        #         link = replace.parent
+        #         consumed_links.add(link)
+        #         # Create a new link
+        #         new_link = ast.Link(link.outport.clone(), replacement.clone())
+        #         link.parent.add_child(new_link)
+        # for consumed_link in consumed_links:
+        #     consumed_link.delete()
 
-        consumed_links = set()
-        for actor, port, replacement in outportmaps:
-            ports = self.query(self.root, kind=ast.Port, attributes={'actor':actor, 'port':port})
-            for replace in ports:
-                link = replace.parent
-                consumed_links.add(link)
-                # Create a new link
-                new_link = ast.Link(replacement.clone(), link.inport.clone())
-                link.parent.add_child(new_link)
-        for consumed_link in consumed_links:
-            consumed_link.delete()
-
-        consumed_links = set()
-        for actor, port, replacement in inportmaps:
-            ports = self.query(self.root, kind=ast.Port, attributes={'actor':actor, 'port':port})
-            for replace in ports:
-                link = replace.parent
-                consumed_links.add(link)
-                # Create a new link
-                new_link = ast.Link(link.outport.clone(), replacement.clone())
-                link.parent.add_child(new_link)
-        for consumed_link in consumed_links:
-            consumed_link.delete()
-
+        print "========\nFINISHED\n========"
         self.printer.process(self.root)
 
         ##

@@ -114,8 +114,7 @@ def p_program(p):
 
 def p_statement(p):
     """statement : assignment
-                 | link
-                 | portmap"""
+                 | link"""
     p[0] = p[1]
 
 
@@ -125,15 +124,17 @@ def p_assignment(p):
 
 
 def p_link(p):
-    """link : port GT port
-            | implicit_port GT port"""
+    """link : outport GT inport
+            | outport GT internal_inport
+            | internal_outport GT inport
+            | implicit_port GT inport"""
     p[0] = ast.Link(p[1], p[3])
 
 
-def p_portmap(p):
-    """portmap : port GT internal_port
-               | internal_port GT port"""
-    p[0] = ast.Portmap(p[1], p[3])
+# def p_portmap(p):
+#     """portmap : port GT internal_port
+#                | internal_port GT port"""
+#     p[0] = ast.Portmap(p[1], p[3])
 
 
 def p_implicit_port(p):
@@ -141,14 +142,23 @@ def p_implicit_port(p):
     p[0] = ast.ImplicitPort(p[1])
 
 
-def p_port(p):
-    """port : IDENTIFIER DOT IDENTIFIER"""
-    p[0] = ast.Port(p[1], p[3])
+def p_inport(p):
+    """inport : IDENTIFIER DOT IDENTIFIER"""
+    p[0] = ast.InPort(p[1], p[3])
+
+def p_outport(p):
+    """outport : IDENTIFIER DOT IDENTIFIER"""
+    p[0] = ast.OutPort(p[1], p[3])
 
 
-def p_internal_port(p):
-    """internal_port : DOT IDENTIFIER"""
-    p[0] = ast.InternalPort(p[2])
+def p_internal_inport(p):
+    """internal_inport : DOT IDENTIFIER"""
+    p[0] = ast.InternalInPort(p[2])
+
+
+def p_internal_outport(p):
+    """internal_outport : DOT IDENTIFIER"""
+    p[0] = ast.InternalOutPort(p[2])
 
 
 def p_named_args(p):

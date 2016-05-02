@@ -140,11 +140,13 @@ class Link(Node):
         self.inport.parent = None
         self.children[1] = value
 
+# FIXME: Redundant
 class Portmap(Link):
     """docstring for Portmap"""
     def __init__(self, outport, inport):
         super(Portmap, self).__init__(outport, inport)
 
+# FIXME: Abstract
 class Port(Node):
     """docstring for LinkNode"""
     def __init__(self, actor, port):
@@ -153,16 +155,31 @@ class Port(Node):
         self.actor = actor
         self.port = port
 
+class InPort(Port):
+    """docstring for LinkNode"""
+    def __init__(self, actor, port):
+        super(InPort, self).__init__(actor, port)
+
+class OutPort(Port):
+    """docstring for LinkNode"""
+    def __init__(self, actor, port):
+        super(OutPort, self).__init__(actor, port)
+
 class ImplicitPort(Node):
     """docstring for ImplicitPortNode"""
     def __init__(self, arg):
         super(ImplicitPort, self).__init__()
         self.add_child(arg)
 
-class InternalPort(Port):
+class InternalInPort(InPort):
     """docstring for InternalPortNode"""
     def __init__(self, port):
-        super(InternalPort, self).__init__('', port)
+        super(InternalInPort, self).__init__('', port)
+
+class InternalOutPort(OutPort):
+    """docstring for InternalPortNode"""
+    def __init__(self, port):
+        super(InternalOutPort, self).__init__('', port)
 
 class Block(Node):
     """docstring for ComponentNode"""
@@ -170,6 +187,8 @@ class Block(Node):
         super(Block, self).__init__()
         self.namespace = namespace
         self.args = args or {}
+        self.inport_map = {}
+        self.outport_map = {}
         self.add_children(program or [])
 
 class Component(Node):

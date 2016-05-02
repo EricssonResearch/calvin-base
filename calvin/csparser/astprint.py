@@ -105,7 +105,14 @@ class BracePrinter(object):
     @visitor.when(ast.Block)
     def visit(self, node):
         def f(node):
-            print "{}( {} namespace: {}, args: {}".format(self._indentation(), node, node.namespace, node.args)
+            xtra_indent = self._indentation() + " "*11
+            print "{}( {}\n{}namespace: {},\n{}args: {},\n{}inport_map: {},\n{}outport_map: {}".format(
+                self._indentation(), node,
+                xtra_indent, node.namespace,
+                xtra_indent, node.args,
+                xtra_indent, node.inport_map,
+                xtra_indent, node.outport_map
+            )
         def g(node):
             print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)
@@ -132,6 +139,14 @@ class BracePrinter(object):
     def visit(self, node):
         print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
 
+    @visitor.when(ast.InPort)
+    def visit(self, node):
+        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
+
+    @visitor.when(ast.OutPort)
+    def visit(self, node):
+        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
+
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
         def f(node):
@@ -144,7 +159,11 @@ class BracePrinter(object):
 
         # print "{}( {} {} )".format(self._indentation(), node, node.arg)
 
-    @visitor.when(ast.InternalPort)
+    @visitor.when(ast.InternalInPort)
+    def visit(self, node):
+        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
+
+    @visitor.when(ast.InternalOutPort)
     def visit(self, node):
         print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
 
