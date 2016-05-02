@@ -314,11 +314,17 @@ class CodeGen(object):
 
         ##
         # # Resolve portmaps
+        consumed = []
         iops = self.query(self.root, kind=ast.InternalOutPort)
         for iop in iops:
             ps = self.query(self.root, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
             for p in ps:
-                p.parent.inport = iop.parent.inport.clone()
+                link = p.parent
+                block = link.parent
+                new = link.clone()
+                new.inport = iop.parent.inport.clone()
+                block.add_child(new)
+                consumed.append(link)
 
         iips = self.query(self.root, kind=ast.InternalInPort)
         for iip in iips:
@@ -331,6 +337,9 @@ class CodeGen(object):
 
         # print "========\nFINISHED\n========"
         # self.printer.process(self.root)
+        for x in set(consumed):
+            if x.parent:
+                x.delete()
 
         ##
         # "code" generation
@@ -350,5 +359,5 @@ class CodeGen(object):
 if __name__ == '__main__':
     from parser_regression_tests import run_check
     run_check(tests=['test9'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/examples/sample-scripts')
-    # run_check(tests=['test11'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/tests/scripts')
+    run_check(tests=['test11'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/tests/scripts')
 
