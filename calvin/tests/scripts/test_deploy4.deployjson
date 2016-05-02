@@ -1,0 +1,17 @@
+{
+    "groups": {"firstgroup": ["src", "sum"]},
+    "requirements": {
+        "src": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"name": "serv"}]},
+                 "type": "+"
+                }], 
+        "sum": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"name": "display"}]},
+                 "type": "+"
+                }], 
+        "snk": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"name": "serv"}]},
+                 "type": "+"
+                }]
+            }
+}
