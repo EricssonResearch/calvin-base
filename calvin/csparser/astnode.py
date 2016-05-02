@@ -187,8 +187,6 @@ class Block(Node):
         super(Block, self).__init__()
         self.namespace = namespace
         self.args = args or {}
-        self.inport_map = {}
-        self.outport_map = {}
         self.add_children(program or [])
 
 class Component(Node):

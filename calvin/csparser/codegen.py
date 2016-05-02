@@ -100,31 +100,6 @@ class Expander(object):
             return
         map(self.visit, node.children[:])
 
-    # @visitor.when(ast.Portmap)
-    # def visit(self, node):
-    #     if type(node.outport) is ast.InternalPort:
-    #         # Component inport: may map to many real inports inside component
-    #         node.parent.inport_map[node.outport.port] = node.inport.clone()
-    #     else:
-    #         # Component outport - maps to a single outport inside component
-    #         node.parent.outport_map[node.inport.port] = node.outport.clone()
-    #     node.delete()
-
-    # @visitor.when(ast.InternalOutPort)
-    # def visit(self, node):
-    #     # Component inport: may map to many real inports inside component
-    #     link = node.parent
-    #     block = link.parent
-    #     block.inport_map[node.port] = link.inport.clone()
-    #     link.delete()
-    #
-    # @visitor.when(ast.InternalInPort)
-    # def visit(self, node):
-    #     # Component outport - maps to a single outport inside component
-    #     link = node.parent
-    #     block = link.parent
-    #     block.outport_map[node.port] = link.outport.clone()
-    #     link.delete()
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
@@ -144,8 +119,6 @@ class Expander(object):
         # Recurse
         # map(self.visit, new.children)
         self.visit(new)
-
-
 
 
 class Flatten(object):
@@ -197,10 +170,6 @@ class Flatten(object):
                 value = block.args[key]
             node.replace_child(value_node, value)
 
-    # @visitor.when(ast.InternalPort)
-    # def visit(self, node):
-    #     # node.actor = ':'.join(self.stack)
-    #     raise Exception("Error: {} found in {}".format(node, node.parent))
 
     @visitor.when(ast.Port)
     def visit(self, node):
@@ -225,7 +194,6 @@ class Flatten(object):
         if node.namespace:
             self.stack.append(node.namespace)
         # Iterate over a copy of children since we manipulate the list
-
         map(self.visit, node.children[:])
         if node.namespace:
             self.stack.pop()
@@ -307,9 +275,9 @@ class CodeGen(object):
         ##
         # Tree re-write
         #
-        print
-        print "========\nROOT\n========"
-        self.printer.process(self.root)
+        # print
+        # print "========\nROOT\n========"
+        # self.printer.process(self.root)
 
         ##
         # Expand local components
@@ -325,58 +293,44 @@ class CodeGen(object):
         for comp in components:
             comp.delete()
 
-        print "========\nEXPANDED\n========"
-        self.printer.process(self.root)
+        # print "========\nEXPANDED\n========"
+        # self.printer.process(self.root)
+
         ##
         # Implicit port rewrite
         rw = ImplicitPortRewrite()
         rw.visit(self.root)
 
-        print "========\nPortRewrite\n========"
-        self.printer.process(self.root)
+        # print "========\nPortRewrite\n========"
+        # self.printer.process(self.root)
 
         ##
         # Flatten blocks
         flattener = Flatten()
         flattener.visit(self.root)
 
-        print "========\nFLATTENED\n========"
-        self.printer.process(self.root)
+        # print "========\nFLATTENED\n========"
+        # self.printer.process(self.root)
+
         ##
         # # Resolve portmaps
-        # # FIXME: Clean up this mess.
-        # portmaps = self.query(self.root, kind=ast.Portmap)
-        # outportmaps = [(p.inport.actor, p.inport.port, p.outport) for p in portmaps if type(p.inport) is ast.InternalPort]
-        # inportmaps = [(p.outport.actor, p.outport.port, p.inport) for p in portmaps if type(p.outport) is ast.InternalPort]
-        # for portmap in portmaps:
-        #     portmap.delete()
-        #
-        # consumed_links = set()
-        # for actor, port, replacement in outportmaps:
-        #     ports = self.query(self.root, kind=ast.Port, attributes={'actor':actor, 'port':port})
-        #     for replace in ports:
-        #         link = replace.parent
-        #         consumed_links.add(link)
-        #         # Create a new link
-        #         new_link = ast.Link(replacement.clone(), link.inport.clone())
-        #         link.parent.add_child(new_link)
-        # for consumed_link in consumed_links:
-        #     consumed_link.delete()
-        #
-        # consumed_links = set()
-        # for actor, port, replacement in inportmaps:
-        #     ports = self.query(self.root, kind=ast.Port, attributes={'actor':actor, 'port':port})
-        #     for replace in ports:
-        #         link = replace.parent
-        #         consumed_links.add(link)
-        #         # Create a new link
-        #         new_link = ast.Link(link.outport.clone(), replacement.clone())
-        #         link.parent.add_child(new_link)
-        # for consumed_link in consumed_links:
-        #     consumed_link.delete()
+        iops = self.query(self.root, kind=ast.InternalOutPort)
+        for iop in iops:
+            ps = self.query(self.root, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
+            for p in ps:
+                p.parent.inport = iop.parent.inport.clone()
 
-        print "========\nFINISHED\n========"
-        self.printer.process(self.root)
+        iips = self.query(self.root, kind=ast.InternalInPort)
+        for iip in iips:
+            ps = self.query(self.root, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
+            for p in ps:
+                p.parent.outport = iip.parent.outport.clone()
+
+        for ip in self.query(self.root, kind=ast.InternalOutPort) + self.query(self.root, kind=ast.InternalInPort):
+            ip.parent.delete()
+
+        # print "========\nFINISHED\n========"
+        # self.printer.process(self.root)
 
         ##
         # "code" generation
@@ -396,4 +350,5 @@ class CodeGen(object):
 if __name__ == '__main__':
     from parser_regression_tests import run_check
     run_check(tests=['test9'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/examples/sample-scripts')
+    # run_check(tests=['test11'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/tests/scripts')
 

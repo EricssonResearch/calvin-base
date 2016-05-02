@@ -106,12 +106,10 @@ class BracePrinter(object):
     def visit(self, node):
         def f(node):
             xtra_indent = self._indentation() + " "*11
-            print "{}( {}\n{}namespace: {},\n{}args: {},\n{}inport_map: {},\n{}outport_map: {}".format(
+            print "{}( {}\n{}namespace: {},\n{}args: {}".format(
                 self._indentation(), node,
                 xtra_indent, node.namespace,
-                xtra_indent, node.args,
-                xtra_indent, node.inport_map,
-                xtra_indent, node.outport_map
+                xtra_indent, node.args
             )
         def g(node):
             print "{})".format(self._indentation())
