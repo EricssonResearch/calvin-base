@@ -20,8 +20,9 @@ import sys
 import json
 import argparse
 from calvin.csparser.parser import calvin_parser
-from calvin.csparser.checker import check
-from calvin.csparser.analyzer import generate_app_info
+# from calvin.csparser.checker import check
+# from calvin.csparser.analyzer import generate_app_info
+from calvin.csparser.codegen import CodeGen
 from calvin.utilities.security import Security, security_needed_check
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
@@ -87,10 +88,15 @@ def _compile_cont(source_text, filename, verify, access_decision, security=None,
     _log.debug("Parsed %s, %s, %s" % (ir, errors, warnings))
     # If there were errors during parsing no IR will be generated
     if not errors:
-        c_errors, c_warnings = check(ir, verify=verify)
-        errors.extend(c_errors)
-        warnings.extend(c_warnings)
-        deployable = generate_app_info(ir, verify=verify)
+        # FIXME:
+        # c_errors, c_warnings = check(ir, verify=verify)
+        # errors.extend(c_errors)
+        # warnings.extend(c_warnings)
+        # FIXME:
+        # deployable = generate_app_info(ir, verify=verify)
+        codegen = CodeGen(ir, os.path.basename(filename))
+        deployable = codegen.app_info
+
         if errors:
             deployable['valid'] = False
     _log.debug("Compiled %s, %s, %s" % (deployable, errors, warnings))
