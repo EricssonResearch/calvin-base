@@ -1,0 +1,5 @@
+define FOO=[1,2,3]
+
+print : io.Print()
+
+FOO > print.token

@@ -1,0 +1,21 @@
+define ARG=-1
+
+component Foo(arg) in -> out {
+  """
+  Foo(arg)
+  Documentation please
+  """
+
+  init : std.Init(data=arg)
+
+  .in > init.in
+  init.out > .out
+}
+
+src : Foo(arg=ARG)
+delay : std.ClassicDelay()
+print : io.Print()
+
+src.out > print.token
+src.out > delay.token
+delay.token > src.in

@@ -1,0 +1,18 @@
+// Component with fan-out to outports
+
+component Tee() in -> out1, out2 {
+  ident : std.Identity()
+
+  .in > ident.token
+  ident.token > .out1
+  ident.token > .out2
+}
+
+src : std.Counter()
+tee : Tee()
+p1 : io.Print()
+p2 : io.Print()
+
+src.integer > tee.in
+tee.out1 > p1.token
+tee.out2 > p2.token
