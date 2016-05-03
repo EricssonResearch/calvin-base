@@ -296,37 +296,38 @@ class CodeGen(object):
     Generate code from a source file
     FIXME: Use a writer class to generate output in various formats
     """
-    def __init__(self, ast_root, script_name):
+    def __init__(self, ast_root, script_name, verbose=False):
         super(CodeGen, self).__init__()
         self.actorstore = ActorStore()
         self.root = ast_root
         self.script_name = script_name
-        self.constants = {}
         self.local_components = {}
-        # self.app_info = {'name':script_name}
         self.printer = astprint.BracePrinter()
-
+        self.verbose = verbose
         self.run()
 
+    def dump_tree(self, heading):
+        if not self.verbose:
+            return
+        print "========\n{}\n========".format(heading)
+        self.printer.process(self.root)
 
     def run(self, verbose=True):
         ast.Node._verbose_desc = verbose
 
-        ##
+        ## FIXME:
         # Check for errors
         #
 
         ##
         # Tree re-write
         #
-        # print
-        # print "========\nROOT\n========"
-        # self.printer.process(self.root)
+        print
+        self.dump_tree('ROOT')
 
         ##
         # Expand local components
         #
-
         components = self.query(self.root, kind=ast.Component, maxdepth=1)
         for c in components:
             self.local_components[c.name] = c
@@ -336,29 +337,25 @@ class CodeGen(object):
         # All component definitions can now be removed
         for comp in components:
             comp.delete()
-
-        # print "========\nEXPANDED\n========"
-        # self.printer.process(self.root)
+        self.dump_tree('EXPANDED')
 
         ##
         # Implicit port rewrite
         rw = ImplicitPortRewrite()
         rw.visit(self.root)
-
-        # print "========\nPortRewrite\n========"
-        # self.printer.process(self.root)
+        self.dump_tree('Port Rewrite')
 
         ##
         # Flatten blocks
         flattener = Flatten()
         flattener.visit(self.root)
+        self.dump_tree('FLATTENED')
 
-        # print "========\nFLATTENED\n========"
-        # self.printer.process(self.root)
         ##
         # Resolve Constants
         rc = ResolveConstants(self.root)
         rc.process()
+        self.dump_tree('RESOLVED CONSTANTS')
 
         ##
         # # Resolve portmaps
@@ -383,11 +380,11 @@ class CodeGen(object):
         for ip in self.query(self.root, kind=ast.InternalOutPort) + self.query(self.root, kind=ast.InternalInPort):
             ip.parent.delete()
 
-        # print "========\nFINISHED\n========"
-        # self.printer.process(self.root)
         for x in set(consumed):
             if x.parent:
                 x.delete()
+
+        self.dump_tree('RESOLVED PORTMAPS')
 
         ##
         # "code" generation
@@ -395,8 +392,8 @@ class CodeGen(object):
         gen_app_info.visit(self.root)
         self.app_info = gen_app_info.app_info
 
-        import json
-        print json.dumps(self.app_info, indent=4)
+        # import json
+        # print json.dumps(self.app_info, indent=4)
 
     def query(self, root, kind=None, attributes=None, maxdepth=1024):
         finder = Finder()
@@ -406,6 +403,5 @@ class CodeGen(object):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check(tests=['test9'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/examples/sample-scripts')
-    run_check(tests=['test11'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/tests/scripts')
+    run_check(tests=None, print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/regression-tests')
 
