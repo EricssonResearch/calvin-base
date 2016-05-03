@@ -14,8 +14,7 @@
         "attributes": {
             "first_name": "Berit",
             "last_name": "Beritsdotter",
-            "age": "22",
-            "groups": ["Ericsson Lund"]
+            "age": "22"
         }
     },
     {

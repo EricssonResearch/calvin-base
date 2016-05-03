@@ -149,8 +149,8 @@ class PolicyDecisionPoint(object):
         Policy format (example):
         {
             "id": "policy1",
-            "description": "Security policy for user1/user2 with 
-                            actor signed by 'signer'",
+            "description": "Security policy for user Tomas or Gustav 
+                            Nilsson with actor signed by signer.",
             "rule_combining": "permit_overrides",
             "target": {
                 "subject": {
@@ -164,7 +164,7 @@ class PolicyDecisionPoint(object):
                     "id": "policy1_rule1",
                     "description": "Permit access to 'calvinsys.events.timer', 
                                     'calvinsys.io.*' and 'runtime' between 
-                                    09:00 and 17:00 if condition is true",
+                                    09:00 and 17:00 if condition is true.",
                     "effect": "permit",
                     "target": {
                         "action": {

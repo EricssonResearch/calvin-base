@@ -39,7 +39,6 @@ from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 from calvin.utilities.utils import get_home
-from calvin.requests.request_handler import RequestHandler
 from calvin.utilities.calvin_callback import CalvinCB
 
 _conf = calvinconfig.get()
@@ -133,7 +132,9 @@ class Security(object):
         if not security_needed_check() or not credentials:
             _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
-
+        # Make sure that all credential values are lists.
+        credentials = {k: v if isinstance(v, list) else [v]
+                       for k, v in credentials.iteritems()}
         if self.sec_conf['authentication']['procedure'] == "local":
             _log.debug("Security: local authentication method chosen")
             return self.authenticate_using_local_database(credentials)
@@ -155,6 +156,7 @@ class Security(object):
                         secret= bytes(self.sec_conf['authentication']['secret']),
                         dict=Dictionary(os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary"), 
                                         os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary.acc")))
+            # TODO: handle multiple credentials (username/password pairs).
             req=srv.CreateAuthPacket(code=pyrad.packet.AccessRequest,
                         User_Name=credentials['user'][0],
                         NAS_Identifier="localhost")
@@ -203,11 +205,27 @@ class Security(object):
                 local_groups = []
  
         # Verify users against stored passwords
+        # TODO: handle multiple credentials (username/password pairs).
         for user in local_users:
             if credentials['user'][0] == user['username']:
                 if credentials['password'][0] == user['password']:
-                    self.subject_attributes = user['attributes']
-                    # TODO: add attributes for groups which user is member of
+                    for key in user['attributes']:
+                        if key == "groups" and local_groups:
+                            for group_key in user['attributes']['groups']:
+                                for group_attribute in local_groups[group_key]:
+                                    if not group_attribute in self.subject_attributes:
+                                        # If the key doesn't exist, create array and add first value
+                                        self.subject_attributes.setdefault(group_attribute, []).append(local_groups[group_key][group_attribute])
+                                    elif not local_groups[group_key][group_attribute] in self.subject_attributes[group_attribute]:
+                                        # List exists, make sure we don't add same value several times
+                                        self.subject_attributes[group_attribute].append(local_groups[group_key][group_attribute])
+                        else:
+                            if not user['attributes'][key] in self.subject_attributes:
+                                # If the key doesn't exist, create array and add first value
+                                self.subject_attributes.setdefault(key, []).append(user['attributes'][key])
+                            elif not user['attributes'][key] in self.subject_attributes[key]:
+                                # List exists, make sure we don't add same value several times
+                                self.subject_attributes[key].append(user['attributes'][key])
                     return True
         return False
 

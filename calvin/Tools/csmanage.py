@@ -262,7 +262,7 @@ def manage_cs(args):
         if args.dir:
             truststore_path = os.path.join(args.dir, "trustStore")
         else:
-            homefolder = os.getenv("HOME")
+            homefolder = get_home()
             truststore_path = os.path.join(homefolder, ".calvin", "security", "trustStore")
         if not os.path.isdir(truststore_path):
             os.makedirs(truststore_path, 0700)
@@ -278,7 +278,7 @@ def manage_cs(args):
         if args.dir:
             truststore_path = os.path.join(args.dir, "trustStore")
         else:
-            homefolder = os.getenv("HOME")
+            homefolder = get_home()
             truststore_path = os.path.join(homefolder, ".calvin", "security", "trustStore")
         try:
             os.remove(os.path.join(truststore_path, certificate.cert_hash(cert_file) + ".0"))
