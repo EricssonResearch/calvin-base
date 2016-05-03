@@ -182,6 +182,8 @@ class AutoDHTServer(StorageBase):
         except:
             # We got something that we did not like wait for proper response
             return
+        _log.debug("Stop CA search")
+        self._ssdps.stop_search(CA_SERVICE_UUID)
         self._signed_cert_available()
 
     def _signed_cert_available(self, cert=None, certstr=None):
@@ -279,7 +281,7 @@ class AutoDHTServer(StorageBase):
                 # Discover the signing CA
                 _log.debug("No signed cert, discover CA signing CSR")
                 self._sde_client = sde.Client(name, nodeid,
-                                          CalvinCB(self._ssdps.search,
+                                          CalvinCB(self._ssdps.start_search,
                                                    CA_SERVICE_UUID,
                                                    callback=self._signed_cert_received),
                                           self._signed_cert_available)
@@ -305,7 +307,7 @@ class AutoDHTServer(StorageBase):
         return TwistedWaitObject(self.dht_server.bootstrap, addr=addrs, cb=cb)
 
     def stop_all_search(self):
-        return self._ssdps.stop_search()
+        return self._ssdps.stop_all_search()
 
     def stop(self, cb=None):
         d1 = self.dht_server.stop()

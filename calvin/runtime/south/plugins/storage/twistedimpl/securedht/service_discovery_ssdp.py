@@ -140,7 +140,7 @@ class ServerBase(DatagramProtocol):
                         reactor.callLater(delay, self.send_it,
                                               response, address)
         except:
-            _log.exception("Error datagram received")
+            _log.exception("SSDP search received, but failed handling")
 
     def update_params(self, service_uuid, **kwargs):
         self._msearches_resp[service_uuid].update(kwargs)
@@ -189,9 +189,9 @@ class ClientBase(DatagramProtocol):
     def datagramReceived(self, datagram, address):
         # Broadcast
         cmd, headers = parse_http_response(datagram)
-
+        _log.debug("Received %s, %s from %r" % (cmd, headers, address, ))
+        
         if cmd[0].startswith('HTTP/1.') and cmd[1] == '200':
-            _log.debug("Received %s from %r" % (headers, address, ))
             if SERVICE_UUID in headers['st']:
                 c_address = headers['server'].split(':')
                 c_address[1] = int(c_address[1])
@@ -221,7 +221,7 @@ class ClientBase(DatagramProtocol):
                 except KeyError:
                     pass
                 # FIXME do we need service filtering for signed certificates
-                if c_address:
+                if c_address and not self.is_stopped(CA_SERVICE_UUID):
                     _log.debug("Signed Cert %s" % c_address)
                     _log.debug("CA search data: %s" % self._msearches[CA_SERVICE_UUID])
                     if self._msearches[CA_SERVICE_UUID]['cb']:
@@ -309,6 +309,11 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
             self.port.protocol.set_callback(service_uuid, None)
             self.port.protocol.stop(service_uuid)
 
+    def stop_search(self, service_uuid):
+        _log.debug("Stop search of %s" % service_uuid)
+        self.port.protocol.set_callback(service_uuid, None)
+        self.port.protocol.stop(service_uuid)
+
     def set_client_filter(self, service):
         self.port.protocol.set_service(service)
 
@@ -321,10 +326,10 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
     def _send_msearch(self, service_uuid, once=True, kwargs=None):
         if kwargs is None:
             kwargs={}
-        if self.port:
+        if self.port and not self.port.protocol.is_stopped(service_uuid):
             for src_ip in self.iface_send_list:
                 self.port.protocol.transport.setOutgoingInterface(src_ip)
-                _log.debug("Sending  M-SEARCH... on %s", src_ip)
+                _log.debug("Sending  M-SEARCH... on %s\n%s" % (src_ip, MS[service_uuid].format(**kwargs)))
                 self.port.write(MS[service_uuid].format(**kwargs), (SSDP_ADDR, SSDP_PORT))
 
             if not once and not self.port.protocol.is_stopped(service_uuid):
@@ -332,8 +337,6 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
                                     service_uuid, once=False, kwargs=kwargs)
                 _log.debug("Next M-SEARCH in %s seconds" % self.searches[service_uuid]["backoff"])
                 self.searches[service_uuid]["backoff"] = min(600, self.searches[service_uuid]["backoff"] * 1.5)
-        else:
-            _log.debug(traceback.format_stack())
 
     def search(self, service_uuid, callback, **kwargs):
         self.port.protocol.set_callback(service_uuid, callback)

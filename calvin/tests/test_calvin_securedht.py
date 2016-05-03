@@ -50,7 +50,7 @@ rt2_id = None
 rt3_id = None
 test_script_dir = None
 
-deploy_attr = ['node', 'attr', 'script','reqs', 'check', 'credentials', 'domain']
+deploy_attr = ['node', 'attr', 'script','reqs', 'check', 'credentials', 'signer']
 DeployArgsTuple = namedtuple('DeployArgs', deploy_attr)
 def DeployArgs(**kwargs):
     deployargs = DeployArgsTuple(*[None]*len(deploy_attr))

@@ -507,6 +507,11 @@ def sign_req(conf, req, name, other=False):
     except OSError:
         pass
 
+    try:
+        os.remove(signed)
+    except:
+        pass
+
     fname_lock = "{}.lock".format(conf.configuration["CA_default"]["serial"])
     fdlock = None
     try:
@@ -540,7 +545,8 @@ def sign_req(conf, req, name, other=False):
         fp = fingerprint(signed)
         newcert = "{}.pem".format(fp.replace(":", "")[-40:])
     except:
-        pass
+        _log.exception("Sign request failed")
+        newcert = None
     finally:
         # Release primitive lock
         if fdlock:
@@ -549,7 +555,8 @@ def sign_req(conf, req, name, other=False):
                 os.remove(fname_lock)
             except:
                 pass
-
+    if newcert is None:
+        raise IOError("Could not sign certificate")
     try:
         os.makedirs(os.path.join(name_dir, "mine"))
     except OSError:
