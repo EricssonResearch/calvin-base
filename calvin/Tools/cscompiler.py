@@ -94,7 +94,8 @@ def _compile_cont(source_text, filename, verify, access_decision, security=None,
         # warnings.extend(c_warnings)
         # FIXME:
         # deployable = generate_app_info(ir, verify=verify)
-        codegen = CodeGen(ir, os.path.basename(filename))
+        app_name = os.path.splitext(os.path.basename(filename))[0]
+        codegen = CodeGen(ir, app_name)
         deployable = codegen.app_info
 
         if errors:
