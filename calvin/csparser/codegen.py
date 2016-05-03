@@ -247,6 +247,50 @@ class AppInfo(object):
         self.app_info['connections'].setdefault(key, []).append(value)
 
 
+class ResolveConstants(object):
+    """docstring for ResolveConstants"""
+    def __init__(self, root):
+        super(ResolveConstants, self).__init__()
+        self.root = root
+        self.defs = {}
+
+    def process(self):
+        finder = Finder()
+        consts = finder.find_all(self.root, ast.Constant)
+        self.defs = {c.children[0].ident: c.children[1].value for c in consts if type(c.children[1]) is ast.Value}
+        unresolved = [c for c in consts if type(c.children[1]) is ast.Id]
+        done = False
+        while not done:
+            did_replace = False
+            for c in unresolved[:]:
+                key, const_key = c.children
+                if const_key.ident in self.defs:
+                    self.defs[key.ident] = self.defs[const_key.ident]
+                    unresolved.remove(c)
+                    did_replace = True
+            if unresolved and not did_replace:
+                raise Exception("Unresolved constant")
+            done = not (unresolved and did_replace)
+
+        self.visit(self.root)
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children)
+
+    @visitor.when(ast.NamedArg)
+    def visit(self, node):
+        arg = node.children[1]
+        if type(arg) is ast.Id and arg.ident in self.defs:
+            val = ast.Value(self.defs[arg.ident])
+            node.replace_child(arg, val)
+
+
 class CodeGen(object):
     """
     Generate code from a source file
@@ -311,6 +355,10 @@ class CodeGen(object):
 
         # print "========\nFLATTENED\n========"
         # self.printer.process(self.root)
+        ##
+        # Resolve Constants
+        rc = ResolveConstants(self.root)
+        rc.process()
 
         ##
         # # Resolve portmaps
