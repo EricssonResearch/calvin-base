@@ -231,6 +231,7 @@ class ActorStore(Store):
             info:          if is_primitive is
                             True  => actor object
                             False => component definition dictionary
+            signer:         name of actor signer (string) if security is used, else None
         """
         _log.debug("ActorStore lookup SECURITY %s" % str(self.sec))
         namespace, _, actor_type = qualified_name.rpartition('.')

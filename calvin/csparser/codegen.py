@@ -228,7 +228,7 @@ class AppInfo(object):
         namespace = self.app_info['name']
         key = "{}:{}".format(namespace, node.ident)
         value = {}
-        found, is_actor, actor_class = self.actorstore.lookup(node.actor_type)
+        found, is_actor, actor_class, _ = self.actorstore.lookup(node.actor_type)
         value['actor_type'] = node.actor_type
         args = {}
         for arg_node in node.children:
