@@ -13,20 +13,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import json
+import difflib
+
+# Old setup
+import calvin.csparser.parser_old as parser_old
+import calvin.csparser.checker as checker_old
+import calvin.csparser.analyzer as analyzer_old
+
+# New setup
+import calvin.csparser.parser as parser
+import calvin.csparser.codegen as codegen
 
 
 def testit(testlist, print_diff, print_script, testdir=None):
-    import json
-    import difflib
-
-    # Old setup
-    import calvin.csparser.parser_old as parser_old
-    import calvin.csparser.checker as checker_old
-    import calvin.csparser.analyzer as analyzer_old
-
-    # New setup
-    import calvin.csparser.parser as parser
-    import calvin.csparser.codegen as codegen
 
     def old_ir(source_text, filename):
         ir, errors, warnings = parser_old.calvin_parser(source_text, filename)
@@ -48,39 +49,24 @@ def testit(testlist, print_diff, print_script, testdir=None):
             raise Exception("There were errors caught by the new parser...")
         return ast
 
+    def collect_all_tests(testdir):
+        tests = [os.path.splitext(file)[0] for file in os.listdir(testdir) if file.endswith(".calvin")]
+        return tests
+
+    testdir = os.path.abspath(os.path.expandvars(testdir))
+    tests = testlist or collect_all_tests(testdir)
 
     crashers = []
     expected_diff = []
-    tests = testlist or [
-        'empty_script',
-        'define_constants',
-        'two_actors',
-        'three_actors',
-        'implicit_port',
-        'actor_one_arg',
-        'actor_two_args',
-        'define_component',
-        'local_component',
-        'use_component',
-        'use_component_same_portnames',
-        'use_component_twice',
-        'nested_components',
-        'use_component_with_args',
-        'nested_components_with_args'
-    ]
 
     res = {}
     for test in tests:
         try:
-            testdir = testdir or 'calvin/csparser/testscripts/regression-tests'
             filename = '{}/{}.calvin'.format(testdir, test)
             print test,
-
             with open(filename, 'r') as f:
                 source = f.read()
 
-            #header = source.splitlines()[0].lstrip('/ ')
-            # print header,
             res[test] = [test]
             if test in crashers:
                 res[test].append("CRASHER")
@@ -89,8 +75,6 @@ def testit(testlist, print_diff, print_script, testdir=None):
 
             a1 = analyzer_old.Analyzer(old_ir(source, test))
             a2 = codegen.CodeGen(ast(source), test)
-
-            # print "======= DONE ========"
 
             if a1.app_info == a2.app_info:
                 output = "IDENTICAL {}".format("(SURPRISE)" if test in expected_diff else "")
@@ -117,8 +101,6 @@ def testit(testlist, print_diff, print_script, testdir=None):
             filename = f.f_code.co_filename
             print 'EXCEPTION IN ({}, "{}"): {}'.format(filename, lineno, exc_obj)
 
-
-
     print
     print "SUMMARY"
     print "---------------------"
@@ -129,7 +111,7 @@ def testit(testlist, print_diff, print_script, testdir=None):
 
 
 
-def run_check(tests=None, print_diff=True, print_script=False, testdir=None):
+def run_check(tests=None, print_diff=True, print_script=False, testdir='calvin/csparser/testscripts/regression-tests'):
     # Configure for virtualenv
     cwd = "/Users/eperspe/Source/calvin-base"
     env_activate = "/Users/eperspe/.virtualenvs/calvin/bin/activate_this.py"
@@ -146,7 +128,7 @@ def run_check(tests=None, print_diff=True, print_script=False, testdir=None):
 
 
 if __name__ == '__main__':
-    run_check(tests=['test2'], testdir='/Users/eperspe/Source/calvin-base/calvin/tests/scripts')
+    run_check()
 
 
 
