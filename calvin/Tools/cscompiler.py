@@ -95,11 +95,13 @@ def _compile_cont(source_text, filename, verify, access_decision, security=None,
         # FIXME:
         # deployable = generate_app_info(ir, verify=verify)
         app_name = os.path.splitext(os.path.basename(filename))[0]
-        codegen = CodeGen(ir, app_name)
+        codegen = CodeGen(ir, app_name, verify=verify)
         deployable = codegen.app_info
 
-        if errors:
-            deployable['valid'] = False
+        # FIXME: not used when above commented out
+        #if errors:
+        #    deployable['valid'] = False
+
     _log.debug("Compiled %s, %s, %s" % (deployable, errors, warnings))
     if org_cb:
         org_cb(deployable, errors, warnings, security=security)
