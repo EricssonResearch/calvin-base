@@ -271,9 +271,12 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         dclient = defer.Deferred()
         try:
             self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.iface_send_list,
-                                                dserver=dserver), interface=self.iface, listenMultiple=True)
-            self.ssdp.setLoopbackMode(1)
-            self.ssdp.joinGroup(SSDP_ADDR, interface=self.iface)
+                                                dserver=dserver), listenMultiple=True)
+            self.ssdp.setTTL(5)
+            for iface_ in self.iface_send_list:
+                d = self.ssdp.joinGroup(SSDP_ADDR, interface=iface_)
+                d.addErrback(lambda x: _log.error("Failed to join multicast group %s:%s, %s", iface_, SSDP_PORT, x))
+                d.addCallback(lambda x: _log.debug("Joined multicast group %s:%s, %s", iface_, SSDP_PORT, x))
         except:
             _log.exception("Multicast listen join failed!!")
             # Dont start server some one is alerady running locally
