@@ -168,6 +168,7 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
             'REPLY': [CalvinCB(self.reply_handler)],
+            'AUTHENTICATION_DECISION': [CalvinCB(self.authentication_decision_handler)],
             'AUTHORIZATION_REGISTER': [CalvinCB(self.authorization_register_handler)],
             'AUTHORIZATION_DECISION': [CalvinCB(self.authorization_decision_handler)],
             'AUTHORIZATION_SEARCH': [CalvinCB(self.authorization_search_handler)]})
@@ -524,6 +525,67 @@ class CalvinProto(CalvinCBClass):
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
+
+    #### AUTHENTICATION ####
+
+    def authentication_decision(self, auth_server_uuid, callback, jwt):
+        """ 
+        Return a response to an authentication request.
+
+        auth_server_uuid: node uuid for the runtime that acts as authentication server 
+        callback: called when finished with the authentication decision
+        jwt: signed JSON Web Token (JWT) containing the authentication request
+        """
+        if self.node.network.link_request(auth_server_uuid, 
+                                          CalvinCB(self._authentication_decision,
+                                                   auth_server_uuid=auth_server_uuid,
+                                                   callback=callback,
+                                                   jwt=jwt)):
+            # Already have link, just continue in _authentication_decision.
+            self._authentication_decision(auth_server_uuid, callback, jwt, status=response.CalvinResponse(True))
+
+    def _authentication_decision(self, auth_server_uuid, callback, jwt, status, peer_node_id=None, uri=None):
+        """Got link? Continue authentication decision"""
+        if status:
+            msg = {'cmd': 'AUTHENTICATION_DECISION', 'jwt': jwt, 'cert_name': self.node.cert_name}
+            self.network.links[auth_server_uuid].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def authentication_decision_handler(self, payload):
+        """
+        Return a response to the authentication request in the payload.
+
+        Signed JSON Web Tokens (JWT) with timestamps and information about 
+        sender and receiver are used for both the request and response.
+        A Policy Decision Point (PDP) is used to determine if access is permitted.
+        """
+        if not _sec_conf['authentication']['accept_external_requests']:
+            reply = response.CalvinResponse(response.NOT_FOUND)
+        else:
+            try:
+                decoded = self.node.authentication.decode_request(payload)
+                self.node.authentication.adp.authenticate(decoded["request"], 
+                                    callback=CalvinCB(self._authentication_decision_handler, payload, decoded))
+                return
+            except Exception:
+                reply = response.CalvinResponse(response.INTERNAL_ERROR)
+        # Send reply
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def _authentication_decision_handler(self, payload, request, auth_response):
+        try:
+            jwt_response = self.node.authentication.encode_response(request, auth_response)
+            data_response = {"jwt": jwt_response, "cert_name": self.node.cert_name}
+            reply = response.CalvinResponse(response.OK, data_response)
+        except Exception as e:
+            _log.info(e)
+            reply = response.CalvinResponse(response.INTERNAL_ERROR)
+        # Send reply
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
 
     #### AUTHORIZATION ####
 

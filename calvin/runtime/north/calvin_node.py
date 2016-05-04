@@ -28,6 +28,7 @@ from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
+from calvin.runtime.north.authentication import authentication
 from calvin.runtime.north.authorization import authorization
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
@@ -77,6 +78,7 @@ class Node(object):
         self.node_name = self.attributes.get_node_name_as_str()
         # Obtain node id, when using security also handle runtime certificate
         self.id = certificate.obtain_cert_node_info(self.node_name)['id']
+        self.authentication = authentication.Authentication(self)
         self.authorization = authorization.Authorization(self)
         try:
             self.domain = _conf.get("security", "certificate_domain")

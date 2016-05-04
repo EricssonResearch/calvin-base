@@ -608,6 +608,56 @@ re_post_storage = re.compile(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
     """
+    GET /authentication/users_db
+    Get user database on this runtime
+    Response status code: OK or INTERNAL_ERROR
+    Response: 
+    {
+        "policies": {
+            <policy-id>: policy in JSON format,
+            ...
+        }
+    }
+"""
+re_get_authentication_users_db = re.compile(r"GET /authentication/users_db\sHTTP/1")
+
+control_api_doc += \
+    """
+    PUT /authentication/users_db
+    Update user database
+    Body: new policy in JSON format
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
+    Response: none
+"""
+re_edit_authentication_users_db = re.compile(r"PUT /authentication/users_db\sHTTP/1")
+
+control_api_doc += \
+    """
+    GET /authentication/groups_db
+    Get user database on this runtime
+    Response status code: OK or INTERNAL_ERROR
+    Response: 
+    {
+        "policies": {
+            <policy-id>: policy in JSON format,
+            ...
+        }
+    }
+"""
+re_get_authentication_groups_db = re.compile(r"GET /authentication/groups_db\sHTTP/1")
+
+control_api_doc += \
+    """
+    PUT /authentication/groups_db
+    Update user database
+    Body: new policy in JSON format
+    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
+    Response: none
+"""
+re_edit_authentication_groups_db = re.compile(r"PUT /authentication/groups_db\sHTTP/1")
+
+control_api_doc += \
+    """
     POST /authorization/policies
     Create a new policy
     Body: policy in JSON format
@@ -763,6 +813,10 @@ class CalvinControl(object):
             (re_get_index, self.handle_get_index),
             (re_get_storage, self.handle_get_storage),
             (re_post_storage, self.handle_post_storage),
+            (re_get_authentication_users_db, self.handle_get_authentication_users_db),
+            (re_edit_authentication_users_db, self.handle_edit_authentication_users_db),
+            (re_get_authentication_groups_db, self.handle_get_authentication_groups_db),
+            (re_edit_authentication_groups_db, self.handle_edit_authentication_groups_db),
             (re_post_new_authorization_policy, self.handle_new_authorization_policy),
             (re_get_authorization_policies, self.handle_get_authorization_policies),
             (re_get_authorization_policy, self.handle_get_authorization_policy),
@@ -1383,6 +1437,40 @@ class CalvinControl(object):
         """ Get from storage
         """
         self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
+
+    def handle_get_authentication_users_db(self, handle, connection, match, data, hdr):
+        """Get all authorization policies on this runtime"""
+        try:
+            users_db = self.node.authentication.arp.get_users_db()
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_get_authentication_users_db")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, json.dumps({"users_db": users_db}) if status == calvinresponse.OK else None, 
+                           status=status)
+
+    def handle_edit_authentication_users_db(self, handle, connection, match, data, hdr):
+        """Edit users database"""
+        # TODO: need some kind of authentication for policy management
+        try:
+#            self.node.authentication.arp.update_users_db(data, match.group(1))
+            self.node.authentication.arp.update_users_db(data)
+            status = calvinresponse.OK
+        except IOError:
+            _log.exception("handle_edit_authentication_users_db")
+            status = calvinresponse.NOT_FOUND
+        except:
+            _log.exception("handle_edit_authentication_users_db")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, None, status=status)
+
+    def handle_get_authentication_groups_db(self, handle, connection, match, data, hdr):
+        """Get all authorization policies on this runtime"""
+        #TODO:to be implemented
+
+    def handle_edit_authentication_groups_db(self, handle, connection, match, data, hdr):
+        """Edit authorization policy identified by id"""
+        #TODO:to be implemented
 
     def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
         """Create authorization policy"""

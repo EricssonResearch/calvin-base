@@ -126,19 +126,34 @@ class Security(object):
         """Return a dictionary with all authenticated subject attributes."""
         return self.subject_attributes.copy()
 
-    def authenticate_subject(self, credentials):
+    def authenticate_subject(self, credentials, callback=None):
         """Authenticate subject using the authentication procedure specified in config."""
         _log.debug("Security: authenticate_subject")
+        request = {}
+        #TODO: hash of password should be used
+        request['subject'] = credentials
         if not security_needed_check() or not credentials:
             _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
         # Make sure that all credential values are lists.
         credentials = {k: v if isinstance(v, list) else [v]
                        for k, v in credentials.iteritems()}
-        if self.sec_conf['authentication']['procedure'] == "local":
+        if self.sec_conf['authentication']['procedure'] == "localOLD":
             _log.debug("Security: local authentication method chosen")
             return self.authenticate_using_local_database(credentials)
-        if self.sec_conf['authentication']['procedure'] == "radius":
+        elif self.sec_conf['authentication']['procedure'] == "external":
+            if not HAS_JWT:
+                _log.error("Security: Install JWT to use external server as authentication method.\n" +
+                               "Note: NO authentication USED")
+                return False
+            _log.debug("Security: external authentication method chosen")
+            self.authenticate_using_external_server(request, callback)
+        elif self.sec_conf['authentication']['procedure'] == "local":
+            _log.debug("Security: local authentication method chosen")
+            # authenticate access using a local Authentication Decision Point (ADP).
+            self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response, 
+                                                      callback=callback))
+        elif self.sec_conf['authentication']['procedure'] == "radius":
             if not HAS_PYRAD:
                 _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
                             "Note! NO AUTHENTICATION USED")
@@ -228,6 +243,67 @@ class Security(object):
                                 self.subject_attributes[key].append(user['attributes'][key])
                     return True
         return False
+
+    def authenticate_using_external_server(self, request, callback):
+        """
+        authenticate access using an external authentication server.
+
+        The request is put in a JSON Web Token (JWT) that is signed and encrypted
+        and includes timestamps and information about sender and receiver.
+        """
+        try:
+            auth_server_id = self.sec_conf['authentication']['server_uuid']
+            payload = {
+                "iss": self.node.id,
+                "aud": auth_server_id,
+                "iat": datetime.utcnow(),
+                "exp": datetime.utcnow() + timedelta(seconds=60),
+                "request": request
+            }
+            #TODO: encrypt the JWT
+            # Create a JSON Web Token signed using the node's Elliptic Curve private key.
+            jwt_request = encode_jwt(payload, self.node.node_name)
+            # Send request to authentication server.
+            self.node.proto.authentication_decision(auth_server_id,
+                                                   CalvinCB(self._handle_authentication_response,
+                                                            callback=callback, actor_id=actor_id),
+                                                   jwt_request)
+        except Exception as e:
+            _log.error("Security: authentication error - %s" % str(e))
+            self._return_authentication_decision("indeterminate", [], callback)
+
+    def _handle_authentication_response(self, reply, callback, actor_id=None):
+        if reply.status != 200:
+            _log.error("Security: authentication server error - %s" % reply)
+            self._return_authentication_decision("indeterminate", [], callback)
+            return
+        try:
+            # Decode JSON Web Token, which contains the authentication response.
+            decoded = decode_jwt(reply.data["jwt"], reply.data["cert_name"],
+                                 self.node.node_name, self.node.id, actor_id)
+            authentication_response = decoded['response']
+            self._return_authentication_decision(authentication_response['subject_attributes'],
+                                                authentication_response.get("obligations", []),
+                                                callback)
+        except Exception as e:
+            _log.error("Security: JWT decoding error - %s" % str(e))
+            self._return_authentication_decision("indeterminate", [], callback)
+
+    def _handle_local_authentication_response(self, auth_response, callback):
+        try:
+            self._return_authentication_decision(auth_response['subject_attributes'],
+                                                auth_response.get("obligations", []), callback)
+        except Exception as e:
+            _log.error("Security: local authentication error - %s" % str(e))
+            self._return_authentication_decision("indeterminate", [], callback)
+
+    def _return_authentication_decision(self, subject_attributes, obligations, callback):
+        _log.info("Authentication response received: %s, obligations %s" % (subject_attributes, obligations))
+        self.subject_attributes=subject_attributes
+#        if obligations:
+#            callback(access_decision=(True, obligations))
+#        else:
+#            callback(access_decision=True)
 
     def check_security_policy(self, callback, element_type, actor_id=None, requires=None, signer=None, decision_from_migration=None):
         """Check if access is permitted by the security policy."""
