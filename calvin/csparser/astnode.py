@@ -37,7 +37,8 @@ class Node(object):
     def add_child(self, child):
         if self.is_leaf():
             raise Exception("Can't add children to leaf node {}".format(self))
-        child.parent = self
+        if child:
+            child.parent = self
         self.children.append(child)
 
     def add_children(self, children):
@@ -79,45 +80,45 @@ class Node(object):
 
 class Constant(Node):
     """docstring for ConstNode"""
-    def __init__(self, ident, arg):
+    def __init__(self, ident=None, arg=None):
         super(Constant, self).__init__()
         self.add_children([ident, arg])
 
 class Id(Node):
     """docstring for IdNode"""
-    def __init__(self, ident):
+    def __init__(self, ident=None):
         super(Id, self).__init__()
         self.children = None
         self.ident = ident
 
 class Value(Node):
     """docstring for ValueNode"""
-    def __init__(self, value):
+    def __init__(self, value=None):
         super(Value, self).__init__()
         self.children = None
         self.value = value
 
 class Assignment(Node):
     """docstring for AssignmentNode"""
-    def __init__(self, ident, actor_type, args):
+    def __init__(self, ident=None, actor_type=None, args=None):
         super(Assignment, self).__init__()
         self.ident = ident
         self.actor_type = actor_type
-        self.add_children(args)
+        self.add_children(args or {})
 
 class NamedArg(Node):
     """docstring for ConstNode"""
-    def __init__(self, ident, arg):
+    def __init__(self, ident=None, arg=None):
         super(NamedArg, self).__init__()
         self.add_children([ident, arg])
 
 class Link(Node):
     """docstring for LinkNode"""
-    def __init__(self, outport, inport):
+    def __init__(self, outport=None, inport=None):
         super(Link, self).__init__()
         self.add_children([outport, inport])
 
-    def remove_child(self, child):
+    def remove_child(self, child=None):
         raise Exception("Can't remove child from {}".format(self))
 
     @property
@@ -143,13 +144,13 @@ class Link(Node):
 # FIXME: Redundant
 class Portmap(Link):
     """docstring for Portmap"""
-    def __init__(self, outport, inport):
+    def __init__(self, outport=None, inport=None):
         super(Portmap, self).__init__(outport, inport)
 
 # FIXME: Abstract
 class Port(Node):
     """docstring for LinkNode"""
-    def __init__(self, actor, port):
+    def __init__(self, actor=None, port=None):
         super(Port, self).__init__()
         self.children = None
         self.actor = actor
@@ -157,28 +158,28 @@ class Port(Node):
 
 class InPort(Port):
     """docstring for LinkNode"""
-    def __init__(self, actor, port):
+    def __init__(self, actor=None, port=None):
         super(InPort, self).__init__(actor, port)
 
 class OutPort(Port):
     """docstring for LinkNode"""
-    def __init__(self, actor, port):
+    def __init__(self, actor=None, port=None):
         super(OutPort, self).__init__(actor, port)
 
 class ImplicitPort(Node):
     """docstring for ImplicitPortNode"""
-    def __init__(self, arg):
+    def __init__(self, arg=None):
         super(ImplicitPort, self).__init__()
         self.add_child(arg)
 
 class InternalInPort(InPort):
     """docstring for InternalPortNode"""
-    def __init__(self, port):
+    def __init__(self, port=None):
         super(InternalInPort, self).__init__('', port)
 
 class InternalOutPort(OutPort):
     """docstring for InternalPortNode"""
-    def __init__(self, port):
+    def __init__(self, port=None):
         super(InternalOutPort, self).__init__('', port)
 
 class Block(Node):
@@ -191,14 +192,59 @@ class Block(Node):
 
 class Component(Node):
     """docstring for ComponentNode"""
-    def __init__(self, name, arg_names, inports, outports, docstring, program):
+    def __init__(self, name=None, arg_names=None, inports=None, outports=None, docstring=None, program=None):
         super(Component, self).__init__()
         self.name = name
+        self.namespace = None # For installer
         self.arg_names = arg_names
         self.inports = inports
         self.outports = outports
         self.docstring = docstring
         self.add_child(Block(program))
+
+################################
+#
+# Helpers for JSON serialization
+#
+################################
+def node_encoder(instance):
+    """
+    Use with json.dump(s) like so:
+    s = json.dumps(tree, default=node_encoder, indent=2)
+    where tree is an AST.
+    """
+    instance.parent = None
+    return {'class':instance.__class__.__name__, 'data':instance.__dict__}
+
+def node_decoder(o):
+    """
+    Use with json.load(s) like so:
+    tree = json.loads(s, object_hook=node_decoder)
+    where s is a JSON-formatted string representing an AST.
+    """
+    if 'class' not in o:
+        return o
+    instance = {
+        'Node':Node,
+        'Constant':Constant,
+        'Id':Id,
+        'Value':Value,
+        'Assignment':Assignment,
+        'NamedArg':NamedArg,
+        'Link':Link,
+        'Portmap':Portmap,
+        'Port':Port,
+        'InPort':InPort,
+        'OutPort':OutPort,
+        'ImplicitPort':ImplicitPort,
+        'InternalInPort':InternalInPort,
+        'InternalOutPort':InternalOutPort,
+        'Block':Block,
+        'Component':Component
+    }.get(o['class'])()
+    instance.__dict__ = o['data']
+    return instance
+
 
 if __name__ == '__main__':
     Node._verbose_desc = True
@@ -219,6 +265,9 @@ if __name__ == '__main__':
     while n:
         print n
         n = n.parent
+
+
+
 
 
 

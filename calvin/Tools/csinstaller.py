@@ -18,7 +18,9 @@
 import sys
 import argparse
 from calvin.csparser.parser import calvin_parser
-from calvin.csparser.checker import check
+# from calvin.csparser.checker import check
+from calvin.csparser.codegen import Finder
+import calvin.csparser.astnode as ast
 from calvin.actorstore import store
 
 
@@ -33,10 +35,10 @@ def check_script(file):
     # 2) checker IR -> IR. May produce syntax errors/warnings
     ir, errors, warnings = calvin_parser(source_text, file)
     # If there were errors during parsing no IR will be generated
-    if not errors:
-        c_errors, c_warnings = check(ir)
-        errors.extend(c_errors)
-        warnings.extend(c_warnings)
+    # if not errors:
+    #     c_errors, c_warnings = check(ir)
+    #     errors.extend(c_errors)
+    #     warnings.extend(c_warnings)
     return ir, errors, warnings
 
 
@@ -77,13 +79,16 @@ def main():
         return 1
 
     errors = []
-    for comp_name, comp_def in ir['components'].items():
-        if args.component and comp_name not in args.component:
+    f = Finder()
+    comps = f.find_all(ir, kind=ast.Component)
+    print comps
+    for comp in comps:
+        if args.component and comp.name not in args.component:
             continue
-        ok = install_component(args.namespace, comp_name, comp_def, args.overwrite)
+        ok = install_component(args.namespace, comp.name, comp, args.overwrite)
         if not ok:
-            errors.append({'reason': 'Failed to install "{0}"'.format(comp_name),
-                          'line': comp_def['dbg_line'], 'col': 0})
+            errors.append({'reason': 'Failed to install "{0}"'.format(comp.name),
+                          'line': 0, 'col': 0})
 
     if errors:
         report_issues(errors, 'Error', args.script)

@@ -23,10 +23,12 @@ import re
 from types import ModuleType
 import hashlib
 
+from calvin.csparser.astnode import node_encoder, node_decoder
 from calvin.utilities import calvinconfig
 from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
+
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
@@ -302,7 +304,7 @@ class ActorStore(Store):
             return None
         try:
           with open(path, 'r') as source:
-            dict = json.load(source)
+            dict = json.load(source, object_hook=node_decoder)
         except Exception as e:
           _log.exception("Failed to read source for component '%s' : " % ( name, ))
           return None
@@ -339,7 +341,7 @@ class ActorStore(Store):
 
       try:
         with open(filepath, 'w') as f:
-          json.dump(comp, f)
+          json.dump(comp, f, default=node_encoder, indent=2)
       except Exception as e:
          _log.exception("Could not write component to: %s" % filepath)
          return False
@@ -433,17 +435,31 @@ class DocumentationStore(ActorStore):
 
     def component_docs(self, comp_type, compdef):
         """Combine info from compdef to raw docs"""
+        print type(compdef)
+        print compdef
         namespace, name = comp_type.rsplit('.', 1)
-        doctext = compdef['docstring'].splitlines()
+        if type(compdef) is dict:
+            return {
+            'ns': namespace, 'name': name,
+            'type': 'component',
+            'short_desc': "Old style component (not supported)",
+            'long_desc': "",
+            'requires': [],
+            'args': {'mandatory':[], 'optional':{}},
+            'inputs': [],
+            'outputs': [],
+            }
+        doctext = compdef.docstring.splitlines()
+        print compdef.inports, compdef.outports
         doc = {
             'ns': namespace, 'name': name,
             'type': 'component',
             'short_desc': doctext[0],
             'long_desc': '\n'.join(doctext[1:]),
-            'requires':list({compdef['structure']['actors'][a]['actor_type'] for a in compdef['structure']['actors']}),
-            'args': {'mandatory':compdef['arg_identifiers'], 'optional':{}},
-            'inputs': [(p, self._fetch_port_docs(compdef, 'in', p)) for p in compdef['inports']],
-            'outputs': [(p, self._fetch_port_docs(compdef, 'out', p)) for p in compdef['outports']],
+            'requires':["FIXME"], # FIXME
+            'args': {'mandatory':compdef.arg_names, 'optional':{}},
+            'inputs': [(x, "FIXME") for x in compdef.inports or []], # FIXME append port docs
+            'outputs': [(x, "FIXME") for x in compdef.outports or []], # FIXME append port docs
             }
         return doc
 
@@ -637,9 +653,14 @@ class GlobalStore(ActorStore):
                          u'inports': sorted([unicode(i) for i in desc['inports']]),
                          u'outports': sorted([unicode(i) for i in desc['outports']])}
         else:
-            signature = {u'actor_type': unicode(desc['actor_type']),
-                         u'inports': sorted([unicode(i) for i in desc['component']['inports']]),
-                         u'outports': sorted([unicode(i) for i in desc['component']['outports']])}
+            if type(desc['component']) is dict:
+                signature = {u'actor_type': unicode(desc['actor_type']),
+                             u'inports': sorted([unicode(i) for i in desc['component']['inports']]),
+                             u'outports': sorted([unicode(i) for i in desc['component']['outports']])}
+            else:
+                signature = {u'actor_type': unicode(desc['actor_type']),
+                             u'inports': sorted([unicode(i) for i in desc['component'].inports]),
+                             u'outports': sorted([unicode(i) for i in desc['component'].outports])}
         return hashlib.sha256(json.dumps(signature, separators=(',', ':'), sort_keys=True)).hexdigest()
 
     @staticmethod
@@ -661,7 +682,9 @@ class GlobalStore(ActorStore):
         """ Takes actor/component description and
             generates one hash of the complete info
         """
-        return hashlib.sha256(json.dumps(GlobalStore.list_sort(desc), separators=(',', ':'), sort_keys=True)).hexdigest()
+        # return hashlib.sha256(json.dumps(GlobalStore.list_sort(desc), separators=(',', ':'), sort_keys=True)).hexdigest()
+        # FIXME: This is a temporary hack to make things work while we rewrite the store and signing infrastructure
+        return hashlib.sha256(GlobalStore.actor_signature(desc)).hexdigest()
 
     def export_actor(self, desc):
         signature = self.actor_signature(desc)
@@ -670,6 +693,10 @@ class GlobalStore(ActorStore):
             # FIXME should have callback to verify OK
             self.node.storage.add_index(['actor', 'signature', signature, self.node.id], hash, root_prefix_level=3)
             # FIXME should have callback to verify OK
+            # FIXME: This is a temporary hack to make things work while we rewrite the store and signing infrastructure
+            if 'component' in desc and type(desc['component']) is not dict:
+                mess = json.dumps(desc['component'], default=node_encoder)
+                desc['component'] = json.loads(mess)
             self.node.storage.set('actor_type-', hash, desc, None)
         else:
             print "global store index %s -> %s" %(signature, hash)
@@ -685,7 +712,7 @@ class GlobalStore(ActorStore):
             if is_primitive:
                 inputs, outputs, _ = self._parse_docstring(actor)
                 args = self._get_args(actor)
-                desc = {'is_primitive': is_primitive, 
+                desc = {'is_primitive': is_primitive,
                         'actor_type': a,
                         'args': args,
                         'inports': [p[0] for p in inputs],
@@ -693,7 +720,7 @@ class GlobalStore(ActorStore):
                         'requires': actor.requires if hasattr(actor, 'requires') else [],
                         'signer': signer}
             else:
-                desc = {'is_primitive': is_primitive, 
+                desc = {'is_primitive': is_primitive,
                         'actor_type': a,
                         'component': actor}
             self.export_actor(desc)
@@ -712,7 +739,7 @@ class GlobalStore(ActorStore):
             nbr = [len(value)]
             actors = []
             for a in value:
-                self.node.storage.get('actor_type-', a, 
+                self.node.storage.get('actor_type-', a,
                             CalvinCB(self._global_lookup_collect, nbr, actors, signature=signature, org_cb=org_cb))
 
     def _global_lookup_collect(self, key, value, nbr, actors, signature, org_cb):
@@ -761,7 +788,7 @@ class GlobalStore(ActorStore):
         if param_names is None:
             actor_type_iter.set_name("global_lookup")
             return actor_type_iter
-        filtered_actor_type_iter = dynops.Map(self.filter_actor_on_params, actor_type_iter, param_names=param_names, 
+        filtered_actor_type_iter = dynops.Map(self.filter_actor_on_params, actor_type_iter, param_names=param_names,
                                               eager=True)
         actor_type_iter.set_name("unfiltered_global_lookup")
         filtered_actor_type_iter.set_name("global_lookup")
@@ -787,7 +814,7 @@ if __name__ == '__main__':
     print "====="
     print ds.help(what='std.SumActor', compact=True)
     print "====="
-    print ds.help(what='misc.ArgWrapper', compact=False)
+    print ds.help(what='std.Foo', compact=False)
     print "====="
     print ds.help(what='misc.ArgWrapper', compact=True)
 

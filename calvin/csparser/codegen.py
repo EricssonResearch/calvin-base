@@ -12,6 +12,24 @@ def _create_signature(actor_class, actor_type):
                       'outports': actor_class.outport_names}
     return GlobalStore.actor_signature(signature_desc)
 
+def _create_signature_for_component(actor_class, actor_type):
+    # Create the actor signature to be able to look it up in the GlobalStore if neccessary
+    print actor_class, actor_type
+    signature_desc = {'is_primitive': True,
+                      'actor_type': actor_type,
+                      'inports': actor_class['inports'],
+                      'outports': actor_class['outports']}
+    return GlobalStore.actor_signature(signature_desc)
+
+
+def _create_signature_for_unknown(actor_class, actor_type):
+    # Create the actor signature to be able to look it up in the GlobalStore if neccessary
+    signature_desc = {'is_primitive': True,
+                      'actor_type': actor_type,
+                      'inports': actor_class.inport_names,
+                      'outports': actor_class.outport_names}
+    return GlobalStore.actor_signature(signature_desc)
+
 
 
 class Finder(object):
@@ -82,6 +100,25 @@ class ImplicitPortRewrite(object):
         block = link.parent
         block.add_child(const_actor)
 
+class RestoreParents(object):
+    """docstring for RestoreParents"""
+    def __init__(self):
+        super(RestoreParents, self).__init__()
+        self.stack = [None]
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        node.parent = self.stack[-1]
+        if node.is_leaf():
+            return
+        self.stack.append(node)
+        map(self.visit, node.children[:])
+        self.stack.pop()
+
 
 class Expander(object):
     """
@@ -103,15 +140,23 @@ class Expander(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        if node.actor_type not in self.components:
+        found, is_actor, meta, _ = ActorStore().lookup(node.actor_type)
+        if found and is_actor:
+            # Plain actor
+            return
+        if found:
+            compdef = meta.children[0]
+            v = RestoreParents()
+            v.visit(compdef)
+        elif node.actor_type in self.components:
+            compdef = self.components[node.actor_type].children[0]
+        else:
             return
         # Clone assignment to clone the arguments
         ca = node.clone()
         args = ca.children
         # Clone block from component definition
-        # FIXME: should block be a propery?
-        block = self.components[node.actor_type].children[0]
-        new = block.clone()
+        new = compdef.clone()
         new.namespace = node.ident
         # Add arguments from assignment to block
         new.args = {x.children[0].ident: x.children[1] for x in args}
@@ -204,15 +249,19 @@ class Flatten(object):
 
 class AppInfo(object):
     """docstring for AppInfo"""
-    def __init__(self, script_name):
+    def __init__(self, script_name, root, verify=True):
         super(AppInfo, self).__init__()
-        self.actorstore = ActorStore()
+        self.root = root
+        self.verify = verify
         self.app_info = {
             'name':script_name,
             'actors': {},
             'connections': {},
             'valid': True
         }
+
+    def process(self):
+        self.visit(self.root)
 
     @visitor.on('node')
     def visit(self, node):
@@ -228,7 +277,11 @@ class AppInfo(object):
         namespace = self.app_info['name']
         key = "{}:{}".format(namespace, node.ident)
         value = {}
-        found, is_actor, actor_class, _ = self.actorstore.lookup(node.actor_type)
+        # if is_actor is False, actor_class is component definition
+        found, is_actor, actor_class, _ = ActorStore().lookup(node.actor_type)
+        if self.verify and not found:
+            self.app_info['valid'] = False
+            return
         value['actor_type'] = node.actor_type
         args = {}
         for arg_node in node.children:
@@ -236,7 +289,15 @@ class AppInfo(object):
                 arg_id, arg_val = arg_node.children
                 args[arg_id.ident] = arg_val.value
         value['args'] = args
-        value['signature'] = _create_signature(actor_class, node.actor_type)
+        if found:
+            if is_actor:
+                value['signature'] = _create_signature(actor_class, node.actor_type)
+            else:
+                value['signature'] = _create_signature_for_component(actor_class, node.actor_type)
+        else:
+            # FIXME: Handle the case where the actor is unknown, but verify is FALSE
+            raise Exception("Cannot compute signature of unknown actor")
+            value['signature'] = _create_signature_for_unknown(node, )
         self.app_info['actors'][key] = value
 
     @visitor.when(ast.Link)
@@ -296,14 +357,15 @@ class CodeGen(object):
     Generate code from a source file
     FIXME: Use a writer class to generate output in various formats
     """
-    def __init__(self, ast_root, script_name, verbose=False):
+    def __init__(self, ast_root, script_name, verbose=False, verify=True):
         super(CodeGen, self).__init__()
-        self.actorstore = ActorStore()
         self.root = ast_root
         self.script_name = script_name
         self.local_components = {}
         self.printer = astprint.BracePrinter()
         self.verbose = verbose
+        self.verify = verify
+
         self.run()
 
     def dump_tree(self, heading):
@@ -388,8 +450,8 @@ class CodeGen(object):
 
         ##
         # "code" generation
-        gen_app_info = AppInfo(self.script_name)
-        gen_app_info.visit(self.root)
+        gen_app_info = AppInfo(self.script_name, self.root, self.verify)
+        gen_app_info.process()
         self.app_info = gen_app_info.app_info
 
         # import json
@@ -399,6 +461,10 @@ class CodeGen(object):
         finder = Finder()
         finder.find_all(root, kind, attributes=attributes, maxdepth=maxdepth)
         return finder.matches
+
+def generate_app_info(ast, name='anonymous', verify=True):
+    cg = CodeGen(ast, name, verbose=False, verify=verify)
+    return cg.app_info
 
 
 if __name__ == '__main__':
