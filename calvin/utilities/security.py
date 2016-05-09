@@ -130,36 +130,34 @@ class Security(object):
         """Authenticate subject using the authentication procedure specified in config."""
         _log.debug("Security: authenticate_subject")
         request = {}
-        #TODO: hash of password should be used
-        request['subject'] = credentials
         if not security_needed_check() or not credentials:
             _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
         # Make sure that all credential values are lists.
-        credentials = {k: v if isinstance(v, list) else [v]
-                       for k, v in credentials.iteritems()}
-        if self.sec_conf['authentication']['procedure'] == "localOLD":
-            _log.debug("Security: local authentication method chosen")
-            return self.authenticate_using_local_database(credentials)
-        elif self.sec_conf['authentication']['procedure'] == "external":
-            if not HAS_JWT:
-                _log.error("Security: Install JWT to use external server as authentication method.\n" +
-                               "Note: NO authentication USED")
-                return False
-            _log.debug("Security: external authentication method chosen")
-            self.authenticate_using_external_server(request, callback)
-        elif self.sec_conf['authentication']['procedure'] == "local":
-            _log.debug("Security: local authentication method chosen")
-            # authenticate access using a local Authentication Decision Point (ADP).
-            self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response, 
-                                                      callback=callback))
-        elif self.sec_conf['authentication']['procedure'] == "radius":
-            if not HAS_PYRAD:
-                _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
-                            "Note! NO AUTHENTICATION USED")
-                return False
-            _log.debug("Security: Radius authentication method chosen")
-            return self.authenticate_using_radius_server(credentials)
+#        credentials = {k: v if isinstance(v, list) else [v]
+#                       for k, v in credentials.iteritems()}
+        #only attempt authentication if credentials for the domain are supplied
+        if self.node.domain in credentials:
+            _log.debug("credentials for current domain supplied")
+            request['subject'] = credentials[self.node.domain]
+            if self.sec_conf['authentication']['procedure'] == "external":
+                if not HAS_JWT:
+                    _log.error("Security: Install JWT to use external server as authentication method.\n" +
+                                   "Note: NO authentication USED")
+                    return False
+                _log.debug("Security: external authentication method chosen")
+                self.authenticate_using_external_server(request, callback)
+            elif self.sec_conf['authentication']['procedure'] == "local":
+                # authenticate access using a local Authentication Decision Point (ADP).
+                self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response, 
+                                                          callback=callback))
+            elif self.sec_conf['authentication']['procedure'] == "radius":
+                if not HAS_PYRAD:
+                    _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
+                                "Note! NO AUTHENTICATION USED")
+                    return False
+                _log.debug("Security: Radius authentication method chosen")
+                return self.authenticate_using_radius_server(credentials)
         _log.debug("Security: No security config, so authentication disabled")
         return True
 
