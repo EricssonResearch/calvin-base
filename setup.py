@@ -45,6 +45,7 @@ setup(name='calvin',
           'pyserial==3.0.1',
           'netifaces==0.10.4',
           'pyOpenSSL==0.15.1',
+          'passlib==1.6.5',
           'PyJWT==1.4.0',
           'service-identity==16.0.0'
       ],

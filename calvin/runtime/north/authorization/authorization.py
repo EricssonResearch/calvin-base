@@ -79,10 +79,8 @@ class Authorization(object):
                     if not HAS_JWT:
                         _log.error("Security: Install JWT to use external server as authorization method.")
                         return
-                    _log.debug("Register node for external authorization")
                     self.register_node_external()
                 else:
-                    _log.debug("Register node for local authorization")
                     self.pdp.register_node(self.node.id, self.node.attributes.get_indexed_public_with_keys())
             except Exception as e:
                 _log.error("Node could not be registered for authorization - %s" % str(e))

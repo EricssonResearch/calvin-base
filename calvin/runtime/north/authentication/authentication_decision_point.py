@@ -25,7 +25,6 @@ _log = get_logger(__name__)
 class AuthenticationDecisionPoint(object):
 
     def __init__(self, node, config=None):
-        _log.info("__init__")
         # Default config
         self.config = {
             "policy_storage": "files",
@@ -86,22 +85,19 @@ class AuthenticationDecisionPoint(object):
             except Exception:
                 pass
 
-        decisions = []
         obligations = []
         #authentication_decision, policy_obligations = self.authentication_decision(request)
-        subject_attributes = self.authentication_decision(request)
+        (decision, subject_attributes) = self.authentication_decision(request)
         #TODO: add support for obligations, if it makes any sense??? 
 #        if policy_obligations:
 #            obligations.append(policy_obligations)
-        callback(auth_response=self.create_response(subject_attributes, obligations))
-
-        return (subject_attributes, obligations)
+        callback(auth_response=self.create_response(decision, subject_attributes, obligations))
 
 
-
-    def create_response(self, subject_attributes, obligations):
+    def create_response(self, decision, subject_attributes, obligations):
         """Return authorization response including decision and obligations."""
         response = {}
+        response["decision"] = decision
         response["subject_attributes"] = subject_attributes
         if obligations:
             response["obligations"] = obligations
@@ -114,9 +110,11 @@ class AuthenticationDecisionPoint(object):
         groups_db = self.node.authentication.arp.get_groups_db()
         # Verify users against stored passwords
         subject_attributes = {}
+        decision=False
         for user in users_db['users_db']:
             if request['subject']['user'] == user['username']:
                 if pbkdf2_sha256.verify(request['subject']['password'],user['password']):
+                    decision=True
                     for key in user['attributes']:
                         if key == "groups" and groups_db:
                             for groupKey in user['attributes']['groups']:
@@ -134,7 +132,10 @@ class AuthenticationDecisionPoint(object):
                             elif not user['attributes'][key] in subject_attributes[key]:
                                 #list exist, make sure we don't add same value several times
                                 subject_attributes[key].append(user['attributes'][key])
-                    return subject_attributes
-        return None
+                    return (decision,subject_attributes)
+                else:
+                    decision=False
+                    return (decision, None)
+        return (decision, None)
  
 

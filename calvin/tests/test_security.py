@@ -68,7 +68,7 @@ class TestSecurity(unittest.TestCase):
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
-                            "local_users_database_path": os.path.join(security_test_dir, "identity_provider", "users.json")
+                            "identity_provider_path": os.path.join(security_test_dir, "identity_provider")
                         },
                         "authorization": {
                             "procedure": "local",
@@ -106,7 +106,7 @@ class TestSecurity(unittest.TestCase):
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
-                            "local_users_database_path": os.path.join(security_test_dir, "identity_provider", "users.json")
+                            "identity_provider_path": os.path.join(security_test_dir, "identity_provider")
                         },
                         "authorization": {
                             "procedure": "local",
@@ -179,7 +179,7 @@ class TestSecurity(unittest.TestCase):
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
                         "authentication": {
                             "procedure": "local",
-                            "local_users_database_path": os.path.join(security_test_dir, "identity_provider", "users.json")
+                            "identity_provider_path": os.path.join(security_test_dir, "identity_provider")
                         },
                         "authorization": {
                             "procedure": "external",
@@ -310,7 +310,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
-                        credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
+                    credentials={"testdomain":{"user": "user1", "password": "pass1"}}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -344,7 +344,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_incorrectly_signed", content['file'], 
-                        credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
+                    credentials={"testdomain":{"user": "user1", "password": "pass1"}}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -368,7 +368,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_correctlySignedApp_incorrectlySignedActor", content['file'], 
-                        credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
+                    credentials={"testdomain":{"user": "user1", "password": "pass1"}}, content=content, 
                         check=True)
         except Exception as e:
             _log.debug(str(e))
@@ -408,7 +408,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt2, "test_security1_unsignedApp_signedActors", content['file'], 
-                        credentials={"user": ["user2"], "password": ["pass2"]}, content=content, 
+                        credentials={"testdomain":{"user":"user2", "password":"pass2"}}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -442,7 +442,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt2, "test_security1_unsignedApp_unsignedActors", content['file'], 
-                        credentials={"user": ["user3"], "password": ["pass3"]}, content=content, 
+                        credentials={"testdomain":{"user":"user3", "password":"pass3"}}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -476,7 +476,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
-                        credentials={"user": ["user1"], "password": ["pass1"]}, content=content, 
+                        credentials={"testdomain":{"user":"user1", "password":"pass1"}}, content=content, 
                         check=True)
         except Exception as e:
             _log.debug(str(e))
@@ -511,7 +511,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt4, "test_security1_unsignedApp_signedActors", content['file'], 
-                        credentials={"user": ["user2"], "password": ["pass2"]}, content=content, 
+                        credentials={"testdomain":{"user":"user2","password":"pass2"}}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -546,7 +546,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
-                        credentials={"user": ["user4"], "password": ["pass4"]}, content=content, 
+                        credentials={"testdomain":{"user":"user4", "password":"pass4"}}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -585,7 +585,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
-                        credentials={"user": ["user_not_allowed"], "password": ["pass1"]}, content=content, 
+                        credentials={"testdomain":{"user":"user_not_allowed", "password":"pass1"}}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -609,7 +609,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
-                        credentials={"user": ["user1"], "password": ["incorrect_password"]}, content=content, 
+                        credentials={"testdomain":{"user":"user1", "password":"incorrect_password"}}, content=content, 
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -633,7 +633,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             result = request_handler.deploy_application(rt3, "test_security1_correctly_signed", content['file'], 
-                        credentials={"user": ["user5"], "password": ["pass5"]}, content=content, 
+                        credentials={"testdomain":{"user":"user5", "password":"pass5"}}, content=content, 
                         check=True)
         except Exception as e:
             if isinstance(e, Timeout):

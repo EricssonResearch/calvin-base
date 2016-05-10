@@ -133,12 +133,10 @@ class Security(object):
         if not security_needed_check() or not credentials:
             _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
-        # Make sure that all credential values are lists.
-#        credentials = {k: v if isinstance(v, list) else [v]
-#                       for k, v in credentials.iteritems()}
         #only attempt authentication if credentials for the domain are supplied
+        #if not, subject_attributes is empty, which may still grant access according to
+        #the policy
         if self.node.domain in credentials:
-            _log.debug("credentials for current domain supplied")
             request['subject'] = credentials[self.node.domain]
             if self.sec_conf['authentication']['procedure'] == "external":
                 if not HAS_JWT:
@@ -148,9 +146,11 @@ class Security(object):
                 _log.debug("Security: external authentication method chosen")
                 self.authenticate_using_external_server(request, callback)
             elif self.sec_conf['authentication']['procedure'] == "local":
+                _log.debug("local authentication method chosen")
                 # authenticate access using a local Authentication Decision Point (ADP).
                 self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response, 
                                                           callback=callback))
+                return True
             elif self.sec_conf['authentication']['procedure'] == "radius":
                 if not HAS_PYRAD:
                     _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
@@ -159,7 +159,7 @@ class Security(object):
                 _log.debug("Security: Radius authentication method chosen")
                 return self.authenticate_using_radius_server(credentials)
         _log.debug("Security: No security config, so authentication disabled")
-        return True
+        return True 
 
     def authenticate_using_radius_server(self, credentials):
         """Authenticate a subject using a RADIUS server."""
@@ -189,58 +189,6 @@ class Security(object):
         except Exception:
             return False
 
-    def authenticate_using_local_database(self, credentials):
-        """
-        Authenticate a subject against information stored in config.
-
-        This is primarily intended for testing purposes,
-        since passwords aren't stored securely.
-        """
-        if 'local_users_database_path' not in self.sec_conf['authentication']:
-            _log.error("No user database path supplied")
-            return False
-        else:
-            path = self.sec_conf['authentication']['local_users_database_path']
-
-        try:
-            with open(path, 'rt') as data:
-                local_users = json.load(data)
-        except Exception:
-            _log.error("No user database found")
-            return False
-
-        if 'local_groups_database_path' in self.sec_conf['authentication']:
-            path = self.sec_conf['authentication']['local_groups_database_path']
-            try:
-                with open(path, 'rt') as data:
-                    local_groups = json.load(data)
-            except Exception:
-                local_groups = []
- 
-        # Verify users against stored passwords
-        # TODO: handle multiple credentials (username/password pairs).
-        for user in local_users:
-            if credentials['user'][0] == user['username']:
-                if credentials['password'][0] == user['password']:
-                    for key in user['attributes']:
-                        if key == "groups" and local_groups:
-                            for group_key in user['attributes']['groups']:
-                                for group_attribute in local_groups[group_key]:
-                                    if not group_attribute in self.subject_attributes:
-                                        # If the key doesn't exist, create array and add first value
-                                        self.subject_attributes.setdefault(group_attribute, []).append(local_groups[group_key][group_attribute])
-                                    elif not local_groups[group_key][group_attribute] in self.subject_attributes[group_attribute]:
-                                        # List exists, make sure we don't add same value several times
-                                        self.subject_attributes[group_attribute].append(local_groups[group_key][group_attribute])
-                        else:
-                            if not user['attributes'][key] in self.subject_attributes:
-                                # If the key doesn't exist, create array and add first value
-                                self.subject_attributes.setdefault(key, []).append(user['attributes'][key])
-                            elif not user['attributes'][key] in self.subject_attributes[key]:
-                                # List exists, make sure we don't add same value several times
-                                self.subject_attributes[key].append(user['attributes'][key])
-                    return True
-        return False
 
     def authenticate_using_external_server(self, request, callback):
         """
@@ -289,15 +237,22 @@ class Security(object):
 
     def _handle_local_authentication_response(self, auth_response, callback):
         try:
-            self._return_authentication_decision(auth_response['subject_attributes'],
+            self._return_authentication_decision(auth_response['decision'],
+                                                auth_response['subject_attributes'],
                                                 auth_response.get("obligations", []), callback)
         except Exception as e:
             _log.error("Security: local authentication error - %s" % str(e))
-            self._return_authentication_decision("indeterminate", [], callback)
+            self._return_authentication_decision(False, [], callback)
 
-    def _return_authentication_decision(self, subject_attributes, obligations, callback):
-        _log.info("Authentication response received: %s, obligations %s" % (subject_attributes, obligations))
-        self.subject_attributes=subject_attributes
+    def _return_authentication_decision(self, decision, subject_attributes, obligations, callback):
+        _log.debug("Authentication response received: decision:%s, attributes:%s, obligations %s" % (decision, subject_attributes, obligations))
+        if decision:
+            _log.debug("authentication successfull")
+            self.subject_attributes=subject_attributes
+            callback(authentication_decision=True)
+        else:
+            _log.debug("authentication failed")
+            callback(authentication_decision=False)
 #        if obligations:
 #            callback(access_decision=(True, obligations))
 #        else:
@@ -355,7 +310,7 @@ class Security(object):
                                                           callback=callback))
 
     def _return_authorization_decision(self, decision, obligations, callback):
-        _log.info("Authorization response received: %s, obligations %s" % (decision, obligations))
+        _log.debug("Authorization response received: %s, obligations %s" % (decision, obligations))
         if decision == "permit":
             _log.debug("Security: access permitted to resources")
             if obligations:

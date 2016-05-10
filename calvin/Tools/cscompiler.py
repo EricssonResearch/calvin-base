@@ -41,36 +41,43 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
     warnings = []
     if node is not None and security_needed_check():
         sec = Security(node)
-        # TODO: authenticate_subject should also be async and have a callback.
-        if not sec.authenticate_subject(credentials):
-            _log.error("Check credentials...failed authentication")
-            # This error reason is detected in calvin control and gives proper REST response
-            errors.append({'reason': "401: UNAUTHORIZED", 'line': 0, 'col': 0})
-            if cb:
-                cb(deployable, errors, warnings)
-                return
-            else:
-                return deployable, errors, warnings
-        verified, signer = sec.verify_signature_content(content, "application")
-        if not verified:
-            # Verification not OK if sign or cert not OK.
-            _log.error("Failed application verification")
-            # This error reason is detected in calvin control and gives proper REST response
-            errors.append({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None})
-            if cb:
-                cb(deployable, errors, warnings)
-                return
-            else:
-                return deployable, errors, warnings
-        sec.check_security_policy(CalvinCB(_compile_cont, source_text, filename, verify,
-                                           security=sec, org_cb=cb), "application", signer=signer)
+        sec.authenticate_subject(credentials, callback=CalvinCB(_compile_cont1, source_text, 
+                                                filename, verify, security=sec, org_cb=cb, content=content))
     else:
         if cb:
-            _compile_cont(source_text, filename, verify, True, org_cb=cb)
+            _compile_cont1(source_text, filename, verify, True, org_cb=cb, content=content)
         else:
-            return _compile_cont(source_text, filename, verify, True)
+            return _compile_cont1(source_text, filename, verify, True, org_cb=cb, content=content)
 
-def _compile_cont(source_text, filename, verify, access_decision, security=None, org_cb=None):
+def _compile_cont1(source_text, filename, verify, authentication_decision, security=None, org_cb=None, content=None):
+    deployable = {'valid': False, 'actors': {}, 'connections': {}}
+    errors = [] # TODO: fill in something meaningful
+    warnings = []
+    if not authentication_decision:
+        _log.error("Authentication failed")
+        # This error reason is detected in calvin control and gives proper REST response
+        errors.append({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None})
+        if org_cb:
+            org_cb(deployable, errors, warnings)
+            return
+        else:
+            return deployable, errors, warnings
+
+    verified, signer = security.verify_signature_content(content, "application")
+    if not verified:
+        # Verification not OK if sign or cert not OK.
+        _log.error("Failed application verification")
+        # This error reason is detected in calvin control and gives proper REST response
+        errors.append({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None})
+        if org_cb:
+            org_cb(deployable, errors, warnings)
+            return
+        else:
+            return deployable, errors, warnings
+    security.check_security_policy(CalvinCB(_compile_cont2, source_text, filename, verify, 
+                                       security=security, org_cb=org_cb), "application", signer=signer)
+
+def _compile_cont2(source_text, filename, verify, access_decision, security=None, org_cb=None):
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
     errors = [] # TODO: fill in something meaningful
     warnings = []
