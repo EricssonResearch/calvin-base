@@ -177,7 +177,12 @@ class Storage(object):
         self.trigger_flush()
 
     def set(self, prefix, key, value, cb):
-        """ Set key: prefix+key value: value
+        """ Set registry key: prefix+key to be single value: value
+            It is assumed that the prefix and key are strings,
+            the sum has to be an immutable object.
+            Callback cb with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and 
+            value indicate success.
         """
         _log.debug("Set key %s, value %s" % (prefix + key, value))
         value = self.coder.encode(value) if value else value
@@ -201,7 +206,14 @@ class Storage(object):
         org_cb(org_key, value)
 
     def get(self, prefix, key, cb):
-        """ Get value for key: prefix+key, first look in localstore
+        """ Get single value for registry key: prefix+key,
+            first look in locally set but not yet distributed registry
+            It is assumed that the prefix and key are strings,
+            the sum has to be an immutable object.
+            Callback cb with signature cb(key=key, value=<retrived value>/None/False)
+            note that the key here is without the prefix.
+            False is returned when value has been deleted,
+            None is returned if never set (this is current behaviour and might change).
         """
         if not cb:
             return
@@ -232,8 +244,21 @@ class Storage(object):
             it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
 
     def get_iter(self, prefix, key, it, include_key=False):
-        """ Get value for key: prefix+key, first look in localstore
-            Add the value to the supplied dynamic iterable (preferable a LimitedList or List)
+        """ Get single value for registry key: prefix+key,
+            first look in locally set but not yet distributed registry.
+            It is assumed that the prefix and key are strings,
+            the sum has to be an immutable object.
+            Value is placed in supplied dynamic iterable it parameter.
+            The dynamic iterable are of a subclass to calvin.utilities.dynops.DynOps
+            that supports the append function call (currently only List), see DynOps
+            for details of how they are used. It is common to call auto_final method
+            with parameter max_length to number of get_iter calls.
+            If a key is not found the special value dynops.FailedElement is put in the
+            iterable. When the parameter include_key is True a tuple of (key, value)
+            is placed in it instead of only the retrived value,
+            note that the key here is without the prefix.
+            Value is False when value has been deleted and
+            None if never set (this is current behaviour and might change).
         """
         if it:
             if prefix + key in self.localstore:
@@ -262,11 +287,20 @@ class Storage(object):
             org_cb(org_key, local_list if local_list else None)
 
     def get_concat(self, prefix, key, cb):
-        """ Get value for key: prefix+key, first look in localstore
-            Return value is list. The storage could be eventually consistent.
-            For example a remove might only have reached part of the
-            storage and hence the return list might contain removed items,
-            but also missing items.
+        """ Get multiple values for registry key: prefix+key,
+            union of locally added but not yet distributed values
+            and values added by others.
+            It is assumed that the prefix and key are strings,
+            the sum has to be an immutable object.
+            Callback cb with signature cb(key=key, value=<retrived values>)
+            note that the key here is without the prefix.
+            Values are returned as a list.
+
+            The registry can be eventually consistent,
+            e.g. a removal of a value might only have reached part of a
+            distributed registry and hence still be part of returned
+            list of values, it may also miss values added by others but
+            not yet distributed.
         """
         if not cb:
             return
@@ -298,11 +332,24 @@ class Storage(object):
         _log.analyze(self.node.id, "+ END", {'key': org_key, 'iter': str(it)})
 
     def get_concat_iter(self, prefix, key, include_key=False):
-        """ Get value for key: prefix+key, first look in localstore
-            Returned value is dynamic iterable. The storage could be eventually consistent.
-            For example a remove might only have reached part of the
-            storage and hence the return iterable might contain removed items,
-            but also missing items.
+        """ Get multiple values for registry key: prefix+key,
+            union of locally added but not yet distributed values
+            and values added by others.
+            It is assumed that the prefix and key are strings,
+            the sum has to be an immutable object.
+            Values are placed in returned dynamic iterable object.
+            When the parameter include_key is True a tuple of (key, value)
+            is placed in dynamic iterable object instead of only the retrived value.
+            The dynamic iterable are of the List subclass to
+            calvin.utilities.dynops.DynOps, see DynOps for details
+            of how they are used. The final method will be called when
+            all values are appended to the returned dynamic iterable.
+
+            The registry can be eventually consistent,
+            e.g. a removal of a value might only have reached part of a
+            distributed registry and hence still be part of returned
+            list of values, it may also miss values added by others but
+            not yet distributed.
         """
         _log.analyze(self.node.id, "+ BEGIN", {'key': key})
         if prefix + key in self.localstore_sets:
@@ -347,7 +394,14 @@ class Storage(object):
         self.trigger_flush()
 
     def append(self, prefix, key, value, cb):
-        """ set operation append on key: prefix+key value: value is a list of items
+        """ Add multiple values value to registry key: prefix+key,
+            the stored values are a set, i.e. unordered without duplicates.
+            It is assumed that the prefix and key are strings,
+            the sum has to be an immutable object.
+            value is a list, tuple or set of values.
+            Callback cb with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and 
+            value indicate success.
         """
         _log.debug("Append key %s, value %s" % (prefix + key, value))
         # Keep local storage for sets updated until confirmed
@@ -387,7 +441,14 @@ class Storage(object):
         self.trigger_flush()
 
     def remove(self, prefix, key, value, cb):
-        """ set operation remove on key: prefix+key value: value is a list of items
+        """ Remove multiple values value from registry key: prefix+key,
+            the stored values are a set, i.e. unordered without duplicates.
+            It is assumed that the prefix and key are strings,
+            the sum has to be an immutable object.
+            value is a list, tuple or set of values.
+            Callback cb with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and 
+            value indicate success.
         """
         _log.debug("Remove key %s, value %s" % (prefix + key, value))
         # Keep local storage for sets updated until confirmed
@@ -408,7 +469,13 @@ class Storage(object):
                 cb(key=key, value=True)
 
     def delete(self, prefix, key, cb):
-        """ Delete key: prefix+key (value set to None)
+        """ Delete registry key: prefix+key
+            It is assumed that the prefix and key are strings,
+            the sum has to be an immutable object.
+            This is equivalent to set(..., value=None, ...).
+            Callback cb with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and 
+            value indicate success.
         """
         _log.debug("Deleting key %s" % prefix + key)
         if prefix + key in self.localstore:
@@ -630,16 +697,19 @@ class Storage(object):
 
     def add_index(self, index, value, root_prefix_level=3, cb=None):
         """
-        Add value (typically a node id) to the storage as a set.
-        index: a string with slash as delimiter for finer level of index,
+        Add single value (e.g. a node id) to a set stored in registry 
+        later retrivable for each level of the index.
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
-               node/affiliation/owner/com.ericsson/Harald,
-               node/affiliation/name/com.ericsson/laptop
-               OR a list of strings
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
         value: the value that is to be added to the set stored at each level of the index
-        root_prefix_level: the top level of the index that can be searched,
-               with =1 then e.g. node/address, node/affiliation
-        cb: will be called when done.
+        root_prefix_level: the top level of the index that can be searched separately,
+               with e.g. =1 then node/address can't be split
+        cb: Callback with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and 
+            value indicate success.
         """
 
         # TODO this implementation will store the value to each level of the index.
@@ -658,15 +728,20 @@ class Storage(object):
 
     def remove_index(self, index, value, root_prefix_level=2, cb=None):
         """
-        Remove value (typically a node id) from the storage as a set.
-        index: a string with slash as delimiter for finer level of index,
+        Remove single value (e.g. a node id) from a set stored in registry
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
                node/affiliation/owner/com.ericsson/Harald,
-               node/affiliation/name/com.ericsson/laptop
+               node/affiliation/name/com.ericsson/laptop,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
         value: the value that is to be removed from the set stored at each level of the index
-        root_prefix_level: the top level of the index that can be searched,
-               with =1 then e.g. node/address, node/affiliation
-        cb: will be called when done.
+        root_prefix_level: the top level of the index that can be searched separately,
+               with e.g. =1 then node/address can't be split
+        cb: Callback with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and 
+            value indicate success.
         """
 
         # TODO this implementation will delete the value to each level of the index.
@@ -689,26 +764,29 @@ class Storage(object):
 
     def get_index(self, index, cb=None):
         """
-        Get index from the storage.
-        index: a string with slash as delimiter for finer level of index,
+        Get multiple values from the registry stored at the index level or
+        below it in hierarchy.
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
                node/affiliation/owner/com.ericsson/Harald,
-               node/affiliation/name/com.ericsson/laptop
-        cb: will be called when done. Should expect to be called several times with
-               partial results. Currently only called once.
+               node/affiliation/name/com.ericsson/laptop,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
+        cb: Callback cb with signature cb(key=key, value=<retrived values>),
+            value is a list.
 
-        Since storage might be eventually consistent caller must expect that the
-        list can contain node ids that are removed and node ids have not yet reached
-        the storage.
+        The registry can be eventually consistent,
+        e.g. a removal of a value might only have reached part of a
+        distributed registry and hence still be part of returned
+        list of values, it may also miss values added by others but
+        not yet distributed.
         """
 
         # TODO this implementation will get the value from the level of the index.
         # When time permits a proper implementation should be done with for example
         # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in. A proper implementation might also have several callbacks
-        # since might get index from several levels of index trie, and instead of building a complete
-        # list before returning better to return iteratively for nodes with less memory
-        # or system with large number of nodes, might also need a timeout.
+        # prefix search built in.
 
         if isinstance(index, list):
             index = "/".join(index)
@@ -720,15 +798,30 @@ class Storage(object):
 
     def get_index_iter(self, index, include_key=False):
         """
-        Get index from the storage.
-        index: a string with slash as delimiter for finer level of index,
+        Get multiple values from the registry stored at the index level or
+        below it in hierarchy.
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
                node/affiliation/owner/com.ericsson/Harald,
-               node/affiliation/name/com.ericsson/laptop
+               node/affiliation/name/com.ericsson/laptop,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
+        include_key: When the parameter include_key is True a tuple of (index, value)
+               is placed in dynamic interable instead of only the retrived value,
+               note it is only the supplied index, not for each sub-level.
+        returned: Dynamic iterable object
+            Values are placed in the dynamic iterable object.
+            The dynamic iterable are of the List subclass to
+            calvin.utilities.dynops.DynOps, see DynOps for details
+            of how they are used. The final method will be called when
+            all values are appended to the returned dynamic iterable.
 
-        Since storage might be eventually consistent caller must expect that the
-        list can contain node ids that are removed and node ids have not yet reached
-        the storage.
+        The registry can be eventually consistent,
+        e.g. a removal of a value might only have reached part of a
+        distributed registry and hence still be part of returned
+        list of values, it may also miss values added by others but
+        not yet distributed.
         """
 
         # TODO this implementation will get the value from the level of the index.
