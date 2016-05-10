@@ -1747,7 +1747,7 @@ class CalvinControlTunnelClient(object):
                     _log.exception("FIXME! Caught exception in calvincontrol when tunneling.")
                     self.calvincontrol.send_response(payload["msgid"], None, None, status=calvinresponse.INTERNAL_ERROR)
             elif payload["cmd"] == "started":
-                self.calvincontrol.node.control_uri = payload["controluri"]
+                self.calvincontrol.node.external_control_uri = payload["controluri"]
                 self.calvincontrol.node.storage.add_node(self.calvincontrol.node)
                 return
             elif payload["cmd"] == "logclose":
