@@ -753,7 +753,7 @@ class CalvinControl(object):
             (re_options, self.handle_options)
         ]
 
-    def start(self, node, uri, tunnel=False):
+    def start(self, node, uri, tunnel=False, external_uri=None):
         """ If not tunnel, start listening on uri and handle http requests.
             If tunnel, setup a tunnel to uri and handle requests.
         """
@@ -767,6 +767,10 @@ class CalvinControl(object):
             url = urlparse(uri)
             self.port = int(url.port)
             self.host = url.hostname
+            if external_uri is not None:
+                self.external_host = urlparse(external_uri).hostname
+            else:
+                self.external_host = self.host
             _log.info("Control API listening on: %s:%s" % (self.host, self.port))
 
             self.server = server_connection.ServerProtocolFactory(self.handle_request, "http")
@@ -1632,7 +1636,7 @@ class CalvinControlTunnel(object):
 
         # Tell peer node that we a listening and on what uri
         msg = {"cmd": "started",
-               "controluri": "http://" + self.host + ":" + str(self.port)}
+               "controluri": "http://" + get_calvincontrol().external_host + ":" + str(self.port)}
         self.tunnel.send(msg)
 
     def close(self):

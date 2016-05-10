@@ -214,7 +214,7 @@ class Node(object):
             self.control.start(node=self, uri=proxy_control_uri, tunnel=True)
         else:
             if self.control_uri is not None:
-                self.control.start(node=self, uri=self.control_uri)
+                self.control.start(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
 
     def stop(self, callback=None):
         def stopped(*args):
