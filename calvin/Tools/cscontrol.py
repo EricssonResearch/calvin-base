@@ -130,7 +130,7 @@ def control_nodes(args):
     elif args.cmd == 'list':
         return get_request_handler().get_nodes(args.node)
     elif args.cmd == 'add':
-        return get_request_handler().peer_setup(args.node, *args.peerlist)
+        return get_request_handler().peer_setup(args.node, *(args.peerlist + [ args.id ]))
     elif args.cmd == 'stop':
         try:
             return get_request_handler().quit(args.node)
@@ -179,7 +179,7 @@ def parse_args():
     info_group = cmd_nodes.add_argument_group('info')
     info_group.add_argument('id', metavar='<node id>', nargs='?', help="id of node to get info about")
     list_group = cmd_nodes.add_argument_group('add')
-    list_group.add_argument('peerlist', metavar='<peerlist>', nargs='*', default=[],
+    list_group.add_argument('peerlist', metavar='<peer>', nargs='*', default=[],
                             help="list of peers of the form calvinip://<address>:<port>")
     cmd_nodes.set_defaults(func=control_nodes)
 
