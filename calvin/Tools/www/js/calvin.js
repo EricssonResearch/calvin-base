@@ -13,6 +13,32 @@ var svg = d3.select("#applicationGraph").append("svg");
 var svgGroup = svg.append("g");
 var graphTimer = null;
 
+function showAlert(message, type, delay)
+{
+    var alert = $('<div class="alert alert-' + type + ' fade in">')
+        .append(
+            $('<button type="button" class="close" data-dismiss="alert">')
+            .append("&times;")
+        )
+        .append(message);
+
+    $("#alerts-container").prepend(alert);
+
+    if (delay) {
+        window.setTimeout(function() { alert.alert("close") }, delay);
+    }
+}
+
+function showError(message)
+{
+    showAlert(message, "danger", 10000);
+}
+
+function showSuccess(message)
+{
+    showAlert(message, "success", 5000);
+}
+
 function addActorToGraph(actor)
 {
     if (document.getElementById("chkDrawApplication").checked) {
@@ -337,7 +363,7 @@ function getPeerID()
             }
         },
         error: function() {
-            alert("Failed to get node id, url: " + url);
+            showError("Failed to get node id, url: " + url);
         }
     });
 }
@@ -372,7 +398,7 @@ function getPeersFromIndex(index)
             }
         },
         error: function() {
-            alert("Failed to get peers from index, url: " + url);
+            console.log("Failed to get peers from index, url: " + url);
         }
     });
 }
@@ -409,7 +435,7 @@ function getPeers(peer)
             }
         },
         error: function() {
-            alert("Failed to get peers, url: " + url);
+            console.log("Failed to get peers, url: " + url);
         }
     });
 }
@@ -458,7 +484,7 @@ function getPeer(id)
             }
         },
         error: function() {
-            alert("Failed to get peer, url: " + url);
+            showError("Failed to get peer, url: " + url);
         }
     });
 }
@@ -508,7 +534,7 @@ function getApplications()
                 }
             },
             error: function() {
-                alert("Failed to get applications, url: " + url);
+                console.log("Failed to get applications, url: " + url);
             }
         });
     }
@@ -558,7 +584,7 @@ function getApplication(uri, id)
             }
         },
         error: function() {
-            alert("Failed to get application, url: " + url);
+            showError("Failed to get application, url: " + url);
         }
     });
 }
@@ -619,7 +645,7 @@ function getActor(id, show)
             }
         },
         error: function() {
-            alert("Failed to get actor, url: " + url);
+            showError("Failed to get actor, url: " + url);
         }
     });
 }
@@ -667,7 +693,7 @@ function getPort(actor_id, port_id)
             }
         },
         error: function() {
-            alert("Failed to get port, url: " + url);
+            showError("Failed to get port, url: " + url);
         }
     });
 }
@@ -710,7 +736,7 @@ function getPortState(port_id)
                         }
                     },
                     error: function() {
-                        alert("Failed to get port state, url: " + url);
+                        showError("Failed to get port state, url: " + url);
                     }
                 });
             }
@@ -854,6 +880,15 @@ function showApplication()
         btnDestroy.value = 'Destroy';
         btnDestroy.setAttribute("onclick", "destroyApplication(this.id)");
         AddTableItem(tableRef, document.createTextNode("Destroy"), btnDestroy);
+
+        // Set requirements
+        var btnSetRequirements = document.createElement('input');
+        btnSetRequirements.type = 'button';
+        btnSetRequirements.className = "btn btn-primary btn-xs";
+        btnSetRequirements.id = application.id;
+        btnSetRequirements.value = 'Set requirements...';
+        btnSetRequirements.setAttribute("onclick", "showSetRequirements(this.id)");
+        AddTableItem(tableRef, document.createTextNode("Set requirements"), btnSetRequirements);
 
         var index;
         for (index in application.actors) {
@@ -1013,13 +1048,14 @@ function migrate(actor_id)
                 data: data,
                 success: function() {
                     getActor(actor_id, true);
+                    showSuccess("Actor " + actor_id + " migrated");
                 },
                 error: function() {
-                    console.log("Failed to migrate");
+                    showError("Failed to migrate " + actor_id);
                 }
             });
         } else {
-            console.log("migrate - No node with id: " + actor.peer_id);
+            showError("Failed to migrate, no node with id: " + actor.peer_id);
         }
     }
 }
@@ -1043,13 +1079,14 @@ function destroyApplication(application_id)
             type: 'DELETE',
             success: function() {
                 getApplications();
+                showSuccess("Application " + application_id + " destroyed");
             },
             error: function() {
-                alert("Failed to destroy application");
+                showError("Failed to destroy application");
             }
         });
     } else {
-        console.log("destroyApplication - No application with id: " + application_id);
+        showError("Failed to destroy application, no application with id: " + application_id);
     }
 }
 
@@ -1080,16 +1117,17 @@ function destroyPeer(peer_id)
                 for (var x = 0; x < tableRef.rows.length; x++) {
                     if (tableRef.rows[x].cells[0].innerHTML == peer_id) {
                         tableRef.deleteRow(x);
+                        showSuccess("Runtime " + peer_id + " destroyed");
                         return;
                     }
                 }
             },
             error: function() {
-                alert("Failed to destroy peer");
+                showError("Failed to destroy runtime");
             }
         });
     } else {
-        console.log("destroyPeer - No peer with id: " + peer_id);
+        showError("Failed to destroy runtime, no runtime with id: " + peer_id);
     }
 }
 
@@ -1165,7 +1203,7 @@ function startTrace() {
     $("#traceDialog").modal('hide');
     for (var index in peers) {
         if (peers[index].source) {
-            alert("Trace already started on runtime" + peers[index].id);
+            showError("Trace already started on runtime" + peers[index].id);
         } else {
             var url = peers[index].control_uri + '/log';
             var data = JSON.stringify({'actors': actors, 'events': events});
@@ -1193,7 +1231,7 @@ function startTrace() {
                     }
                 },
                 error: function() {
-                    console.log("startLog - Failed, url: " + url);
+                    showError("Failed to start log, url: " + url);
                 }
             });
         }
@@ -1219,7 +1257,7 @@ function stopLog()
             success: function() {
             },
             error: function() {
-                alert("stopLog - Failed, url: " + url);
+                showError("Failed to stop log, url: " + url);
             }
         });
         if (peers[index].source) {
@@ -1323,7 +1361,7 @@ function startGraphEvents(application)
     var actors = application.actors;
     for (var index in peers) {
         if (peers[index].graph_source) {
-            alert("Graph trace already started on runtime" + peers[index].name);
+            showError("Graph trace already started on runtime" + peers[index].name);
         } else {
             var url = peers[index].control_uri + '/log';
             var data = JSON.stringify({'actors': actors, 'events': events});
@@ -1351,7 +1389,7 @@ function startGraphEvents(application)
                     }
                 },
                 error: function() {
-                    console.log("startGraphEvents - Failed, url: " + url);
+                    console.log("Failed to get log, url: " + url);
                 }
             });
         }
@@ -1378,7 +1416,7 @@ function stopGraphEvents()
                 success: function() {
                 },
                 error: function() {
-                    alert("stopGraphEvents - Failed, url: " + url);
+                    showError("Failed to stop log, url: " + url);
                 }
             });
 
@@ -1411,14 +1449,10 @@ function showDeployApplication(peer_id)
 {
     var peer = findRuntime(peer_id);
     if (peer) {
-        $("#deployDialog").modal({
-            modal: true,
-            width: 800,
-            height: 800,
-        });
         $("#deployDialog").modal.peer = peer;
         $("#deployDialog").modal({
-            show: true,
+            modal: true,
+            show: true
         });
     }
 }
@@ -1429,7 +1463,6 @@ function deployHandler() {
     var name = $("#script_name").val();
     var reqs = $("#migrate_reqs").val();
     deployApplication(peer.control_uri, script, reqs, name);
-    $("#deployDialog").modal('close');
 }
 
 // Deploy application with "script" and "name" to runtime with "uri"
@@ -1456,10 +1489,56 @@ function deployApplication(uri, script, reqs, name)
         type: 'POST',
         data: data,
         success: function(data) {
-            console.log("deployApplication - Success");
+            showSuccess("Application " + name + " deployed");
         },
         error: function() {
-            alert("Failed to deploy application, url: " + url + " data: " + data);
+            showError("Failed to deploy application, url: " + url + " data: " + data);
+        }
+    });
+}
+
+// Show dialog for setting requirements
+function showSetRequirements(application_id)
+{
+    var application = findApplication(application_id);
+    if (application) {
+        $("#requirementsDialog").modal.application = application;
+        $("#requirementsDialog").modal({
+            modal: true,
+            show: true
+        });
+    }
+}
+
+function setRequirementsHandler() {
+    var application = $("#requirementsDialog").modal.application;
+    var requirements = $("#requirements").val();
+    setRequirements(application, requirements);
+}
+
+// Set requirements
+function setRequirements(application, requirements)
+{
+    var url = application.control_uri + '/application/' + application.id + '/migrate';
+    var data = JSON.stringify({'deploy_info': JSON.parse(requirements)});
+
+    console.log("setRequirements url: " + url + " data: " + data);
+    $.ajax({
+        timeout: 20000,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        url: url,
+        type: 'POST',
+        data: data,
+        success: function(data) {
+            showSuccess("Requirements updated");
+        },
+        error: function() {
+            showError("Failed to set requirements, url: " + url + " data: " + data);
         }
     });
 }
@@ -1491,6 +1570,20 @@ jQuery(document).ready(function() {
 
         reader.onload = function(e) {
             fileDisplayMigrate.innerHTML = e.target.result;
+        }
+
+        reader.readAsText(file);
+    });
+
+    // handle file select in set requirements
+    var fileInputRequirements = document.getElementById('fileInputRequirements');
+    var fileDisplayRequirements = document.getElementById('requirements');
+    fileInputRequirements.addEventListener('change', function(e) {
+        var file = fileInputRequirements.files[0];
+        var reader = new FileReader();
+
+        reader.onload = function(e) {
+            fileDisplayRequirements.innerHTML = e.target.result;
         }
 
         reader.readAsText(file);
