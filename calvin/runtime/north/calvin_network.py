@@ -24,12 +24,14 @@ import calvin.requests.calvinresponse as response
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
+
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 # FIXME should be read from calvin config
 TRANSPORT_PLUGIN_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), *['south', 'plugins', 'transports'])
 TRANSPORT_PLUGIN_NS = "calvin.runtime.south.plugins.transports"
+
 
 class CalvinLink(object):
     """ CalvinLink class manage one RT to RT link between
@@ -135,6 +137,21 @@ class CalvinNetwork(object):
         """ Register THE function that will receive all incomming messages on all links """
         self.recv_handler = recv_handler
 
+    def _filename_without_extension(self, filename):
+        return os.path.basename(filename)[:-3]
+
+    def _find_modules(self, filenames):
+        modules = []
+        for filename in filenames:
+            if not os.path.basename(filename).startswith("_") and os.path.isfile(filename):
+                modules.append(self._filename_without_extension(filename))
+        return modules
+
+    def _find_directories(self, filenames):
+        # Find directories with __init__.py python file (which should have the register function)
+        dirs = [f for f in filenames if not os.path.basename(f).startswith('_') and os.path.isdir(f)]
+        return [os.path.basename(d) for d in dirs if os.path.isfile(os.path.join(d, "__init__.py"))]
+
     def register(self, schemas, formats):
         """ Load and registers all transport plug-in modules matching the list of schemas.
             The plug-in modules can register any number of schemas with corresponding
@@ -143,33 +160,33 @@ class CalvinNetwork(object):
             uri schema or start listening for incoming requests.
         """
         # Find python files in plugins/transport
-        module_paths = glob.glob(os.path.join(TRANSPORT_PLUGIN_PATH, "*.py"))
-        modules = [os.path.basename(f)[:-3] for f in module_paths if not os.path.basename(
-            f).startswith('_') and os.path.isfile(f)]
+        py_files = glob.glob(os.path.join(TRANSPORT_PLUGIN_PATH, "*.py"))
+        modules = self._find_modules(py_files)
 
-        # Find directories with __init__.py python file (which should have the register function)
-        module_paths = glob.glob(os.path.join(TRANSPORT_PLUGIN_PATH, "*"))
-        dirs = [f for f in module_paths if not os.path.basename(f).startswith('_') and os.path.isdir(f)]
-        modules += [os.path.basename(d) for d in dirs if os.path.isfile(os.path.join(d, "__init__.py"))]
+        files = glob.glob(os.path.join(TRANSPORT_PLUGIN_PATH, "*"))
+        modules.extend(self._find_directories(files))
 
         # Try to register each transport plugin module
         for m in modules:
-            schema_objects = {}
-            try:
-                self.transport_modules[m] = importlib.import_module(TRANSPORT_PLUGIN_NS + "." + m)
-                # Get a dictionary of schemas -> transport factory
-                schema_objects = self.transport_modules[m].register(self.node.id,
-                                                                    {'join_finished': [CalvinCB(self.join_finished)],
-                                                                     'data_received': [self.recv_handler],
-                                                                     'peer_disconnected': [CalvinCB(self.peer_disconnected)]},
-                                                                    schemas, formats)
-            except:
-                _log.debug("Could not register transport plugin %s" % (m,))
-                continue
-            if schema_objects:
-                _log.debug("Register transport plugin %s" % (m,))
-                # Add them to the list - currently only one module can handle one schema
-                self.transports.update(schema_objects)
+            self._register_module(schemas, formats, m)
+
+    def _register_module(self, schemas, formats, module):
+        schema_objects = None
+        try:
+            self.transport_modules[module] = importlib.import_module(TRANSPORT_PLUGIN_NS + "." + module)
+            # Get a dictionary of schemas -> transport factory
+            schema_objects = self.transport_modules[module].register(self.node.id,
+                                                                     {'join_finished': [CalvinCB(self.join_finished)],
+                                                                      'data_received': [self.recv_handler],
+                                                                      'peer_disconnected': [CalvinCB(self.peer_disconnected)]},
+                                                                     schemas, formats)
+        except Exception as e:
+            _log.error("Could not register transport plugin {}: {}".format(module, e))
+
+        if schema_objects:
+            _log.debug("Register transport plugin %s" % (module))
+            # Add them to the list - currently only one module can handle one schema
+            self.transports.update(schema_objects)
 
     def start_listeners(self, uris=None):
         """ Start the transport listening on the uris
@@ -207,32 +224,44 @@ class CalvinNetwork(object):
             corresponding_peer_ids = [None] * len(uris)
 
         for uri, peer_id in zip(uris, corresponding_peer_ids):
-            if not (uri in self.pending_joins or peer_id in self.pending_joins_by_id or peer_id in self.links):
-                # No simultaneous join detected
-                schema = uri.split(":", 1)[0]
-                _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id, 'schema': schema, 'transports': self.transports.keys()}, peer_node_id=peer_id)
-                if schema in self.transports.keys():
-                    # store we have a pending join and its callback
-                    if peer_id:
-                        self.pending_joins_by_id[peer_id] = uri
-                    if callback:
-                        self.pending_joins[uri] = [callback]
-                    # Ask the transport plugin to do the join
-                    _log.analyze(self.node.id, "+ TRANSPORT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                    self.transports[schema].join(uri)
+            if self._simultaneous_joins(uri, peer_id):
+                self._handle_simultaneous_join(callback, uri, peer_id)
             else:
-                # We have simultaneous joins
-                _log.analyze(self.node.id, "+ SIMULTANEOUS", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                if callback:
-                    if peer_id in self.links:
-                        # Link was already established, then need to call the callback now
-                        callback(status=response.CalvinResponse(True), uri=uri)
-                        continue
-                    # Otherwise also want to be called when the ongoing link setup finishes
-                    if uri in self.pending_joins:
-                        self.pending_joins[uri].append(callback)
-                    else:
-                        self.pending_joins[uri] = [callback]
+                self._handle_non_simultaneous_join(callback, uri, peer_id)
+
+    def _simultaneous_joins(self, uri, peer_id):
+        return uri in self.pending_joins or peer_id in self.pending_joins_by_id or peer_id in self.links
+
+    def _handle_simultaenous_join(self, callback, uri, peer_id):
+        _log.analyze(self.node.id, "+ SIMULTANEOUS", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+        if not callback:
+            return
+
+        if peer_id in self.links:
+            # Link was already established, then need to call the callback now
+            callback(status=response.CalvinResponse(True), uri=uri)
+            return
+
+        # Otherwise also want to be called when the ongoing link setup finishes
+        if uri in self.pending_joins:
+            self.pending_joins[uri].append(callback)
+        else:
+            self.pending_joins[uri] = [callback]
+
+    def _handle_non_simultaneous_join(self, callback, uri, peer_id):
+        schema = uri.split(":", 1)[0]
+        _log.analyze(self.node.id, "+",
+                     {'uri': uri, 'peer_id': peer_id, 'schema': schema, 'transports': self.transports.keys()},
+                     peer_node_id=peer_id)
+        if schema in self.transports.keys():
+            # store we have a pending join and its callback
+            if peer_id:
+                self.pending_joins_by_id[peer_id] = uri
+            if callback:
+                self.pending_joins[uri] = [callback]
+            # Ask the transport plugin to do the join
+            _log.analyze(self.node.id, "+ TRANSPORT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+            self.transports[schema].join(uri)
 
     def join_finished(self, tp_link, peer_id, uri, is_orginator):
         """ Peer join is (not) accepted, called by transport plugin.
@@ -247,62 +276,84 @@ class CalvinNetwork(object):
         """
         # while a link is pending it is the responsibility of the transport layer, since
         # higher layers don't have any use for it anyway
-        _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id,
-                                         'pending_joins': self.pending_joins,
-                                         'pending_joins_by_id': self.pending_joins_by_id},
-                                         peer_node_id=peer_id, tb=True)
-        if tp_link is None:
-            # This is a failed join lets send it upwards
-            if uri in self.pending_joins:
-                cbs = self.pending_joins.pop(uri)
-                if cbs:
-                    for cb in cbs:
-                        cb(status=response.CalvinResponse(response.SERVICE_UNAVAILABLE), uri=uri, peer_node_id=peer_id)
-            return
+        _log.analyze(self.node.id, "+",
+                     {'uri': uri,
+                      'peer_id': peer_id,
+                      'pending_joins': self.pending_joins,
+                      'pending_joins_by_id': self.pending_joins_by_id},
+                     peer_node_id=peer_id, tb=True)
+
+        if not tp_link:
+            return self._service_unavailable(uri, peer_id)
+
         # Only support for one RT to RT communication link per peer
         if peer_id in self.links:
             # Likely simultaneous join requests, use the one requested by the node with highest id
             if is_orginator and self.node.id > peer_id:
-                # We requested it and we have highest node id, hence the one in links is the peer's and we replace it
-                _log.analyze(self.node.id, "+ REPLACE ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self.links[peer_id])
+                self._replace_originator(tp_link, uri, peer_id)
             elif is_orginator and self.node.id < peer_id:
-                # We requested it and peer have highest node id, hence the one in links is peer's and we close this new
-                _log.analyze(self.node.id, "+ DROP ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                tp_link.disconnect()
+                self._drop_originator(tp_link, uri, peer_id)
             elif not is_orginator and self.node.id > peer_id:
-                # Peer requested it and we have highest node id, hence the one in links is ours and we close this new
-                _log.analyze(self.node.id, "+ DROP", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                tp_link.disconnect()
+                self._drop_peer_link(tp_link, uri, peer_id)
             elif not is_orginator and self.node.id < peer_id:
-                # Peer requested it and peer have highest node id, hence the one in links is ours and we replace it
-                _log.analyze(self.node.id, "+ REPLACE", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self.links[peer_id])
+                self._replace_peer_link(tp_link, uri, peer_id)
         else:
-            # No simultaneous join detected, just add the link
-            _log.analyze(self.node.id, "+ INSERT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id, tb=True)
-            self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link)
+            self._add_peer_link(tp_link, uri, peer_id)
 
         # Find and call any callbacks registered for the uri or peer id
         _log.debug("%s: peer_id: %s, uri: %s\npending_joins_by_id: %s\npending_joins: %s" % (self.node.id, peer_id,
-                                                                                         uri,
-                                                                                         self.pending_joins_by_id,
-                                                                                         self.pending_joins))
+                                                                                             uri,
+                                                                                             self.pending_joins_by_id,
+                                                                                             self.pending_joins))
+
+        self._send_response_to_pending_joins(uri, peer_id)
+
+    def _send_response_to_pending_joins(self, uri, peer_id):
         if peer_id in self.pending_joins_by_id:
             peer_uri = self.pending_joins_by_id.pop(peer_id)
             if peer_uri in self.pending_joins:
-                cbs = self.pending_joins.pop(peer_uri)
-                if cbs:
-                    for cb in cbs:
-                        cb(status=response.CalvinResponse(True), uri=peer_uri, peer_node_id=peer_id)
+                cbs = self.pending_joins.pop(peer_uri) or []
+                for cb in cbs:
+                    cb(status=response.CalvinResponse(True), uri=peer_uri, peer_node_id=peer_id)
 
         if uri in self.pending_joins:
-            cbs = self.pending_joins.pop(uri)
-            if cbs:
-                for cb in cbs:
-                    cb(status=response.CalvinResponse(True), uri=uri, peer_node_id=peer_id)
+            cbs = self.pending_joins.pop(uri) or []
+            for cb in cbs:
+                cb(status=response.CalvinResponse(True), uri=uri, peer_node_id=peer_id)
 
-        return
+    def _service_unavailable(self, uri, peer_id):
+        # This is a failed join lets send it upwards
+        if uri not in self.pending_joins:
+            return
+
+        cbs = self.pending_joins.pop(uri) or []
+        for cb in cbs:
+            cb(status=response.CalvinResponse(response.SERVICE_UNAVAILABLE), uri=uri, peer_node_id=peer_id)
+
+    def _add_peer_link(self, tp_link, uri, peer_id):
+        # No simultaneous join detected, just add the link
+        _log.analyze(self.node.id, "+ INSERT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id, tb=True)
+        self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link)
+
+    def _replace_originator(self, tp_link, uri, peer_id):
+        """We requested it and we have highest node id, hence the one in links is the peer's and we replace it"""
+        _log.analyze(self.node.id, "+ REPLACE ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+        self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self.links[peer_id])
+
+    def _drop_originator(self, tp_link, uri, peer_id):
+        """We requested it and peer have highest node id, hence the one in links is peer's and we close this new"""
+        _log.analyze(self.node.id, "+ DROP ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+        tp_link.disconnect()
+
+    def _drop_peer_link(self, tp_link, uri, peer_id):
+        """Peer requested it and we have highest node id, hence the one in links is ours and we close this new"""
+        _log.analyze(self.node.id, "+ DROP", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+        tp_link.disconnect()
+
+    def _replace_peer_link(self, tp_link, uri, peer_id):
+        """Peer requested it and peer have highest node id, hence the one in links is ours and we replace it"""
+        _log.analyze(self.node.id, "+ REPLACE", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+        self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self.links[peer_id])
 
     def link_get(self, peer_id):
         """ Get a link by node id """
@@ -349,9 +400,11 @@ class CalvinNetwork(object):
         return None
 
     def peer_disconnected(self, link, rt_id, reason):
-        _log.analyze(self.node.id, "+", {'reason': reason,
-                                         'links_equal': link == self.links[rt_id].transport if rt_id in self.links else "Gone"},
-                                         peer_node_id=rt_id)
+        param = {
+            'reason': reason,
+            'links_equal': link == self.links[rt_id].transport if rt_id in self.links else "Gone"
+        }
+        _log.analyze(self.node.id, "+", param, peer_node_id=rt_id)
         if rt_id in self.links and link == self.links[rt_id].transport:
             self.link_remove(rt_id)
 
