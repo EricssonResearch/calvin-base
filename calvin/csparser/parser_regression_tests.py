@@ -135,14 +135,8 @@ def issue_test(testlist, testdir):
     results = {}
     for source, test in test_generator(testdir, testlist):
         results[test] = {}
-        try:
             old_errors, old_warnings = old_issue_report(source, test)
-        except:
-            pass
-        try:
             new_errors, new_warnings = new_issue_report(source, test)
-        except:
-            pass
 
         error_cover = old_issues_covered(old_errors, new_errors)
         warning_cover = old_issues_covered(old_warnings, new_warnings)
