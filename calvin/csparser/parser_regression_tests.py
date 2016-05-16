@@ -195,7 +195,13 @@ def run_issue_check(tests=None, testdir='calvin/csparser/testscripts/issue-repor
     for test, result in results.iteritems():
         print test, result['output']
         if result['output'] is not "PASSED":
-            print result
+            if 'old_errors' in result:
+                print "    Expected:", result['old_errors']
+                print "    Got     :", result['new_errors']
+            if 'old_warnings' in result:
+                print "    Expected:", result['old_warnings']
+                print "    Got     :", result['new_warnings']
+
 
 
 
