@@ -16,7 +16,7 @@
 
 import json
 
-from calvin.csparser.parser import calvin_parser
+from calvin.csparser.parser_old import calvin_parser
 from calvin.actorstore.store import DocumentationStore
 import json
 

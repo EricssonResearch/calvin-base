@@ -435,22 +435,21 @@ class DocumentationStore(ActorStore):
 
     def component_docs(self, comp_type, compdef):
         """Combine info from compdef to raw docs"""
-        print type(compdef)
-        print compdef
         namespace, name = comp_type.rsplit('.', 1)
         if type(compdef) is dict:
+            doctext = compdef['docstring'].splitlines()
             return {
-            'ns': namespace, 'name': name,
-            'type': 'component',
-            'short_desc': "Old style component (not supported)",
-            'long_desc': "",
-            'requires': [],
-            'args': {'mandatory':[], 'optional':{}},
-            'inputs': [],
-            'outputs': [],
+                'ns': namespace, 'name': name,
+                'type': 'component',
+                 'short_desc': doctext[0],
+                 'long_desc': '\n'.join(doctext[1:]),
+                 'requires':list({compdef['structure']['actors'][a]['actor_type'] for a in compdef['structure']['actors']}),
+                 'args': {'mandatory':compdef['arg_identifiers'], 'optional':{}},
+                 'inputs': [(p, self._fetch_port_docs(compdef, 'in', p)) for p in compdef['inports']],
+                 'outputs': [(p, self._fetch_port_docs(compdef, 'out', p)) for p in compdef['outports']],
             }
+        # print compdef.inports, compdef.outports
         doctext = compdef.docstring.splitlines()
-        print compdef.inports, compdef.outports
         doc = {
             'ns': namespace, 'name': name,
             'type': 'component',
@@ -460,7 +459,7 @@ class DocumentationStore(ActorStore):
             'args': {'mandatory':compdef.arg_names, 'optional':{}},
             'inputs': [(x, "FIXME") for x in compdef.inports or []], # FIXME append port docs
             'outputs': [(x, "FIXME") for x in compdef.outports or []], # FIXME append port docs
-            }
+        }
         return doc
 
 
