@@ -344,8 +344,8 @@ class PolicyDecisionPoint(object):
                         except Exception:
                             _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (path[1], path[2]))
                             return False
-                # Accept both strings and lists by turning strings into single element lists.
-                if isinstance(args[index], basestring):
+                # Accept both single object and lists by turning single objects into a list.
+                if not isinstance(args[index], list):
                     args[index] = [args[index]]
         if func == "equal":
             try:
