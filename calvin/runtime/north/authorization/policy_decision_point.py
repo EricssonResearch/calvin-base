@@ -329,6 +329,8 @@ class PolicyDecisionPoint(object):
         If a function argument starts with 'attr', e.g. 'attr:resource:address.country',
         the value is retrieved from the request or the Policy Information Point.
         """
+        args = args[:]  # Copy list to prevent editing original list.
+
         # Check each function argument
         for index, arg in enumerate(args):
             if isinstance(arg, basestring):
@@ -344,25 +346,24 @@ class PolicyDecisionPoint(object):
                         except Exception:
                             _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (path[1], path[2]))
                             return False
-                # Accept both single object and lists by turning single objects into a list.
-                if not isinstance(args[index], list):
-                    args[index] = [args[index]]
+            if func not in ["and", "or"]:
+                if isinstance(args[index], list):
+                    # Handle everything as strings.
+                    args[index] = [self._to_string(arg) for arg in args[index]]
+                else:
+                    # Accept both single object and lists by turning single objects into a list.
+                    # Handle all objects as strings.
+                    args[index] = [self._to_string(args[index])]
         if func == "equal":
-            try:
-                # If the lists contain many values, only one of the values need to match.
-                # Regular expressions (has to be args[1]) are allowed for strings in policies
-                # (re.match checks for a match at the beginning of the string, $ marks the end of the string).
-                return any([re.match(r+'$', x) for r in args[1] for x in args[0]])
-            except TypeError:  # If the value is not a string
-                return not set(args[0]).isdisjoint(args[1])
+            # If the lists contain many values, only one of the values need to match.
+            # Regular expressions (has to be args[1]) are allowed for strings in policies
+            # (re.match checks for a match at the beginning of the string, $ marks the end of the string).
+            return any([re.match(r+'$', x) for r in args[1] for x in args[0]])
         elif func == "not_equal":
-            try:
-                # If the lists contain many values, only one of the values need to match.
-                # Regular expressions (has to be args[1]) are allowed for strings in policies
-                # (re.match checks for a match at the beginning of the string, $ marks the end of the string).
-                return not any([re.match(r+'$', x) for r in args[1] for x in args[0]])
-            except TypeError:  # If the value is not a string
-                return set(args[0]).isdisjoint(args[1])
+            # If the lists contain many values, only one of the values need to match.
+            # Regular expressions (has to be args[1]) are allowed for strings in policies
+            # (re.match checks for a match at the beginning of the string, $ marks the end of the string).
+            return not any([re.match(r+'$', x) for r in args[1] for x in args[0]])
         elif func == "and":
             return all(args)  # True if all elements of the list are True
         elif func == "or":
@@ -371,6 +372,14 @@ class PolicyDecisionPoint(object):
             return args[0] <= args[1]
         elif func == "greater_than_or_equal":
             return args[0] >= args[1]
+
+    def _to_string(self, value):
+        if isinstance(value, str):
+            return value.decode("UTF-8")
+        elif isinstance(value, unicode):
+            return value
+        else:
+            return str(value).decode("UTF-8")
 
     def runtime_search(self, request, runtime_whitelist, callback):
         """
