@@ -122,8 +122,8 @@ def old_issues_covered(old_issues, new_issues):
     # for each old issue, check if it is reported in new issues
     passed = True
     for t in old_issues:
-        issue = (t['line'], t['col'], t['reason'])
-        cover = [x for x in new_issues if (x['line'], x['col'], x['reason']) == issue]
+        issue = (t['line'], t['reason'])
+        cover = [x for x in new_issues if (x['line'], x['reason']) == issue]
         if not cover:
             passed = False
             break;
