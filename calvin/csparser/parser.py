@@ -284,7 +284,7 @@ class CalvinParser(object):
             'type': 'error',
             'reason': 'Syntax error.',
             'line': token.lineno,
-            'col': self._find_column(token)
+            'col': self._find_column(token.lexpos)
         }
         self.issues.append(error)
         # print self.parser.statestack
@@ -292,21 +292,21 @@ class CalvinParser(object):
 
         # Trying to recover from here...
 
-    def _find_column(self, token):
+    def _find_column(self, lexpos):
     # Compute column.
     #     input is the input text string
     #     token is a token instance
-        last_cr = self.source_text.rfind('\n', 0, token.lexpos)
+        last_cr = self.source_text.rfind('\n', 0, lexpos)
         # rfind returns -1 if not found, i.e. on 1st line,
         # which is exactly what we need in that case...
-        column = token.lexpos - last_cr
+        column = lexpos - last_cr
         return column
 
 
     def debug_info(self, token):
         info = {
             'line': token.lineno,
-            'col': self._find_column(token)
+            'col': self._find_column(token.lexpos)
         }
         return info
 
