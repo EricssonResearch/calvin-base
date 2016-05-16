@@ -130,6 +130,15 @@ class CalvinParser(object):
                 | implicit_port GT inport"""
         p[0] = ast.Link(outport=p[1], inport=p[3])
 
+    def p_link_error(self, p):
+        """link : internal_outport GT internal_inport"""
+        error = {
+            'type': 'error',
+            'reason': 'Component inport connected directly to outport.',
+            'line': p.lineno(2),
+            'col': self._find_column(p.lexpos(2))
+        }
+        self.issues.append(error)
 
     # def p_portmap(self, p):
     #     """portmap : port GT internal_port
