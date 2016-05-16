@@ -208,7 +208,7 @@ def run_issue_check(tests=None, testdir='calvin/csparser/testscripts/issue-repor
 if __name__ == '__main__':
     run_check()
     print
-    run_issue_check()
+    run_issue_check(tests=['test10', 'test15'])
 
 
 
