@@ -6,10 +6,11 @@ class Node(object):
     _verbose_desc = False
 
     """Base class for all nodes in CS AST"""
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(Node, self).__init__()
         self.parent = None
         self.children = []
+        self.debug_info = kwargs.get('debug_info')
 
     def matches(self, kind=None, attr_dict=None):
         """
@@ -76,49 +77,49 @@ class Node(object):
         if self._verbose_desc:
             return "{} {}".format(self.__class__.__name__, hex(id(self)))
         else:
-            return "{}".format(self.__class__.__name__)
+            return "{} {}".format(self.__class__.__name__, self.debug_info)
 
 class Constant(Node):
     """docstring for ConstNode"""
-    def __init__(self, ident=None, arg=None):
-        super(Constant, self).__init__()
-        self.add_children([ident, arg])
+    def __init__(self, **kwargs):
+        super(Constant, self).__init__(**kwargs)
+        self.add_children([kwargs.get('ident'), kwargs.get('arg')])
 
 class Id(Node):
     """docstring for IdNode"""
-    def __init__(self, ident=None):
-        super(Id, self).__init__()
+    def __init__(self, **kwargs):
+        super(Id, self).__init__(**kwargs)
         self.children = None
-        self.ident = ident
+        self.ident = kwargs.get('ident')
 
 class Value(Node):
     """docstring for ValueNode"""
-    def __init__(self, value=None):
-        super(Value, self).__init__()
+    def __init__(self, **kwargs):
+        super(Value, self).__init__(**kwargs)
         self.children = None
-        self.value = value
+        self.value = kwargs.get('value')
 
 class Assignment(Node):
     """docstring for AssignmentNode"""
-    def __init__(self, ident=None, actor_type=None, args=None):
-        super(Assignment, self).__init__()
-        self.ident = ident
-        self.actor_type = actor_type
-        self.add_children(args or {})
+    def __init__(self, **kwargs):
+        super(Assignment, self).__init__(**kwargs)
+        self.ident = kwargs.get('ident')
+        self.actor_type = kwargs.get('actor_type')
+        self.add_children(kwargs.get('args', {}))
 
 class NamedArg(Node):
     """docstring for ConstNode"""
-    def __init__(self, ident=None, arg=None):
-        super(NamedArg, self).__init__()
-        self.add_children([ident, arg])
+    def __init__(self, **kwargs):
+        super(NamedArg, self).__init__(**kwargs)
+        self.add_children([kwargs.get('ident'), kwargs.get('arg')])
 
 class Link(Node):
     """docstring for LinkNode"""
-    def __init__(self, outport=None, inport=None):
-        super(Link, self).__init__()
-        self.add_children([outport, inport])
+    def __init__(self, **kwargs):
+        super(Link, self).__init__(**kwargs)
+        self.add_children([kwargs.get('outport'), kwargs.get('inport')])
 
-    def remove_child(self, child=None):
+    def remove_child(self, child):
         raise Exception("Can't remove child from {}".format(self))
 
     @property
@@ -144,63 +145,63 @@ class Link(Node):
 # FIXME: Redundant
 class Portmap(Link):
     """docstring for Portmap"""
-    def __init__(self, outport=None, inport=None):
-        super(Portmap, self).__init__(outport, inport)
+    def __init__(self, **kwargs):
+        super(Portmap, self).__init__(**kwargs)
 
 # FIXME: Abstract
 class Port(Node):
     """docstring for LinkNode"""
-    def __init__(self, actor=None, port=None):
-        super(Port, self).__init__()
+    def __init__(self, **kwargs):
+        super(Port, self).__init__(**kwargs)
         self.children = None
-        self.actor = actor
-        self.port = port
+        self.actor = kwargs.get('actor')
+        self.port = kwargs.get('port')
 
 class InPort(Port):
     """docstring for LinkNode"""
-    def __init__(self, actor=None, port=None):
-        super(InPort, self).__init__(actor, port)
+    def __init__(self, **kwargs):
+        super(InPort, self).__init__(**kwargs)
 
 class OutPort(Port):
     """docstring for LinkNode"""
-    def __init__(self, actor=None, port=None):
-        super(OutPort, self).__init__(actor, port)
+    def __init__(self, **kwargs):
+        super(OutPort, self).__init__(**kwargs)
 
 class ImplicitPort(Node):
     """docstring for ImplicitPortNode"""
-    def __init__(self, arg=None):
-        super(ImplicitPort, self).__init__()
-        self.add_child(arg)
+    def __init__(self, **kwargs):
+        super(ImplicitPort, self).__init__(**kwargs)
+        self.add_child(kwargs.get('arg'))
 
 class InternalInPort(InPort):
     """docstring for InternalPortNode"""
-    def __init__(self, port=None):
-        super(InternalInPort, self).__init__('', port)
+    def __init__(self, **kwargs):
+        super(InternalInPort, self).__init__(actor='', **kwargs)
 
 class InternalOutPort(OutPort):
     """docstring for InternalPortNode"""
-    def __init__(self, port=None):
-        super(InternalOutPort, self).__init__('', port)
+    def __init__(self, **kwargs):
+        super(InternalOutPort, self).__init__(actor='', **kwargs)
 
 class Block(Node):
     """docstring for ComponentNode"""
-    def __init__(self, program = None, namespace="", args=None):
-        super(Block, self).__init__()
-        self.namespace = namespace
-        self.args = args or {}
-        self.add_children(program or [])
+    def __init__(self, **kwargs):
+        super(Block, self).__init__(**kwargs)
+        self.namespace = kwargs.get('namespace', '')
+        self.args = kwargs.get('args', {})
+        self.add_children(kwargs.get('program', []))
 
 class Component(Node):
     """docstring for ComponentNode"""
-    def __init__(self, name=None, arg_names=None, inports=None, outports=None, docstring=None, program=None):
-        super(Component, self).__init__()
-        self.name = name
-        self.namespace = None # For installer
-        self.arg_names = arg_names
-        self.inports = inports
-        self.outports = outports
-        self.docstring = docstring
-        self.add_child(Block(program))
+    def __init__(self, **kwargs):
+        super(Component, self).__init__(**kwargs)
+        self.name = kwargs.get('name')
+        self.namespace = None # For installer # FIXME: Remove, likely cruft
+        self.arg_names = kwargs.get('arg_names')
+        self.inports = kwargs.get('inports')
+        self.outports = kwargs.get('outports')
+        self.docstring = kwargs.get('docstring')
+        self.add_child(Block(program=kwargs.get('program')))
 
 ################################
 #
@@ -248,9 +249,9 @@ def node_decoder(o):
 
 if __name__ == '__main__':
     Node._verbose_desc = True
-    p = Port('foo', 'out')
-    l = Link(p, Port('bar', 'in'))
-    a = Assignment('foo', 'std.Source', [NamedArg(Id('n'), Value(10)), NamedArg(Id('str'), Value('hello'))])
+    p = Port(actor='foo', port='out')
+    l = Link(outport=p, inport=Port(actor='bar', port='in'))
+    a = Assignment(ident='foo', actor_type='std.Source', args=[NamedArg(ident=Id(ident='n'), arg=Value(value=10)), NamedArg(ident=Id(ident='str'), arg=Value(value='hello'))])
     print l, l.outport, l.inport
     lc = l.clone()
     print lc, lc.outport, lc.inport

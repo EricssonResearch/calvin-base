@@ -90,11 +90,11 @@ class ImplicitPortRewrite(object):
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
         const_value = node.children[0]
-        args = [ ast.NamedArg(ast.Id('data'), const_value),  ast.NamedArg(ast.Id('n'), ast.Value(-1))]
+        args = [ ast.NamedArg(ident=ast.Id(ident='data'), arg=const_value),  ast.NamedArg(ident=ast.Id(ident='n'), arg=ast.Value(value=-1))]
         self.counter += 1
         const_name = '_literal_const_'+str(self.counter)
-        const_actor = ast.Assignment(const_name, 'std.Constant', args)
-        const_actor_port = ast.Port(const_name, 'token')
+        const_actor = ast.Assignment(ident=const_name, actor_type='std.Constant', args=args)
+        const_actor_port = ast.Port(actor=const_name, port='token')
         link = node.parent
         link.replace_child(node, const_actor_port)
         block = link.parent
@@ -192,6 +192,8 @@ class Flatten(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
+        # if node.ident is None:
+        #     import pdb ; pdb.set_trace()
         self.stack.append(node.ident)
         node.ident = ':'.join(self.stack)
         self.stack.pop()
@@ -348,7 +350,7 @@ class ResolveConstants(object):
     def visit(self, node):
         arg = node.children[1]
         if type(arg) is ast.Id and arg.ident in self.defs:
-            val = ast.Value(self.defs[arg.ident])
+            val = ast.Value(value=self.defs[arg.ident])
             node.replace_child(arg, val)
 
 
@@ -374,7 +376,7 @@ class CodeGen(object):
         print "========\n{}\n========".format(heading)
         self.printer.process(self.root)
 
-    def run(self, verbose=True):
+    def run(self, verbose=False):
         ast.Node._verbose_desc = verbose
 
         ## FIXME:
@@ -469,5 +471,5 @@ def generate_app_info(ast, name='anonymous', verify=True):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_check
-    run_check(tests=None, print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/regression-tests')
+    run_check(tests=['constant_on_implicit_port'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/regression-tests')
 
