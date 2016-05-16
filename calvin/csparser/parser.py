@@ -273,7 +273,7 @@ class CalvinParser(object):
             lines = self.source_text.splitlines()
             error = {
                 'type': 'error',
-                'reason': 'Unexpected end of file',
+                'reason': 'Unexpected end of file.',
                 'line': len(lines),
                 'col': len(lines[-1])
             }
@@ -282,7 +282,7 @@ class CalvinParser(object):
         # FIXME: Better recovery
         error = {
             'type': 'error',
-            'reason': 'Syntax error',
+            'reason': 'Syntax error.',
             'line': token.lineno,
             'col': self._find_column(token)
         }

@@ -1,0 +1,17 @@
+// Component with bad argument name
+
+component ArgWrapper(sourcefile) -> out {
+  """
+  This component wraps an actor and passes an instantiation parameter to the wrapped actor
+  """
+  /* FileReader takes input parameter 'file' */
+  s:io.FileReader(file=source)
+
+  s.out > .out
+}
+
+src:ArgWrapper(sourcefile="data.txt")
+snk:io.StandardOut()
+
+src.out > snk.token
+

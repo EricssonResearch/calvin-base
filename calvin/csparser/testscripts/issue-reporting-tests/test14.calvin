@@ -1,0 +1,15 @@
+// Self referencing nested components
+
+component B() in -> out {
+  c : B()
+
+  .in > c.in
+  c.out > .out
+}
+
+a : std.Counter()
+b : B()
+c : io.StandardOut()
+
+a.integer > b.in
+b.out > c.token

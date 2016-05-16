@@ -1,0 +1,13 @@
+// Passthrough component (in > out)
+
+component Pass() in -> out {
+
+  .in > .out
+}
+
+src:std.Counter()
+pass:Pass()
+snk:io.StandardOut()
+
+src.integer > pass.in
+pass.out > snk.token

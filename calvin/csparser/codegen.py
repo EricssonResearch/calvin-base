@@ -470,6 +470,6 @@ def generate_app_info(ast, name='anonymous', verify=True):
 
 
 if __name__ == '__main__':
-    from parser_regression_tests import run_check
-    run_check(tests=['constant_on_implicit_port'], print_diff=True, print_script=True, testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/regression-tests')
+    from parser_regression_tests import run_issue_check
+    run_issue_check(tests=['test10'], testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/issue-reporting-tests')
 

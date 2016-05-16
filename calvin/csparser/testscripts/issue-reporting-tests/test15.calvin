@@ -1,0 +1,7 @@
+// a -> b
+
+/* Actors */
+src : std.CounterActor()
+snk : io.StandardOut()
+/* Connections */
+src.integer > snk.token

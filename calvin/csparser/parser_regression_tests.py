@@ -27,27 +27,53 @@ import calvin.csparser.parser as parser
 import calvin.csparser.codegen as codegen
 
 
-def testit(testlist, print_diff, print_script, testdir=None):
+def old_codegen(source, test):
+    ir, errors, warnings = old_ir(source, test)
+    if errors:
+        for error in errors:
+            print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
+        raise Exception("There were errors caught by the old checker...")
+    return analyzer_old.Analyzer(ir)
 
-    def old_ir(source_text, filename):
-        ir, errors, warnings = parser_old.calvin_parser(source_text, filename)
-        if not errors:
-            c_errors, c_warnings = checker_old.check(ir)
-            errors.extend(c_errors)
-            warnings.extend(c_warnings)
-        if errors:
-            for error in errors:
-                print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
-            raise Exception("There were errors caught by the old checker...")
-        return ir
 
-    def ast(source_text):
-        ast, errors, warnings = parser.calvin_parser(source_text)
-        if errors:
-            for error in errors:
-                print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
-            raise Exception("There were errors caught by the new parser...")
-        return ast
+def new_codegen(source, test):
+    ast, errors, warnings = new_ast(source)
+    if errors:
+        for error in errors:
+            print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
+        raise Exception("There were errors caught by the new parser...")
+    return codegen.CodeGen(ast, test)
+
+
+def old_issue_report(source, test):
+    ir, errors, warnings = old_ir(source, test)
+    return errors, warnings
+
+
+def new_issue_report(source, test):
+    ast, errors, warnings = new_ast(source)
+    _ = codegen.CodeGen(ast, test)
+    # FIXME: Report issues from codegen, add to errors and warnings
+    return errors, warnings
+
+
+def old_ir(source_text, filename):
+    ir, errors, warnings = parser_old.calvin_parser(source_text, filename)
+    if not errors:
+        c_errors, c_warnings = checker_old.check(ir)
+        errors.extend(c_errors)
+        warnings.extend(c_warnings)
+    return ir, errors, warnings
+
+
+def new_ast(source_text):
+    ast, issues, dummy = parser.calvin_parser(source_text)
+    errors = [issue for issue in issues if issue['type'] is 'error']
+    warnings = [issue for issue in issues if issue['type'] is 'warning']
+    return ast, errors, warnings
+
+
+def test_generator(testdir, testlist):
 
     def collect_all_tests(testdir):
         tests = [os.path.splitext(file)[0] for file in os.listdir(testdir) if file.endswith(".calvin")]
@@ -56,63 +82,89 @@ def testit(testlist, print_diff, print_script, testdir=None):
     testdir = os.path.abspath(os.path.expandvars(testdir))
     tests = testlist or collect_all_tests(testdir)
 
-    crashers = []
-    expected_diff = []
-
-    res = {}
     for test in tests:
+        filename = '{}/{}.calvin'.format(testdir, test)
+        with open(filename, 'r') as f:
+            source = f.read()
+
+        yield(source, test)
+
+
+def codegen_test(testlist, testdir):
+
+    results = {}
+    for source, test in test_generator(testdir, testlist):
+        results[test] = {}
         try:
-            filename = '{}/{}.calvin'.format(testdir, test)
-            print test,
-            with open(filename, 'r') as f:
-                source = f.read()
+            a1 = old_codegen(source, test)
+        except:
+            results[test]['output'] = "EXCEPTION IN OLD"
+            continue
+        try:
+            a2 = new_codegen(source, test)
+        except:
+            results[test]['output'] = "EXCEPTION IN NEW"
+            continue
 
-            res[test] = [test]
-            if test in crashers:
-                res[test].append("CRASHER")
-                print "CRASHER"
-                continue
+        if a1.app_info == a2.app_info:
+            results[test]['output'] = "IDENTICAL"
+        else:
+            results[test]['output'] = "DIFFERENCE"
+            out1 = json.dumps(a1.app_info, indent=4, sort_keys=True)
+            out2 = json.dumps(a2.app_info, indent=4, sort_keys=True)
+            diff = difflib.unified_diff(out1.splitlines(), out2.splitlines())
+            results[test]['diff'] = '\n'.join(list(diff))
+            results[test]['source'] = source
 
-            a1 = analyzer_old.Analyzer(old_ir(source, test))
-            a2 = codegen.CodeGen(ast(source), test)
+    return results
 
-            if a1.app_info == a2.app_info:
-                output = "IDENTICAL {}".format("(SURPRISE)" if test in expected_diff else "")
-                print output
-            else:
-                if print_script:
-                    print source
-                    print
-
-                output = "DIFFERENCE {}".format("(EXPECTED)" if test in expected_diff else "")
-                print output
-                if print_diff:
-                    out1 = json.dumps(a1.app_info, indent=4, sort_keys=True)
-                    out2 = json.dumps(a2.app_info, indent=4, sort_keys=True)
-                    diff = difflib.unified_diff(out1.splitlines(), out2.splitlines())
-                    print '\n'.join(list(diff))
-
-            res[test].append(output)
-        except Exception as e:
-            import sys
-            exc_type, exc_obj, tb = sys.exc_info()
-            f = tb.tb_frame
-            lineno = tb.tb_lineno
-            filename = f.f_code.co_filename
-            print 'EXCEPTION IN ({}, "{}"): {}'.format(filename, lineno, exc_obj)
-
-    print
-    print "SUMMARY"
-    print "---------------------"
-    for test in tests:
-        print test, res[test][1] if len(res[test])>1 else "--- CRASH ---"
-
-    return (testdir, res)
+def old_issues_covered(old_issues, new_issues):
+    # for each old issue, check if it is reported in new issues
+    passed = True
+    for t in old_issues:
+        issue = (t['line'], t['col'], t['reason'])
+        cover = [x for x in new_issues if (x['line'], x['col'], x['reason']) == issue]
+        if not cover:
+            passed = False
+            break;
+    return passed
 
 
+def issue_test(testlist, testdir):
 
-def run_check(tests=None, print_diff=True, print_script=False, testdir='calvin/csparser/testscripts/regression-tests'):
-    # Configure for virtualenv
+    results = {}
+    for source, test in test_generator(testdir, testlist):
+        results[test] = {}
+        try:
+            old_errors, old_warnings = old_issue_report(source, test)
+        except:
+            pass
+        try:
+            new_errors, new_warnings = new_issue_report(source, test)
+        except:
+            pass
+
+        error_cover = old_issues_covered(old_errors, new_errors)
+        warning_cover = old_issues_covered(old_warnings, new_warnings)
+
+        if error_cover and warning_cover:
+            results[test]['output'] = "PASSED"
+        else:
+            status = "FAILED"
+            if not error_cover:
+                results[test]['old_errors'] = old_errors
+                results[test]['new_errors'] = new_errors
+                status = status + " ERRORS"
+            if not warning_cover:
+                results[test]['old_warnings'] = old_warnings
+                results[test]['new_warnings'] = new_warnings
+                status = status + " WARNINGS"
+            results[test]['output'] = status
+
+    return results
+
+
+def setup_venv():
     cwd = "/Users/eperspe/Source/calvin-base"
     env_activate = "/Users/eperspe/.virtualenvs/calvin/bin/activate_this.py"
     calvin_root = "/Users/eperspe/Source/calvin-base"
@@ -123,12 +175,45 @@ def run_check(tests=None, print_diff=True, print_script=False, testdir='calvin/c
     execfile(env_activate, dict(__file__=env_activate))
     sys.path[:0] = [calvin_root]
 
+
+def run_check(tests=None, testdir='calvin/csparser/testscripts/regression-tests'):
+    # Configure for virtualenv
+    setup_venv()
     # Run regression checks
-    return testit(tests, print_diff, print_script, testdir)
+    print "Checking code generation..."
+    results = codegen_test(tests, testdir)
+    print "SUMMARY"
+    print "---------------------"
+    for test, result in results.iteritems():
+        print test, result['output']
+        if result['output'] is not "IDENTICAL":
+            print result['diff']
+
+
+def run_issue_check(tests=None, testdir='calvin/csparser/testscripts/issue-reporting-tests'):
+    # Configure for virtualenv
+    setup_venv()
+    # Run regression checks
+    print "Checking issue reporting..."
+    results = issue_test(tests, testdir)
+    print "SUMMARY"
+    print "---------------------"
+    for test, result in results.iteritems():
+        print test, result['output']
+        if result['output'] is not "PASSED":
+            print result
+
 
 
 if __name__ == '__main__':
     run_check()
+    print
+    run_issue_check()
+
+
+
+
+
 
 
 
