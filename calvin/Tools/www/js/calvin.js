@@ -406,38 +406,40 @@ function getPeersFromIndex(index)
 // Get connected peers
 function getPeers(peer)
 {
-    var url = peer.control_uri + '/nodes';
-    console.log("getPeers - url: " + url);
-    $.ajax({
-        peer: peer,
-        timeout: 20000,
-        beforeSend: function() {
-            startSpin();
-        },
-        complete: function() {
-            stopSpin();
-        },
-        dataType: 'json',
-        url: url,
-        type: 'GET',
-        success: function(data) {
-            if (data) {
-                console.log("getPeers response: " + JSON.stringify(data));
-                this.peer.peers = data;
-                var index;
-                for (index in data) {
-                    if (!findRuntime(data[index])) {
-                        getPeer(data[index]);
+    if (peer.control_uri) {
+        var url = peer.control_uri + '/nodes';
+        console.log("getPeers - url: " + url);
+        $.ajax({
+            peer: peer,
+            timeout: 20000,
+            beforeSend: function() {
+                startSpin();
+            },
+            complete: function() {
+                stopSpin();
+            },
+            dataType: 'json',
+            url: url,
+            type: 'GET',
+            success: function(data) {
+                if (data) {
+                    console.log("getPeers response: " + JSON.stringify(data));
+                    this.peer.peers = data;
+                    var index;
+                    for (index in data) {
+                        if (!findRuntime(data[index])) {
+                            getPeer(data[index]);
+                        }
                     }
+                } else {
+                    console.log("getPeers - Empty response");
                 }
-            } else {
-                console.log("getPeers - Empty response");
+            },
+            error: function() {
+                console.log("Failed to get peers, url: " + url);
             }
-        },
-        error: function() {
-            console.log("Failed to get peers, url: " + url);
-        }
-    });
+        });
+    }
 }
 
 // Get runtime information from runtime with id "id"
@@ -509,34 +511,36 @@ function getApplications()
     actors = [];
     var index;
     for (index in peers) {
-        url = peers[index].control_uri + '/applications';
-        $.ajax({
-            uri: peers[index].control_uri,
-            timeout: 20000,
-            beforeSend: function() {
-                startSpin();
-            },
-            complete: function() {
-                stopSpin();
-            },
-            dataType: 'json',
-            url: url,
-            type: 'GET',
-            success: function(data) {
-                if (data) {
-                    console.log("getApplications - Response: " + JSON.stringify(data));
-                    var index_application;
-                    for (index_application in data) {
-                        getApplication(this.uri, data[index_application]);
+        if (peers[index].control_uri) {
+            url = peers[index].control_uri + '/applications';
+            $.ajax({
+                uri: peers[index].control_uri,
+                timeout: 20000,
+                beforeSend: function() {
+                    startSpin();
+                },
+                complete: function() {
+                    stopSpin();
+                },
+                dataType: 'json',
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    if (data) {
+                        console.log("getApplications - Response: " + JSON.stringify(data));
+                        var index_application;
+                        for (index_application in data) {
+                            getApplication(this.uri, data[index_application]);
+                        }
+                    } else {
+                        console.log("getApplication - Empty result");
                     }
-                } else {
-                    console.log("getApplication - Empty result");
+                },
+                error: function() {
+                    console.log("Failed to get applications, url: " + url);
                 }
-            },
-            error: function() {
-                console.log("Failed to get applications, url: " + url);
-            }
-        });
+            });
+        }
     }
 }
 
@@ -706,7 +710,7 @@ function getPortState(port_id)
         var actor = findActor(port.actor_id);
         if (actor) {
             var runtime = findRuntime(actor.peer_id);
-            if (runtime) {
+            if (runtime && runtime.control_uri) {
                 var url = runtime.control_uri + '/actor/' + port.actor_id + '/port/' + port_id + "/state";
                 console.log("getPort - url: " + url);
                 $.ajax({
@@ -784,23 +788,29 @@ function AddTableItem(tableRef, element1, element2, element3, element4, element5
 // Add "peer" to peersTable
 function showPeer(peer)
 {
+    var row;
     var tableRef = document.getElementById('peersTable');
 
-    var btnDestroy = document.createElement('input');
-    btnDestroy.type = 'button';
-    btnDestroy.className = "btn btn-danger btn-xs";
-    btnDestroy.id = peer.id;
-    btnDestroy.value = 'Destroy';
-    btnDestroy.setAttribute("onclick", "destroyPeer(this.id)");
+    if (peer.control_uri) {
+        var btnDestroy = document.createElement('input');
+        btnDestroy.type = 'button';
+        btnDestroy.className = "btn btn-danger btn-xs";
+        btnDestroy.id = peer.id;
+        btnDestroy.value = 'Destroy';
+        btnDestroy.setAttribute("onclick", "destroyPeer(this.id)");
 
-    var btnDeploy = document.createElement('input');
-    btnDeploy.type = 'button';
-    btnDeploy.className = "btn btn-primary btn-xs";
-    btnDeploy.id = peer.id;
-    btnDeploy.value = 'Deploy...';
-    btnDeploy.setAttribute("onclick", "showDeployApplication(this.id)");
+        var btnDeploy = document.createElement('input');
+        btnDeploy.type = 'button';
+        btnDeploy.className = "btn btn-primary btn-xs";
+        btnDeploy.id = peer.id;
+        btnDeploy.value = 'Deploy...';
+        btnDeploy.setAttribute("onclick", "showDeployApplication(this.id)");
 
-    var row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnDestroy, btnDeploy);
+        row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnDestroy, btnDeploy);
+    } else {
+        row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri));
+    }
+
     row.id = peer.id;
     row.setAttribute("onclick", "showPeerAttributes(this.id); showPeerConnections(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");");
 }
@@ -1032,28 +1042,32 @@ function migrate(actor_id)
     if (actor) {
         var node = findRuntime(actor.peer_id);
         if (node) {
-            var url = node.control_uri + '/actor/' + actor.id + '/migrate';
-            var data = JSON.stringify({'peer_node_id': peer_id});
-            console.log("migrate - url: " + url + " data: " + data);
-            $.ajax({
-                timeout: 5000,
-                beforeSend: function() {
-                    startSpin();
-                },
-                complete: function() {
-                    stopSpin();
-                },
-                url: url,
-                type: 'POST',
-                data: data,
-                success: function() {
-                    getActor(actor_id, true);
-                    showSuccess("Actor " + actor_id + " migrated");
-                },
-                error: function() {
-                    showError("Failed to migrate " + actor_id);
-                }
-            });
+            if (node.control_uri) {
+                var url = node.control_uri + '/actor/' + actor.id + '/migrate';
+                var data = JSON.stringify({'peer_node_id': peer_id});
+                console.log("migrate - url: " + url + " data: " + data);
+                $.ajax({
+                    timeout: 5000,
+                    beforeSend: function() {
+                        startSpin();
+                    },
+                    complete: function() {
+                        stopSpin();
+                    },
+                    url: url,
+                    type: 'POST',
+                    data: data,
+                    success: function() {
+                        getActor(actor_id, true);
+                        showSuccess("Actor " + actor_id + " migrated");
+                    },
+                    error: function() {
+                        showError("Failed to migrate " + actor_id);
+                    }
+                });
+            } else {
+                showError("Node " + actor.peer_id + " has no control API");
+            }
         } else {
             showError("Failed to migrate, no node with id: " + actor.peer_id);
         }
@@ -1199,41 +1213,49 @@ function startTrace() {
     if (document.getElementById("chkTraceApplicationDestroy").checked) {
         events.push("application_destroy");
     }
+    if (document.getElementById("chkTraceLinkConnected").checked) {
+        events.push("link_connected");
+    }
+    if (document.getElementById("chkTraceLinkDisconnected").checked) {
+        events.push("link_disconnected");
+    }
 
     $("#traceDialog").modal('hide');
     for (var index in peers) {
-        if (peers[index].source) {
-            showError("Trace already started on runtime" + peers[index].id);
-        } else {
-            var url = peers[index].control_uri + '/log';
-            var data = JSON.stringify({'actors': actors, 'events': events});
-            console.log("startLog - url: " + url + " data: " + data);
-            $.ajax({
-                peer: peers[index],
-                timeout: 20000,
-                beforeSend: function() {
-                    startSpin();
-                },
-                complete: function() {
-                    stopSpin();
-                },
-                url: url,
-                type: 'POST',
-                data: data,
-                success: function(data) {
-                    if(data) {
-                        console.log("startLog - data: " + JSON.stringify(data));
-                        this.peer.user_id = data.user_id;
-                        this.peer.source = new EventSource(this.peer.control_uri + '/log/' + this.peer.user_id);
-                        this.peer.source.addEventListener("message", eventHandler, false);
-                    } else {
-                        console.log("startLog - Empty response");
+        if (peers[index].control_uri) {
+            if (peers[index].source) {
+                showError("Trace already started on runtime" + peers[index].id);
+            } else {
+                var url = peers[index].control_uri + '/log';
+                var data = JSON.stringify({'actors': actors, 'events': events});
+                console.log("startLog - url: " + url + " data: " + data);
+                $.ajax({
+                    peer: peers[index],
+                    timeout: 20000,
+                    beforeSend: function() {
+                        startSpin();
+                    },
+                    complete: function() {
+                        stopSpin();
+                    },
+                    url: url,
+                    type: 'POST',
+                    data: data,
+                    success: function(data) {
+                        if(data) {
+                            console.log("startLog - data: " + JSON.stringify(data));
+                            this.peer.user_id = data.user_id;
+                            this.peer.source = new EventSource(this.peer.control_uri + '/log/' + this.peer.user_id);
+                            this.peer.source.addEventListener("message", eventHandler, false);
+                        } else {
+                            console.log("startLog - Empty response");
+                        }
+                    },
+                    error: function() {
+                        showError("Failed to start log, url: " + url);
                     }
-                },
-                error: function() {
-                    showError("Failed to start log, url: " + url);
-                }
-            });
+                });
+            }
         }
     }
 }
@@ -1269,7 +1291,8 @@ function stopLog()
 }
 
 // Clear log table
-function clearLog() {
+function clearLog()
+{
     var tableRef = document.getElementById('logTable');
     for(var i = 1; i < tableRef.rows.length;) {
        tableRef.deleteRow(i);
@@ -1349,6 +1372,11 @@ function eventHandler(event)
         cell4.appendChild(document.createTextNode(data.application_name));
     } else if(data.type == "application_destroy") {
         cell3.appendChild(document.createTextNode(data.application_id));
+    } else if(data.type == "link_connected") {
+        cell3.appendChild(document.createTextNode(data.peer_id));
+        cell4.appendChild(document.createTextNode(data.uri));
+    } else if(data.type == "link_disconnected") {
+        cell3.appendChild(document.createTextNode(data.peer_id));
     } else {
         console.log("eventHandler - Unknown event type:" + data.type);
     }
@@ -1360,38 +1388,40 @@ function startGraphEvents(application)
     var events = ["actor_new"];
     var actors = application.actors;
     for (var index in peers) {
-        if (peers[index].graph_source) {
-            showError("Graph trace already started on runtime" + peers[index].name);
-        } else {
-            var url = peers[index].control_uri + '/log';
-            var data = JSON.stringify({'actors': actors, 'events': events});
-            console.log("startGraphEvents - url: " + url + " data: " + data);
-            $.ajax({
-                peer: peers[index],
-                timeout: 5000,
-                beforeSend: function() {
-                    startSpin();
-                },
-                complete: function() {
-                    stopSpin();
-                },
-                url: url,
-                type: 'POST',
-                data: data,
-                success: function(data) {
-                    if(data) {
-                        console.log("startGraphEvents - data: " + JSON.stringify(data));
-                        this.peer.graph_user_id = data.user_id;
-                        this.peer.graph_source = new EventSource(this.peer.control_uri + '/log/' + data.user_id);
-                        this.peer.graph_source.addEventListener("message", graphEventHandler, false);
-                    } else {
-                        console.log("startGraphEvents - Empty response");
+        if (peers[index].control_uri) {
+            if (peers[index].graph_source) {
+                showError("Graph trace already started on runtime" + peers[index].name);
+            } else {
+                var url = peers[index].control_uri + '/log';
+                var data = JSON.stringify({'actors': actors, 'events': events});
+                console.log("startGraphEvents - url: " + url + " data: " + data);
+                $.ajax({
+                    peer: peers[index],
+                    timeout: 5000,
+                    beforeSend: function() {
+                        startSpin();
+                    },
+                    complete: function() {
+                        stopSpin();
+                    },
+                    url: url,
+                    type: 'POST',
+                    data: data,
+                    success: function(data) {
+                        if(data) {
+                            console.log("startGraphEvents - data: " + JSON.stringify(data));
+                            this.peer.graph_user_id = data.user_id;
+                            this.peer.graph_source = new EventSource(this.peer.control_uri + '/log/' + data.user_id);
+                            this.peer.graph_source.addEventListener("message", graphEventHandler, false);
+                        } else {
+                            console.log("startGraphEvents - Empty response");
+                        }
+                    },
+                    error: function() {
+                        console.log("Failed to get log, url: " + url);
                     }
-                },
-                error: function() {
-                    console.log("Failed to get log, url: " + url);
-                }
-            });
+                });
+            }
         }
     }
 }

@@ -63,8 +63,8 @@
         <th align="left">Timestamp</th>
         <th align="left">Node id</th>
         <th align="left">Event type</th>
-        <th align="left">Id</th>
-        <th align="left">Name</th>
+        <th align="left">Id/Peer id</th>
+        <th align="left">Name/URI</th>
         <th align="left">Type/Action/Peer</th>
         <th align="left">Is shadow/Consumed</th>
         <th align="left">Produced</th>
@@ -128,13 +128,15 @@
 </div>
 
 <!-- Event log dialog -->
-<div id="traceDialog" title="Event trace filter" style="display:none; height: 300px; width: 300px;" class="modal modal-dialog">
+<div id="traceDialog" title="Event trace filter" style="display:none; height: 500px; width: 300px;" class="modal modal-dialog">
     <div class="modal-content">
         <div class="modal-header">
             <h4 class="modal-title">Event Trace Filter</h4>
         </div>
         <div class="modal-body">
             <form>
+                <input type="checkbox" id="chkTraceLinkConnected" checked="">Link connect<br>
+                <input type="checkbox" id="chkTraceLinkDisconnected" checked="">Link disconnect<br>
                 <input type="checkbox" id="chkTraceActorFiring" onchange="toggleActionResult()" checked="">Actor firings<br>
                 &nbsp;&nbsp;<input type="checkbox" id="chkTraceActorFiringActionResult">Action result<br>
                 <input type="checkbox" id="chkTraceActorNew" checked="">Actor new<br>

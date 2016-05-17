@@ -130,6 +130,7 @@ class CalvinNetwork(object):
         self.recv_handler = None
         self.pending_joins = {}  # key: uri, value: list of callbacks or None
         self.pending_joins_by_id = {}  # key: peer id, value: uri
+        self.control = self.node.control
 
     def register_recv(self, recv_handler):
         """ Register THE function that will receive all incomming messages on all links """
@@ -302,6 +303,7 @@ class CalvinNetwork(object):
                 for cb in cbs:
                     cb(status=response.CalvinResponse(True), uri=uri, peer_node_id=peer_id)
 
+        self.control.log_link_connected(peer_id, uri)
         return
 
     def link_get(self, peer_id):
@@ -354,6 +356,7 @@ class CalvinNetwork(object):
                                          peer_node_id=rt_id)
         if rt_id in self.links and link == self.links[rt_id].transport:
             self.link_remove(rt_id)
+        self.control.log_link_disconnected(rt_id)
 
     def link_remove(self, peer_id):
         """ Removes a link to peer id """
