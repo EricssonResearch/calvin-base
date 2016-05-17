@@ -35,6 +35,8 @@ class IssueTracker(object):
     def __init__(self):
         super(IssueTracker, self).__init__()
         self.issues = []
+        self.err_count = 0
+        self.warn_count = 0
 
     def _add_issue(self, issue_type, reason, node):
         issue = {
@@ -44,6 +46,10 @@ class IssueTracker(object):
         issue.update(node.debug_info or {'line':0, 'col':0, 'FIXME':True})
         if issue not in self.issues:
             self.issues.append(issue)
+            if issue['type'] is 'error':
+                self.err_count += 1
+            else:
+                self.warn_count +=1
 
     def add_error(self, reason, node):
         self._add_issue('error', reason, node)
@@ -490,9 +496,7 @@ class CodeGen(object):
         gen_app_info = AppInfo(self.script_name, self.root, issue_tracker, self.verify)
         gen_app_info.process()
         self.app_info = gen_app_info.app_info
-
-        # import json
-        # print json.dumps(self.app_info, indent=4)
+        self.app_info['valid'] = (issue_tracker.err_count == 0)
 
         for issue in issue_tracker.issues:
             print issue
