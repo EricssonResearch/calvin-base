@@ -336,36 +336,12 @@ class AppInfo(object):
         self.app_info['connections'].setdefault(key, []).append(value)
 
 
-class ResolveConstants(object):
-    """docstring for ResolveConstants"""
-    def __init__(self, root, issue_tracker):
-        super(ResolveConstants, self).__init__()
-        self.root = root
-        self.defs = {}
+class ReplaceConstants(object):
+    """docstring for ReplaceConstants"""
+    def __init__(self, constant_defs, issue_tracker):
+        super(ReplaceConstants, self).__init__()
+        self.defs = constant_defs
         self.issue_tracker = issue_tracker
-
-    def process(self):
-        finder = Finder()
-        consts = finder.find_all(self.root, ast.Constant)
-        self.defs = {c.children[0].ident: c.children[1].value for c in consts if type(c.children[1]) is ast.Value}
-        unresolved = [c for c in consts if type(c.children[1]) is ast.Id]
-        done = False
-        while not done:
-            did_replace = False
-            for c in unresolved[:]:
-                key, const_key = c.children
-                if const_key.ident in self.defs:
-                    self.defs[key.ident] = self.defs[const_key.ident]
-                    unresolved.remove(c)
-                    did_replace = True
-            if unresolved and not did_replace:
-                for c in unresolved:
-                    reason = "Undefined constant '{}'".format(const_key.ident)
-                    self.issue_tracker.add_error(reason, const_key)
-                return
-            done = not (unresolved and did_replace)
-
-        self.visit(self.root)
 
     @visitor.on('node')
     def visit(self, node):
@@ -379,9 +355,11 @@ class ResolveConstants(object):
     @visitor.when(ast.NamedArg)
     def visit(self, node):
         arg = node.children[1]
-        if type(arg) is ast.Id and arg.ident in self.defs:
-            val = ast.Value(value=self.defs[arg.ident])
-            node.replace_child(arg, val)
+        if type(arg) is ast.Value:
+            return
+        if arg.ident in self.defs:
+            value = self.defs[arg.ident]
+            node.replace_child(arg, value.clone())
 
 
 class CodeGen(object):
@@ -404,6 +382,26 @@ class CodeGen(object):
             return
         print "========\n{}\n========".format(heading)
         self.printer.process(self.root)
+
+    def process_constants(self, issue_tracker):
+        constants = self.query(self.root, ast.Constant)
+        defined = {c.children[0].ident: c.children[1] for c in constants if type(c.children[1]) is ast.Value}
+        unresolved = [c for c in constants if type(c.children[1]) is ast.Id]
+        while True:
+            did_replace = False
+            for c in unresolved[:]:
+                key, const_key = c.children
+                if const_key.ident in defined:
+                    defined[key.ident] = defined[const_key.ident]
+                    unresolved.remove(c)
+                    did_replace = True
+            if not did_replace:
+                break
+        for c in unresolved:
+            key, const_key = c.children
+            reason = "Constant '{}' has a circular reference".format(key.ident)
+            issue_tracker.add_error(reason, c)
+        return defined
 
     def run(self, verbose=False):
         ast.Node._verbose_desc = verbose
@@ -447,8 +445,9 @@ class CodeGen(object):
 
         ##
         # Resolve Constants
-        rc = ResolveConstants(self.root, issue_tracker)
-        rc.process()
+        const_defs = self.process_constants(issue_tracker)
+        rc = ReplaceConstants(const_defs, issue_tracker)
+        rc.visit(self.root)
         self.dump_tree('RESOLVED CONSTANTS')
 
         ##
