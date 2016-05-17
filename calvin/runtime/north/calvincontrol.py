@@ -694,6 +694,8 @@ class CalvinControl(object):
     LOG_ACTOR_MIGRATE = 4
     LOG_APPLICATION_NEW = 5
     LOG_APPLICATION_DESTROY = 6
+    LOG_LINK_CONNECTED = 7
+    LOG_LINK_DISCONNECTED = 8
 
     def __init__(self):
         self.node = None
@@ -903,6 +905,10 @@ class CalvinControl(object):
                         events.append(self.LOG_APPLICATION_NEW)
                     elif event == 'application_destroy':
                         events.append(self.LOG_APPLICATION_DESTROY)
+                    elif event == 'link_connected':
+                        events.append(self.LOG_LINK_CONNECTED)
+                    elif event == 'link_disconnected':
+                        events.append(self.LOG_LINK_DISCONNECTED)
                     else:
                         status = calvinresponse.BAD_REQUEST
                         break
@@ -1529,6 +1535,52 @@ class CalvinControl(object):
                 data['node_id'] = self.node.id
                 data['type'] = 'application_destroy'
                 data['application_id'] = application_id
+                if logger.connection is not None:
+                    if not logger.connection.connection_lost:
+                        logger.connection.send("data: %s\n\n" % json.dumps(data))
+                    else:
+                        disconnected.append(user_id)
+                elif self.tunnel_client is not None and logger.handle is not None:
+                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                    self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_link_connected(self, peer_id, uri):
+        """ Trace node connect
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_LINK_CONNECTED in logger.events:
+                data = {}
+                data['timestamp'] = time.time()
+                data['node_id'] = self.node.id
+                data['type'] = 'link_connected'
+                data['peer_id'] = peer_id
+                data['uri'] = uri
+                if logger.connection is not None:
+                    if not logger.connection.connection_lost:
+                        logger.connection.send("data: %s\n\n" % json.dumps(data))
+                    else:
+                        disconnected.append(user_id)
+                elif self.tunnel_client is not None and logger.handle is not None:
+                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                    self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+
+    def log_link_disconnected(self, peer_id):
+        """ Trace node connect
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_LINK_DISCONNECTED in logger.events:
+                data = {}
+                data['timestamp'] = time.time()
+                data['node_id'] = self.node.id
+                data['type'] = 'link_disconnected'
+                data['peer_id'] = peer_id
                 if logger.connection is not None:
                     if not logger.connection.connection_lost:
                         logger.connection.send("data: %s\n\n" % json.dumps(data))
