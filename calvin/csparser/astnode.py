@@ -75,9 +75,9 @@ class Node(object):
 
     def __str__(self):
         if self._verbose_desc:
-            return "{} {}".format(self.__class__.__name__, hex(id(self)))
+            return "{} {} {}".format(self.__class__.__name__, hex(id(self)), self.debug_info)
         else:
-            return "{} {}".format(self.__class__.__name__, self.debug_info)
+            return "{}".format(self.__class__.__name__)
 
 class Constant(Node):
     """docstring for ConstNode"""
