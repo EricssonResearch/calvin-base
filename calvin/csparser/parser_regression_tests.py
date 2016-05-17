@@ -42,7 +42,9 @@ def new_codegen(source, test):
         for error in errors:
             print "{reason} {script} [{line}:{col}]".format(script=filename, **error)
         raise Exception("There were errors caught by the new parser...")
-    return codegen.CodeGen(ast, test)
+    cg = codegen.CodeGen(ast, test)
+    cg.run()
+    return cg
 
 
 def old_issue_report(source, test):
@@ -52,7 +54,13 @@ def old_issue_report(source, test):
 
 def new_issue_report(source, test):
     ast, errors, warnings = new_ast(source)
-    _ = codegen.CodeGen(ast, test)
+    cg = codegen.CodeGen(ast, test)
+    cg.run()
+    for issue in cg.issues:
+        if issue['type'] is 'error':
+            errors.append(issue)
+        else:
+            warnings.append(issue)
     # FIXME: Report issues from codegen, add to errors and warnings
     return errors, warnings
 

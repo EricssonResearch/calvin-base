@@ -62,7 +62,7 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
                 return
             else:
                 return deployable, errors, warnings
-        sec.check_security_policy(CalvinCB(_compile_cont, source_text, filename, verify, 
+        sec.check_security_policy(CalvinCB(_compile_cont, source_text, filename, verify,
                                            security=sec, org_cb=cb), "application", signer=signer)
     else:
         if cb:
@@ -96,6 +96,7 @@ def _compile_cont(source_text, filename, verify, access_decision, security=None,
         # deployable = generate_app_info(ir, verify=verify)
         app_name = os.path.splitext(os.path.basename(filename))[0]
         codegen = CodeGen(ir, app_name, verify=verify)
+        codegen.run()
         deployable = codegen.app_info
 
         # FIXME: not used when above commented out

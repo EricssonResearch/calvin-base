@@ -403,7 +403,6 @@ class CodeGen(object):
         self.verbose = verbose
         self.verify = verify
 
-        self.run()
 
     def dump_tree(self, heading):
         if not self.verbose:
@@ -498,7 +497,7 @@ class CodeGen(object):
         for issue in issue_tracker.issues:
             print issue
 
-        return issue_tracker.issues
+        self.issues = issue_tracker.issues
 
     def query(self, root, kind=None, attributes=None, maxdepth=1024):
         finder = Finder()
@@ -507,7 +506,8 @@ class CodeGen(object):
 
 def generate_app_info(ast, name='anonymous', verify=True):
     cg = CodeGen(ast, name, verbose=False, verify=verify)
-    return cg.app_info
+    cg.run()
+    return cg.app_info, cg.issues
 
 
 if __name__ == '__main__':
