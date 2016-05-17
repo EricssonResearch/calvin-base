@@ -61,7 +61,6 @@ def new_issue_report(source, test):
             errors.append(issue)
         else:
             warnings.append(issue)
-    # FIXME: Report issues from codegen, add to errors and warnings
     return errors, warnings
 
 
@@ -129,9 +128,13 @@ def codegen_test(testlist, testdir):
 def old_issues_covered(old_issues, new_issues):
     # for each old issue, check if it is reported in new issues
     passed = True
+    if len(old_issues) is not len(new_issues):
+        return False
+
     for t in old_issues:
+        skip_line_check = (t['line'] == 0)
         issue = (t['line'], t['reason'])
-        cover = [x for x in new_issues if (x['line'], x['reason']) == issue]
+        cover = [x for x in new_issues if x['reason'] == t['reason'] and (x['line'] == t['line'] or skip_line_check)]
         if not cover:
             passed = False
             break;
@@ -189,7 +192,7 @@ def run_check(tests=None, testdir='calvin/csparser/testscripts/regression-tests'
     for test, result in results.iteritems():
         print test, result['output']
         if result['output'] is not "IDENTICAL":
-            print result['diff']
+            print result.get('diff', "-- No diff available")
 
 
 def run_issue_check(tests=None, testdir='calvin/csparser/testscripts/issue-reporting-tests'):
@@ -211,12 +214,14 @@ def run_issue_check(tests=None, testdir='calvin/csparser/testscripts/issue-repor
                 print "    Got     :", result['new_warnings']
 
 
+def run_all():
+    run_check()
+    print
+    run_issue_check()
 
 
 if __name__ == '__main__':
-    run_check()
-    print
-    run_issue_check(tests=['test10', 'test15'])
+    run_all()
 
 
 
