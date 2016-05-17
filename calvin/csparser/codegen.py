@@ -386,6 +386,7 @@ class CodeGen(object):
         constants = self.query(self.root, ast.Constant)
         defined = {c.children[0].ident: c.children[1] for c in constants if type(c.children[1]) is ast.Value}
         unresolved = [c for c in constants if type(c.children[1]) is ast.Id]
+        seen = [c.children[0].ident for c in constants if type(c.children[1]) is ast.Id]
         while True:
             did_replace = False
             for c in unresolved[:]:
@@ -393,12 +394,16 @@ class CodeGen(object):
                 if const_key.ident in defined:
                     defined[key.ident] = defined[const_key.ident]
                     unresolved.remove(c)
+                    seen.append(c.children[0].ident)
                     did_replace = True
             if not did_replace:
                 break
         for c in unresolved:
             key, const_key = c.children
-            reason = "Constant '{}' has a circular reference".format(key.ident)
+            if const_key.ident in seen:
+                reason = "Constant '{}' has a circular reference".format(key.ident)
+            else:
+                reason = "Constant '{}' is undefined".format(const_key.ident)
             issue_tracker.add_error(reason, c)
         return defined
 
