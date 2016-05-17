@@ -128,7 +128,7 @@ def codegen_test(testlist, testdir):
 def old_issues_covered(old_issues, new_issues):
     # for each old issue, check if it is reported in new issues
     passed = True
-    if len(old_issues) is not len(new_issues):
+    if len(old_issues) > len(new_issues):
         return False
 
     for t in old_issues:
