@@ -58,8 +58,8 @@ class CalvinParser(object):
 
 
     def p_constdef(self, p):
-        """constdef : DEFINE IDENTIFIER EQ argument"""
-        constdef = ast.Constant(ident=ast.Id(ident=p[2]), arg=p[4])
+        """constdef : DEFINE identifier EQ argument"""
+        constdef = ast.Constant(ident=p[2], arg=p[4], debug_info=self.debug_info(p, 1))
         p[0] = constdef
 
 
@@ -82,7 +82,7 @@ class CalvinParser(object):
 
     def p_compdef(self, p):
         """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring program RBRACE"""
-        p[0] = ast.Component(name=p[2], arg_names=p[4], inports=p[6], outports=p[8], docstring=p[10], program=p[11])
+        p[0] = ast.Component(name=p[2], arg_names=p[4], inports=p[6], outports=p[8], docstring=p[10], program=p[11], debug_info=self.debug_info(p, 1))
 
 
     def p_docstring(self, p):
@@ -100,7 +100,7 @@ class CalvinParser(object):
         if len(p) == 1:
             p[0] = []
         else:
-            p[0] = [ast.Block(program=p[1])]
+            p[0] = [ast.Block(program=p[1], debug_info=self.debug_info(p, 1))]
 
 
     def p_program(self, p):
@@ -120,7 +120,7 @@ class CalvinParser(object):
 
     def p_assignment(self, p):
         """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
-        p[0] = ast.Assignment(ident=p[1], actor_type=p[3], args=p[5])
+        p[0] = ast.Assignment(ident=p[1], actor_type=p[3], args=p[5], debug_info=self.debug_info(p, 1))
 
 
     def p_link(self, p):
@@ -128,7 +128,7 @@ class CalvinParser(object):
                 | outport GT internal_inport
                 | internal_outport GT inport
                 | implicit_port GT inport"""
-        p[0] = ast.Link(outport=p[1], inport=p[3])
+        p[0] = ast.Link(outport=p[1], inport=p[3], debug_info=self.debug_info(p, 1))
 
     def p_link_error(self, p):
         """link : internal_outport GT internal_inport"""
@@ -148,26 +148,26 @@ class CalvinParser(object):
 
     def p_implicit_port(self, p):
         """implicit_port : argument"""
-        p[0] = ast.ImplicitPort(arg=p[1])
+        p[0] = ast.ImplicitPort(arg=p[1], debug_info=self.debug_info(p, 1))
 
 
     def p_inport(self, p):
         """inport : IDENTIFIER DOT IDENTIFIER"""
-        p[0] = ast.InPort(actor=p[1], port=p[3])
+        p[0] = ast.InPort(actor=p[1], port=p[3], debug_info=self.debug_info(p, 1))
 
     def p_outport(self, p):
         """outport : IDENTIFIER DOT IDENTIFIER"""
-        p[0] = ast.OutPort(actor=p[1], port=p[3])
+        p[0] = ast.OutPort(actor=p[1], port=p[3], debug_info=self.debug_info(p, 1))
 
 
     def p_internal_inport(self, p):
         """internal_inport : DOT IDENTIFIER"""
-        p[0] = ast.InternalInPort(port=p[2])
+        p[0] = ast.InternalInPort(port=p[2], debug_info=self.debug_info(p, 1))
 
 
     def p_internal_outport(self, p):
         """internal_outport : DOT IDENTIFIER"""
-        p[0] = ast.InternalOutPort(port=p[2])
+        p[0] = ast.InternalOutPort(port=p[2], debug_info=self.debug_info(p, 1))
 
 
     def p_named_args(self, p):
@@ -181,21 +181,18 @@ class CalvinParser(object):
 
 
     def p_named_arg(self, p):
-        """named_arg : IDENTIFIER EQ argument"""
-        p[0] = ast.NamedArg(ident=ast.Id(ident=p[1]), arg=p[3])
+        """named_arg : identifier EQ argument"""
+        p[0] = ast.NamedArg(ident=p[1], arg=p[3], debug_info=self.debug_info(p, 1))
 
 
     def p_argument(self, p):
         """argument : value
-                    | IDENTIFIER"""
-        if p.slice[1].type.upper() == 'IDENTIFIER':
-            p[0] = ast.Id(ident=p[1])
-        else:
-            p[0] = p[1]
+                    | identifier"""
+        p[0] = p[1]
 
-    # def p_identifier(self, p):
-    #     """identifier : IDENTIFIER"""
-    #     p[0] = ast.Id(p[1])
+    def p_identifier(self, p):
+        """identifier : IDENTIFIER"""
+        p[0] = ast.Id(ident=p[1], debug_info=self.debug_info(p, 1))
 
 
     def p_value(self, p):
@@ -205,7 +202,7 @@ class CalvinParser(object):
                  | null
                  | NUMBER
                  | STRING"""
-        p[0] = ast.Value(value=p[1])
+        p[0] = ast.Value(value=p[1], debug_info=self.debug_info(p, 1))
 
 
     def p_bool(self, p):
@@ -312,10 +309,10 @@ class CalvinParser(object):
         return column
 
 
-    def debug_info(self, token):
+    def debug_info(self, p, n):
         info = {
-            'line': token.lineno,
-            'col': self._find_column(token.lexpos)
+            'line': p.lineno(n),
+            'col': self._find_column(p.lexpos(n))
         }
         return info
 
