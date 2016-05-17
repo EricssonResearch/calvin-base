@@ -313,9 +313,8 @@ class AppInfo(object):
                 if type(arg_val) is ast.Value:
                     args[arg_id.ident] = arg_val.value
                 else:
-                    reason = "Missing symbol '{}'".format(arg_val.ident)
+                    reason = "Undefined identifier: '{}'".format(arg_val.ident)
                     self.issue_tracker.add_error(reason, arg_val)
-                    continue
         value['args'] = args
         if found:
             if is_actor:
