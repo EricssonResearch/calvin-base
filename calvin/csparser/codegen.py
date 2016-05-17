@@ -31,14 +31,33 @@ def _create_signature_for_unknown(actor_class, actor_type):
     return GlobalStore.actor_signature(signature_desc)
 
 
+class IssueTracker(object):
+    def __init__(self):
+        super(IssueTracker, self).__init__()
+        self.issues = []
+
+    def _add_issue(self, issue_type, reason, node):
+        issue = {
+            'type': issue_type,
+            'reason': reason,
+        }
+        issue.update(node.debug_info or {'line':0, 'col':0, 'FIXME':True})
+        if issue not in self.issues:
+            self.issues.append(issue)
+
+    def add_error(self, reason, node):
+        self._add_issue('error', reason, node)
+
+    def add_warning(self, reason, node):
+        self._add_issue('warning', reason, node)
+
 
 class Finder(object):
     """
     Perform queries on the tree
-    FIXME: Make subclass of Visitor
     """
     def __init__(self):
-        pass
+        super(Finder, self).__init__()
 
     @visitor.on('node')
     def visit(self, node):
@@ -73,9 +92,10 @@ class ImplicitPortRewrite(object):
         <value> > foo.in
     by replacing <value> with a std.Constant(data=<value>) actor.
     """
-    def __init__(self):
+    def __init__(self, issue_tracker):
         super(ImplicitPortRewrite, self).__init__()
         self.counter = 0
+        self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
@@ -99,6 +119,7 @@ class ImplicitPortRewrite(object):
         link.replace_child(node, const_actor_port)
         block = link.parent
         block.add_child(const_actor)
+
 
 class RestoreParents(object):
     """docstring for RestoreParents"""
@@ -124,8 +145,9 @@ class Expander(object):
     """
     Expands a tree with components provided as a dictionary
     """
-    def __init__(self, components):
+    def __init__(self, components, issue_tracker):
         self.components = components
+        self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
@@ -171,9 +193,10 @@ class Flatten(object):
     Flattens a block by wrapping everything in the block's namespace
     and propagating arguments before removing the block
     """
-    def __init__(self):
+    def __init__(self, issue_tracker):
         self.stack = []
         self.constants = {}
+        self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
@@ -210,7 +233,8 @@ class Flatten(object):
             if key not in block.args:
                 # Check constants
                 if key not in self.constants:
-                    print "WARNING: Missing symbol '{}'".format(key)
+                    reason = "Missing symbol '{}'".format(key)
+                    self.issue_tracker.add_error(reason, value_node)
                     return
                 value = self.constants[key]
             else:
@@ -233,7 +257,8 @@ class Flatten(object):
                 block = node.parent
                 parent_key = value_node.ident
                 if parent_key not in block.args:
-                    print "WARNING: Missing symbol '{}'".format(parent_key)
+                    reason = "Missing symbol '{}'".format(node)
+                    self.issue_tracker.add_error(reason, node)
                 else:
                     value = block.args[parent_key]
                     node.args[key] = value
@@ -251,7 +276,7 @@ class Flatten(object):
 
 class AppInfo(object):
     """docstring for AppInfo"""
-    def __init__(self, script_name, root, verify=True):
+    def __init__(self, script_name, root, issue_tracker, verify=True):
         super(AppInfo, self).__init__()
         self.root = root
         self.verify = verify
@@ -261,6 +286,7 @@ class AppInfo(object):
             'connections': {},
             'valid': True
         }
+        self.issue_tracker = issue_tracker
 
     def process(self):
         self.visit(self.root)
@@ -289,7 +315,12 @@ class AppInfo(object):
         for arg_node in node.children:
             if type(arg_node) is ast.NamedArg:
                 arg_id, arg_val = arg_node.children
-                args[arg_id.ident] = arg_val.value
+                if type(arg_val) is ast.Value:
+                    args[arg_id.ident] = arg_val.value
+                else:
+                    reason = "Missing symbol '{}'".format(arg_val.ident)
+                    self.issue_tracker.add_error(reason, arg_val)
+                    continue
         value['args'] = args
         if found:
             if is_actor:
@@ -312,10 +343,11 @@ class AppInfo(object):
 
 class ResolveConstants(object):
     """docstring for ResolveConstants"""
-    def __init__(self, root):
+    def __init__(self, root, issue_tracker):
         super(ResolveConstants, self).__init__()
         self.root = root
         self.defs = {}
+        self.issue_tracker = issue_tracker
 
     def process(self):
         finder = Finder()
@@ -332,7 +364,10 @@ class ResolveConstants(object):
                     unresolved.remove(c)
                     did_replace = True
             if unresolved and not did_replace:
-                raise Exception("Unresolved constant")
+                for c in unresolved:
+                    reason = "Undefined constant '{}'".format(const_key.ident)
+                    self.issue_tracker.add_error(reason, const_key)
+                return
             done = not (unresolved and did_replace)
 
         self.visit(self.root)
@@ -378,6 +413,7 @@ class CodeGen(object):
 
     def run(self, verbose=False):
         ast.Node._verbose_desc = verbose
+        issue_tracker = IssueTracker()
 
         ## FIXME:
         # Check for errors
@@ -396,7 +432,7 @@ class CodeGen(object):
         for c in components:
             self.local_components[c.name] = c
 
-        expander = Expander(self.local_components)
+        expander = Expander(self.local_components, issue_tracker)
         expander.visit(self.root)
         # All component definitions can now be removed
         for comp in components:
@@ -405,19 +441,19 @@ class CodeGen(object):
 
         ##
         # Implicit port rewrite
-        rw = ImplicitPortRewrite()
+        rw = ImplicitPortRewrite(issue_tracker)
         rw.visit(self.root)
         self.dump_tree('Port Rewrite')
 
         ##
         # Flatten blocks
-        flattener = Flatten()
+        flattener = Flatten(issue_tracker)
         flattener.visit(self.root)
         self.dump_tree('FLATTENED')
 
         ##
         # Resolve Constants
-        rc = ResolveConstants(self.root)
+        rc = ResolveConstants(self.root, issue_tracker)
         rc.process()
         self.dump_tree('RESOLVED CONSTANTS')
 
@@ -452,12 +488,17 @@ class CodeGen(object):
 
         ##
         # "code" generation
-        gen_app_info = AppInfo(self.script_name, self.root, self.verify)
+        gen_app_info = AppInfo(self.script_name, self.root, issue_tracker, self.verify)
         gen_app_info.process()
         self.app_info = gen_app_info.app_info
 
         # import json
         # print json.dumps(self.app_info, indent=4)
+
+        for issue in issue_tracker.issues:
+            print issue
+
+        return issue_tracker.issues
 
     def query(self, root, kind=None, attributes=None, maxdepth=1024):
         finder = Finder()
@@ -471,5 +512,5 @@ def generate_app_info(ast, name='anonymous', verify=True):
 
 if __name__ == '__main__':
     from parser_regression_tests import run_issue_check
-    run_issue_check(tests=['test10'], testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/issue-reporting-tests')
+    run_issue_check(tests=['undefined_constant'], testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/issue-reporting-tests')
 
