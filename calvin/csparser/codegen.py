@@ -236,16 +236,9 @@ class Flatten(object):
             # Get value from grandparent (block)
             block = node.parent.parent
             key = value_node.ident
-            if key not in block.args:
-                # Check constants
-                if key not in self.constants:
-                    reason = "Missing symbol '{}'".format(key)
-                    self.issue_tracker.add_error(reason, value_node)
-                    return
-                value = self.constants[key]
-            else:
+            if key in block.args:
                 value = block.args[key]
-            node.replace_child(value_node, value)
+                node.replace_child(value_node, value)
 
 
     @visitor.when(ast.Port)
@@ -265,9 +258,6 @@ class Flatten(object):
                 if parent_key in block.args:
                     value = block.args[parent_key]
                     node.args[key] = value
-                elif parent_key not in self.constants:
-                    reason = "Missing symbol '{}'".format(parent_key)
-                    self.issue_tracker.add_error(reason, value_node)
 
         if node.namespace:
             self.stack.append(node.namespace)
