@@ -97,11 +97,12 @@ class ImplicitPortRewrite(object):
     ImplicitPortRewrite takes care of the construct
         <value> > foo.in
     by replacing <value> with a std.Constant(data=<value>) actor.
+
+    Running this cannot not fail and thus cannot cause an issue.
     """
     def __init__(self, issue_tracker):
         super(ImplicitPortRewrite, self).__init__()
         self.counter = 0
-        self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
@@ -149,11 +150,12 @@ class RestoreParents(object):
 
 class Expander(object):
     """
-    Expands a tree with components provided as a dictionary
+    Expands a tree with components provided as a subtree
+
+    Running this cannot not fail and thus cannot cause an issue.
     """
     def __init__(self, components, issue_tracker):
         self.components = components
-        self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
@@ -190,7 +192,6 @@ class Expander(object):
         new.args = {x.children[0].ident: x.children[1] for x in args}
         node.parent.replace_child(node, new)
         # Recurse
-        # map(self.visit, new.children)
         self.visit(new)
 
 
@@ -221,8 +222,6 @@ class Flatten(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        # if node.ident is None:
-        #     import pdb ; pdb.set_trace()
         self.stack.append(node.ident)
         node.ident = ':'.join(self.stack)
         self.stack.pop()
@@ -487,9 +486,6 @@ class CodeGen(object):
         gen_app_info.process()
         self.app_info = gen_app_info.app_info
         self.app_info['valid'] = (issue_tracker.err_count == 0)
-
-        for issue in issue_tracker.issues:
-            print issue
 
         self.issues = issue_tracker.issues
 
