@@ -256,12 +256,12 @@ class Flatten(object):
                 # Get value from parent (block)
                 block = node.parent
                 parent_key = value_node.ident
-                if parent_key not in block.args:
-                    reason = "Missing symbol '{}'".format(node)
-                    self.issue_tracker.add_error(reason, node)
-                else:
+                if parent_key in block.args:
                     value = block.args[parent_key]
                     node.args[key] = value
+                elif parent_key not in self.constants:
+                    reason = "Missing symbol '{}'".format(parent_key)
+                    self.issue_tracker.add_error(reason, value_node)
 
         if node.namespace:
             self.stack.append(node.namespace)
