@@ -404,7 +404,7 @@ class CodeGen(object):
                 reason = "Constant '{}' has a circular reference".format(key.ident)
             else:
                 reason = "Constant '{}' is undefined".format(const_key.ident)
-            issue_tracker.add_error(reason, c)
+            issue_tracker.add_error(reason, const_key)
         return defined
 
     def run(self, verbose=False):
