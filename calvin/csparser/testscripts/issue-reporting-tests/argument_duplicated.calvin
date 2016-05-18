@@ -1,0 +1,3 @@
+source : std.Constant(data=1, data=2)
+print : io.Print()
+source.token > print.token

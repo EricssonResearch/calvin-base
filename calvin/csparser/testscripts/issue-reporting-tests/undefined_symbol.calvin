@@ -1,0 +1,4 @@
+print : io.Print()
+delay : std.ClassicDelay(delay=foo)
+bar > delay.token
+delay.token > print.token

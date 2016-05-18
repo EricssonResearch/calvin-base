@@ -1,33 +1,15 @@
 import astnode as ast
 import visitor
 import astprint
-from calvin.actorstore.store import ActorStore, GlobalStore
+from calvin.actorstore.store import ActorStore, DocumentationStore, GlobalStore
 
 
-def _create_signature(actor_class, actor_type):
+def _create_signature(actor_type, metadata):
     # Create the actor signature to be able to look it up in the GlobalStore if neccessary
     signature_desc = {'is_primitive': True,
                       'actor_type': actor_type,
-                      'inports': actor_class.inport_names,
-                      'outports': actor_class.outport_names}
-    return GlobalStore.actor_signature(signature_desc)
-
-def _create_signature_for_component(actor_class, actor_type):
-    # Create the actor signature to be able to look it up in the GlobalStore if neccessary
-    print actor_class, actor_type
-    signature_desc = {'is_primitive': True,
-                      'actor_type': actor_type,
-                      'inports': actor_class['inports'],
-                      'outports': actor_class['outports']}
-    return GlobalStore.actor_signature(signature_desc)
-
-
-def _create_signature_for_unknown(actor_class, actor_type):
-    # Create the actor signature to be able to look it up in the GlobalStore if neccessary
-    signature_desc = {'is_primitive': True,
-                      'actor_type': actor_type,
-                      'inports': actor_class.inport_names,
-                      'outports': actor_class.outport_names}
+                      'inports': [p for p,_ in metadata['inputs']],
+                      'outports': [p for p,_ in metadata['outputs']]}
     return GlobalStore.actor_signature(signature_desc)
 
 
@@ -170,6 +152,7 @@ class Expander(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
+        # FIXME: Change to use new metadata storage
         found, is_actor, meta, _ = ActorStore().lookup(node.actor_type)
         if found and is_actor:
             # Plain actor
@@ -286,6 +269,54 @@ class AppInfo(object):
     def process(self):
         self.visit(self.root)
 
+    def check_arguments(self, assignment, metadata):
+        """
+        Verify that all arguments are present and valid when instantiating actors.
+        """
+        given_args = assignment.children
+        mandatory = set(metadata['args']['mandatory'])
+        optional = set(metadata['args']['optional'].keys())
+        given_idents = {a.children[0].ident: a.children[0] for a in given_args}
+        given_keys = [a.children[0].ident for a in given_args]
+        given = set(given_keys)
+
+        # Case 0: Duplicated arguments
+        duplicates = set([x for x in given_keys if given_keys.count(x) > 1])
+        for m in duplicates:
+            reason = "Duplicated argument: '{}'".format(m)
+            self.issue_tracker.add_error(reason, given_idents[m])
+
+
+        # Case 1: Missing arguments
+        missing = mandatory - given
+        for m in missing:
+            reason = "Missing argument: '{}'".format(m)
+            self.issue_tracker.add_error(reason, assignment)
+
+        # Case 2: Extra (unused) arguments
+        unused = given - (mandatory | optional)
+        for m in unused:
+            reason = "Unused argument: '{}'".format(m)
+            self.issue_tracker.add_error(reason, given_idents[m])
+
+        # Case 3: Deprecation warning if optional args not explicitly given
+        deprecated = optional - given
+        for m in deprecated:
+            reason = "Using default value for implicit parameter '{}'".format(m)
+            self.issue_tracker.add_warning(reason, assignment)
+
+        # Assing and return args dictionary
+        args = {}
+        for arg_node in given_args:
+            arg_id, arg_val = arg_node.children
+            if type(arg_val) is ast.Value:
+                args[arg_id.ident] = arg_val.value
+            else:
+                reason = "Undefined identifier: '{}'".format(arg_val.ident)
+                self.issue_tracker.add_error(reason, arg_val)
+        return args
+
+
     @visitor.on('node')
     def visit(self, node):
         pass
@@ -299,32 +330,24 @@ class AppInfo(object):
     def visit(self, node):
         namespace = self.app_info['name']
         key = "{}:{}".format(namespace, node.ident)
-        value = {}
-        # if is_actor is False, actor_class is component definition
-        found, is_actor, actor_class, _ = ActorStore().lookup(node.actor_type)
-        if self.verify and not found:
+
+        # FIXME: Change to use new metadata storage
+        metadata = DocumentationStore().actor_docs(node.actor_type)
+        if self.verify and not metadata:
             self.app_info['valid'] = False
             return
+
+        value = {}
         value['actor_type'] = node.actor_type
-        args = {}
-        for arg_node in node.children:
-            if type(arg_node) is ast.NamedArg:
-                arg_id, arg_val = arg_node.children
-                if type(arg_val) is ast.Value:
-                    args[arg_id.ident] = arg_val.value
-                else:
-                    reason = "Undefined identifier: '{}'".format(arg_val.ident)
-                    self.issue_tracker.add_error(reason, arg_val)
-        value['args'] = args
-        if found:
-            if is_actor:
-                value['signature'] = _create_signature(actor_class, node.actor_type)
-            else:
-                value['signature'] = _create_signature_for_component(actor_class, node.actor_type)
-        else:
+        value['args'] = self.check_arguments(node, metadata)
+
+        if not metadata:
             # FIXME: Handle the case where the actor is unknown, but verify is FALSE
+            #        by gathering info to construct metadata
+            metadata = {'inputs':[], 'outputs':[]}
             raise Exception("Cannot compute signature of unknown actor")
-            value['signature'] = _create_signature_for_unknown(node, )
+        value['signature'] = _create_signature(node.actor_type, metadata)
+
         self.app_info['actors'][key] = value
 
     @visitor.when(ast.Link)

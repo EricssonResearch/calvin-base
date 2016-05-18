@@ -1,0 +1,3 @@
+source : std.CountTimer(sleep=1, steps=10)
+print : io.Print()
+source.integer > print.token

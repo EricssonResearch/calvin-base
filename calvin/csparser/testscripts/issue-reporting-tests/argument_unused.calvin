@@ -1,0 +1,2 @@
+print : io.Print(foo=1)
+1 > print.token
