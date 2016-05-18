@@ -252,18 +252,13 @@ class Flatten(object):
         node.delete()
 
 
-class AppInfo(object):
+class AppInfoActors(object):
     """docstring for AppInfo"""
-    def __init__(self, script_name, root, issue_tracker, verify=True):
-        super(AppInfo, self).__init__()
+    def __init__(self, app_info, root, issue_tracker, verify=True):
+        super(AppInfoActors, self).__init__()
         self.root = root
         self.verify = verify
-        self.app_info = {
-            'name':script_name,
-            'actors': {},
-            'connections': {},
-            'valid': True
-        }
+        self.app_info = app_info
         self.issue_tracker = issue_tracker
 
     def process(self):
@@ -351,6 +346,28 @@ class AppInfo(object):
 
         self.app_info['actors'][key] = value
 
+
+class AppInfoLinks(object):
+    """docstring for AppInfo"""
+    def __init__(self, app_info, root, issue_tracker, verify=True):
+        super(AppInfoLinks, self).__init__()
+        self.root = root
+        self.verify = verify
+        self.app_info = app_info
+        self.issue_tracker = issue_tracker
+
+    def process(self):
+        self.visit(self.root)
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children)
+
     @visitor.when(ast.Link)
     def visit(self, node):
         namespace = self.app_info['name']
@@ -393,11 +410,17 @@ class CodeGen(object):
     def __init__(self, ast_root, script_name, verbose=False, verify=True):
         super(CodeGen, self).__init__()
         self.root = ast_root
-        self.script_name = script_name
+        # self.script_name = script_name
         self.local_components = {}
         self.printer = astprint.BracePrinter()
         self.verbose = verbose
         self.verify = verify
+        self.app_info = {
+            'name':script_name,
+            'actors': {},
+            'connections': {},
+            'valid': True
+        }
 
 
     def dump_tree(self, heading):
@@ -509,11 +532,12 @@ class CodeGen(object):
 
         ##
         # "code" generation
-        gen_app_info = AppInfo(self.script_name, self.root, issue_tracker, self.verify)
+        gen_app_info = AppInfoActors(self.app_info, self.root, issue_tracker, self.verify)
         gen_app_info.process()
-        self.app_info = gen_app_info.app_info
-        self.app_info['valid'] = (issue_tracker.err_count == 0)
+        gen_app_info = AppInfoLinks(self.app_info, self.root, issue_tracker, self.verify)
+        gen_app_info.process()
 
+        self.app_info['valid'] = (issue_tracker.err_count == 0)
         self.issues = issue_tracker.issues
 
     def query(self, root, kind=None, attributes=None, maxdepth=1024):
