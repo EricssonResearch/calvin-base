@@ -37,11 +37,15 @@ from kademlia.node import Node, NodeHeap
 from kademlia import version as kademlia_version
 from calvin.utilities import certificate
 
+from twisted.python import log
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 
 _conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)
+
+# Make twisted (rpcudp) logs go to null
+log.startLogging(log.NullFile())
 
 
 def logger(node, message, level=None):
