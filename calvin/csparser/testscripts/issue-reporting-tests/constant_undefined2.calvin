@@ -1,0 +1,3 @@
+src : std.Constant(data=FOO)
+print : io.Print()
+src.token > print.token

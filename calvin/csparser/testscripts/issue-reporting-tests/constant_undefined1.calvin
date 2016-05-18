@@ -1,0 +1,3 @@
+print : io.Print()
+FOO > print.token
+
