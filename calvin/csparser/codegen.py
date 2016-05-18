@@ -334,7 +334,8 @@ class AppInfo(object):
         # FIXME: Change to use new metadata storage
         metadata = DocumentationStore().actor_docs(node.actor_type)
         if self.verify and not metadata:
-            self.app_info['valid'] = False
+            reason = "Unknown actor type: '{}'".format(node.actor_type)
+            self.issue_tracker.add_error(reason, node)
             return
 
         value = {}

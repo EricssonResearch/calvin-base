@@ -1,0 +1,5 @@
+source : std.Counter()
+print : io.Print()
+delay : std.ClassicalDelay(delay=foo)
+source.integer > delay.token
+delay.token > print.token
