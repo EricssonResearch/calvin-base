@@ -7,14 +7,17 @@
 <body>
 <!-- Tabbed menu -->
 <div class="tabs">
-    <ul class="tab-links">
-        <li class="active"><a href="#tabPeers"><h2>Runtimes</h2></a></li>
-        <li><a href="#tabApplications"><h2>Applications</h2></a></li>
+    <ul class="nav nav-tabs" id="tabMenu">
+        <li class="active"><a data-target="#tabPeers" data-toggle="tab"><h2>Runtimes</h2></a></li>
+        <li><a data-target="#tabApplications" data-toggle="tab"><h2>Applications</h2></a></li>
     </ul>
 
     <div class="tab-content">
-        <div id="tabPeers" class="tab active">
-            <h3>Runtimes</h3>
+        <div id="tabPeers" class="tab-pane active">
+            <h4>Control API</h4>
+            <table class="table table-bordered table-striped" id="controlTable" style="width: 20%">
+            </table>
+            <h4>Runtimes</h4>
             <table class="table table-bordered table-striped" id="peersTable">
                 <th align="left">ID</th>
                 <th align="left">Name</th>
@@ -23,29 +26,29 @@
                 <th align="left">Destroy</th>
                 <th align="left">Deploy application</th>
             </table>
-            <h3>Attributes</h3>
+            <h4>Attributes</h4>
             <table class="table table-bordered table-striped" id="peerTable">
             </table>
-            <h3>Connections</h3>
+            <h4>Connections</h4>
             <table class="table table-bordered table-striped" id="connectionsTable">
             </table>
         </div>
 
-        <div id="tabApplications" class="tab">
+        <div id="tabApplications" class="tab-pane">
             <div id="applicationData">
-                <h2>Application</h2>
-                <input type="checkbox" id="chkDrawApplication" onchange="toggleDrawConnections()">Draw application graph<br>
-                &nbsp;&nbsp;<input type="checkbox" id="chkDrawConnections" disabled>Draw connections<br>
-                &nbsp;&nbsp;<input type="checkbox" id="chkShowPortNames" disabled>Show portnames<br>
+                <h4>Application</h4>
+                <input type="checkbox" id="chkDrawApplication" onchange="toggleDrawConnections()" checked>Draw application graph<br>
+                &nbsp;&nbsp;<input type="checkbox" id="chkDrawConnections" checked>Draw connections<br>
+                &nbsp;&nbsp;<input type="checkbox" id="chkShowPortNames" checked>Show portnames<br>
                 <select id="applicationSelector" onchange="showApplication()"></select>
                 <table class="table table-bordered table-striped" id="applicationsTable"></table>
-                <h3>Actor</h3>
+                <h4>Actor</h4>
                 <select id="actorSelector" onchange="updateSelectedActor()"></select>
                 <table class="table table-bordered table-striped" id="actorsTable"></table>
-                <h3>Port</h3>
+                <h4>Port</h4>
                 <select id="portSelector" onchange="showPort()"></select>
                 <table class="table table-bordered table-striped" id="actorPortsTable"></table>
-                <h3>Tokens</h3>
+                <h4>Tokens</h4>
                 <table class="table table-bordered table-striped" id="actorPortFifoTable"></table>
             </div>
             <div id="applicationGraph"></div>
@@ -55,7 +58,7 @@
 
 <!-- Log data from runtimes -->
 <div id="logData">
-    <h3>Trace</h3>
+    <h4>Trace</h4>
     <button class="btn btn-primary btn-xs" style="margin-left: 5px;" onclick="startLog()">Start trace</button>
     <button class="btn btn-danger btn-xs" style="margin-left: 5px;" onclick="stopLog()">Stop trace</button>
     <button class="btn btn-default btn-xs" style="margin-left: 5px;" onclick="clearLog()">Clear trace</button>
@@ -84,9 +87,7 @@
                 <br>
                 <input type="text" name="connect_uri" id="connect_uri" size="35" />
                 <br>
-                <label for="index_search">Peers index search</label>
-                <br>
-                <input type="text" name="index_search" id="index_search" size="35" />
+                <input type="checkbox" id="chk_get_all_runtimes" checked>Get all runtimes<br>
             </form>
         </div>
         <div class="modal-footer">
