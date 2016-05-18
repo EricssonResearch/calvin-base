@@ -86,22 +86,14 @@ def _compile_cont(source_text, filename, verify, access_decision, security=None,
     _log.debug("Parsing...")
     ir, errors, warnings = calvin_parser(source_text, filename)
     _log.debug("Parsed %s, %s, %s" % (ir, errors, warnings))
-    # If there were errors during parsing no IR will be generated
-    if not errors:
-        # FIXME:
-        # c_errors, c_warnings = check(ir, verify=verify)
-        # errors.extend(c_errors)
-        # warnings.extend(c_warnings)
-        # FIXME:
-        # deployable = generate_app_info(ir, verify=verify)
-        app_name = os.path.splitext(os.path.basename(filename))[0]
-        codegen = CodeGen(ir, app_name, verify=verify)
-        codegen.run()
-        deployable = codegen.app_info
 
-        # FIXME: not used when above commented out
-        #if errors:
-        #    deployable['valid'] = False
+    app_name = os.path.splitext(os.path.basename(filename))[0]
+    codegen = CodeGen(ir, app_name, verify=verify)
+    codegen.run()
+    deployable = codegen.app_info
+    errors.extend([issue for issue in codegen.issues if issue['type'] is 'error'])
+    warnings.extend([issue for issue in codegen.issues if issue['type'] is 'warning'])
+
 
     _log.debug("Compiled %s, %s, %s" % (deployable, errors, warnings))
     if org_cb:
