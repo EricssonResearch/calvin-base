@@ -23,6 +23,7 @@
                 <th align="left">Name</th>
                 <th align="left">URI</th>
                 <th align="left">Control URI</th>
+                <th align="left">Configure</th>
                 <th align="left">Destroy</th>
                 <th align="left">Deploy application</th>
             </table>
@@ -92,6 +93,182 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-primary" onclick="connectHandler()">Connect</button>
+        </div>
+    </div>
+</div>
+
+<!-- Configure runtime dialog -->
+<div id="configDialog" title="Configure runtime" style="display:none;" class="modal modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4 class="modal-title">Configure runtime</h4>
+        </div>
+        <div class="modal-body">
+            <form>
+                <ul class="nav nav-tabs" id="tabRuntimeConfig">
+                    <li class="active"><a data-target="#tabNodeName" data-toggle="tab"><h4>Name</h4></a></li>
+                    <li><a data-target="#tabNodeAddress" data-toggle="tab"><h4>Address</h4></a></li>
+                    <li><a data-target="#tabNodeOwner" data-toggle="tab"><h4>Owner</h4></a></li>
+                </ul>
+
+                <div class="tab-content">
+                    <div id="tabNodeName" class="tab-pane active">
+                        <table class="table table-bordered table-striped" id="nodeNameTable" style="width: 20%">
+                            <tr>
+                            <td>
+                            <label for="conf_name_organization">Organization:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_name_organization" id="conf_name_organization" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_name_organizationalUnit">Organizational unit:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_name_organizationalUnit" id="conf_name_organizationalUnit" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_name_purpose">Purpose:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_name_purpose" id="conf_name_purpose" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_name_group">Group:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_name_group" id="conf_name_group" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_name_name">Name:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_name_name" id="conf_name_name" size="35" />
+                            </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div id="tabNodeAddress" class="tab-pane">
+                        <table class="table table-bordered table-striped" id="nodeAddressTable" style="width: 20%">
+                            <tr>
+                            <td>
+                            <label for="conf_address_country">Country:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_address_country" id="conf_address_country" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_address_organizationalUnit">State or province:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_address_organizationalUnit" id="conf_address_organizationalUnit" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_address_locality">Locality:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_address_locality" id="conf_address_locality" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_address_street">Street:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_address_street" id="conf_address_street" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_address_streetNumber">Street number:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_address_streetNumber" id="conf_address_streetNumber" size="35" />
+                            </td>
+                            </tr>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_address_building">Building:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_address_building" id="conf_address_building" size="35" />
+                            </td>
+                            </tr>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_address_floor">Floor:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_address_floor" id="conf_address_floor" size="35" />
+                            </td>
+                            </tr>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_address_room">Room:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_address_room" id="conf_address_room" size="35" />
+                            </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div id="tabNodeOwner" class="tab-pane">
+                        <table class="table table-bordered table-striped" id="nodeOwnerTable" style="width: 20%">
+                            <tr>
+                            <td>
+                            <label for="conf_owner_organization">Organization:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_owner_organization" id="conf_owner_organization" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_owner_organizationalUnit">Organizational unit:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_owner_organizationalUnit" id="conf_owner_organizationalUnit" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_owner_role">Role:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_owner_role" id="conf_owner_role" size="35" />
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                            <label for="conf_owner_personOrGroup">Person or group:</label>
+                            </td>
+                            <td>
+                            <input type="text" name="conf_owner_personOrGroup" id="conf_owner_personOrGroup" size="35" />
+                            </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="setRuntimeConfig()">Update</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
         </div>
     </div>
 </div>

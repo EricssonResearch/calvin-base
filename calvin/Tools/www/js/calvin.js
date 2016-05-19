@@ -480,7 +480,27 @@ function getPeer(id)
                         for (attribute in peer.attributes.indexed_public) {
                             if (peer.attributes.indexed_public[attribute].indexOf("node_name") != -1) {
                                 var res = peer.attributes.indexed_public[attribute].split("/");
+                                peer.name_organization = res[res.length - 5];
+                                peer.name_organizationalUnit = res[res.length - 4];
+                                peer.name_purpose = res[res.length - 3];
+                                peer.name_group = res[res.length - 2];
                                 peer.name = res[res.length - 1];
+                            } else if (peer.attributes.indexed_public[attribute].indexOf("address") != -1) {
+                                var res = peer.attributes.indexed_public[attribute].split("/");
+                                peer.address_country = res[res.length - 8];
+                                peer.address_organizationalUnit = res[res.length - 7];
+                                peer.address_locality = res[res.length - 6];
+                                peer.address_street = res[res.length - 5];
+                                peer.address_streetNumber = res[res.length - 4];
+                                peer.address_building = res[res.length - 3];
+                                peer.address_floor = res[res.length - 2];
+                                peer.address_room = res[res.length - 1];
+                            } if (peer.attributes.indexed_public[attribute].indexOf("owner") != -1) {
+                                var res = peer.attributes.indexed_public[attribute].split("/");
+                                peer.owner_organization = res[res.length - 4];
+                                peer.owner_organizationalUnit = res[res.length - 3];
+                                peer.owner_role = res[res.length - 2];
+                                peer.owner_personOrGroup = res[res.length - 1];
                             }
                         }
                     }
@@ -759,7 +779,7 @@ function getPortState(port_id)
 }
 
 // Helper for adding a table row with elements
-function AddTableItem(tableRef, element1, element2, element3, element4, element5, element6)
+function AddTableItem(tableRef, element1, element2, element3, element4, element5, element6, element7)
 {
     var row = tableRef.insertRow();
     if (element1) {
@@ -792,7 +812,115 @@ function AddTableItem(tableRef, element1, element2, element3, element4, element5
         cell.appendChild(element6);
     }
 
+    if (element7) {
+        var cell = row.insertCell(6);
+        cell.appendChild(element7);
+    }
+
     return row;
+}
+
+function set_input(input, value)
+{
+    if (!value || value == undefined) {
+        input.value = "";
+    } else {
+        input.value = value;
+    }
+}
+
+function showRuntimeConfig(peer_id)
+{
+    var peer = findRuntime(peer_id);
+    if (peer) {
+        set_input(document.getElementById("conf_name_organization"), peer.name_organization);
+        set_input(document.getElementById("conf_name_organizationalUnit"), peer.name_organizationalUnit);
+        set_input(document.getElementById("conf_name_purpose"), peer.name_purpose);
+        set_input(document.getElementById("conf_name_group"), peer.name_group);
+        set_input(document.getElementById("conf_name_name"), peer.name);
+        set_input(document.getElementById("conf_address_country"), peer.address_country);
+        set_input(document.getElementById("conf_address_organizationalUnit"), peer.address_organizationalUnit);
+        set_input(document.getElementById("conf_address_locality"), peer.address_locality);
+        set_input(document.getElementById("conf_address_street"), peer.address_street);
+        set_input(document.getElementById("conf_address_streetNumber"), peer.address_streetNumber);
+        set_input(document.getElementById("conf_address_building"), peer.address_building);
+        set_input(document.getElementById("conf_address_floor"), peer.address_floor);
+        set_input(document.getElementById("conf_address_room"), peer.address_room);
+        set_input(document.getElementById("conf_owner_organization"), peer.owner_organization);
+        set_input(document.getElementById("conf_owner_organizationalUnit"), peer.owner_organizationalUnit);
+        set_input(document.getElementById("conf_owner_role"), peer.owner_role);
+        set_input(document.getElementById("conf_owner_personOrGroup"), peer.owner_personOrGroup);
+        $("#configDialog").modal.peer = peer;
+        $("#configDialog").modal({
+            modal: true,
+            show: true
+        });
+    }
+}
+
+function get_value_from_input(input)
+{
+    if (input.val() == undefined) {
+        return "";
+    }
+    return input.val();
+}
+
+function setRuntimeConfig()
+{
+    $("#configDialog").modal('hide');
+    var peer = $("#configDialog").modal.peer;
+    peer.name_organization = get_value_from_input($("#conf_name_organization"));
+    peer.name_organizationalUnit = get_value_from_input($("#conf_name_organizationalUnit"));
+    peer.name_purpose = get_value_from_input($("#conf_name_purpose"));
+    peer.name_group = get_value_from_input($("#conf_name_group"));
+    peer.name = get_value_from_input($("#conf_name_name"));
+    peer.address_country = get_value_from_input($("#conf_address_country"));
+    peer.address_organizationalUnit = get_value_from_input($("#conf_address_organizationalUnit"));
+    peer.address_locality = get_value_from_input($("#conf_address_locality"));
+    peer.address_street = get_value_from_input($("#conf_address_street"));
+    peer.address_streetNumber = get_value_from_input($("#conf_address_streetNumber"));
+    peer.address_building = get_value_from_input($("#conf_address_building"));
+    peer.address_floor = get_value_from_input($("#conf_address_floor"));
+    peer.address_room = get_value_from_input($("#conf_address_room"));
+    peer.owner_organization = get_value_from_input($("#conf_owner_organization"));
+    peer.owner_organizationalUnit = get_value_from_input($("#conf_owner_organizationalUnit"));
+    peer.owner_role = get_value_from_input($("#conf_owner_role"));
+    peer.owner_personOrGroup = get_value_from_input($("#conf_owner_personOrGroup"));
+
+    if (peer.control_uri) {
+        var url = peer.control_uri + '/node/' + peer.id;
+        var node_name = [peer.name_organization, peer.name_organizationalUnit, peer.name_purpose, peer.name_group, peer.name];
+        var address = [peer.address_country, peer.address_organizationalUnit, peer.address_locality, peer.address_street, peer.address_streetNumber, peer.address_building, peer.address_floor, peer.address_room];
+        var owner = [peer.owner_organization, peer.owner_organizationalUnit, peer.owner_role, peer.owner_personOrGroup];
+        var data = JSON.stringify({'node_name': node_name, 'address': address, 'owner': owner});
+        console.log("set runtime config - url: " + url + " data: " + data);
+        $.ajax({
+            timeout: 5000,
+            beforeSend: function() {
+                startSpin();
+            },
+            complete: function() {
+                stopSpin();
+            },
+            url: url,
+            type: 'POST',
+            data: data,
+            success: function() {
+                showSuccess("Runtime " + peer.id + " updated");
+                var tableRef = document.getElementById('peersTable');
+                for (var x = 0; x < tableRef.rows.length; x++) {
+                    if (tableRef.rows[x].cells[0].innerHTML == peer.id) {
+                        tableRef.rows[x].cells[1].innerHTML = peer.name;
+                        return;
+                    }
+                }
+            },
+            error: function() {
+                showError("Failed to update runtime " + peer.id);
+            }
+        });
+    }
 }
 
 // Add "peer" to peersTable
@@ -800,6 +928,13 @@ function showPeer(peer)
 {
     var row;
     var tableRef = document.getElementById('peersTable');
+
+    var btnConfigure = document.createElement('input');
+    btnConfigure.type = 'button';
+    btnConfigure.className = "btn btn-primary btn-xs";
+    btnConfigure.id = peer.id;
+    btnConfigure.value = 'Configure...';
+    btnConfigure.setAttribute("onclick", "showRuntimeConfig(this.id)");
 
     if (peer.control_uri) {
         var btnDestroy = document.createElement('input');
@@ -816,9 +951,9 @@ function showPeer(peer)
         btnDeploy.value = 'Deploy...';
         btnDeploy.setAttribute("onclick", "showDeployApplication(this.id)");
 
-        row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnDestroy, btnDeploy);
+        row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnConfigure, btnDestroy, btnDeploy);
     } else {
-        row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri));
+        row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnConfigure);
     }
 
     row.id = peer.id;
@@ -1497,7 +1632,8 @@ function showDeployApplication(peer_id)
     }
 }
 
-function deployHandler() {
+function deployHandler()
+{
     var peer = $("#deployDialog").modal.peer;
     var script = $("#deploy_script").val();
     var name = $("#script_name").val();
@@ -1671,11 +1807,15 @@ jQuery(document).ready(function() {
         $(this).tab('show');
     })
 
+    $('#tabRuntimeConfig a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+    })
+
     $('a[data-toggle="tab"]').on('show.bs.tab', function (e) {
-        console.log(e);
         if (e.target.text == "Applications") {
             getApplications();
-        } else {
+        } else if (e.target.text == "Runtimes") {
             stopGraphEvents();
         }
     })
