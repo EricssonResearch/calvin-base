@@ -231,18 +231,12 @@ class Flatten(object):
     """
     def __init__(self, issue_tracker):
         self.stack = []
-        self.constants = {}
         self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
         pass
 
-    @visitor.when(ast.Constant)
-    def visit(self, node):
-        key = node.children[0].ident
-        value_node = node.children[1]
-        self.constants[key] = value_node
 
     @visitor.when(ast.Node)
     def visit(self, node):
