@@ -139,11 +139,10 @@ class Expander(object):
 
     def process(self, root, verify=True):
         self.verify = verify
-        finder = Finder()
-        finder.find_all(root, kind=ast.Component, attributes=None, maxdepth=1)
-        self.components = {comp.name : comp.children[0] for comp in finder.matches}
+        local_components = query(root, kind=ast.Component, maxdepth=1)
+        self.components = {comp.name : comp.children[0] for comp in local_components}
         # Remove from AST
-        for comp in finder.matches:
+        for comp in local_components:
             comp.delete()
 
         self.visit(root)
@@ -414,10 +413,35 @@ class AppInfoLinks(object):
 
 class ReplaceConstants(object):
     """docstring for ReplaceConstants"""
-    def __init__(self, constant_defs, issue_tracker):
+    def __init__(self, issue_tracker):
         super(ReplaceConstants, self).__init__()
-        self.defs = constant_defs
         self.issue_tracker = issue_tracker
+
+    def process(self, root):
+        constants = query(root, ast.Constant)
+        defined = {c.children[0].ident: c.children[1] for c in constants if type(c.children[1]) is ast.Value}
+        unresolved = [c for c in constants if type(c.children[1]) is ast.Id]
+        seen = [c.children[0].ident for c in constants if type(c.children[1]) is ast.Id]
+        while True:
+            did_replace = False
+            for c in unresolved[:]:
+                key, const_key = c.children
+                if const_key.ident in defined:
+                    defined[key.ident] = defined[const_key.ident]
+                    unresolved.remove(c)
+                    seen.append(c.children[0].ident)
+                    did_replace = True
+            if not did_replace:
+                break
+        for c in unresolved:
+            key, const_key = c.children
+            if const_key.ident in seen:
+                reason = "Constant '{}' has a circular reference".format(key.ident)
+            else:
+                reason = "Constant '{}' is undefined".format(const_key.ident)
+            self.issue_tracker.add_error(reason, const_key)
+        self.definitions = defined
+        self.visit(root)
 
     @visitor.on('node')
     def visit(self, node):
@@ -433,8 +457,8 @@ class ReplaceConstants(object):
         arg = node.children[1]
         if type(arg) is ast.Value:
             return
-        if arg.ident in self.defs:
-            value = self.defs[arg.ident]
+        if arg.ident in self.definitions:
+            value = self.definitions[arg.ident]
             node.replace_child(arg, value.clone())
 
 
@@ -464,30 +488,6 @@ class CodeGen(object):
         print "========\n{}\n========".format(heading)
         self.printer.process(self.root)
 
-    def process_constants(self, issue_tracker):
-        constants = self.query(self.root, ast.Constant)
-        defined = {c.children[0].ident: c.children[1] for c in constants if type(c.children[1]) is ast.Value}
-        unresolved = [c for c in constants if type(c.children[1]) is ast.Id]
-        seen = [c.children[0].ident for c in constants if type(c.children[1]) is ast.Id]
-        while True:
-            did_replace = False
-            for c in unresolved[:]:
-                key, const_key = c.children
-                if const_key.ident in defined:
-                    defined[key.ident] = defined[const_key.ident]
-                    unresolved.remove(c)
-                    seen.append(c.children[0].ident)
-                    did_replace = True
-            if not did_replace:
-                break
-        for c in unresolved:
-            key, const_key = c.children
-            if const_key.ident in seen:
-                reason = "Constant '{}' has a circular reference".format(key.ident)
-            else:
-                reason = "Constant '{}' is undefined".format(const_key.ident)
-            issue_tracker.add_error(reason, const_key)
-        return defined
 
     def run(self, verbose=False):
         ast.Node._verbose_desc = verbose
@@ -512,7 +512,6 @@ class CodeGen(object):
         # Expand local components
         expander = Expander(issue_tracker)
         expander.process(self.root, self.verify)
-        # All component definitions can now be removed
         self.dump_tree('EXPANDED')
 
         ##
@@ -523,18 +522,16 @@ class CodeGen(object):
 
         ##
         # Resolve Constants
-        # FIXME: Move process_constant into ReplaceConstants
-        const_defs = self.process_constants(issue_tracker)
-        rc = ReplaceConstants(const_defs, issue_tracker)
-        rc.visit(self.root)
+        rc = ReplaceConstants(issue_tracker)
+        rc.process(self.root)
         self.dump_tree('RESOLVED CONSTANTS')
 
         ##
         # # Resolve portmaps
         consumed = []
-        iops = self.query(self.root, kind=ast.InternalOutPort)
+        iops = query(self.root, kind=ast.InternalOutPort)
         for iop in iops:
-            ps = self.query(self.root, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
+            ps = query(self.root, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
             for p in ps:
                 link = p.parent
                 block = link.parent
@@ -543,13 +540,13 @@ class CodeGen(object):
                 block.add_child(new)
                 consumed.append(link)
 
-        iips = self.query(self.root, kind=ast.InternalInPort)
+        iips = query(self.root, kind=ast.InternalInPort)
         for iip in iips:
-            ps = self.query(self.root, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
+            ps = query(self.root, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
             for p in ps:
                 p.parent.outport = iip.parent.outport.clone()
 
-        for ip in self.query(self.root, kind=ast.InternalOutPort) + self.query(self.root, kind=ast.InternalInPort):
+        for ip in query(self.root, kind=ast.InternalOutPort) + query(self.root, kind=ast.InternalInPort):
             ip.parent.delete()
 
         for x in set(consumed):
@@ -568,10 +565,10 @@ class CodeGen(object):
         self.app_info['valid'] = (issue_tracker.err_count == 0)
         self.issues = issue_tracker.issues
 
-    def query(self, root, kind=None, attributes=None, maxdepth=1024):
-        finder = Finder()
-        finder.find_all(root, kind, attributes=attributes, maxdepth=maxdepth)
-        return finder.matches
+def query(root, kind=None, attributes=None, maxdepth=1024):
+    finder = Finder()
+    finder.find_all(root, kind, attributes=attributes, maxdepth=maxdepth)
+    return finder.matches
 
 def generate_app_info(ast, name='anonymous', verify=True):
     cg = CodeGen(ast, name, verbose=False, verify=verify)
