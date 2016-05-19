@@ -276,6 +276,10 @@ def main():
     if args.name:
         runtime_attr.setdefault("indexed_public",{}).setdefault("node_name",{})['name'] = args.name
 
+    # If still no name give it "no_name" name
+    if not 'name' in runtime_attr.setdefault("indexed_public",{}).setdefault("node_name",{}):
+        runtime_attr["indexed_public"]["node_name"]['name'] = "no_name"
+
     if app_info:
         dispatch_and_deploy(app_info, args.wait, uris, control_uri, runtime_attr, credentials_)
     else:

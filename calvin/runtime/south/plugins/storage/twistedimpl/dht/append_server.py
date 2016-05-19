@@ -32,9 +32,15 @@ from kademlia.node import Node
 from kademlia import version as kademlia_version
 from collections import Counter
 
+from twisted.python import log
 from calvin.utilities import calvinlogger
 import base64
+
 _log = calvinlogger.get_logger(__name__)
+
+# Make twisted (rpcudp) logs go to null
+log.startLogging(log.NullFile())
+
 
 # Fix for None types in storage
 class ForgetfulStorageFix(ForgetfulStorage):
@@ -223,6 +229,7 @@ class AppendServer(Server):
         if self.protocol.transport is None:
             return task.deferLater(reactor, .2, self.bootstrap, addrs)
         else:
+            _log.debug("AppendServer.bootstrap(%s)" % addrs)
             return Server.bootstrap(self, addrs)
 
     def append(self, key, value):
@@ -234,7 +241,7 @@ class AppendServer(Server):
 
         def append_(nodes):
             # if this node is close too, then store here as well
-            if self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+            if not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
                 try:
                     pvalue = json.loads(value)
                     self.set_keys.add(dkey)
@@ -260,6 +267,29 @@ class AppendServer(Server):
 
         spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
         return spider.find().addCallback(append_)
+
+    def set(self, key, value):
+        """
+        Set the given key to the given value in the network.
+        """
+        _log.debug("setting '%s' = '%s' on network" % (key, value))
+        dkey = digest(key)
+        node = Node(dkey)
+
+        def store(nodes):
+            _log.debug("setting '%s' on %s" % (key, map(str, nodes)))
+            # if this node is close too, then store here as well
+            if not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+                self.storage[dkey] = value
+            ds = [self.protocol.callStore(n, dkey, value) for n in nodes]
+            return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)
+
+        nearest = self.protocol.router.findNeighbors(node)
+        if len(nearest) == 0:
+            _log.warning("There are no known neighbors to set key %s" % key)
+            return defer.succeed(False)
+        spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
+        return spider.find().addCallback(store)
 
     def get(self, key):
         """
@@ -292,7 +322,7 @@ class AppendServer(Server):
 
         def remove_(nodes):
             # if this node is close too, then store here as well
-            if self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+            if not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
                 try:
                     pvalue = json.loads(value)
                     self.set_keys.add(dkey)

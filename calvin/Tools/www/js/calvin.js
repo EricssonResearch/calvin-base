@@ -304,6 +304,20 @@ function getCookie(cname) {
 // Reset data, show connectDialog and get information from selected runtime
 function connect()
 {
+    for (var index in peers) {
+        if (peers[index].source) {
+            peers[index].source.removeEventListener("message", eventHandler, false);
+            peers[index].source.close();
+        }
+
+        if (peers[index].graph_source && peers[index].graph_user_id) {
+            peers[index].graph_source.removeEventListener("message", graphEventHandler, false);
+            peers[index].graph_source.close();
+        }
+    }
+
+    clearLog();
+
     peers = [];
     applications = [];
     actors = [];
@@ -315,10 +329,8 @@ function connect()
     }
 
     var uri = getCookie("calvin_uri");
-    var index_search = getCookie("calvin_indexsearch");
 
     document.getElementById("connect_uri").value = uri;
-    document.getElementById("index_search").value = index_search;
 
     $("#connectDialog").modal({
         modal: true,
@@ -328,12 +340,10 @@ function connect()
 
 function connectHandler() {
     connect_uri = $("#connect_uri").val();
-    index_search = $("#index_search").val();
     document.cookie="calvin_uri=" + connect_uri;
-    document.cookie="calvin_indexsearch=" + index_search;
     getPeerID();
-    if (index_search) {
-        getPeersFromIndex(index_search);
+    if ($('#chk_get_all_runtimes').is(':checked')) {
+        getPeersFromIndex("/node/attribute/node_name");
     }
     $("#connectDialog").modal('hide');
 }
@@ -1573,8 +1583,45 @@ function setRequirements(application, requirements)
     });
 }
 
+function updateControlTable()
+{
+    var tableRef = document.getElementById('controlTable');
+    clearTable(tableRef);
+    AddTableItem(tableRef, document.createTextNode("Control URI"), document.createTextNode(connect_uri));
+    var btnConnect = document.createElement('input');
+    btnConnect.type = 'button';
+    btnConnect.className = "btn btn-primary btn-xs";
+    btnConnect.value = 'Connect...';
+    btnConnect.setAttribute("onclick", "connect()");
+    AddTableItem(tableRef, document.createTextNode("Connect"), btnConnect);
+}
+
 jQuery(document).ready(function() {
-    connect();
+    connect_uri = "http://" + window.location.hostname + ":5001";
+    var url = connect_uri + '/id';
+    $.ajax({
+        timeout: 1000,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: url,
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                getPeer(data.id, true);
+                getPeersFromIndex("/node/attribute/node_name");
+                updateControlTable();
+
+            }
+        },
+        error: function() {
+            connect();
+        }
+    });
 
     // handle file select in deploy app
     var fileInputDeploy = document.getElementById('fileInputDeploy');
@@ -1619,22 +1666,17 @@ jQuery(document).ready(function() {
         reader.readAsText(file);
     });
 
-    // handle tabbed view
-    jQuery('.tabs .tab-links a').on('click', function(e)  {
-        var currentAttrValue = jQuery(this).attr('href');
+    $('#tabMenu a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+    })
 
-        if (currentAttrValue == "#tabApplications") {
+    $('a[data-toggle="tab"]').on('show.bs.tab', function (e) {
+        console.log(e);
+        if (e.target.text == "Applications") {
             getApplications();
         } else {
             stopGraphEvents();
         }
-
-        // Show/Hide Tabs
-        jQuery('.tabs ' + currentAttrValue).show().siblings().hide();
-
-        // Change/remove current tab to active
-        jQuery(this).parent('li').addClass('active').siblings().removeClass('active');
-
-        e.preventDefault();
-    });
+    })
 });

@@ -1,20 +1,20 @@
 body { font: 12px Arial;}
 
 text {
-  font-weight: 300;
-  font-family: Arial;
-  font-size: 12px;
+    font-weight: 300;
+    font-family: Arial;
+    font-size: 12px;
 }
 
 .node rect {
-  stroke: #999;
-  fill: #fff;
-  stroke-width: 1.5px;
+    stroke: #999;
+    fill: #fff;
+    stroke-width: 1.5px;
 }
 
 .edgePath path {
-  stroke: #333;
-  stroke-width: 1.5px;
+    stroke: #333;
+    stroke-width: 1.5px;
 }
 
 #applicationData {
@@ -38,64 +38,6 @@ text {
 /*----- Table selection -----*/
 table tr.active {background: #ccc;}
 
-/*----- Tabs -----*/
-.tabs {
-    float: left;
-    width:100%;
-    height: 50%;
-    clear: both;
-}
-
-    /*----- Tab Links -----*/
-    /* Clearfix */
-    .tab-links:after {
-        display:block;
-        clear:both;
-        content:'';
-    }
-
-    .tab-links li {
-        margin:0px 5px;
-        float:left;
-        list-style:none;
-    }
-
-        .tab-links a {
-            padding:9px 15px;
-            display:inline-block;
-            border-radius:3px 3px 0px 0px;
-            background:#7FB5DA;
-            color:#4c4c4c;
-            transition:all linear 0.15s;
-        }
-
-        .tab-links a:hover {
-            background:#a7cce5;
-            text-decoration:none;
-        }
-
-    li.active a, li.active a:hover {
-        background:#fff;
-        color:#4c4c4c;
-    }
-
-    /*----- Content of Tabs -----*/
-    .tab-content {
-        padding:15px;
-        border-radius:3px;
-        background:#fff;
-        width:100%;
-        height: 100%;
-    }
-
-        .tab {
-            display:none;
-        }
-
-        .tab.active {
-            display:block;
-        }
-
 #logData {
     width:100%;
     height: 50%;
@@ -103,7 +45,7 @@ table tr.active {background: #ccc;}
 }
 
 div.ui-widget-header {
-  background: #7FB5DA;
+    background: #7FB5DA;
 }
 
 .modal {
