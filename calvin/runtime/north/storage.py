@@ -521,6 +521,15 @@ class Storage(object):
             _log.debug("Add node capabilities failed", exc_info=True)
             pass
 
+    def remove_node_index(self, node, cb=None):
+        indexes = node.attributes.get_indexed_public()
+        try:
+            for index in indexes:
+                # TODO add callback, but currently no users supply a cb anyway
+                self.remove_index(index, node.id)
+        except:
+            _log.debug("Remove node index failed", exc_info=True)
+
     def get_node(self, node_id, cb=None):
         """
         Get node data from storage
