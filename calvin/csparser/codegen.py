@@ -134,10 +134,19 @@ class Expander(object):
     """
     Expands a tree with components provided as a subtree
     """
-    def __init__(self, components, issue_tracker, verify=True):
-        self.components = components
+    def __init__(self, issue_tracker):
         self.issue_tracker = issue_tracker
+
+    def process(self, root, verify=True):
         self.verify = verify
+        finder = Finder()
+        finder.find_all(root, kind=ast.Component, attributes=None, maxdepth=1)
+        self.components = {comp.name : comp.children[0] for comp in finder.matches}
+        # Remove from AST
+        for comp in finder.matches:
+            comp.delete()
+
+        self.visit(root)
 
     @visitor.on('node')
     def visit(self, node):
@@ -438,7 +447,6 @@ class CodeGen(object):
         super(CodeGen, self).__init__()
         self.root = ast_root
         # self.script_name = script_name
-        self.local_components = {}
         self.printer = astprint.BracePrinter()
         self.verbose = verbose
         self.verify = verify
@@ -502,18 +510,10 @@ class CodeGen(object):
 
         ##
         # Expand local components
-        # FIXME: Move this into Expander
-        components = self.query(self.root, kind=ast.Component, maxdepth=1)
-        for c in components:
-            self.local_components[c.name] = c.children[0]
-
-        expander = Expander(self.local_components, issue_tracker, self.verify)
-        expander.visit(self.root)
+        expander = Expander(issue_tracker)
+        expander.process(self.root, self.verify)
         # All component definitions can now be removed
-        for comp in components:
-            comp.delete()
         self.dump_tree('EXPANDED')
-
 
         ##
         # Flatten blocks
