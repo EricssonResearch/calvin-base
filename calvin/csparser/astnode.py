@@ -103,6 +103,7 @@ class Assignment(Node):
     """docstring for AssignmentNode"""
     def __init__(self, **kwargs):
         super(Assignment, self).__init__(**kwargs)
+        self.metadata = None
         self.ident = kwargs.get('ident')
         self.actor_type = kwargs.get('actor_type')
         self.add_children(kwargs.get('args', {}))

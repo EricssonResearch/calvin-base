@@ -1,7 +1,7 @@
 import astnode as ast
 import visitor
 import astprint
-from calvin.actorstore.store import ActorStore, DocumentationStore, GlobalStore
+from calvin.actorstore.store import DocumentationStore, GlobalStore
 
 
 def _create_signature(actor_type, metadata):
@@ -133,11 +133,11 @@ class RestoreParents(object):
 class Expander(object):
     """
     Expands a tree with components provided as a subtree
-
-    Running this cannot not fail and thus cannot cause an issue.
     """
-    def __init__(self, components, issue_tracker):
+    def __init__(self, components, issue_tracker, verify=True):
         self.components = components
+        self.issue_tracker = issue_tracker
+        self.verify = verify
 
     @visitor.on('node')
     def visit(self, node):
@@ -152,19 +152,57 @@ class Expander(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
+
+        def is_local_component(actor_type):
+            return '.' not in actor_type
+
+        def construct_metadata(node):
+            # FIXME: Actually construct metadata
+            return {
+                'is_known': False,
+                'inputs': [],
+                'outputs': [],
+                'args':{
+                    'mandatory':[],
+                    'optional':{}
+                }
+            }
+
         # FIXME: Change to use new metadata storage
-        found, is_actor, meta, _ = ActorStore().lookup(node.actor_type)
-        if found and is_actor:
-            # Plain actor
-            return
-        if found:
-            compdef = meta.children[0]
+        if not is_local_component(node.actor_type):
+            metadata = DocumentationStore().actor_docs(node.actor_type)
+            if metadata and metadata['type'] is 'actor':
+                metadata['is_known']=True
+                node.metadata = metadata
+                return
+
+            if not metadata:
+                # Unknown actor => construct metadata from graph + args unless verify is True
+                if self.verify:
+                    reason = "Unknown actor type: '{}'".format(node.actor_type)
+                    self.issue_tracker.add_error(reason, node)
+                else:
+                    metadata = construct_metadata(node)
+                    node.metadata = metadata
+                    reason = "Not validating actor type: '{}'".format(node.actor_type)
+                    self.issue_tracker.add_warning(reason, node)
+                return
+
+            # Component from store
+            compdef = metadata['definition']
             v = RestoreParents()
             v.visit(compdef)
-        elif node.actor_type in self.components:
-            compdef = self.components[node.actor_type].children[0]
         else:
-            return
+            if node.actor_type not in self.components:
+                reason = "Unknown local component: '{}'".format(node.actor_type)
+                self.issue_tracker.add_error(reason, node)
+                return
+            # Component from script
+            compdef = self.components[node.actor_type]
+
+        #
+        # We end up here if node is in fact a component
+        #
         # Clone assignment to clone the arguments
         ca = node.clone()
         args = ca.children
@@ -254,20 +292,20 @@ class Flatten(object):
 
 class AppInfoActors(object):
     """docstring for AppInfo"""
-    def __init__(self, app_info, root, issue_tracker, verify=True):
+    def __init__(self, app_info, root, issue_tracker):
         super(AppInfoActors, self).__init__()
         self.root = root
-        self.verify = verify
         self.app_info = app_info
         self.issue_tracker = issue_tracker
 
     def process(self):
         self.visit(self.root)
 
-    def check_arguments(self, assignment, metadata):
+    def check_arguments(self, assignment):
         """
         Verify that all arguments are present and valid when instantiating actors.
         """
+        metadata = assignment.metadata
         given_args = assignment.children
         mandatory = set(metadata['args']['mandatory'])
         optional = set(metadata['args']['optional'].keys())
@@ -323,36 +361,25 @@ class AppInfoActors(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        namespace = self.app_info['name']
-        key = "{}:{}".format(namespace, node.ident)
-
-        # FIXME: Change to use new metadata storage
-        metadata = DocumentationStore().actor_docs(node.actor_type)
-        if self.verify and not metadata:
-            reason = "Unknown actor type: '{}'".format(node.actor_type)
-            self.issue_tracker.add_error(reason, node)
+        if not node.metadata:
+            # No metadata => we have already generated an error, just skip
             return
 
         value = {}
         value['actor_type'] = node.actor_type
-        value['args'] = self.check_arguments(node, metadata)
+        value['args'] = self.check_arguments(node)
+        value['signature'] = _create_signature(node.actor_type, node.metadata)
 
-        if not metadata:
-            # FIXME: Handle the case where the actor is unknown, but verify is FALSE
-            #        by gathering info to construct metadata
-            metadata = {'inputs':[], 'outputs':[]}
-            raise Exception("Cannot compute signature of unknown actor")
-        value['signature'] = _create_signature(node.actor_type, metadata)
-
+        namespace = self.app_info['name']
+        key = "{}:{}".format(namespace, node.ident)
         self.app_info['actors'][key] = value
 
 
 class AppInfoLinks(object):
     """docstring for AppInfo"""
-    def __init__(self, app_info, root, issue_tracker, verify=True):
+    def __init__(self, app_info, root, issue_tracker):
         super(AppInfoLinks, self).__init__()
         self.root = root
-        self.verify = verify
         self.app_info = app_info
         self.issue_tracker = issue_tracker
 
@@ -465,28 +492,28 @@ class CodeGen(object):
         ##
         # Tree re-write
         #
-        print
         self.dump_tree('ROOT')
-
-        ##
-        # Expand local components
-        #
-        components = self.query(self.root, kind=ast.Component, maxdepth=1)
-        for c in components:
-            self.local_components[c.name] = c
-
-        expander = Expander(self.local_components, issue_tracker)
-        expander.visit(self.root)
-        # All component definitions can now be removed
-        for comp in components:
-            comp.delete()
-        self.dump_tree('EXPANDED')
 
         ##
         # Implicit port rewrite
         rw = ImplicitPortRewrite(issue_tracker)
         rw.visit(self.root)
         self.dump_tree('Port Rewrite')
+
+        ##
+        # Expand local components
+        # FIXME: Move this into Expander
+        components = self.query(self.root, kind=ast.Component, maxdepth=1)
+        for c in components:
+            self.local_components[c.name] = c.children[0]
+
+        expander = Expander(self.local_components, issue_tracker, self.verify)
+        expander.visit(self.root)
+        # All component definitions can now be removed
+        for comp in components:
+            comp.delete()
+        self.dump_tree('EXPANDED')
+
 
         ##
         # Flatten blocks
@@ -496,6 +523,7 @@ class CodeGen(object):
 
         ##
         # Resolve Constants
+        # FIXME: Move process_constant into ReplaceConstants
         const_defs = self.process_constants(issue_tracker)
         rc = ReplaceConstants(const_defs, issue_tracker)
         rc.visit(self.root)
@@ -532,9 +560,9 @@ class CodeGen(object):
 
         ##
         # "code" generation
-        gen_app_info = AppInfoActors(self.app_info, self.root, issue_tracker, self.verify)
+        gen_app_info = AppInfoActors(self.app_info, self.root, issue_tracker)
         gen_app_info.process()
-        gen_app_info = AppInfoLinks(self.app_info, self.root, issue_tracker, self.verify)
+        gen_app_info = AppInfoLinks(self.app_info, self.root, issue_tracker)
         gen_app_info.process()
 
         self.app_info['valid'] = (issue_tracker.err_count == 0)
