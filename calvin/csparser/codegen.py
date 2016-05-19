@@ -298,10 +298,10 @@ class Flatten(object):
         node.delete()
 
 
-class AppInfoActors(object):
+class AppInfo(object):
     """docstring for AppInfo"""
     def __init__(self, app_info, root, issue_tracker):
-        super(AppInfoActors, self).__init__()
+        super(AppInfo, self).__init__()
         self.root = root
         self.app_info = app_info
         self.issue_tracker = issue_tracker
@@ -381,27 +381,6 @@ class AppInfoActors(object):
         namespace = self.app_info['name']
         key = "{}:{}".format(namespace, node.ident)
         self.app_info['actors'][key] = value
-
-
-class AppInfoLinks(object):
-    """docstring for AppInfo"""
-    def __init__(self, app_info, root, issue_tracker):
-        super(AppInfoLinks, self).__init__()
-        self.root = root
-        self.app_info = app_info
-        self.issue_tracker = issue_tracker
-
-    def process(self):
-        self.visit(self.root)
-
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children)
 
     @visitor.when(ast.Link)
     def visit(self, node):
@@ -493,10 +472,6 @@ class CodeGen(object):
         ast.Node._verbose_desc = verbose
         issue_tracker = IssueTracker()
 
-        ## FIXME:
-        # Check for errors
-        #
-
         ##
         # Tree re-write
         #
@@ -557,9 +532,7 @@ class CodeGen(object):
 
         ##
         # "code" generation
-        gen_app_info = AppInfoActors(self.app_info, self.root, issue_tracker)
-        gen_app_info.process()
-        gen_app_info = AppInfoLinks(self.app_info, self.root, issue_tracker)
+        gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
         gen_app_info.process()
 
         self.app_info['valid'] = (issue_tracker.err_count == 0)
