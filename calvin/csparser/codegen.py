@@ -279,41 +279,33 @@ class Flatten(object):
         map(self.visit, blocks)
 
         # Replace and delete links (manipulates children)
-        # links = query(node, kind=ast.Link, maxdepth=2)
         iops = query(node, kind=ast.InternalOutPort, maxdepth=2)
-        # Handle with care, potential fan-out from internal outport
-        mapping = {}
+        consumed = set()
         for iop in iops:
-            key = (iop.actor, iop.port)
-            mapping.setdefault(key, []).append(iop.parent.inport)
-
-        for key in mapping:
-            replacements = mapping[key]
-
-            # There should be at most one target
-            actor, port = key
-            targets = query(node, kind=ast.InPort, attributes={'actor':actor, 'port':port})
+            targets = query(node, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
+            if not targets:
+                continue
             if len(targets) > 1:
                 raise Exception("There can be only one")
+            target = targets[0]
+            link = target.parent.clone()
+            link.inport = iop.parent.inport.clone()
+            node.add_child(link)
+            iop.parent.delete()
+            # Defer deletion of link since can have multiple matches
+            consumed.add(target.parent)
 
-            if targets:
-                target = targets[0]
-                link = target.parent
-                for replacement in replacements:
-                    new = link.clone()
-                    new.inport = replacement.clone()
-                    node.add_child(new)
-                    replacement.parent.delete()
-                link.delete()
+        for link in consumed:
+            link.delete()
 
         iips = query(node, kind=ast.InternalInPort, maxdepth=2)
         for iip in iips:
-            replacement = iip.parent.outport
             targets = query(node, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
-            if targets:
-                for target in targets:
-                    target.parent.outport = replacement.clone()
-                iip.parent.delete()
+            if not targets:
+                continue
+            for target in targets:
+                target.parent.outport = iip.parent.outport.clone()
+            iip.parent.delete()
 
         # Promote ports and assignments (handled by visitors)
         non_blocks = [x for x in node.children if type(x) is not ast.Block]
