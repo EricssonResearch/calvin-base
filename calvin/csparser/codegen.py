@@ -233,10 +233,13 @@ class Flatten(object):
         self.stack = []
         self.issue_tracker = issue_tracker
 
+    def process(self, root, name):
+        self.stack.append(name) # FIXME: Fix this by making root node ast.Block instead of ast.Node
+        self.visit(root)
+
     @visitor.on('node')
     def visit(self, node):
         pass
-
 
     @visitor.when(ast.Node)
     def visit(self, node):
@@ -245,9 +248,7 @@ class Flatten(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        self.stack.append(node.ident)
-        node.ident = ':'.join(self.stack)
-        self.stack.pop()
+        node.ident = self.stack[-1] + ':' + node.ident
         map(self.visit, node.children[:])
 
 
@@ -262,16 +263,16 @@ class Flatten(object):
                 value = block.args[key]
                 node.replace_child(value_node, value)
 
-
     @visitor.when(ast.Port)
     def visit(self, node):
         if node.actor:
-            node.actor = ':'.join(self.stack + [node.actor])
+            node.actor = self.stack[-1] + ':' + node.actor
         else:
-            node.actor = ':'.join(self.stack)
+            node.actor = self.stack[-1]
 
     @visitor.when(ast.Block)
     def visit(self, node):
+        # Propagate parameters
         for key, value_node in node.args.iteritems():
             if type(value_node) is ast.Id:
                 # Get value from parent (block)
@@ -281,15 +282,65 @@ class Flatten(object):
                     value = block.args[parent_key]
                     node.args[key] = value
 
-        if node.namespace:
+        # Recurse into blocks first
+        if node.namespace: # FIXME: Fix this by making root node ast.Block instead of ast.Node
             self.stack.append(node.namespace)
-        # Iterate over a copy of children since we manipulate the list
-        map(self.visit, node.children[:])
-        if node.namespace:
+        blocks = [x for x in node.children if type(x) is ast.Block]
+        map(self.visit, blocks)
+
+        # Replace and delete links (manipulates children)
+        # links = query(node, kind=ast.Link, maxdepth=2)
+        iops = query(node, kind=ast.InternalOutPort, maxdepth=2)
+        # Handle with care, potential fan-out from internal outport
+        mapping = {}
+        for iop in iops:
+            key = (iop.actor, iop.port)
+            mapping.setdefault(key, []).append(iop.parent.inport)
+
+        for key in mapping:
+            replacements = mapping[key]
+
+            # There should be at most one target
+            actor, port = key
+            targets = query(node, kind=ast.InPort, attributes={'actor':actor, 'port':port})
+            if len(targets) > 1:
+                raise Exception("There can be only one")
+
+            if targets:
+                target = targets[0]
+                link = target.parent
+                for replacement in replacements:
+                    new = link.clone()
+                    new.inport = replacement.clone()
+                    node.add_child(new)
+                    replacement.parent.delete()
+                link.delete()
+
+        iips = query(node, kind=ast.InternalInPort, maxdepth=2)
+        for iip in iips:
+            replacement = iip.parent.outport
+            targets = query(node, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
+            if targets:
+                for target in targets:
+                    link = target.parent
+                    new = link.clone()
+                    new.outport = replacement.clone()
+                    node.add_child(new)
+                    target.parent.delete()
+                iip.parent.delete()
+
+        # Promote ports and assignments (handled by visitors)
+        non_blocks = [x for x in node.children if type(x) is not ast.Block]
+        map(self.visit, non_blocks)
+
+        # Raise promoted children to outer level
+        node.parent.add_children(node.children)
+
+        # Delete this node
+        node.delete()
+        if node.namespace: # FIXME: Fix this by making root node ast.Block instead of ast.Node
             self.stack.pop()
 
-        node.parent.add_children(node.children)
-        node.delete()
 
 
 class AppInfo(object):
@@ -372,15 +423,13 @@ class AppInfo(object):
         value['args'] = self.check_arguments(node)
         value['signature'] = _create_signature(node.actor_type, node.metadata)
 
-        namespace = self.app_info['name']
-        key = "{}:{}".format(namespace, node.ident)
-        self.app_info['actors'][key] = value
+        self.app_info['actors'][node.ident] = value
 
     @visitor.when(ast.Link)
     def visit(self, node):
-        namespace = self.app_info['name']
-        key = "{}:{}.{}".format(namespace, node.outport.actor, node.outport.port)
-        value = "{}:{}.{}".format(namespace, node.inport.actor, node.inport.port)
+        key = "{}.{}".format(node.outport.actor, node.outport.port)
+        value = "{}.{}".format(node.inport.actor, node.inport.port)
+
         self.app_info['connections'].setdefault(key, []).append(value)
 
 
@@ -486,7 +535,7 @@ class CodeGen(object):
         ##
         # Flatten blocks
         flattener = Flatten(issue_tracker)
-        flattener.visit(self.root)
+        flattener.process(self.root, self.app_info['name'])
         self.dump_tree('FLATTENED')
 
         ##
@@ -494,35 +543,6 @@ class CodeGen(object):
         rc = ReplaceConstants(issue_tracker)
         rc.process(self.root)
         self.dump_tree('RESOLVED CONSTANTS')
-
-        ##
-        # # Resolve portmaps
-        consumed = []
-        iops = query(self.root, kind=ast.InternalOutPort)
-        for iop in iops:
-            ps = query(self.root, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
-            for p in ps:
-                link = p.parent
-                block = link.parent
-                new = link.clone()
-                new.inport = iop.parent.inport.clone()
-                block.add_child(new)
-                consumed.append(link)
-
-        iips = query(self.root, kind=ast.InternalInPort)
-        for iip in iips:
-            ps = query(self.root, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
-            for p in ps:
-                p.parent.outport = iip.parent.outport.clone()
-
-        for ip in query(self.root, kind=ast.InternalOutPort) + query(self.root, kind=ast.InternalInPort):
-            ip.parent.delete()
-
-        for x in set(consumed):
-            if x.parent:
-                x.delete()
-
-        self.dump_tree('RESOLVED PORTMAPS')
 
         ##
         # "code" generation
