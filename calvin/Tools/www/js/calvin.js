@@ -12,6 +12,85 @@ var render = new dagreD3.render();
 var svg = d3.select("#applicationGraph").append("svg");
 var svgGroup = svg.append("g");
 var graphTimer = null;
+var color = d3.scale.category20();
+
+function drawConnections()
+{
+    var nodes = [];
+    var links = [];
+
+    document.getElementById("connectionsGraph").innerHTML = "";
+
+    var width = 800,
+        height = 600;
+
+    var svg_con = d3.select("#connectionsGraph").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    var force = d3.layout.force()
+        .charge(-120)
+        .linkDistance(100)
+        .size([width, height]);
+
+    var index_peer;
+    for (index_peer in peers) {
+        var source = {id:peers[index_peer].id, name:peers[index_peer].name};
+        nodes.push(source);
+        var index_connection;
+        for (index_connection in peers[index_peer].peers) {
+            var index_target;
+            for (var index_target = 0; index_target < nodes.length; index_target++) {
+                if (nodes[index_target].id === peers[index_peer].peers[index_connection]) {
+                    links.push({source:source, target:nodes[index_target]});
+                    console.log("Adding link from " + peers[index_peer].id + " to " + peers[index_peer].peers[index_connection]);
+                    break;
+                }
+            }
+        }
+        console.log("Adding node " + peers[index_peer].id);
+    }
+
+    force
+        .nodes(nodes)
+        .links(links)
+        .start();
+
+    var link = svg_con.selectAll(".link")
+            .data(force.links())
+        .enter().append("line")
+            .attr("class", "link")
+            .style("stroke-width", function(d) { return 2; });
+
+    var gnodes = svg_con.selectAll('g.gnode')
+        .data(nodes)
+        .enter()
+        .append('g')
+        .classed('gnode', true);
+
+    var node = gnodes.append("circle")
+        .attr("class", "node")
+        .attr("r", 10)
+        .style("fill", function(d) { return color("#aec7e8"); })
+        .call(force.drag);
+
+    var labels = gnodes.append("text")
+        .attr("x", 10)
+        .attr("y", ".31em")
+        .style("font-size", "15px")
+        .text(function(d) { return d.name; });
+
+    force.on("tick", function() {
+        link.attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
+
+        gnodes.attr("transform", function(d) {
+            return 'translate(' + [d.x, d.y] + ')';
+        });
+    });
+};
 
 function showAlert(message, type, delay)
 {
@@ -46,7 +125,6 @@ function addActorToGraph(actor)
             clearTimeout(graphTimer);
         }
 
-        var color = d3.scale.category20();
         for (var index in peers) {
             if (peers[index].id == actor.peer_id) {
                 graph.setNode(peers[index].id, {
@@ -338,7 +416,8 @@ function connect()
     });
 }
 
-function connectHandler() {
+function connectHandler()
+{
     connect_uri = $("#connect_uri").val();
     document.cookie="calvin_uri=" + connect_uri;
     getPeerID();
@@ -452,6 +531,13 @@ function getPeers(peer)
     }
 }
 
+function updatePeers()
+{
+    for (var index in peers) {
+        getPeer(peers[index].id);
+    }
+}
+
 // Get runtime information from runtime with id "id"
 function getPeer(id)
 {
@@ -471,46 +557,47 @@ function getPeer(id)
         success: function(data) {
             if (data) {
                 console.log("getPeer response: " + JSON.stringify(data));
-                if (!findRuntime(id)) {
-                    var peer = new runtimeObject(id);
-                    peer.uri = data.uri;
-                    peer.control_uri = data.control_uri;
-                    peer.attributes = data.attributes;
-                    if (peer.attributes.indexed_public) {
-                        for (attribute in peer.attributes.indexed_public) {
-                            if (peer.attributes.indexed_public[attribute].indexOf("node_name") != -1) {
-                                var res = peer.attributes.indexed_public[attribute].split("/");
-                                peer.name_organization = res[res.length - 5];
-                                peer.name_organizationalUnit = res[res.length - 4];
-                                peer.name_purpose = res[res.length - 3];
-                                peer.name_group = res[res.length - 2];
-                                peer.name = res[res.length - 1];
-                            } else if (peer.attributes.indexed_public[attribute].indexOf("address") != -1) {
-                                var res = peer.attributes.indexed_public[attribute].split("/");
-                                peer.address_country = res[res.length - 8];
-                                peer.address_organizationalUnit = res[res.length - 7];
-                                peer.address_locality = res[res.length - 6];
-                                peer.address_street = res[res.length - 5];
-                                peer.address_streetNumber = res[res.length - 4];
-                                peer.address_building = res[res.length - 3];
-                                peer.address_floor = res[res.length - 2];
-                                peer.address_room = res[res.length - 1];
-                            } if (peer.attributes.indexed_public[attribute].indexOf("owner") != -1) {
-                                var res = peer.attributes.indexed_public[attribute].split("/");
-                                peer.owner_organization = res[res.length - 4];
-                                peer.owner_organizationalUnit = res[res.length - 3];
-                                peer.owner_role = res[res.length - 2];
-                                peer.owner_personOrGroup = res[res.length - 1];
-                            }
+                var peer = findRuntime(id);
+                if (!peer) {
+                    peer = new runtimeObject(id);
+                    peers[peers.length] = peer;
+                }
+                peer.uri = data.uri;
+                peer.control_uri = data.control_uri;
+                peer.attributes = data.attributes;
+                if (peer.attributes.indexed_public) {
+                    for (attribute in peer.attributes.indexed_public) {
+                        if (peer.attributes.indexed_public[attribute].indexOf("node_name") != -1) {
+                            var res = peer.attributes.indexed_public[attribute].split("/");
+                            peer.name_organization = res[res.length - 5];
+                            peer.name_organizationalUnit = res[res.length - 4];
+                            peer.name_purpose = res[res.length - 3];
+                            peer.name_group = res[res.length - 2];
+                            peer.name = res[res.length - 1];
+                        } else if (peer.attributes.indexed_public[attribute].indexOf("address") != -1) {
+                            var res = peer.attributes.indexed_public[attribute].split("/");
+                            peer.address_country = res[res.length - 8];
+                            peer.address_organizationalUnit = res[res.length - 7];
+                            peer.address_locality = res[res.length - 6];
+                            peer.address_street = res[res.length - 5];
+                            peer.address_streetNumber = res[res.length - 4];
+                            peer.address_building = res[res.length - 3];
+                            peer.address_floor = res[res.length - 2];
+                            peer.address_room = res[res.length - 1];
+                        } if (peer.attributes.indexed_public[attribute].indexOf("owner") != -1) {
+                            var res = peer.attributes.indexed_public[attribute].split("/");
+                            peer.owner_organization = res[res.length - 4];
+                            peer.owner_organizationalUnit = res[res.length - 3];
+                            peer.owner_role = res[res.length - 2];
+                            peer.owner_personOrGroup = res[res.length - 1];
                         }
                     }
-                    if (!peer.name) {
-                        peer.name = id;
-                    }
-                    peers[peers.length] = peer;
-                    showPeer(peer);
-                    getPeers(peer);
                 }
+                if (!peer.name) {
+                    peer.name = id;
+                }
+                showPeer(peer);
+                getPeers(peer);
             } else {
                 console.log("getPeer - Empty response");
             }
@@ -929,6 +1016,13 @@ function showPeer(peer)
     var row;
     var tableRef = document.getElementById('peersTable');
 
+    for (var x = 0; x < tableRef.rows.length; x++) {
+        if (tableRef.rows[x].cells[0].innerHTML == peer.id) {
+            tableRef.rows[x].cells[1] = peer.name;
+            return;
+        }
+    }
+
     var btnConfigure = document.createElement('input');
     btnConfigure.type = 'button';
     btnConfigure.className = "btn btn-primary btn-xs";
@@ -957,48 +1051,6 @@ function showPeer(peer)
     }
 
     row.id = peer.id;
-    row.setAttribute("onclick", "showPeerAttributes(this.id); showPeerConnections(this.id); $(this).toggleClass(\"active\"); $(this).siblings().removeClass(\"active\");");
-}
-
-// Update peerTable with attributes from runtime with id "peer_id"
-function showPeerAttributes(peer_id)
-{
-    var peer = findRuntime(peer_id);
-    if (peer) {
-        var tableRef = document.getElementById('peerTable');
-        clearTable(tableRef);
-        if (peer.attributes.indexed_public) {
-            for (attribute in peer.attributes.indexed_public) {
-                AddTableItem(tableRef, document.createTextNode("Indexed public"), document.createTextNode(peer.attributes.indexed_public[attribute]));
-            }
-        }
-
-        if (peer.attributes.public) {
-            for (attribute in peer.attributes.public) {
-                AddTableItem(tableRef, document.createTextNode("Public"), document.createTextNode(peer.attributes.public[attribute]));
-            }
-        }
-    }
-}
-
-// Update connectionsTable with attributes from runtime with id "peer_id"
-function showPeerConnections(peer_id)
-{
-    var runtime = findRuntime(peer_id);
-    if (runtime) {
-        var tableRef = document.getElementById('connectionsTable');
-        clearTable(tableRef);
-        if (runtime.peers) {
-            for (connection in runtime.peers) {
-                var peer = findRuntime(runtime.peers[connection]);
-                if (peer) {
-                    AddTableItem(tableRef, document.createTextNode(peer.name));
-                } else {
-                    AddTableItem(tableRef, document.createTextNode(runtime.peers[connection]));
-                }
-            }
-        }
-    }
 }
 
 // Add "application" to applicationsTable
@@ -1816,7 +1868,12 @@ jQuery(document).ready(function() {
         if (e.target.text == "Applications") {
             getApplications();
         } else if (e.target.text == "Runtimes") {
+            updatePeers();
             stopGraphEvents();
+        } else if (e.target.text == "Connections") {
+            updatePeers();
+            stopGraphEvents();
+            drawConnections();
         }
     })
 });

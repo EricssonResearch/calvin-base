@@ -10,6 +10,7 @@
     <ul class="nav nav-tabs" id="tabMenu">
         <li class="active"><a data-target="#tabPeers" data-toggle="tab"><h2>Runtimes</h2></a></li>
         <li><a data-target="#tabApplications" data-toggle="tab"><h2>Applications</h2></a></li>
+        <li><a data-target="#tabConnections" data-toggle="tab"><h2>Connections</h2></a></li>
     </ul>
 
     <div class="tab-content">
@@ -26,12 +27,6 @@
                 <th align="left">Configure</th>
                 <th align="left">Destroy</th>
                 <th align="left">Deploy application</th>
-            </table>
-            <h4>Attributes</h4>
-            <table class="table table-bordered table-striped" id="peerTable">
-            </table>
-            <h4>Connections</h4>
-            <table class="table table-bordered table-striped" id="connectionsTable">
             </table>
         </div>
 
@@ -53,6 +48,10 @@
                 <table class="table table-bordered table-striped" id="actorPortFifoTable"></table>
             </div>
             <div id="applicationGraph"></div>
+        </div>
+
+        <div id="tabConnections" class="tab-pane">
+            <div id="connectionsGraph"></div>
         </div>
     </div>
 </div>
