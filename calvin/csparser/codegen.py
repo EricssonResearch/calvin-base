@@ -322,11 +322,7 @@ class Flatten(object):
             targets = query(node, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
             if targets:
                 for target in targets:
-                    link = target.parent
-                    new = link.clone()
-                    new.outport = replacement.clone()
-                    node.add_child(new)
-                    target.parent.delete()
+                    target.parent.outport = replacement.clone()
                 iip.parent.delete()
 
         # Promote ports and assignments (handled by visitors)
