@@ -272,16 +272,6 @@ class Flatten(object):
 
     @visitor.when(ast.Block)
     def visit(self, node):
-        # Propagate parameters
-        for key, value_node in node.args.iteritems():
-            if type(value_node) is ast.Id:
-                # Get value from parent (block)
-                block = node.parent
-                parent_key = value_node.ident
-                if parent_key in block.args:
-                    value = block.args[parent_key]
-                    node.args[key] = value
-
         # Recurse into blocks first
         if node.namespace: # FIXME: Fix this by making root node ast.Block instead of ast.Node
             self.stack.append(node.namespace)
