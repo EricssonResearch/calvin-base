@@ -1,0 +1,7 @@
+
+input : std.Constant(data={ "variable": "rfidObject.writeValue", "value": 10})
+server : misc.OPCServer()
+out: io.Print()
+
+input.token > server.operation
+server.result > out.token

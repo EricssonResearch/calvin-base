@@ -1,0 +1,57 @@
+
+component ComingOrGoing() container, key, empty_value -> value {
+  get_status : json.GetValue()
+  get_key : json.GetValue()
+  switch : std.Switch()
+  terminate : std.Terminator()
+  
+  dbg: io.Print()
+  
+  "status" > get_status.key
+  .container > get_status.container
+  
+  .key > get_key.key
+  .container > get_key.container
+  
+  get_key.value > dbg.token
+  get_key.value > switch.a
+  .empty_value > switch.b
+  get_status.value > switch.switch
+  switch.b > .value
+  switch.a > terminate.void
+}
+
+nothing : std.Void()
+reader : sensor.RFIDReader()
+server: misc.OPCServer()
+get_uid : ComingOrGoing()
+get_value : ComingOrGoing()
+switch : std.Alternate()
+set_current_uid : json.SetValue()
+set_current_value: json.SetValue()
+out: io.Print()
+dbg: io.Print()
+
+nothing.void > reader.data
+
+reader.data > get_uid.container
+"cardno" > get_uid.key
+"0" > get_uid.empty_value
+{"variable": "rfidObject.currentUID"} > set_current_uid.container
+get_uid.value > set_current_uid.value
+"value" > set_current_uid.key
+
+reader.data > get_value.container
+reader.data > dbg.token
+"data" > get_value.key
+0 > get_value.empty_value
+{"variable": "rfidObject.currentValue"} > set_current_value.container
+get_value.value > set_current_value.value
+"value" > set_current_value.key
+
+set_current_uid.container > switch.token_1
+set_current_value.container > switch.token_2
+switch.token > server.operation
+server.result > out.token
+
+
