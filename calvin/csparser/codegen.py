@@ -8,12 +8,18 @@ def _create_signature(actor_type, metadata):
     # Create the actor signature to be able to look it up in the GlobalStore if neccessary
     signature_desc = {'is_primitive': True,
                       'actor_type': actor_type,
-                      'inports': [p for p,_ in metadata['inputs']],
-                      'outports': [p for p,_ in metadata['outputs']]}
+                      'inports': metadata['inputs'],
+                      'outports': metadata['outputs']}
     return GlobalStore.actor_signature(signature_desc)
 
 def _is_local_component(actor_type):
     return '.' not in actor_type
+
+def _root(node):
+    root = node
+    while root.parent:
+        root = root.parent
+    return root
 
 def _construct_metadata(node):
     # FIXME: Actually construct metadata
@@ -26,6 +32,33 @@ def _construct_metadata(node):
             'optional':{}
         }
     }
+
+def _lookup(node):
+    if _is_local_component(node.actor_type):
+        comps = query(_root(node), kind=ast.Component, attributes={'name':node.actor_type})
+        if comps:
+            comp = comps[0]
+            metadata = {
+                'is_known': True,
+                'type': 'component',
+                'inputs': comp.inports,
+                'outputs': comp.outports,
+                'args':{
+                    'mandatory':comp.arg_names,
+                    'optional':{}
+                },
+                'definition': comp.children[0]
+            }
+    else:
+        # FIXME: Harmonize metadata
+        metadata = DocumentationStore().actor_docs(node.actor_type)
+        if metadata:
+            metadata['is_known'] = True
+            metadata['inputs'] = [p for p, _ in metadata['inputs']]
+            metadata['outputs'] = [p for p, _ in metadata['outputs']]
+        else:
+            metadata = {'is_known': False}
+    return metadata
 
 
 class IssueTracker(object):
@@ -154,13 +187,10 @@ class Expander(object):
 
     def process(self, root, verify=True):
         self.verify = verify
-        local_components = query(root, kind=ast.Component, maxdepth=1)
-        self.components = {comp.name : comp.children[0] for comp in local_components}
-        # Remove from AST
-        for comp in local_components:
-            comp.delete()
-
         self.visit(root)
+        # Remove local componentes from AST
+        for comp in query(root, kind=ast.Component, maxdepth=1):
+            comp.delete()
 
     @visitor.on('node')
     def visit(self, node):
@@ -176,40 +206,26 @@ class Expander(object):
     @visitor.when(ast.Assignment)
     def visit(self, node):
         # FIXME: Change to use new metadata storage
-        if not _is_local_component(node.actor_type):
-            metadata = DocumentationStore().actor_docs(node.actor_type)
-            if metadata and metadata['type'] is 'actor':
-                metadata['is_known']=True
-                node.metadata = metadata
-                return
-
-            if not metadata:
-                # Unknown actor => construct metadata from graph + args unless verify is True
-                if self.verify:
-                    reason = "Unknown actor type: '{}'".format(node.actor_type)
-                    self.issue_tracker.add_error(reason, node)
-                else:
-                    metadata = _construct_metadata(node)
-                    node.metadata = metadata
-                    reason = "Not validating actor type: '{}'".format(node.actor_type)
-                    self.issue_tracker.add_warning(reason, node)
-                return
-
-            # Component from store
-            compdef = metadata['definition']
-            v = RestoreParents()
-            v.visit(compdef)
-        else:
-            if node.actor_type not in self.components:
-                reason = "Unknown local component: '{}'".format(node.actor_type)
+        if not node.metadata:
+            node.metadata = _lookup(node)
+        if node.metadata['is_known'] and node.metadata['type'] is 'actor':
+            return
+        if not node.metadata['is_known']:
+            # Unknown actor => construct metadata from graph + args unless verify is True
+            if self.verify:
+                reason = "Unknown actor type: '{}'".format(node.actor_type)
                 self.issue_tracker.add_error(reason, node)
-                return
-            # Component from script
-            compdef = self.components[node.actor_type]
-
+            else:
+                node.metadata = _construct_metadata(node)
+                reason = "Not validating actor type: '{}'".format(node.actor_type)
+                self.issue_tracker.add_warning(reason, node)
+            return
         #
         # We end up here if node is in fact a component
         #
+        compdef = node.metadata['definition']
+        v = RestoreParents()
+        v.visit(compdef)
         # Clone assignment to clone the arguments
         ca = node.clone()
         args = ca.children
@@ -394,7 +410,7 @@ class AppInfo(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        if not node.metadata:
+        if not node.metadata['is_known']:
             # No metadata => we have already generated an error, just skip
             return
 
@@ -476,7 +492,6 @@ class ConsistencyCheck(object):
         self.component = None
 
     def process(self, root):
-        self.root = root
         self.visit(root)
 
     @visitor.on('node')
@@ -518,27 +533,8 @@ class ConsistencyCheck(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-
-        if _is_local_component(node.actor_type):
-            comps = query(self.root, kind=ast.Component, attributes={'name':node.actor_type})
-            if comps:
-                comp = comps[0]
-                node.metadata = {
-                    'is_known': True,
-                    'inputs': comp.inports,
-                    'outputs': comp.outports,
-                    'args':{
-                        'mandatory':comp.arg_names,
-                        'optional':{}
-                    }
-                }
-        else:
-            node.metadata = DocumentationStore().actor_docs(node.actor_type)
-            if node.metadata:
-            # FIXME: Harmonize metadata
-                node.metadata['inputs'] = [p for p, _ in node.metadata['inputs']]
-                node.metadata['outputs'] = [p for p, _ in node.metadata['outputs']]
-        if not node.metadata:
+        node.metadata = _lookup(node)
+        if not node.metadata['is_known']:
             # warning unknown actor, can't check
             print "FIXME: Unknown actor {}".format(node.ident)
             return
@@ -566,7 +562,7 @@ class ConsistencyCheck(object):
             reason = "Undefined actor: '{}'".format(node.actor)
             issue_tracker.add_error(reason, node)
             return
-        if not matches[0].metadata:
+        if not matches[0].metadata['is_known']:
             # Already covered by assignment node
             return
 
