@@ -134,12 +134,6 @@ class AttributeResolverHelper(object):
     def owner_resolver(cls, attr):
         if not isinstance(attr, dict):
             raise Exception('Owner attribute must be a dictionary with %s keys.' % owner_keys)
-        if "country" in attr:
-            attr["country"] = attr["country"].upper()
-            if attr["country"] not in countries:
-                raise Exception("country must be ISO 3166-1 alpha2")
-        if "stateOrProvince" in attr and "country" not in attr:
-            raise Exception("country required for stateOrProvince, see ISO 3166-2 for proper code")
         resolved = [cls._to_unicode(attr[k]) if k in attr.keys() else None for k in owner_keys]
         return resolved
 
@@ -154,6 +148,12 @@ class AttributeResolverHelper(object):
     def address_resolver(cls, attr):
         if not isinstance(attr, dict):
             raise Exception('Address attribute must be a dictionary with %s keys.' % address_keys)
+        if "country" in attr:
+            attr["country"] = attr["country"].upper()
+            if attr["country"] not in countries:
+                raise Exception("country must be ISO 3166-1 alpha2")
+        if "stateOrProvince" in attr and "country" not in attr:
+            raise Exception("country required for stateOrProvince, see ISO 3166-2 for proper code")
         resolved = [cls._to_unicode(attr[k]) if k in attr.keys() else None for k in address_keys]
         return resolved
 
@@ -249,6 +249,12 @@ class AttributeResolver(object):
             self.attr["public"] = {}
         if "private" not in self.attr:
             self.attr["private"] = {}
+
+    def set_indexed_public(self, attributes):
+        attr = {}
+        for attr_type, attribute in attributes.items():
+            attr[attr_type] = attr_resolver[attr_type](attribute)
+        self.attr["indexed_public"] = attr
 
     def resolve_indexed_public(self, attr):
         if attr:

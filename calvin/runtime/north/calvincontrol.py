@@ -137,12 +137,17 @@ re_get_node = re.compile(r"GET /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTT
 
 control_api_doc += \
     """
-    POST /node/{node-id}
-    Update information on node node-id
-    Body: {"node_name: <organization/organizational/purpose/group/name> }
-    Response status code: OK or INTERNAL_ERROR
+    POST /node/{node-id}/attributes/indexed_public
+    Set indexed_public attributes on node with node-id
+    Body:
+    {
+        "node_name": {"organization": <organization>, "organizationalUnit": <organizationalUnit>, "purpose": <purpose>, "group": <group>, "name": <name>},
+        "owner": {"organization": <organization>, "organizationalUnit": <organizationalUnit>, "role": <role>, "personOrGroup": <personOrGroup>},
+        "address": {"country": <country>, "stateOrProvince": <stateOrProvince>, "locality": <locality>, "street": <street>, "streetNumber": <streetNumber>, "building": <building>, "floor": <floor>, "room": <room>}
+    }
+    Response status code: OK, UNAUTHORIZED or INTERNAL_ERROR
 """
-re_post_node = re.compile(r"POST /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+re_post_node_attribute_indexed_public = re.compile(r"POST /node/(NODE_" + uuid_re + "|" + uuid_re + ")/attributes/indexed_public\sHTTP/1")
 
 control_api_doc += \
     """
@@ -727,7 +732,7 @@ class CalvinControl(object):
             (re_get_node_id, self.handle_get_node_id),
             (re_get_nodes, self.handle_get_nodes),
             (re_get_node, self.handle_get_node),
-            (re_post_node, self.handle_post_node),
+            (re_post_node_attribute_indexed_public, self.handle_post_node_attribute_indexed_public),
             (re_post_peer_setup, self.handle_peer_setup),
             (re_get_applications, self.handle_get_applications),
             (re_get_application, self.handle_get_application),
@@ -979,15 +984,13 @@ class CalvinControl(object):
         self.node.storage.get_node(match.group(1), CalvinCB(
             func=self.storage_cb, handle=handle, connection=connection))
 
-    def handle_post_node(self, handle, connection, match, data, hdr):
+    def handle_post_node_attribute_indexed_public(self, handle, connection, match, data, hdr):
         """ Update node information
         """
         try:
             if match.group(1) == self.node.id:
                 if self.node.domain is None:
-                    self.node.attributes.attr['indexed_public']['node_name'] = data['node_name']
-                    self.node.attributes.attr['indexed_public']['owner'] = data['owner']
-                    self.node.attributes.attr['indexed_public']['address'] = data['address']
+                    self.node.attributes.set_indexed_public(data)
                     self.node_name = self.node.attributes.get_node_name_as_str()
                     self.node.storage.remove_node_index(self.node)
                     self.node.storage.add_node(self.node, CalvinCB(
