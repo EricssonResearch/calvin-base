@@ -152,7 +152,8 @@ class CalvinConfig(object):
             raise Exception("Can't append, {}:{} is not a list".format(section, option))
         if type(value) is not list:
             raise Exception("Can't append, value is not a list")
-        _section[_option][:0] = value
+        
+        _section[_option] = value + [ v for v in _section[_option] if v not in value ]
 
     def set_config(self, config):
         """Set complete config"""
