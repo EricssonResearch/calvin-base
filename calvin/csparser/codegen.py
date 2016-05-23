@@ -33,22 +33,25 @@ def _construct_metadata(node):
         }
     }
 
-def _lookup(node):
+def _lookup(node, issue_tracker):
     if _is_local_component(node.actor_type):
         comps = query(_root(node), kind=ast.Component, attributes={'name':node.actor_type})
-        if comps:
-            comp = comps[0]
-            metadata = {
-                'is_known': True,
-                'type': 'component',
-                'inputs': comp.inports,
-                'outputs': comp.outports,
-                'args':{
-                    'mandatory':comp.arg_names,
-                    'optional':{}
-                },
-                'definition': comp.children[0]
-            }
+        if not comps:
+            reason = "Missing local component definition: '{}'".format(node.actor_type)
+            issue_tracker.add_error(reason, node)
+            return {'is_known': False}
+        comp = comps[0]
+        metadata = {
+            'is_known': True,
+            'type': 'component',
+            'inputs': comp.inports,
+            'outputs': comp.outports,
+            'args':{
+                'mandatory':comp.arg_names,
+                'optional':{}
+            },
+            'definition': comp.children[0]
+        }
     else:
         # FIXME: Harmonize metadata
         metadata = DocumentationStore().actor_docs(node.actor_type)
@@ -58,6 +61,9 @@ def _lookup(node):
             metadata['outputs'] = [p for p, _ in metadata['outputs']]
         else:
             metadata = {'is_known': False}
+            reason = "Not validating actor type: '{}'".format(node.actor_type)
+            issue_tracker.add_warning(reason, node)
+
     return metadata
 
 
@@ -207,7 +213,7 @@ class Expander(object):
     def visit(self, node):
         # FIXME: Change to use new metadata storage
         if not node.metadata:
-            node.metadata = _lookup(node)
+            node.metadata = _lookup(node, self.issue_tracker)
         if node.metadata['is_known'] and node.metadata['type'] is 'actor':
             return
         if not node.metadata['is_known']:
@@ -216,9 +222,8 @@ class Expander(object):
                 reason = "Unknown actor type: '{}'".format(node.actor_type)
                 self.issue_tracker.add_error(reason, node)
             else:
+                # Warning issued previously
                 node.metadata = _construct_metadata(node)
-                reason = "Not validating actor type: '{}'".format(node.actor_type)
-                self.issue_tracker.add_warning(reason, node)
             return
         #
         # We end up here if node is in fact a component
@@ -533,10 +538,9 @@ class ConsistencyCheck(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        node.metadata = _lookup(node)
+        node.metadata = _lookup(node, self.issue_tracker)
         if not node.metadata['is_known']:
-            # warning unknown actor, can't check
-            print "FIXME: Unknown actor {}".format(node.ident)
+            # error issued in _lookup
             return
         for port in node.metadata['inputs']:
             matches = query(self.block, kind=ast.InPort, attributes={'actor':node.ident, 'port':port})
