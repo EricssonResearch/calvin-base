@@ -103,7 +103,7 @@ class ImplicitPortRewrite(object):
         self.counter += 1
         const_name = '_literal_const_'+str(self.counter)
         const_actor = ast.Assignment(ident=const_name, actor_type='std.Constant', args=args)
-        const_actor_port = ast.Port(actor=const_name, port='token')
+        const_actor_port = ast.OutPort(actor=const_name, port='token')
         link = node.parent
         link.replace_child(node, const_actor_port)
         block = link.parent
