@@ -12,6 +12,21 @@ def _create_signature(actor_type, metadata):
                       'outports': [p for p,_ in metadata['outputs']]}
     return GlobalStore.actor_signature(signature_desc)
 
+def _is_local_component(actor_type):
+    return '.' not in actor_type
+
+def _construct_metadata(node):
+    # FIXME: Actually construct metadata
+    return {
+        'is_known': False,
+        'inputs': [],
+        'outputs': [],
+        'args':{
+            'mandatory':[],
+            'optional':{}
+        }
+    }
+
 
 class IssueTracker(object):
     def __init__(self):
@@ -160,24 +175,8 @@ class Expander(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-
-        def is_local_component(actor_type):
-            return '.' not in actor_type
-
-        def construct_metadata(node):
-            # FIXME: Actually construct metadata
-            return {
-                'is_known': False,
-                'inputs': [],
-                'outputs': [],
-                'args':{
-                    'mandatory':[],
-                    'optional':{}
-                }
-            }
-
         # FIXME: Change to use new metadata storage
-        if not is_local_component(node.actor_type):
+        if not _is_local_component(node.actor_type):
             metadata = DocumentationStore().actor_docs(node.actor_type)
             if metadata and metadata['type'] is 'actor':
                 metadata['is_known']=True
@@ -190,7 +189,7 @@ class Expander(object):
                     reason = "Unknown actor type: '{}'".format(node.actor_type)
                     self.issue_tracker.add_error(reason, node)
                 else:
-                    metadata = construct_metadata(node)
+                    metadata = _construct_metadata(node)
                     node.metadata = metadata
                     reason = "Not validating actor type: '{}'".format(node.actor_type)
                     self.issue_tracker.add_warning(reason, node)
@@ -281,10 +280,16 @@ class Flatten(object):
         consumed = set()
         for iop in iops:
             targets = query(node, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
-            if not targets:
+            if len(targets) is not 1:
+                # Covered by consistency check
                 continue
-            if len(targets) > 1:
-                raise Exception("There can be only one")
+            # if not targets:
+            #     continue
+            # if len(targets) > 1:
+            #     reason = "Actor '{name}' has multiple connections to inport '{port}'".format(name=iop.actor, port=iop.port)
+            #     for target in targets:
+            #         self.issue_tracker.add_error(reason, target)
+
             target = targets[0]
             link = target.parent.clone()
             link.inport = iop.parent.inport.clone()
@@ -468,6 +473,11 @@ class ConsistencyCheck(object):
         super(ConsistencyCheck, self).__init__()
         self.issue_tracker = issue_tracker
         self.block = None
+        self.component = None
+
+    def process(self, root):
+        self.root = root
+        self.visit(root)
 
     @visitor.on('node')
     def visit(self, node):
@@ -480,7 +490,23 @@ class ConsistencyCheck(object):
 
     @visitor.when(ast.Component)
     def visit(self, node):
-        pass
+        self.component = node
+        for port in node.outports:
+            matches = query(node, kind=ast.InternalInPort, attributes={'port':port})
+            if not matches:
+                reason = "Component {} is missing connection to outport '{}'".format(node.name, port)
+                self.issue_tracker.add_error(reason, node)
+            elif len(matches) > 1:
+                reason = "Component {} has multiple connections to outport '{}'".format(node.name, port)
+                for match in matches:
+                    self.issue_tracker.add_error(reason, match)
+        for port in node.inports:
+            matches = query(node, kind=ast.InternalOutPort, attributes={'port':port})
+            if not matches:
+                reason = "Component {} is missing connection to inport '{}'".format(node.name, port)
+                self.issue_tracker.add_error(reason, node)
+        map(self.visit, node.children)
+        self.component = None
 
     @visitor.when(ast.Block)
     def visit(self, node):
@@ -492,13 +518,31 @@ class ConsistencyCheck(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        node.metadata = DocumentationStore().actor_docs(node.actor_type)
+
+        if _is_local_component(node.actor_type):
+            comps = query(self.root, kind=ast.Component, attributes={'name':node.actor_type})
+            if comps:
+                comp = comps[0]
+                node.metadata = {
+                    'is_known': True,
+                    'inputs': comp.inports,
+                    'outputs': comp.outports,
+                    'args':{
+                        'mandatory':comp.arg_names,
+                        'optional':{}
+                    }
+                }
+        else:
+            node.metadata = DocumentationStore().actor_docs(node.actor_type)
+            if node.metadata:
+            # FIXME: Harmonize metadata
+                node.metadata['inputs'] = [p for p, _ in node.metadata['inputs']]
+                node.metadata['outputs'] = [p for p, _ in node.metadata['outputs']]
         if not node.metadata:
             # warning unknown actor, can't check
             print "FIXME: Unknown actor {}".format(node.ident)
             return
-        ports = [p for p, _ in node.metadata['inputs']]
-        for port in ports:
+        for port in node.metadata['inputs']:
             matches = query(self.block, kind=ast.InPort, attributes={'actor':node.ident, 'port':port})
             matches = matches + query(self.block, kind=ast.InternalInPort, attributes={'actor':node.ident, 'port':port})
             if not matches:
@@ -509,8 +553,7 @@ class ConsistencyCheck(object):
                 for match in matches:
                     self.issue_tracker.add_error(reason, match)
 
-        ports = [p for p, _ in node.metadata['outputs']]
-        for port in ports:
+        for port in node.metadata['outputs']:
             matches = query(self.block, kind=ast.OutPort, attributes={'actor':node.ident, 'port':port})
             matches = matches + query(self.block, kind=ast.InternalOutPort, attributes={'actor':node.ident, 'port':port})
             if not matches:
@@ -527,7 +570,7 @@ class ConsistencyCheck(object):
             # Already covered by assignment node
             return
 
-        ports = [p for p, _ in matches[0].metadata[direction + 'puts']]
+        ports = matches[0].metadata[direction + 'puts']
         if node.port not in ports:
             metadata = matches[0].metadata
             reason = "Actor {} ({}.{}) has no {}port '{}'".format(node.actor, metadata['ns'], metadata['name'], direction, node.port)
@@ -542,6 +585,17 @@ class ConsistencyCheck(object):
     def visit(self, node):
         self._check_port(node, 'out', self.issue_tracker)
 
+    @visitor.when(ast.InternalInPort)
+    def visit(self, node):
+        if node.port not in self.component.outports:
+            reason = "Component {} has no outport '{}'".format(self.component.name, node.port)
+            self.issue_tracker.add_error(reason, node)
+
+    @visitor.when(ast.InternalOutPort)
+    def visit(self, node):
+        if node.port not in self.component.inports:
+            reason = "Component {} has no inport '{}'".format(self.component.name, node.port)
+            self.issue_tracker.add_error(reason, node)
 
 
 
@@ -596,7 +650,7 @@ class CodeGen(object):
         ##
         # Check graph consistency
         cc = ConsistencyCheck(issue_tracker)
-        cc.visit(self.root)
+        cc.process(self.root)
         self.dump_tree('Consistency Check')
 
 
