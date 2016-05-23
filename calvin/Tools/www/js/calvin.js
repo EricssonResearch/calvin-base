@@ -572,44 +572,50 @@ function getPeer(id)
                     for (attribute in peer.attributes.indexed_public) {
                         if (peer.attributes.indexed_public[attribute].indexOf("node_name") != -1) {
                             var res = peer.attributes.indexed_public[attribute].split("/");
-                            if (res[res.length - 5])
-                                peer.node_name.organization = res[res.length - 5];
-                            if (res[res.length - 4])
-                                peer.node_name.organizationalUnit = res[res.length - 4];
-                            if (res[res.length - 3])
-                                peer.node_name.purpose = res[res.length - 3];
-                            if (res[res.length - 2])
-                                peer.node_name.group = res[res.length - 2];
-                            if (res[res.length - 1])
-                                peer.node_name.name = res[res.length - 1];
+                            if (res.length > 4) {
+                                if (res[res.length - 5])
+                                    peer.node_name.organization = res[res.length - 5];
+                                if (res[res.length - 4])
+                                    peer.node_name.organizationalUnit = res[res.length - 4];
+                                if (res[res.length - 3])
+                                    peer.node_name.purpose = res[res.length - 3];
+                                if (res[res.length - 2])
+                                    peer.node_name.group = res[res.length - 2];
+                                if (res[res.length - 1])
+                                    peer.node_name.name = res[res.length - 1];
+                            }
                         } else if (peer.attributes.indexed_public[attribute].indexOf("address") != -1) {
                             var res = peer.attributes.indexed_public[attribute].split("/");
-                            if (res[res.length - 8])
-                                peer.address.country = res[res.length - 8];
-                            if (res[res.length - 7])
-                                peer.address.stateOrProvince = res[res.length - 7];
-                            if (res[res.length - 6])
-                                peer.address.locality = res[res.length - 6];
-                            if (res[res.length - 5])
-                                peer.address.street = res[res.length - 5];
-                            if (res[res.length - 4])
-                                peer.address.streetNumber = res[res.length - 4];
-                            if (res[res.length - 3])
-                                peer.address.building = res[res.length - 3];
-                            if (res[res.length - 2])
-                                peer.address.floor = res[res.length - 2];
-                            if (res[res.length - 1])
-                                peer.address.room = res[res.length - 1];
+                            if (res.length > 4) {
+                                if (res[res.length - 8])
+                                    peer.address.country = res[res.length - 8];
+                                if (res[res.length - 7])
+                                    peer.address.stateOrProvince = res[res.length - 7];
+                                if (res[res.length - 6])
+                                    peer.address.locality = res[res.length - 6];
+                                if (res[res.length - 5])
+                                    peer.address.street = res[res.length - 5];
+                                if (res[res.length - 4])
+                                    peer.address.streetNumber = res[res.length - 4];
+                                if (res[res.length - 3])
+                                    peer.address.building = res[res.length - 3];
+                                if (res[res.length - 2])
+                                    peer.address.floor = res[res.length - 2];
+                                if (res[res.length - 1])
+                                    peer.address.room = res[res.length - 1];
+                            }
                         } if (peer.attributes.indexed_public[attribute].indexOf("owner") != -1) {
                             var res = peer.attributes.indexed_public[attribute].split("/");
-                            if (res[res.length - 4])
-                                peer.owner.organization = res[res.length - 4];
-                            if (res[res.length - 3])
-                                peer.owner.organizationalUnit = res[res.length - 3];
-                            if (res[res.length - 2])
-                                peer.owner.role = res[res.length - 2];
-                            if (res[res.length - 1])
-                                peer.owner.personOrGroup = res[res.length - 1];
+                            if (res.length > 4) {
+                                if (res[res.length - 4])
+                                    peer.owner.organization = res[res.length - 4];
+                                if (res[res.length - 3])
+                                    peer.owner.organizationalUnit = res[res.length - 3];
+                                if (res[res.length - 2])
+                                    peer.owner.role = res[res.length - 2];
+                                if (res[res.length - 1])
+                                    peer.owner.personOrGroup = res[res.length - 1];
+                            }
                         }
                     }
                 }
@@ -940,40 +946,23 @@ function showRuntimeConfig(peer_id)
 {
     var peer = findRuntime(peer_id);
     if (peer) {
-        if (peer.node_name.organization)
-            set_input(document.getElementById("conf_name_organization"), peer.node_name.organization);
-        if (peer.node_name.organizationalUnit)
-            set_input(document.getElementById("conf_name_organizationalUnit"), peer.node_name.organizationalUnit);
-        if (peer.node_name.purpose)
-            set_input(document.getElementById("conf_name_purpose"), peer.node_name.purpose);
-        if (peer.node_name.group)
-            set_input(document.getElementById("conf_name_group"), peer.node_name.group);
-        if (peer.node_name.name)
-            set_input(document.getElementById("conf_name_name"), peer.node_name.name);
-        if (peer.address.country)
-            set_input(document.getElementById("conf_address_country"), peer.address.country);
-        if (peer.address.stateOrProvince)
-            set_input(document.getElementById("conf_address_stateOrProvince"), peer.address.stateOrProvince);
-        if (peer.address.locality)
-            set_input(document.getElementById("conf_address_locality"), peer.address.locality);
-        if (peer.address.street)
-            set_input(document.getElementById("conf_address_street"), peer.address.street);
-        if (peer.address.streetNumber)
-            set_input(document.getElementById("conf_address_streetNumber"), peer.address.streetNumber);
-        if (peer.address.building)
-            set_input(document.getElementById("conf_address_building"), peer.address.building);
-        if (peer.address.floor)
-            set_input(document.getElementById("conf_address_floor"), peer.address.floor);
-        if (peer.address.room)
-            set_input(document.getElementById("conf_address_room"), peer.address.room);
-        if (peer.owner.organization)
-            set_input(document.getElementById("conf_owner_organization"), peer.owner.organization);
-        if (peer.owner.organizationalUnit)
-            set_input(document.getElementById("conf_owner_organizationalUnit"), peer.owner.organizationalUnit);
-        if (peer.owner.role)
-            set_input(document.getElementById("conf_owner_role"), peer.owner.role);
-        if (peer.owner.personOrGroup)
-            set_input(document.getElementById("conf_owner_personOrGroup"), peer.owner.personOrGroup);
+        set_input(document.getElementById("conf_name_organization"), peer.node_name.organization);
+        set_input(document.getElementById("conf_name_organizationalUnit"), peer.node_name.organizationalUnit);
+        set_input(document.getElementById("conf_name_purpose"), peer.node_name.purpose);
+        set_input(document.getElementById("conf_name_group"), peer.node_name.group);
+        set_input(document.getElementById("conf_name_name"), peer.node_name.name);
+        set_input(document.getElementById("conf_address_country"), peer.address.country);
+        set_input(document.getElementById("conf_address_stateOrProvince"), peer.address.stateOrProvince);
+        set_input(document.getElementById("conf_address_locality"), peer.address.locality);
+        set_input(document.getElementById("conf_address_street"), peer.address.street);
+        set_input(document.getElementById("conf_address_streetNumber"), peer.address.streetNumber);
+        set_input(document.getElementById("conf_address_building"), peer.address.building);
+        set_input(document.getElementById("conf_address_floor"), peer.address.floor);
+        set_input(document.getElementById("conf_address_room"), peer.address.room);
+        set_input(document.getElementById("conf_owner_organization"), peer.owner.organization);
+        set_input(document.getElementById("conf_owner_organizationalUnit"), peer.owner.organizationalUnit);
+        set_input(document.getElementById("conf_owner_role"), peer.owner.role);
+        set_input(document.getElementById("conf_owner_personOrGroup"), peer.owner.personOrGroup);
         $("#configDialog").modal.peer = peer;
         $("#configDialog").modal({
             modal: true,
@@ -1019,43 +1008,47 @@ function setRuntimeConfig()
     peer.owner.role = update_attribute_from_input(peer.owner.role, $("#conf_owner_role")); 
     peer.owner.personOrGroup = update_attribute_from_input(peer.owner.personOrGroup, $("#conf_owner_personOrGroup"));
 
+    var url;
     if (peer.control_uri) {
-        var url = peer.control_uri + '/node/' + peer.id + '/attributes/indexed_public';
-        var data = {};
-        if (!$.isEmptyObject(peer.node_name))
-            data['node_name'] = peer.node_name;
-        if (!$.isEmptyObject(peer.address) > 0)
-            data['address'] = peer.address;
-        if (!$.isEmptyObject(peer.owner) > 0)
-            data['owner'] = peer.owner;
-        data = JSON.stringify(data);
-        console.log("set runtime config - url: " + url + " data: " + data);
-        $.ajax({
-            timeout: 5000,
-            beforeSend: function() {
-                startSpin();
-            },
-            complete: function() {
-                stopSpin();
-            },
-            url: url,
-            type: 'POST',
-            data: data,
-            success: function() {
-                showSuccess("Runtime " + peer.id + " updated");
-                var tableRef = document.getElementById('peersTable');
-                for (var x = 0; x < tableRef.rows.length; x++) {
-                    if (tableRef.rows[x].cells[0].innerHTML == peer.id) {
-                        tableRef.rows[x].cells[1].innerHTML = peer.node_name.name;
-                        return;
-                    }
-                }
-            },
-            error: function() {
-                showError("Failed to update runtime " + peer.id);
-            }
-        });
+        url = peer.control_uri + '/node/' + peer.id + '/attributes/indexed_public';
+    } else {
+        url = connect_uri + '/node/' + peer.id + '/attributes/indexed_public';
     }
+
+    var data = {};
+    if (!$.isEmptyObject(peer.node_name))
+        data['node_name'] = peer.node_name;
+    if (!$.isEmptyObject(peer.address) > 0)
+        data['address'] = peer.address;
+    if (!$.isEmptyObject(peer.owner) > 0)
+        data['owner'] = peer.owner;
+    data = JSON.stringify(data);
+    console.log("set runtime config - url: " + url + " data: " + data);
+    $.ajax({
+        timeout: 5000,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        url: url,
+        type: 'POST',
+        data: data,
+        success: function() {
+            showSuccess("Runtime " + peer.id + " updated");
+            var tableRef = document.getElementById('peersTable');
+            for (var x = 0; x < tableRef.rows.length; x++) {
+                if (tableRef.rows[x].cells[0].innerHTML == peer.id) {
+                    tableRef.rows[x].cells[1].innerHTML = peer.node_name.name;
+                    return;
+                }
+            }
+        },
+        error: function() {
+            showError("Failed to update runtime " + peer.id);
+        }
+    });
 }
 
 // Add "peer" to peersTable

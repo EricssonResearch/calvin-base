@@ -23,6 +23,7 @@ from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north import metering
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.utilities.attribute_resolver import format_index_string
 from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
 from calvin.requests import calvinresponse
@@ -984,6 +985,20 @@ class CalvinControl(object):
         self.node.storage.get_node(match.group(1), CalvinCB(
             func=self.storage_cb, handle=handle, connection=connection))
 
+    def handle_post_node_attribute_indexed_public_cb(self, key, value, handle, connection, attributes):
+        try:
+            indexed_public = []
+            for attr in attributes.items():
+                indexed_string = format_index_string(attr)
+                indexed_public.append(indexed_string)
+                self.node.storage.add_index(indexed_string, key)
+            value['attributes']['indexed_public'] = indexed_public
+            self.node.storage.set(prefix="node-", key=key, value=value,
+                cb=CalvinCB(func=self.storage_cb, handle=handle, connection=connection))
+        except Exception as e:
+            _log.error("Failed to update node %s", e)
+            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+            
     def handle_post_node_attribute_indexed_public(self, handle, connection, match, data, hdr):
         """ Update node information
         """
@@ -998,8 +1013,8 @@ class CalvinControl(object):
                 else:
                     self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
             else:
-                # TODO: Handle request from other nodes
-                self.send_response(handle, connection, None, status=calvinresponse.SERVICE_UNAVAILABLE)
+                self.node.storage.get_node(match.group(1), CalvinCB(
+                    func=self.handle_post_node_attribute_indexed_public_cb, handle=handle, connection=connection, attributes=data))
         except Exception as e:
             _log.error("Failed to update node %s", e)
             self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
