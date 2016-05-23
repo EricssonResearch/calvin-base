@@ -100,7 +100,7 @@ class CalvinParser(object):
         if len(p) == 1:
             p[0] = []
         else:
-            p[0] = [ast.Block(program=p[1], debug_info=self.debug_info(p, 1))]
+            p[0] = [ast.Block(program=p[1], namespace='__scriptname__', debug_info=self.debug_info(p, 1))]
 
 
     def p_program(self, p):

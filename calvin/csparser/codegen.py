@@ -233,8 +233,7 @@ class Flatten(object):
         self.stack = []
         self.issue_tracker = issue_tracker
 
-    def process(self, root, name):
-        self.stack.append(name) # FIXME: Fix this by making root node ast.Block instead of ast.Node
+    def process(self, root):
         self.visit(root)
 
     @visitor.on('node')
@@ -273,8 +272,7 @@ class Flatten(object):
     @visitor.when(ast.Block)
     def visit(self, node):
         # Recurse into blocks first
-        if node.namespace: # FIXME: Fix this by making root node ast.Block instead of ast.Node
-            self.stack.append(node.namespace)
+        self.stack.append(node.namespace)
         blocks = [x for x in node.children if type(x) is ast.Block]
         map(self.visit, blocks)
 
@@ -316,8 +314,7 @@ class Flatten(object):
 
         # Delete this node
         node.delete()
-        if node.namespace: # FIXME: Fix this by making root node ast.Block instead of ast.Node
-            self.stack.pop()
+        self.stack.pop()
 
 
 
@@ -481,6 +478,9 @@ class CodeGen(object):
             'connections': {},
             'valid': True
         }
+        program = query(ast_root, kind=ast.Block, attributes={'namespace':'__scriptname__'})
+        if program:
+            program[0].namespace = script_name
 
 
     def dump_tree(self, heading):
@@ -515,7 +515,7 @@ class CodeGen(object):
         ##
         # Flatten blocks
         flattener = Flatten(issue_tracker)
-        flattener.process(self.root, self.app_info['name'])
+        flattener.process(self.root)
         self.dump_tree('FLATTENED')
 
         ##
