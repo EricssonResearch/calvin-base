@@ -459,6 +459,93 @@ class ReplaceConstants(object):
             node.replace_child(arg, value.clone())
 
 
+class ConsistencyCheck(object):
+    """docstring for RestoreParents
+
+       Run before expansion.
+    """
+    def __init__(self, issue_tracker):
+        super(ConsistencyCheck, self).__init__()
+        self.issue_tracker = issue_tracker
+        self.block = None
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children)
+
+    @visitor.when(ast.Component)
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Block)
+    def visit(self, node):
+        self.block = node
+        assignments = [n for n in node.children if type(n) is ast.Assignment]
+        map(self.visit, assignments)
+        links = [n for n in node.children if type(n) is ast.Link]
+        map(self.visit, links)
+
+    @visitor.when(ast.Assignment)
+    def visit(self, node):
+        node.metadata = DocumentationStore().actor_docs(node.actor_type)
+        if not node.metadata:
+            # warning unknown actor, can't check
+            print "FIXME: Unknown actor {}".format(node.ident)
+            return
+        ports = [p for p, _ in node.metadata['inputs']]
+        for port in ports:
+            matches = query(self.block, kind=ast.InPort, attributes={'actor':node.ident, 'port':port})
+            matches = matches + query(self.block, kind=ast.InternalInPort, attributes={'actor':node.ident, 'port':port})
+            if not matches:
+                reason = "Actor {} ({}.{}) is missing connection to inport '{}'".format(node.ident, node.metadata['ns'], node.metadata['name'], port)
+                self.issue_tracker.add_error(reason, node)
+            elif len(matches) > 1:
+                reason = "Actor {} ({}.{}) has multiple connections to inport '{}'".format(node.ident, node.metadata['ns'], node.metadata['name'], port)
+                for match in matches:
+                    self.issue_tracker.add_error(reason, match)
+
+        ports = [p for p, _ in node.metadata['outputs']]
+        for port in ports:
+            matches = query(self.block, kind=ast.OutPort, attributes={'actor':node.ident, 'port':port})
+            matches = matches + query(self.block, kind=ast.InternalOutPort, attributes={'actor':node.ident, 'port':port})
+            if not matches:
+                reason = "Actor {} ({}.{}) is missing connection to outport '{}'".format(node.ident, node.metadata['ns'], node.metadata['name'], port)
+                self.issue_tracker.add_error(reason, node)
+
+    def _check_port(self, node, direction, issue_tracker):
+        matches = query(self.block, kind=ast.Assignment, attributes={'ident':node.actor})
+        if not matches:
+            reason = "Undefined actor: '{}'".format(node.actor)
+            issue_tracker.add_error(reason, node)
+            return
+        if not matches[0].metadata:
+            # Already covered by assignment node
+            return
+
+        ports = [p for p, _ in matches[0].metadata[direction + 'puts']]
+        if node.port not in ports:
+            metadata = matches[0].metadata
+            reason = "Actor {} ({}.{}) has no {}port '{}'".format(node.actor, metadata['ns'], metadata['name'], direction, node.port)
+            issue_tracker.add_error(reason, node)
+            return
+
+    @visitor.when(ast.InPort)
+    def visit(self, node):
+        self._check_port(node, 'in', self.issue_tracker)
+
+    @visitor.when(ast.OutPort)
+    def visit(self, node):
+        self._check_port(node, 'out', self.issue_tracker)
+
+
+
+
+
 class CodeGen(object):
 
     verbose = False
@@ -507,7 +594,14 @@ class CodeGen(object):
         self.dump_tree('Port Rewrite')
 
         ##
-        # Expand local components
+        # Check graph consistency
+        cc = ConsistencyCheck(issue_tracker)
+        cc.visit(self.root)
+        self.dump_tree('Consistency Check')
+
+
+        ##
+        # Expand components
         expander = Expander(issue_tracker)
         expander.process(self.root, self.verify)
         self.dump_tree('EXPANDED')
