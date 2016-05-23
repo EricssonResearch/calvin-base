@@ -463,16 +463,17 @@ class ReplaceConstants(object):
 
 
 class CodeGen(object):
+
+    verbose = False
+    verbose_nodes = False
+
     """
     Generate code from a source file
     FIXME: Use a writer class to generate output in various formats
     """
-    def __init__(self, ast_root, script_name, verbose=False, verify=True):
+    def __init__(self, ast_root, script_name, verify=True):
         super(CodeGen, self).__init__()
         self.root = ast_root
-        # self.script_name = script_name
-        self.printer = astprint.BracePrinter()
-        self.verbose = verbose
         self.verify = verify
         self.app_info = {
             'name':script_name,
@@ -485,12 +486,13 @@ class CodeGen(object):
     def dump_tree(self, heading):
         if not self.verbose:
             return
+        ast.Node._verbose_desc = self.verbose_nodes
+        printer = astprint.BracePrinter()
         print "========\n{}\n========".format(heading)
-        self.printer.process(self.root)
+        printer.process(self.root)
 
 
-    def run(self, verbose=False):
-        ast.Node._verbose_desc = verbose
+    def run(self):
         issue_tracker = IssueTracker()
 
         ##
@@ -536,7 +538,7 @@ def query(root, kind=None, attributes=None, maxdepth=1024):
     return finder.matches
 
 def generate_app_info(ast, name='anonymous', verify=True):
-    cg = CodeGen(ast, name, verbose=False, verify=verify)
+    cg = CodeGen(ast, name, verify=verify)
     cg.run()
     return cg.app_info, cg.issues
 
