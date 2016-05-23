@@ -1,0 +1,27 @@
+{
+	"private": {
+		"opcua": {
+			"server": {
+				"endpoint": "opc.tcp://0.0.0.0:4841/rfidopcua/server/",
+				"name": "Rfid_opcua_server",
+				"namespace": "http://chalmers.se/rfidtest"
+			},
+			"objects": [{
+				"name": "rfidObject",
+				"ro_variables": {
+					"currentUID" : null,
+					"currentValue" : 0,
+					"readOK": false,
+					"resultSequenceNumber": 0,
+					"writeOk": false					
+				},
+				"rw_variables": {
+					"targetUID": null,
+					"writeValue": 0,
+					"writeSequenceNumber": 0
+				}
+				
+			}]
+	    }
+	}
+}
