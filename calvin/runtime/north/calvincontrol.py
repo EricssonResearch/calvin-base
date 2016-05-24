@@ -23,6 +23,7 @@ from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north import metering
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.utilities.attribute_resolver import format_index_string
 from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
 from calvin.requests import calvinresponse
@@ -137,12 +138,17 @@ re_get_node = re.compile(r"GET /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTT
 
 control_api_doc += \
     """
-    POST /node/{node-id}
-    Update information on node node-id
-    Body: {"node_name: <organization/organizational/purpose/group/name> }
-    Response status code: OK or INTERNAL_ERROR
+    POST /node/{node-id}/attributes/indexed_public
+    Set indexed_public attributes on node with node-id
+    Body:
+    {
+        "node_name": {"organization": <organization>, "organizationalUnit": <organizationalUnit>, "purpose": <purpose>, "group": <group>, "name": <name>},
+        "owner": {"organization": <organization>, "organizationalUnit": <organizationalUnit>, "role": <role>, "personOrGroup": <personOrGroup>},
+        "address": {"country": <country>, "stateOrProvince": <stateOrProvince>, "locality": <locality>, "street": <street>, "streetNumber": <streetNumber>, "building": <building>, "floor": <floor>, "room": <room>}
+    }
+    Response status code: OK, UNAUTHORIZED or INTERNAL_ERROR
 """
-re_post_node = re.compile(r"POST /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+re_post_node_attribute_indexed_public = re.compile(r"POST /node/(NODE_" + uuid_re + "|" + uuid_re + ")/attributes/indexed_public\sHTTP/1")
 
 control_api_doc += \
     """
@@ -727,7 +733,7 @@ class CalvinControl(object):
             (re_get_node_id, self.handle_get_node_id),
             (re_get_nodes, self.handle_get_nodes),
             (re_get_node, self.handle_get_node),
-            (re_post_node, self.handle_post_node),
+            (re_post_node_attribute_indexed_public, self.handle_post_node_attribute_indexed_public),
             (re_post_peer_setup, self.handle_peer_setup),
             (re_get_applications, self.handle_get_applications),
             (re_get_application, self.handle_get_application),
@@ -979,15 +985,27 @@ class CalvinControl(object):
         self.node.storage.get_node(match.group(1), CalvinCB(
             func=self.storage_cb, handle=handle, connection=connection))
 
-    def handle_post_node(self, handle, connection, match, data, hdr):
+    def handle_post_node_attribute_indexed_public_cb(self, key, value, handle, connection, attributes):
+        try:
+            indexed_public = []
+            for attr in attributes.items():
+                indexed_string = format_index_string(attr)
+                indexed_public.append(indexed_string)
+                self.node.storage.add_index(indexed_string, key)
+            value['attributes']['indexed_public'] = indexed_public
+            self.node.storage.set(prefix="node-", key=key, value=value,
+                cb=CalvinCB(func=self.storage_cb, handle=handle, connection=connection))
+        except Exception as e:
+            _log.error("Failed to update node %s", e)
+            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+            
+    def handle_post_node_attribute_indexed_public(self, handle, connection, match, data, hdr):
         """ Update node information
         """
         try:
             if match.group(1) == self.node.id:
                 if self.node.domain is None:
-                    self.node.attributes.attr['indexed_public']['node_name'] = data['node_name']
-                    self.node.attributes.attr['indexed_public']['owner'] = data['owner']
-                    self.node.attributes.attr['indexed_public']['address'] = data['address']
+                    self.node.attributes.set_indexed_public(data)
                     self.node_name = self.node.attributes.get_node_name_as_str()
                     self.node.storage.remove_node_index(self.node)
                     self.node.storage.add_node(self.node, CalvinCB(
@@ -995,8 +1013,8 @@ class CalvinControl(object):
                 else:
                     self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
             else:
-                # TODO: Handle request from other nodes
-                self.send_response(handle, connection, None, status=calvinresponse.SERVICE_UNAVAILABLE)
+                self.node.storage.get_node(match.group(1), CalvinCB(
+                    func=self.handle_post_node_attribute_indexed_public_cb, handle=handle, connection=connection, attributes=data))
         except Exception as e:
             _log.error("Failed to update node %s", e)
             self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
