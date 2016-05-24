@@ -76,8 +76,8 @@ def _check_arguments(assignment, issue_tracker):
     optional = set(metadata['args']['optional'].keys())
 
     given_args = assignment.children
-    given_idents = {a.children[0].ident: a.children[0] for a in given_args}
-    given_keys = [a.children[0].ident for a in given_args]
+    given_idents = {a.ident.ident: a.ident for a in given_args}
+    given_keys = [a.ident.ident for a in given_args]
     given = set(given_keys)
 
     # Case 0: Duplicated arguments
@@ -206,8 +206,7 @@ class ImplicitPortRewrite(object):
 
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
-        const_value = node.children[0]
-        args = [ ast.NamedArg(ident=ast.Id(ident='data'), arg=const_value),  ast.NamedArg(ident=ast.Id(ident='n'), arg=ast.Value(value=-1))]
+        args = [ ast.NamedArg(ident=ast.Id(ident='data'), arg=node.arg),  ast.NamedArg(ident=ast.Id(ident='n'), arg=ast.Value(value=-1))]
         self.counter += 1
         const_name = '_literal_const_'+str(self.counter)
         const_actor = ast.Assignment(ident=const_name, actor_type='std.Constant', args=args)
@@ -292,7 +291,7 @@ class Expander(object):
         new = compdef.clone()
         new.namespace = node.ident
         # Add arguments from assignment to block
-        new.args = {x.children[0].ident: x.children[1] for x in args}
+        new.args = {x.ident.ident: x.arg for x in args}
         node.parent.replace_child(node, new)
         # Recurse
         self.visit(new)
@@ -324,17 +323,15 @@ class Flatten(object):
         node.ident = self.stack[-1] + ':' + node.ident
         map(self.visit, node.children[:])
 
-
     @visitor.when(ast.NamedArg)
     def visit(self, node):
-        value_node = node.children[1]
-        if type(value_node) is ast.Id:
+        if type(node.arg) is ast.Id:
             # Get value from grandparent (block)
             block = node.parent.parent
-            key = value_node.ident
+            key = node.arg.ident
             if key in block.args:
                 value = block.args[key]
-                node.replace_child(value_node, value)
+                node.replace_child(node.arg, value)
 
     @visitor.when(ast.Port)
     def visit(self, node):
@@ -448,9 +445,9 @@ class ReplaceConstants(object):
 
     def process(self, root):
         constants = query(root, ast.Constant)
-        defined = {c.children[0].ident: c.children[1] for c in constants if type(c.children[1]) is ast.Value}
-        unresolved = [c for c in constants if type(c.children[1]) is ast.Id]
-        seen = [c.children[0].ident for c in constants if type(c.children[1]) is ast.Id]
+        defined = {c.ident.ident: c.arg for c in constants if type(c.arg) is ast.Value}
+        unresolved = [c for c in constants if type(c.arg) is ast.Id]
+        seen = [c.ident.ident for c in constants if type(c.arg) is ast.Id]
         while True:
             did_replace = False
             for c in unresolved[:]:
@@ -458,7 +455,7 @@ class ReplaceConstants(object):
                 if const_key.ident in defined:
                     defined[key.ident] = defined[const_key.ident]
                     unresolved.remove(c)
-                    seen.append(c.children[0].ident)
+                    seen.append(c.ident.ident)
                     did_replace = True
             if not did_replace:
                 break
@@ -483,12 +480,11 @@ class ReplaceConstants(object):
 
     @visitor.when(ast.NamedArg)
     def visit(self, node):
-        arg = node.children[1]
-        if type(arg) is ast.Value:
+        if type(node.arg) is ast.Value:
             return
-        if arg.ident in self.definitions:
-            value = self.definitions[arg.ident]
-            node.replace_child(arg, value.clone())
+        if node.arg.ident in self.definitions:
+            value = self.definitions[node.arg.ident]
+            node.replace_child(node.arg, value.clone())
 
 
 class ConsistencyCheck(object):
@@ -520,7 +516,7 @@ class ConsistencyCheck(object):
 
         for arg_name in node.arg_names:
             matches = query(node, kind=ast.NamedArg)
-            referenced_values = [m.children[1].ident for m in matches if type(m.children[1]) is ast.Id]
+            referenced_values = [m.arg.ident for m in matches if type(m.arg) is ast.Id]
             if not arg_name in referenced_values:
                 reason = "Unused argument: '{}'".format(arg_name)
                 self.issue_tracker.add_error(reason, node)

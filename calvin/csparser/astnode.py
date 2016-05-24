@@ -79,11 +79,41 @@ class Node(object):
         else:
             return "{}".format(self.__class__.__name__)
 
-class Constant(Node):
+class IdValuePair(Node):
+    """Abstract: don't use directly, use NamedArg or Constant"""
+    def __init__(self, **kwargs):
+        super(IdValuePair, self).__init__(**kwargs)
+        self.add_children([kwargs.get('ident'), kwargs.get('arg')])
+
+    @property
+    def ident(self):
+        return self.children[0]
+
+    @ident.setter
+    def ident(self, value):
+        value.parent = self
+        self.ident.parent = None
+        self.children[0] = value
+
+    @property
+    def arg(self):
+        return self.children[1]
+
+    @arg.setter
+    def inport(self, value):
+        value.parent = self
+        self.arg.parent = None
+        self.children[1] = value
+
+class NamedArg(IdValuePair):
+    """docstring for ConstNode"""
+    def __init__(self, **kwargs):
+        super(NamedArg, self).__init__(**kwargs)
+
+class Constant(IdValuePair):
     """docstring for ConstNode"""
     def __init__(self, **kwargs):
         super(Constant, self).__init__(**kwargs)
-        self.add_children([kwargs.get('ident'), kwargs.get('arg')])
 
 class Id(Node):
     """docstring for IdNode"""
@@ -108,11 +138,11 @@ class Assignment(Node):
         self.actor_type = kwargs.get('actor_type')
         self.add_children(kwargs.get('args', {}))
 
-class NamedArg(Node):
-    """docstring for ConstNode"""
-    def __init__(self, **kwargs):
-        super(NamedArg, self).__init__(**kwargs)
-        self.add_children([kwargs.get('ident'), kwargs.get('arg')])
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {} {} {}".format(self.__class__.__name__, hex(id(self)), self.metadata, self.debug_info)
+        else:
+            return "{} {}".format(self.__class__.__name__, self.metadata)
 
 class Link(Node):
     """docstring for LinkNode"""
@@ -173,6 +203,17 @@ class ImplicitPort(Node):
     def __init__(self, **kwargs):
         super(ImplicitPort, self).__init__(**kwargs)
         self.add_child(kwargs.get('arg'))
+
+    @property
+    def arg(self):
+        return self.children[0]
+
+    @arg.setter
+    def inport(self, value):
+        value.parent = self
+        self.arg.parent = None
+        self.children[0] = value
+
 
 class InternalInPort(InPort):
     """docstring for InternalPortNode"""
