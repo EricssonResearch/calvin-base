@@ -93,6 +93,9 @@ class CalvinResponseException(Exception):
     def success_list(self):
         return self.response.success_list
 
+    def __str__(self):
+        return "Exception(%s)" % str(self.response)
+
 
 class CalvinResponse(object):
     """A generic class for handling all responses between entities"""
