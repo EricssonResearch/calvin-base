@@ -96,7 +96,7 @@ def _check_arguments(assignment, issue_tracker):
     # FIXME: Rename error to Excess argument
     unused = given - (mandatory | optional)
     for m in unused:
-        reason = "Unused argument: '{}'".format(m)
+        reason = "Excess argument: '{}'".format(m)
         issue_tracker.add_error(reason, given_idents[m])
 
     # Case 3: Deprecation warning if optional args not explicitly given

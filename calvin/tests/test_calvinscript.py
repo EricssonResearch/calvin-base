@@ -345,6 +345,18 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Missing argument: 'data'")
 
+    def testExcessArguments(self):
+        script = """
+        a:std.Constant(data=1, bar=2)
+        b:io.StandardOut()
+        a.token > b.token
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Excess argument: 'bar'")
+
+
     def testComponentUndefinedArgument(self):
         script = """
         component Foo(file) in -> {
@@ -376,6 +388,21 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors, warnings = check(result)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Unused argument: 'file'")
+
+    def testComponentExcessArgument(self):
+        script = """
+        component Foo(file) -> out {
+            file > .out
+        }
+        a:Foo(file="Foo.txt", bar=1)
+        b:io.Print()
+        a.out > b.token
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Excess argument: 'bar'")
+
 
     def testLocalComponentRecurse(self):
         script = """
