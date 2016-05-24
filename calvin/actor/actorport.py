@@ -37,6 +37,7 @@ class Port(object):
         # The token queue. Not all scenarios use it,
         # but needed when e.g. changing from local to remote connection.
         self.fifo = fifo.FIFO(fifo_size)
+        self.properties = {}
 
     def __str__(self):
         return "%s id=%s" % (self.name, self.id)
@@ -71,6 +72,10 @@ class Port(object):
         raise Exception("Can't disconnect port %s.%s with id: %s" % (
             self.owner.name, self.name, self.id))
 
+    @property
+    def direction(self):
+        return self.properties.get('direction', '')
+
 
 class InPort(Port):
 
@@ -80,6 +85,7 @@ class InPort(Port):
         super(InPort, self).__init__(name, owner)
         self.fifo.add_reader(self.id)
         self.endpoint = endpoint.Endpoint(self)
+        self.properties['direction'] = 'in'
 
     def __str__(self):
         s = super(InPort, self).__str__()
@@ -144,6 +150,7 @@ class OutPort(Port):
         super(OutPort, self).__init__(name, owner)
         self.fanout = 1
         self.endpoints = []
+        self.properties['direction'] = 'out'
 
     def __str__(self):
         s = super(OutPort, self).__str__()

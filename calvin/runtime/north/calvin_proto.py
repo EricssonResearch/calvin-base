@@ -495,13 +495,15 @@ class CalvinProto(CalvinCBClass):
 
     #### PORTS ####
 
-    def port_connect(self, callback=None, port_id=None, peer_node_id=None, peer_port_id=None, peer_actor_id=None, peer_port_name=None, peer_port_dir=None, tunnel=None):
+    def port_connect(self, callback=None, port_id=None, peer_port_meta=None, tunnel=None):
         """ Before calling this method all needed information and when requested a tunnel must be available
             see port manager for parameters
         """
         if tunnel:
-            msg = {'cmd': 'PORT_CONNECT', 'port_id': port_id, 'peer_actor_id': peer_actor_id, 'peer_port_name': peer_port_name, 'peer_port_id': peer_port_id, 'peer_port_dir': peer_port_dir, 'tunnel_id':tunnel.id}
-            self.network.links[peer_node_id].send_with_reply(callback, msg)
+            msg = {'cmd': 'PORT_CONNECT', 'port_id': port_id, 'peer_actor_id': peer_port_meta.actor_id,
+                    'peer_port_name': peer_port_meta.port_name, 'peer_port_id': peer_port_meta.port_id,
+                    'peer_port_dir': peer_port_meta.properties['direction'], 'tunnel_id':tunnel.id}
+            self.network.links[peer_port_meta.node_id].send_with_reply(callback, msg)
         else:
             raise NotImplementedError()
 
