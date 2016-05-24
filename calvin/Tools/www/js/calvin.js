@@ -14,6 +14,14 @@ var svgGroup = svg.append("g");
 var graphTimer = null;
 var color = d3.scale.category20();
 
+var findNode = function (nodes, id)
+{
+    for (var i = 0; i < nodes.length; i++) {
+        if (nodes[i].id === id)
+            return nodes[i];
+    }
+}
+
 function drawConnections()
 {
     var nodes = [];
@@ -35,20 +43,21 @@ function drawConnections()
 
     var index_peer;
     for (index_peer in peers) {
-        var source = {id:peers[index_peer].id, name:peers[index_peer].name};
+        var source = {id:peers[index_peer].id, name:peers[index_peer].node_name.name};
         nodes.push(source);
-        var index_connection;
-        for (index_connection in peers[index_peer].peers) {
-            var index_target;
-            for (var index_target = 0; index_target < nodes.length; index_target++) {
-                if (nodes[index_target].id === peers[index_peer].peers[index_connection]) {
-                    links.push({source:source, target:nodes[index_target]});
-                    console.log("Adding link from " + peers[index_peer].id + " to " + peers[index_peer].peers[index_connection]);
-                    break;
+    }
+
+    for (index_peer in peers) {
+        var source = findNode(nodes, peers[index_peer].id);
+        if (source) {
+            var index_connection;
+            for (index_connection in peers[index_peer].peers) {
+                var dest = findNode(nodes, peers[index_peer].peers[index_connection]);
+                if (dest) {
+                    links.push({source:source, target:dest});
                 }
             }
         }
-        console.log("Adding node " + peers[index_peer].id);
     }
 
     force
@@ -128,7 +137,7 @@ function addActorToGraph(actor)
         for (var index in peers) {
             if (peers[index].id == actor.peer_id) {
                 graph.setNode(peers[index].id, {
-                    label: peers[index].name,
+                    label: peers[index].node_name.name,
                     clusterLabelPos: 'top',
                     style: 'fill: LightGrey'
                 });
@@ -1183,7 +1192,7 @@ function showActor()
 
         // ID
         var runtime = findRuntime(actor.peer_id);
-        AddTableItem(tableRef, document.createTextNode("Runtime"), document.createTextNode(runtime.name));
+        AddTableItem(tableRef, document.createTextNode("Runtime"), document.createTextNode(runtime.node_name.name));
 
         // Shadow
         AddTableItem(tableRef, document.createTextNode("Shadow"), document.createTextNode(actor.is_shadow));
@@ -1194,7 +1203,7 @@ function showActor()
         var index;
         for (index in peers) {
             if (peers[index].id != actor.peer_id) {
-                var optionPeer = new Option(peers[index].name);
+                var optionPeer = new Option(peers[index].node_name.name);
                 optionPeer.id = peers[index].id;
                 selectNode.options.add(optionPeer);
                 sortCombo(selectNode);
@@ -1628,7 +1637,7 @@ function startGraphEvents(application)
     for (var index in peers) {
         if (peers[index].control_uri) {
             if (peers[index].graph_source) {
-                showError("Graph trace already started on runtime" + peers[index].name);
+                showError("Graph trace already started on runtime" + peers[index].node_name.name);
             } else {
                 var url = peers[index].control_uri + '/log';
                 var data = JSON.stringify({'actors': actors, 'events': events});
