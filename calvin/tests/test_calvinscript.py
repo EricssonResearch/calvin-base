@@ -576,7 +576,6 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         self.assertEqual(len(errors), 0)
         # self.assertEqual(len(warnings), 0)
 
-    @pytest.mark.xfail()
     def testBadLocalPort(self):
         script = """
         component Foo() in -> {
@@ -588,8 +587,9 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
-        self.assertNotEqual(len(errors), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Internal port '.in' outside component definition")
+
         # self.assertEqual(len(warnings), 0)
 
 

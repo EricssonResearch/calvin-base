@@ -604,16 +604,24 @@ class ConsistencyCheck(object):
 
     @visitor.when(ast.InternalInPort)
     def visit(self, node):
-        if node.port not in self.component.outports:
-            reason = "Component {} has no outport '{}'".format(self.component.name, node.port)
+        if self.component:
+            if node.port not in self.component.outports:
+                reason = "Component {} has no outport '{}'".format(self.component.name, node.port)
+                self.issue_tracker.add_error(reason, node)
+        else:
+            reason = "Internal port '.{}' outside component definition".format(node.port)
             self.issue_tracker.add_error(reason, node)
+
 
     @visitor.when(ast.InternalOutPort)
     def visit(self, node):
-        if node.port not in self.component.inports:
-            reason = "Component {} has no inport '{}'".format(self.component.name, node.port)
+        if self.component:
+            if node.port not in self.component.inports:
+                reason = "Component {} has no inport '{}'".format(self.component.name, node.port)
+                self.issue_tracker.add_error(reason, node)
+        else:
+            reason = "Internal port '.{}' outside component definition".format(node.port)
             self.issue_tracker.add_error(reason, node)
-
 
 
 
