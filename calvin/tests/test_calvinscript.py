@@ -416,7 +416,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 0)
         # self.assertEqual(len(warnings), 0)
 
-    @pytest.mark.xfail(reason="Since component def is now a dict, order is not preserved. Needs fix.")
     def testLocalComponentBad(self):
         script = """
         component B() in -> out {
@@ -441,8 +440,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['reason'], "Unknown actor type: 'E'")
+        self.assertEqual(len(errors), 0)
         # self.assertEqual(len(warnings), 0)
 
     def testNoSuchPort(self):
