@@ -20,6 +20,7 @@ from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 from calvin.utilities.security import Security
+from calvin.utilities import proxyconfig
 from calvin.actorstore.store import ActorStore
 import calvin.requests.calvinresponse as response
 
@@ -154,6 +155,7 @@ class CalvinProto(CalvinCBClass):
             # Hence it is possible for others to register additional
             # functions that should be called. Either permanent here
             # or using the callback_register method.
+            'PROXY_CONFIG': [CalvinCB(self.proxy_config_handler)],
             'ACTOR_NEW': [CalvinCB(self.actor_new_handler)],
             'ACTOR_MIGRATE': [CalvinCB(self.actor_migrate_handler)],
             'APP_DESTROY': [CalvinCB(self.app_destroy_handler)],
@@ -207,6 +209,13 @@ class CalvinProto(CalvinCBClass):
     #
     # Remote commands supported by protocol
     #
+
+    #### PROXY NODES ####
+
+    def proxy_config_handler(self, payload):
+        status = proxyconfig.set_proxy_config(hex(payload['vid']), hex(payload['pid']), payload['from_rt_uuid'], self.node.storage)
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(status).encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
 
     #### ACTORS ####
 
