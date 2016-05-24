@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.utilities import calvinuuid
-from calvin.runtime.north import fifo
+from calvin.runtime.north import queue
 from calvin.runtime.south import endpoint
 from calvin.utilities.calvinlogger import get_logger
 import copy
@@ -36,7 +36,7 @@ class Port(object):
         self.id = calvinuuid.uuid("PORT")
         # The token queue. Not all scenarios use it,
         # but needed when e.g. changing from local to remote connection.
-        self.fifo = fifo.FIFO(fifo_size)
+        self.fifo = queue.FIFO(fifo_size)
         self.properties = {}
 
     def __str__(self):

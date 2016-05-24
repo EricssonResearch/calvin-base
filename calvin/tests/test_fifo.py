@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import unittest
-from calvin.runtime.north import fifo
+from calvin.runtime.north import queue
 from calvin.runtime.north.calvin_token import Token
 
 
@@ -35,7 +35,7 @@ class FifoTests(unittest.TestCase):
 
     def test1(self):
         """Adding reader again (reconnect)"""
-        f = fifo.FIFO(5)
+        f = queue.FIFO(5)
         f.add_reader('p1.id')
         data = ['1', '2', '3', '4']
         for token in data:
@@ -66,7 +66,7 @@ class FifoTests(unittest.TestCase):
     def test2(self):
         """Multiple readers"""
 
-        f = fifo.FIFO(5)
+        f = queue.FIFO(5)
         f.add_reader("r1")
         f.add_reader("r2")
 
@@ -118,7 +118,7 @@ class FifoTests(unittest.TestCase):
 
     def test3(self):
         """Testing commit reads"""
-        f = fifo.FIFO(5)
+        f = queue.FIFO(5)
         f.add_reader("r1")
 
         for token in ['1', '2', '3', '4']:
@@ -144,7 +144,7 @@ class FifoTests(unittest.TestCase):
 
     def test4(self):
         """Testing rollback reads"""
-        f = fifo.FIFO(5)
+        f = queue.FIFO(5)
         f.add_reader('r1')
 
         for token in ['1', '2', '3', '4']:
