@@ -546,6 +546,16 @@ class ConsistencyCheck(object):
     def visit(self, node):
         self.block = node
         assignments = [n for n in node.children if type(n) is ast.Assignment]
+
+        # Check for multiple definitions
+        assignments_ids = [a.ident for a in assignments]
+        dups = [a for a in assignments_ids if assignments_ids.count(a) > 1]
+        for dup in dups:
+            dup_assignments = [a for a in assignments if a.ident is dup]
+            reason = "Instance identifier '{}' redeclared".format(dup)
+            # Relate error to last seen declaration
+            self.issue_tracker.add_error(reason, dup_assignments[-1])
+
         map(self.visit, assignments)
         links = [n for n in node.children if type(n) is ast.Link]
         map(self.visit, links)

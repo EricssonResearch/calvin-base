@@ -446,7 +446,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(errors[2]['reason'], "Actor i (std.Identity) is missing connection to inport 'token'")
         self.assertEqual(errors[3]['reason'], "Actor i (std.Identity) is missing connection to outport 'token'")
 
-    @pytest.mark.xfail()
     def testRedfineInstance(self):
         script = """
         i:std.Identity()
@@ -458,8 +457,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
         self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Instance identifier 'i' redeclared")
 
     def testUndefinedActorInComponent(self):
         script = """
