@@ -179,7 +179,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
         self.assertFalse(errors, '\n'.join([str(error) for error in errors]))
-        # self.assertFalse(warnings, '\n'.join([str(warning) for warning in warnings]))
 
     def testCheckOutportConnections(self):
         script = """
@@ -191,7 +190,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
         self.assertEqual(errors[0]['reason'], "Actor b (std.CountTimer) is missing connection to outport 'integer'")
-        # self.assertFalse(warnings)
 
     def testCheckInportConnections1(self):
         script = """
@@ -201,7 +199,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors, warnings = check(result)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Actor c (io.StandardOut) is missing connection to inport 'token'")
-        # self.assertFalse(warnings)
 
     def testCheckInportConnections2(self):
         script = """
@@ -215,7 +212,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors, warnings = check(result)
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Actor c (io.StandardOut) has multiple connections to inport 'token'")
-        # self.assertFalse(warnings)
 
     def testBadComponent1(self):
         script = """
@@ -232,7 +228,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors, warnings = check(result)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Actor b (std.CountTimer) is missing connection to outport 'integer'")
-        # self.assertFalse(warnings)
 
     def testBadComponent2(self):
         script = """
@@ -249,7 +244,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors, warnings = check(result)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to outport 'out'")
-        # self.assertFalse(warnings)
 
     def testBadComponent3(self):
         script = """
@@ -267,7 +261,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Component Foo has multiple connections to outport 'out'")
         self.assertEqual(errors[1]['reason'], "Component Foo has multiple connections to outport 'out'")
-        # self.assertFalse(warnings)
 
     def testBadComponent4(self):
         script = """
@@ -283,7 +276,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to inport 'in'")
         self.assertEqual(errors[1]['reason'], "Actor a (io.StandardOut) is missing connection to inport 'token'")
-        # self.assertFalse(warnings)
 
     def testBadComponent5(self):
         script = """
@@ -301,7 +293,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors = sorted(errors, key=lambda x : x['reason'])
         self.assertEqual(errors[0]['reason'], "Component Foo has no inport 'foo'")
         self.assertEqual(errors[1]['reason'], "Component Foo is missing connection to inport 'in'")
-        # self.assertEqual(len(warnings), 0)
 
     def testBadComponent6(self):
         script = """
@@ -319,7 +310,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors = sorted(errors, key=lambda x : x['reason'])
         self.assertEqual(errors[0]['reason'], "Component Foo has no outport 'foo'")
         self.assertEqual(errors[1]['reason'], "Component Foo is missing connection to outport 'out'")
-        # self.assertEqual(len(warnings), 0)
 
     @unittest.skip("Not compatible with new parser")
     def testBadComponent7(self):
@@ -332,7 +322,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors, warnings = check(result)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Component inport connected directly to outport.")
-        # self.assertEqual(len(warnings), 0)
 
     def testUndefinedActors(self):
         script = """
@@ -386,7 +375,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
         self.assertEqual(len(errors), 1)
-        # self.assertEqual(len(warnings), 0)
         self.assertEqual(errors[0]['reason'], "Unused argument: 'file'")
 
     def testLocalComponentRecurse(self):
@@ -414,7 +402,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
         self.assertEqual(len(errors), 0)
-        # self.assertEqual(len(warnings), 0)
 
     def testLocalComponentBad(self):
         script = """
@@ -441,7 +428,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
         self.assertEqual(len(errors), 0)
-        # self.assertEqual(len(warnings), 0)
 
     def testNoSuchPort(self):
         script = """
@@ -459,7 +445,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(errors[1]['reason'], "Actor i (std.Identity) has no outport 'bar'")
         self.assertEqual(errors[2]['reason'], "Actor i (std.Identity) is missing connection to inport 'token'")
         self.assertEqual(errors[3]['reason'], "Actor i (std.Identity) is missing connection to outport 'token'")
-        # self.assertEqual(len(warnings), 0)
 
     @pytest.mark.xfail()
     def testRedfineInstance(self):
@@ -475,7 +460,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         errors, warnings = check(result)
         print errors
         self.assertEqual(len(errors), 1)
-        # self.assertEqual(len(warnings), 0)
 
     def testUndefinedActorInComponent(self):
         script = """
@@ -485,9 +469,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
         self.assertEqual(len(errors), 1)
-        # self.assertEqual(len(warnings), 0)
 
 
 class CalvinScriptDefinesTest(CalvinTestBase):
@@ -501,9 +483,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
         self.assertEqual(len(errors), 1)
-        # self.assertEqual(len(warnings), 0)
         self.assertEqual(errors[0]['reason'], "Undefined identifier: 'FOO'")
 
     def testDefinedConstant(self):
@@ -515,9 +495,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
         self.assertEqual(len(errors), 0)
-        # self.assertEqual(len(warnings), 0)
 
     def testUndefinedRecursiveConstant(self):
         script = """
@@ -544,9 +522,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
         self.assertEqual(len(errors), 0)
-        # self.assertEqual(len(warnings), 0)
 
 
     def testLiteralOnPort(self):
@@ -556,9 +532,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
         self.assertEqual(len(errors), 0)
-        # self.assertEqual(len(warnings), 0)
 
     def testComponentArgumentOnInternalPort(self):
         script = """
@@ -595,7 +569,6 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Internal port '.in' outside component definition")
 
-        # self.assertEqual(len(warnings), 0)
 
 
 
