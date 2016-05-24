@@ -33,7 +33,7 @@ class TestActorStore(object):
 
         # Valid
         module = self.ms.lookup("std.Sum")
-        assert len(module) is 3
+        assert len(module) is 4
         assert module[0]
 
         # Fail
