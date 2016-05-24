@@ -67,6 +67,60 @@ def _lookup(node, issue_tracker):
     return metadata
 
 
+def _check_arguments(assignment, issue_tracker):
+    """
+    Verify that all arguments are present and valid when instantiating actors.
+    """
+    metadata = assignment.metadata
+    mandatory = set(metadata['args']['mandatory'])
+    optional = set(metadata['args']['optional'].keys())
+
+    given_args = assignment.children
+    given_idents = {a.children[0].ident: a.children[0] for a in given_args}
+    given_keys = [a.children[0].ident for a in given_args]
+    given = set(given_keys)
+
+    # Case 0: Duplicated arguments
+    duplicates = set([x for x in given_keys if given_keys.count(x) > 1])
+    for m in duplicates:
+        reason = "Duplicated argument: '{}'".format(m)
+        issue_tracker.add_error(reason, given_idents[m])
+
+    # Case 1: Missing arguments
+    missing = mandatory - given
+    for m in missing:
+        reason = "Missing argument: '{}'".format(m)
+        issue_tracker.add_error(reason, assignment)
+
+    # Case 2: Extra (unused) arguments
+    # FIXME: Rename error to Excess argument
+    unused = given - (mandatory | optional)
+    for m in unused:
+        reason = "Unused argument: '{}'".format(m)
+        issue_tracker.add_error(reason, given_idents[m])
+
+    # Case 3: Deprecation warning if optional args not explicitly given
+    deprecated = optional - given
+    for m in deprecated:
+        reason = "Using default value for implicit parameter '{}'".format(m)
+        issue_tracker.add_warning(reason, assignment)
+
+
+def _arguments(assignment, issue_tracker):
+    # Assign and return args dictionary
+    given_args = assignment.children
+    args = {}
+    for arg_node in given_args:
+        arg_id, arg_val = arg_node.children
+        if type(arg_val) is ast.Value:
+            args[arg_id.ident] = arg_val.value
+        else:
+            reason = "Undefined identifier: '{}'".format(arg_val.ident)
+            issue_tracker.add_error(reason, arg_val)
+    return args
+
+
+
 class IssueTracker(object):
     def __init__(self):
         super(IssueTracker, self).__init__()
@@ -355,54 +409,6 @@ class AppInfo(object):
     def process(self):
         self.visit(self.root)
 
-    def check_arguments(self, assignment):
-        """
-        Verify that all arguments are present and valid when instantiating actors.
-        """
-        metadata = assignment.metadata
-        given_args = assignment.children
-        mandatory = set(metadata['args']['mandatory'])
-        optional = set(metadata['args']['optional'].keys())
-        given_idents = {a.children[0].ident: a.children[0] for a in given_args}
-        given_keys = [a.children[0].ident for a in given_args]
-        given = set(given_keys)
-
-        # Case 0: Duplicated arguments
-        duplicates = set([x for x in given_keys if given_keys.count(x) > 1])
-        for m in duplicates:
-            reason = "Duplicated argument: '{}'".format(m)
-            self.issue_tracker.add_error(reason, given_idents[m])
-
-
-        # Case 1: Missing arguments
-        missing = mandatory - given
-        for m in missing:
-            reason = "Missing argument: '{}'".format(m)
-            self.issue_tracker.add_error(reason, assignment)
-
-        # Case 2: Extra (unused) arguments
-        unused = given - (mandatory | optional)
-        for m in unused:
-            reason = "Unused argument: '{}'".format(m)
-            self.issue_tracker.add_error(reason, given_idents[m])
-
-        # Case 3: Deprecation warning if optional args not explicitly given
-        deprecated = optional - given
-        for m in deprecated:
-            reason = "Using default value for implicit parameter '{}'".format(m)
-            self.issue_tracker.add_warning(reason, assignment)
-
-        # Assing and return args dictionary
-        args = {}
-        for arg_node in given_args:
-            arg_id, arg_val = arg_node.children
-            if type(arg_val) is ast.Value:
-                args[arg_id.ident] = arg_val.value
-            else:
-                reason = "Undefined identifier: '{}'".format(arg_val.ident)
-                self.issue_tracker.add_error(reason, arg_val)
-        return args
-
 
     @visitor.on('node')
     def visit(self, node):
@@ -421,7 +427,7 @@ class AppInfo(object):
 
         value = {}
         value['actor_type'] = node.actor_type
-        value['args'] = self.check_arguments(node)
+        value['args'] = _arguments(node, self.issue_tracker)
         value['signature'] = _create_signature(node.actor_type, node.metadata)
 
         self.app_info['actors'][node.ident] = value
@@ -511,6 +517,14 @@ class ConsistencyCheck(object):
     @visitor.when(ast.Component)
     def visit(self, node):
         self.component = node
+
+        for arg_name in node.arg_names:
+            matches = query(node, kind=ast.NamedArg)
+            referenced_values = [m.ident for m in matches if type(m.children[1]) is ast.Id]
+            if not arg_name in referenced_values:
+                reason = "Unused argument: '{}'".format(arg_name)
+                self.issue_tracker.add_error(reason, node)
+
         for port in node.outports:
             matches = query(node, kind=ast.InternalInPort, attributes={'port':port})
             if not matches:
@@ -542,6 +556,9 @@ class ConsistencyCheck(object):
         if not node.metadata['is_known']:
             # error issued in _lookup
             return
+
+        _check_arguments(node, self.issue_tracker)
+
         for port in node.metadata['inputs']:
             matches = query(self.block, kind=ast.InPort, attributes={'actor':node.ident, 'port':port})
             matches = matches + query(self.block, kind=ast.InternalInPort, attributes={'actor':node.ident, 'port':port})
@@ -648,11 +665,16 @@ class CodeGen(object):
         self.dump_tree('Port Rewrite')
 
         ##
+        # Resolve Constants
+        rc = ReplaceConstants(issue_tracker)
+        rc.process(self.root)
+        self.dump_tree('RESOLVED CONSTANTS')
+
+        ##
         # Check graph consistency
         cc = ConsistencyCheck(issue_tracker)
         cc.process(self.root)
         self.dump_tree('Consistency Check')
-
 
         ##
         # Expand components
@@ -665,12 +687,6 @@ class CodeGen(object):
         flattener = Flatten(issue_tracker)
         flattener.process(self.root)
         self.dump_tree('FLATTENED')
-
-        ##
-        # Resolve Constants
-        rc = ReplaceConstants(issue_tracker)
-        rc.process(self.root)
-        self.dump_tree('RESOLVED CONSTANTS')
 
         ##
         # "code" generation
