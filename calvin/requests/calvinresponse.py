@@ -78,6 +78,21 @@ BAD_GATEWAY = 502
 SERVICE_UNAVAILABLE = 503
 GATEWAY_TIMEOUT = 504
 
+class CalvinResponseException(Exception):
+    """ CalvinResponseException"""
+    def __init__(self, response):
+        super(CalvinResponseException, self).__init__()
+        self.response = response
+
+    def status(self):
+        return self.response.status
+
+    def data(self):
+        return self.response.data
+
+    def success_list(self):
+        return self.response.success_list
+
 
 class CalvinResponse(object):
     """A generic class for handling all responses between entities"""
