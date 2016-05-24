@@ -520,7 +520,7 @@ class ConsistencyCheck(object):
 
         for arg_name in node.arg_names:
             matches = query(node, kind=ast.NamedArg)
-            referenced_values = [m.ident for m in matches if type(m.children[1]) is ast.Id]
+            referenced_values = [m.children[1].ident for m in matches if type(m.children[1]) is ast.Id]
             if not arg_name in referenced_values:
                 reason = "Unused argument: '{}'".format(arg_name)
                 self.issue_tracker.add_error(reason, node)
