@@ -262,7 +262,6 @@ class Expander(object):
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
-        # FIXME: Change to use new metadata storage
         if not node.metadata:
             node.metadata = _lookup(node, self.issue_tracker)
         if node.metadata['is_known'] and node.metadata['type'] is 'actor':
@@ -353,13 +352,6 @@ class Flatten(object):
             if len(targets) is not 1:
                 # Covered by consistency check
                 continue
-            # if not targets:
-            #     continue
-            # if len(targets) > 1:
-            #     reason = "Actor '{name}' has multiple connections to inport '{port}'".format(name=iop.actor, port=iop.port)
-            #     for target in targets:
-            #         self.issue_tracker.add_error(reason, target)
-
             target = targets[0]
             link = target.parent.clone()
             link.inport = iop.parent.inport.clone()
@@ -390,7 +382,6 @@ class Flatten(object):
         # Delete this node
         node.delete()
         self.stack.pop()
-
 
 
 class AppInfo(object):
@@ -581,6 +572,7 @@ class ConsistencyCheck(object):
                 reason = "Actor {} ({}.{}) is missing connection to outport '{}'".format(node.ident, node.metadata['ns'], node.metadata['name'], port)
                 self.issue_tracker.add_error(reason, node)
 
+
     def _check_port(self, node, direction, issue_tracker):
         matches = query(self.block, kind=ast.Assignment, attributes={'ident':node.actor})
         if not matches:
@@ -711,6 +703,8 @@ class CodeGen(object):
 def query(root, kind=None, attributes=None, maxdepth=1024):
     finder = Finder()
     finder.find_all(root, kind, attributes=attributes, maxdepth=maxdepth)
+    # print
+    # print "QUERY", kind.__name__, attributes, finder.matches
     return finder.matches
 
 def generate_app_info(ast, name='anonymous', verify=True):
@@ -720,6 +714,8 @@ def generate_app_info(ast, name='anonymous', verify=True):
 
 
 if __name__ == '__main__':
-    from parser_regression_tests import run_issue_check
-    run_issue_check(tests=['undefined_constant'], testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/issue-reporting-tests')
+    from parser_regression_tests import run_check, run_issue_check, run_all
+    # run_check(tests=['testComponentArgumentOnInternalPort'], testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/regression-tests')
+    # run_issue_check(tests=['component_bad1'], testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/issue-reporting-tests')
+    run_all()
 
