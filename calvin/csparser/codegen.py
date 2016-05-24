@@ -77,7 +77,7 @@ def _check_arguments(assignment, issue_tracker):
 
     given_args = assignment.children
     given_idents = {a.ident.ident: a.ident for a in given_args}
-    given_keys = [a.ident.ident for a in given_args]
+    given_keys = given_idents.keys()
     given = set(given_keys)
 
     # Case 0: Duplicated arguments
@@ -111,14 +111,12 @@ def _arguments(assignment, issue_tracker):
     given_args = assignment.children
     args = {}
     for arg_node in given_args:
-        arg_id, arg_val = arg_node.children
-        if type(arg_val) is ast.Value:
-            args[arg_id.ident] = arg_val.value
+        if type(arg_node.arg) is ast.Value:
+            args[arg_node.ident.ident] = arg_node.arg.value
         else:
-            reason = "Undefined identifier: '{}'".format(arg_val.ident)
-            issue_tracker.add_error(reason, arg_val)
+            reason = "Undefined identifier: '{}'".format(arg_node.arg.ident)
+            issue_tracker.add_error(reason, arg_node.arg)
     return args
-
 
 
 class IssueTracker(object):
@@ -447,11 +445,11 @@ class ReplaceConstants(object):
         constants = query(root, ast.Constant)
         defined = {c.ident.ident: c.arg for c in constants if type(c.arg) is ast.Value}
         unresolved = [c for c in constants if type(c.arg) is ast.Id]
-        seen = [c.ident.ident for c in constants if type(c.arg) is ast.Id]
+        seen = [c.ident.ident for c in unresolved]
         while True:
             did_replace = False
             for c in unresolved[:]:
-                key, const_key = c.children
+                key, const_key = c.ident, c.arg
                 if const_key.ident in defined:
                     defined[key.ident] = defined[const_key.ident]
                     unresolved.remove(c)
@@ -460,7 +458,7 @@ class ReplaceConstants(object):
             if not did_replace:
                 break
         for c in unresolved:
-            key, const_key = c.children
+            key, const_key = c.ident, c.arg
             if const_key.ident in seen:
                 reason = "Constant '{}' has a circular reference".format(key.ident)
             else:
