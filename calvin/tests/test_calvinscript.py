@@ -560,8 +560,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         self.assertEqual(len(errors), 0)
         # self.assertEqual(len(warnings), 0)
 
-    @pytest.mark.xfail()
-    def testComponentArgumentOnPort(self):
+    def testComponentArgumentOnInternalPort(self):
         script = """
         component Foo(foo) -> out {
             foo > .out
@@ -569,9 +568,18 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         """
         result = self.invoke_parser_assert_syntax('inline', script)
         errors, warnings = check(result)
-        print errors
         self.assertEqual(len(errors), 0)
-        # self.assertEqual(len(warnings), 0)
+
+    def testLiteralOnInternalPort(self):
+        script = """
+        component Foo() -> out {
+            1 > .out
+        }
+        """
+        result = self.invoke_parser_assert_syntax('inline', script)
+        errors, warnings = check(result)
+        self.assertEqual(len(errors), 0)
+
 
     def testBadLocalPort(self):
         script = """

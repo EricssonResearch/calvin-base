@@ -127,7 +127,8 @@ class CalvinParser(object):
         """link : outport GT inport
                 | outport GT internal_inport
                 | internal_outport GT inport
-                | implicit_port GT inport"""
+                | implicit_port GT inport
+                | implicit_port GT internal_inport"""
         p[0] = ast.Link(outport=p[1], inport=p[3], debug_info=self.debug_info(p, 1))
 
     def p_link_error(self, p):
