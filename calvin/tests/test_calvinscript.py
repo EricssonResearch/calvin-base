@@ -26,13 +26,6 @@ def absolute_filename(filename):
     return os.path.join(os.path.dirname(__file__), filename)
 
 
-def check(ast):
-    app_info, issues = generate_app_info(ast)
-    errors = [issue for issue in issues if issue['type'] is 'error']
-    warnings = [issue for issue in issues if issue['type'] is 'warning']
-    return errors, warnings
-
-
 class CalvinTestBase(unittest.TestCase):
 
     def setUp(self):
@@ -54,83 +47,27 @@ class CalvinTestBase(unittest.TestCase):
         msg_list = ["Expected empty error, not {0}".format(err) for err in errors]
         return '\n'.join(msg_list)
 
-    def invoke_parser(self, test, source_text=None):
+    def parse(self, test, source_text=None, verify=True):
         if not source_text:
             test = self.test_script_dir + test + '.calvin'
             source_text = self._read_file(test)
-        return calvin_parser(source_text, test)
 
-    def invoke_parser_assert_syntax(self, test, source_text=None):
-        """Verify that the source is free from syntax errors and return parser output"""
-        result, errors, warnings = self.invoke_parser(test, source_text)
-        self.assertFalse(errors, self._format_unexpected_error_message(errors))
-        return result
+        ast, parser_issues, _ = calvin_parser(source_text, test)
+        app_info, codegen_issues = generate_app_info(ast, name=test, verify=verify)
+        issues = parser_issues + codegen_issues
 
-    def assert_script(self, test):
-        """Check parsing of script against a reference result"""
-        result = self.invoke_parser_assert_syntax(test)
-        ref_file = self.test_script_dir + test + '.ref'
-        reference = self._read_file(ref_file)
-        # Canonical form
-        sorted_result = json.dumps(result, indent=4, sort_keys=True)
-        sorted_result = "\n".join([line for line in sorted_result.splitlines() if "sourcefile" not in line])
-        reference = "\n".join([line for line in reference.splitlines() if "sourcefile" not in line])
-        diff_lines = difflib.unified_diff(sorted_result.splitlines(), reference.splitlines())
-        diff = '\n'.join(diff_lines)
-        self.assertFalse(diff, diff)
+        errors = [issue for issue in issues if issue['type'] is 'error']
+        errors = sorted(errors, key=lambda x : x['reason'])
+
+        warnings = [issue for issue in issues if issue['type'] is 'warning']
+        warnings = sorted(warnings, key=lambda x : x['reason'])
+
+        return app_info, errors, warnings
 
 
-@unittest.skip("Not compatible with new parser")
-class CalvinScriptParserTest(CalvinTestBase):
-    """Test the CalvinScript parser"""
-
-    def testSimpleStructure(self):
-        """Basic sanity check"""
-        self.assert_script('test1')
-
-    def testComplexScript(self):
-        self.assert_script('test9')
-
-    def testComponentDefinitions(self):
-        self.assert_script('test8')
-
-    def testSyntaxError(self):
-        """Check syntax error output"""
-        test = 'test10'
-        result, errors, warnings = self.invoke_parser(test)
-        self.assertEqual(errors[0], {'reason': 'Syntax error.', 'line': 6, 'col': 2})
 
 
-@unittest.skip("Not compatible with new parser")
-class CalvinScriptAnalyzerTest(CalvinTestBase):
-    """Test the CalvinsScript analyzer"""
-
-    def assert_app_info(self, test, app_info):
-        """Check app_info against a reference result"""
-        ref_file = self.test_script_dir + test + '.app_info'
-        reference = self._read_file(ref_file)
-        # Canonical form
-        sorted_app_info = json.dumps(app_info, indent=4, sort_keys=True)
-        diff_lines = difflib.unified_diff(sorted_app_info.splitlines(), reference.splitlines())
-        diff = '\n'.join(diff_lines)
-        self.assertFalse(diff, diff)
-
-    def testSimpleScript(self):
-        test = 'test9'
-        # First make sure result below is error-free
-        result = self.invoke_parser(test)
-        app_info = generate_app_info(result)
-
-        self.assert_app_info(test, app_info)
-
-    def testMissingActor(self):
-        script = """a:std.NotLikely()"""
-        result = self.invoke_parser('inline', script)
-        app_info = generate_app_info(result)
-        print app_info
-        self.assertFalse(app_info['valid'])
-
-class CalvinScriptCheckerTest2(CalvinTestBase):
+class CalvinScriptCheckerTest(CalvinTestBase):
     """Test the CalvinsScript checker"""
 
     def testCheckSimpleScript(self):
@@ -140,7 +77,7 @@ class CalvinScriptCheckerTest2(CalvinTestBase):
 
         a.integer > b.token
         """
-        result, errors, warnings = self.invoke_parser('inline', script)
+        result, errors, warnings = self.parse('inline', script)
         self.assertFalse(errors)
 
     def testCheckSimpleScript2(self):
@@ -148,22 +85,7 @@ class CalvinScriptCheckerTest2(CalvinTestBase):
         a:Foo()
         b:Bar()
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = generate_app_info(result)
-        self.assertTrue(errors)
-
-
-
-class CalvinScriptCheckerTest(CalvinTestBase):
-    """Test the CalvinsScript checker"""
-
-    def testCheckSimpleScript(self):
-        script = """
-        a:Foo()
-        b:Bar()
-        """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = generate_app_info(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertTrue(errors)
 
     def testCheckLocalComponent(self):
@@ -176,9 +98,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         b:io.StandardOut()
         a.out > b.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
-        self.assertFalse(errors, '\n'.join([str(error) for error in errors]))
+        result, errors, warnings = self.parse('inline', script)
+        self.assertFalse(errors)
 
     def testCheckOutportConnections(self):
         script = """
@@ -187,16 +108,14 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         c:io.StandardOut()
         a.integer > c.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(errors[0]['reason'], "Actor b (std.CountTimer) is missing connection to outport 'integer'")
 
     def testCheckInportConnections1(self):
         script = """
         c:io.StandardOut()
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Actor c (io.StandardOut) is missing connection to inport 'token'")
 
@@ -208,8 +127,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a.integer > c.token
         b.integer > c.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Actor c (io.StandardOut) has multiple connections to inport 'token'")
 
@@ -224,8 +142,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         b:io.StandardOut()
         a.out > b.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Actor b (std.CountTimer) is missing connection to outport 'integer'")
 
@@ -240,8 +157,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         b:io.StandardOut()
         a.out > b.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to outport 'out'")
 
@@ -256,8 +172,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         b:io.StandardOut()
         a.out > b.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Component Foo has multiple connections to outport 'out'")
         self.assertEqual(errors[1]['reason'], "Component Foo has multiple connections to outport 'out'")
@@ -271,11 +186,10 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a:std.CountTimer()
         a.integer > b.in
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
-        self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to inport 'in'")
-        self.assertEqual(errors[1]['reason'], "Actor a (io.StandardOut) is missing connection to inport 'token'")
+        self.assertEqual(errors[0]['reason'], "Actor a (io.StandardOut) is missing connection to inport 'token'")
+        self.assertEqual(errors[1]['reason'], "Component Foo is missing connection to inport 'in'")
 
     def testBadComponent5(self):
         script = """
@@ -287,10 +201,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a:std.CountTimer()
         a.integer > b.in
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
-        errors = sorted(errors, key=lambda x : x['reason'])
         self.assertEqual(errors[0]['reason'], "Component Foo has no inport 'foo'")
         self.assertEqual(errors[1]['reason'], "Component Foo is missing connection to inport 'in'")
 
@@ -304,31 +216,31 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a:io.StandardOut()
         b.out > a.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
-        errors = sorted(errors, key=lambda x : x['reason'])
         self.assertEqual(errors[0]['reason'], "Component Foo has no outport 'foo'")
         self.assertEqual(errors[1]['reason'], "Component Foo is missing connection to outport 'out'")
 
-    @unittest.skip("Not compatible with new parser")
     def testBadComponent7(self):
         script = """
         component Foo() in -> out {
             .in > .out
         }
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['reason'], "Component inport connected directly to outport.")
+        result, errors, warnings = self.parse('inline', script)
+        print errors
+        self.assertEqual(len(errors), 3)
+        self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to inport 'in'")
+        self.assertEqual(errors[1]['reason'], "Component Foo is missing connection to outport 'out'")
+        self.assertEqual(errors[2]['reason'], "Component inport connected directly to outport.")
+
+
 
     def testUndefinedActors(self):
         script = """
         a.token > b.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Undefined actor: 'a'")
         self.assertEqual(errors[1]['reason'], "Undefined actor: 'b'")
@@ -340,8 +252,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         b:io.StandardOut()
         a.token > b.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Missing argument: 'data'")
 
@@ -351,8 +262,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         b:io.StandardOut()
         a.token > b.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Excess argument: 'bar'")
 
@@ -367,9 +277,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a:std.CountTimer()
         a.integer > b.in
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
-        errors = sorted(errors, key=lambda x : x['reason'])
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Missing argument: 'file'")
         self.assertEqual(errors[1]['reason'], "Unused argument: 'file'")
@@ -384,8 +292,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a:std.CountTimer()
         a.integer > b.in
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Unused argument: 'file'")
 
@@ -398,8 +305,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         b:io.Print()
         a.out > b.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Excess argument: 'bar'")
 
@@ -426,8 +332,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a.integer > b.in
         b.out > c.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
     def testLocalComponentBad(self):
@@ -452,8 +357,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a.integer > b.in
         b.out > c.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
     def testNoSuchPort(self):
@@ -464,10 +368,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         src.integer > i.foo
         i.bar > dst.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 4)
-        errors = sorted(errors, key=lambda x : x['reason'])
         self.assertEqual(errors[0]['reason'], "Actor i (std.Identity) has no inport 'foo'")
         self.assertEqual(errors[1]['reason'], "Actor i (std.Identity) has no outport 'bar'")
         self.assertEqual(errors[2]['reason'], "Actor i (std.Identity) is missing connection to inport 'token'")
@@ -482,8 +384,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         src.integer > i.token
         i.token > dst.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Instance identifier 'i' redeclared")
 
@@ -493,13 +394,9 @@ class CalvinScriptCheckerTest(CalvinTestBase):
           b.out > .out
         }
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
 
-
-class CalvinScriptDefinesTest(CalvinTestBase):
-    """Test CalvinsScript defines"""
 
     def testUndefinedConstant(self):
         script = """
@@ -507,10 +404,21 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         snk : io.StandardOut()
         src.token > snk.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Undefined identifier: 'FOO'")
+
+    @pytest.mark.xfail()
+    def testUnusedConstant(self):
+        script = """
+        define FOO=2
+        sink : std.Terminator()
+        1 > sink.void
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Unused constant: 'FOO'")
+
 
     def testDefinedConstant(self):
         script = """
@@ -519,8 +427,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         snk : io.StandardOut()
         src.token > snk.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
     def testUndefinedRecursiveConstant(self):
@@ -530,9 +437,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         snk : io.StandardOut()
         src.token > snk.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
-        errors = sorted(errors, key=lambda x : x['reason'])
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Constant 'BAR' is undefined")
         self.assertEqual(errors[1]['reason'], "Undefined identifier: 'FOO'")
@@ -546,8 +451,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         snk : io.StandardOut()
         src.token > snk.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
 
@@ -556,8 +460,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         snk : io.StandardOut()
         42 > snk.token
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
     def testComponentArgumentOnInternalPort(self):
@@ -566,8 +469,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
             foo > .out
         }
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
     def testLiteralOnInternalPort(self):
@@ -576,8 +478,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
             1 > .out
         }
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
 
@@ -590,8 +491,7 @@ class CalvinScriptDefinesTest(CalvinTestBase):
         src : std.Counter()
         src.integer > .in
         """
-        result = self.invoke_parser_assert_syntax('inline', script)
-        errors, warnings = check(result)
+        result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Internal port '.in' outside component definition")
 
