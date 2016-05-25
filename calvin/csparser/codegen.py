@@ -282,6 +282,7 @@ class Expander(object):
         v = RestoreParents()
         v.visit(compdef)
         # Clone assignment to clone the arguments
+        # FIXME: Is cloning necessary here, since we construct an arg dict anyway?
         ca = node.clone()
         args = ca.children
         # Clone block from component definition
@@ -654,14 +655,8 @@ class CodeGen(object):
         printer.process(self.root)
 
 
-    def run(self):
-        issue_tracker = IssueTracker()
-
-        ##
-        # Tree re-write
-        #
+    def phase1(self, issue_tracker):
         self.dump_tree('ROOT')
-
         ##
         # Implicit port rewrite
         rw = ImplicitPortRewrite(issue_tracker)
@@ -680,6 +675,8 @@ class CodeGen(object):
         cc.process(self.root)
         self.dump_tree('Consistency Check')
 
+
+    def phase2(self, issue_tracker):
         ##
         # Expand components
         expander = Expander(issue_tracker)
@@ -697,8 +694,27 @@ class CodeGen(object):
         gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
         gen_app_info.process()
 
+
+    def run(self):
+        issue_tracker = IssueTracker()
+
+        self.phase1(issue_tracker)
+        self.phase2(issue_tracker)
+
         self.app_info['valid'] = (issue_tracker.err_count == 0)
         self.issues = issue_tracker.issues
+
+    def export_components(self):
+        issue_tracker = IssueTracker()
+
+        self.phase1(issue_tracker)
+
+        if issue_tracker.err_count == 0:
+            comps = query(self.root, kind=ast.Component, maxdepth=1)
+        else:
+            comps = None
+
+        return comps, issue_tracker.issues
 
 def query(root, kind=None, attributes=None, maxdepth=1024):
     finder = Finder()

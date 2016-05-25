@@ -18,28 +18,24 @@
 import sys
 import argparse
 from calvin.csparser.parser import calvin_parser
-# from calvin.csparser.checker import check
-from calvin.csparser.codegen import Finder
-import calvin.csparser.astnode as ast
+from calvin.csparser.codegen import CodeGen
 from calvin.actorstore import store
 
 
-def check_script(file):
+def get_components(file):
     try:
         with open(file, 'r') as source:
             source_text = source.read()
     except:
         return {}, [{'reason': 'File not found', 'line': 0, 'col': 0}], []
-    # Steps taken:
-    # 1) parser .calvin file -> IR. May produce syntax errors/warnings
-    # 2) checker IR -> IR. May produce syntax errors/warnings
-    ir, errors, warnings = calvin_parser(source_text, file)
-    # If there were errors during parsing no IR will be generated
-    # if not errors:
-    #     c_errors, c_warnings = check(ir)
-    #     errors.extend(c_errors)
-    #     warnings.extend(c_warnings)
-    return ir, errors, warnings
+    ast, errors, warnings = calvin_parser(source_text, file)
+    cg = CodeGen(ast, 'temp')
+    comps, issues = cg.export_components()
+
+    errors = errors + [issue for issue in issues if issue['type'] == 'error']
+    warnings = warnings + [issue for issue in issues if issue['type'] == 'warning']
+
+    return comps, errors, warnings
 
 
 def install_component(namespace, name, definition, overwrite):
@@ -71,7 +67,10 @@ def main():
         for issue in sorted_issues:
             sys.stderr.write(args.fmt.format(script=file, issue_type=issue_type, **issue) + '\n')
 
-    ir, errors, warnings = check_script(args.script)
+    comps, errors, warnings = get_components(args.script)
+
+    # FIXME: Error if component requested in args.component not present
+
     if warnings:
         report_issues(warnings, 'Warning', args.script)
     if errors:
@@ -79,9 +78,6 @@ def main():
         return 1
 
     errors = []
-    f = Finder()
-    comps = f.find_all(ir, kind=ast.Component)
-    print comps
     for comp in comps:
         if args.component and comp.name not in args.component:
             continue

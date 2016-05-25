@@ -459,6 +459,7 @@ class DocumentationStore(ActorStore):
             'args': {'mandatory':compdef.arg_names, 'optional':{}},
             'inputs': [(x, "FIXME") for x in compdef.inports or []], # FIXME append port docs
             'outputs': [(x, "FIXME") for x in compdef.outports or []], # FIXME append port docs
+            'definition':compdef.children[0]
         }
         return doc
 
