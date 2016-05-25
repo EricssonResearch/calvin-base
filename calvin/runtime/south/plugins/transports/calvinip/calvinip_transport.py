@@ -30,6 +30,7 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
         self._peers = {}
         self._servers = {}
         self._callbacks = callbacks
+        self._client_validator = None
 
     def _peer_connected(self):
         pass
@@ -42,14 +43,15 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
 
         try:
             tp = twisted_transport.CalvinTransport(self._rt_id,
+
                                                    uri, self._callbacks,
                                                    TwistedCalvinTransport,
-                                                   node_name=self._node_name,
+												   node_name=self._node_name,
+												   client_validator=self._client_validator,
                                                    server_node_name=server_node_name)
             self._peers[peer_addr] = tp
             tp.connect()
-            # self._callback_execute('join_finished', peer_id, tp)
-            return True
+            return tp
         except:
             _log.exception("Error creating TwistedCalvinTransport")
             raise
@@ -73,9 +75,11 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
 
         try:
             tp = twisted_transport.CalvinServer(
-                self._rt_id, self._node_name, uri, self._callbacks, TwistedCalvinServer, TwistedCalvinTransport)
+                self._rt_id, self._node_name, uri, self._callbacks, TwistedCalvinServer, TwistedCalvinTransport,
+                client_validator=self._client_validator)
             self._servers[uri] = tp
             tp.start()
+            return tp
         except:
             _log.exception("Error starting server")
             raise

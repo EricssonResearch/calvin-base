@@ -218,7 +218,9 @@ class CalvinNetwork(object):
                 schema_objects = self.transport_modules[m].register(self.node.id,
                                                                     self.node.node_name,
                                                                     {'join_finished': [CalvinCB(self.join_finished)],
+                                                                     'join_failed': [CalvinCB(self._join_failed)],
                                                                      'data_received': [self.recv_handler],
+                                                                     'connection_failed': [CalvinCB(self._connection_failed)],
                                                                      'peer_disconnected': [CalvinCB(self.peer_disconnected)]},
                                                                     schemas, formats)
             except:
@@ -367,6 +369,9 @@ class CalvinNetwork(object):
         self.control.log_link_connected(peer_id, uri)
         return
 
+    def _join_failed(self, tp_link, peer_id, uri, is_orginator, reason):
+        _log.warning("Join failed on uri %s, reason %s(%s)", uri, reason['reason'], reason['info'])
+
     def link_get(self, peer_id):
         """ Get a link by node id """
         return self.links.get(peer_id, None)
@@ -479,6 +484,9 @@ class CalvinNetwork(object):
                 if uri.startswith(transport):
                     return uri
         return None
+
+    def _connection_failed(self, tp_link, uri, reason):
+        _log.warning("Connection failed on uri %s, reason %s(%s)", uri, reason['reason'], reason['info'])
 
     def peer_disconnected(self, link, rt_id, reason):
         _log.analyze(self.node.id, "+", {'reason': reason,

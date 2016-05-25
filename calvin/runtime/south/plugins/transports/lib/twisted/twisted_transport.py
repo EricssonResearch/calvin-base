@@ -26,7 +26,7 @@ _join_request = {'cmd': 'JOIN_REQUEST', 'id': None, 'sid': None, 'serializers': 
 
 
 class CalvinTransport(base_transport.BaseTransport):
-    def __init__(self, rt_id, remote_uri, callbacks, transport, proto=None, node_name=None, server_node_name=None):
+    def __init__(self, rt_id, remote_uri, callbacks, transport, proto=None, node_name=None, server_node_name=None, client_validator=None):
         """docstring for __init__"""
         _log.debug("rt_id={}, node_name={}, remote_uri={}, callbacks={}, transport={}, server_node_name={}".format(rt_id, node_name, remote_uri, callbacks, transport, server_node_name))
         super(CalvinTransport, self).__init__(rt_id, remote_uri, callbacks=callbacks)
@@ -38,8 +38,10 @@ class CalvinTransport(base_transport.BaseTransport):
         self._transport = transport(self._uri.hostname, self._uri.port, callbacks, proto=proto, node_name=self._node_name, server_node_name=server_node_name)
         self._rtt = 2000  # Init rt in ms
 
-        # TODO: This should be incoming param
-        self._verify_client = lambda x: True
+        if not client_validator:
+            self._verify_client = lambda x: True
+        else:
+            self._verify_client = client_validator
 
         self._incoming = proto is not None
         if self._incoming:
@@ -53,6 +55,7 @@ class CalvinTransport(base_transport.BaseTransport):
             raise Exception("Transport already connected")
 
         self._transport.callback_register("connected", CalvinCB(self._send_join))
+        self._transport.callback_register("connection_failed", CalvinCB(self._connection_failed))
         self._transport.callback_register("disconnected", CalvinCB(self._disconnected))
         self._transport.callback_register("data", CalvinCB(self._data_received))
         # TODO: set timeout
@@ -106,9 +109,12 @@ class CalvinTransport(base_transport.BaseTransport):
         self.send(msg, coder=self._get_join_coder())
 
     def _handle_join(self, data):
+        sid = None
+        coder_name = None
+        rt_id = None
+        valid = False
         try:
             data_obj = self._get_join_coder().decode(data)
-            coder_name = None
             # Verify package
             if 'cmd' not in data_obj or data_obj['cmd'] != 'JOIN_REQUEST' or \
                'serializers' not in data_obj or 'id' not in data_obj or 'sid' not in data_obj:
@@ -126,20 +132,28 @@ class CalvinTransport(base_transport.BaseTransport):
             valid = self._verify_client(data_obj)
             # TODO: Callback or use join_finished
             if valid:
+                rt_id = self._rt_id
                 self._remote_rt_id = data_obj['id']
+            else:
+                rt_id = None
+                self._joined(False, False, reason={'reason': 'not_verified', 'info': ''})
 
-        except:
+        except Exception as exc:
             _log.exception("_handle_join: Failed!!")
-            # TODO: disconnect ?
-            return
+            self._joined(False, False, reason={'reason': 'unknown', 'info': str(exc)})
 
-        self._send_join_reply(not valid or self._rt_id, coder_name, sid)
-        self._joined(False)
+        self._send_join_reply(rt_id, coder_name, sid)
+        if valid:
+            self._joined(True, False)
 
-    def _joined(self, is_orginator):
-        self._callback_execute('join_finished', self, self._remote_rt_id, self.get_uri(), is_orginator)
+    def _joined(self, success, is_orginator, reason=None):
+        if not success:
+            self._callback_execute('join_failed', self, self._remote_rt_id, self.get_uri(), is_orginator, reason)
+        else:
+            self._callback_execute('join_finished', self, self._remote_rt_id, self.get_uri(), is_orginator)
 
     def _handle_join_reply(self, data):
+        valid = False
         try:
             data_obj = self.get_coders()['json'].decode(data)
 
@@ -154,16 +168,38 @@ class CalvinTransport(base_transport.BaseTransport):
             if data_obj['id'] is not None:
                 # Request denied
                 self._remote_rt_id = data_obj['id']
-        except:
-            _log.exception("_handle_join: Failed!!")
+            else:
+                self._joined(False, False, reason={'reason': 'remote_rejected', 'info': ''})
+                return
+
+            valid = self._verify_client(data_obj)
+            if not valid:
+                self._joined(False, False, reason={'reason': 'not_verified', 'info': ''})
+            # TODO: Callback or use join_finished
+
+        except Exception as exc:
+            _log.exception("_handle_join_reply: Failed!!")
+            self._joined(False, False, reason={'reason': 'unknown', 'info': str(exc)})
             # TODO: disconnect ?
             return
 
-        self._joined(True)
+        if valid:
+            self._joined(True, True)
 
     def _disconnected(self, reason):
         # TODO: unify reason
-        self._callback_execute('peer_disconnected', self, self._remote_rt_id, reason)
+        status = "ERROR"
+        if reason.getErrorMessage() == "Connection was closed cleanly.":
+            status = "OK"
+        self._callback_execute('peer_disconnected', self, self._remote_rt_id, status)
+
+    def _connection_failed(self, reason):
+        status = "ERROR"
+        if reason.getErrorMessage() == "An error occurred while connecting: 22":
+            status = "OK"
+
+       # TODO: unify reason
+        self._callback_execute('peer_connection_failed', self, self.get_uri(), status)
 
     def _data_received(self, data):
         self._callback_execute('raw_data_received', self, data)
@@ -186,7 +222,7 @@ class CalvinTransport(base_transport.BaseTransport):
 
 
 class CalvinServer(base_transport.BaseServer):
-    def __init__(self, rt_id, node_name, listen_uri, callbacks, server_transport, client_transport):
+    def __init__(self, rt_id, node_name, listen_uri, callbacks, server_transport, client_transport, client_validator=None):
         super(CalvinServer, self).__init__(rt_id, listen_uri, callbacks=callbacks)
         self._rt_id = rt_id
         self._node_name = node_name
@@ -194,6 +230,7 @@ class CalvinServer(base_transport.BaseServer):
         self._port = None
         self._peers = {}
         self._callbacks = callbacks
+        self._client_validator = client_validator
 
         # TODO: Get iface from addr and lookup host
         iface = '::'
@@ -218,7 +255,8 @@ class CalvinServer(base_transport.BaseServer):
         """
         tp = CalvinTransport(self._rt_id, uri, self._callbacks,
                              self._client_transport, proto=protocol,
-                             node_name=self._node_name)
+                             node_name=self._node_name,
+							 client_validator=self._client_validator)
 
         self._callback_execute('peer_connected', tp, tp.get_uri())
 

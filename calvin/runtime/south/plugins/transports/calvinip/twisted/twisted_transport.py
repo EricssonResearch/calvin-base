@@ -161,17 +161,18 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
         if self._proto:
             self._proto.sendString(data)
 
-    def join(self):  # , callbacks):
+    def join(self):
         if self._proto:
             raise Exception("Already connected")
 
         # Own callbacks
         callbacks = {'connected': [CalvinCB(self._connected)],
                      'disconnected': [CalvinCB(self._disconnected)],
+                     'connection_failed': [CalvinCB(self._connection_failed)],
                      'data': [CalvinCB(self._data)],
                      'set_proto': [CalvinCB(self._set_proto)]}
 
-        self._factory = TCPClientFactory(callbacks)
+        self._factory = TCPClientFactory(callbacks) # addr="%s:%s" % (self._host_ip, self._host_port))
         runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
         if runtime_to_runtime_security=="tls":
             _log.debug("TwistedCalvinTransport with TLS chosen")
@@ -217,19 +218,29 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
 
     def _disconnected(self, reason):
         _log.debug("%s, %s, %s" % (self, 'disconnected', reason))
-        self._callback_execute('disconnected', str(reason))
+        self._callback_execute('disconnected', reason)
+
+    def _connection_failed(self, addr, reason):
+        _log.debug("%s, %s, %s" % (self, 'connection_failed', reason))
+        self._callback_execute('connection_failed', reason)
 
     def _data(self, data):
         _log.debug("%s, %s, %s" % (self, '_data', data))
         self._callback_execute('data', data)
 
 
-class TCPClientFactory(protocol.ClientFactory):
+class TCPClientFactory(protocol.ClientFactory, CalvinCBClass):
     protocol = StringProtocol
 
     def __init__(self, callbacks):
         # For the protocol
         self._callbacks = callbacks
+        super(TCPClientFactory, self).__init__(callbacks)
+
+    def clientConnectionFailed(self, connector, reason):
+        _log.info('Connection failed. reason: %s, dest %s', reason, connector.getDestination())
+        addr = (connector.getDestination().host, connector.getDestination().port)
+        self._callback_execute('connection_failed', addr, reason)
 
     def startedConnecting(self, connector):
         pass
