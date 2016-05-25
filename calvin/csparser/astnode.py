@@ -173,12 +173,6 @@ class Link(Node):
         self.inport.parent = None
         self.children[1] = value
 
-# FIXME: Redundant
-class Portmap(Link):
-    """docstring for Portmap"""
-    def __init__(self, **kwargs):
-        super(Portmap, self).__init__(**kwargs)
-
 # FIXME: Abstract
 class Port(Node):
     """docstring for LinkNode"""
@@ -209,7 +203,7 @@ class ImplicitPort(Node):
         return self.children[0]
 
     @arg.setter
-    def inport(self, value):
+    def arg(self, value):
         value.parent = self
         self.arg.parent = None
         self.children[0] = value
@@ -243,7 +237,7 @@ class Component(Node):
         self.inports = kwargs.get('inports')
         self.outports = kwargs.get('outports')
         self.docstring = kwargs.get('docstring')
-        self.add_child(Block(program=kwargs.get('program')))
+        self.add_child(Block(program=kwargs.get('program', [])))
 
 ################################
 #
@@ -273,9 +267,9 @@ def node_decoder(o):
         'Id':Id,
         'Value':Value,
         'Assignment':Assignment,
+        'IdValuePair':IdValuePair,
         'NamedArg':NamedArg,
         'Link':Link,
-        'Portmap':Portmap,
         'Port':Port,
         'InPort':InPort,
         'OutPort':OutPort,
@@ -290,24 +284,26 @@ def node_decoder(o):
 
 
 if __name__ == '__main__':
+    import json
+    import astprint
+    import astnode as ast
+
     Node._verbose_desc = True
-    p = Port(actor='foo', port='out')
-    l = Link(outport=p, inport=Port(actor='bar', port='in'))
-    a = Assignment(ident='foo', actor_type='std.Source', args=[NamedArg(ident=Id(ident='n'), arg=Value(value=10)), NamedArg(ident=Id(ident='str'), arg=Value(value='hello'))])
-    print l, l.outport, l.inport
-    lc = l.clone()
-    print lc, lc.outport, lc.inport
 
-    print a, a.ident, a.actor_type, id(a.children), a.children[0], a.children[1]
-    ac = a.clone()
-    print ac, ac.ident, ac.actor_type, id(ac.children), ac.children[0], ac.children[1]
-    ac.children[0].children[1] = 42
-    print a.children[0].children[1], ac.children[0].children[1]
+    bp = astprint.BracePrinter()
 
-    n = p
-    while n:
-        print n
-        n = n.parent
+    root = ast.Node()
+    root.add_child(ast.Constant(ident=ast.Id(ident="foo"), arg=ast.Value(value=1)))
+    bp.visit(root)
+
+    s = json.dumps(root, default=ast.node_encoder, indent=2)
+
+    print
+    print s
+    print
+
+    tree = json.loads(s, object_hook=ast.node_decoder)
+    bp.visit(tree)
 
 
 
