@@ -45,11 +45,11 @@ def compile(source_text, filename='', content=None, credentials=None, verify=Tru
                                                 filename, verify, security=sec, org_cb=cb, content=content))
     else:
         if cb:
-            _compile_cont1(source_text, filename, verify, True, org_cb=cb, content=content)
+            _compile_cont2(source_text, filename, verify, True, org_cb=cb)
         else:
-            return _compile_cont1(source_text, filename, verify, True, org_cb=cb, content=content)
+            return _compile_cont2(source_text, filename, verify, True)
 
-def _compile_cont1(source_text, filename, verify, authentication_decision, security=None, org_cb=None, content=None):
+def _compile_cont1(source_text, filename, verify, authentication_decision, security, org_cb=None, content=None):
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
     errors = [] # TODO: fill in something meaningful
     warnings = []
