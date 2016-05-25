@@ -406,7 +406,7 @@ delay.token > src.in
     for issue in parser.issues:
         print "{type} : {reason} {script} [{line}:{col}]".format(script=script, **issue)
 
-    n_errors = len([x for x in parser.issues if x['type'] is 'error'])
+    n_errors = len([x for x in parser.issues if x['type'] == 'error'])
     print "err count", n_errors
     print result
     if not n_errors:

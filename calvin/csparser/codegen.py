@@ -134,7 +134,7 @@ class IssueTracker(object):
         issue.update(node.debug_info or {'line':0, 'col':0, 'FIXME':True})
         if issue not in self.issues:
             self.issues.append(issue)
-            if issue['type'] is 'error':
+            if issue['type'] == 'error':
                 self.err_count += 1
             else:
                 self.warn_count +=1
@@ -264,7 +264,7 @@ class Expander(object):
     def visit(self, node):
         if not node.metadata:
             node.metadata = _lookup(node, self.issue_tracker)
-        if node.metadata['is_known'] and node.metadata['type'] is 'actor':
+        if node.metadata['is_known'] and node.metadata['type'] == 'actor':
             return
         if not node.metadata['is_known']:
             # Unknown actor => construct metadata from graph + args unless verify is True

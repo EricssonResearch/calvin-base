@@ -57,7 +57,7 @@ def new_issue_report(source, test):
     cg = codegen.CodeGen(ast, test)
     cg.run()
     for issue in cg.issues:
-        if issue['type'] is 'error':
+        if issue['type'] == 'error':
             errors.append(issue)
         else:
             warnings.append(issue)
@@ -75,8 +75,8 @@ def old_ir(source_text, filename):
 
 def new_ast(source_text):
     ast, issues, dummy = parser.calvin_parser(source_text)
-    errors = [issue for issue in issues if issue['type'] is 'error']
-    warnings = [issue for issue in issues if issue['type'] is 'warning']
+    errors = [issue for issue in issues if issue['type'] == 'error']
+    warnings = [issue for issue in issues if issue['type'] == 'warning']
     return ast, errors, warnings
 
 

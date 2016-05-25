@@ -56,14 +56,13 @@ class CalvinTestBase(unittest.TestCase):
         app_info, codegen_issues = generate_app_info(ast, name=test, verify=verify)
         issues = parser_issues + codegen_issues
 
-        errors = [issue for issue in issues if issue['type'] is 'error']
+        errors = [issue for issue in issues if issue['type'] == 'error']
         errors = sorted(errors, key=lambda x : x['reason'])
 
-        warnings = [issue for issue in issues if issue['type'] is 'warning']
+        warnings = [issue for issue in issues if issue['type'] == 'warning']
         warnings = sorted(warnings, key=lambda x : x['reason'])
 
         return app_info, errors, warnings
-
 
 
 

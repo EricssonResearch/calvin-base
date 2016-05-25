@@ -91,8 +91,8 @@ def _compile_cont(source_text, filename, verify, access_decision, security=None,
     codegen = CodeGen(ir, app_name, verify=verify)
     codegen.run()
     deployable = codegen.app_info
-    errors.extend([issue for issue in codegen.issues if issue['type'] is 'error'])
-    warnings.extend([issue for issue in codegen.issues if issue['type'] is 'warning'])
+    errors.extend([issue for issue in codegen.issues if issue['type'] == 'error'])
+    warnings.extend([issue for issue in codegen.issues if issue['type'] == 'warning'])
 
 
     _log.debug("Compiled %s, %s, %s" % (deployable, errors, warnings))
