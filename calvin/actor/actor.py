@@ -718,7 +718,8 @@ class ShadowActor(Actor):
         self.outport_names = []
         super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions,
                                             disable_transition_checks=disable_transition_checks,
-                                            disable_state_checks=disable_state_checks, actor_id=actor_id)
+                                            disable_state_checks=disable_state_checks, actor_id=actor_id, 
+                                            security=security)
 
     @manage(['_shadow_args'])
     def init(self, **args):
