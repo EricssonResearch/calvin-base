@@ -112,7 +112,8 @@ class InPort(Port):
         self.owner.did_disconnect(self)
         self.endpoint = endpoint.Endpoint(self, former_peer_id=endpoint_.get_peer()[1])
 
-    def disconnect(self):
+    def disconnect(self, peer_ids=None):
+        # Ignore peer_ids since we can only have one peer
         self.owner.did_disconnect(self)
         endpoints = [self.endpoint]
         self.endpoint = endpoint.Endpoint(self, former_peer_id=self.endpoint.get_peer()[1])
@@ -206,16 +207,20 @@ class OutPort(Port):
         self.owner.did_disconnect(self)
         self.endpoints.remove(endpoint_)
 
-    def disconnect(self):
-        self.owner.did_disconnect(self)
-        endpoints = self.endpoints
-        self.endpoints = []
+    def disconnect(self, peer_ids=None):
+        if peer_ids is None:
+            endpoints = self.endpoints
+        else:
+            endpoints = [e for e in self.endpoints if e.get_peer()[1] in peer_ids]
+        # Remove all endpoints corresponding to the peer ids
+        self.endpoints = [e for e in self.endpoints if e not in endpoints]
         # Rewind any tentative reads to acked reads
         # When local no effect since already equal
         # When tunneled transport tokens after last continuous acked token will be resent later, receiver will just ack them again if rereceived
         for e in endpoints:
             peer_node_id, peer_id = e.get_peer()
             self.fifo.commit_reads(peer_id, False)
+        self.owner.did_disconnect(self)
         return endpoints
 
     def write_token(self, data):

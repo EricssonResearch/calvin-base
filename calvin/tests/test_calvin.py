@@ -528,6 +528,64 @@ class TestActorMigration(CalvinTestBase):
         request_handler.delete_actor(peer, sum_)
         request_handler.delete_actor(peer, src)
 
+    def testFanOutPortRemoteToLocalMigration(self):
+        """Testing outport with fan-out remote to local migration"""
+
+        rt = self.runtime
+        id_ = rt.id
+        peer = self.runtimes[0]
+        peer_id = peer.id
+
+        snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1)
+        snk2 = request_handler.new_actor_wargs(peer, 'io.StandardOut', 'snk2', store_tokens=1)
+        alt = request_handler.new_actor(peer, 'std.Alternate', 'alt')
+        src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
+        src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=0.1, steps=100)
+
+        request_handler.set_port_property(peer, alt, 'out', 'token', 'fanout', 2)
+
+        request_handler.connect(rt, snk1, 'token', peer_id, alt, 'token')
+        request_handler.connect(peer, snk2, 'token', peer_id, alt, 'token')
+        request_handler.connect(peer, alt, 'token_1', id_, src1, 'integer')
+        request_handler.connect(peer, alt, 'token_2', id_, src2, 'integer')
+        time.sleep(1)
+
+
+        def _d():
+            for i in range(1,100):
+                yield i
+                yield i
+
+        expected = list(_d())
+        actual = actual_tokens(rt, snk1)
+        snk1_0 = len(actual)
+        assert(len(actual) > 1)
+        self.assertListPrefix(expected, actual)
+
+        actual = actual_tokens(peer, snk2)
+        snk2_0 = len(actual)
+        assert(len(actual) > 1)
+        self.assertListPrefix(expected, actual)
+
+        request_handler.migrate(rt, snk1, peer_id)
+        time.sleep(1)
+
+        actual = actual_tokens(peer, snk1)
+        # Make sure that we got at least 5 more tokens since we could have transfered but unprocessed in fifo
+        assert(len(actual) > snk1_0 + 5)
+        self.assertListPrefix(expected, actual)
+
+        actual = actual_tokens(peer, snk2)
+        # Make sure that we got at least 5 more tokens since we could have transfered but unprocessed in fifo
+        assert(len(actual) > snk2_0 + 5)
+        self.assertListPrefix(expected, actual)
+
+        request_handler.delete_actor(peer, snk1)
+        request_handler.delete_actor(peer, snk2)
+        request_handler.delete_actor(peer, alt)
+        request_handler.delete_actor(rt, src1)
+        request_handler.delete_actor(rt, src2)
+
     def testOutPortLocalToRemoteMigration(self):
         """Testing outport local to remote migration"""
 

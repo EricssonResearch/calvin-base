@@ -714,9 +714,11 @@ class PortManager(object):
     def _disconnect_port(self, callback=None, port_id=None):
         """ Obtain any missing information to enable disconnecting one port and make the disconnect"""
 
+        _log.analyze(self.node.id, "+", {'port_id': port_id})
         # Check if port actually is local
         port_meta = PortMeta(self, port_id=port_id)
         if not port_meta.is_local():
+            _log.analyze(self.node.id, "+ NOT LOCAL", {'port_id': port_id})
             status = response.CalvinResponse(response.NOT_FOUND, "Port %s must be local" % (port_id))
             if callback:
                 callback(status=status, port_id=port_id)
@@ -734,8 +736,10 @@ class PortManager(object):
             # Outport have several possible peers
             peer_ids = port.get_peers()
 
+        _log.analyze(self.node.id, "+ PEERS", {'port_id': port_id, 'peers': peer_ids})
         # Disconnect and destroy the endpoints
         endpoints = port.disconnect()
+        _log.analyze(self.node.id, "+ EP", {'port_id': port_id, 'endpoints': endpoints})
         for ep in endpoints:
             if isinstance(ep, endpoint.TunnelOutEndpoint):
                 self.monitor.unregister_out_endpoint(ep)
@@ -745,7 +749,7 @@ class PortManager(object):
         for peer_node_id, peer_port_id in peer_ids:
             if peer_node_id == 'local':
                 # Use the disconnect request function since does not matter if local or remote request
-                if not self.disconnection_request({'peer_port_id': peer_port_id}):
+                if not self.disconnection_request({'peer_port_id': peer_port_id, 'port_id': port_id}):
                     ok = False
 
         # Inform all the remote ports of the disconnect
@@ -827,7 +831,7 @@ class PortManager(object):
             return response.CalvinResponse(response.NOT_FOUND)
         else:
             # Disconnect and destroy endpoints
-            endpoints = port.disconnect()
+            endpoints = port.disconnect(peer_ids=[payload['port_id']])
             for ep in endpoints:
                 if isinstance(ep, endpoint.TunnelOutEndpoint):
                     self.monitor.unregister_out_endpoint(ep)
