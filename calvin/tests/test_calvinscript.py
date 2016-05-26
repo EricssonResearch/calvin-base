@@ -499,7 +499,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         iip : std.Init(data="ping")
         print : io.Print()
-        void > iip.in
+        voidport > iip.in
         iip.out > print.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -511,7 +511,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testVoidOnOutPort(self):
         script = """
         src : std.Counter()
-        src.integer > void
+        src.integer > voidport
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
@@ -519,7 +519,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testVoidInvalidUse1(self):
         script = """
         component Foo() in -> {
-            .in > void
+            .in > voidport
         }
         """
         result, errors, warnings = self.parse('inline', script)
@@ -529,7 +529,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testVoidInvalidUse2(self):
         script = """
         component Bar() -> out {
-            void > .out
+            voidport > .out
         }
         """
         result, errors, warnings = self.parse('inline', script)
@@ -538,7 +538,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testVoidInvalidUse3(self):
         script = """
-        1 > void
+        1 > voidport
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
@@ -547,7 +547,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testVoidInvalidUse4(self):
         script = """
         define BAR=1
-        BAR > void
+        BAR > voidport
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
