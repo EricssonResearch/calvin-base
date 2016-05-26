@@ -495,6 +495,22 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(errors[0]['reason'], "Internal port '.in' outside component definition")
 
 
+    def testVoidOnInPort(self):
+        script = """
+        iip : std.Init(data="ping")
+        print : io.Print()
+        void > iip.in
+        iip.out > print.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
 
+    def testVoidOnOutPort(self):
+        script = """
+        src : std.Counter()
+        src.integer > void
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
 
 

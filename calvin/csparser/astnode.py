@@ -173,6 +173,12 @@ class Link(Node):
         self.inport.parent = None
         self.children[1] = value
 
+class Void(Node):
+    """docstring for Void"""
+    def __init__(self, **kwargs):
+        super(Void, self).__init__(**kwargs)
+        self.children = None
+
 # FIXME: Abstract
 class Port(Node):
     """docstring for LinkNode"""
@@ -270,6 +276,7 @@ def node_decoder(o):
         'IdValuePair':IdValuePair,
         'NamedArg':NamedArg,
         'Link':Link,
+        'Void':Void,
         'Port':Port,
         'InPort':InPort,
         'OutPort':OutPort,

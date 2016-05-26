@@ -69,17 +69,20 @@ class BracePrinter(object):
 
     def _visit(self, node, preorder=None, inorder=None, postorder=None):
         if preorder: preorder(node)
-        left, last = node.children[0:-1], node.children[-1:]
-        if not left:
-            if last: self.visit(last[0])
+        if node.is_leaf():
             if inorder: inorder(node)
         else:
-            self.indent +=1
-            for child in left:
-                self.visit(child)
+            left, last = node.children[0:-1], node.children[-1:]
+            if not left:
+                if last: self.visit(last[0])
                 if inorder: inorder(node)
-            self.visit(last[0])
-            self.indent -=1
+            else:
+                self.indent +=1
+                for child in left:
+                    self.visit(child)
+                    if inorder: inorder(node)
+                self.visit(last[0])
+                self.indent -=1
         if postorder: postorder(node)
 
     def _indentation(self):

@@ -16,7 +16,7 @@
 
 import ply.lex as lex
 
-keywords = {'component': 'COMPONENT', 'define': 'DEFINE'}
+keywords = {'component': 'COMPONENT', 'define': 'DEFINE', 'void': 'VOID'}
 
 tokens = [
     'IDENTIFIER', 'STRING', 'NUMBER',

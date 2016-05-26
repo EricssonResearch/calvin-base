@@ -215,6 +215,25 @@ class ImplicitPortRewrite(object):
         block.add_child(const_actor)
 
 
+    @visitor.when(ast.Void)
+    def visit(self, node):
+        if node.parent.outport is node:
+            actor_type = 'std.Void'
+            port_class = ast.OutPort
+        else:
+            actor_type='std.Terminator'
+            port_class = ast.InPort
+
+        self.counter += 1
+        actor_name = '_void_'+str(self.counter)
+        void_actor = ast.Assignment(ident=actor_name, actor_type=actor_type)
+        void_actor_port = port_class(actor=actor_name, port='void')
+        link = node.parent
+        link.replace_child(node, void_actor_port)
+        block = link.parent
+        block.add_child(void_actor)
+
+
 class RestoreParents(object):
     """docstring for RestoreParents"""
     def __init__(self):

@@ -125,6 +125,8 @@ class CalvinParser(object):
 
     def p_link(self, p):
         """link : outport GT inport
+                | void GT inport
+                | outport GT void
                 | outport GT internal_inport
                 | internal_outport GT inport
                 | implicit_port GT inport
@@ -146,6 +148,9 @@ class CalvinParser(object):
     #                | internal_port GT port"""
     #     p[0] = ast.Portmap(p[1], p[3])
 
+    def p_void(self, p):
+        """void : VOID"""
+        p[0] = ast.Void(debug_info=self.debug_info(p, 1))
 
     def p_implicit_port(self, p):
         """implicit_port : argument"""
