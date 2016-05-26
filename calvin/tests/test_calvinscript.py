@@ -504,6 +504,9 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['reason'], "Using 'void' as input to 'iip.in'")
+
 
     def testVoidOnOutPort(self):
         script = """
@@ -513,4 +516,39 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
+    def testVoidInvalidUse1(self):
+        script = """
+        component Foo() in -> {
+            .in > void
+        }
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Syntax error.")
 
+    def testVoidInvalidUse2(self):
+        script = """
+        component Bar() -> out {
+            void > .out
+        }
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Syntax error.")
+
+    def testVoidInvalidUse3(self):
+        script = """
+        1 > void
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Syntax error.")
+
+    def testVoidInvalidUse4(self):
+        script = """
+        define BAR=1
+        BAR > void
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Syntax error.")

@@ -191,6 +191,7 @@ class ImplicitPortRewrite(object):
     def __init__(self, issue_tracker):
         super(ImplicitPortRewrite, self).__init__()
         self.counter = 0
+        self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
@@ -217,9 +218,12 @@ class ImplicitPortRewrite(object):
 
     @visitor.when(ast.Void)
     def visit(self, node):
-        if node.parent.outport is node:
+        link = node.parent
+        if link.outport is node:
             actor_type = 'std.Void'
             port_class = ast.OutPort
+            reason = "Using 'void' as input to '{}.{}'".format(link.inport.actor, link.inport.port)
+            self.issue_tracker.add_warning(reason, node)
         else:
             actor_type='std.Terminator'
             port_class = ast.InPort
