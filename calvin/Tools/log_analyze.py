@@ -129,7 +129,7 @@ def main():
         nodes.insert(0, args.first)
     line = ""
     for n in nodes:
-        line += n + " "*(WIDTH-35)
+        line += str(n) + " "*(WIDTH-35)
     print line
     for l in log:
         if 'match_exclude' in l:
