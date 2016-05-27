@@ -70,9 +70,13 @@ class StringProtocol(CalvinCBClass, Int32StringReceiver):
     def __init__(self, callbacks):
         super(StringProtocol, self).__init__(callbacks)
         self._callback_execute('set_proto', self)
+        self.MAX_LENGTH = 1024*1024*20
 
     def connectionMade(self):
         self._callback_execute('connected', self)
+
+    def lengthLimitExceeded(self, length):
+        _log.error("String length recieved to big package was dumped, length was %s and max length is %s", length, self.MAX_LENGTH)
 
     def connectionLost(self, reason):
         self._callback_execute('disconnected', reason)
