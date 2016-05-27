@@ -124,13 +124,16 @@ class CalvinParser(object):
 
 
     def p_link(self, p):
-        """link : outport GT inport
-                | void GT inport
+        """link : outport GT port
+                | outport GT portlist
                 | outport GT void
-                | outport GT internal_inport
+                | implicit_port GT port
+                | implicit_port GT portlist
                 | internal_outport GT inport
-                | implicit_port GT inport
-                | implicit_port GT internal_inport"""
+                | internal_outport GT inportlist
+                | void GT inport
+                | void GT inportlist
+        """
         p[0] = ast.Link(outport=p[1], inport=p[3], debug_info=self.debug_info(p, 1))
 
     def p_link_error(self, p):
@@ -151,6 +154,34 @@ class CalvinParser(object):
     def p_void(self, p):
         """void : VOID"""
         p[0] = ast.Void(debug_info=self.debug_info(p, 1))
+
+    def p_portlist(self, p):
+        """portlist : portlist COMMA port
+                    | port COMMA port"""
+        if type(p[1]) is ast.PortList:
+            p[1].add_child(p[3])
+            p[0] = p[1]
+        else:
+            p[0] = ast.PortList()
+            p[0].add_child(p[1])
+            p[0].add_child(p[3])
+
+    def p_inportlist(self, p):
+        """inportlist : inportlist COMMA inport
+                    | inport COMMA inport"""
+        if type(p[1]) is ast.PortList:
+            p[1].add_child(p[3])
+            p[0] = p[1]
+        else:
+            p[0] = ast.PortList()
+            p[0].add_child(p[1])
+            p[0].add_child(p[3])
+
+
+    def p_port(self, p):
+        """port : inport
+                | internal_inport"""
+        p[0]=p[1]
 
     def p_implicit_port(self, p):
         """implicit_port : argument"""

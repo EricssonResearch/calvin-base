@@ -188,6 +188,11 @@ class Port(Node):
         self.actor = kwargs.get('actor')
         self.port = kwargs.get('port')
 
+class PortList(Node):
+    """docstring for LinkNode"""
+    def __init__(self, **kwargs):
+        super(PortList, self).__init__(**kwargs)
+
 class InPort(Port):
     """docstring for LinkNode"""
     def __init__(self, **kwargs):

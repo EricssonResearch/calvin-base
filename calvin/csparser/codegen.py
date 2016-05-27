@@ -237,6 +237,16 @@ class ImplicitPortRewrite(object):
         block = link.parent
         block.add_child(void_actor)
 
+    @visitor.when(ast.PortList)
+    def visit(self, node):
+        link = node.parent
+        block = link.parent
+        for inport in node.children:
+            new_link = ast.Link(outport=link.outport.clone(), inport=inport)
+            block.add_child(new_link)
+        link.delete()
+
+
 
 class RestoreParents(object):
     """docstring for RestoreParents"""

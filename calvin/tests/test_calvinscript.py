@@ -552,3 +552,98 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Syntax error.")
+
+    def testPortlist2(self):
+        script = """
+        src : std.Counter()
+        snk1 : io.Print()
+        snk2 : io.Print()
+        src.integer > snk1.token, snk2.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testPortlist3(self):
+        script = """
+        src : std.Counter()
+        snk1 : io.Print()
+        snk2 : io.Print()
+        snk3 : io.Print()
+        src.integer > snk1.token, snk2.token, snk3.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testPortlistLiteral(self):
+        script = """
+        snk1 : io.Print()
+        snk2 : io.Print()
+        1 > snk1.token, snk2.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+
+    def testPortlistInternalOutPort(self):
+        script = """
+        component Foo() in ->  {
+            snk1 : io.Print()
+            snk2 : io.Print()
+            .in  > snk1.token , snk2.token
+        }
+        snk : Foo()
+        1 > snk.in
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testPortlistInternalInPort(self):
+        script = """
+        component Foo() -> out {
+            snk1 : io.Print()
+            snk2 : io.Print()
+            1  > snk1.token, snk2.token, .out
+        }
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testPortlistInternalInPort(self):
+        script = """
+        component Foo() -> out {
+            snk1 : io.Print()
+            snk2 : io.Print()
+            1  > snk1.token, snk2.token, .out
+        }
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testPortlistInternalInPort2(self):
+        script = """
+        component Foo() -> out {
+            snk1 : io.Print()
+            snk2 : io.Print()
+            src : std.Counter()
+            src.integer  > snk1.token, snk2.token, .out
+        }
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+
+    def testPortlistInternalOutPortPassthrough(self):
+        script = """
+        component Foo() in -> out {
+            snk1 : io.Print()
+            .in  > snk1.token, .out
+        }
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Syntax error.")
+
+
+
+
+
