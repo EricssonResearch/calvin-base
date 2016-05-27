@@ -359,6 +359,46 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
+    def testLocalBadComponentCauseCrash1(self):
+        script = """
+        component Foo() in -> out {
+          snk1 : io.Print()
+          .in  > snk1.token
+        }
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+
+    def testLocalBadComponentCauseCrash2(self):
+        script = """
+        component Foo() in -> out {
+          snk1 : io.Print()
+          .in  > snk1.token
+        }
+        foo : Foo()
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 3)
+        self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to outport 'out'")
+        self.assertEqual(errors[1]['reason'], "Component foo (local.Foo) is missing connection to inport 'in'")
+        self.assertEqual(errors[2]['reason'], "Component foo (local.Foo) is missing connection to outport 'out'")
+
+    def testLocalBadComponentCauseCrash3(self):
+        script = """
+        component Foo() in -> out {
+          snk1 : io.Print()
+          .in  > snk1.token
+        }
+        foo : Foo()
+        1 > foo.in
+        """
+        result, errors, warnings = self.parse('inline', script)
+        print errors
+        self.assertEqual(len(errors), 2)
+        self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to outport 'out'")
+        self.assertEqual(errors[1]['reason'], "Component foo (local.Foo) is missing connection to outport 'out'")
+
+
     def testNoSuchPort(self):
         script = """
         i:std.Identity()

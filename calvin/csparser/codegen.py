@@ -43,6 +43,7 @@ def _lookup(node, issue_tracker):
         comp = comps[0]
         metadata = {
             'is_known': True,
+            'name': comp.name,
             'type': 'component',
             'inputs': comp.inports,
             'outputs': comp.outports,
@@ -592,10 +593,11 @@ class ConsistencyCheck(object):
             matches = query(self.block, kind=ast.InPort, attributes={'actor':node.ident, 'port':port})
             matches = matches + query(self.block, kind=ast.InternalInPort, attributes={'actor':node.ident, 'port':port})
             if not matches:
-                reason = "Actor {} ({}.{}) is missing connection to inport '{}'".format(node.ident, node.metadata['ns'], node.metadata['name'], port)
+                print node.metadata
+                reason = "{} {} ({}.{}) is missing connection to inport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
                 self.issue_tracker.add_error(reason, node)
             elif len(matches) > 1:
-                reason = "Actor {} ({}.{}) has multiple connections to inport '{}'".format(node.ident, node.metadata['ns'], node.metadata['name'], port)
+                reason = "{} {} ({}.{}) has multiple connections to inport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
                 for match in matches:
                     self.issue_tracker.add_error(reason, match)
 
@@ -603,7 +605,7 @@ class ConsistencyCheck(object):
             matches = query(self.block, kind=ast.OutPort, attributes={'actor':node.ident, 'port':port})
             matches = matches + query(self.block, kind=ast.InternalOutPort, attributes={'actor':node.ident, 'port':port})
             if not matches:
-                reason = "Actor {} ({}.{}) is missing connection to outport '{}'".format(node.ident, node.metadata['ns'], node.metadata['name'], port)
+                reason = "{} {} ({}.{}) is missing connection to outport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
                 self.issue_tracker.add_error(reason, node)
 
 
@@ -620,7 +622,7 @@ class ConsistencyCheck(object):
         ports = matches[0].metadata[direction + 'puts']
         if node.port not in ports:
             metadata = matches[0].metadata
-            reason = "Actor {} ({}.{}) has no {}port '{}'".format(node.actor, metadata['ns'], metadata['name'], direction, node.port)
+            reason = "{} {} ({}.{}) has no {}port '{}'".format(metadata['type'].capitalize(), node.actor, metadata.get('ns', 'local'), metadata['name'], direction, node.port)
             issue_tracker.add_error(reason, node)
             return
 
@@ -657,7 +659,7 @@ class ConsistencyCheck(object):
 
 class CodeGen(object):
 
-    verbose = False
+    verbose = True
     verbose_nodes = False
 
     """
