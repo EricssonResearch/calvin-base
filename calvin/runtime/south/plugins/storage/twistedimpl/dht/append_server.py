@@ -39,7 +39,7 @@ import base64
 _log = calvinlogger.get_logger(__name__)
 
 # Make twisted (rpcudp) logs go to null
-log.startLogging(log.NullFile())
+log.startLogging(log.NullFile(), setStdout=0)
 
 
 # Fix for None types in storage
