@@ -31,7 +31,7 @@ class Endpoint(object):
         self.former_peer_id = former_peer_id
 
     def __str__(self):
-        return self.__class__.__name__
+        return "%s(port_id=%s)" % (self.__class__.__name__, self.port.id)
 
     def is_connected(self):
         return False

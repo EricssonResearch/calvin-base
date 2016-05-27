@@ -15,8 +15,10 @@
 # limitations under the License.
 
 from calvin.utilities import calvinuuid
+from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north import queue
 from calvin.runtime.south import endpoint
+import calvin.requests.calvinresponse as response
 from calvin.utilities.calvinlogger import get_logger
 import copy
 
@@ -246,6 +248,187 @@ class OutPort(Port):
             all -= set([p[1] for p in peers])
             peers.extend([(None, p) for p in all])
         return peers
+
+
+class PortMeta(object):
+    """ Collection and retrieval of meta data for a port """
+
+    def __init__(self, port_manager, actor_id=None, port_id=None, port_name=None, properties=None, node_id=None):
+        super(PortMeta, self).__init__()
+        self.pm = port_manager
+        self.actor_id = actor_id
+        self.port_id = port_id
+        self.port_name = port_name
+        self.properties = properties
+        self.node_id = node_id
+        self._port = None
+        self.retries = 0  # Used to keep track of how many times we have tried to find the port
+
+    def encode(self):
+        return {'actor_id': self.actor_id,
+                'port_id': self.port_id,
+                'port_name': self.port_name,
+                'properties': self.properties,
+                'node_id': self.node_id}
+
+    def __str__(self):
+        return str(self.encode())
+
+    def get_local_port(self):
+        if self._port is None:
+            self.retrieve(callback=None, local_only=True)
+        return self._port
+
+    def is_local(self):
+        if self.node_id is None:
+            try:
+                self.retrieve(callback=None, local_only=True)
+            except:
+                return False
+        return self.node_id == self.pm.node.id
+
+    @property
+    def port(self):
+        if self._port is None:
+            raise response.CalvinResponseException(response.CalvinResponse(False))
+        else:
+            return self._port
+
+    def retry(self, callback):
+        self.node_id = None
+        self.retries += 1
+        self.retrieve(callback)
+
+    def retrieve(self, callback=None, local_only=False):
+        """ Try to fill in port meta information based on current
+            available info. Raise CalvinResponseException (BAD_REQUEST)
+            when the supplied input data is incomplete.
+            Could also return OK (directly available) or
+            ACCEPTED (maybe available in callback).
+            When not a BAD_REQUEST the callback will be called with
+            any result.
+
+            Will only make sure that either port id or
+            (actor name, port name, direction) is available.
+            Node id is always retrieved.
+            local_only means only looks locally for the port.
+        """
+        try:
+            direction = self.properties['direction']
+        except:
+            direction = None
+        try:
+            self._port = self.pm._get_local_port(self.actor_id, self.port_name, direction, self.port_id)
+            # Found locally
+            self.actor_id = self._port.owner.id
+            self.port_id = self._port.id
+            self.port_name = self._port.name
+            self.properties = self._port.properties
+            self.node_id = self.pm.node.id
+            status = response.CalvinResponse(True)
+            if callback:
+                callback(status=status, port_meta=self)
+            return status
+        except:
+            # not local
+            if local_only:
+                if self.port_id:
+                    status = response.CalvinResponse(response.BAD_REQUEST,
+                                                    "Port %s must be local" % (self.port_id))
+                else:
+                    status = response.CalvinResponse(response.BAD_REQUEST,
+                                                    "Port %s on actor %s must be local" %
+                                                    (self.port_name, self.actor_id))
+                raise response.CalvinResponseException(status)
+
+        # No node id ...
+        if not self.node_id:
+            if self.port_id:
+                # ... but an id of a port lets ask for more info
+                self.pm.node.storage.get_port(self.port_id, CalvinCB(self._retrieve_by_port_id,
+                                                                        cb=callback))
+                return response.CalvinResponse(response.ACCEPTED)
+            elif self.actor_id and self.port_name:
+                # ... but an id of an actor lets ask for more info
+                self.pm.node.storage.get_actor(self.actor_id, CalvinCB(self._retrieve_by_actor_id,
+                                                                        cb=callback))
+                return response.CalvinResponse(response.ACCEPTED)
+            else:
+                # ... and no info on how to get more info, abort
+                status = response.CalvinResponse(response.BAD_REQUEST,
+                                    "Unknown node id (%s), actor_id (%s) and/or port_id(%s)" %
+                                    (self.node_id, self.actor_id, self.port_id))
+                raise response.CalvinResponseException(status)
+
+        # Have node id but are we missing port info
+        if not ((self.actor_id and self.port_name and direction) or self.port_id):
+                # We miss information on to find the peer port
+            status = response.CalvinResponse(response.BAD_REQUEST,
+                                "actor_id (%s) and/or port_id(%s)" %
+                                (self.actor_id, self.port_id))
+            raise response.CalvinResponseException(status)
+
+        # Got everything for an answer
+        status = response.CalvinResponse(True)
+        if callback:
+            callback(status=status, port_meta=self)
+        return status
+
+    def _retrieve_by_port_id(self, key, value, cb):
+        """ Gets called when registry responds with port information """
+        _log.analyze(self.pm.node.id, "+", self.encode(), peer_node_id=self.node_id, tb=True)
+        if not isinstance(value, dict):
+            if cb:
+                cb(status=response.CalvinResponse(response.NOT_FOUND, "Port unknown in registry"), port_meta=self)
+            return
+        try:
+            self.node_id = value['node_id'] or self.node_id
+        except:
+            if not self.node_id:
+                if cb:
+                    cb(status=response.CalvinResponse(response.NOT_FOUND, "Port have unknown node in registry"),
+                        port_meta=self)
+                return
+
+        # Got everything for an answer
+        if cb:
+            cb(status=response.CalvinResponse(True), port_meta=self)
+
+    def _retrieve_by_actor_id(self, key, value, cb):
+        """ Gets called when registry responds with actor information"""
+        _log.analyze(self.pm.node.id, "+", self.encode(), peer_node_id=self.node_id, tb=True)
+        if not isinstance(value, dict):
+            if cb:
+                cb(status=response.CalvinResponse(response.NOT_FOUND, "Actor unknown in registry"), port_meta=self)
+            return
+
+        try:
+            self.node_id = value['node_id'] or self.node_id
+        except:
+            if not self.node_id:
+                if cb:
+                    cb(status=response.CalvinResponse(response.NOT_FOUND, "Port have unknown node in registry"),
+                        port_meta=self)
+                return
+
+        if not self.port_id:
+            try:
+                # Get port id based on names
+                ports = value['inports' if self.properties['direction'] == 'in' else 'outports']
+                for port in ports:
+                    if port['name'] == self.port_name:
+                        self.port_id = port['id']
+                        break
+            except:
+                if not self.node_id:
+                    if cb:
+                        cb(status=response.CalvinResponse(response.NOT_FOUND, "Port have unknown id in registry"),
+                            port_meta=self)
+                    return
+
+        # Got everything for an answer
+        if cb:
+            cb(status=response.CalvinResponse(True), port_meta=self)
 
 
 if __name__ == '__main__':

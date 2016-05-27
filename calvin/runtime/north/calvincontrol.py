@@ -1338,6 +1338,7 @@ class CalvinControl(object):
 
     def handle_disconnect_cb(self, handle, connection, **kwargs):
         status = kwargs.get('status', None)
+        _log.analyze(self.node.id, "+ DISCONNECTED", {'status': status.status}, tb=True)
         self.send_response(handle, connection, None, status=status.status)
 
     def handle_post_meter(self, handle, connection, match, data, hdr):
