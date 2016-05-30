@@ -26,7 +26,7 @@ import calvin.requests.calvinresponse as response
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
-_sec_conf = _conf.get("security","security_conf")
+_sec_conf = _conf.get("security", "security_conf")
 
 
 class CalvinTunnel(object):
@@ -56,7 +56,7 @@ class CalvinTunnel(object):
         # Add the tunnel to the dictionary
         if self.peer_node_id:
             if self.peer_node_id in self.tunnels:
-                self.tunnels[self.peer_node_id][self.id]=self
+                self.tunnels[self.peer_node_id][self.id] = self
             else:
                 self.tunnels[self.peer_node_id] = {self.id: self}
         # The callbacks recv for incoming message, down for tunnel failed or died, up for tunnel working
@@ -71,7 +71,7 @@ class CalvinTunnel(object):
         self.peer_node_id = peer_node_id
         if self.peer_node_id:
             if self.peer_node_id in self.tunnels:
-                self.tunnels[self.peer_node_id][self.id]=self
+                self.tunnels[self.peer_node_id][self.id] = self
             else:
                 self.tunnels[self.peer_node_id] = {self.id: self}
 
@@ -84,7 +84,7 @@ class CalvinTunnel(object):
         old_id = self.id
         self.id = id
         self.tunnels[self.peer_node_id].pop(old_id)
-        self.tunnels[self.peer_node_id][self.id]=self
+        self.tunnels[self.peer_node_id][self.id] = self
 
     def _setup_ack(self, reply):
         """ Gets called when the tunnel request is acknowledged by the other side """
@@ -141,6 +141,7 @@ class CalvinTunnel(object):
         if not local_only:
             #FIXME use the tunnel_destroy cmd directly instead
             raise NotImplementedError()
+
 
 class CalvinProto(CalvinCBClass):
     """ CalvinProto class is the interface between runtimes for all runtime
@@ -214,7 +215,11 @@ class CalvinProto(CalvinCBClass):
     #### PROXY NODES ####
 
     def proxy_config_handler(self, payload):
-        status = proxyconfig.set_proxy_config(hex(payload['vid']), hex(payload['pid']), payload['from_rt_uuid'], self.node.storage)
+        status = proxyconfig.set_proxy_config(
+                                hex(payload['vid']),
+                                hex(payload['pid']),
+                                payload['from_rt_uuid'],
+                                self.node.storage)
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(status).encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
 
@@ -234,13 +239,15 @@ class CalvinProto(CalvinCBClass):
                                                         state=state,
                                                         prev_connections=prev_connections)):
             # Already have link just continue in _actor_new
-                self._actor_new(to_rt_uuid, callback, actor_type, state, prev_connections, status=response.CalvinResponse(True))
+                self._actor_new(to_rt_uuid, callback, actor_type, state, prev_connections,
+                                status=response.CalvinResponse(True))
 
-    def _actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections, status, peer_node_id=None, uri=None):
+    def _actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections, status,
+                    peer_node_id=None, uri=None):
         """ Got link? continue actor new """
         if status:
             msg = {'cmd': 'ACTOR_NEW',
-                   'state':{'actor_type': actor_type, 'actor_state': state, 'prev_connections':prev_connections}}
+                   'state': {'actor_type': actor_type, 'actor_state': state, 'prev_connections': prev_connections}}
             self.network.links[to_rt_uuid].send_with_reply(callback, msg)
         elif callback:
             callback(status=status)
@@ -316,6 +323,7 @@ class CalvinProto(CalvinCBClass):
                                                         callback=callback,
                                                         app_id=app_id,
                                                         actor_ids=actor_ids))
+
     def _app_destroy(self, to_rt_uuid, callback, app_id, actor_ids, status, peer_node_id=None, uri=None):
         """ Got link? continue app destruction """
         if status:
@@ -354,11 +362,13 @@ class CalvinProto(CalvinCBClass):
             # Need to join the other peer first
             # Create a tunnel object which is not inserted on a link yet
             tunnel = CalvinTunnel(self.network.links, self.tunnels, None, tunnel_type, policy, rt_id=self.node.id)
-            self.network.link_request(to_rt_uuid, CalvinCB(self._tunnel_link_request_finished, tunnel=tunnel, to_rt_uuid=to_rt_uuid, tunnel_type=tunnel_type, policy=policy))
+            self.network.link_request(to_rt_uuid, 
+                                        CalvinCB(self._tunnel_link_request_finished, tunnel=tunnel,
+                                                    to_rt_uuid=to_rt_uuid, tunnel_type=tunnel_type, policy=policy))
             return tunnel
 
         # Do we have a tunnel already?
-        tunnel = self._get_tunnel(to_rt_uuid, tunnel_type = tunnel_type)
+        tunnel = self._get_tunnel(to_rt_uuid, tunnel_type=tunnel_type)
         if tunnel != None:
             return tunnel
 
@@ -378,9 +388,10 @@ class CalvinProto(CalvinCBClass):
         msg = {'cmd': 'TUNNEL_NEW', 'type': tunnel_type, 'tunnel_id': tunnel.id, 'policy': policy}
         self.network.links[to_rt_uuid].send_with_reply(CalvinCB(tunnel._setup_ack), msg)
 
-    def _tunnel_link_request_finished(self, status, tunnel, to_rt_uuid, tunnel_type, policy, peer_node_id=None, uri=None):
+    def _tunnel_link_request_finished(self, status, tunnel, to_rt_uuid, tunnel_type, policy,
+                                        peer_node_id=None, uri=None):
         """ Got a link, now continue with tunnel setup """
-        _log.analyze(self.rt_id, "+" , {'status': status.__str__()}, peer_node_id=to_rt_uuid)
+        _log.analyze(self.rt_id, "+", {'status': status.__str__()}, peer_node_id=to_rt_uuid)
         try:
             self.network.link_check(to_rt_uuid)
         except:
@@ -408,7 +419,8 @@ class CalvinProto(CalvinCBClass):
                     # Our tunnel has lowest id, change our tunnels id
                     # update status and call proper callbacks
                     # but send tunnel reply first, to get everything in order
-                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(ok, data={'tunnel_id': payload['tunnel_id']}).encode()}
+                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'],
+                            'value': response.CalvinResponse(ok, data={'tunnel_id': payload['tunnel_id']}).encode()}
                     self.network.links[payload['from_rt_uuid']].send(msg)
                     tunnel._setup_ack(response.CalvinResponse(True, data={'tunnel_id': payload['tunnel_id']}))
                     _log.analyze(self.rt_id, "+ CHANGE ID", payload, peer_node_id=payload['from_rt_uuid'])
@@ -416,7 +428,8 @@ class CalvinProto(CalvinCBClass):
                     # Our tunnel has highest id, keep our id
                     # update status and call proper callbacks
                     # but send tunnel reply first, to get everything in order
-                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(ok, data={'tunnel_id': tunnel.id}).encode()}
+                    msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'],
+                            'value': response.CalvinResponse(ok, data={'tunnel_id': tunnel.id}).encode()}
                     self.network.links[payload['from_rt_uuid']].send(msg)
                     tunnel._setup_ack(response.CalvinResponse(True, data={'tunnel_id': tunnel.id}))
                     _log.analyze(self.rt_id, "+ KEEP ID", payload, peer_node_id=payload['from_rt_uuid'])
@@ -426,7 +439,8 @@ class CalvinProto(CalvinCBClass):
             return
         else:
             # No simultaneous tunnel requests, lets create it...
-            tunnel = CalvinTunnel(self.network.links, self.tunnels, payload['from_rt_uuid'], payload['type'], payload['policy'], rt_id=self.node.id, id=payload['tunnel_id'])
+            tunnel = CalvinTunnel(self.network.links, self.tunnels, payload['from_rt_uuid'],
+                                    payload['type'], payload['policy'], rt_id=self.node.id, id=payload['tunnel_id'])
             _log.analyze(self.rt_id, "+ NO SMASH", payload, peer_node_id=payload['from_rt_uuid'])
             try:
                 # ... and see if the handler wants it
@@ -434,7 +448,8 @@ class CalvinProto(CalvinCBClass):
             except:
                 pass
         # Send the response
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(ok, data={'tunnel_id': tunnel.id}).encode()}
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'],
+                'value': response.CalvinResponse(ok, data={'tunnel_id': tunnel.id}).encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
 
         # If handler did not want it close it again
@@ -502,7 +517,7 @@ class CalvinProto(CalvinCBClass):
         if tunnel:
             msg = {'cmd': 'PORT_CONNECT', 'port_id': port_id, 'peer_actor_id': peer_port_meta.actor_id,
                     'peer_port_name': peer_port_meta.port_name, 'peer_port_id': peer_port_meta.port_id,
-                    'peer_port_dir': peer_port_meta.properties['direction'], 'tunnel_id':tunnel.id}
+                    'peer_port_dir': peer_port_meta.properties['direction'], 'tunnel_id': tunnel.id}
             self.network.links[peer_port_meta.node_id].send_with_reply(callback, msg)
         else:
             raise NotImplementedError()
@@ -514,11 +529,13 @@ class CalvinProto(CalvinCBClass):
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
 
-    def port_disconnect(self, callback=None, port_id=None, peer_node_id=None, peer_port_id=None, peer_actor_id=None, peer_port_name=None, peer_port_dir=None, tunnel=None):
+    def port_disconnect(self, callback=None, port_id=None, peer_node_id=None, peer_port_id=None, peer_actor_id=None,
+                        peer_port_name=None, peer_port_dir=None, tunnel=None):
         """ Before calling this method all needed information must be available
             see port manager for parameters
         """
-        msg = {'cmd': 'PORT_DISCONNECT', 'port_id': port_id, 'peer_actor_id': peer_actor_id, 'peer_port_name': peer_port_name, 'peer_port_id': peer_port_id, 'peer_port_dir': peer_port_dir}
+        msg = {'cmd': 'PORT_DISCONNECT', 'port_id': port_id, 'peer_actor_id': peer_actor_id,
+                'peer_port_name': peer_port_name, 'peer_port_id': peer_port_id, 'peer_port_dir': peer_port_dir}
         self.network.links[peer_node_id].send_with_reply(callback, msg)
 
     def port_disconnect_handler(self, payload):
@@ -594,11 +611,11 @@ class CalvinProto(CalvinCBClass):
         """
         Register node attributes for authorization.
 
-        authz_server_uuid: node uuid for the runtime that acts as authorization server 
+        authz_server_uuid: node uuid for the runtime that acts as authorization server
         callback: called when finished with the registration
         jwt: signed JSON Web Token (JWT) containing the node attributes
         """
-        if self.node.network.link_request(authz_server_uuid, 
+        if self.node.network.link_request(authz_server_uuid,
                                           CalvinCB(self._authorization_register,
                                                    authz_server_uuid=authz_server_uuid,
                                                    callback=callback,
@@ -634,14 +651,14 @@ class CalvinProto(CalvinCBClass):
         self.network.links[payload['from_rt_uuid']].send(msg)
 
     def authorization_decision(self, authz_server_uuid, callback, jwt):
-        """ 
+        """
         Return a response to an authorization request.
 
-        authz_server_uuid: node uuid for the runtime that acts as authorization server 
+        authz_server_uuid: node uuid for the runtime that acts as authorization server
         callback: called when finished with the authorization decision
         jwt: signed JSON Web Token (JWT) containing the authorization request
         """
-        if self.node.network.link_request(authz_server_uuid, 
+        if self.node.network.link_request(authz_server_uuid,
                                           CalvinCB(self._authorization_decision,
                                                    authz_server_uuid=authz_server_uuid,
                                                    callback=callback,
@@ -661,7 +678,7 @@ class CalvinProto(CalvinCBClass):
         """
         Return a response to the authorization request in the payload.
 
-        Signed JSON Web Tokens (JWT) with timestamps and information about 
+        Signed JSON Web Tokens (JWT) with timestamps and information about
         sender and receiver are used for both the request and response.
         A Policy Decision Point (PDP) is used to determine if access is permitted.
         """
@@ -670,7 +687,7 @@ class CalvinProto(CalvinCBClass):
         else:
             try:
                 decoded = self.node.authorization.decode_request(payload)
-                self.node.authorization.pdp.authorize(decoded["request"], 
+                self.node.authorization.pdp.authorize(decoded["request"],
                                     callback=CalvinCB(self._authorization_decision_handler, payload, decoded))
                 return
             except Exception:
@@ -694,11 +711,11 @@ class CalvinProto(CalvinCBClass):
         """
         Search for runtime where the decision for the authorization request is 'permit'.
 
-        authz_server_uuid: node uuid for the runtime that acts as authorization server 
+        authz_server_uuid: node uuid for the runtime that acts as authorization server
         callback: called when finished with the search
         jwt: signed JSON Web Token (JWT) containing the authorization request
         """
-        if self.node.network.link_request(authz_server_uuid, 
+        if self.node.network.link_request(authz_server_uuid,
                                           CalvinCB(self._authorization_search,
                                                    authz_server_uuid=authz_server_uuid,
                                                    callback=callback,
@@ -718,13 +735,13 @@ class CalvinProto(CalvinCBClass):
         """
         Return a response to the authorization search request in the payload.
 
-        Signed JSON Web Tokens (JWT) with timestamps and information about 
+        Signed JSON Web Tokens (JWT) with timestamps and information about
         sender and receiver are used for both the request and response.
         A Policy Decision Point (PDP) is used for the authorization search.
         """
         try:
             decoded = self.node.authorization.decode_request(payload)
-            self.node.authorization.pdp.runtime_search(decoded["request"], decoded["whitelist"], 
+            self.node.authorization.pdp.runtime_search(decoded["request"], decoded["whitelist"],
                                          CalvinCB(self._authorization_search_handler, payload, decoded))
         except Exception:
             reply = response.CalvinResponse(response.INTERNAL_ERROR)

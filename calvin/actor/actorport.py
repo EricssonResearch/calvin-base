@@ -429,6 +429,7 @@ class PortMeta(object):
 
 
 if __name__ == '__main__':
+
     class Stub(object):
 
         def __init__(self, name):

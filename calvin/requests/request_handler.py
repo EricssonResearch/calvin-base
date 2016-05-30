@@ -70,11 +70,13 @@ def get_runtime(value):
 
 
 class RT(object):
+
     def __init__(self, control_uri):
         self.control_uri = control_uri
 
 
 class RequestHandler(object):
+
     def __init__(self):
         self.future_responses = []
 
@@ -219,7 +221,6 @@ class RequestHandler(object):
         path = ACTOR_MIGRATE.format(actor_id)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
-
 
     def migrate_app_use_req(self, rt, application_id, deploy_info=None, move=False, timeout=DEFAULT_TIMEOUT,
                             async=False):

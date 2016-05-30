@@ -24,11 +24,13 @@ from calvin.utilities import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 
+
 class ConnectionFactory(object):
     """ Set up a connection between ports according to port properties
         node: the node
         purpose: INIT, CONNECT or DISCONNECT
     """
+
     def __init__(self, node, purpose, **kwargs):
         super(ConnectionFactory, self).__init__()
         self.kwargs = kwargs
@@ -74,10 +76,10 @@ class ConnectionFactory(object):
         connections = []
         for peer_id in peer_ids:
             # When node id is 'local' it is local
-            peer_node_id=self.node.id if peer_id[0] == 'local' else peer_id[0]
+            peer_node_id = self.node.id if peer_id[0] == 'local' else peer_id[0]
             peer_port_meta = PortMeta(
                                 self.node.pm,
-                                port_id = peer_id[1], node_id=peer_node_id)
+                                port_id=peer_id[1], node_id=peer_node_id)
             connections.append(self.get(port, peer_port_meta, callback, **kwargs))
         # Make a connection instance aware of all parallel connection instances
         for connection in connections:
@@ -93,6 +95,7 @@ class ConnectionFactory(object):
 
 class BaseConnection(object):
     """BaseConnection"""
+
     def __init__(self, node, purpose, port, peer_port_meta, callback, *args, **kwargs):
         super(BaseConnection, self).__init__()
         self.node = node
@@ -118,6 +121,7 @@ class BaseConnection(object):
 
 class Disconnected(BaseConnection):
     """ When a peer already is disconnected """
+
     def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
         super(Disconnected, self).__init__(node, purpose, port, peer_port_meta, callback)
         self.kwargs = kwargs
@@ -129,6 +133,7 @@ class Disconnected(BaseConnection):
 
 class LocalConnection(BaseConnection):
     """ Connect two ports that are local"""
+
     def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
         super(LocalConnection, self).__init__(node, purpose, port, peer_port_meta, callback)
         self.kwargs = kwargs
@@ -205,6 +210,7 @@ class LocalConnection(BaseConnection):
 
 class TunnelConnection(BaseConnection):
     """ Connect two ports that are remote over a Tunnel"""
+
     def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
         super(TunnelConnection, self).__init__(node, purpose, port, peer_port_meta, callback)
         self.kwargs = kwargs
@@ -248,7 +254,6 @@ class TunnelConnection(BaseConnection):
                         'tunnel_status': self.token_tunnel.tunnels[self.peer_port_meta.node_id].status},
                         peer_node_id=self.peer_port_meta.node_id)
         self._connect_via_tunnel(status=response.CalvinResponse(True))
-
 
     def _connect_via_tunnel(self, status=None):
         """ All information and hopefully (status OK) a tunnel to the peer is available for a port connect"""
@@ -426,7 +431,6 @@ class TunnelConnection(BaseConnection):
         _log.analyze(self.node.id, "+ OK", payload, peer_node_id=self.peer_port_meta.node_id)
         return response.CalvinResponse(response.OK, {'port_id': self.port.id})
 
-
     def disconnect(self):
         """ Obtain any missing information to enable disconnecting one port peer and make the disconnect"""
 
@@ -573,7 +577,6 @@ class TunnelConnection(BaseConnection):
                 elif 'TOKEN_REPLY' == payload['cmd']:
                     self.recv_token_reply_handler(tunnel, payload)
 
-        
     def init(self):
         return TunnelConnection.TokenTunnel(self.node, self.kwargs['portmanager'])
 
