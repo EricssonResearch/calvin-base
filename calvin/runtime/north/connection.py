@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.utilities.utils import enum
 from calvin.runtime.south import endpoint
 from calvin.runtime.north.calvin_proto import CalvinTunnel
 from calvin.actor.actorport import PortMeta
@@ -24,18 +25,28 @@ from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
 class ConnectionFactory(object):
-    """ Set up a connection between ports according to port properties """
-    def __init__(self, node):
+    """ Set up a connection between ports according to port properties
+        node: the node
+        purpose: INIT, CONNECT or DISCONNECT
+    """
+    def __init__(self, node, purpose, **kwargs):
         super(ConnectionFactory, self).__init__()
+        self.kwargs = kwargs
         self.node = node
+        self.purpose = purpose
+
+    PURPOSE = enum('INIT', 'CONNECT', 'DISCONNECT')
 
     def get(self, port, peer_port_meta, callback=None, **kwargs):
         if peer_port_meta.is_local():
-            return LocalConnection(self.node, port, peer_port_meta, callback, **kwargs)
+            return LocalConnection(self.node, self.purpose, port, peer_port_meta, callback, **kwargs)
+        elif self.purpose == self.PURPOSE.DISCONNECT and peer_port_meta.node_id is None:
+            # A port that miss node info that we want to disconnect is already disconnected
+            return Disconnected(self.node, self.purpose, port, peer_port_meta, callback, **kwargs)
         else:
             # Remote connection
             # TODO Currently we only have support for setting up a remote connection via tunnel
-            return TunnelConnection(self.node, port, peer_port_meta, callback, **kwargs)
+            return TunnelConnection(self.node, self.purpose, port, peer_port_meta, callback, **kwargs)
 
     def get_existing(self, port_id, callback=None, **kwargs):
         _log.analyze(self.node.id, "+", {'port_id': port_id})
@@ -63,32 +74,32 @@ class ConnectionFactory(object):
         connections = []
         for peer_id in peer_ids:
             # When node id is 'local' it is local
-            node_id=self.node.id if peer_id[0] == 'local' else peer_id[0]
+            peer_node_id=self.node.id if peer_id[0] == 'local' else peer_id[0]
             peer_port_meta = PortMeta(
                                 self.node.pm,
-                                port_id = peer_id[1], node_id=node_id)
-            # When node id is None in this case it is disconnected already
-            # TODO introduce data structure to detect this since we in general can't
-            # distinguish missing (unknown) from disconnected
-            if node_id is None:
-                connections.append(Disconnected(self.node, port, peer_port_meta, callback, **kwargs))
-            else:
-                connections.append(self.get(port, peer_port_meta, callback, **kwargs))
+                                port_id = peer_id[1], node_id=peer_node_id)
+            connections.append(self.get(port, peer_port_meta, callback, **kwargs))
         # Make a connection instance aware of all parallel connection instances
         for connection in connections:
             connection.parallel_connections(connections)
         return connections
 
-    def data(self):
-        d = {}
+    def init(self):
+        data = {}
         for C in _connection_classes:
-            d.update(C(self.node, None, None, None).data())
+            data[C.__name__] = C(self.node, self.PURPOSE.INIT, None, None, None, **self.kwargs).init()
+        return data
 
 
 class BaseConnection(object):
     """BaseConnection"""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, node, purpose, port, peer_port_meta, callback, *args, **kwargs):
         super(BaseConnection, self).__init__()
+        self.node = node
+        self.purpose = purpose
+        self.port = port
+        self.peer_port_meta = peer_port_meta
+        self.callback = callback
         self._parallel_connections = []
 
     def parallel_connections(self, connections):
@@ -98,18 +109,17 @@ class BaseConnection(object):
         for c in self._parallel_connections:
             setattr(c, key, value)
 
+    def init(self):
+        return None
+
     def __str__(self):
         return "%s(port_id=%s, peer_port_id=%s)" % (self.__class__.__name__, self.port.id, self.peer_port_meta.port_id)
 
 
 class Disconnected(BaseConnection):
     """ When a peer already is disconnected """
-    def __init__(self, node, port, peer_port_meta, callback, **kwargs):
-        super(Disconnected, self).__init__()
-        self.node = node
-        self.port = port
-        self.peer_port_meta = peer_port_meta
-        self.callback = callback
+    def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
+        super(Disconnected, self).__init__(node, purpose, port, peer_port_meta, callback)
         self.kwargs = kwargs
 
     def disconnect(self):
@@ -119,12 +129,8 @@ class Disconnected(BaseConnection):
 
 class LocalConnection(BaseConnection):
     """ Connect two ports that are local"""
-    def __init__(self, node, port, peer_port_meta, callback, **kwargs):
-        super(LocalConnection, self).__init__()
-        self.node = node
-        self.port = port
-        self.peer_port_meta = peer_port_meta
-        self.callback = callback
+    def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
+        super(LocalConnection, self).__init__(node, purpose, port, peer_port_meta, callback)
         self.kwargs = kwargs
 
     def connect(self):
@@ -196,38 +202,33 @@ class LocalConnection(BaseConnection):
             if self.callback:
                 self.callback(status=response.CalvinResponse(True), port_id=self.port.id)
 
-    def data(self):
-        return {}
-
 
 class TunnelConnection(BaseConnection):
     """ Connect two ports that are remote over a Tunnel"""
-    def __init__(self, node, port, peer_port_meta, callback, **kwargs):
-        super(TunnelConnection, self).__init__()
-        self.node = node
-        self.port = port
-        self.peer_port_meta = peer_port_meta
-        self.callback = callback
+    def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
+        super(TunnelConnection, self).__init__(node, purpose, port, peer_port_meta, callback)
         self.kwargs = kwargs
+        if self.purpose != ConnectionFactory.PURPOSE.INIT:
+            self.token_tunnel = self.node.pm.connections_data[self.__class__.__name__]
 
     def connect(self):
         tunnel = None
-        if self.peer_port_meta.node_id not in self.node.pm.tunnels.iterkeys():
+        if self.peer_port_meta.node_id not in self.token_tunnel.tunnels.iterkeys():
             # No tunnel to peer, get one first
             _log.analyze(self.node.id, "+ GET TUNNEL", self.peer_port_meta, peer_node_id=self.peer_port_meta.node_id)
             tunnel = self.node.proto.tunnel_new(self.peer_port_meta.node_id, 'token', {})
-            tunnel.register_tunnel_down(CalvinCB(self.node.pm.tunnel_down, tunnel))
-            tunnel.register_tunnel_up(CalvinCB(self.node.pm.tunnel_up, tunnel))
-            tunnel.register_recv(CalvinCB(self.node.pm.tunnel_recv_handler, tunnel))
-            self.node.pm.tunnels[self.peer_port_meta.node_id] = tunnel
+            tunnel.register_tunnel_down(CalvinCB(self.token_tunnel.tunnel_down, tunnel))
+            tunnel.register_tunnel_up(CalvinCB(self.token_tunnel.tunnel_up, tunnel))
+            tunnel.register_recv(CalvinCB(self.token_tunnel.tunnel_recv_handler, tunnel))
+            self.token_tunnel.tunnels[self.peer_port_meta.node_id] = tunnel
         else:
-            tunnel = self.node.pm.tunnels[self.peer_port_meta.node_id]
+            tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
 
         if tunnel.status == CalvinTunnel.STATUS.PENDING:
-            if self.peer_port_meta.node_id not in self.node.pm.pending_tunnels:
-                self.node.pm.pending_tunnels[self.peer_port_meta.node_id] = []
+            if self.peer_port_meta.node_id not in self.token_tunnel.pending_tunnels:
+                self.token_tunnel.pending_tunnels[self.peer_port_meta.node_id] = []
             # call _connect_via_tunnel when we get the response of the tunnel
-            self.node.pm.pending_tunnels[self.peer_port_meta.node_id].append(CalvinCB(self._connect_via_tunnel))
+            self.token_tunnel.pending_tunnels[self.peer_port_meta.node_id].append(CalvinCB(self._connect_via_tunnel))
             return
         elif tunnel.status == CalvinTunnel.STATUS.TERMINATED:
             # TODO should we retry at this level?
@@ -244,7 +245,7 @@ class TunnelConnection(BaseConnection):
 
         _log.analyze(self.node.id, "+ HAD TUNNEL",
                         {'local_port': self.port, 'peer_port': self.peer_port_meta,
-                        'tunnel_status': self.node.pm.tunnels[self.peer_port_meta.node_id].status},
+                        'tunnel_status': self.token_tunnel.tunnels[self.peer_port_meta.node_id].status},
                         peer_node_id=self.peer_port_meta.node_id)
         self._connect_via_tunnel(status=response.CalvinResponse(True))
 
@@ -284,10 +285,10 @@ class TunnelConnection(BaseConnection):
                 return None
         # Finally we have all information and a tunnel
         # Lets ask the peer if it can connect our port.
-        tunnel = self.node.pm.tunnels[self.peer_port_meta.node_id]
+        tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
         _log.analyze(self.node.id, "+ SENDING",
                         {'local_port': self.port, 'peer_port': self.peer_port_meta,
-                        'tunnel_status': self.node.pm.tunnels[self.peer_port_meta.node_id].status},
+                        'tunnel_status': self.token_tunnel.tunnels[self.peer_port_meta.node_id].status},
                         peer_node_id=self.peer_port_meta.node_id)
 
         self.node.proto.port_connect(callback=CalvinCB(self._connected_via_tunnel),
@@ -338,7 +339,7 @@ class TunnelConnection(BaseConnection):
                 return
 
         # Set up the port's endpoint
-        tunnel = self.node.pm.tunnels[self.peer_port_meta.node_id]
+        tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
         if self.port.direction == 'in':
             endp = endpoint.TunnelInEndpoint(self.port,
                                              tunnel,
@@ -387,7 +388,7 @@ class TunnelConnection(BaseConnection):
         if 'tunnel_id' not in payload:
             # TODO implement connection requests not via tunnel
             raise NotImplementedError()
-        tunnel = self.node.pm.tunnels[self.peer_port_meta.node_id]
+        tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
         if tunnel.id != payload['tunnel_id']:
             # For some reason does the tunnel id not match the one we have to connect to the peer
             # Likely due to that we have not yet received a tunnel request from the peer that replace our tunnel id
@@ -424,15 +425,6 @@ class TunnelConnection(BaseConnection):
 
         _log.analyze(self.node.id, "+ OK", payload, peer_node_id=self.peer_port_meta.node_id)
         return response.CalvinResponse(response.OK, {'port_id': self.port.id})
-
-    def data(self):
-        # Register that we are interested in peer's requests for token transport tunnels
-        #self.node.proto.register_tunnel_handler('token', CalvinCB(self.tunnel_request_handles))
-        #self.tunnels = {}  # key: peer_node_id, value: tunnel instances
-        #self.pending_tunnels = {}  # key: peer_node_id, value: list of CalvinCB instances
-        return {}
-
-
 
 
     def disconnect(self):
@@ -480,6 +472,110 @@ class TunnelConnection(BaseConnection):
             if isinstance(ep, endpoint.TunnelOutEndpoint):
                 self.node.monitor.unregister_out_endpoint(ep)
             ep.destroy()
+
+    class TokenTunnel(object):
+        """ Handles token transport over tunnel, common instance for all token tunnel connections """
+
+        def __init__(self, node, pm):
+            super(TunnelConnection.TokenTunnel, self).__init__()
+            self.node = node
+            self.pm = pm
+            self.proto = node.proto
+            # Register that we are interested in peer's requests for token transport tunnels
+            self.proto.register_tunnel_handler('token', CalvinCB(self.tunnel_request_handles))
+            self.tunnels = {}  # key: peer_node_id, value: tunnel instances
+            self.pending_tunnels = {}  # key: peer_node_id, value: list of CalvinCB instances
+            # Alias to port manager's port lookup
+            self._get_local_port = self.pm._get_local_port
+
+        def tunnel_request_handles(self, tunnel):
+            """ Incoming tunnel request for token transport """
+            # TODO check if we want a tunnel first
+            self.tunnels[tunnel.peer_node_id] = tunnel
+            tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
+            tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
+            tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
+            # We accept it by returning True
+            return True
+
+        def tunnel_down(self, tunnel):
+            """ Callback that the tunnel is not accepted or is going down """
+            tunnel_peer_id = tunnel.peer_node_id
+            try:
+                self.tunnels.pop(tunnel_peer_id)
+            except:
+                pass
+
+            # If a port connect have ordered a tunnel then it have a callback in pending
+            # which want information on the failure
+            if tunnel_peer_id in self.pending_tunnels:
+                for cb in self.pending_tunnels[tunnel_peer_id]:
+                    try:
+                        cb(status=response.CalvinResponse(False))
+                    except:
+                        pass
+                self.pending_tunnels.pop(tunnel_peer_id)
+            # We should always return True which sends an OK on the destruction of the tunnel
+            return True
+
+        def tunnel_up(self, tunnel):
+            """ Callback that the tunnel is working """
+            tunnel_peer_id = tunnel.peer_node_id
+            # If a port connect have ordered a tunnel then it have a callback in pending
+            # which want to continue with the connection
+            if tunnel_peer_id in self.pending_tunnels:
+                for cb in self.pending_tunnels[tunnel_peer_id]:
+                    try:
+                        cb(status=response.CalvinResponse(True))
+                    except:
+                        pass
+                self.pending_tunnels.pop(tunnel_peer_id)
+
+        def recv_token_handler(self, tunnel, payload):
+            """ Gets called when a token arrives on any port """
+            try:
+                port = self._get_local_port(port_id=payload['peer_port_id'])
+                port.endpoint.recv_token(payload)
+            except:
+                # Inform other end that it sent token to a port that does not exist on this node or
+                # that we have initiated a disconnect (endpoint does not have recv_token).
+                # Can happen e.g. when the actor and port just migrated and the token was in the air
+                reply = {'cmd': 'TOKEN_REPLY',
+                         'port_id': payload['port_id'],
+                         'peer_port_id': payload['peer_port_id'],
+                         'sequencenbr': payload['sequencenbr'],
+                         'value': 'ABORT'}
+                tunnel.send(reply)
+
+        def recv_token_reply_handler(self, tunnel, payload):
+            """ Gets called when a token is (N)ACKed for any port """
+            try:
+                port = self._get_local_port(port_id=payload['port_id'])
+            except:
+                pass
+            else:
+                # Send the reply to correct endpoint (an outport may have several when doing fan-out)
+                for e in port.endpoints:
+                    # We might have started disconnect before getting the reply back, just ignore in that case
+                    # it is sorted out if we connect again
+                    try:
+                        if e.get_peer()[1] == payload['peer_port_id']:
+                            e.reply(payload['sequencenbr'], payload['value'])
+                            break
+                    except:
+                        pass
+
+        def tunnel_recv_handler(self, tunnel, payload):
+            """ Gets called when we receive a message over a tunnel """
+            if 'cmd' in payload:
+                if 'TOKEN' == payload['cmd']:
+                    self.recv_token_handler(tunnel, payload)
+                elif 'TOKEN_REPLY' == payload['cmd']:
+                    self.recv_token_reply_handler(tunnel, payload)
+
+        
+    def init(self):
+        return TunnelConnection.TokenTunnel(self.node, self.kwargs['portmanager'])
 
 
 # All connection classes
