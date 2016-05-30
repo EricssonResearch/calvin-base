@@ -62,10 +62,18 @@ class ConnectionFactory(object):
         # A port may have several peers, create individual connection instances
         connections = []
         for peer_id in peer_ids:
+            # When node id is 'local' it is local
+            node_id=self.node.id if peer_id[0] == 'local' else peer_id[0]
             peer_port_meta = PortMeta(
                                 self.node.pm,
-                                port_id = peer_id[1], node_id=self.node.id if peer_id[0] == 'local' else peer_id[0])
-            connections.append(self.get(port, peer_port_meta, callback, **kwargs))
+                                port_id = peer_id[1], node_id=node_id)
+            # When node id is None in this case it is disconnected already
+            # TODO introduce data structure to detect this since we in general can't
+            # distinguish missing (unknown) from disconnected
+            if node_id is None:
+                connections.append(Disconnected(self.node, port, peer_port_meta, callback, **kwargs))
+            else:
+                connections.append(self.get(port, peer_port_meta, callback, **kwargs))
         # Make a connection instance aware of all parallel connection instances
         for connection in connections:
             connection.parallel_connections(connections)
@@ -92,6 +100,21 @@ class BaseConnection(object):
 
     def __str__(self):
         return "%s(port_id=%s, peer_port_id=%s)" % (self.__class__.__name__, self.port.id, self.peer_port_meta.port_id)
+
+
+class Disconnected(BaseConnection):
+    """ When a peer already is disconnected """
+    def __init__(self, node, port, peer_port_meta, callback, **kwargs):
+        super(Disconnected, self).__init__()
+        self.node = node
+        self.port = port
+        self.peer_port_meta = peer_port_meta
+        self.callback = callback
+        self.kwargs = kwargs
+
+    def disconnect(self):
+        if self.callback:
+            self.callback(status=response.CalvinResponse(True), port_id=self.port.id)
 
 
 class LocalConnection(BaseConnection):

@@ -344,6 +344,7 @@ class ActorManager(object):
         actor_type = actor._type
         ports = actor.connections(self.node.id)
         # Disconnect ports and continue in _migrate_disconnect
+        _log.analyze(self.node.id, "+ PRE DISCONNECT", {'actor_name': actor.name, 'actor_id': actor.id})
         self.node.pm.disconnect(callback=CalvinCB(self._migrate_disconnected,
                                                   actor=actor,
                                                   actor_type=actor_type,
@@ -351,10 +352,12 @@ class ActorManager(object):
                                                   node_id=node_id,
                                                   callback=callback),
                                 actor_id=actor_id)
+        _log.analyze(self.node.id, "+ POST DISCONNECT", {'actor_name': actor.name, 'actor_id': actor.id})
         self.node.control.log_actor_migrate(actor_id, node_id)
 
     def _migrate_disconnected(self, actor, actor_type, ports, node_id, status, callback = None, **state):
         """ Actor disconnected, continue migration """
+        _log.analyze(self.node.id, "+ DISCONNECTED", {'actor_name': actor.name, 'actor_id': actor.id, 'status': status})
         if status:
             state = actor.state()
             self.destroy(actor.id)
