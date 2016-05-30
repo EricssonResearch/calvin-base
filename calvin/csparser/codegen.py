@@ -659,7 +659,7 @@ class ConsistencyCheck(object):
 
 class CodeGen(object):
 
-    verbose = True
+    verbose = False
     verbose_nodes = False
 
     """
