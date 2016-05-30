@@ -52,7 +52,7 @@ class PortManager(object):
                                 properties={'direction': payload['peer_port_dir']},
                                 node_id=self.node.id)
         try:
-            port = our_port_meta.get_local_port()
+            port = our_port_meta.port
         except:
             # We don't have the port
             _log.analyze(self.node.id, "+ PORT NOT FOUND", payload, peer_node_id=payload['from_rt_uuid'])
@@ -86,7 +86,7 @@ class PortManager(object):
         _log.analyze(self.node.id, "+", {'local': local_port_meta, 'peer': peer_port_meta},
                     peer_node_id=peer_node_id, tb=True)
         try:
-            port = local_port_meta.get_local_port()
+            port = local_port_meta.port
         except response.CalvinResponseException as e:
             if callback:
                 callback(status=e.response,
@@ -248,7 +248,7 @@ class PortManager(object):
         _log.analyze(self.node.id, "+", {'local': local_port_meta, 'peer': peer_port_meta},
                     peer_node_id=payload['from_rt_uuid'], tb=True)
         try:
-            port = local_port_meta.get_local_port()
+            port = local_port_meta.port
         except response.CalvinResponseException as e:
             # We don't have the port
             return response.CalvinResponse(response.NOT_FOUND)

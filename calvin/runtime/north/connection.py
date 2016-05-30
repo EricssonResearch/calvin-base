@@ -137,7 +137,7 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ LOCAL", {'local_port': self.port, 'peer_port': self.peer_port_meta},
                         peer_node_id=self.peer_port_meta.node_id)
         port1 = self.port
-        port2 = self.peer_port_meta.get_local_port()
+        port2 = self.peer_port_meta.port
         # Local connect wants the first port to be an inport
         inport, outport = (port1, port2) if port1.direction == 'in' else (port2, port1)
         self._connect_via_local(inport, outport)
@@ -184,7 +184,7 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP DESTROYED", {'port_id': self.port.id})
 
         # Disconnect other end also, which is also local
-        endpoints = self.peer_port_meta.get_local_port().disconnect(peer_ids=[self.port.id])
+        endpoints = self.peer_port_meta.port.disconnect(peer_ids=[self.port.id])
         _log.analyze(self.node.id, "+ EP PEER", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
         for ep in endpoints:

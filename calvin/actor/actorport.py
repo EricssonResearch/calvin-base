@@ -274,11 +274,6 @@ class PortMeta(object):
     def __str__(self):
         return str(self.encode())
 
-    def get_local_port(self):
-        if self._port is None:
-            self.retrieve(callback=None, local_only=True)
-        return self._port
-
     def is_local(self):
         if self.node_id is None:
             try:
@@ -289,10 +284,12 @@ class PortMeta(object):
 
     @property
     def port(self):
+        """ Return the port instance, only relevant if local.
+            Will raise exception if not local.
+        """
         if self._port is None:
-            raise response.CalvinResponseException(response.CalvinResponse(False))
-        else:
-            return self._port
+            self.retrieve(callback=None, local_only=True)
+        return self._port
 
     def retry(self, callback):
         self.node_id = None
