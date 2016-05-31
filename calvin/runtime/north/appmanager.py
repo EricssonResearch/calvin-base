@@ -702,8 +702,9 @@ class Deployer(object):
             peer_port_dir='out')
         return result
 
-    def set_port_property(self, actor, port_type, port_name, port_property, value):
-        self.node.am.set_port_property(self.actor_map[actor], port_type, port_name, port_property, value)
+    def set_port_property(self, actor, port_dir, port_name, port_property, value):
+        self.node.pm.set_port_property(actor_id=self.actor_map[actor], port_dir=port_dir,
+                                        port_name=port_name, port_property=port_property, value=value)
 
     def select_actor(self, out_iter, kwargs, final, comp_name_desc):
         _log.analyze(self.node.id, "+", {'comp_name_desc': comp_name_desc}, tb=True)

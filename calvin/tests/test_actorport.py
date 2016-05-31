@@ -160,7 +160,7 @@ def test_set_outport_state(outport):
 
     assert outport.name == 'new_name'
     assert outport.id == '123'
-    assert outport.fanout == 2
+    assert outport.properties['fanout'] == 2
 
     assert outport.can_write()
     assert outport.available_tokens() == 3

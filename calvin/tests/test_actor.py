@@ -38,19 +38,6 @@ def actor():
     return create_actor(DummyNode())
 
 
-@pytest.mark.parametrize("port_type,port_name,port_property,value,expected", [
-    ("invalid", "", "", "", False),
-    ("in", "missing", "", "", False),
-    ("out", "missing", "", "", False),
-    ("out", "token", "missing", "", False),
-    ("in", "token", "missing", "", False),
-    ("out", "token", "name", "new_name", True),
-    ("out", "token", "name", "new_name", True),
-])
-def test_set_port_property(port_type, port_name, port_property, value, expected):
-    assert actor().set_port_property(port_type, port_name, port_property, value) is expected
-
-
 @pytest.mark.parametrize("inport_ret_val,outport_ret_val,expected", [
     (False, False, False),
     (False, True, False),

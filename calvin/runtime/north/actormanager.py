@@ -441,13 +441,6 @@ class ActorManager(object):
         _log.debug(actor)
         _log.debug("-----------")
 
-    def set_port_property(self, actor_id, port_type, port_name, port_property, value):
-        if actor_id not in self.actors:
-            self._actor_not_found(actor_id)
-        actor = self.actors[actor_id]
-        success = actor.set_port_property(port_type, port_name, port_property, value)
-        return 'OK' if success else 'FAILURE'
-
     def get_port_state(self, actor_id, port_id):
         if actor_id not in self.actors:
             self._actor_not_found(actor_id)

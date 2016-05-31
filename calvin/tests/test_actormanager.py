@@ -180,7 +180,6 @@ class ActorManagerTests(unittest.TestCase):
     def test_missing_actor(self):
         test_functions = [("report", ()), ("destroy", ()), ("enable", ()), ("disable", ()),
                           ("connect", ([], None)), ("connections", ()), ("dump", ()),
-                          ("set_port_property", (None, None, None, None)),
                           ("get_port_state", (None, ))]
         for func, args in test_functions:
             with pytest.raises(Exception) as excinfo:

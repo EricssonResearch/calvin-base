@@ -414,26 +414,6 @@ class Actor(object):
             self.name, self._type, self.fsm, ip, op)
         return s
 
-    @verify_status([STATUS.READY])
-    def set_port_property(self, port_type, port_name, port_property, value):
-        """Change a port property. Currently, setting 'fanout' on output ports is only allowed operation."""
-
-        if port_type not in ('in', 'out'):
-            _log.error("Illegal port type '%s' for actor '%s' of type '%s'" % (port_type, self.name, self._type))
-            return False
-        ports = self.outports if port_type == 'out' else self.inports
-        if port_name not in ports:
-            _log.error("Illegal %sport name '%s' for actor '%s' of type '%s'" %
-                       (port_type, port_name, self.name, self._type))
-            return False
-        port = ports[port_name]
-        if not hasattr(port, port_property):
-            _log.error("Illegal property '%s' for %sport '%s' in actor '%s' of type '%s'" %
-                       (port_property, port_type, port_name, self.name, self._type))
-            return False
-        setattr(port, port_property, value)
-        return True
-
     @verify_status([STATUS.READY, STATUS.PENDING])
     def did_connect(self, port):
         """Called when a port is connected, checks actor is fully connected."""

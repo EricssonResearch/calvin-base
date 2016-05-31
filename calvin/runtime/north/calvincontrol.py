@@ -329,10 +329,11 @@ control_api_doc += \
         "actor_id" : <actor-id>,
         "port_type": <in/out>,
         "port_name": <port-name>,
-        "port_property": <property-name>
+        "port_id": <port-id>, optionally instead of the above identifiers
+        "port_property": <property-name as string>
         "value" : <property value>
     }
-    Response status code: OK or NOT_FOUND
+    Response status code: OK, BAD_REQUEST or NOT_FOUND
     Response: none
 """
 re_set_port_property = re.compile(r"POST /set_port_property\sHTTP/1")
@@ -1231,16 +1232,17 @@ class CalvinControl(object):
 
     def handle_set_port_property(self, handle, connection, match, data, hdr):
         try:
-            self.node.am.set_port_property(
-                actor_id=data["actor_id"],
-                port_type=data["port_type"],
-                port_name=data["port_name"],
-                port_property=data["port_property"],
-                value=data["value"])
-            status = calvinresponse.OK
+            status = self.node.pm.set_port_property(
+                port_id=data.get("port_id"),
+                actor_id=data.get("actor_id"),
+                port_dir=data.get("port_type"),
+                port_name=data.get("port_name"),
+                port_property=data.get("port_property"),
+                value=data.get("value"))
         except:
-            status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection, None, status=status)
+            _log.exception("Failed setting port property")
+            status = calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND)
+        self.send_response(handle, connection, None, status=status.status)
 
     def handle_deploy(self, handle, connection, match, data, hdr):
         try:

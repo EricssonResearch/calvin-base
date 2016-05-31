@@ -35,6 +35,15 @@ class PortManager(object):
         self.ports = {}  # key: port_id, value: port
         self.connections_data = ConnectionFactory(self.node, ConnectionFactory.PURPOSE.INIT, portmanager=self).init()
 
+    def set_port_property(self, port_id=None, actor_id=None, port_dir=None, port_name=None,
+                            port_property=None, value=None):
+        _log.analyze(self.node.id, "+", {port_property: value})
+        port = self._get_local_port(actor_id=actor_id, port_name=port_name, port_dir=port_dir, port_id=port_id)
+        if isinstance(port_property, basestring):
+            port.properties[port_property] = value
+            return response.CalvinResponse(True)
+        return response.CalvinResponse(response.BAD_REQUEST)
+
     def connection_request(self, payload):
         """ A request from a peer to connect a port"""
         _log.analyze(self.node.id, "+", payload, peer_node_id=payload['from_rt_uuid'])

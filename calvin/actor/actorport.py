@@ -151,13 +151,13 @@ class OutPort(Port):
 
     def __init__(self, name, owner):
         super(OutPort, self).__init__(name, owner)
-        self.fanout = 1
+        self.properties['fanout'] = 1
         self.endpoints = []
         self.properties['direction'] = 'out'
 
     def __str__(self):
         s = super(OutPort, self).__str__()
-        s = s + "fan-out: %s\n" % self.fanout
+        s = s + "fan-out: %s\n" % self.properties['fanout']
         s = s + " [ "
         for ep in self.endpoints:
             s = s + str(ep) + " "
@@ -166,15 +166,15 @@ class OutPort(Port):
 
     def _state(self):
         state = super(OutPort, self)._state()
-        state['fanout'] = self.fanout
+        state['fanout'] = self.properties['fanout']
         return state
 
     def _set_state(self, state):
-        self.fanout = state.pop('fanout')
+        self.properties['fanout'] = state.pop('fanout')
         super(OutPort, self)._set_state(state)
 
     def is_connected(self):
-        if len(self.endpoints) < self.fanout:
+        if len(self.endpoints) < self.properties['fanout']:
             return False
         for ep in self.endpoints:
             if not ep.is_connected():

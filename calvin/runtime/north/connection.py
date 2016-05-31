@@ -291,7 +291,8 @@ class TunnelConnection(BaseConnection):
                         peer_node_id=self.peer_port_meta.node_id)
 
         self.node.proto.port_connect(callback=CalvinCB(self._connected_via_tunnel),
-                                port_id=self.port.id, peer_port_meta=self.peer_port_meta, tunnel=tunnel)
+                                        port_id=self.port.id, port_properties=self.port.properties,
+                                        peer_port_meta=self.peer_port_meta, tunnel_id=tunnel.id)
 
     def _connected_via_tunnel(self, reply):
         """ Gets called when remote responds to our request for port connection """
