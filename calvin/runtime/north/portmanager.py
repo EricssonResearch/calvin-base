@@ -41,7 +41,7 @@ class PortManager(object):
         if not ('peer_port_id' in payload or
                 ('peer_actor_id' in payload and
                 'peer_port_name' in payload and
-                'peer_port_dir' in payload)):
+                'peer_port_properties' in payload)):
             # Not enough info to find port
             _log.analyze(self.node.id, "+ NOT ENOUGH DATA", payload, peer_node_id=payload['from_rt_uuid'])
             return response.CalvinResponse(response.BAD_REQUEST)
@@ -49,7 +49,7 @@ class PortManager(object):
                                 actor_id=payload['peer_actor_id'],
                                 port_id=payload['peer_port_id'],
                                 port_name=payload['peer_port_name'],
-                                properties={'direction': payload['peer_port_dir']},
+                                properties=payload['peer_port_properties'],
                                 node_id=self.node.id)
         try:
             port = our_port_meta.port
@@ -65,8 +65,9 @@ class PortManager(object):
             return ConnectionFactory(self.node, ConnectionFactory.PURPOSE.CONNECT).get(
                     port, peer_port_meta, payload=payload).connection_request()
 
-    def connect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None, peer_node_id=None,
-                      peer_actor_id=None, peer_port_name=None, peer_port_dir=None, peer_port_id=None):
+    def connect(self, callback=None, actor_id=None, port_name=None, port_properties=None, port_id=None,
+                peer_node_id=None, peer_actor_id=None, peer_port_name=None, peer_port_properties=None,
+                peer_port_id=None):
         """ Obtain any missing information to enable making a connection and make actual connect
             callback: an optional callback that gets called with status when finished
             local port identified by:
@@ -79,9 +80,9 @@ class PortManager(object):
         """
 
         local_port_meta = PortMeta(self, actor_id=actor_id, port_id=port_id, port_name=port_name,
-                            properties={'direction': port_dir}, node_id=self.node.id)
+                            properties=port_properties, node_id=self.node.id)
         peer_port_meta = PortMeta(self, actor_id=peer_actor_id, port_id=peer_port_id, port_name=peer_port_name,
-                            properties={'direction': peer_port_dir}, node_id=peer_node_id)
+                            properties=peer_port_properties, node_id=peer_node_id)
 
         _log.analyze(self.node.id, "+", {'local': local_port_meta, 'peer': peer_port_meta},
                     peer_node_id=peer_node_id, tb=True)

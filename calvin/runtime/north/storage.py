@@ -610,13 +610,13 @@ class Storage(object):
         for p in actor.inports.values():
             port = {"id": p.id, "name": p.name}
             inports.append(port)
-            self.add_port(p, node_id, actor.id, "in")
+            self.add_port(p, node_id, actor.id)
         data["inports"] = inports
         outports = []
         for p in actor.outports.values():
             port = {"id": p.id, "name": p.name}
             outports.append(port)
-            self.add_port(p, node_id, actor.id, "out")
+            self.add_port(p, node_id, actor.id)
         data["outports"] = outports
         data["is_shadow"] = isinstance(actor, ShadowActor)
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
@@ -634,31 +634,17 @@ class Storage(object):
         _log.debug("Delete actor id %s" % (actor_id))
         self.delete(prefix="actor-", key=actor_id, cb=cb)
 
-    def add_port(self, port, node_id, actor_id=None, direction=None, cb=None):
+    def add_port(self, port, node_id, actor_id=None, cb=None):
         """
         Add port to storage
         """
-        if direction is None:
-            if isinstance(port, actorport.InPort):
-                direction = "in"
-            else:
-                direction = "out"
-
         if actor_id is None:
             actor_id = port.owner.id
 
-        data = {"name": port.name, "connected": port.is_connected(
-        ), "node_id": node_id, "actor_id": actor_id, "direction": direction}
-        if direction == "out":
-            if port.is_connected():
-                data["peers"] = port.get_peers()
-            else:
-                data["peers"] = []
-        elif direction == "in":
-            if port.is_connected():
-                data["peer"] = port.get_peer()
-            else:
-                data["peer"] = None
+        data = {"name": port.name, "connected": port.is_connected(),
+                "node_id": node_id, "actor_id": actor_id, "properties": port.properties}
+        if port.is_connected():
+            data["peers"] = port.get_peers()
         self.set(prefix="port-", key=port.id, value=data, cb=cb)
 
     def get_port(self, port_id, cb=None):

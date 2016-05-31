@@ -159,7 +159,7 @@ class TestStorageStarted(object):
         port2 = TestPort("in", "in", )
 
         port1.peers = [("local", port2.id)]
-        port2.peer = ("local", port1.id)
+        port2.peers = [("local", port1.id)]
 
         actor = TestActor("actor1", "type1", {}, {port1.name: port1})
 
@@ -240,7 +240,7 @@ class TestStorageNotStarted(object):
         port2 = TestPort("in", "in", )
 
         port1.peers = [("local", port2.id)]
-        port2.peer = ("local", port1.id)
+        port2.peers = [("local", port1.id)]
 
         actor1 = TestActor("actor1", "type1", {}, {port1.name: port1})
         actor2 = TestActor("actor2", "type2", {port2.name: port2}, {})
@@ -260,7 +260,7 @@ class TestStorageNotStarted(object):
         value = self.q.get(timeout=0.2)
         assert value["key"] == port1.id
         assert value["value"]["name"] == port1.name
-        assert value["value"]["direction"] == port1.direction
+        assert value["value"]["properties"]["direction"] == port1.direction
         assert value["value"]["peers"] == [["local", port2.id]]
 
         self.storage.add_actor(actor2, calvinuuid.uuid("NODE"))
@@ -276,8 +276,8 @@ class TestStorageNotStarted(object):
         value = self.q.get(timeout=0.2)
         assert value["key"] == port2.id
         assert value["value"]["name"] == port2.name
-        assert value["value"]["direction"] == port2.direction
-        assert value["value"]["peer"] == ["local", port1.id]
+        assert value["value"]["properties"]["direction"] == port2.direction
+        assert value["value"]["peers"] == ["local", port1.id]
 
         self.storage.delete_actor(actor1.id, cb=CalvinCB(func=cb))
         value = self.q.get(timeout=0.2)

@@ -517,7 +517,7 @@ class CalvinProto(CalvinCBClass):
         if tunnel:
             msg = {'cmd': 'PORT_CONNECT', 'port_id': port_id, 'peer_actor_id': peer_port_meta.actor_id,
                     'peer_port_name': peer_port_meta.port_name, 'peer_port_id': peer_port_meta.port_id,
-                    'peer_port_dir': peer_port_meta.properties['direction'], 'tunnel_id': tunnel.id}
+                    'peer_port_properties': peer_port_meta.properties, 'tunnel_id': tunnel.id}
             self.network.links[peer_port_meta.node_id].send_with_reply(callback, msg)
         else:
             raise NotImplementedError()

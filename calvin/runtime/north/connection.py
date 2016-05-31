@@ -63,13 +63,7 @@ class ConnectionFactory(object):
         _log.analyze(self.node.id, "+ LOCAL CHECKED", {'port_id': port_id})
         port = port_meta.port
         # Now check the peer port, peer_ids is list of (peer_node_id, peer_port_id) tuples
-        peer_ids = []
-        if port.direction == "in":
-            # Inport only have one possible peer
-            peer_ids = [port.get_peer()]
-        else:
-            # Outport have several possible peers
-            peer_ids = port.get_peers()
+        peer_ids = port.get_peers()
 
         _log.analyze(self.node.id, "+ GOT PEERS", {'port_id': port_id, 'peer_ids': peer_ids})
         # A port may have several peers, create individual connection instances
@@ -174,8 +168,8 @@ class LocalConnection(BaseConnection):
             invalid_endpoint.destroy()
 
         # Update storage
-        self.node.storage.add_port(inport, self.node.id, inport.owner.id, "in")
-        self.node.storage.add_port(outport, self.node.id, outport.owner.id, "out")
+        self.node.storage.add_port(inport, self.node.id, inport.owner.id)
+        self.node.storage.add_port(outport, self.node.id, outport.owner.id)
 
     def disconnect(self):
         """ Obtain any missing information to enable disconnecting one peer port and make the disconnect"""
@@ -378,10 +372,7 @@ class TunnelConnection(BaseConnection):
                              peer_port_id=self.peer_port_meta.port_id)
 
         # Update storage
-        if self.port.direction == 'in':
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id, "in")
-        else:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id, "out")
+        self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
 
     def connection_request(self):
         """ A request from a peer to connect a port"""
@@ -391,7 +382,6 @@ class TunnelConnection(BaseConnection):
         except:
             return response.CalvinResponse(False)
         if 'tunnel_id' not in payload:
-            # TODO implement connection requests not via tunnel
             raise NotImplementedError()
         tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
         if tunnel.id != payload['tunnel_id']:
@@ -423,10 +413,7 @@ class TunnelConnection(BaseConnection):
             invalid_endpoint.destroy()
 
         # Update storage
-        if self.port.direction == "in":
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id, "in")
-        else:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id, "out")
+        self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
 
         _log.analyze(self.node.id, "+ OK", payload, peer_node_id=self.peer_port_meta.node_id)
         return response.CalvinResponse(response.OK, {'port_id': self.port.id})

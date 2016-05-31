@@ -119,17 +119,21 @@ class Node(object):
         if msg_id in self.async_msg_ids:
             self.async_msg_ids[msg_id] = reply
 
-    def connect(self, actor_id=None, port_name=None, port_dir=None, port_id=None,
+    def connect(self, actor_id=None, port_name=None, port_dir=None, port_properties=None, port_id=None,
                 peer_node_id=None, peer_actor_id=None, peer_port_name=None,
-                peer_port_dir=None, peer_port_id=None, cb=None):
+                peer_port_dir=None, peer_port_properties=None, peer_port_id=None, cb=None):
+        if port_properties is None and port_dir is not None:
+            port_properties = {'direction': port_dir}
+        if peer_port_properties is None and peer_port_dir is not None:
+            peer_port_properties = {'direction': peer_port_dir}
         self.pm.connect(actor_id=actor_id,
                         port_name=port_name,
-                        port_dir=port_dir,
+                        port_properties=port_properties,
                         port_id=port_id,
                         peer_node_id=peer_node_id,
                         peer_actor_id=peer_actor_id,
                         peer_port_name=peer_port_name,
-                        peer_port_dir=peer_port_dir,
+                        peer_port_properties=peer_port_properties,
                         peer_port_id=peer_port_id,
                         callback=CalvinCB(self.logging_callback, preamble="connect cb")  if cb is None else cb)
 

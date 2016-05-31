@@ -1213,11 +1213,13 @@ class CalvinControl(object):
             actor_id=data.get("actor_id"),
             port_name=data.get("port_name"),
             port_dir=data.get("port_dir"),
+            port_properties=data.get("port_properties"),
             port_id=data.get("port_id"),
             peer_node_id=data.get("peer_node_id"),
             peer_actor_id=data.get("peer_actor_id"),
             peer_port_name=data.get("peer_port_name"),
             peer_port_dir=data.get("peer_port_dir"),
+            peer_port_properties=data.get("peer_port_properties"),
             peer_port_id=data.get("peer_port_id"),
             cb=CalvinCB(self.handle_connect_cb, handle, connection))
 

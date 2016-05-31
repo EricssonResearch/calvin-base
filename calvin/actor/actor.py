@@ -614,10 +614,9 @@ class Actor(object):
         c = {'actor_id': self.id, 'actor_name': self.name}
         inports = {}
         for port in self.inports.values():
-            peer = port.get_peer()
-            if peer[0] == 'local':
-                peer = (node_id, peer[1])
-            inports[port.id] = peer
+            peers = [
+                (node_id, p[1]) if p[0] == 'local' else p for p in port.get_peers()]
+            inports[port.id] = peers
         c['inports'] = inports
         outports = {}
         for port in self.outports.values():

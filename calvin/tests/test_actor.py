@@ -118,7 +118,7 @@ def test_connections():
     assert actor.connections(node) == {
         'actor_id': actor.id,
         'actor_name': actor.name,
-        'inports': {inport.id: (node, "y")},
+        'inports': {inport.id: [(node, "y")]},
         'outports': {outport.id: [(node, "y")]}
     }
 

@@ -141,8 +141,8 @@ class InPort(Port):
         """Used by actor (owner) to check number of tokens on the port."""
         return self.endpoint.available_tokens()
 
-    def get_peer(self):
-        return self.endpoint.get_peer()
+    def get_peers(self):
+        return [self.endpoint.get_peer()]
 
 
 class OutPort(Port):
@@ -359,7 +359,7 @@ class PortMeta(object):
 
         # Have node id but are we missing port info
         if not ((self.actor_id and self.port_name and direction) or self.port_id):
-                # We miss information on to find the peer port
+            # We miss information on to find the peer port
             status = response.CalvinResponse(response.BAD_REQUEST,
                                 "actor_id (%s) and/or port_id(%s)" %
                                 (self.actor_id, self.port_id))
@@ -386,7 +386,19 @@ class PortMeta(object):
                     cb(status=response.CalvinResponse(response.NOT_FOUND, "Port have unknown node in registry"),
                         port_meta=self)
                 return
-
+        # Lets fill in any other missing info
+        try:
+            self.properties = value['properties'] or self.properties
+        except:
+            pass
+        try:
+            self.port_name = value['name'] or self.port_name
+        except:
+            pass
+        try:
+            self.actor_id = value['actor_id'] or self.actor_id
+        except:
+            pass
         # Got everything for an answer
         if cb:
             cb(status=response.CalvinResponse(True), port_meta=self)

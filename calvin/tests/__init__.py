@@ -42,15 +42,11 @@ class TestPort:
         self.id = calvinuuid.uuid("PORT")
         self.name = name
         self.direction = direction
-        self.peer = None
         self.peers = None
         self.fifo = FIFO(5)
 
     def is_connected(self):
         return True
-
-    def get_peer(self):
-        return self.peer
 
     def get_peers(self):
         return self.peers
