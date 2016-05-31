@@ -81,10 +81,9 @@ class Node(object):
         self.authentication = authentication.Authentication(self)
         self.authorization = authorization.Authorization(self)
         try:
-            self.domain = _conf.get("security", "certificate_domain")
-            cert_conf = certificate.Config(_conf.get("security", "certificate_conf"), self.domain)
+            self.domain = _conf.get("security", "security_domain_name")
             # cert_name is the node's certificate filename (without file extension)
-            self.cert_name = certificate.get_own_cert_name(cert_conf, self.node_name)
+            self.cert_name = certificate.get_own_cert_name(self.node_name)
         except:
             self.domain = None
             self.cert_name = None

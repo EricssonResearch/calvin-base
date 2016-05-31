@@ -62,7 +62,11 @@ class TestSecurity(unittest.TestCase):
         security_test_dir = os.path.join(os.path.dirname(__file__), "security_test")
 
         # Runtime 1: local authentication, signature verification, local authorization.
-        rt1_conf = copy.deepcopy(_conf)
+        rt_conf = copy.deepcopy(_conf)
+        rt_conf.set('security', 'security_domain_name', "testdomain")
+        rt_conf.set('security', 'security_path',security_test_dir)
+        rt_conf.set('global', 'actor_paths', [os.path.join(security_test_dir, "store")])
+        rt1_conf = copy.deepcopy(rt_conf)
         rt1_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
@@ -76,8 +80,6 @@ class TestSecurity(unittest.TestCase):
                         }
                     })
         rt1_conf.set('global', 'actor_paths', [os.path.join(security_test_dir, "store")])
-        rt1_conf.set('security', 'certificate_domain', "testdomain")
-        rt1_conf.set('security', 'certificate_conf', os.path.join(security_test_dir, "testdomain", "openssl.conf"))
         rt1_conf.save("/tmp/calvin5001.conf")
 
         try:
@@ -100,7 +102,7 @@ class TestSecurity(unittest.TestCase):
         # Runtime 2: local authentication, signature verification, local authorization.
         # Can also act as authorization server for other runtimes.
         # Other street compared to the other runtimes
-        rt2_conf = copy.deepcopy(_conf)
+        rt2_conf = copy.deepcopy(rt_conf)
         rt2_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
@@ -115,8 +117,6 @@ class TestSecurity(unittest.TestCase):
                         }
                     })
         rt2_conf.set('global', 'actor_paths', [os.path.join(security_test_dir, "store")])
-        rt2_conf.set('security', 'certificate_domain', "testdomain")
-        rt2_conf.set('security', 'certificate_conf', os.path.join(security_test_dir, "testdomain", "openssl.conf"))
         rt2_conf.save("/tmp/calvin5002.conf")
 
         try:
@@ -137,7 +137,7 @@ class TestSecurity(unittest.TestCase):
 
 
         # Runtime 3: external authentication (RADIUS), signature verification, local authorization.
-        rt3_conf = copy.deepcopy(_conf)
+        rt3_conf = copy.deepcopy(rt_conf)
         rt3_conf.set("security", "security_conf", {
                         "comment": "RADIUS authentication, local authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
@@ -152,8 +152,6 @@ class TestSecurity(unittest.TestCase):
                         }
                     })
         rt3_conf.set('global', 'actor_paths', [os.path.join(security_test_dir, "store")])
-        rt3_conf.set('security', 'certificate_domain', "testdomain")
-        rt3_conf.set('security', 'certificate_conf', os.path.join(security_test_dir, "testdomain", "openssl.conf"))
         rt3_conf.save("/tmp/calvin5003.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5003"
@@ -173,7 +171,7 @@ class TestSecurity(unittest.TestCase):
 
 
         # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
-        rt4_conf = copy.deepcopy(_conf)
+        rt4_conf = copy.deepcopy(rt_conf)
         rt4_conf.set("security", "security_conf", {
                         "comment": "Local authentication, external authorization",
                         "signature_trust_store": os.path.join(security_test_dir, "trustStore"),
@@ -187,8 +185,6 @@ class TestSecurity(unittest.TestCase):
                         }
                     })
         rt4_conf.set('global', 'actor_paths', [os.path.join(security_test_dir, "store")])
-        rt4_conf.set('security', 'certificate_domain', "testdomain")
-        rt4_conf.set('security', 'certificate_conf', os.path.join(security_test_dir, "testdomain", "openssl.conf"))
         rt4_conf.save("/tmp/calvin5004.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5004"

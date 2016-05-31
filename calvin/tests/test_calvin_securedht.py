@@ -28,6 +28,7 @@ from calvin.requests.request_handler import RequestHandler, RT
 from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
 from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities import certificate
+from calvin.utilities import certificate_authority
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 from calvin.utilities import calvinuuid
@@ -70,33 +71,45 @@ class TestSecureDht(unittest.TestCase):
         from conftest import _config_pytest
         homefolder = get_home()
         domain = "rttest"
-        configdir = os.path.join(homefolder, ".calvin",
-                                       "security", domain)
+        testdir = os.path.join(homefolder, ".calvin","sec_dht_test")
+        configdir = os.path.join(testdir, domain)
+        runtimesdir = os.path.join(testdir,"runtimes")
+        runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
         try:
-            shutil.rmtree(configdir)
+            shutil.rmtree(testdir)
         except:
+            print "Failed to remove old tesdir"
             pass
-        print "Trying to create a new test domain configuration."
-        testconfig = certificate.Config(domain=domain)
-        print "Reading configuration successfull."
-
-        print "Creating new domain."
-        certificate.new_domain(testconfig)
-        print "Created new domain."
-        
-        configdir2 = os.path.join(homefolder, ".calvin",
-                                       "security2", domain)
         try:
-            shutil.rmtree(configdir2)
+            os.mkdir(testdir)
+            os.mkdir(configdir)
+            os.mkdir(runtimesdir)
+            os.mkdir(runtimes_truststore)
+        except:
+            print "Failed to create test folder structure"
+            pass
+
+        print "Trying to create a new test domain configuration."
+        ca = certificate_authority.CA(domain=domain, commonName="sec-dht-test-CA", security_dir=testdir)
+        print "Reading configuration successfull."
+        
+        print "Copy CA cert into truststore of runtimes folder"
+        ca.export_ca_cert(runtimes_truststore)
+
+
+        ca_original_backup = os.path.join(homefolder, ".calvin",
+                                       "sec_dht_test_backup", domain)
+        try:
+            shutil.rmtree(ca_original_backup)
         except:
             pass
         # copy other setup and remove private directory and openssl.conf file
-        shutil.copytree(configdir, configdir2)
-        shutil.rmtree(os.path.join(configdir2, "private"))
-        configfile2=os.path.join(configdir2, "openssl.conf")
-        os.remove(configfile2)
-        print "Trying to create a second test domain configuration."
-        testconfig = certificate.Config(configfile=configfile2, domain=domain)
+#        shutil.copytree(configdir, ca_original_backup)
+#        shutil.rmtree(os.path.join(configdir, "private"))
+#        configfile=os.path.join(configdir, "openssl.conf")
+#        os.remove(configfile)
+#        print "Trying to create a second test domain configuration."
+#        testconfig = certificate_authority.CA(domain=domain, security_dir=testdir)
 
         global rt1
         global rt2
@@ -105,18 +118,16 @@ class TestSecureDht(unittest.TestCase):
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('global', 'storage_type', 'securedht')
         rt_conf.add_section('security')
-        rt_conf.set('security', "certificate_conf", os.path.join(configdir2, "openssl.conf"))
-        rt_conf.set('security', "certificate_domain", domain)
+        rt_conf.set('security', "runtimes_path", runtimesdir)
+        rt_conf.set('security', "security_domain_name", domain)
+        rt_conf.set('security', "security_path",testdir)
         rt_conf.save("/tmp/calvin1.conf")
         rt_conf2 = copy.deepcopy(rt_conf)
         rt_conf2.set('global', 'actor_paths', [absolute_filename('test_store')])
         rt_conf2.set('global', 'capabilities_blacklist', ['calvinsys.events.timer'])
         rt_conf2.save("/tmp/calvin2.conf")
-        rt_ca_conf = copy.deepcopy(_conf)
-        rt_ca_conf.set('global', 'storage_type', 'securedht')
-        rt_ca_conf.add_section('security')
-        rt_ca_conf.set('security', "certificate_conf", os.path.join(configdir, "openssl.conf"))
-        rt_ca_conf.set('security', "certificate_domain", domain)
+        rt_ca_conf = copy.deepcopy(rt_conf)
+        rt_ca_conf.set('security', "certificate_authority", "True")
         rt_ca_conf.save("/tmp/calvin_ca.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5000"
@@ -178,9 +189,9 @@ class TestSecureDht(unittest.TestCase):
         for p in multiprocessing.active_children():
             p.terminate()
         # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
-        os.system("pkill -9 -f -l 'csruntime -n %s -p 5000'" % (ip_addr,))
-        os.system("pkill -9 -f -l 'csruntime -n %s -p 5001'" % (ip_addr,))
-        os.system("pkill -9 -f -l 'csruntime -n %s -p 5002'" % (ip_addr,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5000'" % (ip_addr,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5001'" % (ip_addr,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5002'" % (ip_addr,))
         time.sleep(0.2)
 
     def verify_storage(self):

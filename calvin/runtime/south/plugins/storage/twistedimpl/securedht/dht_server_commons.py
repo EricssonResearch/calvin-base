@@ -47,13 +47,11 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
 
     def __init__(self, *args, **kwargs):
         super(evilAutoDHTServer, self).__init__(*args, **kwargs)
-        self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
-                                            _conf.get("security", "certificate_domain")).configuration
 
     def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None, nodeid=None):
         if bootstrap is None:
             bootstrap = []
-        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)
+        name_dir = certificate.get_own_credentials_path(self.name)
         filename = os.listdir(os.path.join(name_dir, "mine"))
         st_cert = open(os.path.join(name_dir, "mine", filename[0]), 'rt').read()
         cert_part = st_cert.split(certificate.BEGIN_LINE)

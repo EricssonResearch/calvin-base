@@ -48,11 +48,9 @@ _log = get_logger(__name__)
 TIMEOUT=5
 
 try:
-    _cert_conffile = _conf.get("security", "certificate_conf")
-    _domain = _conf.get("security", "certificate_domain")
-    _cert_conf = certificate.Config(_cert_conffile, _domain)
+    _domain = _conf.get("security", "security_domain_name")
 except:
-    _cert_conf = None
+    domain = None
 
 def security_modules_check():
     if _conf.get("security","security_conf"):
@@ -76,7 +74,7 @@ def security_needed_check():
 
 def encode_jwt(payload, node_name):
     """Encode JSON Web Token"""
-    private_key = certificate.get_private_key(_cert_conf, node_name)
+    private_key = certificate.get_private_key(node_name)
     # Create a JSON Web Token signed using the node's Elliptic Curve private key.
     return jwt.encode(payload, private_key, algorithm='ES256')
     
@@ -84,7 +82,7 @@ def decode_jwt(token, sender_cert_name, node_name, node_id, actor_id=None):
     """Decode JSON Web Token"""
     # Get authorization server certificate from disk.
     try:
-        sender_certificate = certificate.get_certificate(_cert_conf, node_name, sender_cert_name)
+        sender_certificate = certificate.get_certificate(node_name, sender_cert_name)
     except Exception:
         raise Exception("Certificate not found.")
     sender_public_key = certificate.get_public_key(sender_certificate)
@@ -101,15 +99,15 @@ def decode_jwt(token, sender_cert_name, node_name, node_id, actor_id=None):
 class Security(object):
 
     def __init__(self, node):
-        _log.debug("Security: _init_")
+        _log.debug("_init_, node={}".format(node))
         self.sec_conf = _conf.get("security","security_conf")
-        if self.sec_conf is not None and not self.sec_conf.get('signature_trust_store', None):
-            # Set default directory for trust store
-            homefolder = get_home()
-            truststore_dir = os.path.join(homefolder, ".calvin", "security", "trustStore")
-            self.sec_conf['signature_trust_store'] = truststore_dir
         self.node = node
         self.subject_attributes = {}
+        try:
+            self.truststore_for_signing = certificate.get_truststore_path(self.node.node_name, certificate.TRUSTSTORE_SIGN)
+        except Exception as err:
+            _log.error("Failed to determine trust store path" % err)
+            raise Exception("Failed to load trust store path ")
 
     def __str__(self):
         return "Subject: %s:" % self.subject_attributes
@@ -494,6 +492,7 @@ class Security(object):
 
         A tuple (verified True/False, signer) is returned.
         """
+        _log.debug("verify_signature: file={}, flag={}".format(file, flag))
         content = Security.verify_signature_get_files(file)
         if content:
             return self.verify_signature_content(content, flag)
@@ -506,7 +505,7 @@ class Security(object):
 
         A tuple (verified True/False, signer) is returned.
         """
-        _log.debug("Security: verify %s signature of %s" % (flag, content))
+        _log.debug("verify_signature_content: flag={} , content={}".format(flag, content))
         if not self.sec_conf:
             _log.debug("Security: no signature verification required: %s" % content['file'])
             return (True, None)
@@ -518,7 +517,7 @@ class Security(object):
         signer = None
 
         if content is None or not content['sign']:
-            _log.debug("Security: signature information missing")
+            _log.debug("Security: signature information missing, content={}".format(content))
             signer = ["__unsigned__"]
             return (True, signer)  # True is returned to allow authorization request with the signer attribute '__unsigned__'.
 
@@ -531,7 +530,8 @@ class Security(object):
         for cert_hash, signature in content['sign'].iteritems():
             try:
                 # Check if the certificate is stored in the truststore (name is <cert_hash>.0)
-                trusted_cert_path = os.path.join(self.sec_conf['signature_trust_store'], cert_hash + ".0")
+                #TODO: remove signature_trust_store dependency
+                trusted_cert_path = os.path.join(self.truststore_for_signing, cert_hash + ".0")
                 with open(trusted_cert_path, 'rt') as f:
                     trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
                     try:

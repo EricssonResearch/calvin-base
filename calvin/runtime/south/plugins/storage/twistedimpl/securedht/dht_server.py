@@ -28,6 +28,7 @@ from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discover
                                                                                               SERVICE_UUID,\
                                                                                               CA_SERVICE_UUID
 from calvin.utilities import certificate
+from calvin.utilities import certificate_authority
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
@@ -45,17 +46,18 @@ def logger(message):
 
 class ServerApp(object):
 
-    def __init__(self, server_type, identifier):
+    def __init__(self, server_type, identifier, node_name=None):
         self.kserver = None
         self.port = None
         self.server_type = server_type
         self.id = identifier
+        self.node_name = node_name
 
     def start(self, port=0, iface='', bootstrap=None):
         if bootstrap is None:
             bootstrap = []
 
-        self.kserver = self.server_type(id=self.id)
+        self.kserver = self.server_type(id=self.id, node_name=self.node_name)
         self.kserver.bootstrap(bootstrap)
 
         self.port = reactor.listenUDP(port,
@@ -149,22 +151,7 @@ class AutoDHTServer(StorageBase):
         self.dht_server = None
         self._ssdps = None
         self._started = False
-        self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
-                                            _conf.get("security", "certificate_domain")).configuration
-
-    def _get_cert(self, name):
-        try:
-            name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], name)
-            filename = os.listdir(os.path.join(name_dir, "mine"))
-            st_cert = open(os.path.join(name_dir, "mine", filename[0]), 'rt').read()
-            cert_part = st_cert.split(certificate.BEGIN_LINE)
-            certstr = "{}{}".format(certificate.BEGIN_LINE, cert_part[1])
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                  certstr)
-            return cert, certstr
-        except:
-            # Certificate not available
-            return None, None
+        self._name= None
 
     def _derive_dht_id(self, cert):
         key = cert.digest("sha256")
@@ -173,6 +160,7 @@ class AutoDHTServer(StorageBase):
         return bytekey[-20:]
 
     def _signed_cert_received(self, addr_certificate):
+ 
         if not addr_certificate:
             return
         ip, port, certificate = addr_certificate
@@ -188,10 +176,12 @@ class AutoDHTServer(StorageBase):
 
     def _signed_cert_available(self, cert=None, certstr=None):
         if cert is None:
-            cert, certstr = self._get_cert(self._name)
+            _log.debug("_signed_cert_available, cert supplied={}".format(cert))
+            cert, certstr = certificate.get_own_cert(self._name)
+        if cert is None:
+            _log.error("No runtime certificate can be found")
         dht_id = self._derive_dht_id(cert)
-
-        self.dht_server = ServerApp(AppendServer, dht_id)
+        self.dht_server = ServerApp(AppendServer, dht_id, node_name=self._name)
         ip, port = self.dht_server.start(iface=self._iface)
 
         self._dlist.append(self.dht_server.bootstrap(self._bootstrap))
@@ -236,6 +226,7 @@ class AutoDHTServer(StorageBase):
         self.dht_server.kserver.name = self._name
         self.dht_server.kserver.protocol.name = self._name
         self.dht_server.kserver.protocol.storeOwnCert(certstr)
+        self.dht_server.kserver.protocol.getOwnCert()
         self.dht_server.kserver.protocol.setPrivateKey()
 
     def start(self, iface='', network=None, bootstrap=None, cb=None, name=None, nodeid=None):
@@ -253,26 +244,29 @@ class AutoDHTServer(StorageBase):
         self._dlist = []
         self._ssdps = SSDPServiceDiscovery(iface)
         self._dlist += self._ssdps.start()
+        domain = _conf.get("security", "security_domain_name")
+        is_ca=False
         try:
-            cert_conf_file = _conf.get("security", "certificate_conf")
-            domain = _conf.get("security", "certificate_domain")
-            cert_conf_obj = certificate.Config(cert_conf_file, domain)
-            cert_conf = cert_conf_obj.configuration
-            is_ca = os.path.isfile(cert_conf['CA_default']['private_key'])
+            if _conf.get("security","certificate_authority")=="True":
+                ca = certificate_authority.CA(domain)
+                #make sure private key exist
+                if ca.verify_private_key_exist():
+                    is_ca = True
         except:
             is_ca = False
         self._ssdps.update_server_params(CA_SERVICE_UUID, sign=is_ca, name=name)
-        cert, certstr = self._get_cert(self._name)
+        cert, certstr = certificate.get_own_cert(self._name)
         if not cert:
+            _log.debug("runtime cert not available, let's create CSR")
+            print "runtime cert not available"
             if is_ca:
-                # We are the CA sign it
+                # We are the CA, just generate CSR and sign it
+                csrfile = certificate.new_runtime(name, domain, nodeid=nodeid)
                 _log.debug("Local CA sign runtime CSR")
-                csrfile = certificate.new_runtime(cert_conf_obj, name, nodeid)
                 try:
                     content = open(csrfile, 'rt').read()
-                    cert = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM,
-                                                                  content)
-                    certificate.sign_req(cert_conf_obj, os.path.basename(csrfile), name)
+                    certpath=ca.sign_csr(csrfile)
+                    certificate.store_own_cert(certpath=certpath)
                     return self._signed_cert_available()
                 except:
                     _log.exception("Failed signing with local CA")
@@ -286,6 +280,7 @@ class AutoDHTServer(StorageBase):
                                                    callback=self._signed_cert_received),
                                           self._signed_cert_available)
         else:
+            _log.debug("runtime cert available")
             self._signed_cert_available(cert=cert, certstr=certstr)
 
     def set(self, key, value, cb=None):

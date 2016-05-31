@@ -34,10 +34,7 @@ from calvin.utilities import calvinconfig
 
 _conf = calvinconfig.get()
 _conf.add_section("security")
-_conf_file = os.path.join(get_home(), ".calvin/security/test/openssl.conf")
-_conf.set("security", "certificate_conf", _conf_file)
-_conf.set("security", "certificate_domain", "test")
-_cert_conf = None
+_conf.set("security", "security_domain_name", "test")
 _log = calvinlogger.get_logger(__name__)
 
 reactor.suggestThreadPoolSize(30)
@@ -56,8 +53,6 @@ class TestDHT(object):
 
     @pytest.fixture(autouse=True, scope="class")
     def setup(self, request):
-        global _cert_conf
-        _cert_conf = certificate.Config(_conf_file, "test").configuration
 
     @pytest.inlineCallbacks
     def test_dht_multi(self, monkeypatch):
@@ -142,7 +137,7 @@ class TestDHT(object):
             pytest.fail(traceback.format_exc())
         finally:
             for server in servers:
-                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "evil")
+                name_dir = certificate.get_own_credentials_path(self.name)
                 shutil.rmtree(os.path.join(name_dir, "others"), ignore_errors=True)
                 os.mkdir(os.path.join(name_dir, "others"))
                 server.stop()

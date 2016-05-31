@@ -36,6 +36,7 @@ from kademlia.storage import ForgetfulStorage
 from kademlia.node import Node, NodeHeap
 from kademlia import version as kademlia_version
 from calvin.utilities import certificate
+from copy import copy
 
 from twisted.python import log
 from calvin.utilities import calvinlogger
@@ -75,10 +76,12 @@ class ForgetfulStorageFix(ForgetfulStorage):
 class KademliaProtocolAppend(KademliaProtocol):
 
     def __init__(self, *args, **kwargs):
+        _log.debug("KademliaProtocolAppend::__init__")
         self.set_keys = kwargs.pop('set_keys', set([]))
+
+        self.priv_key = None
+        self.node_name = kwargs.pop('node_name',None)
         KademliaProtocol.__init__(self, *args, **kwargs)
-        self.cert_conf = certificate.Config(_conf.get("security", "certificate_conf"),
-                                            _conf.get("security", "certificate_domain")).configuration
         try:
             self.trustedStore = OpenSSL.crypto.X509Store() # Contains all trusted CA-certificates.
         except:
@@ -93,6 +96,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         """
         Asks 'nodeToAsk' for its certificate.
         """
+        _log.debug("callCertFindValue")
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
         try:
@@ -120,6 +124,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         """
         Asks 'nodeToAsk' for the value 'nodeToFind.id'
         """
+        _log.debug("callFindNode")
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
         try:
@@ -145,6 +150,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         """
         Asks 'nodeToAsk' for the information regarding the node 'nodeToFind'
         """
+        _log.debug("callFindValue")
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
         try:
@@ -169,7 +175,8 @@ class KademliaProtocolAppend(KademliaProtocol):
     def callPing(self, nodeToAsk, cert=None):
         """
         Sends a ping message to 'nodeToAsk'
-        """        
+        """ 
+        _log.debug("callPing, nodeToAsk={}".format(nodeToAsk))
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
         try:
@@ -195,6 +202,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         """
         Sends a request for 'nodeToAsk' to store value 'value' with key 'key'
         """   
+        _log.debug("callStore")
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
         try:
@@ -222,6 +230,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         """
         Sends a request for 'nodeToAsk' to add value 'value' to key 'key' set
         """   
+        _log.debug("callAppend")
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
         try:
@@ -246,6 +255,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         """
         Sends a request for 'nodeToAsk' to remove value 'value' from key 'key' set
         """   
+        _log.debug("callRemove")
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
         try:
@@ -281,6 +291,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         Raise ?? exceptions at ?? occation.
         Return results if signatures are valid?
         """
+        _log.debug("handleCertCallResponse, result={}, node={}, challenge={}".format(result, node, challenge))
         logger(self.sourceNode, "handleCertCallResponse {}".format(str(result)))
         if 'value' in result[1]:
             try:
@@ -319,6 +330,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         `result` is an array and element 1 contains a dict.
         Return None if any error occur and dont tell anyone.
         """
+        _log.debug("handleSignedBucketResponse, result={}, node={}, challenge={}".format(result, node, challenge))
         logger(self.sourceNode, "handleSignedBucketResponse {}".format(str(result)))
         nodeIdHex = node.id.encode('hex').upper()
         if result[0]:
@@ -381,6 +393,8 @@ class KademliaProtocolAppend(KademliaProtocol):
         Return None on error.
         Return identity of ping response if signature is valid.
         """
+        _log.debug("handleSignedPingResponse,result={}, node={}, challenge={}".format(result, node, challenge))
+        address = (nodeToAsk.ip, nodeToAsk.port)
         logger(self.sourceNode, "handleSignedPingResponse {}".format(str(result)))
         if result[0]:
             if "NACK" in result[1]:
@@ -507,6 +521,8 @@ class KademliaProtocolAppend(KademliaProtocol):
         return (False, None)
 
     def handleSignedNACKResponse(self, result, node, challenge):
+        _log.debug("handleSignedNACKResponse, result={}, node={}, challenge={}".format(result, node, challenge))
+        address = (nodeToAsk.ip, nodeToAsk.port)
         nodeIdHex = node.id.encode('hex').upper()
         cert_stored = self.searchForCertificate(nodeIdHex)
         if cert_stored == None:
@@ -536,6 +552,7 @@ class KademliaProtocolAppend(KademliaProtocol):
     #####################
 
     def rpc_store(self, sender, nodeid, key, value, challenge, signature):
+        _log.debug("rpc_store")
         source = Node(nodeid, sender[0], sender[1])
         logger(self.sourceNode,
               "rpc_store {} ".format(str(sender)))
@@ -586,6 +603,7 @@ class KademliaProtocolAppend(KademliaProtocol):
             return signature
 
     def rpc_append(self, sender, nodeid, key, value, challenge, signature):
+        _log.debug("rpc_append")
         source = Node(nodeid, sender[0], sender[1])
         logger(self.sourceNode, "rpc_append {} ".format(str(sender)))
         nodeIdHex = nodeid.encode('hex').upper()
@@ -652,6 +670,7 @@ class KademliaProtocolAppend(KademliaProtocol):
 
 
     def rpc_remove(self, sender, nodeid, key, value, challenge, signature):
+        _log.debug("rpc_remove")
         source = Node(nodeid, sender[0], sender[1])
         logger(self.sourceNode, "rpc_remove {} ".format(str(sender)))
         nodeIdHex = nodeid.encode('hex').upper()
@@ -711,6 +730,7 @@ class KademliaProtocolAppend(KademliaProtocol):
             return signature
 
     def rpc_find_node(self, sender, nodeid, key, challenge, signature):
+        _log.debug("rpc_find_node")
         nodeIdHex = nodeid.encode('hex').upper()
         logger(self.sourceNode,
               "finding neighbors of {} "
@@ -769,6 +789,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         Verifying received `challenge` and `signature` using
         supplied signature or stored signature derived from `nodeid`.
         """
+        _log.debug("rpc_find_value")
         source = Node(nodeid, sender[0], sender[1])
         nodeIdHex = nodeid.encode('hex').upper()
         cert_stored = self.searchForCertificate(nodeIdHex)
@@ -780,13 +801,10 @@ class KademliaProtocolAppend(KademliaProtocol):
             # If the senders certificate is not in store,
             # the only allowed action is to ask it for its certificate
                 try:
+                    #verify certificate chain
+                    certificate.verify_certificate("truststore_for_transport", certstring=certString)
                     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                          certString)
-                    store_ctx = OpenSSL.crypto.X509StoreContext(self.trustedStore,
-                                                               cert)
-                    store_ctx.verify_certificate()
-                    # Ensure that the CA of the received certificate is trusted
-
+                                                            certString)
                     fingerprint = cert.digest("sha256")
                     id = fingerprint.replace(":", "")[-40:]
                     if id != nodeIdHex:
@@ -868,6 +886,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         Store certificate if `certString` is verified.
 
         """
+        _log.debug("rpc_ping,sender={}, nodeid={}, challenge={}, signature={}".format(sender, nodeid, challenge, signature))
         source = Node(nodeid, sender[0], sender[1])
         nodeIdHex = nodeid.encode("hex").upper()
         if certString != None:
@@ -894,10 +913,10 @@ class KademliaProtocolAppend(KademliaProtocol):
                 if not self.certificateExists(nodeIdHex):
                     self.storeCert(certString, nodeIdHex)
                     self.transferKeyValues(source)
-            except:
+            except Exception as e:
                 logger(self.sourceNode,
                       "RETNONE: Bad signature for sender of ping with "
-                      "explicit certificate: {}".format(source))
+                      "explicit certificate: {}, err={}".format(source, e))
                 return None
         else:
             cert_stored = self.searchForCertificate(nodeIdHex)
@@ -952,6 +971,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         Returns however the certificate for a
         given id exists in the own DHT storage.
         """
+        _log.debug("certificateExist")
         return digest("{}cert".format(id)) in self.storage
 
     def searchForCertificate(self, id):
@@ -961,6 +981,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         is found to match the ID, this is returned.
         If none or several is found, None is returned.
         """
+        _log.debug("searchForCertificate")
         if digest("{}cert".format(id)) in self.storage:
             data = self.storage.get(digest("{}cert".format(id)))
             try:
@@ -968,7 +989,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                       data[1])
             except:
                 return None
-        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
+        name_dir = certificate.get_own_credentials_path(self.node_name)
         filename = os.listdir(os.path.join(name_dir, "others"))
         matching = [s for s in filename if id in s]
         if len(matching) == 1:
@@ -992,23 +1013,28 @@ class KademliaProtocolAppend(KademliaProtocol):
         Retrieves the nodes private key from disk and
         stores it at priv_key.
         '''
-        name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
-        file = open(os.path.join(name_dir, "private", "private.key"), 'rt')
-        self.priv_key = file.read()
+        _log.debug("setPrivateKey")
+        if self.node_name:
+            self.priv_key = certificate.get_private_key(self.node_name)
+        else:
+            _log.error("self.node_name in none")
 
     def addCACert(self):
         """
         Collects the CA-certificate from disk and adds
         it to the trustedStore.
         """
+        _log.debug("addCACert")
         try:
             # Read CA's cacert.pem file
-            cafile = open(self.cert_conf["CA_default"]["certificate"], 'rt')
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                  cafile.read())
-            self.trustedStore.add_cert(cert)
+            name_dir = certificate.get_own_credentials_path(self.node_name)
+            trusted_roots_dir = certificate.get_truststore_path(self.node_name, certificate.TRUSTSTORE_TRANSPORT)
+            for i in os.listdir(trusted_roots_dir):
+                cafile = open(os.path.join(trusted_roots_dir,i), 'rt')
+                cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cafile.read())
+                self.trustedStore.add_cert(cert)
         except:
-            logger(self.sourceNode, "Failed to load CA-cert")
+            logger(self.sourceNode, "Failed to load all CA-certs")
 
     def _timeout(self, msgID):
         self._outstanding[msgID][0].callback((False, None))
@@ -1046,6 +1072,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         Stores the string representation of the nodes own
         certificate in the DHT.
         """
+        _log.debug("storeOwnCert, certstr={}".format(cert))
         sourceNodeIdHex = self.sourceNode.id.encode("hex").upper()
         self.storage[digest("{}cert".format(sourceNodeIdHex))] = cert
 
@@ -1057,12 +1084,9 @@ class KademliaProtocolAppend(KademliaProtocol):
         this node, the certificate is stored in the DHT and written to disk
         for later use.
         """
+        _log.debug("storeCert::certString={}, id={}".format(certString, id))
         try:
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                  certString)
-            store_ctx = OpenSSL.crypto.X509StoreContext(self.trustedStore,
-                                                       cert)
-            store_ctx.verify_certificate()
+            certificate.verify_certificate("truststore_for_transport", certString)
         except:
             logger(self.sourceNode,
                   "The certificate for {} is not signed "
@@ -1070,28 +1094,37 @@ class KademliaProtocolAppend(KademliaProtocol):
             return
         exists = self.storage.get(digest("{}cert".format(id)))
         if not exists[0]:
+            _log.debug("cert not stored, let's store it")
             self.storage[digest("{}cert".format(id))] = certString
-            name_dir = os.path.join(self.cert_conf["CA_default"]["runtimes_dir"], self.name)
-            file = open(os.path.join(name_dir, "others", "{}.pem".format(id)), 'w')
-            file.write(certString)
-            file.close()
+            store_path = certificate.store_others_cert(self.node_name, id, certstring=certString)
+            _log.debug("storeCert stored certificate at: {}".format(store_path))
 
     def getOwnCert(self):
         """
         Retrieves the nodes own certificate from the nodes DHT-storage and
         returns it.
         """
-        sourceNodeIdHex = self.sourceNode.id.encode("hex").upper()
-        return self.storage[digest("{}cert".format(sourceNodeIdHex))]
-
+        _log.debug("getOwnCert")
+        try:
+            if self.sourceNode:
+                if self.sourceNode.id:
+                    sourceNodeIdHex = self.sourceNode.id.encode("hex").upper()
+                    return self.storage[digest("{}cert".format(sourceNodeIdHex))]
+            else:
+                _log.error("getOwnCert:: sourceNode.id does not exist")
+                raise Exception("getOwnCert:: sourceNode.id does not exist")
+        except:
+            _log.error("har gar det at skogen")
 
 class AppendServer(Server):
 
-    def __init__(self, ksize=20, alpha=3, id=None, storage=None):
+    def __init__(self, ksize=20, alpha=3, id=None, storage=None, node_name=None):
+        _log.debug("AppendServer::__init__")
         storage = storage or ForgetfulStorageFix()
         Server.__init__(self, ksize, alpha, id, storage=storage)
         self.set_keys=set([])
-        self.protocol = KademliaProtocolAppend(self.node, self.storage, ksize, set_keys=self.set_keys)
+        self.node_name=node_name
+        self.protocol = KademliaProtocolAppend(self.node, self.storage, ksize, node_name=self.node_name, set_keys=self.set_keys)
         if kademlia_version != '0.5':
             _log.error("#################################################")
             _log.error("### EXPECTING VERSION 0.5 of kademlia package ###")
@@ -1105,6 +1138,7 @@ class AppendServer(Server):
             addrs: A `list` of (ip, port, cert) tuples.  Note that only IP addresses
                    are acceptable - hostnames will cause an error.
         """
+        _log.debug("AppendServer::bootstrap, addrs={}".format(addrs))
         # if the transport hasn't been initialized yet, wait a second
         if self.protocol.transport is None:
             return task.deferLater(reactor,
@@ -1113,6 +1147,7 @@ class AppendServer(Server):
                                     addrs)
 
         def initTable(results, challenge, id):
+            _log.debug("initTable")
             nodes = []
             for addr, result in results.items():
                 ip = addr[0]
@@ -1153,10 +1188,11 @@ class AppendServer(Server):
         if addrs:
             data = addrs[0]
             addr = (data[0], data[1])
+            certificate = data[2]
             logger(self.protocol.sourceNode, "\n########### DOING BOOTSTRAP ###########")
             try:
                 cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                      data[2])
+                                                      certificate)
                 fingerprint = cert.digest("sha256")
                 id = fingerprint.replace(":", "")[-40:]
                 private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
@@ -1170,7 +1206,7 @@ class AppendServer(Server):
                                              challenge,
                                              signature,
                                              self.protocol.getOwnCert())
-                self.protocol.storeCert(data[2], id)
+                self.protocol.storeCert(certificate, id)
             except:
                 logger(self.protocol.sourceNode, "Certificate creation failed")
             if not id:
@@ -1180,16 +1216,19 @@ class AppendServer(Server):
                 return deferredDict(ds).addCallback(initTable,
                                                    challenge,
                                                    id)
+        _log.debug("No addrs supplied")
         return deferredDict(ds)
 
     def append(self, key, value):
         """
         For the given key append the given list values to the set in the network.
         """
+        _log.debug("append")
         dkey = digest(key)
         node = Node(dkey)
 
         def append_(nodes):
+            _log.debug("append_")
             # if this node is close too, then store here as well
             if not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
                 try:
@@ -1300,6 +1339,7 @@ class AppendServer(Server):
 
         @return: C{None} if not found, the value otherwise.
         """
+        _log.debug("get_concat")
         dkey = digest(key)
         # Always try to do a find even if we have it, due to the concatenation of all results
         exists, value = self.storage.get(dkey)

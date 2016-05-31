@@ -38,9 +38,7 @@ from calvin.utilities import calvinconfig
 _conf = calvinconfig.get()
 _conf.add_section("security")
 _conf_file = os.path.join(get_home(), ".calvin/security/test/openssl.conf")
-_conf.set("security", "certificate_conf", _conf_file)
-_conf.set("security", "certificate_domain", "test")
-_cert_conf = None
+_conf.set("security", "security_domain_name", "test")
 _log = calvinlogger.get_logger(__name__)
 name = "node2:"
 
@@ -60,8 +58,6 @@ class TestDHT(object):
 
     @pytest.fixture(autouse=True, scope="class")
     def setup(self, request):
-        global _cert_conf
-        _cert_conf = certificate.Config(_conf_file, "test").configuration
 
     @pytest.inlineCallbacks
     def test_dht_multi(self, monkeypatch):
@@ -141,7 +137,7 @@ class TestDHT(object):
             assert get_value == "banan"
             print("Node with port {} got right value: {}".format(servers[0].dht_server.port.getHost().port, get_value))
             for i in range(0, amount_of_servers):
-                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))
+                name_dir = certificate.get_own_credentials_path(self.name)
                 filenames = os.listdir(os.path.join(name_dir, "others"))
                 print("Node with port {} has {} certificates in store".format(servers[i].dht_server.port.getHost().port, len(filenames)))
 
@@ -155,7 +151,7 @@ class TestDHT(object):
             yield threads.defer_to_thread(time.sleep, 10)
             i = 0
             for server in servers:
-                name_dir = os.path.join(_cert_conf["CA_default"]["runtimes_dir"], "{}{}".format(name, i))
+                name_dir = certificate.get_own_credentials_path(self.name)
                 shutil.rmtree(os.path.join(name_dir, "others"), ignore_errors=True)
                 os.mkdir(os.path.join(name_dir, "others"))
                 i += 1
