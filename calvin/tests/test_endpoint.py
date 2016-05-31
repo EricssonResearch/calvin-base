@@ -46,50 +46,50 @@ class TestLocalEndpoint(unittest.TestCase):
         assert self.local_in.fifo_mismatch is False
 
     def test_read_token_commits_if_token_is_not_none(self):
-        self.local_in.port.fifo.commit_reads = Mock()
-        self.local_out.port.fifo.commit_reads = Mock()
-        self.local_in.port.fifo.write(1)
+        self.local_in.port.queue.commit_reads = Mock()
+        self.local_out.port.queue.commit_reads = Mock()
+        self.local_in.port.queue.write(1)
 
         assert self.local_in.data_in_local_fifo is True
         assert self.local_in.read_token() == 1
         assert self.local_in.data_in_local_fifo is True
-        self.local_in.port.fifo.commit_reads.assert_called_with(self.port.id, True)
+        self.local_in.port.queue.commit_reads.assert_called_with(self.port.id, True)
 
-        self.local_out.port.fifo.write(2)
+        self.local_out.port.queue.write(2)
 
         assert self.local_in.data_in_local_fifo is True
         assert self.local_in.read_token() == 2
         assert self.local_in.data_in_local_fifo is False
-        self.local_out.port.fifo.commit_reads.assert_called_with(self.port.id, True)
+        self.local_out.port.queue.commit_reads.assert_called_with(self.port.id, True)
 
     def test_peek_token(self):
-        self.local_in.port.fifo.commit_reads = Mock()
-        self.local_out.port.fifo.commit_reads = Mock()
-        self.local_in.port.fifo.write(1)
+        self.local_in.port.queue.commit_reads = Mock()
+        self.local_out.port.queue.commit_reads = Mock()
+        self.local_in.port.queue.write(1)
 
         assert self.local_in.peek_token() == 1
-        assert not self.local_in.port.fifo.commit_reads.called
+        assert not self.local_in.port.queue.commit_reads.called
         assert self.local_in.peek_token() is None
         self.local_in.peek_rewind()
         self.local_in.commit_peek_as_read()
-        self.local_in.port.fifo.commit_reads.assert_called_with(self.port.id)
-        self.local_out.port.fifo.commit_reads.assert_called_with(self.port.id)
+        self.local_in.port.queue.commit_reads.assert_called_with(self.port.id)
+        self.local_out.port.queue.commit_reads.assert_called_with(self.port.id)
 
-        self.local_in.port.fifo.commit_reads.reset_mock()
-        self.local_out.port.fifo.commit_reads.reset_mock()
+        self.local_in.port.queue.commit_reads.reset_mock()
+        self.local_out.port.queue.commit_reads.reset_mock()
 
-        self.local_out.port.fifo.write(2)
+        self.local_out.port.queue.write(2)
         assert self.local_in.peek_token() == 2
-        assert not self.local_out.port.fifo.commit_reads.called
+        assert not self.local_out.port.queue.commit_reads.called
         self.local_in.commit_peek_as_read()
-        assert not self.local_in.port.fifo.commit_reads.called
-        self.local_out.port.fifo.commit_reads.assert_called_with(self.port.id)
+        assert not self.local_in.port.queue.commit_reads.called
+        self.local_out.port.queue.commit_reads.assert_called_with(self.port.id)
 
     def test_available_tokens(self):
-        self.local_in.port.fifo.write(1)
-        self.local_in.port.fifo.write(1)
+        self.local_in.port.queue.write(1)
+        self.local_in.port.queue.write(1)
         assert self.local_in.available_tokens() == 2
-        self.local_out.port.fifo.write(1)
+        self.local_out.port.queue.write(1)
         assert self.local_in.available_tokens() == 3
 
     def test_get_peer(self):
@@ -127,7 +127,7 @@ class TestTunnelEndpoint(unittest.TestCase):
         }
         self.tunnel_in.recv_token(payload)
         assert self.trigger_loop.called
-        assert self.port.fifo.fifo[0].value == 5
+        assert self.port.queue.fifo[0].value == 5
         self.tunnel.send.assert_called_with(expected_reply)
 
         self.trigger_loop.reset_mock()
@@ -151,21 +151,21 @@ class TestTunnelEndpoint(unittest.TestCase):
         self.tunnel.send.assert_called_with(expected_reply)
 
     def test_read_token(self):
-        self.tunnel_in.port.fifo.write(4)
-        self.tunnel_in.port.fifo.commit_reads = Mock()
+        self.tunnel_in.port.queue.write(4)
+        self.tunnel_in.port.queue.commit_reads = Mock()
         assert self.tunnel_in.read_token() == 4
-        self.tunnel_in.port.fifo.commit_reads.assert_called_with(self.port.id, True)
+        self.tunnel_in.port.queue.commit_reads.assert_called_with(self.port.id, True)
 
     def test_peek_token(self):
-        self.tunnel_in.port.fifo.write(4)
+        self.tunnel_in.port.queue.write(4)
         assert self.tunnel_in.peek_token() == 4
         assert self.tunnel_in.read_token() is None
         self.tunnel_in.peek_rewind()
         assert self.tunnel_in.read_token() == 4
 
     def test_available_tokens(self):
-        self.tunnel_in.port.fifo.write(4)
-        self.tunnel_in.port.fifo.write(5)
+        self.tunnel_in.port.queue.write(4)
+        self.tunnel_in.port.queue.write(5)
         assert self.tunnel_in.available_tokens() == 2
 
     def test_get_peer(self):
@@ -173,38 +173,38 @@ class TestTunnelEndpoint(unittest.TestCase):
         assert self.tunnel_out.get_peer() == (self.node_id, self.port.id)
 
     def test_reply(self):
-        self.tunnel_out.port.fifo.commit_one_read = Mock()
+        self.tunnel_out.port.queue.commit_one_read = Mock()
 
         self.tunnel_out.port.write_token(Token(1))
         self.tunnel_out._send_one_token()
 
         self.tunnel_out.reply(0, 'ACK')
-        self.tunnel_out.port.fifo.commit_one_read.assert_called_with(self.port.id, True)
+        self.tunnel_out.port.queue.commit_one_read.assert_called_with(self.port.id, True)
         assert self.trigger_loop.called
 
-        self.tunnel_out.port.fifo.commit_one_read.reset_mock()
+        self.tunnel_out.port.queue.commit_one_read.reset_mock()
         self.tunnel_out.reply(1, 'NACK')
-        assert not self.tunnel_out.port.fifo.commit_one_read.called
+        assert not self.tunnel_out.port.queue.commit_one_read.called
 
     def test_nack_reply(self):
         self.tunnel_out.port.write_token(Token(1))
         self.tunnel_out._send_one_token()
 
-        self.tunnel_out.port.fifo.commit_reads(self.port.id, True)
-        assert self.tunnel_out.port.fifo.tentative_read_pos[self.port.id] == 1
-        assert self.tunnel_out.port.fifo.read_pos[self.port.id] == 1
+        self.tunnel_out.port.queue.commit_reads(self.port.id, True)
+        assert self.tunnel_out.port.queue.tentative_read_pos[self.port.id] == 1
+        assert self.tunnel_out.port.queue.read_pos[self.port.id] == 1
 
         self.tunnel_out.port.write_token(Token(2))
         self.tunnel_out.port.write_token(Token(3))
         self.tunnel_out._send_one_token()
         self.tunnel_out._send_one_token()
 
-        assert self.tunnel_out.port.fifo.read_pos[self.port.id] == 1
-        assert self.tunnel_out.port.fifo.tentative_read_pos[self.port.id] == 3
+        assert self.tunnel_out.port.queue.read_pos[self.port.id] == 1
+        assert self.tunnel_out.port.queue.tentative_read_pos[self.port.id] == 3
 
         self.tunnel_out.reply(1, 'NACK')
-        assert self.tunnel_out.port.fifo.tentative_read_pos[self.port.id] == 1
-        assert self.tunnel_out.port.fifo.read_pos[self.port.id] == 1
+        assert self.tunnel_out.port.queue.tentative_read_pos[self.port.id] == 1
+        assert self.tunnel_out.port.queue.read_pos[self.port.id] == 1
 
     def test_bulk_communicate(self):
         self.tunnel_out.port.write_token(Token(1))

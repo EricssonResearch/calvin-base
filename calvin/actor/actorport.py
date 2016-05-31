@@ -38,7 +38,7 @@ class Port(object):
         self.id = calvinuuid.uuid("PORT")
         # The token queue. Not all scenarios use it,
         # but needed when e.g. changing from local to remote connection.
-        self.fifo = queue.FIFO(fifo_size)
+        self.queue = queue.FIFO(fifo_size)
         self.properties = {}
 
     def __str__(self):
@@ -46,13 +46,13 @@ class Port(object):
 
     def _state(self):
         """Return port state for serialization."""
-        return {'name': self.name, 'id': self.id, 'fifo': self.fifo._state()}
+        return {'name': self.name, 'id': self.id, 'queue': self.queue._state()}
 
     def _set_state(self, state):
         """Set port state."""
         self.name = state.pop('name')
         self.id = state.pop('id')
-        self.fifo._set_state(state.pop('fifo'))
+        self.queue._set_state(state.pop('queue'))
 
     def attach_endpoint(self, endpoint_):
         """
@@ -85,7 +85,6 @@ class InPort(Port):
 
     def __init__(self, name, owner):
         super(InPort, self).__init__(name, owner)
-        self.fifo.add_reader(self.id)
         self.endpoint = endpoint.Endpoint(self)
         self.properties['direction'] = 'in'
 
@@ -104,6 +103,7 @@ class InPort(Port):
         if type(old_endpoint) is not endpoint.Endpoint:
             self.detach_endpoint(old_endpoint)
         self.endpoint = endpoint_
+        self.queue.add_reader(self.id)
         self.owner.did_connect(self)
         return old_endpoint
 
@@ -197,7 +197,7 @@ class OutPort(Port):
             old_endpoint = match[0]
             self.detach_endpoint(old_endpoint)
 
-        self.fifo.add_reader(endpoint_.peer_id)
+        self.queue.add_reader(endpoint_.peer_id)
         self.endpoints.append(endpoint_)
         self.owner.did_connect(self)
         return old_endpoint
@@ -221,30 +221,30 @@ class OutPort(Port):
         # When tunneled transport tokens after last continuous acked token will be resent later, receiver will just ack them again if rereceived
         for e in endpoints:
             peer_node_id, peer_id = e.get_peer()
-            self.fifo.commit_reads(peer_id, False)
+            self.queue.commit_reads(peer_id, False)
         self.owner.did_disconnect(self)
         return endpoints
 
     def write_token(self, data):
         """docstring for write_token"""
-        if not self.fifo.write(data):
+        if not self.queue.write(data):
             raise Exception("FIFO full when writing to port %s.%s with id: %s" % (
                 self.owner.name, self.name, self.id))
 
     def available_tokens(self):
         """Used by actor (owner) to check number of token slots available on the port."""
-        return self.fifo.available_slots()
+        return self.queue.available_slots()
 
     def can_write(self):
         """Used by actor to test if writing a token is possible. Returns a boolean."""
-        return self.fifo.can_write()
+        return self.queue.can_write()
 
     def get_peers(self):
         peers = []
         for ep in self.endpoints:
             peers.append(ep.get_peer())
-        if len(peers) < len(self.fifo.readers):
-            all = copy.copy(self.fifo.readers)
+        if len(peers) < len(self.queue.readers):
+            all = copy.copy(self.queue.readers)
             all -= set([p[1] for p in peers])
             peers.extend([(None, p) for p in all])
         return peers

@@ -111,7 +111,7 @@ def test_disconnect_inport(inport, outport):
 
 def test_disconnect_outport(inport, outport):
     outport.owner.did_disconnect = Mock()
-    outport.fifo.commit_reads = Mock()
+    outport.queue.commit_reads = Mock()
     endpoint_1 = LocalOutEndpoint(outport, inport)
     endpoint_2 = LocalOutEndpoint(outport, outport)
 
@@ -119,7 +119,7 @@ def test_disconnect_outport(inport, outport):
     outport.attach_endpoint(endpoint_2)
     assert outport.disconnect() == [endpoint_1, endpoint_2]
     assert outport.owner.did_disconnect.called
-    outport.fifo.commit_reads.assert_has_calls([call(endpoint_1.peer_id, False), call(endpoint_2.peer_id, False)])
+    outport.queue.commit_reads.assert_has_calls([call(endpoint_1.peer_id, False), call(endpoint_2.peer_id, False)])
 
 
 def test_inport_outport_connection(inport, outport):
@@ -147,7 +147,7 @@ def test_set_outport_state(outport):
         'fanout': 2,
         'name': 'new_name',
         'id': '123',
-        'fifo': {
+        'queue': {
             'fifo': [{'value': 1} for n in range(5)],
             'N': 5,
             'readers': ['123'],
@@ -165,7 +165,7 @@ def test_set_outport_state(outport):
     assert outport.can_write()
     assert outport.available_tokens() == 3
     outport.write_token(10)
-    assert outport.fifo.fifo[3] == 10
+    assert outport.queue.fifo[3] == 10
 
 
 def test_set_inport_state(inport, outport):
@@ -177,7 +177,7 @@ def test_set_inport_state(inport, outport):
     new_state = {
         'name': 'new_name',
         'id': inport.id,
-        'fifo': {
+        'queue': {
             'fifo': [{'data': n} for n in range(5)],
             'N': 5,
             'readers': [in_endpoint.port.id],

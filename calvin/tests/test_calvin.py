@@ -571,12 +571,12 @@ class TestActorMigration(CalvinTestBase):
         time.sleep(1)
 
         actual = actual_tokens(peer, snk1)
-        # Make sure that we got at least 5 more tokens since we could have transfered but unprocessed in fifo
+        # Make sure that we got at least 5 more tokens since we could have transfered but unprocessed in queue
         assert(len(actual) > snk1_0 + 5)
         self.assertListPrefix(expected, actual)
 
         actual = actual_tokens(peer, snk2)
-        # Make sure that we got at least 5 more tokens since we could have transfered but unprocessed in fifo
+        # Make sure that we got at least 5 more tokens since we could have transfered but unprocessed in queue
         assert(len(actual) > snk2_0 + 5)
         self.assertListPrefix(expected, actual)
 

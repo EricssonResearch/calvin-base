@@ -258,7 +258,7 @@ def create_tracing_node(uri, control_uri, attributes=None):
         tmp = sys.stdout
         # Modules to ignore
         ignore = [
-            'fifo', 'calvin', 'actor', 'pickle', 'socket',
+            'queue', 'calvin', 'actor', 'pickle', 'socket',
             'uuid', 'codecs', 'copy_reg', 'string_escape', '__init__',
             'colorlog', 'posixpath', 'glob', 'genericpath', 'base',
             'sre_parse', 'sre_compile', 'fdesc', 'posixbase', 'escape_codes',

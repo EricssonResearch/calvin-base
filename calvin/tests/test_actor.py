@@ -30,6 +30,7 @@ def create_actor(node):
     actor_id = actor_manager.new('std.Identity', {})
     actor = actor_manager.actors[actor_id]
     actor._calvinsys = Mock()
+    actor.inports['token'].queue.add_reader(actor.inports['token'].id)
     return actor
 
 
@@ -120,7 +121,7 @@ def test_state(actor):
         '_signature': None,
         'dump': False,
         'id': actor.id,
-        'inports': {'token': {'fifo': {'N': 5,
+        'inports': {'token': {'queue': {'N': 5,
                                        'fifo': [{'data': 0, 'type': 'Token'},
                                                 {'data': 0, 'type': 'Token'},
                                                 {'data': 0, 'type': 'Token'},
@@ -134,7 +135,7 @@ def test_state(actor):
                               'name': 'token'}},
         'name': '',
         'outports': {'token': {'fanout': 1,
-                               'fifo': {'N': 5,
+                               'queue': {'N': 5,
                                         'fifo': [{'data': 0, 'type': 'Token'},
                                                  {'data': 0, 'type': 'Token'},
                                                  {'data': 0, 'type': 'Token'},

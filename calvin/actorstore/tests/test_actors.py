@@ -25,9 +25,9 @@ from calvin.runtime.north import metering
 
 def fwrite(port, value):
     if isinstance(value, Token):
-        port.fifo.write(value)
+        port.queue.write(value)
     else:
-        port.fifo.write(Token(value=value))
+        port.queue.write(Token(value=value))
 
 
 def pwrite(actor, portname, value):
@@ -51,15 +51,15 @@ def pread(actor, portname, number=1):
         if pavailable(actor, portname) > number:
             raise AssertionError("Too many tokens available, %d, expected %d" % (pavailable(actor, portname), number))
 
-    values = [port.fifo.read(actor.id).value for _ in range(number)]
-    port.fifo.commit_reads(actor.id), True
+    values = [port.queue.read(actor.id).value for _ in range(number)]
+    port.queue.commit_reads(actor.id), True
     return values
 
 
 def pavailable(actor, portname):
     port = actor.outports.get(portname, None)
     assert port
-    return port.fifo.available_tokens(actor.id)
+    return port.queue.available_tokens(actor.id)
 
 
 class DummyInEndpoint(Endpoint):
@@ -75,24 +75,24 @@ class DummyInEndpoint(Endpoint):
         return True
 
     def read_token(self):
-        token = self.port.fifo.read(self.port.id)
+        token = self.port.queue.read(self.port.id)
         if token:
-            self.port.fifo.commit_reads(self.port.id, True)
+            self.port.queue.commit_reads(self.port.id, True)
         return token
 
     def available_tokens(self):
         tokens = 0
-        tokens += self.port.fifo.available_tokens(self.port.id)
+        tokens += self.port.queue.available_tokens(self.port.id)
         return tokens
 
     def peek_token(self):
-        return self.port.fifo.read(self.port.id)
+        return self.port.queue.read(self.port.id)
 
     def commit_peek_as_read(self):
-        self.port.fifo.commit_reads(self.port.id)
+        self.port.queue.commit_reads(self.port.id)
 
     def peek_rewind(self):
-        self.port.fifo.rollback_reads(self.port.id)
+        self.port.queue.rollback_reads(self.port.id)
 
 
 class FDMock(object):
@@ -240,8 +240,9 @@ class ActorTester(object):
 
         for inport in actor.inports.values():
             inport.endpoint = DummyInEndpoint(inport)
+            inport.queue.add_reader(inport.id)
         for outport in actor.outports.values():
-            outport.fifo.add_reader(actor.id)
+            outport.queue.add_reader(actor.id)
 
         self.actors[actorname] = actor
 

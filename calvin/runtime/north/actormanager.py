@@ -448,10 +448,10 @@ class ActorManager(object):
         actor = self.actors[actor_id]
         for port in actor.inports.values():
             if port.id == port_id:
-                return port.fifo._state()
+                return port.queue._state()
         for port in actor.outports.values():
             if port.id == port_id:
-                return port.fifo._state()
+                return port.queue._state()
         raise Exception("No port with id: %s" % port_id)
 
     def actor_type(self, actor_id):

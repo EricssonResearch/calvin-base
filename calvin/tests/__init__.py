@@ -43,7 +43,7 @@ class TestPort:
         self.name = name
         self.direction = direction
         self.peers = None
-        self.fifo = FIFO(5)
+        self.queue = FIFO(5)
 
     def is_connected(self):
         return True
