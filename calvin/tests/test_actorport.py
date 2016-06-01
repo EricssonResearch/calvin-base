@@ -147,7 +147,7 @@ def test_inport_outport_connection(inport, outport):
     assert inport.peek_token() == 1
     inport.peek_rewind()
 
-    assert inport.read_token() == 1
+    assert inport.peek_token() == 1
     assert inport.tokens_available(0)
 
 
@@ -208,7 +208,7 @@ def test_set_inport_state(inport, outport):
 
     assert inport.name == 'new_name'
     assert inport.tokens_available(3)
-    assert inport.read_token().value == 2
-    assert inport.read_token().value == 3
-    assert inport.read_token().value == 4
-    assert inport.read_token() is None
+    assert inport.peek_token().value == 2
+    assert inport.peek_token().value == 3
+    assert inport.peek_token().value == 4
+    assert inport.peek_token() is None

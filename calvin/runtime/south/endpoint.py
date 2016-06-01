@@ -36,9 +36,6 @@ class Endpoint(object):
     def is_connected(self):
         return False
 
-    def read_token(self):
-        return None
-
     def communicate(self):
         """
         Called by the runtime when it is possible to transfer data to counterpart.
@@ -89,24 +86,6 @@ class LocalInEndpoint(Endpoint):
         # and the read pos reflect it does not actually contain any data
         self.port.queue.read_pos[self.port.id] = self.port.queue.write_pos
         self.port.queue.tentative_read_pos[self.port.id] = self.port.queue.write_pos
-
-    def read_token(self):
-        if self.fifo_mismatch:
-            self._fifo_mismatch_fix()
-
-        if self.data_in_local_fifo:
-            # Empty local inport fifo once, since local transport only use outport's fifo
-            token = self.port.queue.read(self.port.id)
-            if token:
-                self.port.queue.commit_reads(self.port.id, True)
-                return token
-            self.data_in_local_fifo = False
-
-        token = self.peer_port.queue.read(self.port.id)
-        self.peer_port.queue.commit_reads(self.port.id, token is not None)
-
-        self._sync_local_fifos()
-        return token
 
     def peek_token(self):
         if self.fifo_mismatch:
@@ -218,11 +197,6 @@ class TunnelInEndpoint(Endpoint):
             'value': 'ACK' if ok else 'NACK'
         }
         self.tunnel.send(reply)
-
-    def read_token(self):
-        token = self.port.queue.read(self.port.id)
-        self.port.queue.commit_reads(self.port.id, token is not None)
-        return token
 
     def peek_token(self):
         token = self.port.queue.read(self.port.id)

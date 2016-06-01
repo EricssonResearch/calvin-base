@@ -75,12 +75,6 @@ class DummyInEndpoint(Endpoint):
     def is_connected(self):
         return True
 
-    def read_token(self):
-        token = self.port.queue.read(self.port.id)
-        if token:
-            self.port.queue.commit_reads(self.port.id, True)
-        return token
-
     def tokens_available(self, length):
         tokens = 0
         tokens += self.port.queue.available_tokens(self.port.id)

@@ -44,7 +44,7 @@ class TestLocalEndpoint(unittest.TestCase):
 
     def test_read_token_fixes_fifo_mismatch(self):
         self.local_in.fifo_mismatch = True
-        token = self.local_in.read_token()
+        token = self.local_in.peek_token()
         assert token is None
         assert self.local_in.fifo_mismatch is False
 
@@ -54,16 +54,17 @@ class TestLocalEndpoint(unittest.TestCase):
         self.local_in.port.queue.write(1)
 
         assert self.local_in.data_in_local_fifo is True
-        assert self.local_in.read_token() == 1
+        assert self.local_in.peek_token() == 1
         assert self.local_in.data_in_local_fifo is True
-        self.local_in.port.queue.commit_reads.assert_called_with(self.port.id, True)
+        self.local_in.commit_peek_as_read()
+        self.local_in.port.queue.commit_reads.assert_called_with(self.port.id)
 
         self.local_out.port.queue.write(2)
 
-        assert self.local_in.data_in_local_fifo is True
-        assert self.local_in.read_token() == 2
+        assert self.local_in.peek_token() == 2
+        self.local_in.commit_peek_as_read()
         assert self.local_in.data_in_local_fifo is False
-        self.local_out.port.queue.commit_reads.assert_called_with(self.port.id, True)
+        self.local_out.port.queue.commit_reads.assert_called_with(self.port.id)
 
     def test_peek_token(self):
         self.local_in.port.queue.commit_reads = Mock()
@@ -158,15 +159,16 @@ class TestTunnelEndpoint(unittest.TestCase):
     def test_read_token(self):
         self.tunnel_in.port.queue.write(4)
         self.tunnel_in.port.queue.commit_reads = Mock()
-        assert self.tunnel_in.read_token() == 4
-        self.tunnel_in.port.queue.commit_reads.assert_called_with(self.port.id, True)
+        assert self.tunnel_in.peek_token() == 4
+        self.tunnel_in.commit_peek_as_read()
+        self.tunnel_in.port.queue.commit_reads.assert_called_with(self.port.id)
 
     def test_peek_token(self):
         self.tunnel_in.port.queue.write(4)
         assert self.tunnel_in.peek_token() == 4
-        assert self.tunnel_in.read_token() is None
+        assert self.tunnel_in.peek_token() is None
         self.tunnel_in.peek_rewind()
-        assert self.tunnel_in.read_token() == 4
+        assert self.tunnel_in.peek_token() == 4
 
     def test_available_tokens(self):
         self.tunnel_in.port.queue.write(4)

@@ -138,10 +138,6 @@ class InPort(Port):
         self.endpoint = endpoint.Endpoint(self, former_peer_id=self.endpoint.get_peer()[1])
         return endpoints
 
-    def read_token(self):
-        """Used by actor (owner) to read a token from the port. Returns None if token queue is empty."""
-        return self.endpoint.read_token()
-
     def peek_token(self):
         """Used by actor (owner) to peek a token from the port. Following peeks will get next token. Reset with peek_rewind."""
         return self.endpoint.peek_token()
