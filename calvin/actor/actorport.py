@@ -120,7 +120,7 @@ class InPort(Port):
         if type(old_endpoint) is not endpoint.Endpoint:
             self.detach_endpoint(old_endpoint)
         self.endpoint = endpoint_
-        self.queue.add_reader(self.id)
+        self.endpoint.attached()
         self.owner.did_connect(self)
         return old_endpoint
 
@@ -210,8 +210,8 @@ class OutPort(Port):
             old_endpoint = match[0]
             self.detach_endpoint(old_endpoint)
 
-        self.queue.add_reader(endpoint_.peer_id)
         self.endpoints.append(endpoint_)
+        endpoint_.attached()
         self.owner.did_connect(self)
         return old_endpoint
 

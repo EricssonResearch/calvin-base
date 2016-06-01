@@ -49,6 +49,11 @@ class Endpoint(object):
     def get_peer(self):
         return (None, self.former_peer_id)
 
+    def attached(self):
+        pass
+
+
+
 #
 # Local endpoints
 #
@@ -69,6 +74,9 @@ class LocalInEndpoint(Endpoint):
 
     def is_connected(self):
         return True
+
+    def attached(self):
+        self.port.queue.add_reader(self.port.id)
 
     def _fifo_mismatch_fix(self):
         # Fix once mismatch of positions: we have tokens in the peer fifo that are duplicates of tokens transferred
@@ -146,13 +154,15 @@ class LocalOutEndpoint(Endpoint):
     def is_connected(self):
         return True
 
+    def attached(self):
+        self.port.queue.add_reader(self.peer_id)
+
     def get_peer(self):
         return ('local', self.peer_id)
 
     def tokens_available(self, length):
         # check available slots in queue
         return self.port.queue.available_slots() >= length
-
 
 #
 # Remote endpoints
@@ -177,6 +187,9 @@ class TunnelInEndpoint(Endpoint):
 
     def is_connected(self):
         return True
+
+    def attached(self):
+        self.port.queue.add_reader(self.port.id)
 
     def recv_token(self, payload):
         ok = False
@@ -242,6 +255,9 @@ class TunnelOutEndpoint(Endpoint):
 
     def is_connected(self):
         return True
+
+    def attached(self):
+        self.port.queue.add_reader(self.peer_id)
 
     def reply(self, sequencenbr, status):
         _log.debug("Reply on port %s/%s/%s [%i] %s" % (self.port.owner.name, self.peer_id, self.port.name, sequencenbr, status))
