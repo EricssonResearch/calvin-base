@@ -91,9 +91,9 @@ class TestLocalEndpoint(unittest.TestCase):
     def test_available_tokens(self):
         self.local_in.port.queue.write(1)
         self.local_in.port.queue.write(1)
-        assert self.local_in.available_tokens() == 2
+        assert self.local_in.tokens_available(2)
         self.local_out.port.queue.write(1)
-        assert self.local_in.available_tokens() == 3
+        assert self.local_in.tokens_available(3)
 
     def test_get_peer(self):
         assert self.local_in.get_peer() == ('local', self.peer_port.id)
@@ -171,7 +171,7 @@ class TestTunnelEndpoint(unittest.TestCase):
     def test_available_tokens(self):
         self.tunnel_in.port.queue.write(4)
         self.tunnel_in.port.queue.write(5)
-        assert self.tunnel_in.available_tokens() == 2
+        assert self.tunnel_in.tokens_available(2)
 
     def test_get_peer(self):
         assert self.tunnel_in.get_peer() == (self.peer_node_id, self.peer_port.id)

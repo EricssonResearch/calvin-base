@@ -103,13 +103,13 @@ def condition(action_input=[], action_output=[]):
             # Check if input ports have enough tokens. Note that all([]) evaluates to True
             #
             input_ok = all(
-                [self.inports[portname].available_tokens() >= repeat for (portname, repeat) in action_input]
+                [self.inports[portname].tokens_available(repeat) for (portname, repeat) in action_input]
             )
             #
             # Check if output port have enough free token slots
             #
             output_ok = all(
-                [self.outports[portname].available_tokens() >= repeat for (portname, repeat) in action_output]
+                [self.outports[portname].tokens_available(repeat) for (portname, repeat) in action_output]
             )
 
             if not input_ok or not output_ok:

@@ -137,21 +137,21 @@ def test_inport_outport_connection(inport, outport):
     inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(in_endpoint)
 
-    assert outport.can_write()
-    assert outport.available_tokens() == 4
+    assert outport.tokens_available(1)
+    assert outport.tokens_available(4)
 
     outport.write_token(1)
-    assert outport.available_tokens() == 3
+    assert outport.tokens_available(3)
 
-    assert inport.available_tokens() == 1
+    assert inport.tokens_available(1)
     assert inport.peek_token() == 1
     inport.peek_rewind()
 
     assert inport.read_token() == 1
-    assert inport.available_tokens() == 0
+    assert inport.tokens_available(0)
 
 
-def test_set_outport_state(outport):
+def test_set_outport_state(inport, outport):
     new_state = {
         'fanout': 2,
         'name': 'new_name',
@@ -162,18 +162,24 @@ def test_set_outport_state(outport):
             'readers': ['123'],
             'write_pos': 3,
             'read_pos': {'123': 2},
-            'tentative_read_pos': {'123': 0}
+            'tentative_read_pos': {'123': 0},
+            'queuetype': 'fifo'
         }
     }
+    out_endpoint = LocalOutEndpoint(outport, inport)
+    in_endpoint = LocalInEndpoint(inport, outport)
+    inport.set_queue(queue.FIFO(5))
+    inport.attach_endpoint(in_endpoint)
     outport.set_queue(queue.FIFO(5))
+    outport.attach_endpoint(out_endpoint)
     outport._set_state(new_state)
 
     assert outport.name == 'new_name'
     assert outport.id == '123'
     assert outport.properties['fanout'] == 2
 
-    assert outport.can_write()
-    assert outport.available_tokens() == 3
+    assert outport.tokens_available(1)
+    assert outport.tokens_available(3)
     outport.write_token(10)
     assert outport.queue.fifo[3] == 10
 
@@ -201,7 +207,7 @@ def test_set_inport_state(inport, outport):
     inport._set_state(new_state)
 
     assert inport.name == 'new_name'
-    assert inport.available_tokens() == 3
+    assert inport.tokens_available(3)
     assert inport.read_token().value == 2
     assert inport.read_token().value == 3
     assert inport.read_token().value == 4

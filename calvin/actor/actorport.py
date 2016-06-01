@@ -154,9 +154,9 @@ class InPort(Port):
         """Used by actor (owner) to rewind port peeking to front token."""
         return self.endpoint.commit_peek_as_read()
 
-    def available_tokens(self):
+    def tokens_available(self, length):
         """Used by actor (owner) to check number of tokens on the port."""
-        return self.endpoint.available_tokens()
+        return self.endpoint.tokens_available(length)
 
     def get_peers(self):
         return [self.endpoint.get_peer()]
@@ -248,13 +248,15 @@ class OutPort(Port):
             raise Exception("FIFO full when writing to port %s.%s with id: %s" % (
                 self.owner.name, self.name, self.id))
 
-    def available_tokens(self):
+    def tokens_available(self, length):
         """Used by actor (owner) to check number of token slots available on the port."""
-        return self.queue.available_slots()
-
-    def can_write(self):
-        """Used by actor to test if writing a token is possible. Returns a boolean."""
-        return self.queue.can_write()
+        try:
+            if self.endpoints[0].single_tokens_available:
+                return self.endpoints[0].tokens_available(length)
+            else:
+                bool(self.endpoints and all([ep.tokens_available(length) for ep in self.endpoints]))
+        except:
+            return bool(self.endpoints and all([ep.tokens_available(length) for ep in self.endpoints]))
 
     def get_peers(self):
         peers = []

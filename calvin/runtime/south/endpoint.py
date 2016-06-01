@@ -68,6 +68,7 @@ class LocalInEndpoint(Endpoint):
         # there might be initial data to read in the FIFO
         self.data_in_local_fifo = True
         self.fifo_mismatch = True
+        self.single_tokens_available = True
 
     def is_connected(self):
         return True
@@ -136,7 +137,7 @@ class LocalInEndpoint(Endpoint):
         self.peer_port.queue.commit_reads(self.port.id)
         self._sync_local_fifos()
 
-    def available_tokens(self):
+    def tokens_available(self, length):
         if self.fifo_mismatch:
             self._fifo_mismatch_fix()
 
@@ -147,7 +148,7 @@ class LocalInEndpoint(Endpoint):
             if tokens == 0:
                 self.data_in_local_fifo = False
         tokens += self.peer_port.queue.available_tokens(self.port.id)
-        return tokens
+        return tokens >= length
 
     def get_peer(self):
         return ('local', self.peer_port.id)
@@ -161,12 +162,17 @@ class LocalOutEndpoint(Endpoint):
         super(LocalOutEndpoint, self).__init__(port)
         self.peer_port = peer_port
         self.peer_id = peer_port.id
+        self.single_tokens_available = True
 
     def is_connected(self):
         return True
 
     def get_peer(self):
         return ('local', self.peer_id)
+
+    def tokens_available(self, length):
+        # check available slots in queue
+        return self.port.queue.available_slots() >= length
 
 
 #
@@ -184,6 +190,7 @@ class TunnelInEndpoint(Endpoint):
         self.peer_port_id = peer_port_id
         self.peer_node_id = peer_node_id
         self.trigger_loop = trigger_loop
+        self.single_tokens_available = True
 
     def __str__(self):
         str = super(TunnelInEndpoint, self).__str__()
@@ -227,9 +234,9 @@ class TunnelInEndpoint(Endpoint):
     def commit_peek_as_read(self):
         self.port.queue.commit_reads(self.port.id)
 
-    def available_tokens(self):
+    def tokens_available(self, length):
         # First fit as many tokens as possible in the queue
-        return self.port.queue.available_tokens(self.port.id)
+        return self.port.queue.available_tokens(self.port.id) >= length
 
     def set_peer_port_id(self, id):
         self.peer_port_id = id
@@ -253,6 +260,7 @@ class TunnelOutEndpoint(Endpoint):
         self.backoff = 0.0
         self.time_cont = 0.0
         self.bulk = True
+        self.single_tokens_available = True
 
     def __str__(self):
         str = super(TunnelOutEndpoint, self).__str__()
@@ -339,6 +347,10 @@ class TunnelOutEndpoint(Endpoint):
             # Make sure that resend will be tried in backoff seconds
             self.trigger_loop(self.backoff)
         return sent
+
+    def tokens_available(self, length):
+        # check available slots in queue
+        return self.port.queue.available_slots() >= length
 
     def get_peer(self):
         return (self.peer_node_id, self.peer_id)

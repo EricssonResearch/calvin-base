@@ -81,10 +81,10 @@ class DummyInEndpoint(Endpoint):
             self.port.queue.commit_reads(self.port.id, True)
         return token
 
-    def available_tokens(self):
+    def tokens_available(self, length):
         tokens = 0
         tokens += self.port.queue.available_tokens(self.port.id)
-        return tokens
+        return tokens >= length
 
     def peek_token(self):
         return self.port.queue.read(self.port.id)
@@ -94,6 +94,23 @@ class DummyInEndpoint(Endpoint):
 
     def peek_rewind(self):
         self.port.queue.rollback_reads(self.port.id)
+
+
+class DummyOutEndpoint(Endpoint):
+
+    """
+    Dummy out endpoint for actor test
+    """
+
+    def __init__(self, port):
+        super(DummyOutEndpoint, self).__init__(port)
+
+    def is_connected(self):
+        return True
+
+    def tokens_available(self, length):
+        tokens = self.port.queue.available_slots()
+        return tokens >= length
 
 
 class FDMock(object):
@@ -246,6 +263,7 @@ class ActorTester(object):
         for outport in actor.outports.values():
             outport.set_queue(queue.FIFO(5))
             outport.queue.add_reader(actor.id)
+            outport.endpoints.append(DummyOutEndpoint(outport))
 
         self.actors[actorname] = actor
 
