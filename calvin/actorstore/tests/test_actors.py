@@ -21,6 +21,7 @@ from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.south.endpoint import Endpoint
 from calvin.runtime.north import metering
+from calvin.runtime.north import queue
 
 
 def fwrite(port, value):
@@ -239,9 +240,11 @@ class ActorTester(object):
             raise e
 
         for inport in actor.inports.values():
+            inport.set_queue(queue.FIFO(5))
             inport.endpoint = DummyInEndpoint(inport)
             inport.queue.add_reader(inport.id)
         for outport in actor.outports.values():
+            outport.set_queue(queue.FIFO(5))
             outport.queue.add_reader(actor.id)
 
         self.actors[actorname] = actor

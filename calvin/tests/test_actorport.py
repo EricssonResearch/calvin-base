@@ -21,6 +21,7 @@ from calvin.runtime.north.actormanager import ActorManager
 from calvin.tests import DummyNode
 from calvin.runtime.south.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actorport import InPort, OutPort
+from calvin.runtime.north import queue
 
 pytestmark = pytest.mark.unittest
 
@@ -54,6 +55,7 @@ def test_attach_endpoint_to_inport(inport, outport):
     old_endpoint = LocalInEndpoint(OutPort("out", actor()), old_inport)
     endpoint = LocalInEndpoint(outport, inport)
 
+    inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(old_endpoint)
     assert inport.is_connected_to(old_inport.id)
 
@@ -68,6 +70,7 @@ def test_detach_endpoint_from_inport(inport, outport):
     inport.owner.did_disconnect = Mock()
     endpoint = LocalInEndpoint(outport, inport)
 
+    inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(endpoint)
     assert inport.is_connected_to(inport.id)
     inport.detach_endpoint(endpoint)
@@ -80,6 +83,7 @@ def test_attach_endpoint_to_outport(inport, outport):
     old_endpoint = LocalOutEndpoint(OutPort("out", actor()), InPort("out", actor()))
     endpoint = LocalOutEndpoint(outport, inport)
 
+    outport.set_queue(queue.FIFO(5))
     outport.attach_endpoint(old_endpoint)
     assert outport.is_connected_to(old_endpoint.peer_id)
 
@@ -93,6 +97,7 @@ def test_detach_endpoint_from_outport(inport, outport):
     outport.owner.did_disconnect = Mock()
     endpoint = LocalOutEndpoint(outport, inport)
 
+    outport.set_queue(queue.FIFO(5))
     outport.attach_endpoint(endpoint)
     assert outport.is_connected_to(endpoint.peer_id)
     outport.detach_endpoint(endpoint)
@@ -104,6 +109,7 @@ def test_disconnect_inport(inport, outport):
     inport.owner.did_disconnect = Mock()
     endpoint = LocalInEndpoint(outport, inport)
 
+    inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(endpoint)
     assert inport.disconnect() == [endpoint]
     assert inport.owner.did_disconnect.called
@@ -111,6 +117,7 @@ def test_disconnect_inport(inport, outport):
 
 def test_disconnect_outport(inport, outport):
     outport.owner.did_disconnect = Mock()
+    outport.set_queue(queue.FIFO(5))
     outport.queue.commit_reads = Mock()
     endpoint_1 = LocalOutEndpoint(outport, inport)
     endpoint_2 = LocalOutEndpoint(outport, outport)
@@ -125,7 +132,9 @@ def test_disconnect_outport(inport, outport):
 def test_inport_outport_connection(inport, outport):
     out_endpoint = LocalOutEndpoint(outport, inport)
     in_endpoint = LocalInEndpoint(inport, outport)
+    outport.set_queue(queue.FIFO(5))
     outport.attach_endpoint(out_endpoint)
+    inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(in_endpoint)
 
     assert outport.can_write()
@@ -156,6 +165,7 @@ def test_set_outport_state(outport):
             'tentative_read_pos': {'123': 0}
         }
     }
+    outport.set_queue(queue.FIFO(5))
     outport._set_state(new_state)
 
     assert outport.name == 'new_name'
@@ -171,7 +181,9 @@ def test_set_outport_state(outport):
 def test_set_inport_state(inport, outport):
     out_endpoint = LocalOutEndpoint(outport, inport)
     in_endpoint = LocalInEndpoint(inport, outport)
+    outport.set_queue(queue.FIFO(5))
     outport.attach_endpoint(out_endpoint)
+    inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(in_endpoint)
 
     new_state = {

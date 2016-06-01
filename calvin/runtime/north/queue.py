@@ -17,6 +17,24 @@
 from calvin_token import Token
 
 
+class QueueNone(object):
+    def __init__(self):
+        super(QueueNone, self).__init__()
+        self.state = {'queuetype': 'none'}
+
+    def _state(self):
+        return self.state
+
+    def _set_state(self, state):
+        self.state = state
+
+    def __str__(self):
+        return "QueueNone: %s" % str(self.state)
+
+    @property
+    def queue_type(self):
+        return self.state["queuetype"]
+
 class FIFO(object):
 
     """
@@ -39,6 +57,7 @@ class FIFO(object):
         self.write_pos = 0
         self.read_pos = {}
         self.tentative_read_pos = {}
+        self._type = "fifo"
 
     def __len__(self):
         return self.write_pos - min(self.read_pos.values() or [0])
@@ -48,6 +67,7 @@ class FIFO(object):
 
     def _state(self):
         state = {
+            'queuetype': self._type,
             'fifo': [t.encode() for t in self.fifo],
             'N': self.N,
             'readers': list(self.readers),
@@ -58,12 +78,17 @@ class FIFO(object):
         return state
 
     def _set_state(self, state):
+        self._type = state.get('queuetype',"fifo")
         self.fifo = [Token.decode(d) for d in state['fifo']]
         self.N = state['N']
         self.readers = set(state['readers'])
         self.write_pos = state['write_pos']
         self.read_pos = state['read_pos']
         self.tentative_read_pos = state['tentative_read_pos']
+
+    @property
+    def queue_type(self):
+        return self._type
 
     def add_reader(self, reader):
         if not isinstance(reader, basestring):

@@ -18,6 +18,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.utils import enum
 from calvin.runtime.south import endpoint
 from calvin.runtime.north.calvin_proto import CalvinTunnel
+from calvin.runtime.north import queue
 from calvin.actor.actorport import PortMeta
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinlogger
@@ -154,6 +155,8 @@ class LocalConnection(BaseConnection):
     def _connect_via_local(self, inport, outport):
         """ Both connecting ports are local, just connect them """
         _log.analyze(self.node.id, "+", {})
+        inport.set_queue(queue.FIFO(5))
+        outport.set_queue(queue.FIFO(5))
         ein = endpoint.LocalInEndpoint(inport, outport)
         eout = endpoint.LocalOutEndpoint(outport, inport)
 
@@ -340,6 +343,7 @@ class TunnelConnection(BaseConnection):
 
         # Set up the port's endpoint
         tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
+        self.port.set_queue(queue.FIFO(5))
         if self.port.direction == 'in':
             endp = endpoint.TunnelInEndpoint(self.port,
                                              tunnel,
@@ -392,6 +396,7 @@ class TunnelConnection(BaseConnection):
             _log.analyze(self.node.id, "+ WRONG TUNNEL", payload, peer_node_id=self.peer_port_meta.node_id)
             return response.CalvinResponse(response.GONE)
 
+        self.port.set_queue(queue.FIFO(5))
         if self.port.direction == "in":
             endp = endpoint.TunnelInEndpoint(self.port,
                                              tunnel,

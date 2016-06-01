@@ -20,6 +20,7 @@ from mock import Mock, patch
 
 from calvin.tests import DummyNode
 from calvin.runtime.north.actormanager import ActorManager
+from calvin.runtime.north import queue
 
 pytestmark = pytest.mark.unittest
 
@@ -128,6 +129,7 @@ class ActorManagerTests(unittest.TestCase):
         callback_mock = Mock()
 
         actor, actor_id = self._new_actor('std.Constant', {'data': 42})
+        actor.outports['token'].set_queue(queue.FIFO(5))
         peer_node = DummyNode()
 
         actor.will_migrate = Mock()
@@ -169,6 +171,7 @@ class ActorManagerTests(unittest.TestCase):
 
     def test_connections_returns_actor_connections_for_current_node(self):
         actor, actor_id = self._new_actor('std.Constant', {'data': 42, 'name': 'actor'})
+        actor.outports['token'].set_queue(queue.FIFO(5))
         expected = {
             'actor_name': 'actor',
             'actor_id': actor_id,

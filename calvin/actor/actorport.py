@@ -28,7 +28,7 @@ _log = get_logger(__name__)
 class Port(object):
     """docstring for Port"""
 
-    def __init__(self, name, owner, fifo_size=5):
+    def __init__(self, name, owner):
         super(Port, self).__init__()
         # Human readable port name
         self.name = name
@@ -36,13 +36,30 @@ class Port(object):
         self.owner = owner
         # Unique id to universally identify port (immutable)
         self.id = calvinuuid.uuid("PORT")
-        # The token queue. Not all scenarios use it,
-        # but needed when e.g. changing from local to remote connection.
-        self.queue = queue.FIFO(fifo_size)
+        # The token queue, will be set when connected.
+        self.queue = queue.QueueNone()
         self.properties = {}
 
     def __str__(self):
         return "%s id=%s" % (self.name, self.id)
+
+    def set_queue(self, new_queue):
+        if self.queue is None:
+            self.queue = new_queue
+        elif isinstance(self.queue, queue.QueueNone) and self.queue.queue_type == new_queue.queue_type:
+            # Apply state from none queue of same type (state from e.g. migration)
+            new_queue._set_state(self.queue._state())
+            self.queue = new_queue
+        elif self.queue.queue_type == "none":
+            # Stateless queue none is just replaced
+            self.queue = new_queue
+        elif self.queue.queue_type == new_queue.queue_type:
+            # A new queue of same type, just discard to not dismiss existing tokens
+            # Since this is set at each connect
+            return
+        else:
+            # Want to replace an existing queue type (e.g. during migration)
+            raise NotImplementedError("FIXME Can't swap queue types")
 
     def _state(self):
         """Return port state for serialization."""

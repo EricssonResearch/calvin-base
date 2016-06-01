@@ -21,6 +21,7 @@ from mock import Mock
 from calvin.actor.actorport import InPort, OutPort
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.south.endpoint import LocalInEndpoint, LocalOutEndpoint, TunnelInEndpoint, TunnelOutEndpoint
+from calvin.runtime.north import queue
 
 pytestmark = pytest.mark.unittest
 
@@ -32,7 +33,9 @@ class TestLocalEndpoint(unittest.TestCase):
         self.peer_port = OutPort("peer_port", Mock())
         self.local_in = LocalInEndpoint(self.port, self.peer_port)
         self.local_out = LocalOutEndpoint(self.peer_port, self.port)
+        self.port.set_queue(queue.FIFO(5))
         self.port.attach_endpoint(self.local_in)
+        self.peer_port.set_queue(queue.FIFO(5))
         self.peer_port.attach_endpoint(self.local_out)
 
     def test_is_connected(self):
@@ -108,7 +111,9 @@ class TestTunnelEndpoint(unittest.TestCase):
         self.peer_node_id = 456
         self.tunnel_in = TunnelInEndpoint(self.port, self.tunnel, self.peer_node_id, self.peer_port.id, self.trigger_loop)
         self.tunnel_out = TunnelOutEndpoint(self.peer_port, self.tunnel, self.node_id, self.port.id, self.trigger_loop)
+        self.port.set_queue(queue.FIFO(5))
         self.port.attach_endpoint(self.tunnel_in)
+        self.peer_port.set_queue(queue.FIFO(5))
         self.peer_port.attach_endpoint(self.tunnel_out)
 
     def test_recv_token(self):
