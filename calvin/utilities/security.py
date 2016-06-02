@@ -119,7 +119,6 @@ class Security(object):
         _log.debug("Security: set_subject %s" % subject_attributes)
         if not isinstance(subject_attributes, dict):
             return False
-        # Make sure that all subject values are lists.
         self.subject_attributes = subject_attributes
 
     def get_subject_attributes(self):
@@ -133,9 +132,9 @@ class Security(object):
         if not security_needed_check() or not credentials:
             _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
-        #only attempt authentication if credentials for the domain are supplied
-        #if not, subject_attributes is empty, which may still grant access according to
-        #the policy
+        # Only attempt authentication if credentials for the domain are supplied.
+        # If not, subject_attributes is empty, which may still grant access according to
+        # the policy
         if self.node.domain in credentials:
             request['subject'] = credentials[self.node.domain]
             if self.sec_conf['authentication']['procedure'] == "external":
@@ -147,7 +146,7 @@ class Security(object):
                 self.authenticate_using_external_server(request, callback)
             elif self.sec_conf['authentication']['procedure'] == "local":
                 _log.debug("local authentication method chosen")
-                # authenticate access using a local Authentication Decision Point (ADP).
+                # Authenticate access using a local Authentication Decision Point (ADP).
                 self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response, 
                                                           callback=callback))
                 return True
@@ -157,42 +156,39 @@ class Security(object):
                                 "Note! NO AUTHENTICATION USED")
                     return False
                 _log.debug("Security: Radius authentication method chosen")
-                return self.authenticate_using_radius_server(credentials)
+                return self.authenticate_using_radius_server(request, callback)
         _log.debug("Security: No security config, so authentication disabled")
         return True 
 
-    def authenticate_using_radius_server(self, credentials):
+    def authenticate_using_radius_server(self, request, callback):
         """Authenticate a subject using a RADIUS server."""
         try:
             root_dir = os.path.abspath(os.path.join(_conf.install_location(), '..'))
-            srv=Client(server=self.sec_conf['authentication']['server_ip'], 
-                        secret= bytes(self.sec_conf['authentication']['secret']),
-                        dict=Dictionary(os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary"), 
+            client = Client(server=self.sec_conf['authentication']['server_ip'], 
+                            secret=bytes(self.sec_conf['authentication']['secret']),
+                            dict=Dictionary(os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary"), 
                                         os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary.acc")))
-            # TODO: handle multiple credentials (username/password pairs).
-            req=srv.CreateAuthPacket(code=pyrad.packet.AccessRequest,
-                        User_Name=credentials['user'][0],
-                        NAS_Identifier="localhost")
-            req["User-Password"]=req.PwCrypt(credentials['password'][0])
-            # FIXME is this over socket? then we should not block here
-            reply=srv.SendPacket(req)
-            if reply.code==pyrad.packet.AccessAccept:
+            req = client.CreateAuthPacket(code=pyrad.packet.AccessRequest,
+                                          User_Name=request['subject']['user'],
+                                          NAS_Identifier=self.node.id)
+            req["User-Password"] = req.PwCrypt(request['subject']['password'])
+            # FIXME: should not block here (use a callback instead)
+            reply = client.SendPacket(req)
+            if reply.code == pyrad.packet.AccessAccept:
                 _log.debug("Security: access accepted")
-                try:
-                    # Save attributes returned by server.
-                    self.subject_attributes = json.loads(reply["Reply-Message"][0])
-                except Exception:
-                    pass
-                return True
+                # Save attributes returned by server.
+                self._return_authentication_decision(True, json.loads(reply["Reply-Message"][0]), 
+                                                     callback)
+                return
             _log.debug("Security: access denied")
-            return False
+            self._return_authentication_decision(False, [], callback)
         except Exception:
-            return False
+            self._return_authentication_decision(False, [], callback)
 
 
     def authenticate_using_external_server(self, request, callback):
         """
-        authenticate access using an external authentication server.
+        Authenticate access using an external authentication server.
 
         The request is put in a JSON Web Token (JWT) that is signed and encrypted
         and includes timestamps and information about sender and receiver.
@@ -206,7 +202,7 @@ class Security(object):
                 "exp": datetime.utcnow() + timedelta(seconds=60),
                 "request": request
             }
-            #TODO: encrypt the JWT
+            # TODO: encrypt the JWT
             # Create a JSON Web Token signed using the node's Elliptic Curve private key.
             jwt_request = encode_jwt(payload, self.node.node_name)
             # Send request to authentication server.
@@ -216,12 +212,12 @@ class Security(object):
                                                    jwt_request)
         except Exception as e:
             _log.error("Security: authentication error - %s" % str(e))
-            self._return_authentication_decision("indeterminate", [], callback)
+            self._return_authentication_decision(False, [], callback)
 
     def _handle_authentication_response(self, reply, callback, actor_id=None):
         if reply.status != 200:
             _log.error("Security: authentication server error - %s" % reply)
-            self._return_authentication_decision("indeterminate", [], callback)
+            self._return_authentication_decision(False, [], callback)
             return
         try:
             # Decode JSON Web Token, which contains the authentication response.
@@ -229,26 +225,27 @@ class Security(object):
                                  self.node.node_name, self.node.id, actor_id)
             authentication_response = decoded['response']
             self._return_authentication_decision(authentication_response['subject_attributes'],
-                                                authentication_response.get("obligations", []),
-                                                callback)
+                                                 callback, 
+                                                 authentication_response.get("obligations", []))
         except Exception as e:
             _log.error("Security: JWT decoding error - %s" % str(e))
-            self._return_authentication_decision("indeterminate", [], callback)
+            self._return_authentication_decision(False, [], callback)
 
     def _handle_local_authentication_response(self, auth_response, callback):
         try:
             self._return_authentication_decision(auth_response['decision'],
-                                                auth_response['subject_attributes'],
-                                                auth_response.get("obligations", []), callback)
+                                                 auth_response['subject_attributes'],
+                                                 callback,
+                                                 auth_response.get("obligations", []))
         except Exception as e:
             _log.error("Security: local authentication error - %s" % str(e))
             self._return_authentication_decision(False, [], callback)
 
-    def _return_authentication_decision(self, decision, subject_attributes, obligations, callback):
+    def _return_authentication_decision(self, decision, subject_attributes, callback, obligations=None):
         _log.debug("Authentication response received: decision:%s, attributes:%s, obligations %s" % (decision, subject_attributes, obligations))
         if decision:
-            _log.debug("authentication successfull")
-            self.subject_attributes=subject_attributes
+            _log.debug("authentication successful")
+            self.set_subject_attributes(subject_attributes)
             callback(authentication_decision=True)
         else:
             _log.debug("authentication failed")
@@ -273,6 +270,7 @@ class Security(object):
         """Get authorization decision using the authorization procedure specified in config."""
         if decision_from_migration:
             try:
+                _log.info("Security: Authorization decision from migration")
                 # Decode JSON Web Token, which contains the authorization response.
                 decoded = decode_jwt(decision_from_migration["jwt"], decision_from_migration["cert_name"], 
                                      self.node.node_name, self.node.id, actor_id)
@@ -310,7 +308,7 @@ class Security(object):
                                                           callback=callback))
 
     def _return_authorization_decision(self, decision, obligations, callback):
-        _log.debug("Authorization response received: %s, obligations %s" % (decision, obligations))
+        _log.info("Authorization response received: %s, obligations %s" % (decision, obligations))
         if decision == "permit":
             _log.debug("Security: access permitted to resources")
             if obligations:

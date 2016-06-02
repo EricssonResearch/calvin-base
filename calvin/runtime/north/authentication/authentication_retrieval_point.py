@@ -66,8 +66,11 @@ class FileAuthenticationRetrievalPoint(object):
 
     def get_users_db(self):
         """Return the database of users"""
-        with open(os.path.join(self.path,'users.json'),'rt') as data:
-            return json.load(data)
+        try:
+            with open(os.path.join(self.path,'users.json'),'rt') as data:
+                return json.load(data)
+        except Exception:
+            return None
 
     def create_users_db(self, data):
         """Create a database of users"""
@@ -94,8 +97,11 @@ class FileAuthenticationRetrievalPoint(object):
         
     def get_groups_db(self):
         """Return the database of groups"""
-        with open(os.path.join(self.path,"groups.json"), 'rt') as data:
-            return json.load(data)
+        try:
+            with open(os.path.join(self.path,"groups.json"), 'rt') as data:
+                return json.load(data)
+        except Exception:
+            return None
 
     def create_groups_db(self, data):
         """Create a database of groups"""

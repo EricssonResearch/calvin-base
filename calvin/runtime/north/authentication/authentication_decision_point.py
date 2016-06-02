@@ -36,7 +36,6 @@ class AuthenticationDecisionPoint(object):
         self.node = node
         self.registered_nodes = {}
 
-
     def authenticate(self, request, callback):
         """
         Use policies to return access decision for the request.
@@ -93,7 +92,6 @@ class AuthenticationDecisionPoint(object):
 #            obligations.append(policy_obligations)
         callback(auth_response=self.create_response(decision, subject_attributes, obligations))
 
-
     def create_response(self, decision, subject_attributes, obligations):
         """Return authorization response including decision and obligations."""
         response = {}
@@ -103,39 +101,40 @@ class AuthenticationDecisionPoint(object):
             response["obligations"] = obligations
         return response
 
-
     def authentication_decision(self, request):
         _log.debug("authentication_decision::request%s" % request)
-        users_db = self.node.authentication.arp.get_users_db()
-        groups_db = self.node.authentication.arp.get_groups_db()
-        # Verify users against stored passwords
-        subject_attributes = {}
-        decision=False
-        for user in users_db['users_db']:
-            if request['subject']['user'] == user['username']:
-                if pbkdf2_sha256.verify(request['subject']['password'],user['password']):
-                    decision=True
-                    for key in user['attributes']:
-                        if key == "groups" and groups_db:
-                            for groupKey in user['attributes']['groups']:
-                                for groupAttribute in groups_db[groupKey]:
-                                    if not groupAttribute in subject_attributes:
-                                        #if the is no key, create array and add firs value
-                                        subject_attributes.setdefault(groupAttribute, []).append(groups_db[groupKey][groupAttribute])
-                                    elif not groups_db[groupKey][groupAttribute] in subject_attributes[groupAttribute]:
-                                        #list exist, make sure we don't add same value several times
-                                        subject_attributes[groupAttribute].append(groups_db[groupKey][groupAttribute])
-                        else:
-                            if not user['attributes'][key] in subject_attributes:
-                                #if the is no key, create array and add firsit value
-                                subject_attributes.setdefault(key, []).append(user['attributes'][key])
-                            elif not user['attributes'][key] in subject_attributes[key]:
-                                #list exist, make sure we don't add same value several times
-                                subject_attributes[key].append(user['attributes'][key])
-                    return (decision,subject_attributes)
-                else:
-                    decision=False
-                    return (decision, None)
-        return (decision, None)
+        try:
+            users_db = self.node.authentication.arp.get_users_db()
+            groups_db = self.node.authentication.arp.get_groups_db()
+            # Verify users against stored passwords
+            subject_attributes = {}
+            decision = False
+            for user in users_db['users_db']:
+                if request['subject']['user'] == user['username']:
+                    if pbkdf2_sha256.verify(request['subject']['password'],user['password']):
+                        decision = True
+                        for key in user['attributes']:
+                            if key == "groups" and groups_db:
+                                for group_key in user['attributes']['groups']:
+                                    for group_attribute in groups_db[group_key]:
+                                        if not group_attribute in subject_attributes:
+                                            # If there is no key, create array and add first value
+                                            subject_attributes.setdefault(group_attribute, []).append(groups_db[group_key][group_attribute])
+                                        elif not groups_db[group_key][group_attribute] in subject_attributes[group_attribute]:
+                                            # List exists, make sure we don't add same value several times
+                                            subject_attributes[group_attribute].append(groups_db[group_key][group_attribute])
+                            else:
+                                if not user['attributes'][key] in subject_attributes:
+                                    # If there is no key, create array and add first value
+                                    subject_attributes.setdefault(key, []).append(user['attributes'][key])
+                                elif not user['attributes'][key] in subject_attributes[key]:
+                                    # List exists, make sure we don't add same value several times
+                                    subject_attributes[key].append(user['attributes'][key])
+                        return (decision, subject_attributes)
+                    else:
+                        decision = False
+                        return (decision, None)
+            return (decision, None)
+        except Exception:
+            return (False, None)
  
-

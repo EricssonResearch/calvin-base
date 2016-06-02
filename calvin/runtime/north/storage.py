@@ -125,6 +125,8 @@ class Storage(object):
                 self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
             except:
                 _log.exception("Failed start of storage for name={}, switches to local".format(name))
+        elif cb:
+            async.DelayedCall(0, cb)
 
         if not self.proxy:
             self._init_proxy()

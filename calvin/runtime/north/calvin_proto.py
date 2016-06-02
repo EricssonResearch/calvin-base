@@ -579,8 +579,7 @@ class CalvinProto(CalvinCBClass):
             jwt_response = self.node.authentication.encode_response(request, auth_response)
             data_response = {"jwt": jwt_response, "cert_name": self.node.cert_name}
             reply = response.CalvinResponse(response.OK, data_response)
-        except Exception as e:
-            _log.info(e)
+        except Exception:
             reply = response.CalvinResponse(response.INTERNAL_ERROR)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
@@ -683,8 +682,7 @@ class CalvinProto(CalvinCBClass):
             jwt_response = self.node.authorization.encode_response(request, authz_response)
             data_response = {"jwt": jwt_response, "cert_name": self.node.cert_name}
             reply = response.CalvinResponse(response.OK, data_response)
-        except Exception as e:
-            _log.info(e)
+        except Exception:
             reply = response.CalvinResponse(response.INTERNAL_ERROR)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
