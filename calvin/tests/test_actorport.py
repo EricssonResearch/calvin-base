@@ -67,7 +67,6 @@ def test_attach_endpoint_to_inport(inport, outport):
 
 
 def test_detach_endpoint_from_inport(inport, outport):
-    inport.owner.did_disconnect = Mock()
     endpoint = LocalInEndpoint(inport, outport)
 
     inport.set_queue(queue.FIFO(5))
@@ -75,7 +74,6 @@ def test_detach_endpoint_from_inport(inport, outport):
     assert inport.is_connected_to(outport.id)
     inport.detach_endpoint(endpoint)
     assert not inport.is_connected_to(outport.id)
-    assert inport.owner.did_disconnect.called
 
 
 def test_attach_endpoint_to_outport(inport, outport):
@@ -95,7 +93,6 @@ def test_attach_endpoint_to_outport(inport, outport):
 
 
 def test_detach_endpoint_from_outport(inport, outport):
-    outport.owner.did_disconnect = Mock()
     endpoint = LocalOutEndpoint(outport, inport)
 
     outport.set_queue(queue.FIFO(5))
@@ -103,7 +100,6 @@ def test_detach_endpoint_from_outport(inport, outport):
     assert outport.is_connected_to(endpoint.peer_id)
     outport.detach_endpoint(endpoint)
     assert not outport.is_connected_to(endpoint.peer_id)
-    assert outport.owner.did_disconnect.called
 
 
 def test_disconnect_inport(inport, outport):

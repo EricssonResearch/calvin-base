@@ -125,10 +125,10 @@ class InPort(Port):
         return old_endpoint
 
     def detach_endpoint(self, endpoint_):
+        # Only called from attach_endpoint with the old endpoint
         if not self.endpoint == endpoint_:
             _log.warning("Inport: No such endpoint")
             return
-        self.owner.did_disconnect(self)
         self.endpoint = endpoint.Endpoint(self, former_peer_id=endpoint_.get_peer()[1])
 
     def disconnect(self, peer_ids=None):
@@ -216,10 +216,10 @@ class OutPort(Port):
         return old_endpoint
 
     def detach_endpoint(self, endpoint_):
+        # Only called from attach_endpoint with the old endpoint
         if endpoint_ not in self.endpoints:
             _log.warning("Outport: No such endpoint")
             return
-        self.owner.did_disconnect(self)
         self.endpoints.remove(endpoint_)
 
     def disconnect(self, peer_ids=None):
@@ -229,12 +229,8 @@ class OutPort(Port):
             endpoints = [e for e in self.endpoints if e.get_peer()[1] in peer_ids]
         # Remove all endpoints corresponding to the peer ids
         self.endpoints = [e for e in self.endpoints if e not in endpoints]
-        # Rewind any tentative reads to acked reads
-        # When local no effect since already equal
-        # When tunneled transport tokens after last continuous acked token will be resent later, receiver will just ack them again if rereceived
         for e in endpoints:
-            peer_node_id, peer_id = e.get_peer()
-            self.queue.commit_reads(peer_id, False)
+            e.detached()
         self.owner.did_disconnect(self)
         return endpoints
 

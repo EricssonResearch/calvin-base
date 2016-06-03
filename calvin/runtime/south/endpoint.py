@@ -52,6 +52,9 @@ class Endpoint(object):
     def attached(self):
         pass
 
+    def detached(self):
+        pass
+
 
 
 #
@@ -157,6 +160,11 @@ class LocalOutEndpoint(Endpoint):
     def attached(self):
         self.port.queue.add_reader(self.peer_id)
 
+    def detached(self):
+        # Rewind any tentative reads to acked reads
+        # For local no effect since already equal
+        self.port.queue.commit_reads(self.peer_port.id, False)
+
     def get_peer(self):
         return ('local', self.peer_id)
 
@@ -258,6 +266,12 @@ class TunnelOutEndpoint(Endpoint):
 
     def attached(self):
         self.port.queue.add_reader(self.peer_id)
+
+    def detached(self):
+        # Rewind any tentative reads to acked reads
+        # Tunneled transport tokens after last continuous acked token will be resent later,
+        # receiver will just ack them again if rereceived
+        self.port.queue.commit_reads(self.peer_id, False)
 
     def reply(self, sequencenbr, status):
         _log.debug("Reply on port %s/%s/%s [%i] %s" % (self.port.owner.name, self.peer_id, self.port.name, sequencenbr, status))
