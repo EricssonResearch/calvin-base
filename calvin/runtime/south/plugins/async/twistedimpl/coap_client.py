@@ -80,7 +80,7 @@ class CoAPClient(CalvinCBClass):
 	    uripath = uripath[1:]
 	request.opt.uri_path = uripath
 	
-	#deal with options. Valid option keys: etag, observe, location_path, uri_path, content_format, uri_query, accept, block2 and block1.
+	#Handle options. Valid option keys: etag, observe, location_path, uri_path, content_format, uri_query, accept, block2 and block1.
 	for option in options:
             if type(options[option]) is unicode:
 	        setattr(request.opt, option, str(options[option]))

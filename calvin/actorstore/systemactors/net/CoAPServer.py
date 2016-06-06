@@ -30,7 +30,7 @@ class CoAPServer(Actor):
     Input:
       port : port to listen on
     Output:
-      data_out : Data received on the UDP port will be sent as tokens.
+      data_out : Data received in POST requestss as tokens.
     """
 
     @manage(['port'])

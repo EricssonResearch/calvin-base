@@ -132,8 +132,7 @@ class CoAPServer(CalvinCBClass):
 	self.sck = ssl.wrap_socket(socket(AF_INET, SOCK_DGRAM))
 	self.sck.bind((self._host, self._serverport))	
 	
-	#TODO: dont use transport certs
-	abscert_path = path.abspath('calvin/runtime/south/plugins/transports/coapdtls/certs')
+	abscert_path = path.abspath('calvin/runtime/south/plugins/async/twistedimpl/certs')
         self._scn = SSLConnection(self.sck,	
 	    keyfile=path.join(abscert_path, 'keycert.pem'),
 	    certfile=path.join(abscert_path, 'server-cert.pem'),
@@ -147,6 +146,7 @@ class CoAPServer(CalvinCBClass):
         proto = generateCoAP(proto_callbacks)
 
 	while True:
+            # Listen for new clients
 	    peer_addr = self._scn.listen()
 	    if peer_addr:
 		conn, uri = self._scn.accept()
