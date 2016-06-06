@@ -1,0 +1,1 @@
+{"client_write_IV": "1f7f535e89a89a", "client_write_seqnr": 400, "client_write_key": "ba3ab94add073f977ad7ad78cc3dd5af", "server_write_IV": "032f3bb0ac43f4", "cid": 1, "alg": "AESCCM12", "server_write_key": "1abd8fe34a9cf2f1a6ea1dbecbc87ceb", "replay_window": [], "server_write_seqnr": 100}

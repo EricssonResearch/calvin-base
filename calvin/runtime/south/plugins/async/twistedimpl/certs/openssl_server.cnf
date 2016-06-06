@@ -1,0 +1,11 @@
+RANDFILE               = $ENV::HOME/.rnd
+
+[ req ]
+distinguished_name     = req_distinguished_name
+prompt                 = no
+
+[ req_distinguished_name ]
+C                      = US
+ST                     = Washington
+O                      = Ray Srv Inc
+CN                     = RaySrvInc
