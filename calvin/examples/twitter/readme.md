@@ -27,3 +27,7 @@ where the file `twitter-credentials.json` contains (at least)
 			}
 		}
 	}
+
+## Installation
+
+Install dependencies using e.g. `pip install -r requirements`  
