@@ -20,30 +20,32 @@ fi
 shift $(($OPTIND - 1))
 
 # install pre-requisites
-apt-get update
-apt-get install -y python python-dev build-essential git libssl-dev libffi-dev
-# there is an issue with python-pip, pip and python-requests and requests on some systems
-# just in case this is one, we remove python-pip and install it using easy_install
-apt-get remove python-pip
-curl https://bootstrap.pypa.io/ez_setup.py -o - | python
-easy_install -U pip
-# get calvin
+sudo apt-get update
+sudo apt-get install -y python python-dev build-essential git libssl-dev libffi-dev
+
+# As of this writing, the python-pip and python-requests packages in Debian Jessie are
+# out of sync. Remove athe default and install a newer version - this is less than ideal.
+sudo apt-get remove -y python-pip
+curl https://bootstrap.pypa.io/get-pip.py -o - | sudo python
+
+# Get calvin
 git clone -b $branch https://www.github.com/EricssonResearch/calvin-base
-# and install it system-wide (but make it editable)
+# and install it and its dependencies
 cd calvin-base
-pip install -r requirements.txt -r test-requirements.txt
-# some packages requires upgrades
-pip install --upgrade pyasn1 setuptools six
-pip install -e .
+sudo -H pip install -r requirements.txt -r test-requirements.txt
+
+# Install it editable
+sudo pip install -e .
 
 # Calvin should now be installed, proceed with other stuff
 
-# install mdns
-apt-get install -y libnss-mdns
-
 if [ x"$runtime_start" = xyes ]; then
+
+# install mdns
+sudo apt-get install -y libnss-mdns
+
 # create calvin startup script
-(cat <<'EOF'
+(sudo cat <<'EOF'
 #! /bin/sh
 # /etc/init.d/calvin
 
@@ -53,22 +55,17 @@ if [ x"$runtime_start" = xyes ]; then
 # Required-Stop: $network $remote_fs $syslog
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
-# Short-Description: Simple script to start a program at boot
+# Short-Description: Start a calvin runtime with default settings
 # Description: A simple script from www.stuffaboutcode.com which will start / stop a program a boot / shutdown.
 ### END INIT INFO
 
-# If you want a command to always run, put it here
-
-# Carry out specific functions when asked to by the system
 case "$1" in
 start)
 echo "Starting calvin"
-# run application you want to start
 /usr/local/bin/csruntime --host $(hostname -I) &
 ;;
 stop)
 echo "Stopping calvin"
-# kill application you want to stop
 killall csruntime
 ;;
 *)
@@ -82,14 +79,13 @@ EOF
 ) > /etc/init.d/calvin.sh
 
 # register script with startup
-chmod 755 /etc/init.d/calvin.sh
-update-rc.d calvin.sh defaults
-
-fi
+sudo chmod 755 /etc/init.d/calvin.sh
+sudo update-rc.d calvin.sh defaults
+fi # runtime start
 
 if [ x"$web_start" = xyes ]; then
 # create csweb startup script
-(cat <<'EOF'
+(sudo cat <<'EOF'
 #! /bin/sh
 # /etc/init.d/csweb
 
@@ -99,13 +95,10 @@ if [ x"$web_start" = xyes ]; then
 # Required-Stop: $network $remote_fs $syslog
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
-# Short-Description: Simple script to start a program at boot
+# Short-Description: Start web interface for calvin system
 # Description: A simple script from www.stuffaboutcode.com which will start / stop a program a boot / shutdown.
 ### END INIT INFO
 
-# If you want a command to always run, put it here
-
-# Carry out specific functions when asked to by the system
 case "$1" in
 start)
 echo "Starting calvin"
@@ -114,7 +107,6 @@ echo "Starting calvin"
 ;;
 stop)
 echo "Stopping csweb"
-# kill application you want to stop
 killall csweb
 ;;
 *)
@@ -128,10 +120,9 @@ EOF
 ) > /etc/init.d/csweb.sh
 
 # register script with startup
-chmod 755 /etc/init.d/csweb.sh
-update-rc.d csweb.sh defaults
-
-fi
+sudo chmod 755 /etc/init.d/csweb.sh
+sudo update-rc.d csweb.sh defaults
+fi # web start
 
 [ x$runtime_start = xyes ] && echo "Installed calvin at startup"
 [ x$web_start = xyes ] && echo "Installed calvin web interface at startup"
