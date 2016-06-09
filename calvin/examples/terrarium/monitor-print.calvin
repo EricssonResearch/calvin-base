@@ -1,0 +1,51 @@
+define RED = [127,0,0]
+define GREEN = [0, 127, 0]
+
+/* Actors */
+src : std.CountTimer(sleep=5)
+hygrometer : sensor.Humidity()
+humid_range : std.SetLimits(lower=40, upper=80)
+thermometer : sensor.Temperature()
+temp_range: std.SetLimits(lower=20, upper=33)
+alt : std.Alternate()
+pacer : std.ClassicDelay(delay=5)
+formatter: text.Format(fmt="{value}{unit}")
+display : io.Display()
+display_format : json.SetValue()
+set_background : json.SetValue()
+bgselect : std.Deselect()
+alarm : std.Alarm()
+print: io.Print()
+sel : std.Select()
+term : std.Terminator()
+
+/* Connections */
+src.integer > hygrometer.trigger
+src.integer > thermometer.trigger
+
+hygrometer.humidity > humid_range.dict
+thermometer.temperature > temp_range.dict
+
+temp_range.dict > alt.token_2
+humid_range.dict > alt.token_1
+
+alt.token > formatter.dict
+alt.token > alarm.dict
+
+formatter.text > pacer.token
+pacer.token > display_format.value
+"text" > display_format.key
+{} > set_background.container
+alarm.warning > bgselect.select
+RED > bgselect.case_true
+GREEN > bgselect.case_false
+
+alarm.warning > sel.select
+formatter.text > sel.data
+sel.case_true > print.token
+sel.case_false > term.void
+
+bgselect.data > set_background.value
+"bgcolor" > set_background.key
+set_background.container > display_format.container
+display_format.container > display.dict
