@@ -46,22 +46,14 @@ def generate_challenge():
 class evilAutoDHTServer(dht_server.AutoDHTServer):
 
     def __init__(self, *args, **kwargs):
+        self._name = None
         super(evilAutoDHTServer, self).__init__(*args, **kwargs)
 
     def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None, nodeid=None):
+        self._name = name
         if bootstrap is None:
             bootstrap = []
-        name_dir = certificate.get_own_credentials_path(self.name)
-        filename = os.listdir(os.path.join(name_dir, "mine"))
-        st_cert = open(os.path.join(name_dir, "mine", filename[0]), 'rt').read()
-        cert_part = st_cert.split(certificate.BEGIN_LINE)
-        certstr = "{}{}".format(certificate.BEGIN_LINE, cert_part[1])
-        try:
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                  certstr)
-        except:
-            logger(self.sourceNode,
-                  "Certificate creating failed at startup")
+        cert, certstr = certificate.get_own_cert(self._name)
         key = cert.digest("sha256")
         newkey = key.replace(":", "")
         bytekey = newkey.decode("hex")
@@ -71,7 +63,7 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
 
         if network is None:
             network = _conf.get_in_order("dht_network_filter", "ALL")
-        self.dht_server = dht_server.ServerApp(evilAppendServer, bytekey[-20:])
+        self.dht_server = dht_server.ServerApp(evilAppendServer, bytekey[-20:], node_name=name)
         ip, port = self.dht_server.start(iface=iface)
 
 
@@ -350,7 +342,8 @@ class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
 
 
 class evilAppendServer(append_server.AppendServer):
-    def __init__(self, ksize=20, alpha=3, id=None, storage=None):
+    def __init__(self, ksize=20, alpha=3, id=None, storage=None, node_name=None):
+        self.node_name=node_name
         storage = storage or append_server.ForgetfulStorageFix()
         append_server.Server.__init__(self,
                                      ksize,

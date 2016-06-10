@@ -377,6 +377,8 @@ def manage_cs_sign(args):
             files.extend(store.actor_paths(m))
     # Filter out any files not *.calvin, *.py
     files = [f for f in files if f.endswith(('.calvin', '.py')) and not f.endswith('__init__.py')]
+    if not files:
+        raise Exception("No (*.calvin, *.py) files supplied")
     exceptions = []
     for f in files:
         try:
@@ -403,7 +405,7 @@ def manage_runtime_create(args):
         attributes=AttributeResolver(attr)
         node_name=attributes.get_node_name_as_str()
         nodeid = calvinuuid.uuid("NODE")
-        print "CSR created at:" + certificate.new_runtime(node_name, args.domain, path=args.dir, nodeid=nodeid)
+        print "CSR created at:" + certificate.new_runtime(node_name, args.domain, security_dir=args.dir, nodeid=nodeid)
 
 def manage_runtime_export(args):
     raise Exception("Not yet implemented")

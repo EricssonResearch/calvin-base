@@ -131,11 +131,17 @@ def cert_DN_Qualifier(ccertstring=None, certpath=None):
     cert = get_cert_data(certstring=certstring, certpath=certpath)
     return cert.get_subject().dnQualifier
 
-def new_runtime(name, domain, path=None, nodeid=None):
+def new_runtime(name, domain, nodeid=None, security_dir=None):
     """
     Create new runtime certificate.
     Return name of certificate signing request file.
 
+    Parameters:
+    -name: name of the runtime
+    -domain: the name of the CA that we intend to sign the runtimes certificate
+    -nodeid: optional parameter used for dnQualified of cert if supplied
+    -security_dir: optional parameter if another credentials location that
+        the default value (~/.calvin/security/runtimes/) is required
     Equivalent of:
     mkdir -p $new_certs_dir
     openssl req -config $OPENSSL_CONF -new \
@@ -144,7 +150,8 @@ def new_runtime(name, domain, path=None, nodeid=None):
                 -keyout $private_dir/runtime.key
     """
     _log.debug("new_runtime: name={} domain={}".format(name, domain))
-    runtimes_dir = get_runtimes_credentials_path(security_dir=path)
+    runtimes_dir = get_runtimes_credentials_path(security_dir=security_dir)
+    print runtimes_dir
     if not os.path.isdir(runtimes_dir):
         try:
             os.makedirs(runtimes_dir)
@@ -163,7 +170,7 @@ def new_runtime(name, domain, path=None, nodeid=None):
         except OSError:
             pass
  
-    runtime_dir = get_own_credentials_path(name, security_dir=path)
+    runtime_dir = get_own_credentials_path(name, security_dir=security_dir)
     os.umask(0077)
     try:
         os.makedirs(os.path.join(runtime_dir, "mine"), 0755)

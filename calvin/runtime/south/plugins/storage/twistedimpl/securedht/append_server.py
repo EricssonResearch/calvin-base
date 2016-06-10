@@ -36,7 +36,6 @@ from kademlia.storage import ForgetfulStorage
 from kademlia.node import Node, NodeHeap
 from kademlia import version as kademlia_version
 from calvin.utilities import certificate
-from copy import copy
 
 from twisted.python import log
 from calvin.utilities import calvinlogger
@@ -1105,16 +1104,8 @@ class KademliaProtocolAppend(KademliaProtocol):
         returns it.
         """
         _log.debug("getOwnCert")
-        try:
-            if self.sourceNode:
-                if self.sourceNode.id:
-                    sourceNodeIdHex = self.sourceNode.id.encode("hex").upper()
-                    return self.storage[digest("{}cert".format(sourceNodeIdHex))]
-            else:
-                _log.error("getOwnCert:: sourceNode.id does not exist")
-                raise Exception("getOwnCert:: sourceNode.id does not exist")
-        except:
-            _log.error("har gar det at skogen")
+        sourceNodeIdHex = self.sourceNode.id.encode("hex").upper()
+        return self.storage[digest("{}cert".format(sourceNodeIdHex))]
 
 class AppendServer(Server):
 

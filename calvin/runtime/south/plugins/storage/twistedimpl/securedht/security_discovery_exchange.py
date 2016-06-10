@@ -201,7 +201,6 @@ class Client(object):
         """State machine that manages client current state."""
         try:
             if self.state == STATE.NEW:
-                print self.name + " : " + self.nodeid
                 self.verify_configuration()
 
             if self.state == STATE.CONFIGURED:
@@ -255,7 +254,6 @@ class Client(object):
         """
         _log.debug("client.verify_configuration")
         try:
-            print "verify_configuration, domain name=" + self.domain
             if self.domain is None:
                 raise ConfigurationMalformed("Missing `security_domain_name in calvin.conf")
         except (Exception), err:
@@ -320,7 +318,6 @@ class Client(object):
         """
         _log.debug("client.validate_cert")
         try:
-            print "domain name=" + self.domain
             certificate.verify_certificate("truststore_for_transport", cert, domain=self.domain)
         except (Exception), err:
             _log.error("verification failed:%s" % err)
@@ -446,7 +443,6 @@ class Ca(object):
 
         except CaNotFound:
             _log.error("CA does not exist")
-            print "domain name=" + self.domain
             self.ca = certificate_authority.CA(domain=self.domain)
             self.state = STATE.CONFIGURED
             self.discover()

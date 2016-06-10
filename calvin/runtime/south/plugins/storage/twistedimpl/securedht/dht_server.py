@@ -160,7 +160,6 @@ class AutoDHTServer(StorageBase):
         return bytekey[-20:]
 
     def _signed_cert_received(self, addr_certificate):
- 
         if not addr_certificate:
             return
         ip, port, certificate = addr_certificate
@@ -258,7 +257,6 @@ class AutoDHTServer(StorageBase):
         cert, certstr = certificate.get_own_cert(self._name)
         if not cert:
             _log.debug("runtime cert not available, let's create CSR")
-            print "runtime cert not available"
             if is_ca:
                 # We are the CA, just generate CSR and sign it
                 csrfile = certificate.new_runtime(name, domain, nodeid=nodeid)

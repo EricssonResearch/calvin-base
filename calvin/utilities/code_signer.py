@@ -41,92 +41,16 @@ BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
 BEGIN_CSR_LINE = "-----BEGIN CERTIFICATE REQUEST-----"
 
 
-# Exceptions
-class ConfigurationMalformed(Exception):
-    """Configuration is missing required attributes to set policy."""
-    pass
-
-
-class CsrGenerationFailed(Exception):
-    """CSR generation failed. An Error occured while generating a CSR."""
-    pass
-
-
-class CaDeniedConfiguration(Exception):
-    """
-    Ca cert is rejected due to Calvin security configuration
-    or openssl.conf.
-    """
-    pass
-
-
-class CaDeniedMalformed(Exception):
-    """Ca cert is denied as it is malformed."""
-    pass
-
-
-class CertificateInvalid(Exception):
-    """Certificate is not validly signed by CA."""
-    pass
-
-
-class CertificateMalformed(Exception):
-    """Certificate is not validly signed by CA."""
-    pass
-
-
-class CertificateDeniedMalformed(Exception):
-    """Ca cert is denied as it is malformed."""
-    pass
-
-
-class CertificateDeniedConfiguration(Exception):
-    """Certificate is denied due to restrictions in configuration."""
-    pass
-
-
-class CsrDeniedConfiguration(Exception):
-    """A CSR is rejected due to Calvin security configuration."""
-    pass
-
-
-class CsrDeniedMalformed(Exception):
-    """A CSR is denied as it is malformed."""
-    pass
-
-
-class StoreFailed(Exception):
-    """Storing failed."""
-    pass
-
-
-class TransmissionFailed(Exception):
-    """Failed to transmit."""
-    pass
-
-
-class ListenFailed(Exception):
-    """Listening to interface failed."""
-    pass
-
-
-class ListenTimeout(Exception):
-    """Listening timed out before receiving anything."""
-    pass
-
-
-class CaNotFound(Exception):
-    """The CA cert file was not found."""
-    pass
-
-
 class CS():
     """
+    A Code Signer (CS) class used to sign actors and applications.
+    The CS is uniquely identified by its organization and common
+    name. If the CS does not exist, it will be created on first
+    reference.
+
     """
 
     def __init__(self, organization, commonName, security_dir=None, force=False, readonly=False):
-#        self.organization = organization
-#        self.commonName = commonName or 'runtime'
         self.cs_dir = self.get_cs_credentials_path(organization, security_dir)
         self.outpath = os.path.join(self.cs_dir, "new_signed_code_dir")
         self.private = os.path.join(self.cs_dir, "private_dir")

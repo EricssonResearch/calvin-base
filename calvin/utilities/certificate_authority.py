@@ -499,7 +499,6 @@ class CA():
     def sign_csr(self, request):
         """
         Sign a certificate request.
-        Conf is a Config object with a loaded openssl.conf configuration.
         Req is the name of a Certificate Signing Request in $new_certs_dir.
 
         Equivalent of:
@@ -515,7 +514,6 @@ class CA():
 
         password_file = os.path.join(private, "ca_password")
         signed = os.path.join(certspath, "signed.pem")
-
         os.umask(0077)
         try:
             os.mkdir(private, 0700)

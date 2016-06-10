@@ -615,6 +615,8 @@ class TestSecurity(unittest.TestCase):
 
         raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")  
 
+    #This only works if a properly configured RADIUS server is available on localhost
+    @pytest.mark.xfail
     @pytest.mark.slow
     def testSecurity_POSITIVE_RADIUS_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
