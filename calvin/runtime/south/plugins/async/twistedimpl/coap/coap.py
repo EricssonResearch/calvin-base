@@ -358,7 +358,7 @@ class Message(object):
             rawdata += self.opt.encodeUnencryptedOptions()           
         return rawdata
         
-    def decodeOSCOAP(self):   
+    def decodeOSCOAP(self): 
         if len(self.opt.getOption(21)[0].value) > 0 and len(self.payload) > 0:
             raise ValueError("Fatal Error: Message malformed. Contains data in both Object-Security option and paylaod.")       
         if len(self.payload) > 0:
@@ -367,7 +367,6 @@ class Message(object):
             self.decodeCoseObject(self.opt.getOption(21)[0].value)
 
     def createCoseObject(self, objectsecuritycontext, isClient):
-        
 	""" Read Security Context file """
 	if isClient:        
             securitycontextpath = path.abspath('calvin/runtime/south/plugins/async/twistedimpl/clientsecuritycontexts/'+objectsecuritycontext)
@@ -422,8 +421,8 @@ class Message(object):
 	aad += struct.pack('!B', self.code)
         aad += unicode(alg)
         aad += unicode(requritid)
-	aad = aad.encode('utf-8')     
-	
+	aad = aad.encode('utf-8')   
+
 	""" Generate Ciphertext and MAC """
         cipher = AES.new(key, AES.MODE_CCM, IV, mac_len=8)  
 	cipher.update(aad)       
@@ -493,8 +492,8 @@ class Message(object):
 	IV = hex(int(bin(rec_seqnr << 58-len(bin(rec_seqnr))), base=2) ^ int(bin(int(staticIV, base=16)), base=2))       
 	IV = IV[2:].decode('hex')
 	key = key.decode('hex')
-	
-	""" Generate AAD """	
+
+	""" Generate AAD """
 	if self.code in requests:
             requritid = "coap://"
 
