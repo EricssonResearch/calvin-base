@@ -115,7 +115,7 @@ def parse_args():
     cmd_cs_create.set_defaults(func=manage_cs_create)
 
     #parser for cs export cmd
-    cmd_cs_export = cs_parser.add_parser('export', help='Export the CSs certificate as <fingerprint>.0 in pem format')
+    cmd_cs_export = cs_parser.add_parser('export', help='Export the CS\'s certificate as <fingerprint>.0 in pem format')
     #required arguments
     cmd_cs_export.add_argument('name', metavar='<name>', type=str,
                            help='Name of the code signer')
@@ -170,7 +170,7 @@ def parse_args():
     cmd_ca_create.set_defaults(func=manage_ca_create)
 
     #parser for CA export cmd
-    cmd_ca_export = ca_parser.add_parser('export', help='Export the CAs root certificate as <fingerprint>.0 in pem format')
+    cmd_ca_export = ca_parser.add_parser('export', help='Export the CA\'s root certificate as <fingerprint>.0 in pem format')
     #required arguments
     cmd_ca_export.add_argument('domain', metavar='<domain>', type=str,
                            help='Name of the domain')
@@ -186,7 +186,7 @@ def parse_args():
 
 
     #parser for CA signCSR cmd
-    cmd_ca_sign_csr = ca_parser.add_parser('signCSR', help='Sign a Certificate Signing Request and create certiticate')
+    cmd_ca_sign_csr = ca_parser.add_parser('signCSR', help='Sign a Certificate Signing Request and create certificate')
     #required arguments
     cmd_ca_sign_csr.add_argument('domain', metavar='<domain>', type=str,
                            help='name of domain for which the certificate is to be signed')
@@ -209,12 +209,12 @@ def parse_args():
     runtime_parser = runtime_parser.add_subparsers(help='sub-command help', dest='runtime_subparser_name')
 
     #parser for runtime create cmd
-    cmd_runtime_create = runtime_parser.add_parser('create', help='Create a runtim keypair and a Certificate Siging Request (CSR) for transport security')
+    cmd_runtime_create = runtime_parser.add_parser('create', help='Create a runtime keypair and a Certificate Signing Request (CSR) for transport security')
     #required arguments
     cmd_runtime_create.add_argument('domain', metavar='<domain>', type=str,
                            help='Name of the domain')
     cmd_runtime_create.add_argument('attr', metavar='<attr>', type=str,
-                           help='runtime attributes of the runtime, at least name and organization of node_name needs to be supplied, e.g. {"indexed_public:{"node_name":{"name":"testName", "organization":"testOrg"}}"')
+                           help='runtime attributes, at least name and organization of node_name needs to be supplied, e.g. \'{"indexed_public:{"node_name":{"name":"testName", "organization":"testOrg"}}}\'')
     #optional arguments
     cmd_runtime_create.add_argument('--dir', metavar='<dir>', type=str,
                            help='Path to create the runtime at')
@@ -237,7 +237,7 @@ def parse_args():
 
 
     #parser for runtime import cmd
-    cmd_runtime_import = runtime_parser.add_parser('import', help='import a runtime certificate signed by the CA (generated from the CSR')
+    cmd_runtime_import = runtime_parser.add_parser('import', help='import a runtime certificate signed by the CA (generated from the CSR)')
     #required arguments
     cmd_runtime_import.add_argument('certificate', metavar='<certificate>', type=str,
                            help='a path to a CA signed certificate for the runtime')
@@ -252,14 +252,14 @@ def parse_args():
     # parser for trust cmd
     trust_commands = ['trust']
 
-    cmd_runtime_trust = runtime_parser.add_parser('trust', help='manage the runtimes trusted certificates')
+    cmd_runtime_trust = runtime_parser.add_parser('trust', help='manage the runtime\'s trusted certificates')
     #required arguments
     cmd_runtime_trust.add_argument('node_name', metavar='<node_name>', type=str,
                            help='name of the runtime for which the CA certificate is to be imported')
     cmd_runtime_trust.add_argument('cacert', metavar='<cacert>', type=str,
                            help='path to CA certificate to trust')
     cmd_runtime_trust.add_argument('type', metavar='<type>', type=str,
-                           help='flag indicating if the certificate is to be used for verification of application/actor signatures or for as root of trust for transport security. Accepted values are {"transport","code_authenticity"}')
+                           help='flag indicating if the certificate is to be used for verification of application/actor signatures or as root of trust for transport security. Accepted values are {"transport","code_authenticity"}')
     #optional arguments
     cmd_runtime_trust.add_argument('--dir', metavar='<directory>', type=str, default="",
                            help='security directory, defaults to ~/.calvin/security')
