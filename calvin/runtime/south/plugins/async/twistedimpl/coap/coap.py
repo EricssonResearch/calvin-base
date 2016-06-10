@@ -9,6 +9,7 @@ import copy
 import struct
 import collections
 import json
+import cbor
 from itertools import chain
 from os import path
 
@@ -300,7 +301,7 @@ class Message(object):
             raise TypeError("Payload must not be None. Use empty string instead.")
 
     @classmethod
-    def decode(cls, rawdata, remote=None, protocol=None, isClient=True):
+    def decode(cls, rawdata, remote=None, protocol=None, isClient=True, own_uri=('',0)):
         """Create Message object from binary representation of message."""
         (vttkl, code, mid) = struct.unpack('!BBH', rawdata[:4])
         version = (vttkl & 0xC0) >> 6
@@ -315,10 +316,11 @@ class Message(object):
         msg.protocol = protocol
         msg.objectsecuritycontext = protocol.objectsecuritycontext # "" if not isClient.
 	msg.isClient = isClient
+	msg._own_uri = own_uri
 
         if msg.opt.getOption(number=21) is not None:
             msg.decodeOSCOAP()
-	#_log.info("msg: %s" % msg)
+
         return msg
 
     def encode(self, objectsecuritycontext="", isClient=True):
@@ -365,14 +367,15 @@ class Message(object):
             self.decodeCoseObject(self.opt.getOption(21)[0].value)
 
     def createCoseObject(self, objectsecuritycontext, isClient):
-        if isClient:        
+        
+	""" Read Security Context file """
+	if isClient:        
             securitycontextpath = path.abspath('calvin/runtime/south/plugins/async/twistedimpl/clientsecuritycontexts/'+objectsecuritycontext)
         else:        
             securitycontextpath = path.abspath('calvin/runtime/south/plugins/async/twistedimpl/serversecuritycontexts/'+objectsecuritycontext)
-        securitycontextfile = open(securitycontextpath)
+	securitycontextfile = open(securitycontextpath)
 	securitycontext = json.loads(securitycontextfile.read())
         securitycontextfile.close()        
-
         cid = securitycontext['cid']
         alg = securitycontext['alg']
         replay_window = securitycontext['replay_window']
@@ -386,63 +389,72 @@ class Message(object):
 	    staticIV = securitycontext['server_write_IV']
             securitycontext['server_write_seqnr'] += 1
             seqnr = securitycontext['server_write_seqnr']
-        #_log.info("encode. isClient: %s, seqnr: %s" % (isClient, seqnr))
         if seqnr > (2**56-1):
             raise ValueError("Max Sequence number reached. Establish new Security Context.")
         
+	""" Construct IV and key from the security context data """
         IV = hex(int(bin(seqnr << 58-len(bin(seqnr))), base=2) ^ int(bin(int(staticIV, base=16)), base=2))
         IV = IV[2:].decode('hex')
-
         key = key.decode('hex')
 
-        if self.code in requests:
-            requritid = "coap://"
-            #requritid += self.remote[0] + ":"
-            #requritid += str(self.remote[1]) + "/"
-            #requritid += "/".join(self.opt.uri_path)
-        else:
-            requritid = json.dumps([cid, securitycontext['client_write_seqnr']])
-	
-        plaintext = self.opt.encodeEncryptedOptions()
+	""" Generate Plaintext """
+	plaintext = self.opt.encodeEncryptedOptions()
         if len(self.payload) > 0:
             plaintext += chr(0xFF)
             plaintext += self.payload
-	
-        aad = chr(self.version << 6)
+
+	""" Generate AAD """
+        if self.code in requests:
+            requritid = "coap://"
+	    
+	    #TODO: When decodeCoseObject function can retrieve IP address, modify this to actual IP. 
+            requritid += "127.0.0.1" + ":"
+	    #requritid += self.remote[0] + ":"
+
+            requritid += str(self.remote[1]) + "/"
+            
+	    #TODO: retrieve uri_path some other way. Cannot retrieve it from the options before decryption.
+	    #requritid += "/".join(self.opt.uri_path)
+        else:
+            requritid = json.dumps([cid, securitycontext['client_write_seqnr']])
+
+	aad = chr(self.version << 6)
 	aad += struct.pack('!B', self.code)
         aad += unicode(alg)
         aad += unicode(requritid)
 	aad = aad.encode('utf-8')     
-        
-        cipher = AES.new(key, AES.MODE_CCM, IV)  
-	#_log.info("aad type: %s, aad: %s" % (type(aad), aad))   
+	
+	""" Generate Ciphertext and MAC """
+        cipher = AES.new(key, AES.MODE_CCM, IV, mac_len=8)  
 	cipher.update(aad)       
-        ciphertext = cipher.encrypt(plaintext)
-	#_log.info("cp enc: %s" % ciphertext)
-	ciphertext = ciphertext.decode('Latin-1')
-        mac = cipher.digest()
-	#_log.info("mac type: %s, mac: %s" % (type(mac), mac))
-	mac = mac.decode('Latin-1')
-        if self.code in requests:        
-            COSE_Encrypted = [[{04:str(seqnr), 06:cid}, {}, mac[:16]], ciphertext]
-        else:
-            COSE_Encrypted = [[{04:str(seqnr)}, {}, mac[:16]], ciphertext]
-        x = json.dumps(COSE_Encrypted) 
+	
+	ciphertext = cipher.encrypt(plaintext)
+	mac = cipher.digest()
 
+	""" Generate COSE object """
+	tag = ciphertext + mac[:8]
+        if self.code in requests:
+	    COSE_Encrypted = [{4:seqnr,6:cid},{},tag]
+        else:
+            COSE_Encrypted = [{4:seqnr},{},tag]
+
+	encodedMessage = cbor.dumps(COSE_Encrypted) 
+	
+	""" Store updated security context """
         securitycontextfile = open(securitycontextpath, 'w')
         securitycontextfile.write(json.dumps(securitycontext))
 
-        return x  
+        return encodedMessage 
 
     def decodeCoseObject(self, rawdata):
-	
-	COSE_Encrypted = json.loads(rawdata.encode('Latin-1'))
-	
+	COSE_Encrypted = cbor.loads(rawdata)
+
+	""" Read Security Context file """
 	if self.isClient:	
             securitycontextpath = path.abspath('calvin/runtime/south/plugins/async/twistedimpl/clientsecuritycontexts/'+self.objectsecuritycontext)
             cid = int(self.objectsecuritycontext[15:])
         else:
-            cid = COSE_Encrypted[0][0]["6"]
+            cid = COSE_Encrypted[0][6]
             securitycontextpath = path.abspath('calvin/runtime/south/plugins/async/twistedimpl/serversecuritycontexts/securitycontext'+str(cid))
             self.protocol.objectsecuritycontext = "securitycontext" + str(cid)
         
@@ -462,7 +474,6 @@ class Message(object):
 	    staticIV = securitycontext['client_write_IV']
             securitycontext['client_write_seqnr'] += 1
             seqnr = securitycontext['client_write_seqnr']
-        #_log.info("decode. isClient: %s, seqnr: %s" % (self.isClient, seqnr))
 
         if seqnr > (2**56-1):
             raise ValueError("Max Sequence number reached. Establish new Security Context.")
@@ -476,41 +487,47 @@ class Message(object):
             if(len(replay_window) > 64):
                 replay_window = replay_window[-64:] 
             securitycontext['replay_window'] = replay_window  
-
-	rec_seqnr = int(COSE_Encrypted[0][0]["4"])
+	
+	""" Construct IV and key from the security context data """
+	rec_seqnr = int(COSE_Encrypted[0][4])
 	IV = hex(int(bin(rec_seqnr << 58-len(bin(rec_seqnr))), base=2) ^ int(bin(int(staticIV, base=16)), base=2))       
 	IV = IV[2:].decode('hex')
-
 	key = key.decode('hex')
 	
+	""" Generate AAD """	
 	if self.code in requests:
             requritid = "coap://"
-            #requritid += self.remote[0] + ":"
-            #requritid += str(self.remote[1]) + "/"
-            #requritid += "/".join(self.opt.uri_path)
+
+	    #TODO: Get own IP dynamically. 
+            requritid += '127.0.0.1' + ":"
+            #requritid += self._own_uri[0] + ":"
+
+            requritid += str(self._own_uri[1]) + "/"
+            
+	    #TODO: retrieve uri_path some other way. Cannot retrieve it from the options before decryption.
+	    #requritid += "/".join(self.opt.uri_path)
         else:
             requritid = json.dumps([cid, securitycontext['client_write_seqnr']])
-
-        aad = chr(self.version << 6)
+	aad = chr(self.version << 6)
 	aad += struct.pack('!B', self.code)
         aad += unicode(alg)
         aad += unicode(requritid)
 	aad = aad.encode('utf-8') 
-        
-        cipher = AES.new(key, AES.MODE_CCM, IV)  
-	#_log.info("aad type: %s, aad: %s" % (type(aad), aad))    
+   
+	""" Decrypt Ciphertext and verify MAC """
+        cipher = AES.new(key, AES.MODE_CCM, IV, mac_len=8)  
 	cipher.update(aad)
 
-	ciphertext = COSE_Encrypted[1].encode('Latin-1')
-	#_log.info("ct type: %s, print: %s" % (type(ciphertext), ciphertext))
-	
-	mac = COSE_Encrypted[0][2].encode('Latin-1')
-	#_log.info("mac type: %s, mac: %s" % (type(mac), mac))
-        plaintext = cipher.decrypt(ciphertext)
-        cipher.verify(mac)
-        
+	ciphertext = COSE_Encrypted[2][:-8]
+	mac = COSE_Encrypted[2][-8:]
+
+	plaintext = cipher.decrypt(ciphertext)        
+	cipher.verify(mac)
+
+	""" Process plaintext """ 
         self.payload = self.opt.decode(plaintext)
 
+	""" Store updated security context """
         securitycontextfile = open(securitycontextpath, 'w')
         securitycontextfile.write(json.dumps(securitycontext))
         
@@ -1009,10 +1026,14 @@ class Coap(protocol.DatagramProtocol):
         self.observations = {} # outgoing observations. (token, remote) -> callback
 	self.objectsecuritycontext = objectsecuritycontext
 	self.isClient = isClient
+	self._own_uri = None
+
+    def setOwnURI(self, own_uri):
+	self._own_uri = own_uri
 
     def datagramReceived(self, data, (host, port)):
         log.msg("Received %r from %s:%d" % (data, host, port))
-        message = Message.decode(data, (host, port), self, isClient=self.isClient)
+        message = Message.decode(data, (host, port), self, isClient=self.isClient, own_uri=self._own_uri)
         if self.deduplicateMessage(message) is True:
             return
         if isRequest(message.code):

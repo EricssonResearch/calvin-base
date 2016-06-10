@@ -102,7 +102,7 @@ class CoAPServer(CalvinCBClass):
 
 	proto_callbacks = {'data': [CalvinCB(self._new_data)]}
         self._proto = generateCoAP(proto_callbacks)
-	
+	self._proto.setOwnURI(('', self._serverport))
 	reactor.listenUDP(self._serverport, self._proto)
 
     def _started(self, port):
