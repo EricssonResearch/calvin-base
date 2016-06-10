@@ -34,6 +34,7 @@ class ImageRenderer(Actor):
 
     def setup(self):
         self.use("calvinsys.media.image", shorthand="image")
+        self.use('calvinsys.native.python-base64', shorthand="base64")
         self.image = self["image"]
 
     def did_migrate(self):
@@ -48,8 +49,8 @@ class ImageRenderer(Actor):
     @condition(action_input=('image',))
     def render_image(self, image):
         if image is not None:
-            self.image.show_image(image, self.width, self.height)
+            self.image.show_image(self['base64'].b64decode(image), self.width, self.height)
         return ActionResult(production=())
 
     action_priority = (render_image, )
-    requires =  ['calvinsys.media.image']
+    requires =  ['calvinsys.media.image', 'calvinsys.native.python-base64']

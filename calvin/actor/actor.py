@@ -740,6 +740,14 @@ class ShadowActor(Actor):
     def enabled(self):
         return False
 
+    def did_connect(self, port):
+        # Do nothing
+        return
+
+    def did_disconnect(self, port):
+        # Do nothing
+        return
+
     def requirements_get(self):
         # If missing signature we can't add requirement for finding actor's requires.
         if self._signature:
