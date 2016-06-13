@@ -25,14 +25,14 @@ class Event_Monitor(object):
         super(Event_Monitor, self).__init__()
         """docstring for __init__"""
 
-        self.out_endpoints = []
+        self.endpoints = []
 
-    def register_out_endpoint(self, endpoint):
-        self.out_endpoints.append(endpoint)
+    def register_endpoint(self, endpoint):
+        self.endpoints.append(endpoint)
 
-    def unregister_out_endpoint(self, endpoint):
-        self.out_endpoints.remove(endpoint)
+    def unregister_endpoint(self, endpoint):
+        self.endpoints.remove(endpoint)
 
     def loop(self, scheduler):
         # Communicate endpoint, see if anyone sent anything
-        return any([endp.communicate() for endp in self.out_endpoints])
+        return any([endp.communicate() for endp in self.endpoints])

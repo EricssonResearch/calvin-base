@@ -160,14 +160,24 @@ class LocalConnection(BaseConnection):
         ein = endpoint.LocalInEndpoint(inport, outport)
         eout = endpoint.LocalOutEndpoint(outport, inport)
 
-        invalid_endpoint = inport.attach_endpoint(ein)
-        if invalid_endpoint:
-            invalid_endpoint.destroy()
+        if ein.use_monitor():
+            self.node.monitor.register_endpoint(ein)
+        if eout.use_monitor():
+            self.node.monitor.register_endpoint(eout)
 
         invalid_endpoint = outport.attach_endpoint(eout)
         if invalid_endpoint:
-            if isinstance(invalid_endpoint, endpoint.TunnelOutEndpoint):
-                self.node.monitor.unregister_out_endpoint(invalid_endpoint)
+            if invalid_endpoint.use_monitor():
+                self.node.monitor.unregister_endpoint(invalid_endpoint)
+            invalid_endpoint.destroy()
+
+        # Must attach in endpoint after out endpoint since starts with
+        # removing tokens transfered but with unhandled ACKs by the out
+        # endpoint
+        invalid_endpoint = inport.attach_endpoint(ein)
+        if invalid_endpoint:
+            if invalid_endpoint.use_monitor():
+                self.node.monitor.unregister_endpoint(invalid_endpoint)
             invalid_endpoint.destroy()
 
         # Update storage
@@ -182,6 +192,8 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
         for ep in endpoints:
+            if ep.use_monitor():
+                self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
         _log.analyze(self.node.id, "+ EP DESTROYED", {'port_id': self.port.id})
 
@@ -190,6 +202,8 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP PEER", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
         for ep in endpoints:
+            if ep.use_monitor():
+                self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
         _log.analyze(self.node.id, "+ DISCONNECTED", {'port_id': self.port.id})
 
@@ -356,13 +370,14 @@ class TunnelConnection(BaseConnection):
                                               self.peer_port_meta.node_id,
                                               reply.data['port_id'],
                                               self.node.sched.trigger_loop)
+        if endp.use_monitor():
             # register into main loop
-            self.node.monitor.register_out_endpoint(endp)
+            self.node.monitor.register_endpoint(endp)
         invalid_endpoint = self.port.attach_endpoint(endp)
         # remove previous endpoint
         if invalid_endpoint:
-            if isinstance(invalid_endpoint, endpoint.TunnelOutEndpoint):
-                self.monitor.unregister_out_endpoint(invalid_endpoint)
+            if invalid_endpoint.use_monitor():
+                self.monitor.unregister_endpoint(invalid_endpoint)
             invalid_endpoint.destroy()
 
         # Done connecting the port
@@ -409,13 +424,14 @@ class TunnelConnection(BaseConnection):
                                               self.peer_port_meta.node_id,
                                               self.peer_port_meta.port_id,
                                               self.node.sched.trigger_loop)
-            self.node.monitor.register_out_endpoint(endp)
+        if endp.use_monitor():
+            self.node.monitor.register_endpoint(endp)
 
         invalid_endpoint = self.port.attach_endpoint(endp)
         # Remove previous endpoint
         if invalid_endpoint:
-            if isinstance(invalid_endpoint, endpoint.TunnelOutEndpoint):
-                self.node.monitor.unregister_out_endpoint(invalid_endpoint)
+            if invalid_endpoint.use_monitor():
+                self.monitor.unregister_endpoint(invalid_endpoint)
             invalid_endpoint.destroy()
 
         # Update storage
@@ -466,8 +482,8 @@ class TunnelConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
         for ep in endpoints:
-            if isinstance(ep, endpoint.TunnelOutEndpoint):
-                self.node.monitor.unregister_out_endpoint(ep)
+            if ep.use_monitor():
+                self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
 
     class TokenTunnel(object):

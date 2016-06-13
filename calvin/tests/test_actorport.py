@@ -53,7 +53,9 @@ def test_attach_endpoint_to_inport(inport, outport):
     inport.owner.did_connect = Mock()
     first_outport = OutPort("out", actor())
     first_endpoint = LocalInEndpoint(inport, first_outport)
+    first_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     endpoint = LocalInEndpoint(inport, outport)
+    endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
     inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(first_endpoint)
@@ -68,6 +70,7 @@ def test_attach_endpoint_to_inport(inport, outport):
 
 def test_detach_endpoint_from_inport(inport, outport):
     endpoint = LocalInEndpoint(inport, outport)
+    endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
     inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(endpoint)
@@ -80,7 +83,9 @@ def test_attach_endpoint_to_outport(inport, outport):
     outport.owner.did_connect = Mock()
     first_inport = InPort("out", actor())
     first_endpoint = LocalOutEndpoint(outport, first_inport)
+    first_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     endpoint = LocalOutEndpoint(outport, inport)
+    endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
     outport.set_queue(queue.FIFO(5))
     outport.attach_endpoint(first_endpoint)
@@ -94,6 +99,7 @@ def test_attach_endpoint_to_outport(inport, outport):
 
 def test_detach_endpoint_from_outport(inport, outport):
     endpoint = LocalOutEndpoint(outport, inport)
+    endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
     outport.set_queue(queue.FIFO(5))
     outport.attach_endpoint(endpoint)
@@ -105,6 +111,7 @@ def test_detach_endpoint_from_outport(inport, outport):
 def test_disconnect_inport(inport, outport):
     inport.owner.did_disconnect = Mock()
     endpoint = LocalInEndpoint(inport, outport)
+    endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
     inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(endpoint)
@@ -115,20 +122,24 @@ def test_disconnect_inport(inport, outport):
 def test_disconnect_outport(inport, outport):
     outport.owner.did_disconnect = Mock()
     outport.set_queue(queue.FIFO(5))
-    outport.queue.commit_reads = Mock()
+    outport.queue.cancel = Mock()
     endpoint_1 = LocalOutEndpoint(outport, inport)
+    endpoint_1._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     endpoint_2 = LocalOutEndpoint(outport, outport)
+    endpoint_2._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
     outport.attach_endpoint(endpoint_1)
     outport.attach_endpoint(endpoint_2)
     assert outport.disconnect() == [endpoint_1, endpoint_2]
     assert outport.owner.did_disconnect.called
-    outport.queue.commit_reads.assert_has_calls([call(endpoint_1.peer_id, False), call(endpoint_2.peer_id, False)])
+    outport.queue.cancel.assert_has_calls([call(endpoint_1.peer_id), call(endpoint_2.peer_id)])
 
 
 def test_inport_outport_connection(inport, outport):
     out_endpoint = LocalOutEndpoint(outport, inport)
+    out_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     in_endpoint = LocalInEndpoint(inport, outport)
+    in_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     outport.set_queue(queue.FIFO(5))
     outport.attach_endpoint(out_endpoint)
     inport.set_queue(queue.FIFO(5))
@@ -140,9 +151,11 @@ def test_inport_outport_connection(inport, outport):
     outport.write_token(1)
     assert outport.tokens_available(3)
 
+    for e in outport.endpoints:
+        e.communicate()
     assert inport.tokens_available(1)
     assert inport.peek_token() == 1
-    inport.peek_rewind()
+    inport.peek_cancel()
 
     assert inport.peek_token() == 1
     assert inport.tokens_available(0)
@@ -164,7 +177,9 @@ def test_set_outport_state(inport, outport):
         }
     }
     out_endpoint = LocalOutEndpoint(outport, inport)
+    out_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     in_endpoint = LocalInEndpoint(inport, outport)
+    in_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     inport.set_queue(queue.FIFO(5))
     inport.attach_endpoint(in_endpoint)
     outport.set_queue(queue.FIFO(5))
@@ -183,7 +198,9 @@ def test_set_outport_state(inport, outport):
 
 def test_set_inport_state(inport, outport):
     out_endpoint = LocalOutEndpoint(outport, inport)
+    out_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     in_endpoint = LocalInEndpoint(inport, outport)
+    in_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     outport.set_queue(queue.FIFO(5))
     outport.attach_endpoint(out_endpoint)
     inport.set_queue(queue.FIFO(5))
@@ -208,4 +225,11 @@ def test_set_inport_state(inport, outport):
     assert inport.peek_token().value == 2
     assert inport.peek_token().value == 3
     assert inport.peek_token().value == 4
-    assert inport.peek_token() is None
+    try:
+        assert inport.peek_token()
+        assert False
+    except queue.QueueEmpty:
+        assert True
+    except:
+        assert False
+

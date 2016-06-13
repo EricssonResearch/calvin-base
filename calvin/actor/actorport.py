@@ -138,21 +138,21 @@ class InPort(Port):
         self.endpoint = endpoint.Endpoint(self, former_peer_id=self.endpoint.get_peer()[1])
         return endpoints
 
-    def peek_token(self):
-        """Used by actor (owner) to peek a token from the port. Following peeks will get next token. Reset with peek_rewind."""
-        return self.endpoint.peek_token()
+    def peek_token(self, metadata=None):
+        """Used by actor (owner) to peek a token from the port. Following peeks will get next token. Reset with peek_cancel."""
+        return self.queue.peek(metadata)
 
-    def peek_rewind(self):
-        """Used by actor (owner) to rewind port peeking to front token."""
-        return self.endpoint.peek_rewind()
+    def peek_cancel(self, metadata=None):
+        """Used by actor (owner) to cancel port peeking to front token."""
+        return self.queue.cancel(metadata)
 
-    def commit_peek_as_read(self):
-        """Used by actor (owner) to rewind port peeking to front token."""
-        return self.endpoint.commit_peek_as_read()
+    def peek_commit(self, metadata=None):
+        """Used by actor (owner) to cancel port peeking to front token."""
+        return self.queue.commit()
 
-    def tokens_available(self, length):
+    def tokens_available(self, length, metadata=None):
         """Used by actor (owner) to check number of tokens on the port."""
-        return self.endpoint.tokens_available(length)
+        return self.queue.tokens_available(length, metadata)
 
     def get_peers(self):
         return [self.endpoint.get_peer()]
@@ -236,19 +236,11 @@ class OutPort(Port):
 
     def write_token(self, data):
         """docstring for write_token"""
-        if not self.queue.write(data):
-            raise Exception("FIFO full when writing to port %s.%s with id: %s" % (
-                self.owner.name, self.name, self.id))
+        self.queue.write(data)
 
     def tokens_available(self, length):
         """Used by actor (owner) to check number of token slots available on the port."""
-        try:
-            if self.endpoints[0].single_tokens_available:
-                return self.endpoints[0].tokens_available(length)
-            else:
-                bool(self.endpoints and all([ep.tokens_available(length) for ep in self.endpoints]))
-        except:
-            return bool(self.endpoints and all([ep.tokens_available(length) for ep in self.endpoints]))
+        return self.queue.slots_available(length)
 
     def get_peers(self):
         peers = []

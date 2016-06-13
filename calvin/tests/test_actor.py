@@ -17,7 +17,7 @@
 import pytest
 
 from mock import Mock
-from calvin.tests import DummyNode
+from calvin.tests import DummyNode, TestPort
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.south.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actor import Actor
@@ -98,19 +98,19 @@ def test_connections():
     inport = actor.inports['token']
     outport = actor.outports['token']
 
-    port = Mock()
-    port.id = "x"
-    peer_port = Mock()
-    peer_port.id = "y"
+    in_peer_port = TestPort("x", "out")
+    out_peer_port = TestPort("y", "in")
+    out_peer_port.queue.add_reader(out_peer_port.id)
+    in_peer_port.queue.add_reader(inport.id)
 
-    inport.attach_endpoint(LocalInEndpoint(port, peer_port))
-    outport.attach_endpoint(LocalOutEndpoint(port, peer_port))
+    inport.attach_endpoint(LocalInEndpoint(inport, in_peer_port))
+    outport.attach_endpoint(LocalOutEndpoint(outport, out_peer_port))
 
     assert actor.connections(node) == {
         'actor_id': actor.id,
         'actor_name': actor.name,
-        'inports': {inport.id: [(node, "y")]},
-        'outports': {outport.id: [(node, "y")]}
+        'inports': {inport.id: [(node, in_peer_port.id)]},
+        'outports': {outport.id: [(node, out_peer_port.id)]}
     }
 
 

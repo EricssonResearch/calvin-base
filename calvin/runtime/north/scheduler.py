@@ -55,7 +55,11 @@ class Scheduler(object):
         self.done = True
 
     def loop_once(self, all_=False):
-        activity = self.monitor.loop(self)
+        try:
+            activity = self.monitor.loop(self)
+        except:
+            _log.exception("loop_once monitor failed")
+            return
 
         # If all ignore the set
         if all_:

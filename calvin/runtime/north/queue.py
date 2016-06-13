@@ -35,17 +35,32 @@ class QueueNone(object):
     def queue_type(self):
         return self.state["queuetype"]
 
+
+class QueueEmpty(Exception):
+    def __init__(self, *args, **kwargs):
+        super(QueueEmpty, self).__init__(*args)
+        self.reader = kwargs.get('reader', "")
+
+    def __str__(self):
+        return "Queue is empty for peer '%s' " % self.reader
+
+
+class QueueFull(Exception):
+    def __init__(self, *args, **kwargs):
+        super(QueueFull, self).__init__(*args)
+
+    def __str__(self):
+        return "Queue is full"
+
+
 class FIFO(object):
 
     """
     A FIFO for Calvin
     Parameters:
         length is the number of entries in the FIFO
-        readers is a set of actors reading from the FIFO
+        readers is a set of peer port ids reading from the FIFO
     """
-
-    # FIXME: (MAJOR) Readers must be UUIDs instead of sockets or we can't
-    # migrate
 
     def __init__(self, length):
         super(FIFO, self).__init__()
@@ -58,9 +73,6 @@ class FIFO(object):
         self.read_pos = {}
         self.tentative_read_pos = {}
         self._type = "fifo"
-
-    def __len__(self):
-        return self.write_pos - min(self.read_pos.values() or [0])
 
     def __str__(self):
         return "Tokens: %s, w:%i, r:%s, tr:%s" % (self.fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
@@ -105,62 +117,61 @@ class FIFO(object):
         del self.tentative_read_pos[reader]
         self.readers.discard(reader)
 
-    def can_write(self):
-        # See if there is space to write data
-        last_readpos = min(self.read_pos.values() or [0])
-        return not (self.write_pos + 1) % self.N == last_readpos % self.N
-
     def write(self, data):
-        if not self.can_write():
-            return False
+        if not self.slots_available(1):
+            raise QueueFull()
         write_pos = self.write_pos
         self.fifo[write_pos % self.N] = data
         self.write_pos = write_pos + 1
         return True
 
-    def available_slots(self):
-        # See if there is space to write data
+    def slots_available(self, length):
         last_readpos = min(self.read_pos.values() or [0])
-        return self.N - ((self.write_pos - last_readpos) % self.N) - 1
+        return (self.N - ((self.write_pos - last_readpos) % self.N) - 1) >= length
 
-    def available_tokens(self, reader):
-        if not isinstance(reader, basestring):
-            raise Exception('Not a string: %s' % reader)
-        if reader not in self.readers:
-            raise Exception("No reader")
-        return self.write_pos - self.tentative_read_pos[reader]
+    def tokens_available(self, length, metadata):
+        if metadata is None and len(self.readers) == 1:
+            # we only have one reader for in port queues (the own port id)
+            # TODO create seperate FIFO without fanout possibility instead
+            metadata = next(iter(self.readers))
+        if not isinstance(metadata, basestring):
+            raise Exception('Not a string: %s' % metadata)
+        if metadata not in self.readers:
+            raise Exception("No reader %s in %s" % (metadata, self.readers))
+        return (self.write_pos - self.tentative_read_pos[metadata]) >= length
 
     #
-    # Reading is now done tentatively until committed
+    # Reading is done tentatively until committed
     #
-    def can_read(self, reader):
-        if not isinstance(reader, basestring):
-            raise Exception('Not a string: %s' % reader)
-        if reader not in self.readers:
-            raise Exception("No reader")
-        return not self.tentative_read_pos[reader] == self.write_pos
-
-    def read(self, reader):
-        if not isinstance(reader, basestring):
-            raise Exception('Not a string: %s' % reader)
-        if reader not in self.readers:
-            raise Exception("Unknown reader: '%s'" % reader)
-        if not self.can_read(reader):
-            return None
-        read_pos = self.tentative_read_pos[reader]
+    def peek(self, metadata=None):
+        if metadata is None and len(self.readers) == 1:
+            # we only have one reader for in port queues (the own port id)
+            # TODO create seperate FIFO without fanout possibility instead
+            metadata = next(iter(self.readers))
+        if not isinstance(metadata, basestring):
+            raise Exception('Not a string: %s' % metadata)
+        if metadata not in self.readers:
+            raise Exception("Unknown reader: '%s'" % metadata)
+        if not self.tokens_available(1, metadata):
+            raise QueueEmpty(reader=metadata)
+        read_pos = self.tentative_read_pos[metadata]
         data = self.fifo[read_pos % self.N]
-        self.tentative_read_pos[reader] = read_pos + 1
+        self.tentative_read_pos[metadata] = read_pos + 1
         return data
 
-    # Commit is always required after reads.
-    def commit_reads(self, reader, commit=True):
-        if commit:
-            self.read_pos[reader] = self.tentative_read_pos[reader]
-        else:
-            self.tentative_read_pos[reader] = self.read_pos[reader]
+    def commit(self, metadata=None):
+        if metadata is None and len(self.readers) == 1:
+            # we only have one reader for in port queues (the own port id)
+            # TODO create seperate FIFO without fanout possibility instead
+            metadata = next(iter(self.readers))
+        self.read_pos[metadata] = self.tentative_read_pos[metadata]
 
-    def rollback_reads(self, reader):
-        self.commit_reads(reader, False)
+    def cancel(self, metadata=None):
+        if metadata is None and len(self.readers) == 1:
+            # we only have one reader for in port queues (the own port id)
+            # TODO create seperate FIFO without fanout possibility instead
+            metadata = next(iter(self.readers))
+        self.tentative_read_pos[metadata] = self.read_pos[metadata]
 
     def commit_one_read(self, reader, commit=True):
         if self.read_pos[reader] < self.tentative_read_pos[reader]:

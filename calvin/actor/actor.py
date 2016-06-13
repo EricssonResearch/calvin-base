@@ -155,7 +155,7 @@ def condition(action_input=[], action_output=[]):
                 # Commit to the read from the FIFOs
                 #
                 for (portname, _) in action_input:
-                    self.inports[portname].commit_peek_as_read()
+                    self.inports[portname].peek_commit()
                 #
                 # Write the results from the action to the output port(s)
                 #
@@ -170,10 +170,10 @@ def condition(action_input=[], action_output=[]):
                 action_result.tokens_produced = tokens_produced
             else:
                 #
-                # Rewind the read from the FIFOs
+                # cancel the read from the FIFOs
                 #
                 for (portname, _) in action_input:
-                    self.inports[portname].peek_rewind()
+                    self.inports[portname].peek_cancel()
 
             if action_result.did_fire and not valid_production:
                 action = "%s.%s" % (self._type, action_method.__name__)
@@ -417,6 +417,7 @@ class Actor(object):
     @verify_status([STATUS.READY, STATUS.PENDING])
     def did_connect(self, port):
         """Called when a port is connected, checks actor is fully connected."""
+        _log.debug("actor.did_connect BEGIN %s %s " % (self.name, self.id))
         # If we happen to be in READY, go to PENDING
         if self.fsm.state() == Actor.STATUS.READY:
             self.fsm.transition_to(Actor.STATUS.PENDING)
@@ -435,6 +436,7 @@ class Actor(object):
 
         # If we made it here, all ports are connected
         self.fsm.transition_to(Actor.STATUS.ENABLED)
+        _log.debug("actor.did_connect ENABLED %s %s " % (self.name, self.id))
 
         # Actor enabled, inform scheduler
         self._calvinsys.scheduler_wakeup()
