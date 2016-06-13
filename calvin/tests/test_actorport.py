@@ -21,7 +21,7 @@ from calvin.runtime.north.actormanager import ActorManager
 from calvin.tests import DummyNode
 from calvin.runtime.south.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actorport import InPort, OutPort
-from calvin.runtime.north import queue
+from calvin.runtime.north.plugins.port import queue
 
 pytestmark = pytest.mark.unittest
 
@@ -57,7 +57,7 @@ def test_attach_endpoint_to_inport(inport, outport):
     endpoint = LocalInEndpoint(inport, outport)
     endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
-    inport.set_queue(queue.FIFO(5))
+    inport.set_queue(queue.fanout_fifo.FIFO(5))
     inport.attach_endpoint(first_endpoint)
     assert inport.is_connected_to(first_outport.id)
 
@@ -72,7 +72,7 @@ def test_detach_endpoint_from_inport(inport, outport):
     endpoint = LocalInEndpoint(inport, outport)
     endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
-    inport.set_queue(queue.FIFO(5))
+    inport.set_queue(queue.fanout_fifo.FIFO(5))
     inport.attach_endpoint(endpoint)
     assert inport.is_connected_to(outport.id)
     inport.detach_endpoint(endpoint)
@@ -87,7 +87,7 @@ def test_attach_endpoint_to_outport(inport, outport):
     endpoint = LocalOutEndpoint(outport, inport)
     endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
-    outport.set_queue(queue.FIFO(5))
+    outport.set_queue(queue.fanout_fifo.FIFO(5))
     outport.attach_endpoint(first_endpoint)
     assert outport.is_connected_to(first_endpoint.peer_id)
 
@@ -101,7 +101,7 @@ def test_detach_endpoint_from_outport(inport, outport):
     endpoint = LocalOutEndpoint(outport, inport)
     endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
-    outport.set_queue(queue.FIFO(5))
+    outport.set_queue(queue.fanout_fifo.FIFO(5))
     outport.attach_endpoint(endpoint)
     assert outport.is_connected_to(endpoint.peer_id)
     outport.detach_endpoint(endpoint)
@@ -113,7 +113,7 @@ def test_disconnect_inport(inport, outport):
     endpoint = LocalInEndpoint(inport, outport)
     endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
 
-    inport.set_queue(queue.FIFO(5))
+    inport.set_queue(queue.fanout_fifo.FIFO(5))
     inport.attach_endpoint(endpoint)
     assert inport.disconnect() == [endpoint]
     assert inport.owner.did_disconnect.called
@@ -121,7 +121,7 @@ def test_disconnect_inport(inport, outport):
 
 def test_disconnect_outport(inport, outport):
     outport.owner.did_disconnect = Mock()
-    outport.set_queue(queue.FIFO(5))
+    outport.set_queue(queue.fanout_fifo.FIFO(5))
     outport.queue.cancel = Mock()
     endpoint_1 = LocalOutEndpoint(outport, inport)
     endpoint_1._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
@@ -140,9 +140,9 @@ def test_inport_outport_connection(inport, outport):
     out_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     in_endpoint = LocalInEndpoint(inport, outport)
     in_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
-    outport.set_queue(queue.FIFO(5))
+    outport.set_queue(queue.fanout_fifo.FIFO(5))
     outport.attach_endpoint(out_endpoint)
-    inport.set_queue(queue.FIFO(5))
+    inport.set_queue(queue.fanout_fifo.FIFO(5))
     inport.attach_endpoint(in_endpoint)
 
     assert outport.tokens_available(1)
@@ -180,9 +180,9 @@ def test_set_outport_state(inport, outport):
     out_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     in_endpoint = LocalInEndpoint(inport, outport)
     in_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
-    inport.set_queue(queue.FIFO(5))
+    inport.set_queue(queue.fanout_fifo.FIFO(5))
     inport.attach_endpoint(in_endpoint)
-    outport.set_queue(queue.FIFO(5))
+    outport.set_queue(queue.fanout_fifo.FIFO(5))
     outport.attach_endpoint(out_endpoint)
     outport._set_state(new_state)
 
@@ -201,9 +201,9 @@ def test_set_inport_state(inport, outport):
     out_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     in_endpoint = LocalInEndpoint(inport, outport)
     in_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
-    outport.set_queue(queue.FIFO(5))
+    outport.set_queue(queue.fanout_fifo.FIFO(5))
     outport.attach_endpoint(out_endpoint)
-    inport.set_queue(queue.FIFO(5))
+    inport.set_queue(queue.fanout_fifo.FIFO(5))
     inport.attach_endpoint(in_endpoint)
 
     new_state = {
@@ -228,7 +228,7 @@ def test_set_inport_state(inport, outport):
     try:
         assert inport.peek_token()
         assert False
-    except queue.QueueEmpty:
+    except queue.common.QueueEmpty:
         assert True
     except:
         assert False

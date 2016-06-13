@@ -22,7 +22,7 @@ from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.south.endpoint import Endpoint
 from calvin.runtime.north import metering
-from calvin.runtime.north import queue
+from calvin.runtime.north.plugins.port import queue
 
 
 def fwrite(port, value):
@@ -42,7 +42,7 @@ def pwrite(actor, portname, value):
                 fwrite(port, v)
         else:
             fwrite(port, value)
-    except queue.QueueFull:
+    except queue.common.QueueFull:
         # Some tests seems to enter too many tokens but we ignore it
         # TODO make all actors' test compliant and change to raise exception
         pass
@@ -238,11 +238,11 @@ class ActorTester(object):
             raise e
 
         for inport in actor.inports.values():
-            inport.set_queue(queue.FIFO(5))
+            inport.set_queue(queue.fanout_fifo.FIFO(5))
             inport.endpoint = DummyInEndpoint(inport)
             inport.queue.add_reader(inport.id)
         for outport in actor.outports.values():
-            outport.set_queue(queue.FIFO(5))
+            outport.set_queue(queue.fanout_fifo.FIFO(5))
             outport.queue.add_reader(actor.id)
             outport.endpoints.append(DummyOutEndpoint(outport))
 

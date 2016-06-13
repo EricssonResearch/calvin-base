@@ -3,7 +3,7 @@ from mock import Mock
 
 from calvin.runtime.north import metering
 from calvin.utilities import calvinuuid
-from calvin.runtime.north.queue import FIFO
+from calvin.runtime.north.plugins.port.queue.fanout_fifo import FIFO
 
 
 class DummyNode:

@@ -16,7 +16,7 @@
 
 import pytest
 import unittest
-from calvin.runtime.north import queue
+from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.calvin_token import Token
 
 pytestmark = pytest.mark.unittest
@@ -38,7 +38,7 @@ class QueueTests(unittest.TestCase):
 
     def test1(self):
         """Adding reader again (reconnect)"""
-        f = queue.FIFO(5)
+        f = queue.fanout_fifo.FIFO(5)
         f.add_reader('p1.id')
         data = ['1', '2', '3', '4']
         for token in data:
@@ -52,7 +52,7 @@ class QueueTests(unittest.TestCase):
 
         self.verify_data(['3', '4'], [f.peek('p1.id') for _ in range(2)])
 
-        self.assertRaises(queue.QueueEmpty, f.peek, 'p1.id')
+        self.assertRaises(queue.common.QueueEmpty, f.peek, 'p1.id')
 
         f.commit('p1.id')
 
@@ -69,12 +69,12 @@ class QueueTests(unittest.TestCase):
     def test2(self):
         """Multiple readers"""
 
-        f = queue.FIFO(5)
+        f = queue.fanout_fifo.FIFO(5)
         f.add_reader("r1")
         f.add_reader("r2")
 
         # Ensure fifo is empty
-        self.assertRaises(queue.QueueEmpty, f.peek, "r1")
+        self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")
         self.assertTrue(f.tokens_available(0, "r1"))
         self.assertTrue(f.tokens_available(0, "r2"))
 
@@ -88,7 +88,7 @@ class QueueTests(unittest.TestCase):
         f.commit('r1')
 
         self.assertEquals([True] * 3, [f.write(Token(t)) for t in ['2', '3', '4']])
-        self.assertRaises(queue.QueueFull, f.write, Token('5'))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
         self.verify_data(['2', '3', '4'], [f.peek('r1') for _ in range(3)])
         f.commit("r1")
 
@@ -106,7 +106,7 @@ class QueueTests(unittest.TestCase):
         self.verify_data(['4', '5'], [f.peek("r2") for _ in range(2)])
 
         self.assertFalse(f.tokens_available(1, "r2"))
-        self.assertRaises(queue.QueueEmpty, f.peek, "r2")
+        self.assertRaises(queue.common.QueueEmpty, f.peek, "r2")
         self.assertTrue(f.tokens_available(1, "r1"))
         self.verify_data(['5'], [f.peek("r1")])
 
@@ -119,12 +119,12 @@ class QueueTests(unittest.TestCase):
 
         self.assertTrue([f.peek("r1")
                          for _ in range(3)], [f.peek("r2") for _ in range(3)])
-        self.assertRaises(queue.QueueEmpty, f.peek, "r1")
-        self.assertRaises(queue.QueueEmpty, f.peek, "r2")
+        self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")
+        self.assertRaises(queue.common.QueueEmpty, f.peek, "r2")
 
     def test3(self):
         """Testing commit reads"""
-        f = queue.FIFO(5)
+        f = queue.fanout_fifo.FIFO(5)
         f.add_reader("r1")
 
         for token in ['1', '2', '3', '4']:
@@ -133,12 +133,12 @@ class QueueTests(unittest.TestCase):
 
         # Fails, fifo full
         self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.QueueFull, f.write, Token('5'))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
 
         # Tentative, fifo still full
         self.verify_data(['1'], [f.peek("r1")])
         self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.QueueFull, f.write, Token('5'))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
 
         # commit previous reads, fifo 1 pos free
         f.commit('r1')
@@ -146,11 +146,11 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(f.write(Token('5')))
         # fifo full again
         self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.QueueFull, f.write, Token('5'))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
 
     def test4(self):
         """Testing rollback reads"""
-        f = queue.FIFO(5)
+        f = queue.fanout_fifo.FIFO(5)
         f.add_reader('r1')
 
         for token in ['1', '2', '3', '4']:
@@ -159,7 +159,7 @@ class QueueTests(unittest.TestCase):
 
         # fifo full
         self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.QueueFull, f.write, Token('5'))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
 
         # tentative reads
         self.verify_data(['1', '2', '3', '4'], [f.peek("r1")
@@ -170,7 +170,7 @@ class QueueTests(unittest.TestCase):
 
         f.cancel("r1")
         self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.QueueFull, f.write, Token('5'))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
         self.assertTrue(f.tokens_available(4, "r1"))
 
         # re-read
@@ -182,4 +182,4 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(f.slots_available(1))
         self.assertTrue(f.write(Token('a')))
         self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.QueueFull, f.write, Token('b'))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('b'))

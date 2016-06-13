@@ -21,7 +21,7 @@ from calvin.tests import DummyNode, TestPort
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.south.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actor import Actor
-from calvin.runtime.north import queue
+from calvin.runtime.north.plugins.port import queue
 
 pytestmark = pytest.mark.unittest
 
@@ -31,9 +31,9 @@ def create_actor(node):
     actor_id = actor_manager.new('std.Identity', {})
     actor = actor_manager.actors[actor_id]
     actor._calvinsys = Mock()
-    actor.inports['token'].set_queue(queue.FIFO(5))
+    actor.inports['token'].set_queue(queue.fanout_fifo.FIFO(5))
     actor.inports['token'].queue.add_reader(actor.inports['token'].id)
-    actor.outports['token'].set_queue(queue.FIFO(5))
+    actor.outports['token'].set_queue(queue.fanout_fifo.FIFO(5))
     return actor
 
 

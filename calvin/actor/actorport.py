@@ -16,7 +16,7 @@
 
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.north import queue
+from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.south import endpoint
 import calvin.requests.calvinresponse as response
 from calvin.utilities.calvinlogger import get_logger
@@ -37,7 +37,7 @@ class Port(object):
         # Unique id to universally identify port (immutable)
         self.id = calvinuuid.uuid("PORT")
         # The token queue, will be set when connected.
-        self.queue = queue.QueueNone()
+        self.queue = queue.common.QueueNone()
         self.properties = {}
 
     def __str__(self):
@@ -46,7 +46,7 @@ class Port(object):
     def set_queue(self, new_queue):
         if self.queue is None:
             self.queue = new_queue
-        elif isinstance(self.queue, queue.QueueNone) and self.queue.queue_type == new_queue.queue_type:
+        elif isinstance(self.queue, queue.common.QueueNone) and self.queue.queue_type == new_queue.queue_type:
             # Apply state from none queue of same type (state from e.g. migration)
             new_queue._set_state(self.queue._state())
             self.queue = new_queue

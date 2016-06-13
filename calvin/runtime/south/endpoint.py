@@ -17,7 +17,7 @@
 from calvin.runtime.north.calvin_token import Token
 import time
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.north.queue import QueueEmpty, QueueFull
+from calvin.runtime.north.plugins.port.queue.common import QueueEmpty, QueueFull
 
 _log = get_logger(__name__)
 
