@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # Queues
-_MODULES = {'fanout_fifo': 'FIFO'}
+_MODULES = {'fanout_fifo': 'FanoutFIFO'}
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)

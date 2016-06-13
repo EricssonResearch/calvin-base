@@ -38,7 +38,7 @@ class QueueTests(unittest.TestCase):
 
     def test1(self):
         """Adding reader again (reconnect)"""
-        f = queue.fanout_fifo.FIFO(5)
+        f = queue.fanout_fifo.FanoutFIFO(5)
         f.add_reader('p1.id')
         data = ['1', '2', '3', '4']
         for token in data:
@@ -69,7 +69,7 @@ class QueueTests(unittest.TestCase):
     def test2(self):
         """Multiple readers"""
 
-        f = queue.fanout_fifo.FIFO(5)
+        f = queue.fanout_fifo.FanoutFIFO(5)
         f.add_reader("r1")
         f.add_reader("r2")
 
@@ -124,7 +124,7 @@ class QueueTests(unittest.TestCase):
 
     def test3(self):
         """Testing commit reads"""
-        f = queue.fanout_fifo.FIFO(5)
+        f = queue.fanout_fifo.FanoutFIFO(5)
         f.add_reader("r1")
 
         for token in ['1', '2', '3', '4']:
@@ -150,7 +150,7 @@ class QueueTests(unittest.TestCase):
 
     def test4(self):
         """Testing rollback reads"""
-        f = queue.fanout_fifo.FIFO(5)
+        f = queue.fanout_fifo.FanoutFIFO(5)
         f.add_reader('r1')
 
         for token in ['1', '2', '3', '4']:

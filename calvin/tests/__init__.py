@@ -3,7 +3,7 @@ from mock import Mock
 
 from calvin.runtime.north import metering
 from calvin.utilities import calvinuuid
-from calvin.runtime.north.plugins.port.queue.fanout_fifo import FIFO
+from calvin.runtime.north.plugins.port.queue.fanout_fifo import FanoutFIFO
 
 
 class DummyNode:
@@ -43,7 +43,7 @@ class TestPort:
         self.name = name
         self.direction = direction
         self.peers = None
-        self.queue = FIFO(5)
+        self.queue = FanoutFIFO(5)
 
     def is_connected(self):
         return True

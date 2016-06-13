@@ -238,11 +238,11 @@ class ActorTester(object):
             raise e
 
         for inport in actor.inports.values():
-            inport.set_queue(queue.fanout_fifo.FIFO(5))
+            inport.set_queue(queue.fanout_fifo.FanoutFIFO(5))
             inport.endpoint = DummyInEndpoint(inport)
             inport.queue.add_reader(inport.id)
         for outport in actor.outports.values():
-            outport.set_queue(queue.fanout_fifo.FIFO(5))
+            outport.set_queue(queue.fanout_fifo.FanoutFIFO(5))
             outport.queue.add_reader(actor.id)
             outport.endpoints.append(DummyOutEndpoint(outport))
 

@@ -17,17 +17,17 @@
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty
 
-class FIFO(object):
+class FanoutFIFO(object):
 
     """
-    A FIFO for Calvin
+    A FIFO with fanout support
     Parameters:
         length is the number of entries in the FIFO
         readers is a set of peer port ids reading from the FIFO
     """
 
     def __init__(self, length):
-        super(FIFO, self).__init__()
+        super(FanoutFIFO, self).__init__()
         self.fifo = [Token(0)] * length
         self.N = length
         self.readers = set()
@@ -36,7 +36,7 @@ class FIFO(object):
         self.write_pos = 0
         self.read_pos = {}
         self.tentative_read_pos = {}
-        self._type = "fifo"
+        self._type = "fanout_fifo"
 
     def __str__(self):
         return "Tokens: %s, w:%i, r:%s, tr:%s" % (self.fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
@@ -54,7 +54,7 @@ class FIFO(object):
         return state
 
     def _set_state(self, state):
-        self._type = state.get('queuetype',"fifo")
+        self._type = state.get('queuetype',"fanout_fifo")
         self.fifo = [Token.decode(d) for d in state['fifo']]
         self.N = state['N']
         self.readers = set(state['readers'])
