@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.north.connection import ConnectionFactory
+from calvin.runtime.north.plugins.port.connection import ConnectionFactory, PURPOSE
 from calvin.actor.actorport import PortMeta
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinlogger
@@ -33,7 +33,7 @@ class PortManager(object):
         super(PortManager, self).__init__()
         self.node = node
         self.ports = {}  # key: port_id, value: port
-        self.connections_data = ConnectionFactory(self.node, ConnectionFactory.PURPOSE.INIT, portmanager=self).init()
+        self.connections_data = ConnectionFactory(self.node, PURPOSE.INIT, portmanager=self).init()
 
     def set_port_property(self, port_id=None, actor_id=None, port_dir=None, port_name=None,
                             port_property=None, value=None):
@@ -71,7 +71,7 @@ class PortManager(object):
             peer_port_meta = PortMeta(self,
                                     port_id=payload['port_id'],
                                     node_id=payload['from_rt_uuid'])
-            return ConnectionFactory(self.node, ConnectionFactory.PURPOSE.CONNECT).get(
+            return ConnectionFactory(self.node, PURPOSE.CONNECT).get(
                     port, peer_port_meta, payload=payload).connection_request()
 
     def connect(self, callback=None, actor_id=None, port_name=None, port_properties=None, port_id=None,
@@ -146,7 +146,7 @@ class PortManager(object):
         _log.analyze(self.node.id, "+", {'local_port': local_port, 'peer_port': port_meta},
                         peer_node_id=port_meta.node_id, tb=True)
 
-        ConnectionFactory(self.node, ConnectionFactory.PURPOSE.CONNECT).get(local_port, port_meta, callback).connect()
+        ConnectionFactory(self.node, PURPOSE.CONNECT).get(local_port, port_meta, callback).connect()
 
     def disconnect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None):
         """ Do disconnect for port(s)
@@ -207,7 +207,7 @@ class PortManager(object):
         # Run over copy of list of ports since modified inside the loop
         for port_id in port_ids[:]:
             _log.analyze(self.node.id, "+ PRE FACTORY", {'port_id': port_id})
-            connections = ConnectionFactory(self.node, ConnectionFactory.PURPOSE.DISCONNECT).get_existing(
+            connections = ConnectionFactory(self.node, PURPOSE.DISCONNECT).get_existing(
                             port_id, callback=callback)
             _log.analyze(self.node.id, "+ POST FACTORY", {'port_id': port_id,
                             'connections': map(lambda x: str(x), connections)})
@@ -264,7 +264,7 @@ class PortManager(object):
             return response.CalvinResponse(response.NOT_FOUND)
         else:
             # Disconnect and destroy endpoints
-            return ConnectionFactory(self.node, ConnectionFactory.PURPOSE.DISCONNECT).get(
+            return ConnectionFactory(self.node, PURPOSE.DISCONNECT).get(
                     local_port_meta.port, peer_port_meta, payload=payload).disconnection_request()
 
     def add_ports_of_actor(self, actor):
