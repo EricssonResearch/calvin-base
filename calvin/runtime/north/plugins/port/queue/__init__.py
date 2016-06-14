@@ -30,9 +30,7 @@ def get(port, peer_port=None, peer_port_meta=None):
     selected_queue = "fanout_fifo"
     try:
         class_ = getattr(globals()[selected_queue], _MODULES[selected_queue])
-        # FIXME should be property on port
-        properties=5
-        return class_(properties)
+        return class_(port.properties)
     except:
         _log.exception("get_queue FAILED")
         return None

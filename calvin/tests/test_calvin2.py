@@ -812,7 +812,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         snk1 = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
         snk2 = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
 
-        request_handler.set_port_property(self.rt1, src, 'out', 'integer', 'fanout', 2)
+        request_handler.set_port_property(self.rt1, src, 'out', 'integer',
+                                            port_properties={'routing': 'fanout', 'nbr_peers': 2})
 
         request_handler.connect(self.rt1, snk1, 'token', self.rt1.id, src, 'integer')
         request_handler.connect(self.rt1, snk2, 'token', self.rt1.id, src, 'integer')

@@ -702,10 +702,6 @@ class Deployer(object):
             peer_port_dir='out')
         return result
 
-    def set_port_property(self, actor, port_dir, port_name, port_property, value):
-        self.node.pm.set_port_property(actor_id=self.actor_map[actor], port_dir=port_dir,
-                                        port_name=port_name, port_property=port_property, value=value)
-
     def select_actor(self, out_iter, kwargs, final, comp_name_desc):
         _log.analyze(self.node.id, "+", {'comp_name_desc': comp_name_desc}, tb=True)
         if final[0] and not kwargs['done']:
@@ -848,7 +844,9 @@ class Deployer(object):
         for src, dst_list in self.deployable['connections'].iteritems():
             if len(dst_list) > 1:
                 src_name, src_port = src.split('.')
-                self.set_port_property(src_name, 'out', src_port, 'fanout', len(dst_list))
+                # TODO get routing method from actor or calvinscript, now set only existing option
+                self.node.pm.set_port_properties(actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port,
+                                                 routing='fanout', nbr_peers=len(dst_list))
 
         for src, dst_list in self.deployable['connections'].iteritems():
             src_actor, src_port = src.split('.')

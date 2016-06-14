@@ -234,14 +234,16 @@ class RequestHandler(object):
         r = self._get(rt, timeout, async, path)
         return self.check_response(r)
 
-    def set_port_property(self, rt, actor_id, port_type, port_name, port_property, value, port_id=None,
+    def set_port_property(self, rt, actor_id, port_type, port_name, port_property=None, value=None,
+                            port_properties=None, port_id=None,
                             timeout=DEFAULT_TIMEOUT, async=False):
         data = {
             'actor_id': actor_id,
             'port_type': port_type,
             'port_name': port_name,
             'port_property': port_property,
-            'value': value
+            'value': value,
+            'port_properties': port_properties
         }
         if port_id is not None:
             data['port_id'] = port_id

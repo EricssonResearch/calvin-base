@@ -26,8 +26,15 @@ class FanoutFIFO(object):
         readers is a set of peer port ids reading from the FIFO
     """
 
-    def __init__(self, length):
+    def __init__(self, port_properties):
         super(FanoutFIFO, self).__init__()
+        # Set default queue length to 4 if not specified
+        try:
+            length = port_properties.get('queue_length', 4)
+        except:
+            length = 4
+        # Compensate length for FIFO having an unused slot
+        length += 1
         self.fifo = [Token(0)] * length
         self.N = length
         self.readers = set()

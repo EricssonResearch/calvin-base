@@ -323,7 +323,6 @@ control_api_doc += \
     """
     POST /set_port_property
     Sets a property of the port.
-    Currently only fanout on outports is supported.
     Body:
     {
         "actor_id" : <actor-id>,
@@ -1232,13 +1231,21 @@ class CalvinControl(object):
 
     def handle_set_port_property(self, handle, connection, match, data, hdr):
         try:
-            status = self.node.pm.set_port_property(
-                port_id=data.get("port_id"),
-                actor_id=data.get("actor_id"),
-                port_dir=data.get("port_type"),
-                port_name=data.get("port_name"),
-                port_property=data.get("port_property"),
-                value=data.get("value"))
+            if data.get("port_properties") is None:
+                status = self.node.pm.set_port_property(
+                    port_id=data.get("port_id"),
+                    actor_id=data.get("actor_id"),
+                    port_dir=data.get("port_type"),
+                    port_name=data.get("port_name"),
+                    port_property=data.get("port_property"),
+                    value=data.get("value"))
+            else:
+                status = self.node.pm.set_port_properties(
+                    port_id=data.get("port_id"),
+                    actor_id=data.get("actor_id"),
+                    port_dir=data.get("port_type"),
+                    port_name=data.get("port_name"),
+                    **data.get("port_properties"))
         except:
             _log.exception("Failed setting port property")
             status = calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND)

@@ -163,7 +163,10 @@ def test_inport_outport_connection(inport, outport):
 
 def test_set_outport_state(inport, outport):
     new_state = {
-        'fanout': 2,
+        'properties': {
+            'routing': 'fanout',
+            'nbr_peers': 2
+        },
         'name': 'new_name',
         'id': '123',
         'queue': {
@@ -188,7 +191,7 @@ def test_set_outport_state(inport, outport):
 
     assert outport.name == 'new_name'
     assert outport.id == '123'
-    assert outport.properties['fanout'] == 2
+    assert outport.properties['nbr_peers'] == 2
 
     assert outport.tokens_available(1)
     assert outport.tokens_available(3)

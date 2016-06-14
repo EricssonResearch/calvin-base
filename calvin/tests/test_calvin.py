@@ -542,7 +542,8 @@ class TestActorMigration(CalvinTestBase):
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=0.1, steps=100)
 
-        request_handler.set_port_property(peer, alt, 'out', 'token', 'fanout', 2)
+        request_handler.set_port_property(peer, alt, 'out', 'token',
+                                            port_properties={'routing': 'fanout', 'nbr_peers': 2})
 
         request_handler.connect(rt, snk1, 'token', peer_id, alt, 'token')
         request_handler.connect(peer, snk2, 'token', peer_id, alt, 'token')

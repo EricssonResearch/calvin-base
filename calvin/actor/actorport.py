@@ -39,6 +39,8 @@ class Port(object):
         # The token queue, will be set when connected.
         self.queue = queue.common.QueueNone()
         self.properties = {}
+        self.properties['routing'] = 'default'
+        self.properties['nbr_peers'] = 1
 
     def __str__(self):
         return "%s id=%s" % (self.name, self.id)
@@ -63,13 +65,14 @@ class Port(object):
 
     def _state(self):
         """Return port state for serialization."""
-        return {'name': self.name, 'id': self.id, 'queue': self.queue._state()}
+        return {'name': self.name, 'id': self.id, 'queue': self.queue._state(), 'properties': self.properties}
 
     def _set_state(self, state):
         """Set port state."""
         self.name = state.pop('name')
         self.id = state.pop('id')
         self.queue._set_state(state.pop('queue'))
+        self.properties.update(state.pop('properties', {}))
 
     def attach_endpoint(self, endpoint_):
         """
@@ -164,30 +167,21 @@ class OutPort(Port):
 
     def __init__(self, name, owner):
         super(OutPort, self).__init__(name, owner)
-        self.properties['fanout'] = 1
-        self.endpoints = []
+        self.properties['routing'] = 'fanout'
         self.properties['direction'] = 'out'
+        self.endpoints = []
 
     def __str__(self):
         s = super(OutPort, self).__str__()
-        s = s + "fan-out: %s\n" % self.properties['fanout']
+        s = s + "%s: %s\n" % (self.properties.get('routing','default'), self.properties.get('nbr_peers', 1))
         s = s + " [ "
         for ep in self.endpoints:
             s = s + str(ep) + " "
         s = s + "]"
         return s
 
-    def _state(self):
-        state = super(OutPort, self)._state()
-        state['fanout'] = self.properties['fanout']
-        return state
-
-    def _set_state(self, state):
-        self.properties['fanout'] = state.pop('fanout')
-        super(OutPort, self)._set_state(state)
-
     def is_connected(self):
-        if len(self.endpoints) < self.properties['fanout']:
+        if len(self.endpoints) < self.properties.get('nbr_peers', 1):
             return False
         for ep in self.endpoints:
             if not ep.is_connected():

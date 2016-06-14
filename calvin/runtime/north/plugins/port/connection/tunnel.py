@@ -15,11 +15,9 @@
 # limitations under the License.
 
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.utils import enum
 from calvin.runtime.north.plugins.port import endpoint
 from calvin.runtime.north.calvin_proto import CalvinTunnel
 from calvin.runtime.north.plugins.port import queue
-from calvin.actor.actorport import PortMeta
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.port.connection.common import BaseConnection, PURPOSE

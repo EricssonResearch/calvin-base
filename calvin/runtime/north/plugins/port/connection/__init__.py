@@ -14,10 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.north.plugins.port import endpoint
-from calvin.runtime.north.calvin_proto import CalvinTunnel
-from calvin.runtime.north.plugins.port import queue
 from calvin.actor.actorport import PortMeta
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinlogger
