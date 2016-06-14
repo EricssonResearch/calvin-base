@@ -19,7 +19,7 @@ from mock import Mock, call
 
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.tests import DummyNode
-from calvin.runtime.south.endpoint import LocalOutEndpoint, LocalInEndpoint
+from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actorport import InPort, OutPort
 from calvin.runtime.north.plugins.port import queue
 

@@ -17,7 +17,7 @@
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port import queue
-from calvin.runtime.south import endpoint
+from calvin.runtime.north.plugins.port import endpoint
 import calvin.requests.calvinresponse as response
 from calvin.utilities.calvinlogger import get_logger
 import copy

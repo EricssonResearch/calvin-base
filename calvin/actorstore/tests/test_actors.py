@@ -20,7 +20,7 @@ import argparse
 import traceback
 from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
-from calvin.runtime.south.endpoint import Endpoint
+from calvin.runtime.north.plugins.port.endpoint import Endpoint
 from calvin.runtime.north import metering
 from calvin.runtime.north.plugins.port import queue
 

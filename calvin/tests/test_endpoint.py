@@ -20,7 +20,7 @@ from mock import Mock
 
 from calvin.actor.actorport import InPort, OutPort
 from calvin.runtime.north.calvin_token import Token
-from calvin.runtime.south.endpoint import LocalInEndpoint, LocalOutEndpoint, TunnelInEndpoint, TunnelOutEndpoint
+from calvin.runtime.north.plugins.port.endpoint import LocalInEndpoint, LocalOutEndpoint, TunnelInEndpoint, TunnelOutEndpoint
 from calvin.runtime.north.plugins.port import queue
 
 pytestmark = pytest.mark.unittest

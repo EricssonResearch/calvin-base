@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,128 +15,11 @@
 # limitations under the License.
 
 from calvin.runtime.north.calvin_token import Token
+from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 import time
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.north.plugins.port.queue.common import QueueEmpty, QueueFull
 
 _log = get_logger(__name__)
-
-
-class Endpoint(object):
-
-    """docstring for Endpoint"""
-
-    def __init__(self, port, former_peer_id=None):
-        super(Endpoint, self).__init__()
-        self.port = port
-        self.former_peer_id = former_peer_id
-
-    def __str__(self):
-        return "%s(port_id=%s)" % (self.__class__.__name__, self.port.id)
-
-    def is_connected(self):
-        return False
-
-    def use_monitor(self):
-        return False
-
-    def communicate(self):
-        """
-        Called by the runtime when it is possible to transfer data to counterpart.
-        """
-        raise Exception("Can't communicate on endpoint in port %s.%s with id: %s" % (
-            self.port.owner.name, self.port.name, self.port.id))
-
-    def destroy(self):
-        pass
-
-    def get_peer(self):
-        return (None, self.former_peer_id)
-
-    def attached(self):
-        pass
-
-    def detached(self):
-        pass
-
-
-
-#
-# Local endpoints
-#
-
-
-class LocalInEndpoint(Endpoint):
-
-    """docstring for LocalEndpoint"""
-
-    def __init__(self, port, peer_port):
-        super(LocalInEndpoint, self).__init__(port)
-        self.peer_port = peer_port
-
-    def is_connected(self):
-        return True
-
-    def attached(self):
-        self.port.queue.add_reader(self.port.id)
-        self._fifo_mismatch_fix()
-
-    def _fifo_mismatch_fix(self):
-        # Fix once mismatch of positions: we have tokens in the peer fifo that are duplicates of tokens transferred
-        # (and ack never reached peer)
-        # Need to remove in peer fifo since might already been consumed
-        # FIXME this goes into queue internal attributes on the peer port!!!
-        while (self.peer_port.queue.tokens_available(1, self.port.id) and
-                self.port.queue.write_pos > self.peer_port.queue.read_pos[self.port.id]):
-            self.peer_port.queue.peek(self.port.id)
-            self.peer_port.queue.commit(self.port.id)
-
-    def get_peer(self):
-        return ('local', self.peer_port.id)
-
-
-class LocalOutEndpoint(Endpoint):
-
-    """docstring for LocalEndpoint"""
-
-    def __init__(self, port, peer_port):
-        super(LocalOutEndpoint, self).__init__(port)
-        self.peer_port = peer_port
-        self.peer_id = peer_port.id
-
-    def is_connected(self):
-        return True
-
-    def attached(self):
-        self.port.queue.add_reader(self.peer_id)
-
-    def detached(self):
-        # cancel any tentative reads to acked reads
-        self.port.queue.cancel(self.peer_port.id)
-
-    def get_peer(self):
-        return ('local', self.peer_id)
-
-    def use_monitor(self):
-        return True
-
-    def communicate(self, *args, **kwargs):
-        sent = False
-        while True:
-            try:
-                token = self.port.queue.peek(self.peer_id)
-                self.peer_port.queue.write(token)
-                self.port.queue.commit_one_read(self.peer_id)
-                sent = True
-            except QueueEmpty:
-                # Nothing to read
-                break
-            except QueueFull:
-                # Could not write, rollback read
-                self.port.queue.commit_one_read(self.peer_id, False)
-                break
-        return sent
-
 
 #
 # Remote tunnel endpoints

@@ -16,7 +16,7 @@
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.utils import enum
-from calvin.runtime.south import endpoint
+from calvin.runtime.north.plugins.port import endpoint
 from calvin.runtime.north.calvin_proto import CalvinTunnel
 from calvin.runtime.north.plugins.port import queue
 from calvin.actor.actorport import PortMeta
