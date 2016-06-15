@@ -65,7 +65,6 @@ def pread(actor, portname, number=1):
 def pavailable(actor, portname, number):
     port = actor.outports.get(portname, None)
     assert port
-    print "PORTID", port.id
     return port.queue.tokens_available(number, actor.id)
 
 
