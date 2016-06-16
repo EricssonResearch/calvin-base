@@ -162,32 +162,24 @@ function addPortToGraph(port)
             clearTimeout(graphTimer);
         }
 
-        if (port.direction == "out") {
-            var peer_index;
-            for (peer_index in port.peers) {
-                var peer_port = findPort(port.peers[peer_index][1]);
-                if (peer_port) {
-                    if (graphTimer) {
-                        clearTimeout(graphTimer);
-                    }
+        var peer_index = 0;
+        for (peer_index in port.peers) {
+            var peer_port = findPort(port.peers[peer_index][1]);
+            if (peer_port) {
+                if (graphTimer) {
+                    clearTimeout(graphTimer);
+                }
+                if (port.direction == "out") {
                     if(document.getElementById("chkShowPortNames").checked) {
                         graph.setEdge(port.actor_id, peer_port.actor_id, {label: port.name + " > " + peer_port.name});
                     } else {
                         graph.setEdge(port.actor_id, peer_port.actor_id);
                     }
-                }
-            }
-        } else if(port.direction == "in") {
-            if (port.peer) {
-                var peer_port = findPort(port.peer[1]);
-                if (peer_port) {
-                    var peer_actor = findActor(peer_port.actor_id);
-                    if (peer_actor) {
-                        if(document.getElementById("chkShowPortNames").checked) {
-                            graph.setEdge(peer_port.actor_id, port.actor_id, {label: peer_port.name + " > " + port.name});
-                        } else {
-                            graph.setEdge(peer_port.actor_id, port.actor_id);
-                        }
+                } else {
+                    if(document.getElementById("chkShowPortNames").checked) {
+                        graph.setEdge(peer_port.actor_id, port.actor_id, {label: peer_port.name + " > " + port.name});
+                    } else {
+                        graph.setEdge(peer_port.actor_id, port.actor_id);
                     }
                 }
             }
@@ -827,20 +819,16 @@ function getPort(actor_id, port_id)
                 console.log("getPort - Response: " + JSON.stringify(data));
                 var port = new portObject(port_id);
                 port.actor_id = data.actor_id;
-                port.direction = data.direction;
                 port.name = data.name;
                 port.connected = data.connected;
                 port.peer_id = data.node_id;
                 port.peers = []
-                if (port.direction == "out") {
-                    var index;
-                    for (index in data.peers) {
-                        port.peers[port.peers.length] = data.peers[index];
-                    }
+                port.direction = data.properties.direction;
+                var index = 0;
+                for (index in data.peers) {
+                    port.peers[port.peers.length] = data.peers[index];
                 }
-                if (port.direction == "in") {
-                    port.peer = data.peer;
-                }
+                port.routing = data.properties.routing;
                 ports[ports.length] = port;
 
                 addPortToGraph(port);
@@ -1014,7 +1002,7 @@ function setRuntimeConfig()
     peer.address.room = update_attribute_from_input(peer.address.room, $("#conf_address_room"));
     peer.owner.organization = update_attribute_from_input(peer.owner.organization, $("#conf_owner_organization"));
     peer.owner.organizationalUnit = update_attribute_from_input(peer.owner.organizationalUnit, $("#conf_owner_organizationalUnit"));
-    peer.owner.role = update_attribute_from_input(peer.owner.role, $("#conf_owner_role")); 
+    peer.owner.role = update_attribute_from_input(peer.owner.role, $("#conf_owner_role"));
     peer.owner.personOrGroup = update_attribute_from_input(peer.owner.personOrGroup, $("#conf_owner_personOrGroup"));
 
     var url;
@@ -1268,6 +1256,9 @@ function showPort()
 
         // Connected
         AddTableItem(tableRef, document.createTextNode("Connected"), document.createTextNode(port.connected));
+
+        // Routing
+        AddTableItem(tableRef, document.createTextNode("Routing"), document.createTextNode(port.routing));
 
         // Get fifo
         var btnFifo = document.createElement('input');
