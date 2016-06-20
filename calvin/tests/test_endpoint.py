@@ -131,18 +131,24 @@ class TestTunnelEndpoint(unittest.TestCase):
         assert self.tunnel_out.get_peer() == (self.node_id, self.port.id)
 
     def test_reply(self):
-        self.tunnel_out.port.queue.commit_one_read = Mock()
+        self.tunnel_out.port.queue.com_commit = Mock()
+        self.tunnel_out.port.queue.com_cancel = Mock()
+        self.tunnel.send = Mock()
 
         self.tunnel_out.port.write_token(Token(1))
         self.tunnel_out._send_one_token()
+        nbr = self.tunnel.send.call_args_list[-1][0][0]['sequencenbr']
 
         self.tunnel_out.reply(0, 'ACK')
-        self.tunnel_out.port.queue.commit_one_read.assert_called_with(self.port.id, True)
+        self.tunnel_out.port.queue.com_commit.assert_called_with(self.port.id, nbr)
         assert self.trigger_loop.called
 
-        self.tunnel_out.port.queue.commit_one_read.reset_mock()
-        self.tunnel_out.reply(1, 'NACK')
-        assert not self.tunnel_out.port.queue.commit_one_read.called
+        self.tunnel_out.port.write_token(Token(1))
+        self.tunnel_out._send_one_token()
+        nbr = self.tunnel.send.call_args_list[-1][0][0]['sequencenbr']
+
+        self.tunnel_out.reply(nbr, 'NACK')
+        assert self.tunnel_out.port.queue.com_cancel.called
 
     def test_nack_reply(self):
         self.tunnel_out.port.write_token(Token(1))

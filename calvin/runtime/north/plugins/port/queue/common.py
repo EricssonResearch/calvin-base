@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from calvin.utilities.utils import enum
+
+COMMIT_RESPONSE = enum('handled', 'unhandled', 'invalid')
+
 class QueueNone(object):
     def __init__(self):
         super(QueueNone, self).__init__()

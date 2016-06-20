@@ -15,7 +15,8 @@
 # limitations under the License.
 
 # Queues
-_MODULES = {'fanout_fifo': 'FanoutFIFO'}
+_MODULES = {'fanout_fifo': 'FanoutFIFO',
+            'scheduled_fifo': 'ScheduledFIFO'}
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -26,8 +27,12 @@ for module in _MODULES.keys():
     globals()[module] = module_obj
 
 def get(port, peer_port=None, peer_port_meta=None):
-    #TODO implement logic based on port and peer port properties
-    selected_queue = "fanout_fifo"
+    #TODO implement more logic based on port and peer port properties
+    if 'routing' in port.properties and ('round-robin' == port.properties['routing'] or
+                                         'random' == port.properties['routing']):
+        selected_queue = "scheduled_fifo"
+    else:
+        selected_queue = "fanout_fifo"
     try:
         class_ = getattr(globals()[selected_queue], _MODULES[selected_queue])
         return class_(port.properties)

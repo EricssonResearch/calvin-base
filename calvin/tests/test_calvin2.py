@@ -894,6 +894,39 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         d.destroy()
 
+    def test40(self):
+        # Verify round robin port
+        _log.analyze("TESTRUN", "+", {})
+        src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
+        snk1 = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
+        snk2 = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
+
+        request_handler.set_port_property(self.rt1, src, 'out', 'integer',
+                                            port_properties={'routing': 'round-robin', 'nbr_peers': 2})
+
+        request_handler.connect(self.rt1, snk1, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(self.rt1, snk2, 'token', self.rt1.id, src, 'integer')
+
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        time.sleep(1.0)
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        request_handler.delete_actor(self.rt1, src)
+        request_handler.delete_actor(self.rt1, snk1)
+        request_handler.delete_actor(self.rt1, snk2)
+
 
 
 @pytest.mark.essential

@@ -16,6 +16,9 @@
 
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty, QueueFull
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
 
 #
 # Local endpoints
@@ -34,17 +37,6 @@ class LocalInEndpoint(Endpoint):
 
     def attached(self):
         self.port.queue.add_reader(self.port.id)
-        self._fifo_mismatch_fix()
-
-    def _fifo_mismatch_fix(self):
-        # Fix once mismatch of positions: we have tokens in the peer fifo that are duplicates of tokens transferred
-        # (and ack never reached peer)
-        # Need to remove in peer fifo since might already been consumed
-        # FIXME this goes into queue internal attributes on the peer port!!!
-        while (self.peer_port.queue.tokens_available(1, self.port.id) and
-                self.port.queue.write_pos > self.peer_port.queue.read_pos[self.port.id]):
-            self.peer_port.queue.peek(self.port.id)
-            self.peer_port.queue.commit(self.port.id)
 
     def get_peer(self):
         return ('local', self.peer_port.id)
@@ -79,15 +71,15 @@ class LocalOutEndpoint(Endpoint):
         sent = False
         while True:
             try:
-                token = self.port.queue.peek(self.peer_id)
-                self.peer_port.queue.write(token)
-                self.port.queue.commit_one_read(self.peer_id)
+                nbr, token = self.port.queue.com_peek(self.peer_id)
+                self.peer_port.queue.com_write(token, nbr)
+                self.port.queue.com_commit(self.peer_id, nbr)
                 sent = True
             except QueueEmpty:
                 # Nothing to read
                 break
             except QueueFull:
                 # Could not write, rollback read
-                self.port.queue.commit_one_read(self.peer_id, False)
+                self.port.queue.com_cancel(self.peer_id, nbr)
                 break
         return sent

@@ -16,6 +16,7 @@
 
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
+from calvin.runtime.north.plugins.port.queue.common import COMMIT_RESPONSE, QueueEmpty, QueueFull
 import time
 from calvin.utilities.calvinlogger import get_logger
 
@@ -48,17 +49,20 @@ class TunnelInEndpoint(Endpoint):
         self.port.queue.add_reader(self.port.id)
 
     def recv_token(self, payload):
-        ok = False
-        # Drop any tokens that we can't write to fifo or is out of sequence
-        # FIXME uses internal attributes of queue
-        if self.port.queue.slots_available(1) and self.port.queue.write_pos == payload['sequencenbr']:
-            self.port.queue.write(Token.decode(payload['token']))
-            self.trigger_loop()
-            ok = True
-        elif self.port.queue.write_pos > payload['sequencenbr']:
-            # Other side resent a token we already have received (can happen after a reconnect if our previous ACK was
-            # lost), just ACK
-            ok = True
+        try:
+            r = self.port.queue.com_write(Token.decode(payload['token']), payload['sequencenbr'])
+            if r == COMMIT_RESPONSE.handled:
+                # New token, trigger loop
+                self.trigger_loop()
+            if r == COMMIT_RESPONSE.invalid:
+                ok = False
+            else:
+                # Either old or new token, ack it
+                ok = True
+            _log.debug("recv_token %s %s: %d %s => %s %d" % (self.port.id, self.port.name, payload['sequencenbr'], payload['token'], "True" if ok else "False", r))
+        except QueueFull:
+            # Queue full just send NACK
+            ok = False
         reply = {
             'cmd': 'TOKEN_REPLY',
             'port_id': payload['port_id'],
@@ -118,24 +122,22 @@ class TunnelOutEndpoint(Endpoint):
             pass
 
     def _reply_ack(self, sequencenbr, status):
-        # FIXME uses internal queue attributes
-        sequencenbr_sent = self.port.queue.tentative_read_pos[self.peer_id]
-        sequencenbr_acked = self.port.queue.read_pos[self.peer_id]
         # Back to full send speed directly
         self.bulk = True
         self.backoff = 0.0
-        if sequencenbr < sequencenbr_sent:
-            self.sequencenbrs_acked.append(sequencenbr)
-        while any(n == sequencenbr_acked for n in self.sequencenbrs_acked):
-            self.port.queue.commit_one_read(self.peer_id, True)
-            self.sequencenbrs_acked.remove(sequencenbr_acked)
         # Maybe someone can fill the queue again
         self.trigger_loop()
+        r = self.port.queue.com_commit(self.peer_id, sequencenbr)
+        if r == COMMIT_RESPONSE.handled or r == COMMIT_RESPONSE.invalid:
+            return
+        self.sequencenbrs_acked.append(sequencenbr)
+        self.sequencenbrs_acked.sort()
+        for n in self.sequencenbrs_acked[:]:
+            r = self.port.queue.com_commit(self.peer_id, n)
+            if r == COMMIT_RESPONSE.handled or r == COMMIT_RESPONSE.invalid:
+                self.sequencenbrs_acked.remove(n)
 
     def _reply_nack(self, sequencenbr, status):
-        # FIXME uses internal queue attributes
-        sequencenbr_sent = self.port.queue.tentative_read_pos[self.peer_id]
-        sequencenbr_acked = self.port.queue.read_pos[self.peer_id]
         # Make send only send one token at a time and have increasing time between them
         curr_time = time.time()
         if self.bulk:
@@ -146,16 +148,13 @@ class TunnelOutEndpoint(Endpoint):
         self.bulk = False
         self.backoff = min(1.0, 0.1 if self.backoff < 0.1 else self.backoff * 2.0)
 
-        if sequencenbr < sequencenbr_sent and sequencenbr >= sequencenbr_acked:
+        r = self.port.queue.com_cancel(self.peer_id, sequencenbr)
+        if r == COMMIT_RESPONSE.handled:
             # Filter out ACK for later seq nbrs, should not happen but precaution
             self.sequencenbrs_acked = [n for n in self.sequencenbrs_acked if n < sequencenbr]
-            # Rollback queue to the NACKed token
-            while(self.port.queue.tentative_read_pos[self.peer_id] > sequencenbr):
-                self.port.queue.commit_one_read(self.peer_id, False)
 
     def _send_one_token(self):
-        token = self.port.queue.peek(self.peer_id)
-        sequencenbr_sent = self.port.queue.tentative_read_pos[self.peer_id] - 1
+        sequencenbr_sent, token = self.port.queue.com_peek(self.peer_id)
         _log.debug("Send on port  %s/%s/%s [%i] %s" % (self.port.owner.name,
                                                        self.peer_id,
                                                        self.port.name,
@@ -181,7 +180,7 @@ class TunnelOutEndpoint(Endpoint):
                 sent = True
                 self._send_one_token()
         elif (self.port.queue.tokens_available(1, self.peer_id) and
-              self.port.queue.tentative_read_pos[self.peer_id] == self.port.queue.read_pos[self.peer_id] and
+              self.port.queue.com_is_committed(self.peer_id) and
               time.time() >= self.time_cont):
             # Send only one since other side sent NACK likely due to their FIFO is full
             # Something to read and last (N)ACK recived

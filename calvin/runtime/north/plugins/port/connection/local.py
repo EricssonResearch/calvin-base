@@ -68,9 +68,6 @@ class LocalConnection(BaseConnection):
                 self.node.monitor.unregister_endpoint(invalid_endpoint)
             invalid_endpoint.destroy()
 
-        # Must attach in endpoint after out endpoint since starts with
-        # removing tokens transfered but with unhandled ACKs by the out
-        # endpoint
         invalid_endpoint = inport.attach_endpoint(ein)
         if invalid_endpoint:
             if invalid_endpoint.use_monitor():
