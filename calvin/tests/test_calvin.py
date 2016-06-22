@@ -2502,3 +2502,41 @@ class TestConstantifyOnPort(CalvinTestBase):
         self.assert_lists_equal(expected2, actual2, min_length=10)
 
         d.destroy()
+
+
+@pytest.mark.essential
+class TestPortProperties(CalvinTestBase):
+
+    def testRoundRobin(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="round-robin")
+            src.integer > snk1.token
+            src.integer > snk2.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testRoundRobin")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testRoundRobin:snk1']
+        snk2 = d.actor_map['testRoundRobin:snk2']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        d.destroy()

@@ -375,6 +375,13 @@ class Flatten(object):
         else:
             node.actor = self.stack[-1]
 
+    @visitor.when(ast.PortProperty)
+    def visit(self, node):
+        if node.actor:
+            node.actor = self.stack[-1] + ':' + node.actor
+        else:
+            node.actor = self.stack[-1]
+
     @visitor.when(ast.Block)
     def visit(self, node):
         # Recurse into blocks first
@@ -462,6 +469,16 @@ class AppInfo(object):
         value = "{}.{}".format(node.inport.actor, node.inport.port)
 
         self.app_info['connections'].setdefault(key, []).append(value)
+
+
+    @visitor.when(ast.PortProperty)
+    def visit(self, node):
+        value = {}
+        value['port'] = node.port
+        value['direction'] = node.direction
+        value['properties'] = _arguments(node, self.issue_tracker)
+
+        self.app_info['port_properties'].setdefault(node.actor, []).append(value)
 
 
 class ReplaceConstants(object):
@@ -676,6 +693,7 @@ class CodeGen(object):
             'name':script_name,
             'actors': {},
             'connections': {},
+            'port_properties': {},
             'valid': True
         }
         # FIXME: Why is this needed here?

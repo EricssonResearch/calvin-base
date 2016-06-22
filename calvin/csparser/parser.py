@@ -121,6 +121,7 @@ class CalvinParser(object):
 
     def p_statement(self, p):
         """statement : assignment
+                     | port_property
                      | link"""
         p[0] = p[1]
 
@@ -128,6 +129,20 @@ class CalvinParser(object):
     def p_assignment(self, p):
         """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
         p[0] = ast.Assignment(ident=p[1], actor_type=p[3], args=p[5], debug_info=self.debug_info(p, 1))
+
+
+    def p_opt_direction(self, p):
+        """opt_direction :
+                       | LBRACK IDENTIFIER RBRACK"""
+        if len(p) == 1:
+            p[0] = None
+        else:
+            p[0] = p[2]
+
+
+    def p_port_property(self, p):
+        """port_property : IDENTIFIER DOT IDENTIFIER opt_direction LPAREN named_args RPAREN"""
+        p[0] = ast.PortProperty(actor=p[1], port=p[3], direction=p[4], args=p[6], debug_info=self.debug_info(p, 1))
 
 
     def p_link(self, p):
@@ -413,6 +428,9 @@ print : io.Print()
 src.out > print.token
 src.out > delay.token
 delay.token > src.in
+
+src.out(routing="round-robin")
+delay.token[in](routing="round-robin")
 '''
     else:
         script = sys.argv[1]

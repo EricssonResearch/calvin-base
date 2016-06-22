@@ -144,6 +144,15 @@ class Assignment(Node):
         else:
             return "{} {}".format(self.__class__.__name__, self.metadata)
 
+class PortProperty(Node):
+    """docstring for PortPropertyNode"""
+    def __init__(self, **kwargs):
+        super(PortProperty, self).__init__(**kwargs)
+        self.actor = kwargs.get('actor')
+        self.port = kwargs.get('port')
+        self.direction = kwargs.get('direction')
+        self.add_children(kwargs.get('args', {}))
+
 class Link(Node):
     """docstring for LinkNode"""
     def __init__(self, **kwargs):
@@ -286,6 +295,7 @@ def node_decoder(o):
         'Id':Id,
         'Value':Value,
         'Assignment':Assignment,
+        'PortProperty':PortProperty,
         'IdValuePair':IdValuePair,
         'NamedArg':NamedArg,
         'Link':Link,

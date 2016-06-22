@@ -45,7 +45,8 @@ class ActorManager(object):
         raise Exception("Actor '{}' not found".format(actor_id))
 
     def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None,
-            signature=None, actor_def=None, security=None, access_decision=None, shadow_actor=False):
+            signature=None, actor_def=None, security=None, access_decision=None, shadow_actor=False,
+            port_properties=None):
         """
         Instantiate an actor of type 'actor_type'. Parameters are passed in 'args',
         'name' is an optional parameter in 'args', specifying a human readable name.
@@ -65,7 +66,7 @@ class ActorManager(object):
             if state:
                 a = self._new_from_state(actor_type, state, actor_def, security, access_decision, shadow_actor)
             else:
-                a = self._new(actor_type, args, actor_def, security, access_decision, shadow_actor)
+                a = self._new(actor_type, args, actor_def, security, access_decision, shadow_actor, port_properties)
         except Exception as e:
             _log.exception("Actor creation failed")
             raise(e)
@@ -120,7 +121,8 @@ class ActorManager(object):
             a.set_authorization_checks(access_decision[1])
         return a
 
-    def _new(self, actor_type, args, actor_def=None, security=None, access_decision=None, shadow_actor=False):
+    def _new(self, actor_type, args, actor_def=None, security=None, access_decision=None, shadow_actor=False,
+             port_properties=None):
         """Return an initialized actor in PENDING state, raises an exception on failure."""
         try:
             a = self._new_actor(actor_type, actor_def, security=security,
@@ -129,6 +131,7 @@ class ActorManager(object):
             human_readable_name = args.pop('name', '')
             a.name = human_readable_name
             self.node.pm.add_ports_of_actor(a)
+            self.node.pm.set_script_port_property(a.id, port_properties)
             a.init(**args)
             a.setup_complete()
         except Exception as e:

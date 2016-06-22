@@ -669,10 +669,14 @@ class Deployer(object):
           - 'access_decision' is a boolean indicating if access is permitted
         """
         try:
+            if 'port_properties' in self.deployable:
+                port_properties = self.deployable['port_properties'].get(actor_name, None)
+            else:
+                port_properties = None
             info['args']['name'] = actor_name
             actor_id = self.node.am.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'], 
                                         actor_def=actor_def, security=self.sec, access_decision=access_decision, 
-                                        shadow_actor='shadow_actor' in info)
+                                        shadow_actor='shadow_actor' in info, port_properties=port_properties)
             if not actor_id:
                 raise Exception("Could not instantiate actor %s" % actor_name)
             deploy_req = self.get_req(actor_name)
@@ -681,6 +685,7 @@ class Deployer(object):
             self.actor_map[actor_name] = actor_id
             self.node.app_manager.add(self.app_id, actor_id)
         except Exception as e:
+            _log.exception("INSTANCIATE FAILED")
             # FIXME: what should happen here?
             raise e
         finally:
@@ -848,8 +853,16 @@ class Deployer(object):
             if len(dst_list) > 1:
                 src_name, src_port = src.split('.')
                 # TODO get routing method from actor or calvinscript, now set only existing option
+                current_properties = self.node.pm.get_port_properties(
+                                        actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port)
+                kwargs = {'nbr_peers': len(dst_list)}
+                if 'routing' in current_properties and current_properties['routing'] != 'default':
+                    kwargs['routing'] = current_properties['routing']
+                else:
+                    kwargs['routing'] = 'fanout'
+                _log.debug("CURRENT PROPERTIES\n%s\n%s" % (current_properties, kwargs))
                 self.node.pm.set_port_properties(actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port,
-                                                 routing='fanout', nbr_peers=len(dst_list))
+                                                 **kwargs)
 
         for src, dst_list in self.deployable['connections'].iteritems():
             src_actor, src_port = src.split('.')

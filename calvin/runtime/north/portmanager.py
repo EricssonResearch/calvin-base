@@ -37,6 +37,7 @@ class PortManager(object):
 
     def _set_port_property(self, port, port_property, value):
         if isinstance(port_property, basestring):
+            # TODO verify property and value are allowed and correct
             port.properties[port_property] = value
             return response.CalvinResponse(True)
         return response.CalvinResponse(response.BAD_REQUEST)
@@ -47,6 +48,24 @@ class PortManager(object):
         port = self._get_local_port(actor_id=actor_id, port_name=port_name, port_dir=port_dir, port_id=port_id)
         return self._set_port_property(port, port_property, value)
 
+    def set_script_port_property(self, actor_id, port_property_list):
+        _log.analyze(self.node.id, "+", port_property_list)
+        success = []
+        if port_property_list is None:
+            return response.CalvinResponse(True)
+        for p in port_property_list:
+            if p['direction'] is None:
+                p['direction'] = "unknown"
+            try:
+                port = self._get_local_port(actor_id=actor_id, port_name=p['port'], port_dir=p['direction'],
+                                            port_id=None)
+                for port_property, value in p['properties'].items():
+                    success.append(self._set_port_property(port, port_property, value))
+            except:
+                success.append(False)
+        ok = all(success)
+        return response.CalvinResponse(True) if ok else response.CalvinResponse(response.BAD_REQUEST)
+
     def set_port_properties(self, port_id=None, actor_id=None, port_dir=None, port_name=None,
                             **port_properties):
         _log.analyze(self.node.id, "+", port_properties)
@@ -56,6 +75,10 @@ class PortManager(object):
             success.append(self._set_port_property(port, port_property, value))
         ok = all(success)
         return response.CalvinResponse(True) if ok else response.CalvinResponse(response.BAD_REQUEST)
+
+    def get_port_properties(self, port_id=None, actor_id=None, port_dir=None, port_name=None):
+        port = self._get_local_port(actor_id=actor_id, port_name=port_name, port_dir=port_dir, port_id=port_id)
+        return port.properties
 
     def connection_request(self, payload):
         """ A request from a peer to connect a port"""
@@ -299,7 +322,7 @@ class PortManager(object):
         """ Return a port if it is local otherwise raise exception """
         if port_id and port_id in self.ports:
             return self.ports[port_id]
-        if port_name and actor_id and port_dir:
+        if port_name and actor_id and port_dir in ['in', 'out']:
             for port in self.ports.itervalues():
                 if port.name == port_name and port.owner and port.owner.id == actor_id and port.direction == port_dir:
                     return port
@@ -316,6 +339,10 @@ class PortManager(object):
                                 'port_dir': port_dir, 'port_id': port.id if port else None})
                 if port:
                     self.ports[port.id] = port
+                    return port
+        elif port_name and actor_id and port_dir == 'unknown':
+            for port in self.ports.itervalues():
+                if port.name == port_name and port.owner and port.owner.id == actor_id:
                     return port
         raise Exception("Port '%s' not found locally" % (port_id if port_id else str(actor_id) +
                                                         "/" + str(port_name) + ":" + str(port_dir)))
