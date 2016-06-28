@@ -133,7 +133,7 @@ class CalvinConfig(object):
             _option = option.lower()
             return self.config[_section][_option]
         except KeyError:
-            _log.info("Option {}.{} not set".format(_section, _option ))
+            _log.debug("Option {}.{} not exist".format(_section, _option ))
         except Exception as e:
             _log.error("Error reading option {}.{}: {}".format(_section, _option, e))
             return None
@@ -152,7 +152,7 @@ class CalvinConfig(object):
             raise Exception("Can't append, {}:{} is not a list".format(section, option))
         if type(value) is not list:
             raise Exception("Can't append, value is not a list")
-        
+
         _section[_option] = value + [ v for v in _section[_option] if v not in value ]
 
     def set_config(self, config):
