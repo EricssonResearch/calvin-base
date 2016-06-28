@@ -39,7 +39,7 @@ class Authentication(object):
         self.node = node
         try:
             if _sec_conf['authentication']['procedure'] == "local":
-                self.adp = AuthenticationDecisionPoint(self.node, _sec_conf['authentication'] if _sec_conf else None)
+                self.adp = AuthenticationDecisionPoint(self.node, _sec_conf['authentication'])
                 self.arp = FileAuthenticationRetrievalPoint(_sec_conf['authentication']['identity_provider_path'])
                 self.auth_server_id = self.node.id
             else:
