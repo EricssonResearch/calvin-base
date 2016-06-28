@@ -258,7 +258,7 @@ class ActorTester(object):
                 self.illegal_actors[a] = "Unknown actor - probably parsing issues"
 
     def load_actor(self, path):
-        actorclass = self.store.load_from_path(path)
+        actorclass, _ = self.store.load_from_path(path)
         if actorclass:
             self.instantiate_actor(actorclass, path)
         else:
