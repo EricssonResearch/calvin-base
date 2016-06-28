@@ -339,14 +339,20 @@ class CalvinNetwork(object):
         # TODO: if connection fails, retry with other transport schemes
         self.join([self.get_supported_uri(value['uri'])], callback, [key])
 
-    def get_supported_uri(self, uris):
+    def get_supported_uri(self, uri_or_uris):
         """ Match configured transport interfaces with uris and return first match.
             returns: First supported uri, None if no match
         """
+        if not isinstance(uri_or_uris, list):
+            uris = [uri_or_uris]
+        else :
+            uris = uri_or_uris
+            
         transports = _conf.get(None, 'transports')
+            
         for transport in transports:
             for uri in uris:
-                if transport in uri:
+                if uri.startswith(transport):
                     return uri
         return None
 
