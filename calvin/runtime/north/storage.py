@@ -65,9 +65,8 @@ class Storage(object):
         if self.localstore or self.localstore_sets:
             if delay is None:
                 delay = self.flush_timeout
-            if self.flush_delayedcall is not None:
-                self.flush_delayedcall.cancel()
-            self.flush_delayedcall = async.DelayedCall(delay, self.flush_localdata)
+            if self.flush_delayedcall is None:
+                self.flush_delayedcall = async.DelayedCall(delay, self.flush_localdata)
 
     def flush_localdata(self):
         """ Write data in localstore to storage
@@ -79,7 +78,7 @@ class Storage(object):
         for key in self.localstore:
             _log.debug("Flush key %s: %s" % (key, self.localstore[key]))
             self.storage.set(key=key, value=self.localstore[key],
-                             cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None))
+                             cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
         for key, value in self.localstore_sets.iteritems():
             self._flush_append(key, value['+'])
@@ -92,7 +91,7 @@ class Storage(object):
         _log.debug("Flush append on key %s: %s" % (key, list(value)))
         coded_value = self.coder.encode(list(value))
         self.storage.append(key=key, value=coded_value,
-                            cb=CalvinCB(func=self.append_cb, org_key=None, org_value=None, org_cb=None))
+                            cb=CalvinCB(func=self.append_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
     def _flush_remove(self, key, value):
         if not value:
@@ -101,7 +100,7 @@ class Storage(object):
         _log.debug("Flush remove on key %s: %s" % (key, list(value)))
         coded_value = self.coder.encode(list(value))
         self.storage.remove(key=key, value=coded_value,
-                            cb=CalvinCB(func=self.remove_cb, org_key=None, org_value=None, org_cb=None))
+                            cb=CalvinCB(func=self.remove_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
     def started_cb(self, *args, **kwargs):
         """ Called when storage has started, flushes localstore
@@ -159,24 +158,25 @@ class Storage(object):
 
     ### Storage operations ###
 
-    def set_cb(self, key, value, org_key, org_value, org_cb):
+    def set_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ set callback, on error store in localstore and retry after flush_timeout
         """
         if value:
-            if org_cb:
-                org_cb(key=key, value=True)
             if key in self.localstore:
                 del self.localstore[key]
             self.reset_flush_timeout()
         else:
-            _log.error("Failed to store %s" % key)
+            if not silent:
+                _log.error("Failed to store %s" % key)
             if org_key and org_value:
                 if not org_value is None:
                     self.localstore[key] = org_value
-            if org_cb:
-                org_cb(key=key, value=False)
 
+        if org_cb:
+            org_cb(key=key, value=bool(value))
+        
         self.trigger_flush()
+
 
     def set(self, prefix, key, value, cb):
         """ Set registry key: prefix+key to be single value: value
@@ -376,12 +376,10 @@ class Storage(object):
         _log.analyze(self.node.id, "+ END", {'key': key, 'iter': str(it)})
         return it
 
-    def append_cb(self, key, value, org_key, org_value, org_cb):
+    def append_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ append callback, on error retry after flush_timeout
         """
         if value:
-            if org_cb:
-                org_cb(key=org_key, value=True)
             if key in self.localstore_sets:
                 if self.localstore_sets[key]['-']:
                     self.localstore_sets[key]['+'] = set([])
@@ -389,10 +387,11 @@ class Storage(object):
                     del self.localstore_sets[key]
                 self.reset_flush_timeout()
         else:
-            _log.error("Failed to update %s" % key)
-            if org_cb:
-                org_cb(key=org_key, value=False)
-
+            if not silent:
+                _log.warning("Failed to update %s" % key)
+        
+        if org_cb:
+            org_cb(key=org_key, value=bool(value))
         self.trigger_flush()
 
     def append(self, prefix, key, value, cb):
@@ -423,12 +422,10 @@ class Storage(object):
             if cb:
                 cb(key=key, value=True)
 
-    def remove_cb(self, key, value, org_key, org_value, org_cb):
+    def remove_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ remove callback, on error retry after flush_timeout
         """
-        if value == True:
-            if org_cb:
-                org_cb(key=org_key, value=True)
+        if value:
             if key in self.localstore_sets:
                 if self.localstore_sets[key]['+']:
                     self.localstore_sets[key]['-'] = set([])
@@ -436,10 +433,11 @@ class Storage(object):
                     del self.localstore_sets[key]
             self.reset_flush_timeout()
         else:
-            _log.error("Failed to update %s" % key)
-            if org_cb:
-                org_cb(key=org_key, value=False)
-
+            if not silent:
+                _log.warning("Failed to update %s" % key)
+        
+        if org_cb:
+            org_cb(key=org_key, value=bool(value))
         self.trigger_flush()
 
     def remove(self, prefix, key, value, cb):
