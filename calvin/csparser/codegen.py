@@ -758,8 +758,8 @@ def query(root, kind=None, attributes=None, maxdepth=1024):
     # print "QUERY", kind.__name__, attributes, finder.matches
     return finder.matches
 
-def generate_app_info(ast, name='anonymous', verify=True):
-    cg = CodeGen(ast, name, verify=verify)
+def generate_app_info(ast_root, name='anonymous', verify=True):
+    cg = CodeGen(ast_root, name, verify=verify)
     cg.run()
     return cg.app_info, cg.issues
 
