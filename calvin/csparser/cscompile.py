@@ -72,15 +72,15 @@ def compile_script(source_text, filename, credentials=None, verify=True, node=No
     # Actual code for compile_script
     #
 
-    if credentials:
-        content = Security.verify_signature_get_files(filename, skip_file=True)
-        # content is ALWAYS a dict if skip_file is True
-        content['file'] = source_text
-    else:
-        content = None
 
     # FIXME: if node is None we bypass security even if enabled. Is that the intention?
     if node is not None and security_enabled():
+        if credentials:
+            content = Security.verify_signature_get_files(filename, skip_file=True)
+            # content is ALWAYS a dict if skip_file is True
+            content['file'] = source_text
+        else:
+            content = None
         # FIXME: If cb is None, we will return from this method with None instead of a tuple, failing silently
         sec = Security(node)
         sec.authenticate_subject(
