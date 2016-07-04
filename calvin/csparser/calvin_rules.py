@@ -16,6 +16,9 @@
 
 import ply.lex as lex
 
+# Make sure we have an initial value for zerocol
+lex.Lexer.zerocol = 0
+
 keywords = {'component': 'COMPONENT', 'define': 'DEFINE', 'voidport': 'VOID'}
 
 tokens = [
