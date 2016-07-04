@@ -20,7 +20,8 @@ import time
 import pytest
 import multiprocessing
 
-from calvin.Tools import cscompiler as compiler
+from calvin.csparser import cscompile as compiler
+from calvin.Tools import cscompiler as compile_tool
 from calvin.Tools import deployer
 from calvin.utilities import calvinlogger
 from calvin.utilities.nodecontrol import dispatch_node
@@ -294,7 +295,7 @@ class TestScripts(CalvinTestBase):
           snk : io.StandardOut(store_tokens=1, quiet=1)
           src.integer > snk.token
           """
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(1)
@@ -310,7 +311,7 @@ class TestScripts(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         scriptname = 'test1'
         scriptfile = absolute_filename("scripts/%s.calvin" % (scriptname, ))
-        app_info, errors, warnings = compiler.compile_file(scriptfile)
+        app_info, errors, warnings = compile_tool.compile_file(scriptfile)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(1)
@@ -338,7 +339,7 @@ class TestMetering(CalvinTestBase):
         r = request_handler.register_metering(self.rt1)
         user_id = r['user_id']
         metering_timeout = r['timeout']
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.5)
@@ -373,7 +374,7 @@ class TestMetering(CalvinTestBase):
         # Register as same user to keep it simple
         r2 = request_handler.register_metering(self.rt2, user_id)
         # deploy app
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         # migrate sink back and forth
@@ -423,7 +424,7 @@ class TestMetering(CalvinTestBase):
         # Register as same user to keep it simple
         r2 = request_handler.register_metering(self.rt2, user_id)
         # deploy app
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         # migrate sink back and forth
@@ -472,7 +473,7 @@ class TestMetering(CalvinTestBase):
           """
 
         # deploy app
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         # migrate sink back and forth
@@ -516,7 +517,7 @@ class TestStateMigration(CalvinTestBase):
           src.integer > sum.integer
           sum.integer > snk.token
           """
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(1)
@@ -547,7 +548,7 @@ class TestAppLifeCycle(CalvinTestBase):
           src.integer > sum.integer
           sum.integer > snk.token
           """
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(1)
@@ -602,7 +603,7 @@ class TestAppLifeCycle(CalvinTestBase):
         from twisted.python import log
         log.startLogging(sys.stdout)
 
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(.2)
@@ -675,7 +676,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
             src.integer > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
@@ -793,7 +794,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
             src.integer > ity.token
             ity.token > snk.token
           """
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.4)
@@ -841,7 +842,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
             src.integer > snk1.token
             src.integer > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "test31")
+        app_info, errors, warnings = compiler.compile_script(script, "test31")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.1)
@@ -878,7 +879,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
             foo.a > snk1.token
             foo.b > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "test32")
+        app_info, errors, warnings = compiler.compile_script(script, "test32")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.1)
@@ -945,7 +946,7 @@ class TestNullPorts(CalvinTestBase):
             src2.void > join.token_2
             join.token > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testVoidActor")
+        app_info, errors, warnings = compiler.compile_script(script, "testVoidActor")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -970,7 +971,7 @@ class TestNullPorts(CalvinTestBase):
             src.integer > term.void
             src.integer > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testTerminatorActor")
+        app_info, errors, warnings = compiler.compile_script(script, "testTerminatorActor")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -999,7 +1000,7 @@ class TestCompare(CalvinTestBase):
             const.token > pred.b
             pred.result > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testBadOp")
+        app_info, errors, warnings = compiler.compile_script(script, "testBadOp")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1025,7 +1026,7 @@ class TestCompare(CalvinTestBase):
             const.token > pred.b
             pred.result > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testEqual")
+        app_info, errors, warnings = compiler.compile_script(script, "testEqual")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1051,7 +1052,7 @@ class TestCompare(CalvinTestBase):
             const.token > pred.b
             pred.result > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testGreaterThanOrEqual")
+        app_info, errors, warnings = compiler.compile_script(script, "testGreaterThanOrEqual")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1083,7 +1084,7 @@ class TestSelect(CalvinTestBase):
             route.case_true  > snk.token
             route.case_false > term.void
         """
-        app_info, errors, warnings = compiler.compile(script, "testTrue")
+        app_info, errors, warnings = compiler.compile_script(script, "testTrue")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1111,7 +1112,7 @@ class TestSelect(CalvinTestBase):
             route.case_true  > term.void
             route.case_false > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testFalse")
+        app_info, errors, warnings = compiler.compile_script(script, "testFalse")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1139,7 +1140,7 @@ class TestSelect(CalvinTestBase):
             route.case_true  > term.void
             route.case_false > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testBadSelect")
+        app_info, errors, warnings = compiler.compile_script(script, "testBadSelect")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1176,7 +1177,7 @@ class TestDeselect(CalvinTestBase):
             comp.result > ds.select
             ds.data > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testDeselectTrue")
+        app_info, errors, warnings = compiler.compile_script(script, "testDeselectTrue")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1209,7 +1210,7 @@ class TestDeselect(CalvinTestBase):
             comp.result > ds.select
             ds.data > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testDeselectFalse")
+        app_info, errors, warnings = compiler.compile_script(script, "testDeselectFalse")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1238,7 +1239,7 @@ class TestDeselect(CalvinTestBase):
             const_5.out > ds.select
             ds.data > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testDeselectBadSelect")
+        app_info, errors, warnings = compiler.compile_script(script, "testDeselectBadSelect")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1269,7 +1270,7 @@ class TestLineJoin(CalvinTestBase):
             src.out   > join.line
             join.text > snk.token
         """ % (datafile, )
-        app_info, errors, warnings = compiler.compile(script, "testBasicJoin")
+        app_info, errors, warnings = compiler.compile_script(script, "testBasicJoin")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1298,7 +1299,7 @@ class TestLineJoin(CalvinTestBase):
             src.out   > join.line
             join.text > snk.token
         """ % (datafile, )
-        app_info, errors, warnings = compiler.compile(script, "testCustomTriggerJoin")
+        app_info, errors, warnings = compiler.compile_script(script, "testCustomTriggerJoin")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.5)
@@ -1327,7 +1328,7 @@ class TestLineJoin(CalvinTestBase):
             src.out   > join.line
             join.text > snk.token
         """ % (datafile, )
-        app_info, errors, warnings = compiler.compile(script, "testCustomTriggerJoin")
+        app_info, errors, warnings = compiler.compile_script(script, "testCustomTriggerJoin")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.5)
@@ -1359,7 +1360,7 @@ class TestRegex(CalvinTestBase):
             regex.match    > snk.token
             regex.no_match > term.void
         """
-        app_info, errors, warnings = compiler.compile(script, "testRegexMatch")
+        app_info, errors, warnings = compiler.compile_script(script, "testRegexMatch")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1386,7 +1387,7 @@ class TestRegex(CalvinTestBase):
             regex.no_match > snk.token
             regex.match    > term.void
         """
-        app_info, errors, warnings = compiler.compile(script, "testRegexNoMatch")
+        app_info, errors, warnings = compiler.compile_script(script, "testRegexNoMatch")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1412,7 +1413,7 @@ class TestRegex(CalvinTestBase):
             regex.match    > snk.token
             regex.no_match > term.void
         """
-        app_info, errors, warnings = compiler.compile(script, "testRegexCapture")
+        app_info, errors, warnings = compiler.compile_script(script, "testRegexCapture")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1438,7 +1439,7 @@ class TestRegex(CalvinTestBase):
             regex.match    > snk.token
             regex.no_match > term.void
         """
-        app_info, errors, warnings = compiler.compile(script, "testRegexMultiCapture")
+        app_info, errors, warnings = compiler.compile_script(script, "testRegexMultiCapture")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1465,7 +1466,7 @@ class TestRegex(CalvinTestBase):
             regex.no_match > snk.token
             regex.match    > term.void
         """
-        app_info, errors, warnings = compiler.compile(script, "testRegexCaptureNoMatch")
+        app_info, errors, warnings = compiler.compile_script(script, "testRegexCaptureNoMatch")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1490,7 +1491,7 @@ class TestConstantAsArguments(CalvinTestBase):
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             src.token > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testConstant")
+        app_info, errors, warnings = compiler.compile_script(script, "testConstant")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1513,7 +1514,7 @@ class TestConstantAsArguments(CalvinTestBase):
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             src.token > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testConstantRecursive")
+        app_info, errors, warnings = compiler.compile_script(script, "testConstantRecursive")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1537,7 +1538,7 @@ class TestConstantOnPort(CalvinTestBase):
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             42 > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testLiteralOnPort")
+        app_info, errors, warnings = compiler.compile_script(script, "testLiteralOnPort")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1558,7 +1559,7 @@ class TestConstantOnPort(CalvinTestBase):
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             FOO > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testConstantOnPort")
+        app_info, errors, warnings = compiler.compile_script(script, "testConstantOnPort")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1580,7 +1581,7 @@ class TestConstantOnPort(CalvinTestBase):
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             FOO > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testConstantRecursiveOnPort")
+        app_info, errors, warnings = compiler.compile_script(script, "testConstantRecursiveOnPort")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1610,7 +1611,7 @@ class TestConstantAndComponents(CalvinTestBase):
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             src.out > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testLiteralOnCompPort")
+        app_info, errors, warnings = compiler.compile_script(script, "testLiteralOnCompPort")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1637,7 +1638,7 @@ class TestConstantAndComponents(CalvinTestBase):
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             src.out > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testConstantOnCompPort")
+        app_info, errors, warnings = compiler.compile_script(script, "testConstantOnCompPort")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1664,7 +1665,7 @@ class TestConstantAndComponents(CalvinTestBase):
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             src.out > snk.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testStringConstantOnCompPort")
+        app_info, errors, warnings = compiler.compile_script(script, "testStringConstantOnCompPort")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -1693,7 +1694,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = compiler.compile(script, "testComponentArgument")
+        app_info, errors, warnings = compiler.compile_script(script, "testComponentArgument")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(.1)
@@ -1719,7 +1720,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgument")
+        app_info, errors, warnings = compiler.compile_script(script, "testComponentConstantArgument")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(.1)
@@ -1747,7 +1748,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgumentDirect")
+        app_info, errors, warnings = compiler.compile_script(script, "testComponentConstantArgumentDirect")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(.1)
@@ -1774,7 +1775,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = compiler.compile(script, "testComponentArgumentAsImplicitActor")
+        app_info, errors, warnings = compiler.compile_script(script, "testComponentArgumentAsImplicitActor")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(.1)
@@ -1802,7 +1803,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = compiler.compile(script, "testComponentConstantArgumentAsImplicitActor")
+        app_info, errors, warnings = compiler.compile_script(script, "testComponentConstantArgumentAsImplicitActor")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(.1)

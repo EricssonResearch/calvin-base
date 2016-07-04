@@ -18,7 +18,7 @@ import re
 import time
 import json
 from random import randint
-from calvin.Tools import cscompiler as compiler
+from calvin.csparser import cscompile as compiler
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north import metering
 from calvin.utilities.calvinlogger import get_logger
@@ -1263,7 +1263,7 @@ class CalvinControl(object):
                         kwargs['content'] = {
                             'file': data["script"],
                             'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
-                compiler.compile(data["script"], filename=data["name"], node=self.node,
+                compiler.compile_script(data["script"], filename=data["name"], node=self.node,
                                  verify=(data["check"] if "check" in data else True),
                                  cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
                                  **kwargs)

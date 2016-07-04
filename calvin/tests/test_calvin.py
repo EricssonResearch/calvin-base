@@ -20,7 +20,7 @@ import time
 import pytest
 import multiprocessing
 
-from calvin.Tools import cscompiler as compiler
+from calvin.csparser import cscompile as compiler
 from calvin.Tools import deployer
 from calvin.utilities import calvinconfig
 from calvin.utilities import calvinlogger
@@ -824,7 +824,7 @@ class TestCalvinScript(CalvinTestBase):
       snk : io.StandardOut(store_tokens=1)
       src.integer > snk.token
     """
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(rt, app_info)
         d.deploy() # ignoring app_id here
         time.sleep(0.5)
@@ -848,7 +848,7 @@ class TestCalvinScript(CalvinTestBase):
       snk : io.StandardOut(store_tokens=1)
       src.integer > snk.token
     """
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(rt, app_info)
         app_id = d.deploy()
         time.sleep(0.2)
@@ -877,7 +877,7 @@ class TestCalvinScript(CalvinTestBase):
       snk : io.StandardOut(store_tokens=1)
       src.integer > snk.token
     """
-        app_info, errors, warnings = compiler.compile(script, "simple")
+        app_info, errors, warnings = compiler.compile_script(script, "simple")
         d = deployer.Deployer(rt, app_info)
         app_id = d.deploy()
         time.sleep(1.0)
