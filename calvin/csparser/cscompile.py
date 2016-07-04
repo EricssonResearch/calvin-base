@@ -19,6 +19,7 @@ def compile_script(source_text, filename, credentials=None, verify=True, node=No
     'cb' is a CalvinCB callback
 
     N.B. If callback 'cb' is given, this method calls cb(deployable, errors, warnings) and returns None
+    N.B. If callback 'cb' is given, and method runs to completion, cb is called with additional parameter 'security' (?)
     """
 
     def _exit_with_error(err, callback):
@@ -72,7 +73,6 @@ def compile_script(source_text, filename, credentials=None, verify=True, node=No
     # Actual code for compile_script
     #
 
-
     # FIXME: if node is None we bypass security even if enabled. Is that the intention?
     if node is not None and security_enabled():
         if credentials:
@@ -92,7 +92,9 @@ def compile_script(source_text, filename, credentials=None, verify=True, node=No
     #
     # We get here if node is None, or security is disabled
     #
-    if cb:
-        _compile_cont2(source_text, filename, verify, access_decision=True, security=None, org_cb=cb)
-    else:
+    if not cb:
         return _compile_cont2(source_text, filename, verify, access_decision=True, security=None, org_cb=None)
+
+    # Will call cb with security=None as fourth and final argument in addition to deployable, errors, and warnings
+    _compile_cont2(source_text, filename, verify, access_decision=True, security=None, org_cb=cb)
+
