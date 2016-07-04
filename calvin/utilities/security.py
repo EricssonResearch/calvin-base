@@ -65,7 +65,7 @@ def security_modules_check():
             return False
     return True
 
-def security_needed_check():
+def security_enabled():
     if _conf.get("security","security_conf"):
         # Want security
         return True
@@ -127,7 +127,7 @@ class Security(object):
         """Authenticate subject using the authentication procedure specified in config."""
         _log.debug("Security: authenticate_subject")
         request = {}
-        if not security_needed_check() or not credentials:
+        if not security_enabled() or not credentials:
             _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
             return True
         # Only attempt authentication if credentials for the domain are supplied.

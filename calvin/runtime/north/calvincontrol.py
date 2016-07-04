@@ -27,7 +27,7 @@ from calvin.utilities.attribute_resolver import format_index_string
 from calvin.runtime.south.plugins.async import server_connection, async
 from urlparse import urlparse
 from calvin.requests import calvinresponse
-from calvin.utilities.security import security_needed_check
+from calvin.utilities.security import security_enabled
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
 
@@ -372,7 +372,7 @@ control_api_doc += \
          "group": <group>,
          ...
         }
-    
+
     The matching rules are implemented as plug-ins, intended to be extended.
     The type "+" is "and"-ing rules together (actually the intersection of all
     possible nodes returned by the rules.) The type "-" is explicitly removing
@@ -611,7 +611,7 @@ control_api_doc += \
     GET /authentication/users_db
     Get user database on this runtime
     Response status code: OK or INTERNAL_ERROR
-    Response: 
+    Response:
     {
         "policies": {
             <policy-id>: policy in JSON format,
@@ -636,7 +636,7 @@ control_api_doc += \
     GET /authentication/groups_db
     Get user database on this runtime
     Response status code: OK or INTERNAL_ERROR
-    Response: 
+    Response:
     {
         "policies": {
             <policy-id>: policy in JSON format,
@@ -671,7 +671,7 @@ control_api_doc += \
     GET /authorization/policies
     Get all policies on this runtime
     Response status code: OK or INTERNAL_ERROR
-    Response: 
+    Response:
     {
         "policies": {
             <policy-id>: policy in JSON format,
@@ -693,7 +693,7 @@ re_get_authorization_policy = re.compile(r"GET /authorization/policies/(POLICY_"
 control_api_doc += \
     """
     PUT /authorization/policies/{policy-id}
-    Update policy 
+    Update policy
     Body: new policy in JSON format
     Response status code: OK, INTERNAL_ERROR or NOT_FOUND
     Response: none
@@ -1052,7 +1052,7 @@ class CalvinControl(object):
         except Exception as e:
             _log.error("Failed to update node %s", e)
             self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
-            
+
     def handle_post_node_attribute_indexed_public(self, handle, connection, match, data, hdr):
         """ Update node information
         """
@@ -1263,8 +1263,8 @@ class CalvinControl(object):
                         kwargs['content'] = {
                             'file': data["script"],
                             'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
-                compiler.compile(data["script"], filename=data["name"], node=self.node, 
-                                 verify=(data["check"] if "check" in data else True), 
+                compiler.compile(data["script"], filename=data["name"], node=self.node,
+                                 verify=(data["check"] if "check" in data else True),
                                  cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
                                  **kwargs)
             else:
@@ -1272,7 +1272,7 @@ class CalvinControl(object):
                 # Main user is csruntime when deploying script at the same time and some tests used
                 # via calvin.Tools.deployer (the Deployer below is the new in appmanager)
                 # TODO rewrite these users to send the uncompiled script as cscontrol does.
-                if security_needed_check():
+                if security_enabled():
                     _log.error("Can't combine compiled script with runtime having security")
                     self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
                     return
@@ -1458,7 +1458,7 @@ class CalvinControl(object):
         except:
             _log.exception("handle_get_authentication_users_db")
             status = calvinresponse.INTERNAL_ERROR
-        self.send_response(handle, connection, json.dumps({"users_db": users_db}) if status == calvinresponse.OK else None, 
+        self.send_response(handle, connection, json.dumps({"users_db": users_db}) if status == calvinresponse.OK else None,
                            status=status)
 
     def handle_edit_authentication_users_db(self, handle, connection, match, data, hdr):
@@ -1505,7 +1505,7 @@ class CalvinControl(object):
         except:
             _log.exception("handle_get_authorization_policies")
             status = calvinresponse.INTERNAL_ERROR
-        self.send_response(handle, connection, json.dumps({"policies": policies}) if status == calvinresponse.OK else None, 
+        self.send_response(handle, connection, json.dumps({"policies": policies}) if status == calvinresponse.OK else None,
                            status=status)
 
     def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
@@ -1519,7 +1519,7 @@ class CalvinControl(object):
         except:
             _log.exception("handle_get_authorization_policy")
             status = calvinresponse.INTERNAL_ERROR
-        self.send_response(handle, connection, json.dumps({"policy": data}) if status == calvinresponse.OK else None, 
+        self.send_response(handle, connection, json.dumps({"policy": data}) if status == calvinresponse.OK else None,
                            status=status)
 
     def handle_edit_authorization_policy(self, handle, connection, match, data, hdr):

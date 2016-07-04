@@ -20,7 +20,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
-from calvin.utilities.security import Security, security_needed_check
+from calvin.utilities.security import Security, security_enabled
 from calvin.actor.actor import ShadowActor
 
 _log = get_logger(__name__)
@@ -95,7 +95,7 @@ class ActorManager(object):
 
     def _new_actor(self, actor_type, class_=None, actor_id=None, security=None, access_decision=None, shadow_actor=False):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
-        if security_needed_check() and not access_decision:
+        if security_enabled() and not access_decision:
             try:
                 _log.debug("Security policy check for actor failed")
                 raise Exception("Security policy check for actor failed")
@@ -123,7 +123,7 @@ class ActorManager(object):
     def _new(self, actor_type, args, actor_def=None, security=None, access_decision=None, shadow_actor=False):
         """Return an initialized actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type, actor_def, security=security, 
+            a = self._new_actor(actor_type, actor_def, security=security,
                                 access_decision=access_decision, shadow_actor=shadow_actor)
             # Now that required APIs are attached we can call init() which may use the APIs
             human_readable_name = args.pop('name', '')
@@ -147,7 +147,7 @@ class ActorManager(object):
                 state['_managed'].remove('migration_info')
             except:
                 pass
-            if security_needed_check():
+            if security_enabled():
                 security = Security(self.node)
                 security.set_subject_attributes(subject_attributes)
             else:
@@ -155,21 +155,21 @@ class ActorManager(object):
             actor_def, signer = self.lookup_and_verify(actor_type, security)
             requirements = actor_def.requires if hasattr(actor_def, "requires") else []
             self.check_requirements_and_sec_policy(requirements, security, state['id'],
-                                                   signer, migration_info, 
-                                                   CalvinCB(self.new, actor_type, None, 
+                                                   signer, migration_info,
+                                                   CalvinCB(self.new, actor_type, None,
                                                             state, prev_connections,
-                                                            callback=callback, 
-                                                            actor_def=actor_def, 
+                                                            callback=callback,
+                                                            actor_def=actor_def,
                                                             security=security))
         except Exception:
             # Still want to create shadow actor.
             self.new(actor_type, None, state, prev_connections, callback=callback, shadow_actor=True)
 
-    def _new_from_state(self, actor_type, state, actor_def, security, 
+    def _new_from_state(self, actor_type, state, actor_def, security,
                              access_decision=None, shadow_actor=False):
         """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type, actor_def, actor_id=state['id'], security=security, 
+            a = self._new_actor(actor_type, actor_def, actor_id=state['id'], security=security,
                                 access_decision=access_decision, shadow_actor=shadow_actor)
             if '_shadow_args' in state:
                 # We were a shadow, do a full init
@@ -227,22 +227,22 @@ class ActorManager(object):
             raise Exception("Not known actor type: %s" % actor_type)
         return (actor_def, signer)
 
-    def check_requirements_and_sec_policy(self, requirements, security=None, actor_id=None, 
+    def check_requirements_and_sec_policy(self, requirements, security=None, actor_id=None,
                                           signer=None, decision_from_migration=None, callback=None):
         """Check requirements and security policy for actor."""
         # Check if node has the capabilities required by the actor.
         for req in requirements:
             if not self.node.calvinsys().has_capability(req):
                 raise Exception("Actor requires %s" % req)
-        if security_needed_check():
+        if security_enabled():
             # Check if access is permitted for the actor by the security policy.
             # Will continue directly with callback if authorization is not enabled.
-            security.check_security_policy(callback, "actor", actor_id, ['runtime'] + requirements, 
+            security.check_security_policy(callback, "actor", actor_id, ['runtime'] + requirements,
                                            signer, decision_from_migration)
         else:
             callback()
 
-    def update_requirements(self, actor_id, requirements, extend=False, move=False, 
+    def update_requirements(self, actor_id, requirements, extend=False, move=False,
                             authorization_check=False, callback=None):
         """ Update requirements and trigger a potential migration """
         if actor_id not in self.actors:
@@ -273,7 +273,7 @@ class ActorManager(object):
                                  move=move, authorization_check=authorization_check, cb=callback, done=done)
         _log.analyze(self.node.id, "+ END", {'actor_id': actor_id, 'node_iter': str(node_iter)})
 
-    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False, 
+    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False,
                                         authorization_check=False, cb=None):
         _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
         actor = self.actors[actor_id]

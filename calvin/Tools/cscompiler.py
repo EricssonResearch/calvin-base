@@ -23,7 +23,7 @@ from calvin.csparser.parser import calvin_parser
 # from calvin.csparser.checker import check
 # from calvin.csparser.analyzer import generate_app_info
 from calvin.csparser.codegen import CodeGen
-from calvin.utilities.security import Security, security_needed_check
+from calvin.utilities.security import Security, security_enabled
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 
@@ -46,7 +46,7 @@ def compile(source_text, filename, credentials=None, verify=True, node=None, cb=
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
     errors = [] # TODO: fill in something meaningful
     warnings = []
-    if node is not None and security_needed_check():
+    if node is not None and security_enabled():
         sec = Security(node)
         sec.authenticate_subject(credentials, callback=CalvinCB(_compile_cont1, source_text,
                                                 filename, verify, security=sec, org_cb=cb, content=content))

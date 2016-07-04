@@ -23,7 +23,7 @@ from calvin.actor import actorport
 from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
 from calvin.actorstore.store import GlobalStore
-from calvin.utilities.security import Security, security_needed_check
+from calvin.utilities.security import Security, security_enabled
 from calvin.utilities import dynops
 import re
 
@@ -174,7 +174,7 @@ class Storage(object):
 
         if org_cb:
             org_cb(key=key, value=bool(value))
-        
+
         self.trigger_flush()
 
 
@@ -183,7 +183,7 @@ class Storage(object):
             It is assumed that the prefix and key are strings,
             the sum has to be an immutable object.
             Callback cb with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and 
+            note that the key here is without the prefix and
             value indicate success.
         """
         _log.debug("Set key %s, value %s" % (prefix + key, value))
@@ -389,7 +389,7 @@ class Storage(object):
         else:
             if not silent:
                 _log.warning("Failed to update %s" % key)
-        
+
         if org_cb:
             org_cb(key=org_key, value=bool(value))
         self.trigger_flush()
@@ -401,7 +401,7 @@ class Storage(object):
             the sum has to be an immutable object.
             value is a list, tuple or set of values.
             Callback cb with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and 
+            note that the key here is without the prefix and
             value indicate success.
         """
         _log.debug("Append key %s, value %s" % (prefix + key, value))
@@ -435,7 +435,7 @@ class Storage(object):
         else:
             if not silent:
                 _log.warning("Failed to update %s" % key)
-        
+
         if org_cb:
             org_cb(key=org_key, value=bool(value))
         self.trigger_flush()
@@ -447,7 +447,7 @@ class Storage(object):
             the sum has to be an immutable object.
             value is a list, tuple or set of values.
             Callback cb with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and 
+            note that the key here is without the prefix and
             value indicate success.
         """
         _log.debug("Remove key %s, value %s" % (prefix + key, value))
@@ -474,7 +474,7 @@ class Storage(object):
             the sum has to be an immutable object.
             This is equivalent to set(..., value=None, ...).
             Callback cb with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and 
+            note that the key here is without the prefix and
             value indicate success.
         """
         _log.debug("Deleting key %s" % prefix + key)
@@ -502,7 +502,7 @@ class Storage(object):
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
         self._add_node_index(node)
         # Store all actors on this node in storage
-        GlobalStore(node=node, security=Security(node) if security_needed_check() else None, verify=False).export()
+        GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
 
     def _add_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()
@@ -692,7 +692,7 @@ class Storage(object):
 
     def add_index(self, index, value, root_prefix_level=3, cb=None):
         """
-        Add single value (e.g. a node id) to a set stored in registry 
+        Add single value (e.g. a node id) to a set stored in registry
         later retrivable for each level of the index.
         index: The multilevel key:
                a string with slash as delimiter for finer level of index,
@@ -703,7 +703,7 @@ class Storage(object):
         root_prefix_level: the top level of the index that can be searched separately,
                with e.g. =1 then node/address can't be split
         cb: Callback with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and 
+            note that the key here is without the prefix and
             value indicate success.
         """
 
@@ -735,7 +735,7 @@ class Storage(object):
         root_prefix_level: the top level of the index that can be searched separately,
                with e.g. =1 then node/address can't be split
         cb: Callback with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and 
+            note that the key here is without the prefix and
             value indicate success.
         """
 
