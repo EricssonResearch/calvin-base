@@ -77,7 +77,7 @@ def encode_jwt(payload, node_name):
     private_key = certificate.get_private_key(node_name)
     # Create a JSON Web Token signed using the node's Elliptic Curve private key.
     return jwt.encode(payload, private_key, algorithm='ES256')
-    
+
 def decode_jwt(token, sender_cert_name, node_name, node_id, actor_id=None):
     """Decode JSON Web Token"""
     # Get authorization server certificate from disk.
@@ -87,9 +87,9 @@ def decode_jwt(token, sender_cert_name, node_name, node_id, actor_id=None):
         raise Exception("Certificate not found.")
     sender_public_key = certificate.get_public_key(sender_certificate)
     sender_node_id = sender_certificate.get_subject().dnQualifier
-    # The signature is verified using the Elliptic Curve public key of the sender. 
+    # The signature is verified using the Elliptic Curve public key of the sender.
     # Exception raised if signature verification fails or if issuer and/or audience are incorrect.
-    decoded = jwt.decode(token, sender_public_key, algorithms=['ES256'], 
+    decoded = jwt.decode(token, sender_public_key, algorithms=['ES256'],
                          issuer=sender_node_id, audience=node_id)
     if actor_id and decoded["sub"] != actor_id:
         raise  # Exception raised if subject (actor_id) is incorrect.
@@ -145,7 +145,7 @@ class Security(object):
             elif self.sec_conf['authentication']['procedure'] == "local":
                 _log.debug("local authentication method chosen")
                 # Authenticate access using a local Authentication Decision Point (ADP).
-                self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response, 
+                self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response,
                                                           callback=callback))
                 return True
             elif self.sec_conf['authentication']['procedure'] == "radius":
@@ -156,15 +156,15 @@ class Security(object):
                 _log.debug("Security: Radius authentication method chosen")
                 return self.authenticate_using_radius_server(request, callback)
         _log.debug("Security: No security config, so authentication disabled")
-        return True 
+        return True
 
     def authenticate_using_radius_server(self, request, callback):
         """Authenticate a subject using a RADIUS server."""
         try:
             root_dir = os.path.abspath(os.path.join(_conf.install_location(), '..'))
-            client = Client(server=self.sec_conf['authentication']['server_ip'], 
+            client = Client(server=self.sec_conf['authentication']['server_ip'],
                             secret=bytes(self.sec_conf['authentication']['secret']),
-                            dict=Dictionary(os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary"), 
+                            dict=Dictionary(os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary"),
                                         os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary.acc")))
             req = client.CreateAuthPacket(code=pyrad.packet.AccessRequest,
                                           User_Name=request['subject']['user'],
@@ -175,7 +175,7 @@ class Security(object):
             if reply.code == pyrad.packet.AccessAccept:
                 _log.debug("Security: access accepted")
                 # Save attributes returned by server.
-                self._return_authentication_decision(True, json.loads(reply["Reply-Message"][0]), 
+                self._return_authentication_decision(True, json.loads(reply["Reply-Message"][0]),
                                                      callback)
                 return
             _log.debug("Security: access denied")
@@ -223,7 +223,7 @@ class Security(object):
                                  self.node.node_name, self.node.id, actor_id)
             authentication_response = decoded['response']
             self._return_authentication_decision(authentication_response['subject_attributes'],
-                                                 callback, 
+                                                 callback,
                                                  authentication_response.get("obligations", []))
         except Exception as e:
             _log.error("Security: JWT decoding error - %s" % str(e))
@@ -255,7 +255,7 @@ class Security(object):
 
     def check_security_policy(self, callback, element_type, actor_id=None, requires=None, signer=None, decision_from_migration=None):
         """Check if access is permitted by the security policy."""
-        # Can't use id for application since it is not assigned when the policy is checked. 
+        # Can't use id for application since it is not assigned when the policy is checked.
         _log.debug("Security: check_security_policy")
         if self.sec_conf:
             signer = {element_type + "_signer": signer}
@@ -270,11 +270,11 @@ class Security(object):
             try:
                 _log.info("Security: Authorization decision from migration")
                 # Decode JSON Web Token, which contains the authorization response.
-                decoded = decode_jwt(decision_from_migration["jwt"], decision_from_migration["cert_name"], 
+                decoded = decode_jwt(decision_from_migration["jwt"], decision_from_migration["cert_name"],
                                      self.node.node_name, self.node.id, actor_id)
                 authorization_response = decoded['response']
-                self._return_authorization_decision(authorization_response['decision'], 
-                                                    authorization_response.get("obligations", []), 
+                self._return_authorization_decision(authorization_response['decision'],
+                                                    authorization_response.get("obligations", []),
                                                     callback)
                 return
             except Exception as e:
@@ -299,10 +299,10 @@ class Security(object):
                     return False
                 _log.debug("Security: external authorization method chosen")
                 self.authorize_using_external_server(request, callback, actor_id)
-            else: 
+            else:
                 _log.debug("Security: local authorization method chosen")
                 # Authorize access using a local Policy Decision Point (PDP).
-                self.node.authorization.pdp.authorize(request, CalvinCB(self._handle_local_authorization_response, 
+                self.node.authorization.pdp.authorize(request, CalvinCB(self._handle_local_authorization_response,
                                                           callback=callback))
 
     def _return_authorization_decision(self, decision, obligations, callback):
@@ -333,9 +333,9 @@ class Security(object):
         try:
             authz_server_id = self.sec_conf['authorization']['server_uuid']
             payload = {
-                "iss": self.node.id, 
-                "aud": authz_server_id, 
-                "iat": datetime.utcnow(), 
+                "iss": self.node.id,
+                "aud": authz_server_id,
+                "iat": datetime.utcnow(),
                 "exp": datetime.utcnow() + timedelta(seconds=60),
                 "request": request
             }
@@ -344,9 +344,9 @@ class Security(object):
             # Create a JSON Web Token signed using the node's Elliptic Curve private key.
             jwt_request = encode_jwt(payload, self.node.node_name)
             # Send request to authorization server.
-            self.node.proto.authorization_decision(authz_server_id, 
-                                                   CalvinCB(self._handle_authorization_response, 
-                                                            callback=callback, actor_id=actor_id), 
+            self.node.proto.authorization_decision(authz_server_id,
+                                                   CalvinCB(self._handle_authorization_response,
+                                                            callback=callback, actor_id=actor_id),
                                                    jwt_request)
         except Exception as e:
             _log.error("Security: authorization error - %s" % str(e))
@@ -359,11 +359,11 @@ class Security(object):
             return
         try:
             # Decode JSON Web Token, which contains the authorization response.
-            decoded = decode_jwt(reply.data["jwt"], reply.data["cert_name"], 
+            decoded = decode_jwt(reply.data["jwt"], reply.data["cert_name"],
                                  self.node.node_name, self.node.id, actor_id)
             authorization_response = decoded['response']
-            self._return_authorization_decision(authorization_response['decision'], 
-                                                authorization_response.get("obligations", []), 
+            self._return_authorization_decision(authorization_response['decision'],
+                                                authorization_response.get("obligations", []),
                                                 callback)
         except Exception as e:
             _log.error("Security: JWT decoding error - %s" % str(e))
@@ -371,7 +371,7 @@ class Security(object):
 
     def _handle_local_authorization_response(self, authz_response, callback):
         try:
-            self._return_authorization_decision(authz_response['decision'], 
+            self._return_authorization_decision(authz_response['decision'],
                                                 authz_response.get("obligations", []), callback)
         except Exception as e:
             _log.error("Security: local authorization error - %s" % str(e))
@@ -383,12 +383,12 @@ class Security(object):
         extra_requirement = [{"op": "actor_reqs_match",
                               "kwargs": {"requires": ["calvinsys.native.python-json"]},
                               "type": "+"},
-                             {"op": "current_node", 
+                             {"op": "current_node",
                               "kwargs": {},
                               "type": "-"}]
-        self.node.am.update_requirements(actor_id, extra_requirement, True, authorization_check=True, 
-                                         callback=CalvinCB(self._authorization_runtime_search_cont, 
-                                                           actor_id=actor_id, 
+        self.node.am.update_requirements(actor_id, extra_requirement, True, authorization_check=True,
+                                         callback=CalvinCB(self._authorization_runtime_search_cont,
+                                                           actor_id=actor_id,
                                                            actorstore_signature=actorstore_signature,
                                                            callback=callback))
 
@@ -399,35 +399,35 @@ class Security(object):
         request = {}
         request["subject"] = self.get_subject_attributes()
         request["subject"]["actorstore_signature"] = actorstore_signature
-        self.node.storage.get_node(possible_placements[0], 
-                                   cb=CalvinCB(self._send_authorization_runtime_search, 
+        self.node.storage.get_node(possible_placements[0],
+                                   cb=CalvinCB(self._send_authorization_runtime_search,
                                                actor_id=actor_id, request=request,
-                                               possible_placements=possible_placements, 
+                                               possible_placements=possible_placements,
                                                authz_server_blacklist=[],
                                                callback=callback))
- 
-    def _send_authorization_runtime_search(self, key, value, actor_id, request, possible_placements, 
+
+    def _send_authorization_runtime_search(self, key, value, actor_id, request, possible_placements,
                                            authz_server_blacklist, callback, counter=0):
         authz_server_id = value["authz_server"]
         if authz_server_id is None or authz_server_id in authz_server_blacklist:
             counter += 1
             if counter < len(possible_placements):
                 # Try with next runtime instead.
-                self.node.storage.get_node(possible_placements[counter], 
-                                           cb=CalvinCB(self._send_authorization_runtime_search, 
-                                                       actor_id=actor_id, request=request, 
+                self.node.storage.get_node(possible_placements[counter],
+                                           cb=CalvinCB(self._send_authorization_runtime_search,
+                                                       actor_id=actor_id, request=request,
                                                        possible_placements=possible_placements,
-                                                       authz_server_blacklist=authz_server_blacklist, 
+                                                       authz_server_blacklist=authz_server_blacklist,
                                                        callback=callback, counter=counter))
             else:
                 callback(None)
             return
         try:
             payload = {
-                "iss": self.node.id, 
+                "iss": self.node.id,
                 "sub": actor_id,
-                "aud": authz_server_id, 
-                "iat": datetime.utcnow(), 
+                "aud": authz_server_id,
+                "iat": datetime.utcnow(),
                 "exp": datetime.utcnow() + timedelta(seconds=60),
                 "request": request,
                 "whitelist": possible_placements
@@ -436,27 +436,27 @@ class Security(object):
             # Add authz_server to blacklist to prevent sending more requests to the same server if search fails.
             authz_server_blacklist.append(authz_server_id)
             # Send request to authorization server.
-            self.node.proto.authorization_search(authz_server_id, 
-                                                 CalvinCB(self._handle_authorization_runtime_search_response, 
-                                                          actor_id=actor_id, request=request, 
-                                                          possible_placements=possible_placements, 
-                                                          authz_server_blacklist=authz_server_blacklist, 
+            self.node.proto.authorization_search(authz_server_id,
+                                                 CalvinCB(self._handle_authorization_runtime_search_response,
+                                                          actor_id=actor_id, request=request,
+                                                          possible_placements=possible_placements,
+                                                          authz_server_blacklist=authz_server_blacklist,
                                                           callback=callback, counter=counter), jwt_request)
         except Exception as e:
             _log.error("Security: authorization server error - %s" % str(e))
             callback(None)
 
-    def _handle_authorization_runtime_search_response(self, reply, actor_id, request, possible_placements, 
+    def _handle_authorization_runtime_search_response(self, reply, actor_id, request, possible_placements,
                                                       authz_server_blacklist, callback, counter):
         if reply.status != 200 or reply.data["node_id"] is None:
             counter += 1
             if counter < len(possible_placements):
                 # Continue searching
-                self.node.storage.get_node(possible_placements[counter], 
-                                           cb=CalvinCB(self._send_authorization_runtime_search, 
-                                                       actor_id=actor_id, request=request, 
-                                                       possible_placements=possible_placements, 
-                                                       authz_server_blacklist=authz_server_blacklist, 
+                self.node.storage.get_node(possible_placements[counter],
+                                           cb=CalvinCB(self._send_authorization_runtime_search,
+                                                       actor_id=actor_id, request=request,
+                                                       possible_placements=possible_placements,
+                                                       authz_server_blacklist=authz_server_blacklist,
                                                        callback=callback, counter=counter))
                 return
         callback(reply)
@@ -482,8 +482,8 @@ class Security(object):
                 with open(filename, 'rt') as f:
                     file_content = f.read()
             except:
-                return None
                 _log.debug("Security: file can't be opened")
+                return None
         return {'sign': sign_content, 'file': file_content}
 
     def verify_signature(self, file, flag):
