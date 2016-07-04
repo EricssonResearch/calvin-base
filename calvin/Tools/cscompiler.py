@@ -39,9 +39,8 @@ def compile(source_text, filename, credentials=None, verify=True, node=None, cb=
     content = None
     if credentials:
         content = Security.verify_signature_get_files(filename, skip_file=True)
-        if content:
-            content['file'] = sourceText
-
+        # content is ALWAYS a dict if skip_file is True
+        content['file'] = source_text
 
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
     errors = [] # TODO: fill in something meaningful
