@@ -30,18 +30,25 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-def compile(source_text, filename='', content=None, credentials=None, verify=True, node=None, cb=None):
+def compile(source_text, filename, credentials=None, verify=True, node=None, cb=None):
     # Steps taken:
     # 1) Authenticate subject, verify signature and check security policy if security is enabled
     # 2) parser .calvin file -> IR. May produce syntax errors/warnings
     # 3) checker IR -> IR. May produce syntax errors/warnings
     # 4) analyzer IR -> app. Should not fail. Sets 'valid' property of IR to True/False
+    content = None
+    if credentials:
+        content = Security.verify_signature_get_files(filename, skip_file=True)
+        if content:
+            content['file'] = sourceText
+
+
     deployable = {'valid': False, 'actors': {}, 'connections': {}}
     errors = [] # TODO: fill in something meaningful
     warnings = []
     if node is not None and security_needed_check():
         sec = Security(node)
-        sec.authenticate_subject(credentials, callback=CalvinCB(_compile_cont1, source_text, 
+        sec.authenticate_subject(credentials, callback=CalvinCB(_compile_cont1, source_text,
                                                 filename, verify, security=sec, org_cb=cb, content=content))
     else:
         if cb:
@@ -74,7 +81,7 @@ def _compile_cont1(source_text, filename, verify, authentication_decision, secur
             return
         else:
             return deployable, errors, warnings
-    security.check_security_policy(CalvinCB(_compile_cont2, source_text, filename, verify, 
+    security.check_security_policy(CalvinCB(_compile_cont2, source_text, filename, verify,
                                        security=security, org_cb=org_cb), "application", signer=signer)
 
 def _compile_cont2(source_text, filename, verify, access_decision, security=None, org_cb=None):
@@ -108,15 +115,13 @@ def _compile_cont2(source_text, filename, verify, access_decision, security=None
     else:
         return deployable, errors, warnings
 
+
+
+
 def compile_file(file, credentials=None):
     with open(file, 'r') as source:
         sourceText = source.read()
-        content = None
-        if credentials:
-            content = Security.verify_signature_get_files(file, skip_file=True)
-            if content:
-                content['file'] = sourceText
-        return compile(sourceText, file, content=content, credentials=credentials)
+        return compile(sourceText, file, credentials=credentials)
 
 def compile_generator(files):
     for file in files:
