@@ -9,7 +9,22 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-def compile_script(source_text, filename, credentials=None, verify=True, node=None, cb=None):
+def compile_script(source_text, filename, credentials=None, verify=True):
+    """
+    Compile a script and return a tuple (deployable, errors, warnings)
+
+    N.B 'credentials' and 'verify' are intended for actor store access, currently unused
+    """
+    ir, errors, warnings = calvin_parser(source_text, filename)
+    app_name = os.path.splitext(os.path.basename(filename))[0]
+    deployable, issues = generate_app_info(ir, app_name, verify=verify)
+    errors = [issue for issue in issues if issue['type'] == 'error']
+    warnings = [issue for issue in issues if issue['type'] == 'warning']
+
+    return deployable, errors, warnings
+
+
+def compile_script_check_security(source_text, filename, credentials=None, verify=True, node=None, cb=None):
     """
     Compile a script and return a tuple (deployable, errors, warnings).
 
@@ -58,11 +73,7 @@ def compile_script(source_text, filename, credentials=None, verify=True, node=No
             # This error reason is detected in calvin control and gives proper REST response
             _exit_with_error({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None}, org_cb)
 
-        ir, errors, warnings = calvin_parser(source_text, filename)
-        app_name = os.path.splitext(os.path.basename(filename))[0]
-        deployable, issues = generate_app_info(ir, app_name, verify=verify)
-        errors = [issue for issue in issues if issue['type'] == 'error']
-        warnings = [issue for issue in issues if issue['type'] == 'warning']
+        deployable, errors, warnings = compile_script(source_text, filename)
 
         if org_cb:
             org_cb(deployable, errors, warnings, security=security)

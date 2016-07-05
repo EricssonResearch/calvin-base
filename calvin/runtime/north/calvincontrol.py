@@ -1263,10 +1263,14 @@ class CalvinControl(object):
                         kwargs['content'] = {
                             'file': data["script"],
                             'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
-                compiler.compile_script(data["script"], filename=data["name"], node=self.node,
-                                 verify=(data["check"] if "check" in data else True),
-                                 cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
-                                 **kwargs)
+                compiler.compile_script_check_security(
+                    data["script"],
+                    filename=data["name"],
+                    node=self.node,
+                    verify=(data["check"] if "check" in data else True),
+                    cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
+                    **kwargs
+                )
             else:
                 # Supplying app_info is for backward compatibility hence abort if node configured security
                 # Main user is csruntime when deploying script at the same time and some tests used
