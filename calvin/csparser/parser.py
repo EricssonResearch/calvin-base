@@ -382,8 +382,7 @@ class CalvinParser(object):
 #     # parser = yacc.yacc(debuglog=log, debug=True)
 #     return parser
 
-
-def calvin_parser(source_text, source_file=''):
+def calvin_parser(source_text):
 
     lexer = lex.lex(module=calvin_rules)
     parser = CalvinParser(lexer)

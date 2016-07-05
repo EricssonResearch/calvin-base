@@ -33,16 +33,17 @@ from calvin.utilities import calvinuuid
 from calvin.actorstore.store import ActorStore
 
 
-def check_script(file):
+# FIXME: This is broken since new parser introduced
+def check_script(filename):
     try:
-        with open(file, 'r') as source:
+        with open(filename, 'r') as source:
             source_text = source.read()
     except:
         return {}, [{'reason': 'File not found', 'line': 0, 'col': 0}], []
     # Steps taken:
     # 1) parser .calvin file -> IR. May produce syntax errors/warnings
     # 2) checker IR -> IR. May produce syntax errors/warnings
-    ir, errors, warnings = calvin_parser(source_text, file)
+    ir, errors, warnings = calvin_parser(source_text)
     # If there were errors during parsing no IR will be generated
     if not errors:
         c_errors, c_warnings = check(ir)

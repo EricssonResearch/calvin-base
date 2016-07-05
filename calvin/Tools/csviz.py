@@ -190,13 +190,13 @@ def visualize_deployment(filename):
 def visualize_script(filename):
     with open(filename, 'r') as f:
         source_text = f.read()
-        ir, errors, warnings = calvin_parser(source_text, 'filename')
+        ir, errors, warnings = calvin_parser(source_text)
         return ScriptViz(ir).render()
 
 def visualize_component_internals(filename, component):
     with open(filename, 'r') as f:
         source_text = f.read()
-        ir, errors, warnings = calvin_parser(source_text, 'filename')
+        ir, errors, warnings = calvin_parser(source_text)
         if component in ir['components']:
             comp_def = ir['components'][component]
             return CompInternalsViz(comp_def).render()

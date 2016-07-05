@@ -21,11 +21,14 @@ import json
 import argparse
 from calvin.csparser.cscompile import compile_script
 
+def _appname_from_filename(filename):
+    return os.path.splitext(os.path.basename(filename))[0]
 
 def compile_file(filename, credentials=None):
     with open(filename, 'r') as source:
         sourceText = source.read()
-        return compile_script(sourceText, filename, credentials=credentials)
+        appname = _appname_from_filename(filename)
+        return compile_script(sourceText, appname, credentials=credentials)
 
 def compile_generator(files):
     for filename in files:
@@ -70,6 +73,7 @@ def main():
     args = argparser.parse_args()
 
     def report_issues(issues, issue_type, filename=''):
+        print issues
         sorted_issues = sorted(issues, key=lambda k: k.get('line', 0))
         for issue in sorted_issues:
             sys.stderr.write(args.fmt.format(script=filename, issue_type=issue_type, **issue) + '\n')

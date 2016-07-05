@@ -8,6 +8,10 @@ from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
+def _appname_from_filename(filename):
+    return os.path.splitext(os.path.basename(filename))[0]
+
+
 
 def compile_script(source_text, filename, credentials=None, verify=True):
     """
@@ -15,16 +19,16 @@ def compile_script(source_text, filename, credentials=None, verify=True):
 
     N.B 'credentials' and 'verify' are intended for actor store access, currently unused
     """
-    ir, errors, warnings = calvin_parser(source_text, filename)
-    app_name = os.path.splitext(os.path.basename(filename))[0]
-    deployable, issues = generate_app_info(ir, app_name, verify=verify)
+    appname =_appname_from_filename(filename)
+    ir, errors, warnings = calvin_parser(source_text)
+    deployable, issues = generate_app_info(ir, appname, verify=verify)
     errors.extend([issue for issue in issues if issue['type'] == 'error'])
     warnings.extend([issue for issue in issues if issue['type'] == 'warning'])
 
     return deployable, errors, warnings
 
 def get_components_in_script(source_text, names=None):
-    ir, errors, warnings = calvin_parser(source_text, 'dummy_filename')
+    ir, errors, warnings = calvin_parser(source_text)
     comps, issues = generate_comp_info(ir, names)
     errors.extend([issue for issue in issues if issue['type'] == 'error'])
     warnings.extend([issue for issue in issues if issue['type'] == 'warning'])
@@ -56,7 +60,7 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
         callback(*reply)
 
 
-    def _handle_authentication_decision(source_text, filename, verify, authentication_decision, security, org_cb, content=None):
+    def _handle_authentication_decision(source_text, appname, verify, authentication_decision, security, org_cb, content=None):
         if not authentication_decision:
             _log.error("Authentication failed")
             # This error reason is detected in calvin control and gives proper REST response
@@ -70,25 +74,25 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
             _exit_with_error({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None}, org_cb)
 
         security.check_security_policy(
-            CalvinCB(_handle_policy_decision, source_text, filename, verify, security=security, org_cb=org_cb),
+            CalvinCB(_handle_policy_decision, source_text, appname, verify, security=security, org_cb=org_cb),
             "application",
             signer=signer
         )
 
-    def _handle_policy_decision(source_text, filename, verify, access_decision, org_cb, security=None):
+    def _handle_policy_decision(source_text, appname, verify, access_decision, org_cb, security=None):
         if not access_decision:
             _log.error("Access denied")
             # This error reason is detected in calvin control and gives proper REST response
             _exit_with_error({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None}, org_cb)
 
-        deployable, errors, warnings = compile_script(source_text, filename)
+        deployable, errors, warnings = compile_script(source_text, appname)
 
         org_cb(deployable, errors, warnings, security=security)
 
     #
     # Actual code for compile_script
     #
-
+    appname =_appname_from_filename(filename)
     # FIXME: if node is None we bypass security even if enabled. Is that the intention?
     if node is not None and security_enabled():
         if credentials:
@@ -101,7 +105,7 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
         sec = Security(node)
         sec.authenticate_subject(
             credentials,
-            callback=CalvinCB(_handle_authentication_decision, source_text, filename, verify, security=sec, org_cb=cb, content=content)
+            callback=CalvinCB(_handle_authentication_decision, source_text, appname, verify, security=sec, org_cb=cb, content=content)
         )
         return
 
@@ -111,7 +115,7 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
     # This used to be
     # _handle_policy_decision(source_text, filename, verify, access_decision=True, security=None, org_cb=cb)
     # but since _handle_policy_decision is called with access_decision=True, security=None only compile_script would be called
-    deployable, errors, warnings = compile_script(source_text, filename)
+    deployable, errors, warnings = compile_script(source_text, appname)
     cb(deployable, errors, warnings, security=None)
 
 

@@ -52,7 +52,7 @@ class CalvinTestBase(unittest.TestCase):
             test = self.test_script_dir + test + '.calvin'
             source_text = self._read_file(test)
 
-        ast, parser_issues, _ = calvin_parser(source_text, test)
+        ast, parser_issues, _ = calvin_parser(source_text)
         app_info, codegen_issues = generate_app_info(ast, name=test, verify=verify)
         issues = parser_issues + codegen_issues
 
