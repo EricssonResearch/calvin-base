@@ -30,32 +30,8 @@ from calvin.utilities import code_signer
 from calvin.utilities.utils import get_home
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities import calvinuuid
-from calvin.actorstore.store import ActorStore
-
-
-# FIXME: This is broken since new parser introduced
-def check_script(filename):
-    try:
-        with open(filename, 'r') as source:
-            source_text = source.read()
-    except:
-        return {}, [{'reason': 'File not found', 'line': 0, 'col': 0}], []
-    # Steps taken:
-    # 1) parser .calvin file -> IR. May produce syntax errors/warnings
-    # 2) checker IR -> IR. May produce syntax errors/warnings
-    ir, errors, warnings = calvin_parser(source_text)
-    # If there were errors during parsing no IR will be generated
-    if not errors:
-        c_errors, c_warnings = check(ir)
-        errors.extend(c_errors)
-        warnings.extend(c_warnings)
-    return ir, errors, warnings
-
-
-def install_component(namespace, name, definition, overwrite):
-    astore = store.ActorStore()
-    return astore.add_component(namespace, name, definition, overwrite)
-
+from calvin.actorstore.store import ActorStore, install_component
+from calvin.csparser.cscompile import get_components_in_script
 
 def parse_args():
     long_desc = """Manage the host's actor store and credentials"""
@@ -63,34 +39,51 @@ def parse_args():
     argparser = argparse.ArgumentParser(description=long_desc)
     cmdparsers = argparser.add_subparsers(help="command help")
 
+    ######################
     # parser for install cmd
+    ######################
     install_commands = ['component', 'actor']
 
-    cmd_install = cmdparsers.add_parser('install', help='install components and actors')
-    cmd_install.add_argument('cmd', metavar='<command>', choices=install_commands, type=str,
-                           help="one of %s" % ", ".join(install_commands))
-    cmd_install.add_argument('--force', dest='force', action='store_true',
+    install_parser = cmdparsers.add_parser('install', help='install components and actors')
+    install_parser.add_argument('--issue-fmt', dest='fmt', type=str,
+                       default='{issue_type}: {reason} {script} [{line}:{col}]',
+                       help='custom format for issue reporting.')
+
+    install_parser = install_parser.add_subparsers(help='sub-command help', dest='cmd')
+
+    # Parser for install component cmd
+    cmd_install_comp = install_parser.add_parser('component', help='Install components')
+    # Arguments
+    cmd_install_comp.add_argument('--force', dest='force', action='store_true',
                            help='overwrite components or actor that exists at destination')
-    cmd_install.add_argument('--org', metavar='<name>', dest='org', type=str,
+    cmd_install_comp.add_argument('--org', metavar='<name>', dest='org', type=str,
                            help='Code Signer org name used, assumes default location when no calvin.conf')
-    cmd_install.add_argument('--namespace', metavar='<ns.sub-ns>', type=str, required=True,
+    cmd_install_comp.add_argument('--namespace', metavar='<ns.sub-ns>', type=str, required=True,
                            help='namespace to install actor or components under')
-    aargs = cmd_install.add_argument_group("actor")
-    aargs.add_argument('--actor', metavar='<path>', action='append', default=[], required=True,
-                           help='actor file to install, can be repeated')
-    gargs = cmd_install.add_argument_group("component")
-    gargs.add_argument('--script', metavar='<path>', type=str, required=True,
+    cmd_install_comp.add_argument('--script', metavar='<path>', type=str, required=True,
                            help='script file with component definitions')
-    whichcomp = gargs.add_mutually_exclusive_group(required=True)
+    whichcomp = cmd_install_comp.add_mutually_exclusive_group(required=True)
     whichcomp.add_argument('--all', dest='component', action='store_const', const=[],
                        help='install all components found in script')
     whichcomp.add_argument('--component', metavar='<component>', type=str, nargs='+',
                        help='name of component(s) to install')
-    gargs.add_argument('--issue-fmt', dest='fmt', type=str,
-                           default='{issue_type}: {reason} {script} [{line}:{col}]',
-                           help='custom format for issue reporting.')
 
-    cmd_install.set_defaults(func=manage_install)
+    cmd_install_comp.set_defaults(func=manage_install_components)
+
+    # Parser for install actor cmd
+    cmd_install_actor = install_parser.add_parser('actor', help='Install actors')
+    # Arguments
+    cmd_install_actor.add_argument('--force', dest='force', action='store_true',
+                           help='overwrite components or actor that exists at destination')
+    cmd_install_actor.add_argument('--org', metavar='<name>', dest='org', type=str,
+                           help='Code Signer org name used, assumes default location when no calvin.conf')
+    cmd_install_actor.add_argument('--namespace', metavar='<ns.sub-ns>', type=str, required=True,
+                           help='namespace to install actor or components under')
+
+    cmd_install_actor.add_argument('--path', metavar='<path>', action='append', type=str, nargs='+', required=True,
+                           help='actor file (or files) to install')
+
+    cmd_install_actor.set_defaults(func=manage_install_actors)
 
 
 
@@ -146,7 +139,7 @@ def parse_args():
                            help='security directory, defaults to ~/.calvin/security')
     cmd_cs_sign.add_argument('--nsfile', metavar='<ns.sub-ns.actor>', action='append', default=[],
                            help='namespaced store path to actor or components, can be repeated')
- 
+
     cmd_cs_sign.set_defaults(func=manage_cs_sign)
 
     ######################
@@ -272,28 +265,50 @@ def parse_args():
 
     return argparser.parse_args()
 
+################################
+# manage Component Installation
+################################
+
 def manage_install(args):
-    def report_issues(issues, issue_type, file=''):
+
+    if args.cmd == 'actor':
+        manage_install_actors(args)
+    else:
+        manage_install_components(args)
+
+def manage_install_actors(args):
+    sys.stderr.write("Installing actors not yet supported\n")
+    return 1
+
+
+def manage_install_components(args):
+
+    def get_components(filename, names):
+        try:
+            with open(filename, 'r') as source:
+                source_text = source.read()
+        except:
+            return [], [{'reason': 'File not found', 'line': 0, 'col': 0}], []
+        return get_components_in_script(source_text, names)
+
+
+    def report_issues(issues, issue_type, filename=''):
         sorted_issues = sorted(issues, key=lambda k: k.get('line', 0))
         for issue in sorted_issues:
-            sys.stderr.write(args.fmt.format(script=file, issue_type=issue_type, **issue) + '\n')
+            sys.stderr.write(args.fmt.format(script=filename, issue_type=issue_type, **issue) + '\n')
 
-    ir, errors, warnings = check_script(args.script)
+    comps, errors, warnings = get_components(args.script, args.component)
+
+
+    if errors:
+        warnings.append({'reason': 'Nothing installed', 'line': 0, 'col': 0})
+    else:
+        for comp in comps:
+            if not install_component(args.namespace, comp, args.force):
+                errors.append({'reason': 'Failed to install "{0}"'.format(comp.name), 'line': 0, 'col': 0})
+
     if warnings:
         report_issues(warnings, 'Warning', args.script)
-    if errors:
-        report_issues(errors, 'Error', args.script)
-        return 1
-
-    errors = []
-    for comp_name, comp_def in ir['components'].items():
-        if args.component and comp_name not in args.component:
-            continue
-        ok = install_component(args.namespace, comp_name, comp_def, args.overwrite)
-        if not ok:
-            errors.append({'reason': 'Failed to install "{0}"'.format(comp_name),
-                          'line': comp_def['dbg_line'], 'col': 0})
-
     if errors:
         report_issues(errors, 'Error', args.script)
         return 1
