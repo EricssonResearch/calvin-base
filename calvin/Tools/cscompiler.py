@@ -73,7 +73,6 @@ def main():
     args = argparser.parse_args()
 
     def report_issues(issues, issue_type, filename=''):
-        print issues
         sorted_issues = sorted(issues, key=lambda k: k.get('line', 0))
         for issue in sorted_issues:
             sys.stderr.write(args.fmt.format(script=filename, issue_type=issue_type, **issue) + '\n')
