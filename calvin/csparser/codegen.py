@@ -593,7 +593,6 @@ class ConsistencyCheck(object):
             matches = query(self.block, kind=ast.InPort, attributes={'actor':node.ident, 'port':port})
             matches = matches + query(self.block, kind=ast.InternalInPort, attributes={'actor':node.ident, 'port':port})
             if not matches:
-                print node.metadata
                 reason = "{} {} ({}.{}) is missing connection to inport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
                 self.issue_tracker.add_error(reason, node)
             elif len(matches) > 1:
