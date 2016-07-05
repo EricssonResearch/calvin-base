@@ -22,15 +22,15 @@ import argparse
 from calvin.csparser.cscompile import compile_script
 
 
-def compile_file(file, credentials=None):
-    with open(file, 'r') as source:
+def compile_file(filename, credentials=None):
+    with open(filename, 'r') as source:
         sourceText = source.read()
-        return compile_script(sourceText, file, credentials=credentials)
+        return compile_script(sourceText, filename, credentials=credentials)
 
 def compile_generator(files):
-    for file in files:
-        deployable, errors, warnings = compile_file(file)
-        yield((deployable, errors, warnings, file))
+    for filename in files:
+        deployable, errors, warnings = compile_file(filename)
+        yield((deployable, errors, warnings, filename))
 
 def remove_debug_info(deployable):
     pass
@@ -69,18 +69,18 @@ def main():
 
     args = argparser.parse_args()
 
-    def report_issues(issues, issue_type, file=''):
+    def report_issues(issues, issue_type, filename=''):
         sorted_issues = sorted(issues, key=lambda k: k.get('line', 0))
         for issue in sorted_issues:
-            sys.stderr.write(args.fmt.format(script=file, issue_type=issue_type, **issue) + '\n')
+            sys.stderr.write(args.fmt.format(script=filename, issue_type=issue_type, **issue) + '\n')
 
     exit_code = 0
-    for deployable, errors, warnings, file in compile_generator(args.files):
+    for deployable, errors, warnings, filename in compile_generator(args.files):
         if errors:
-            report_issues(errors, 'Error', file)
+            report_issues(errors, 'Error', filename)
             exit_code = 1
         if warnings and args.verbose:
-            report_issues(warnings, 'Warning', file)
+            report_issues(warnings, 'Warning', filename)
         if exit_code == 1:
             # Don't produce output if there were errors
             continue
@@ -92,7 +92,7 @@ def main():
         if args.to_stdout:
             print(string_rep)
         else:
-            path, ext = os.path.splitext(file)
+            path, ext = os.path.splitext(filename)
             dst = path + ".json"
             with open(dst, 'w') as f:
                 f.write(string_rep)
