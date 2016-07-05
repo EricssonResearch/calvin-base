@@ -20,9 +20,9 @@ import argparse
 from calvin.csparser.cscompile import get_components_in_script
 from calvin.actorstore.store import install_component
 
-def get_components(file, names):
+def get_components(filename, names):
     try:
-        with open(file, 'r') as source:
+        with open(filename, 'r') as source:
             source_text = source.read()
     except:
         return [], [{'reason': 'File not found', 'line': 0, 'col': 0}], []
@@ -48,10 +48,10 @@ def main():
 
     args = argparser.parse_args()
 
-    def report_issues(issues, issue_type, file=''):
+    def report_issues(issues, issue_type, filename=''):
         sorted_issues = sorted(issues, key=lambda k: k.get('line', 0))
         for issue in sorted_issues:
-            sys.stderr.write(args.fmt.format(script=file, issue_type=issue_type, **issue) + '\n')
+            sys.stderr.write(args.fmt.format(script=filename, issue_type=issue_type, **issue) + '\n')
 
     comps, errors, warnings = get_components(args.script, args.component)
 
