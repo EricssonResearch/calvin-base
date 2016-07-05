@@ -24,7 +24,10 @@ def compile_script(source_text, filename, credentials=None, verify=True):
     return deployable, errors, warnings
 
 
-def compile_script_check_security(source_text, filename, credentials=None, verify=True, node=None, cb=None):
+
+# FIXME: It might make sense to turn this function into a plain asynchronous security check.
+#        Caller can then call compile_script based on status
+def compile_script_check_security(source_text, filename, cb, credentials=None, verify=True, node=None):
     """
     Compile a script and return a tuple (deployable, errors, warnings).
 
@@ -43,12 +46,10 @@ def compile_script_check_security(source_text, filename, credentials=None, verif
         In that case call callback and return None
         """
         reply = ({}, [err], [])
-        if not callback:
-            return reply
         callback(*reply)
 
 
-    def _compile_cont1(source_text, filename, verify, authentication_decision, security, org_cb=None, content=None):
+    def _handle_authentication_decision(source_text, filename, verify, authentication_decision, security, org_cb, content=None):
         if not authentication_decision:
             _log.error("Authentication failed")
             # This error reason is detected in calvin control and gives proper REST response
@@ -62,12 +63,12 @@ def compile_script_check_security(source_text, filename, credentials=None, verif
             _exit_with_error({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None}, org_cb)
 
         security.check_security_policy(
-            CalvinCB(_compile_cont2, source_text, filename, verify, security=security, org_cb=org_cb),
+            CalvinCB(_handle_policy_decision, source_text, filename, verify, security=security, org_cb=org_cb),
             "application",
             signer=signer
         )
 
-    def _compile_cont2(source_text, filename, verify, access_decision, security=None, org_cb=None):
+    def _handle_policy_decision(source_text, filename, verify, access_decision, org_cb, security=None):
         if not access_decision:
             _log.error("Access denied")
             # This error reason is detected in calvin control and gives proper REST response
@@ -75,10 +76,7 @@ def compile_script_check_security(source_text, filename, credentials=None, verif
 
         deployable, errors, warnings = compile_script(source_text, filename)
 
-        if org_cb:
-            org_cb(deployable, errors, warnings, security=security)
-        else:
-            return deployable, errors, warnings
+        org_cb(deployable, errors, warnings, security=security)
 
     #
     # Actual code for compile_script
@@ -96,16 +94,17 @@ def compile_script_check_security(source_text, filename, credentials=None, verif
         sec = Security(node)
         sec.authenticate_subject(
             credentials,
-            callback=CalvinCB(_compile_cont1, source_text, filename, verify, security=sec, org_cb=cb, content=content)
+            callback=CalvinCB(_handle_authentication_decision, source_text, filename, verify, security=sec, org_cb=cb, content=content)
         )
         return
 
     #
     # We get here if node is None, or security is disabled
     #
-    if not cb:
-        return _compile_cont2(source_text, filename, verify, access_decision=True, security=None, org_cb=None)
+    # This used to be
+    # _handle_policy_decision(source_text, filename, verify, access_decision=True, security=None, org_cb=cb)
+    # but since _handle_policy_decision is called with access_decision=True, security=None only compile_script would be called
+    deployable, errors, warnings = compile_script(source_text, filename)
+    cb(deployable, errors, warnings, security=None)
 
-    # Will call cb with security=None as fourth and final argument in addition to deployable, errors, and warnings
-    _compile_cont2(source_text, filename, verify, access_decision=True, security=None, org_cb=cb)
 
