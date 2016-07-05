@@ -739,13 +739,28 @@ class CodeGen(object):
         self.app_info['valid'] = (issue_tracker.err_count == 0)
         self.issues = issue_tracker.issues
 
-    def export_components(self):
+    def export_components(self, names):
+        """
+        Return list of all components in script, or None if not found
+        If name is given, search only for component with that name.
+        """
         issue_tracker = IssueTracker()
 
         self.phase1(issue_tracker)
 
         if issue_tracker.err_count == 0:
-            comps = query(self.root, kind=ast.Component, maxdepth=1)
+            if names:
+                comps = []
+                for name in names:
+                    # NB. query returns a list
+                    comp = query(self.root, kind=ast.Component, attributes={'name':name}, maxdepth=1)
+                    if not comp:
+                        reason = "Component '{}' not found".format(name)
+                        issue_tracker.add_error(reason, self.root)
+                    else:
+                        comps.extend(comp)
+            else:
+                comps = query(self.root, kind=ast.Component, maxdepth=1)
         else:
             comps = None
 
@@ -762,6 +777,10 @@ def generate_app_info(ast_root, name='anonymous', verify=True):
     cg = CodeGen(ast_root, name, verify=verify)
     cg.run()
     return cg.app_info, cg.issues
+
+def generate_comp_info(ast_root, name=None, verify=True):
+    cg = CodeGen(ast_root, 'dummy', verify=verify)
+    return cg.export_components(name)
 
 
 if __name__ == '__main__':

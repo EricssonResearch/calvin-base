@@ -17,30 +17,16 @@
 
 import sys
 import argparse
-from calvin.csparser.parser import calvin_parser
-from calvin.csparser.codegen import CodeGen
-from calvin.actorstore import store
+from calvin.csparser.cscompile import get_components_in_script
+from calvin.actorstore.store import install_component
 
-
-def get_components(file):
+def get_components(file, names):
     try:
         with open(file, 'r') as source:
             source_text = source.read()
     except:
-        return {}, [{'reason': 'File not found', 'line': 0, 'col': 0}], []
-    ast, errors, warnings = calvin_parser(source_text, file)
-    cg = CodeGen(ast, 'temp')
-    comps, issues = cg.export_components()
-
-    errors = errors + [issue for issue in issues if issue['type'] == 'error']
-    warnings = warnings + [issue for issue in issues if issue['type'] == 'warning']
-
-    return comps, errors, warnings
-
-
-def install_component(namespace, name, definition, overwrite):
-    astore = store.ActorStore()
-    return astore.add_component(namespace, name, definition, overwrite)
+        return [], [{'reason': 'File not found', 'line': 0, 'col': 0}], []
+    return get_components_in_script(source_text, names)
 
 
 def main():
@@ -49,8 +35,8 @@ def main():
                            help='script file with component definitions')
     argparser.add_argument('--namespace', type=str, required=True,
                            help='namespace to install components under')
-    group = argparser.add_mutually_exclusive_group()
-    group.add_argument('--all', dest='component', action='store_const', const=[],
+    group = argparser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--all', dest='component', action='store_const', const=None,
                        help='install all components found in script')
     group.add_argument('--component', type=str, nargs='+',
                        help='name of component(s) to install')
@@ -67,25 +53,18 @@ def main():
         for issue in sorted_issues:
             sys.stderr.write(args.fmt.format(script=file, issue_type=issue_type, **issue) + '\n')
 
-    comps, errors, warnings = get_components(args.script)
+    comps, errors, warnings = get_components(args.script, args.component)
 
-    # FIXME: Error if component requested in args.component not present
+
+    if errors:
+        warnings.append({'reason': 'Nothing installed', 'line': 0, 'col': 0})
+    else:
+        for comp in comps:
+            if not install_component(args.namespace, comp, args.overwrite):
+                errors.append({'reason': 'Failed to install "{0}"'.format(comp.name), 'line': 0, 'col': 0})
 
     if warnings:
         report_issues(warnings, 'Warning', args.script)
-    if errors:
-        report_issues(errors, 'Error', args.script)
-        return 1
-
-    errors = []
-    for comp in comps:
-        if args.component and comp.name not in args.component:
-            continue
-        ok = install_component(args.namespace, comp.name, comp, args.overwrite)
-        if not ok:
-            errors.append({'reason': 'Failed to install "{0}"'.format(comp.name),
-                          'line': 0, 'col': 0})
-
     if errors:
         report_issues(errors, 'Error', args.script)
         return 1

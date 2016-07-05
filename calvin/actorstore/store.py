@@ -794,6 +794,13 @@ class GlobalStore(ActorStore):
         filtered_actor_type_iter.set_name("global_lookup")
         return filtered_actor_type_iter
 
+
+
+def install_component(namespace, definition, overwrite):
+    astore = ActorStore()
+    return astore.add_component(namespace, definition.name, definition, overwrite)
+
+
 if __name__ == '__main__':
     import json
 

@@ -1,7 +1,7 @@
 
 import os
 from parser import calvin_parser
-from codegen import generate_app_info
+from codegen import generate_app_info, generate_comp_info
 from calvin.utilities.security import Security, security_enabled
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
@@ -18,11 +18,18 @@ def compile_script(source_text, filename, credentials=None, verify=True):
     ir, errors, warnings = calvin_parser(source_text, filename)
     app_name = os.path.splitext(os.path.basename(filename))[0]
     deployable, issues = generate_app_info(ir, app_name, verify=verify)
-    errors = [issue for issue in issues if issue['type'] == 'error']
-    warnings = [issue for issue in issues if issue['type'] == 'warning']
+    errors.extend([issue for issue in issues if issue['type'] == 'error'])
+    warnings.extend([issue for issue in issues if issue['type'] == 'warning'])
 
     return deployable, errors, warnings
 
+def get_components_in_script(source_text, names=None):
+    ir, errors, warnings = calvin_parser(source_text, 'dummy_filename')
+    comps, issues = generate_comp_info(ir, names)
+    errors.extend([issue for issue in issues if issue['type'] == 'error'])
+    warnings.extend([issue for issue in issues if issue['type'] == 'warning'])
+
+    return comps, errors, warnings
 
 
 # FIXME: It might make sense to turn this function into a plain asynchronous security check.
