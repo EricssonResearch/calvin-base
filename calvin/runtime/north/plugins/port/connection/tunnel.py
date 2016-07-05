@@ -34,7 +34,9 @@ class TunnelConnection(BaseConnection):
         if self.purpose != PURPOSE.INIT:
             self.token_tunnel = self.node.pm.connections_data[self.__class__.__name__]
 
-    def connect(self):
+    def connect(self, status, port_meta):
+        # TODO: status & port_meta unused
+        
         tunnel = None
         if self.peer_port_meta.node_id not in self.token_tunnel.tunnels.iterkeys():
             # No tunnel to peer, get one first
@@ -183,7 +185,7 @@ class TunnelConnection(BaseConnection):
         # remove previous endpoint
         if invalid_endpoint:
             if invalid_endpoint.use_monitor():
-                self.monitor.unregister_endpoint(invalid_endpoint)
+                self.node.monitor.unregister_endpoint(invalid_endpoint)
             invalid_endpoint.destroy()
 
         # Done connecting the port
@@ -237,7 +239,7 @@ class TunnelConnection(BaseConnection):
         # Remove previous endpoint
         if invalid_endpoint:
             if invalid_endpoint.use_monitor():
-                self.monitor.unregister_endpoint(invalid_endpoint)
+                self.node.monitor.unregister_endpoint(invalid_endpoint)
             invalid_endpoint.destroy()
 
         # Update storage
