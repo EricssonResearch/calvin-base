@@ -34,7 +34,7 @@ class TunnelConnection(BaseConnection):
         if self.purpose != PURPOSE.INIT:
             self.token_tunnel = self.node.pm.connections_data[self.__class__.__name__]
 
-    def connect(self, status, port_meta):
+    def connect(self, status=None, port_meta=None):
         # TODO: status & port_meta unused
         
         tunnel = None
