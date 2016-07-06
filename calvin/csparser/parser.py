@@ -22,13 +22,20 @@ from calvin_rules import tokens as calvin_tokens
 import astnode as ast
 
 
-
 class CalvinParser(object):
     """docstring for CalvinParser"""
-    def __init__(self, lexer):
+    def __init__(self, lexer=None):
         super(CalvinParser, self).__init__()
-        self.lexer = lexer
-        self.parser = yacc.yacc(module=self)
+        if lexer:
+            self.lexer = lexer
+        else:
+            self.lexer = lex.lex(module=calvin_rules, debug=False, optimize=True)
+        # Since the parse may be called from other scripts, we want to have control
+        # over where parse tables (and parser.out log) will be put if the tables
+        # have to be recreated
+        this_file = os.path.realpath(__file__)
+        containing_dir = os.path.dirname(this_file)
+        self.parser = yacc.yacc(module=self, debug=False, optimize=True, outputdir=containing_dir)
         self.issues = []
 
     tokens = calvin_tokens
@@ -358,34 +365,8 @@ class CalvinParser(object):
         return self.parser.parse(source_text)
 
 
-
-# def _calvin_parser():
-#     # Set up a logging object
-#     import logging
-#     logging.basicConfig(
-#         level = logging.DEBUG,
-#         filename = "parselog.txt",
-#         filemode = "w",
-#         format = "%(filename)10s:%(lineno)4d:%(message)s"
-#     )
-#     log = logging.getLogger()
-#
-#
-#     lexer = lex.lex(module=calvin_rules)
-#     lexer.zerocol = 0
-#     # Since the parse may be called from other scripts, we want to have control
-#     # over where parse tables (and parser.out log) will be put if the tables
-#     # have to be recreated
-#     this_file = os.path.realpath(__file__)
-#     containing_dir = os.path.dirname(this_file)
-#     parser = yacc.yacc(write_tables=False, debug=True)
-#     # parser = yacc.yacc(debuglog=log, debug=True)
-#     return parser
-
 def calvin_parser(source_text):
-
-    lexer = lex.lex(module=calvin_rules)
-    parser = CalvinParser(lexer)
+    parser = CalvinParser()
     result = parser.parse(source_text)
 
     return result, parser.issues, []
