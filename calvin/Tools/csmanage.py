@@ -22,7 +22,6 @@ import glob
 import shutil
 import json
 from calvin.csparser.parser import calvin_parser
-from calvin.csparser.checker import check
 from calvin.actorstore import store
 from calvin.utilities import certificate
 from calvin.utilities import certificate_authority

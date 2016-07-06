@@ -35,15 +35,6 @@ def compile_generator(files):
         deployable, errors, warnings = compile_file(filename)
         yield((deployable, errors, warnings, filename))
 
-def remove_debug_info(deployable):
-    pass
-    # if type(d)==type({}):
-    #     d.pop('dbg_line', None)
-    #     for item in d:
-    #         _remove_debug_symbols(d[item])
-    # elif type(d)==type([]):
-    #     for item in d:
-    #         _remove_debug_symbols(item)
 
 def main():
     long_description = """
@@ -56,8 +47,8 @@ def main():
 
     argparser.add_argument('files', metavar='<filename>', type=str, nargs='+',
                            help='source file to compile')
-    argparser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False,
-                           help='leave debugging information in output')
+    # argparser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False,
+    #                        help='leave debugging information in output')
     argparser.add_argument('--stdout', dest='to_stdout', action='store_true',
                            help='send output to stdout instead of file (default)')
     argparser.add_argument('--compact', dest='indent', action='store_const', const=None, default=4,
@@ -87,10 +78,6 @@ def main():
         if exit_code == 1:
             # Don't produce output if there were errors
             continue
-        if not args.debug:
-            # FIXME: Debug information is not propagated from IR to deployable by Analyzer.
-            #        When it is, this is the place to remove it
-            remove_debug_info(deployable)
         string_rep = json.dumps(deployable, indent=args.indent, sort_keys=args.sorted)
         if args.to_stdout:
             print(string_rep)

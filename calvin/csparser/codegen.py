@@ -782,9 +782,3 @@ def generate_comp_info(ast_root, name=None, verify=True):
     return cg.export_components(name)
 
 
-if __name__ == '__main__':
-    from parser_regression_tests import run_check, run_issue_check, run_all
-    # run_check(tests=['testComponentArgumentOnInternalPort'], testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/regression-tests')
-    # run_issue_check(tests=['component_bad1'], testdir='/Users/eperspe/Source/calvin-base/calvin/csparser/testscripts/issue-reporting-tests')
-    run_all()
-
