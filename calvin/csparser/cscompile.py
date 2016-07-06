@@ -1,7 +1,7 @@
 
 import os
 from parser import calvin_parser
-from codegen import generate_app_info, generate_comp_info
+from codegen import calvin_codegen, generate_comp_info
 from calvin.utilities.security import Security, security_enabled
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
@@ -20,14 +20,13 @@ def compile_script(source_text, filename, credentials=None, verify=True):
     N.B 'credentials' and 'verify' are intended for actor store access, currently unused
     """
     appname =_appname_from_filename(filename)
-    ir, errors, warnings = calvin_parser(source_text)
-    deployable, issues = generate_app_info(ir, appname, verify=verify)
-    errors.extend([issue for issue in issues if issue['type'] == 'error'])
-    warnings.extend([issue for issue in issues if issue['type'] == 'warning'])
+    deployable, issuetracker = calvin_codegen(source_text, appname, verify=verify)
 
-    return deployable, errors, warnings
+    # FIXME: [PP] Return issuetracker
+    return deployable, issuetracker.errors(), issuetracker.warnings()
 
 def get_components_in_script(source_text, names=None):
+    # FIXME: Combine into single call
     ir, errors, warnings = calvin_parser(source_text)
     comps, issues = generate_comp_info(ir, names)
     errors.extend([issue for issue in issues if issue['type'] == 'error'])

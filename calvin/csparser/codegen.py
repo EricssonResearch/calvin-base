@@ -1,6 +1,7 @@
 import astnode as ast
 import visitor
 import astprint
+from parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore, GlobalStore
 
 
@@ -120,31 +121,31 @@ def _arguments(assignment, issue_tracker):
     return args
 
 
-class IssueTracker(object):
-    def __init__(self):
-        super(IssueTracker, self).__init__()
-        self.issues = []
-        self.err_count = 0
-        self.warn_count = 0
-
-    def _add_issue(self, issue_type, reason, node):
-        issue = {
-            'type': issue_type,
-            'reason': reason,
-        }
-        issue.update(node.debug_info or {'line':0, 'col':0, 'FIXME':True})
-        if issue not in self.issues:
-            self.issues.append(issue)
-            if issue['type'] == 'error':
-                self.err_count += 1
-            else:
-                self.warn_count +=1
-
-    def add_error(self, reason, node):
-        self._add_issue('error', reason, node)
-
-    def add_warning(self, reason, node):
-        self._add_issue('warning', reason, node)
+# class IssueTracker(object):
+#     def __init__(self):
+#         super(IssueTracker, self).__init__()
+#         self.issues = []
+#         self.err_count = 0
+#         self.warn_count = 0
+#
+#     def _add_issue(self, issue_type, reason, node):
+#         issue = {
+#             'type': issue_type,
+#             'reason': reason,
+#         }
+#         issue.update(node.debug_info or {'line':0, 'col':0, 'FIXME':True})
+#         if issue not in self.issues:
+#             self.issues.append(issue)
+#             if issue['type'] == 'error':
+#                 self.err_count += 1
+#             else:
+#                 self.warn_count +=1
+#
+#     def add_error(self, reason, node):
+#         self._add_issue('error', reason, node)
+#
+#     def add_warning(self, reason, node):
+#         self._add_issue('warning', reason, node)
 
 
 class Finder(object):
@@ -210,6 +211,7 @@ class ImplicitPortRewrite(object):
         self.counter += 1
         const_name = '_literal_const_'+str(self.counter)
         const_actor = ast.Assignment(ident=const_name, actor_type='std.Constant', args=args)
+        const_actor.debug_info = node.arg.debug_info
         const_actor_port = ast.OutPort(actor=const_name, port='token')
         link = node.parent
         link.replace_child(node, const_actor_port)
@@ -665,10 +667,10 @@ class CodeGen(object):
     Generate code from a source file
     FIXME: Use a writer class to generate output in various formats
     """
-    def __init__(self, ast_root, script_name, verify=True):
+    def __init__(self, ast_root, script_name):
         super(CodeGen, self).__init__()
         self.root = ast_root
-        self.verify = verify
+        # self.verify = verify
         self.app_info = {
             'name':script_name,
             'actors': {},
@@ -710,11 +712,11 @@ class CodeGen(object):
         self.dump_tree('Consistency Check')
 
 
-    def phase2(self, issue_tracker):
+    def phase2(self, issue_tracker, verify=True):
         ##
         # Expand components
         expander = Expander(issue_tracker)
-        expander.process(self.root, self.verify)
+        expander.process(self.root, verify)
         self.dump_tree('EXPANDED')
 
         ##
@@ -729,14 +731,14 @@ class CodeGen(object):
         gen_app_info.process()
 
 
-    def run(self):
-        issue_tracker = IssueTracker()
+    def run(self, issue_tracker, verify=True):
+        # issue_tracker = IssueTracker()
 
         self.phase1(issue_tracker)
-        self.phase2(issue_tracker)
+        self.phase2(issue_tracker, verify)
 
-        self.app_info['valid'] = (issue_tracker.err_count == 0)
-        self.issues = issue_tracker.issues
+        self.app_info['valid'] = (issue_tracker.error_count == 0)
+        # self.issues = issue_tracker.issues
 
     def export_components(self, names):
         """
@@ -772,13 +774,43 @@ def query(root, kind=None, attributes=None, maxdepth=1024):
     # print "QUERY", kind.__name__, attributes, finder.matches
     return finder.matches
 
-def generate_app_info(ast_root, name='anonymous', verify=True):
-    cg = CodeGen(ast_root, name, verify=verify)
-    cg.run()
-    return cg.app_info, cg.issues
+def calvin_codegen(source_text, app_name, verify=True):
+    """
+    Generate application code from script, return deployable and issuetracker.
+
+    Parameter app_name is required to provide a namespace for the application.
+    Optional parameter verify is deprecated, defaults to True.
+    """
+    ast_root, issuetracker = calvin_parse(source_text)
+    cg = CodeGen(ast_root, app_name)
+    cg.run(issuetracker, verify)
+    return cg.app_info, issuetracker
+
+# FIXME: [PP] Remove, use calvin_codegen
+# def generate_app_info(ast_root, name='anonymous', verify=True):
+#     cg = CodeGen(ast_root, name)
+#     cg.run()
+#     return cg.app_info, cg.issues
 
 def generate_comp_info(ast_root, name=None, verify=True):
     cg = CodeGen(ast_root, 'dummy', verify=verify)
     return cg.export_components(name)
+
+if __name__ == '__main__':
+    script = 'inline'
+    source_text = \
+    """
+    snk : io.Print()
+    1 > snk.token
+    """
+    ai, it = calvin_codegen(source_text, script)
+    if it.issue_count == 0:
+        print "No issues"
+        print ai
+    for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
+        print i
+
+
+
 
 

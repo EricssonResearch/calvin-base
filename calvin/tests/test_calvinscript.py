@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.csparser.parser import calvin_parser
-from calvin.csparser.codegen import generate_app_info
+from calvin.csparser.codegen import calvin_codegen
 import unittest
 import json
 import difflib
@@ -43,26 +43,16 @@ class CalvinTestBase(unittest.TestCase):
             raise e
         return text
 
-    def _format_unexpected_error_message(self, errors):
-        msg_list = ["Expected empty error, not {0}".format(err) for err in errors]
-        return '\n'.join(msg_list)
-
     def parse(self, test, source_text=None, verify=True):
         if not source_text:
             test = self.test_script_dir + test + '.calvin'
             source_text = self._read_file(test)
 
-        ast, parser_issues, _ = calvin_parser(source_text)
-        app_info, codegen_issues = generate_app_info(ast, name=test, verify=verify)
-        issues = parser_issues + codegen_issues
+        deployable, issuetracker = calvin_codegen(source_text, test, verify=verify)
+        errors = issuetracker.errors(sort_key='reason')
+        warnings = issuetracker.warnings(sort_key='reason')
 
-        errors = [issue for issue in issues if issue['type'] == 'error']
-        errors = sorted(errors, key=lambda x : x['reason'])
-
-        warnings = [issue for issue in issues if issue['type'] == 'warning']
-        warnings = sorted(warnings, key=lambda x : x['reason'])
-
-        return app_info, errors, warnings
+        return deployable, errors, warnings
 
 
 

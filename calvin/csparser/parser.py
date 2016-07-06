@@ -20,6 +20,7 @@ import ply.yacc as yacc
 import calvin_rules
 from calvin_rules import tokens as calvin_tokens
 import astnode as ast
+from calvin.utilities.issuetracker import IssueTracker
 
 
 class CalvinParser(object):
@@ -36,7 +37,6 @@ class CalvinParser(object):
         this_file = os.path.realpath(__file__)
         containing_dir = os.path.dirname(this_file)
         self.parser = yacc.yacc(module=self, debug=False, optimize=True, outputdir=containing_dir)
-        self.issues = []
 
     tokens = calvin_tokens
 
@@ -145,13 +145,11 @@ class CalvinParser(object):
 
     def p_link_error(self, p):
         """link : internal_outport GT internal_inport"""
-        error = {
-            'type': 'error',
-            'reason': 'Component inport connected directly to outport.',
+        info = {
             'line': p.lineno(2),
             'col': self._find_column(p.lexpos(2))
         }
-        self.issues.append(error)
+        self.issuetracker.add_error('Component inport connected directly to outport.', info)
 
     # def p_portmap(self, p):
     #     """portmap : port GT internal_port
@@ -321,31 +319,27 @@ class CalvinParser(object):
         if not token:
             # Unexpected EOF
             lines = self.source_text.splitlines()
-            error = {
-                'type': 'error',
-                'reason': 'Unexpected end of file.',
+            info = {
                 'line': len(lines),
                 'col': len(lines[-1])
             }
-            self.issues.append(error)
+            self.issuetracker.add_error('Unexpected end of file.', info)
             return
+
         # FIXME: Better recovery
-        error = {
-            'type': 'error',
-            'reason': 'Syntax error.',
+        # FIXME: [PP] This originated as an exception in the lexer,
+        #             there is more info to extract.
+        info = {
             'line': token.lineno,
             'col': self._find_column(token.lexpos)
         }
-        self.issues.append(error)
+        self.issuetracker.add_error('Syntax error.', info)
         # print self.parser.statestack
         # print self.parser.symstack
 
         # Trying to recover from here...
 
     def _find_column(self, lexpos):
-    # Compute column.
-    #     input is the input text string
-    #     token is a token instance
         last_cr = self.source_text.rfind('\n', 0, lexpos)
         # rfind returns -1 if not found, i.e. on 1st line,
         # which is exactly what we need in that case...
@@ -361,17 +355,23 @@ class CalvinParser(object):
         return info
 
     def parse(self, source_text):
+        self.issuetracker = IssueTracker()
         self.source_text = source_text
-        return self.parser.parse(source_text)
+        return self.parser.parse(source_text), self.issuetracker
 
 
+# FIXME: [PP] remove
 def calvin_parser(source_text):
     parser = CalvinParser()
     result = parser.parse(source_text)
 
     return result, parser.issues, []
 
-
+# FIXME: [PP] new API
+def calvin_parse(source_text):
+    """Parse source text and return ir (AST) and issuetracker."""
+    parser = CalvinParser()
+    return parser.parse(source_text)
 
 
 if __name__ == '__main__':
@@ -414,23 +414,8 @@ delay.token > src.in
             print "Error: Could not read file: '%s'" % script
             sys.exit(1)
 
-    # result, issues = calvin_parser(source_text, script)
-    lexer = lex.lex(module=calvin_rules)
-    parser = CalvinParser(lexer)
-    result = parser.parse(source_text)
-
-    for issue in parser.issues:
-        print "{type} : {reason} {script} [{line}:{col}]".format(script=script, **issue)
-
-    n_errors = len([x for x in parser.issues if x['type'] == 'error'])
-    print "err count", n_errors
-    print result
-    if not n_errors:
-        import astprint
-        bp = astprint.BracePrinter()
-        bp.visit(result)
-        #print
-        #print result.children
-
-        # print result
-        # print(json.dumps(result, indent=4, sort_keys=True))
+    ir, it = calvin_parse(source_text)
+    if it.issue_count == 0:
+        print "No issues"
+    for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
+        print i

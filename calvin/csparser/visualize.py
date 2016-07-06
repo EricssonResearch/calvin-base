@@ -162,25 +162,33 @@ class Visualize(object):
 
 
 def visualize_script(source_text):
-    ast, issues, _ = calvin_parser(source_text)
+    """Process script and return graphviz (dot) source representing application."""
+    # Here we need the unprocessed tree
+    ir, issuetracker = calvin_parse(source_text)
     v = Visualize()
-    return v.process(ast), issues
+    dot_source = v.process(ir)
+    return dot_source, issuetracker
 
 
 def visualize_deployment(source_text):
+    # FIXME: [PP] Combine into single call
     ast_root, issues, _ = calvin_parser(source_text)
     cg = CodeGen(ast_root, 'temp')
     cg.run()
     issues.extend(cg.issues)
+
+    # Here we need the processed tree
     v = Visualize()
     return v.process(cg.root), issues
 
 def visualize_component(source_text, name):
     # FIXME: Not working
+    # FIXME: [PP] Combine into single call
     ast_root, issues, _ = calvin_parser(source_text)
     cg = CodeGen(ast_root, 'temp')
     comps, cg_issues = cg.export_components([name])
     issues.extend(cg_issues)
+
     if not comps:
         return "digraph structs {ERROR}", issues
     v = Visualize()

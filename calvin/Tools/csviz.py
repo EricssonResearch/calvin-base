@@ -55,6 +55,7 @@ def main():
     with open(args.script, 'r') as f:
         source_text = f.read()
 
+    # FIXME: [PP] New API
     issues=[]
     try:
         if args.deployment:
