@@ -3,7 +3,7 @@
 Assuming you have a working installation of docker, either build an image using the
 supplied docker files, or fetch them from dockerhub.
 
-## Building an image ##
+## Building a docker image ##
 
 Building an image is straightforward. Here is how we built the images available on
 dockerhub:
@@ -41,7 +41,7 @@ will build an image based on the develop image with the changes in the current r
 
 will build the develop branch image, and name it `mycalvin/calvin:develop`.
 
-Once they are available, the following should list the available actor namespaces:
+Once an image is available, the following should list the available actor namespaces:
 
     $ ./dcsdocs.sh
     Calvin: Merging cloud and IoT
@@ -58,31 +58,37 @@ and you will get a prompt, with the current path being the root of the Calvin in
     $ cd calvin/examples/sample-scripts
 	$ csruntime --host localhost test1.calvin
 
+Note that in a distributed Calvin-system, the runtimes need to know their externally visible IP. 
 
 ## Starting Calvin ##
 
-To start a runtime, use the following:
+When running Calvin distributed, there are two options for the registry, which is how Calvin handles discovery and information sharing between runtimes. Either have a designated Calvin runtime handling the registry for the system, or have it distributed in a DHT (distributed hash table). It is also possible to have a mixture of these in the same system, but for simplicity we only cover the clean cut cases.
 
-    $ ./dcsruntime.sh -e <ip> -p -n <name>
+### Designated registry
 
-where `<ip>` is the ip of your computer (or your virtual machine if you are running e.g. docker machine.) When connecting several runtimes, this is necessary for them to find eachother. The `-p` sets this as the one in charge of the runtime registry - i.e. the place where other runtimes look up addresses and attributes. There is an optional argument `-i` which sets which image to use. The default is `erctcalvin/calvin:master`
+The registry runtime needs to be started first, before any of the others. The following command starts a runtime, names it "registry" and sets it to not use an external registry - i.e. it handles its own registry. Of course, it also needs an externally visible ip address for the other runtimes to use when communicating with it, and a port to use for the runtime to runtime communication. It is also prudent to expose a port for the control API using the `-c` option. More on that later.
+
+    ./dcsruntime.sh -e <ip> -l -n registry -p <port> -c <another port>
+
+We recommend `5000` and `5001`, respectively. There is an optional argument `-i` which sets which image to use. The default is `erctcalvin/calvin:master`
 	
 To start more runtimes, use the following:
 
-    $ ./dcsruntime.sh -e <ip> -m calvinip://<ip of previous> -n <name>
+    $ ./dcsruntime.sh -e <ip> -r <previous pi>:<previous port> -n <name>
 	
-For example, the following will start 4 runtimes in separate containers, using the address 192.168.99.100, with the first one as registry:
+The naming is optional, and can be omitted (in which case the runtime will get the name of the docker container it is running in.) The `-r` option tells the runtime that the registry is handled by the runtime located at `<ip>:<port>`. For example, the following will start 4 runtimes in separate containers, using the address `192.168.99.100`, with the first one as registry:
 
-    $ ./dcsruntime.sh -e 192.168.99.100 -p -n registry
-	$ ./dcsruntime.sh -e 192.168.99.100 -m calvinip://192.168.99.100 -n runtime-1
-	$ ./dcsruntime.sh -e 192.168.99.100 -m calvinip://192.168.99.100 -n runtime-2
-	$ ./dcsruntime.sh -e 192.168.00.100 -m calvinip://192.168.99.100 -n runtime-3
+    $ ./dcsruntime.sh -e 192.168.99.100 -l -n registry -p 5000 -c 5001
+	$ ./dcsruntime.sh -e 192.168.99.100 -r 192.168.99.100:5000 -n runtime-1
+	$ ./dcsruntime.sh -e 192.168.99.100 -r 192.168.99.100:5000 -n runtime-2
+	$ ./dcsruntime.sh -e 192.168.99.100 -r 192.168.99.100:5000 -n runtime-3
+
 
 Start the web interface:
 
     $ ./dcsweb.sh 8000
 	
-and point your browser to `http://localhost:8000` (if you are using e.g. dockermachine, then this should be the ip of the VM hosting the containers). Enter the control uri of the registry runtime when asked - the default is port 5001 (`http://192.168.99.100:5001` in this example.)
+and point your browser at `http://localhost:8000` (if you are using e.g. dockermachine, then `localhost` will not work - in that case it should be the ip of the VM hosting the containers). Enter the control uri of the registry runtime when asked - `http://192.168.99.100:5001` in this example.
 
 The list should include all 4 runtimes with the specified names.
 

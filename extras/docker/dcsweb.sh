@@ -1,10 +1,31 @@
 #!/bin/sh
 
-PORT=$1
+#Defaults
 
-if [ -z "$PORT" ]; then
-	PORT=8000
-fi
+PORT="8000"
+IMAGE="erctcalvin/calvin:master"
 
-docker run -p $PORT:8000 -it --entrypoint csweb erctcalvin/calvin:master
+usage() {
+	echo "Usage: $(basename $0) \n\
+    -i <image>[:<tag>]   : Docker image (and tag) to use [$IMAGE]\n\
+    -p <port>            : Port to use [$PORT]\n"
+     exit 1
+}
+
+
+while getopts "i:p:h" opt; do
+	case $opt in
+        p)
+            PORT="$OPTARG"
+            ;;
+        i)
+            IMAGE=$OPTARG
+            ;;
+		h)
+			usage;
+			;;
+	esac
+done
+
+docker run -p $PORT:8000 -it --entrypoint csweb $IMAGE
 
