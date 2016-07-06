@@ -24,7 +24,7 @@ class Trigger(Actor):
         data: given data
     """
 
-    @manage(['tick', 'data'])
+    @manage(['tick', 'data', 'started'])
     def init(self, tick, data):
         self.tick = tick
         self.data = data

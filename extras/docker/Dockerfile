@@ -8,6 +8,6 @@ RUN apk --update add python py-pip openssl ca-certificates \
       && cd /calvin-base \
       && pip install --upgrade -r requirements.txt -r test-requirements.txt -e . \
       && apk del build-dependencies && rm -rf /var/cache/apk/*
-COPY docker-runtime.sh /calvin-base/
 WORKDIR /calvin-base/
 EXPOSE 5000 5001
+

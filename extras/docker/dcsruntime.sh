@@ -1,139 +1,120 @@
 #!/bin/sh
 
+
+# Defaults
+IMAGE=erctcalvin/calvin:master
+REGISTRY_TYPE=\"dht\"
+REGISTRY_PROXY=""
+NAME_OPT=""
+CONTROLPORT_OPT="5001"
+PORT_OPT="5000"
+
 usage() {
 	echo "Usage: $(basename $0) \n\
-    -i <image>[:<tag>   : Docker image (and tag) to use
-    -l                  : Limit docker CPU and memory\n\
-    -p                  : Make the proxy node\n\
-    -s                  : Run privileged
-    -g                  : Enable Raspberry Pi gpio (implies -s)
-    -m <storage-proxy>  : address of proxy\n\
-    -e <external-ip>    : external IP to use\n\
-    -n <name>           : Name of docker and attribute of csruntime\n\
-     <args to csruntime>"
+    -i <image>[:<tag>]   : Calvin image (and tag) to use [$IMAGE]\n\
+    -e <external-ip>     : External IP to use\n\
+    -n <name>            : Name of container & runtime\n\
+    -c <port>            : Port to use for control uri\n\
+    -p <port>            : Port to use for runtime to runtime communication\n\
+    -l                   : Use local registry (non-distributed)
+    -r <ip>:<port>       : Use runtime calvinip://<ip>:<port> as registry
+    -v                   : Verbose output
+    -d                   : dry run, do not start Calvin
+     <args to csruntime>\n"
+     exit 1
 }
 
-PROXY=""
-ARGS=""
-NAME=""
-LIMIT=""
-ENV=""
-
-while getopts "sglpe:m:i:o:n:-:" opt; do
+while getopts "dlr:c:p:he:i:n:-:v" opt; do
 	case $opt in
-        s)
-            ENV="$ENV --privileged"
+        d)
+            DRYRUN=yes
             ;;
-        g)
-            ENV="$ENV -e CALVIN_GLOBAL_GPIO_PLUGIN=\"platform/raspberry_pi/rpigpio_impl\""
-            ENV="$ENV --device /dev/ttyAMA0:/dev/ttyAMA0 --device /dev/mem:/dev/mem --privileged"
+        l)
+            REGISTRY_TYPE=\"local\"
             ;;
-        i) 
-            TAG=$OPTARG
+        r)
+            REGISTRY_TYPE=\"proxy\"
+            REGISTRY_PROXY=\"calvinip://$OPTARG\"
             ;;
-		l)
-			LIMIT=yes
-			;;
-		p)
-			# This is the proxy to use
-			PROXY=yes
-			;;
+        p)
+            PORT_OPT="$OPTARG:5000"
+            ;;
+        c)
+            CONTROLPORT_OPT="$OPTARG:5001"
+            ;;
+        i)
+            IMAGE=$OPTARG
+            ;;
 		e)
 			EXTERNAL_IP=$OPTARG
-			;;
-		m) 
-			CALVIN_MASTER=$OPTARG
 			;;
 		n) 
 			NAME=$OPTARG
 			;;
+        v)
+            VERBOSE=yes
+            ;;
 
 		-) 
 			VAL=${!OPTIND}
 			ARGS+=" --$OPTARG ${!OPTIND}"
 			OPTIND=$(( $OPTIND + 1))
 			;;
-		\?)
+		h)
 			usage;
-			exit 1
 			;;
 	esac
 done
 
-shift $((OPTIND-1))
+CALVIN_ENV=" -e CALVIN_GLOBAL_STORAGE_TYPE=$REGISTRY_TYPE"
 
-if [ -z "$TAG" ]; then
-    TAG="erctcalvin/calvin"
+if test -n "$REGISTRY_PROXY"; then
+    CALVIN_ENV+=" -e CALVIN_GLOBAL_STORAGE_PROXY=$REGISTRY_PROXY"
 fi
 
-echo "image: " $TAG
-echo "master:" $CALVIN_MASTER
-echo "external:" $EXTERNAL_IP
-echo "name:" $NAME
-echo "args: " $ARGS
-
-if [ -z "$NAME" ]; then
-	echo "Error: No name supplied";
-	exit 1;
+if test -n "$NAME"; then
+	NAME_OPT="--name $NAME"
 fi
 
-if [ -z "$EXTERNAL_IP" ]; then
-	echo "Error: Externally visible IP required";
-	exit 1;
-fi
+DOCKER_ID=$(docker run $CALVIN_ENV $NAME_OPT -d -it -p $PORT_OPT -p $CONTROLPORT_OPT --entrypoint /bin/sh $IMAGE) || exit 1
 
-if [ -z "$PROXY" -a -z "$CALVIN_MASTER" ]; then
-	echo "Non-proxy runtimes require master of the form 'calvinip://<uri>:<port>'"
-	exit 1
-fi
-
-# Ensure no docker with that name already running
-if [ $(docker ps -a | grep -c "$NAME" ) -eq 1 ]; then
-	echo "Container \"$NAME\" already exists";
-	exit 1;
-fi
-
-# Should be an option, really
-# docker pull erctcalvin/calvin-test:demo
-
-
-if [ "$PROXY" ]; then
-	ENV="$ENV -e CALVIN_GLOBAL_STORAGE_TYPE=\"local\" -p 5001:5001 -p 5000:5000"
-fi
-
-# When not control or proxy try to exit and not catch fatal errors
-if [ -z "$PROXY" -a -z "$CONTROL" ]; then
-	ENV="$ENV -e CALVIN_GLOBAL_EXIT_ON_EXCEPTION=true "
-fi
-
-if [ "$CALVIN_MASTER" ]; then
-	ENV="$ENV -e CALVIN_GLOBAL_STORAGE_TYPE=\"proxy\" "
-	ENV="$ENV -e CALVIN_GLOBAL_STORAGE_PROXY=\"$CALVIN_MASTER\""
-fi
-
-if [ "$LIMIT" ]; then 
-	ENV="$ENV --cpu-quota=83000 --cpu-period=1000000 -m=512m"
-fi
-
-DOCKER_ID=$(docker run $ENV \
-    --name $NAME \
-    -d -t -P --entrypoint ./docker-runtime.sh $TAG --name $NAME "$ARGS")
-
-echo "ENV:"  $ENV
 PORT=$(docker port $DOCKER_ID 5000/tcp)
 CONTROLPORT=$(docker port $DOCKER_ID 5001/tcp)
+INTERNAL_IP=$(docker inspect --format '{{ .NetworkSettings.IPAddress}}' $DOCKER_ID)
 
-INTERNAL_IP=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' $DOCKER_ID)
+if test -z "$EXTERNAL_IP"; then
+	# If not external ip given, warn, use internal
+    printf "Warning: Using internal ip $INTERNAL_IP\n"
+	EXTERNAL_IP=$INTERNAL_IP
+fi
 
-echo $INTERNAL_IP > /tmp/$DOCKER_ID.ip
-docker cp /tmp/$DOCKER_ID.ip $DOCKER_ID:/calvin-base/internal-ip
+EXTERNAL_CONTROL=http://$EXTERNAL_IP:${CONTROLPORT#*:} # Strip address 0.0.0.0: from control port
+EXTERNAL_CALVINIP=calvinip://$EXTERNAL_IP:${PORT#*:} # Strip address 0.0.0.0: from port
 
-echo http://$EXTERNAL_IP:${CONTROLPORT#*:} > /tmp/$DOCKER_ID.control
-docker cp /tmp/$DOCKER_ID.control $DOCKER_ID:/calvin-base/control-uri
+# If no name option given, use docker name for runtime
+if test -z "$NAME"; then
+	# Strip prefix '/' from name
+	NAME=$(docker inspect  --format '{{ .Name }}' $DOCKER_ID)
+	NAME=${NAME#*/}
+fi
 
-echo calvinip://$EXTERNAL_IP:${PORT#*:} > /tmp/$DOCKER_ID.calvinip
-docker cp /tmp/$DOCKER_ID.calvinip $DOCKER_ID:/calvin-base/calvin-ip
+if test x"$VERBOSE" = x"yes"; then
+    echo "Name: $NAME, image: $IMAGE"
+    echo "External ip: $EXTERNAL_IP"
+    echo "Internal ip: $INTERNAL_IP"
+    echo "External control uri: $EXTERNAL_CONTROL"
+    echo "External control ip : $EXTERNAL_CALVINIP"
+    echo "Registry type: $REGISTRY_TYPE"
+    if test -n "$REGISTRY_PROXY"; then
+        echo "Registry proxy: $REGISTRY_PROXY"
+    fi
+fi
 
-# Save the proxy control uri for future reference
-test "$PROXY"x != ""x && cp /tmp/$DOCKER_ID.control /tmp/calvin-proxy.control
-test "$PROXY"x != ""x && cp /tmp/$DOCKER_ID.calvinip /tmp/calvin-ip.control
+if test x"$DRYRUN" != x"yes"; then
+    CMD="csruntime --host $INTERNAL_IP --external $EXTERNAL_CALVINIP --external-control $EXTERNAL_CONTROL \
+        --name $NAME --logfile /calvin-base/calvin.log $ARGS"
+    docker exec -d $DOCKER_ID sh -c "$CMD"
+else
+    docker kill $DOCKER_ID
+    docker rm $DOCKER_ID
+fi
