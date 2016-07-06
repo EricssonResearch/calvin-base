@@ -1,0 +1,5 @@
+{"requirements":{"src":[{"op":"node_attr_match","kwargs":{"index":["node_name",{"name":"runtime-0"}]},"type":"+"}],
+                 "snk":[{"op":"node_attr_match","kwargs":{"index":["node_name",{"name":"runtime-3"}]},"type":"+"}],
+                 "id1":[{"op":"node_attr_match","kwargs":{"index":["node_name",{"name":"runtime-1"}]},"type":"+"}],
+                 "id2":[{"op":"node_attr_match","kwargs":{"index":["node_name",{"name":"runtime-2"}]},"type":"+"}]
+                 }}
