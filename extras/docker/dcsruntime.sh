@@ -54,7 +54,6 @@ while getopts "dlr:c:p:he:i:n:-:v" opt; do
         v)
             VERBOSE=yes
             ;;
-
 		-) 
 			VAL=${!OPTIND}
 			ARGS+=" --$OPTARG ${!OPTIND}"

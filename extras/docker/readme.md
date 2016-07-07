@@ -71,11 +71,11 @@ The registry runtime needs to be started first, before any of the others. The fo
     ./dcsruntime.sh -e <ip> -l -n registry -p <port> -c <another port>
 
 We recommend `5000` and `5001`, respectively. There is an optional argument `-i` which sets which image to use. The default is `erctcalvin/calvin:master`
-	
+
 To start more runtimes, use the following:
 
     $ ./dcsruntime.sh -e <ip> -r <previous pi>:<previous port> -n <name>
-	
+
 The naming is optional, and can be omitted (in which case the runtime will get the name of the docker container it is running in.) The `-r` option tells the runtime that the registry is handled by the runtime located at `<ip>:<port>`. For example, the following will start 4 runtimes in separate containers, using the address `192.168.0.100`, with the first one as registry:
 
     $ ./dcsruntime.sh -e 192.168.0.100 -l -n runtime-0 -p 5000 -c 5001
@@ -95,7 +95,7 @@ Start the web interface:
 
 and point your browser at `http://localhost:8000` (if you are using e.g. dockermachine, then `localhost` will not work - in that case it should be the ip of the VM hosting the containers). Enter the control uri of the registry runtime when asked - `http://192.168.0.100:5001` in this example.
 
-The list should include all 4 runtimes with the specified names. Go to section CSWeb to continue.
+The list should include all 4 runtimes with the specified names. Go to the section on deployment to continue, or start over and setup a system with distributed registry, described in the next section.
 
 ### Distributed registry
 
@@ -178,34 +178,109 @@ It is also possible to deploy an application together with the deployment requir
 
 In the gui, on the first page, click the `deploy..` button on runtime-0.
 
-![click deploy](graphics/deploy-1.png)
+<img src="graphics/deploy-1.png" alt="click deploy" style="width: 50%; border: thin dashed black; display: block; margin-left: auto; margin-right:auto">
 
 In the deployment dialog that opens, click `choose file` at the top, select the file `extras/docker/test/pipeline.calvin` (the precise location depends on your OS, installation, etc.)
 
-![choose script file](graphics/deploy-2.png)
+
+<img src="graphics/deploy-2.png" alt="choose script file" style="border: thin dashed black; display: block; margin-left: auto; margin-right:auto">
 
 and then, in the same dialog, click `choose file` under requirements a bit lower down,
 
-![choose requirements file](graphics/deploy-3.png)
+<img src="graphics/deploy-3.png" alt="choose requirements file" style="border: thin dashed black; display: block; margin-left: auto; margin-right:auto">
 
 select the file `extras/docker/test/pipeline.deployjson`, and then click  `Deploy` at the bottom of the dialog.
 
-![deploy](graphics/deploy-4.png)
+<img src="graphics/deploy-4.png" alt="deploy" style="border: thin dashed black; display: block; margin-left: auto; margin-right:auto">
 
 This will send the script together with the requirements to Calvin, and, if everything works out, it should be possible to visually inspect the application by clicking `Applications`:
 
-![click applications](graphics/deploy-5.png)
+<img src="graphics/deploy-5.png" alt="click applications" style="width: 50%; border: thin dashed black; display: block; margin-left: auto; margin-right:auto">
 
 Select the application `test/pipeline.calvin` from the drop down menu
 
-![select application](graphics/deploy-6.png)
+<img src="graphics/deploy-6.png" alt="select application" style="border: thin dashed black; display: block; margin-left: auto; margin-right:auto">
 
 and a visual representation of the application should appear in your browser.
 
-![visual representation](graphics/deploy-7.png)
+<img src="graphics/deploy-7.png" alt="visual representation" style="width: 75%; border: thin dashed black; display: block; margin-left: auto; margin-right:auto">
 
 It is also possible to set the requirements after deployment, using the `Set requirements...` button here:
 
-![deploy](graphics/deploy-8.png)
+<img src="graphics/deploy-8.png" alt="deploy" style="border: thin dashed black; display: block; margin-left: auto; margin-right:auto">
+## Helper scripts
+
+In the `extras/docker` directory is a collection of helper scripts for managing a system of calvin runtimes. Some of them you have already encountered.
+
+### `dcsweb.sh`
+
+Start csweb in a docker container.
+
+    Usage: dcsweb.sh 
+       -i <image>[:<tag>]   : Docker image (and tag) to use [erctcalvin/calvin:master]
+       -p <port>            : Port to use [8000]
+
+Example usage:
+
+    $ ./dcsweb.sh 8000    
+
+will start a container presenting the CSWeb gui on port 8000 (see earlier example on deployment.)
 
 
+
+##`setup_system.sh`
+
+Set up a number of calvin runtimes. 
+
+    Usage: setup_system.sh -ctn -r <number>-i <image> -e <ip> [proxy/dht/cleanup]
+       -i <image>[:<tag>]   : Calvin image (and tag) to use [erctcalvin/calvin:develop]
+       -e <external-ip>     : External IP to use
+       -n                   : Native, not dockers
+       -r <number>          : Number of extra runtimes beyond the first one
+       -t                   : Run tests (requires 3+1 runtimes)
+       -c                   : Cleanup after tests
+
+This script has a `native` mode (`-n`) which starts up runtimes without using dockers. This requires a working calvin installation. Can also execute some basic deployment tests on a collection of runtimes (four). The tests can be executed as follows (exchange the given ip with yours.)
+
+Execute a test with distributed registry
+  
+    $ ./setup_system.sh -c -t -e 192.168.0.100 dht
+
+Execute test with designated registry
+ 
+     $ ./setup_system.sh -c -t -e 192.168.0.110 proxy
+ 
+To close all running calvin runtimes - in dockers and otherwise
+ 
+    $ ./setup_system.sh cleanup
+
+
+## __`dcsdocs.sh`__ 
+
+Run `csdocs` in a docker container. 
+
+    Usage: dcsdocs.sh <actor or namespace>
+         -i <image>[:<tag>]   : Calvin image (and tag) to use [erctcalvin/calvin:master]
+         <args sent to csdocs>
+         (use --help to get help on csdocs usage)
+
+Straightforward. Make sure you use the long option `--help` for help on csdocs.
+
+
+## `dcsruntime.sh`
+
+Start calvin in a docker container.
+
+    Usage: dcsruntime.sh 
+            -i <image>[:<tag>]   : Calvin image (and tag) to use [erctcalvin/calvin:master]
+            -e <external-ip>     : External IP to use
+            -n <name>            : Name of container & runtime
+            -c <port>            : Port to use for control uri
+            -p <port>            : Port to use for runtime to runtime communication
+            -l                   : Use local registry (non-distributed)
+            -r <ip>:<port>       : Use runtime calvinip://<ip>:<port> as registry
+            -v                   : Verbose output
+            -d                   : dry run, do not start Calvin
+             <args to csruntime>
+
+Note that this script has changed since the last release, so have a look at the arguments before using it if you think you are familiar with its usage.
