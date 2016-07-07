@@ -4,12 +4,12 @@ from codegen import calvin_codegen
 from calvin.utilities.security import Security, security_enabled
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities.issuetracker import IssueTracker
 
 _log = get_logger(__name__)
 
 def _appname_from_filename(filename):
     return os.path.splitext(os.path.basename(filename))[0]
-
 
 
 def compile_script(source_text, filename, credentials=None, verify=True):
@@ -40,27 +40,25 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
     N.B. If callback 'cb' is given, and method runs to completion, cb is called with additional parameter 'security' (?)
     """
 
-    def _exit_with_error(err, callback):
-        """
-        Return with proper tuple unless callback given.
-        In that case call callback and return None
-        """
-        reply = ({}, [err], [])
-        callback(*reply)
+    def _exit_with_error(callback):
+        """Helper method to generate a proper error"""
+        it = IssueTracker()
+        it.add_error("UNAUTHORIZED", info={'status':401})
+        callback({}, it)
 
 
     def _handle_authentication_decision(source_text, appname, verify, authentication_decision, security, org_cb, content=None):
         if not authentication_decision:
             _log.error("Authentication failed")
             # This error reason is detected in calvin control and gives proper REST response
-            _exit_with_error({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None}, org_cb)
+            _exit_with_error(org_cb)
 
         verified, signer = security.verify_signature_content(content, "application")
         if not verified:
             # Verification not OK if sign or cert not OK.
             _log.error("Failed application verification")
             # This error reason is detected in calvin control and gives proper REST response
-            _exit_with_error({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None}, org_cb)
+            _exit_with_error(org_cb)
 
         security.check_security_policy(
             CalvinCB(_handle_policy_decision, source_text, appname, verify, security=security, org_cb=org_cb),
@@ -72,7 +70,7 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
         if not access_decision:
             _log.error("Access denied")
             # This error reason is detected in calvin control and gives proper REST response
-            _exit_with_error({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None}, org_cb)
+            _exit_with_error(org_cb)
 
         deployable, issutracker = compile_script(source_text, appname)
 

@@ -1292,22 +1292,16 @@ class CalvinControl(object):
     def handle_deploy_cont(self, app_info, issuetracker, handle, connection, data, security=None):
         try:
             if issuetracker.error_count:
-                if any([e['reason'].startswith("401:") for e in issuetracker.errors()]):
+                four_oh_ones = [e for e in issuetracker.errors() if 'status' in e and e['status' == 401]]
+                if four_oh_ones:
                     _log.error("Security verification of script failed")
-                    self.send_response(
-                        handle,
-                        connection,
-                        None,
-                        status=calvinresponse.UNAUTHORIZED
-                    )
+                    status = calvinresponse.UNAUTHORIZED
+                    body = None
                 else:
                     _log.exception("Compilation failed")
-                    self.send_response(
-                        handle,
-                        connection,
-                        json.dumps({'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()}),
-                       status=calvinresponse.BAD_REQUEST
-                    )
+                    body = json.dumps({'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()})
+                    status=calvinresponse.BAD_REQUEST
+                self.send_response(handle, connection, body, status=status)
                 return
             _log.analyze(
                 self.node.id,
@@ -1321,11 +1315,7 @@ class CalvinControl(object):
                     name=data["name"] if "name" in data else None,
                     security=security,
                     verify=data["check"] if "check" in data else True,
-                    cb=CalvinCB(
-                        self.handle_deploy_cb,
-                        handle,
-                        connection
-                    )
+                    cb=CalvinCB(self.handle_deploy_cb, handle, connection)
                 )
             _log.analyze(self.node.id, "+ Deployer instantiated", {})
             d.deploy()
@@ -1335,12 +1325,8 @@ class CalvinControl(object):
             self.send_response(
                 handle,
                 connection,
-                json.dumps({
-                    'errors': issuetracker.errors(),
-                    'warnings': issuetracker.warnings(),
-                    'exception': str(e)
-                }),
-                status=calvinresponse.BAD_REQUEST if errors else calvinresponse.INTERNAL_ERROR
+                json.dumps({'errors': issuetracker.errors(), 'warnings': issuetracker.warnings(), 'exception': str(e)}),
+                status=calvinresponse.BAD_REQUEST if issuetracker.error_count else calvinresponse.INTERNAL_ERROR
             )
 
     def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
