@@ -1,0 +1,2 @@
+RPi.GPIO
+-e git+https://github.com/olaan/MFRC522-Python#egg=mfrc522
