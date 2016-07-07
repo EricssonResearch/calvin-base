@@ -9,13 +9,14 @@ USE_DOCKERS=yes
 RUNTESTS=
 
 usage() {
-    echo "Usage: $(basename $0) -c -i <image> -e <ip> [proxy/dht/cleanup]\n\
+    echo "Usage: $(basename $0) -ctn -r <number>-i <image> -e <ip> [proxy/dht/cleanup]\n\
     -i <image>[:<tag>]   : Calvin image (and tag) to use [$IMAGE]\n\
     -e <external-ip>     : External IP to use\n\
     -n                   : Native, not dockers\n\
     -r <number>          : Number of extra runtimes beyond the first one\n\
     -t                   : Run tests (requires 3+1 runtimes)\n\
     -c                   : Cleanup after tests"
+
     exit 1
 }
 
@@ -32,8 +33,9 @@ wait_for_runtime() {
     while test $retries -gt 0; do
         res=$(cscontrol http://$EXTERNAL_IP:$CONTROLPORT storage get_index '["node_name", {"name": "runtime-'$rt'"}]')
         result=${res#*result}
-        if test ${#result} -eq 45; then
-            echo "runtime-$rt on-line"
+        # Successful result is 53 characters, error 13 - but exact comparison is a bit fragile
+        if test ${#result} -gt 25; then
+            echo "runtime-$rt attached to registry"
             break
         fi
         retries=$((retries-1))
@@ -41,6 +43,7 @@ wait_for_runtime() {
     done
     if test $retries -eq 0; then
         echo Too many retries for runtime-$rt, giving up
+        echo $result, ${#result}
         exit 1
     fi
 }
@@ -68,19 +71,19 @@ cleanup_all() {
 }
 
 proxy_docker_system() {
-    ../dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -l -p $PORT -c $CONTROLPORT -n runtime-0
+    ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -l -p $PORT -c $CONTROLPORT -n runtime-0
     wait_for_runtime 0
     for i in $seq; do
-        ../dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -r $EXTERNAL_IP:$PORT -n runtime-$i
+        ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -r $EXTERNAL_IP:$PORT -n runtime-$i
     done
     wait_for_runtimes
 }
 
 dht_docker_system() {
-    ../dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -p $PORT -c $CONTROLPORT -n runtime-0
+    ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -c $CONTROLPORT -n runtime-0
     wait_for_runtime 0
     for i in $seq; do
-        ../dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -n runtime-$i
+        ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -n runtime-$i
         sleep 0.5
     done
     wait_for_runtimes
@@ -88,8 +91,7 @@ dht_docker_system() {
 
 dht_native_system() {
     check_calvin
-
-    csruntime --host $EXTERNAL_IP -p $PORT -c $CONTROLPORT --name runtime-0 -f runtime-0.log >& /dev/null &
+    csruntime --host $EXTERNAL_IP -c $CONTROLPORT --name runtime-0 -f runtime-0.log >& /dev/null &
     wait_for_runtime 0
     for i in $seq ; do
         csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log >& /dev/null &
@@ -131,7 +133,7 @@ setup_proxy_system() {
 
 test_deploy() {
     echo deploying application
-    deploy_result=$(cscontrol http://$EXTERNAL_IP:$CONTROLPORT deploy --reqs pipeline.deployjson pipeline.calvin)
+    deploy_result=$(cscontrol http://$EXTERNAL_IP:$CONTROLPORT deploy --reqs test/pipeline.deployjson test/pipeline.calvin)
     sleep 1
 
     output=""
@@ -141,7 +143,7 @@ test_deploy() {
     while test $retries -gt 0; do
         if test -n "$USE_DOCKERS"; then
             # fetch from docker runtime-3
-            output=$(../dcslog.sh -1 runtime-3)
+            output=$(./dcslog.sh -1 runtime-3)
         else
             # fetch from file runtime-3.log
             output=$(tail -1 runtime-3.log)
@@ -229,6 +231,6 @@ else
     echo system setup done
 fi
 
-if test -n $CLEANUP; then
+if test -n "$CLEANUP"; then
     cleanup_all
 fi
