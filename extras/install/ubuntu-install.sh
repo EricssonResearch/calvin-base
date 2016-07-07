@@ -40,19 +40,19 @@ shift $(($OPTIND - 1))
 sudo apt-get update
 sudo apt-get install -y python python-dev build-essential git libssl-dev libffi-dev
 
-if test "$REPLACE_PIP"="yes"; then
+if test "$REPLACE_PIP" = "yes"; then
     # As of this writing, the python-pip and python-requests packages in Debian Jessie are
     # out of sync. Remove the default and install a newer version - this is less than ideal.
     sudo apt-get remove -y python-pip
     curl https://bootstrap.pypa.io/get-pip.py -o - | sudo python
 fi
 
-if test "$INSTALL_RPI_DEPS"="yes"; then
+if test "$INSTALL_RPI_DEPS" = "yes"; then
     sudo apt-get install sense-hat
     pip install -r rpi-requirements.txt
 fi
 
-if test "$INSTALL_NON_RPI_DEPS"="yes"; then
+if test "$INSTALL_NON_RPI_DEPS" = "yes"; then
     sudo apt-get install python-pygame
     sudo apt-get install python-opencv
     pip install -r ex-requirements.txt
@@ -73,7 +73,7 @@ sudo pip install -e .
 
 # Calvin should now be installed, proceed with other stuff
 
-if [ x"$INSTALL_STARTUP" = xyes ]; then
+if [ "$INSTALL_STARTUP" = yes ]; then
 
 # install mdns
 sudo apt-get install -y libnss-mdns
@@ -118,7 +118,7 @@ sudo chmod 755 /etc/init.d/calvin.sh
 sudo update-rc.d calvin.sh defaults
 fi # INSTALL_STARTUP
 
-if test "$INSTALL_WEB"="yes" ]; then
+if test "$INSTALL_WEB" = "yes" ; then
 # create csweb startup script
 (sudo cat <<'EOF'
 #! /bin/sh
@@ -159,7 +159,7 @@ sudo chmod 755 /etc/init.d/csweb.sh
 sudo update-rc.d csweb.sh defaults
 fi # INSTALL_WEB
 
-[ "$INSTALL_STARTUP"="yes" ] && echo "Installed calvin at startup"
-[ "$INSTALL_WEB"="yes" ] && echo "Installed calvin web interface at startup"
+[ "$INSTALL_STARTUP" = "yes" ] && echo "Installed calvin at startup"
+[ "$INSTALL_WEB" = "yes" ] && echo "Installed calvin web interface at startup"
 # done
 echo "Done. You're on your own."
