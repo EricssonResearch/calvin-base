@@ -11,24 +11,25 @@ usage() {
     printf -- "Usage: %s [-b master/develop] -sweu\n" $0
     printf -- "\t-b\tselect branch of calvin to install [%s]\n" $INSTALL_BRANCH
     printf -- "\t-s\trun calvin at startup [%s]\n" $INSTALL_STARTUP
-	printf -- "\t-w\trun web interface at startup [%s]\n" $INSTALL_WEB 
+    printf -- "\t-w\trun web interface at startup [%s]\n" $INSTALL_WEB 
     printf -- "\t-e\tinstall raspberry pi example dependencies [%s]\n" $INSTALL_RPI_DEPS
     printf -- "\t-u\tinstall non-raspberry pi example dependencies [%s]\n" $INSTALL_NON_RPI_DEPS
     printf -- "\t-p\treplace python-pip (may solve some installation issues) [%s]\n" $REPLACE_PIP
-    exit 0
+    printf -- "\nNote: This script assumes a debian/ubuntu based system, such as Raspberry Pi\n"
+    exit $1
 }
 
 while getopts "pb:sweu" opt
 do
-	case $opt in
-	  b) INSTALL_BRANCH="$OPTARG";;
-	  s) INSTALL_STARTUP=yes;;
-	  w) INSTALL_WEB=yes;;
+    case $opt in
+      b) INSTALL_BRANCH="$OPTARG";;
+      s) INSTALL_STARTUP=yes;;
+      w) INSTALL_WEB=yes;;
       e) INSTALL_RPI_DEPS=yes;;
       u) INSTALL_NON_RPI_DEPS=yes;;
       p) REPLACE_PIP=yes;;
-	  ?) 
-          usage
+      ?) 
+          usage 0
           ;;
 	esac
 done
@@ -37,25 +38,36 @@ shift $(($OPTIND - 1))
 
 # install essential pre-requisites
 
-sudo apt-get update
-sudo apt-get install -y python python-dev build-essential git libssl-dev libffi-dev
+sudo apt-get update > /dev/null 2>&1
+
+if test $? -ne 0; then
+    echo "apt-get update failed"
+    usage 1
+fi
+
+sudo apt-get install -y python python-dev build-essential git libssl-dev libffi-dev > /dev/null 2>&1
+
+if test $? -ne 0; then
+    echo "apt-get install failed"
+    usage 1
+fi
 
 if test "$REPLACE_PIP" = "yes"; then
     # As of this writing, the python-pip and python-requests packages in Debian Jessie are
     # out of sync. Remove the default and install a newer version - this is less than ideal.
-    sudo apt-get remove -y python-pip
-    curl https://bootstrap.pypa.io/get-pip.py -o - | sudo python
+    sudo apt-get remove -y python-pip > /dev/null 2>&1
+    curl --silent https://bootstrap.pypa.io/get-pip.py -o - | sudo -H python > /dev/null 2>&1
 fi
 
 if test "$INSTALL_RPI_DEPS" = "yes"; then
-    sudo apt-get install sense-hat
-    pip install -r rpi-requirements.txt
+    sudo apt-get install sense-hat > /dev/null 2>&1
+    sudo -H pip install -r rpi-requirements.txt > /dev/null 2>&1
 fi
 
 if test "$INSTALL_NON_RPI_DEPS" = "yes"; then
-    sudo apt-get install python-pygame
-    sudo apt-get install python-opencv
-    pip install -r ex-requirements.txt
+    sudo apt-get install python-pygame > /dev/null 2>&1
+    sudo apt-get install python-opencv > /dev/null 2>&1
+    sudo -H pip install -r ex-requirements.txt > /dev/null 2>&1
 fi
 
 
@@ -66,22 +78,22 @@ git clone -b $INSTALL_BRANCH https://www.github.com/EricssonResearch/calvin-base
 
 # install dependencies
 cd calvin-base
-sudo -H pip install -r requirements.txt -r test-requirements.txt
+sudo -H pip install -r requirements.txt -r test-requirements.txt > /dev/null 2>&1
 
 # install calvin
-sudo pip install -e .
+sudo -H pip install -e . > /dev/null 2>&1
 
 # Calvin should now be installed, proceed with other stuff
 
 if [ "$INSTALL_STARTUP" = yes ]; then
 
 # install mdns
-sudo apt-get install -y libnss-mdns
+sudo apt-get install -y libnss-mdns > /dev/null 2>&1
 
 # create calvin startup script
 
-(sudo cat <<'EOF'
-#! /bin/sh
+sudo sh -c "cat > /etc/init.d/calvin.sh" <<'EOF'
+#!/bin/sh
 # /etc/init.d/calvin
 
 ### BEGIN INIT INFO
@@ -91,27 +103,26 @@ sudo apt-get install -y libnss-mdns
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
 # Short-Description: Start a calvin runtime with default settings
-# Description: A simple script from www.stuffaboutcode.com which will start / stop a program a boot / shutdown.
+# Description: start/stop calvin at boot/shutdown (from http://www.stuffaboutcode.com/)
 ### END INIT INFO
 
 case "$1" in
-start)
-echo "Starting calvin"
-/usr/local/bin/csruntime --host $(hostname -I) &
-;;
-stop)
-echo "Stopping calvin"
-killall csruntime
-;;
-*)
-echo "Usage: /etc/init.d/calvin.sh {start|stop}"
-exit 1
-;;
+    start)
+        echo "Starting calvin"
+        /usr/local/bin/csruntime --host $(hostname -I) &
+        ;;
+    stop)
+        echo "Stopping calvin"
+        killall csruntime
+        ;;
+    *)
+        echo "Usage: /etc/init.d/calvin.sh {start|stop}"
+        exit 1
+        ;;
 esac
 
 exit 0
 EOF
-) > /etc/init.d/calvin.sh
 
 # register script with startup
 sudo chmod 755 /etc/init.d/calvin.sh
@@ -120,8 +131,8 @@ fi # INSTALL_STARTUP
 
 if test "$INSTALL_WEB" = "yes" ; then
 # create csweb startup script
-(sudo cat <<'EOF'
-#! /bin/sh
+sudo sh -c "cat > /etc/init.d/csweb.sh" <<'EOF'
+#!/bin/sh
 # /etc/init.d/csweb
 
 ### BEGIN INIT INFO
@@ -131,35 +142,38 @@ if test "$INSTALL_WEB" = "yes" ; then
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
 # Short-Description: Start web interface for calvin system
-# Description: A simple script from www.stuffaboutcode.com which will start / stop a program a boot / shutdown.
+# Description: start/stop csweb at boot/shutdown (from http://www.stuffaboutcode.com/)
 ### END INIT INFO
 
 case "$1" in
-start)
-echo "Starting calvin"
-# run application you want to start
-/usr/local/bin/csweb -p 80 &
-;;
-stop)
-echo "Stopping csweb"
-killall csweb
-;;
-*)
-echo "Usage: /etc/init.d/csweb.sh {start|stop}"
-exit 1
-;;
+    start)
+        echo "Starting csweb"
+        /usr/local/bin/csweb -p 80 &
+        ;;
+    stop)
+        echo "Stopping csweb"
+        killall csweb
+        ;;
+    *)
+        echo "Usage: /etc/init.d/csweb.sh {start|stop}"
+        exit 1
+        ;;
 esac
 
 exit 0
 EOF
-) > /etc/init.d/csweb.sh
 
 # register script with startup
 sudo chmod 755 /etc/init.d/csweb.sh
 sudo update-rc.d csweb.sh defaults
 fi # INSTALL_WEB
 
-[ "$INSTALL_STARTUP" = "yes" ] && echo "Installed calvin at startup"
-[ "$INSTALL_WEB" = "yes" ] && echo "Installed calvin web interface at startup"
+echo "==="
+echo "Installed calvin and necessary dependencies"
+[ "$INSTALL_STARTUP" = "yes" ] && echo "Installed calvin to run at startup"
+[ "$INSTALL_WEB" = "yes" ] && echo "Installed calvin web interface to run at startup"
+[ "$INSTALL_RPI_DEPS" = "yes" ] && echo "Installed raspberry pi example dependencies"
+[ "$INSTALL_NON_RPI_DEPS" = "yes" ] && echo "Installed example dependencies"
 # done
-echo "Done. You're on your own."
+
+echo "Done. Good luck."
