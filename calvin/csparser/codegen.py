@@ -121,33 +121,6 @@ def _arguments(assignment, issue_tracker):
     return args
 
 
-# class IssueTracker(object):
-#     def __init__(self):
-#         super(IssueTracker, self).__init__()
-#         self.issues = []
-#         self.err_count = 0
-#         self.warn_count = 0
-#
-#     def _add_issue(self, issue_type, reason, node):
-#         issue = {
-#             'type': issue_type,
-#             'reason': reason,
-#         }
-#         issue.update(node.debug_info or {'line':0, 'col':0, 'FIXME':True})
-#         if issue not in self.issues:
-#             self.issues.append(issue)
-#             if issue['type'] == 'error':
-#                 self.err_count += 1
-#             else:
-#                 self.warn_count +=1
-#
-#     def add_error(self, reason, node):
-#         self._add_issue('error', reason, node)
-#
-#     def add_warning(self, reason, node):
-#         self._add_issue('warning', reason, node)
-
-
 class Finder(object):
     """
     Perform queries on the tree
