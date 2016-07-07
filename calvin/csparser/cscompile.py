@@ -22,7 +22,7 @@ def compile_script(source_text, filename, credentials=None, verify=True):
     deployable, issuetracker = calvin_codegen(source_text, appname, verify=verify)
 
     # FIXME: [PP] Return issuetracker
-    return deployable, issuetracker.errors(), issuetracker.warnings()
+    return deployable, issuetracker
 
 
 # FIXME: It might make sense to turn this function into a plain asynchronous security check.
@@ -74,9 +74,9 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
             # This error reason is detected in calvin control and gives proper REST response
             _exit_with_error({'reason': "401: UNAUTHORIZED", 'line': None, 'col': None}, org_cb)
 
-        deployable, errors, warnings = compile_script(source_text, appname)
+        deployable, issutracker = compile_script(source_text, appname)
 
-        org_cb(deployable, errors, warnings, security=security)
+        org_cb(deployable, issutracker, security=security)
 
     #
     # Actual code for compile_script
@@ -104,7 +104,7 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
     # This used to be
     # _handle_policy_decision(source_text, filename, verify, access_decision=True, security=None, org_cb=cb)
     # but since _handle_policy_decision is called with access_decision=True, security=None only compile_script would be called
-    deployable, errors, warnings = compile_script(source_text, appname)
-    cb(deployable, errors, warnings, security=None)
+    deployable, issuetracker = compile_script(source_text, appname)
+    cb(deployable, issuetracker, security=None)
 
 

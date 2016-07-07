@@ -30,6 +30,7 @@ from calvin.requests import calvinresponse
 from calvin.utilities.security import security_enabled
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
+from calvin.utilities.issuetracker import IssueTracker
 
 _log = get_logger(__name__)
 
@@ -1281,38 +1282,66 @@ class CalvinControl(object):
                     self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
                     return
                 app_info = data['app_info']
-                errors = []
-                warnings = []
-                self.handle_deploy_cont(app_info, errors, warnings, handle, connection, data)
+                issuetracker = IssueTracker()
+                self.handle_deploy_cont(app_info, issuetracker, handle, connection, data)
         except Exception as e:
             _log.exception("Deployer failed")
             self.send_response(handle, connection, json.dumps({'exception': str(e)}),
                                status=calvinresponse.INTERNAL_ERROR)
 
-    def handle_deploy_cont(self, app_info, errors, warnings, handle, connection, data, security=None):
+    def handle_deploy_cont(self, app_info, issuetracker, handle, connection, data, security=None):
         try:
-            if errors:
-                if any([e['reason'].startswith("401:") for e in errors]):
+            if issuetracker.error_count:
+                if any([e['reason'].startswith("401:") for e in issuetracker.errors()]):
                     _log.error("Security verification of script failed")
-                    self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
+                    self.send_response(
+                        handle,
+                        connection,
+                        None,
+                        status=calvinresponse.UNAUTHORIZED
+                    )
                 else:
                     _log.exception("Compilation failed")
-                    self.send_response(handle, connection, json.dumps({'errors': errors, 'warnings': warnings}),
-                                       status=calvinresponse.BAD_REQUEST)
+                    self.send_response(
+                        handle,
+                        connection,
+                        json.dumps({'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()}),
+                       status=calvinresponse.BAD_REQUEST
+                    )
                 return
-            _log.analyze(self.node.id, "+ COMPILED", {'app_info': app_info, 'errors': errors, 'warnings': warnings})
-            d = Deployer(deployable=app_info, deploy_info=data["deploy_info"] if "deploy_info" in data else None,
-                         node=self.node, name=data["name"] if "name" in data else None,
-                         security=security, verify=data["check"] if "check" in data else True,
-                         cb=CalvinCB(self.handle_deploy_cb, handle, connection))
+            _log.analyze(
+                self.node.id,
+                "+ COMPILED",
+                {'app_info': app_info, 'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()}
+            )
+            d = Deployer(
+                    deployable=app_info,
+                    deploy_info=data["deploy_info"] if "deploy_info" in data else None,
+                    node=self.node,
+                    name=data["name"] if "name" in data else None,
+                    security=security,
+                    verify=data["check"] if "check" in data else True,
+                    cb=CalvinCB(
+                        self.handle_deploy_cb,
+                        handle,
+                        connection
+                    )
+                )
             _log.analyze(self.node.id, "+ Deployer instantiated", {})
             d.deploy()
             _log.analyze(self.node.id, "+ DEPLOYING", {})
         except Exception as e:
             _log.exception("Deployer failed")
-            self.send_response(handle, connection, json.dumps({'errors': errors, 'warnings': warnings,
-                                                                'exception': str(e)}),
-                                status=calvinresponse.BAD_REQUEST if errors else calvinresponse.INTERNAL_ERROR)
+            self.send_response(
+                handle,
+                connection,
+                json.dumps({
+                    'errors': issuetracker.errors(),
+                    'warnings': issuetracker.warnings(),
+                    'exception': str(e)
+                }),
+                status=calvinresponse.BAD_REQUEST if errors else calvinresponse.INTERNAL_ERROR
+            )
 
     def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
         _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})

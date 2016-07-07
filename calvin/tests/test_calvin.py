@@ -232,6 +232,13 @@ class CalvinTestBase(unittest.TestCase):
         self.runtimes = runtimes
         self.peerlist = peerlist
 
+    def compile_script(self, script, name):
+        # Instead of rewriting tests after compiler.compile_script changed
+        # from returning app_info, errors, warnings to app_info, issuetracker
+        # use this stub in tests to keep old behaviour
+        app_info, issuetracker = compiler.compile_script(script, name)
+        return app_info, issuetracker.errors(), issuetracker.warnings()
+
 @pytest.mark.slow
 @pytest.mark.essential
 class TestNodeSetup(CalvinTestBase):
@@ -824,7 +831,7 @@ class TestCalvinScript(CalvinTestBase):
       snk : io.StandardOut(store_tokens=1)
       src.integer > snk.token
     """
-        app_info, errors, warnings = compiler.compile_script(script, "simple")
+        app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(rt, app_info)
         d.deploy() # ignoring app_id here
         time.sleep(0.5)
@@ -848,7 +855,7 @@ class TestCalvinScript(CalvinTestBase):
       snk : io.StandardOut(store_tokens=1)
       src.integer > snk.token
     """
-        app_info, errors, warnings = compiler.compile_script(script, "simple")
+        app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(rt, app_info)
         app_id = d.deploy()
         time.sleep(0.2)
@@ -877,7 +884,7 @@ class TestCalvinScript(CalvinTestBase):
       snk : io.StandardOut(store_tokens=1)
       src.integer > snk.token
     """
-        app_info, errors, warnings = compiler.compile_script(script, "simple")
+        app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(rt, app_info)
         app_id = d.deploy()
         time.sleep(1.0)

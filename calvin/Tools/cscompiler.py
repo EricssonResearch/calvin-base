@@ -32,8 +32,8 @@ def compile_file(filename, credentials=None):
 
 def compile_generator(files):
     for filename in files:
-        deployable, errors, warnings = compile_file(filename)
-        yield((deployable, errors, warnings, filename))
+        deployable, issuetracker = compile_file(filename)
+        yield((deployable, issuetracker, filename))
 
 
 def main():
@@ -56,25 +56,23 @@ def main():
     argparser.add_argument('--sorted', dest='sorted', action='store_true', default=False,
                            help='sort resulting JSON output by keys')
     argparser.add_argument('--issue-fmt', dest='fmt', type=str,
-                           default='{issue_type}: {reason} {script} [{line}:{col}]',
+                           default='{type!c}: {reason} {script} {line}:{col}',
                            help='custom format for issue reporting.')
     argparser.add_argument('--verbose', action='store_true',
                            help='informational output from the compiler')
 
     args = argparser.parse_args()
 
-    def report_issues(issues, issue_type, filename=''):
-        sorted_issues = sorted(issues, key=lambda k: k.get('line', 0))
-        for issue in sorted_issues:
-            sys.stderr.write(args.fmt.format(script=filename, issue_type=issue_type, **issue) + '\n')
 
     exit_code = 0
-    for deployable, errors, warnings, filename in compile_generator(args.files):
-        if errors:
-            report_issues(errors, 'Error', filename)
+    for deployable, issuetracker, filename in compile_generator(args.files):
+        if issuetracker.error_count:
+            for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=filename, line=0, col=0):
+                sys.stderr.write(issue + "\n")
             exit_code = 1
-        if warnings and args.verbose:
-            report_issues(warnings, 'Warning', filename)
+        if issuetracker.warning_count and args.verbose:
+            for issue in issuetracker.formatted_warnings(sort_key='line', custom_format=args.fmt, script=filename, line=0, col=0):
+                sys.stderr.write(issue + "\n")
         if exit_code == 1:
             # Don't produce output if there were errors
             continue

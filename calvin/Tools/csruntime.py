@@ -131,10 +131,11 @@ def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
 def compile_script(scriptfile, credentials):
     _log.debug("Compiling %s ..." % scriptfile)
     from calvin.Tools.cscompiler import compile_file
-    app_info, errors, _ = compile_file(scriptfile, credentials)
-    if errors:
-        for error in errors:
-            log.error("{reason} {script} [{line}:{col}]".format(script=scriptfile, **error))
+    app_info, issuetracker = compile_file(scriptfile, credentials)
+    if issuetracker.error_count:
+        fmt = "{type!c}: {reason} {script} {line}:{col}"
+        for error in issuetracker.formatted_errors(sort_key='line', custom_format=fmt, script=scriptfile, line=0, col=0):
+            log.error(error)
         return False
     return app_info
 
