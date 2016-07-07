@@ -18,7 +18,7 @@ usage() {
     exit 0
 }
 
-while getopts "b:sweu" n
+while getopts "pb:sweu" n
 do
 	case $n in
 	  b) INSTALL_BRANCH="$OPTARG";;
