@@ -50,7 +50,7 @@ def requirements_file(path):
     """ Reads in a requirements file of JSON format with the structure:
         {<actor_name>: [(<req_op>, <req_args>), ...], ...}
 
-        Needs to be called after the initial deployment to get the actor_ids
+        Needs to be called after the initial add_argument to get the actor_ids
     """
     reqs = None
     try:
@@ -65,12 +65,11 @@ def requirements_file(path):
 
 def control_deploy(args):
     response = None
-    print args
     reqs = requirements_file(args.reqs) if args.reqs else None
     if args.signer:
         conf = certificate.Config(configfile=None, domain=args.signer, readonly=True)
         certificate.sign_file(conf, args.script.name)
-    sourceText = args.script.read()
+    source_text = args.script.read()
     credentials_ = None
     content = None
     if args.credentials:
@@ -82,9 +81,9 @@ def control_deploy(args):
         if credentials_:
             content = Security.verify_signature_get_files(args.script.name, skip_file=True)
             if content:
-                content['file'] = sourceText
+                content['file'] = source_text
     try:
-        response = get_request_handler().deploy_application(args.node, args.script.name, sourceText, reqs,
+        response = get_request_handler().deploy_application(args.node, args.script.name, source_text, reqs,
                                             credentials=credentials_, content=content, check=args.check)
     except Exception as e:
         print e
@@ -119,6 +118,11 @@ def control_applications(args):
         if not args.id:
             raise Exception("No application id given")
         return get_request_handler().delete_application(args.node, args.id)
+    elif args.cmd == 'migrate':
+        if not args.id:
+            raise Exception("No application id given")
+        deploy_info = requirements_file(args.reqs) if args.reqs else None
+        return get_request_handler().migrate_app_use_req(rt=args.node, application_id=args.id, deploy_info=deploy_info)
 
 
 def control_nodes(args):
@@ -216,11 +220,15 @@ def parse_args():
     cmd_actor.set_defaults(func=control_actors)
 
     # parser for applications
-    app_commands = ['info', 'list', 'delete']
+    app_commands = ['info', 'list', 'delete', 'migrate']
     cmd_apps = cmdparsers.add_parser('applications', help="handle applications deployed on node")
     cmd_apps.add_argument("cmd", metavar="<command>", choices=app_commands, type=str,
                           help="one of %s" % (", ".join(app_commands)))
     cmd_apps.add_argument("id", metavar="<app id>", type=str, nargs='?')
+    cmd_apps.add_argument('--reqs', metavar='<reqs>', type=str,
+                            help='deploy script, currently JSON coded data file (when migrating)',
+                            dest='reqs')
+    
     cmd_apps.set_defaults(func=control_applications)
 
     # parser for applications
@@ -239,7 +247,7 @@ def main():
     args = parse_args()
     try:
         r =  args.func(args)
-        print "OK" if r is None else r
+        print "OK" if r is None else json.dumps(r, indent=2)
     except Exception as e:
         print "Error {}".format(e)
 if __name__ == '__main__':

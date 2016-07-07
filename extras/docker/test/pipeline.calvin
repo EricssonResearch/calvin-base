@@ -1,0 +1,8 @@
+src : std.Trigger(tick=1, data="fire")
+id1 : std.Identity()
+id2 : std.Identity()
+snk : io.Log(loglevel="INFO")
+
+src.data > id1.token
+id1.token > id2.token
+id2.token > snk.data
