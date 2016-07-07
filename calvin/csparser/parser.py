@@ -360,14 +360,7 @@ class CalvinParser(object):
         return self.parser.parse(source_text), self.issuetracker
 
 
-# FIXME: [PP] remove
-def calvin_parser(source_text):
-    parser = CalvinParser()
-    result = parser.parse(source_text)
-
-    return result, parser.issues, []
-
-# FIXME: [PP] new API
+# FIXME: [PP] Optionally supply an IssueTracker
 def calvin_parse(source_text):
     """Parse source text and return ir (AST) and issuetracker."""
     parser = CalvinParser()

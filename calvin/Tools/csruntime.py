@@ -35,10 +35,10 @@ Start runtime, compile calvinscript and deploy application.
 
     argparser = argparse.ArgumentParser(description=long_description)
 
-    argparser.add_argument('--name', metavar='<name>', type=str, 
+    argparser.add_argument('--name', metavar='<name>', type=str,
                             help="shortcut for attribute indexed_public/node_name/name",
                             dest='name')
-                            
+
     argparser.add_argument('-n', '--host', metavar='<host>', type=str,
                            help='ip address/hostname of calvin runtime',
                            dest='host')
@@ -67,15 +67,15 @@ Start runtime, compile calvinscript and deploy application.
 
     argparser.add_argument('-w', '--wait', dest='wait', metavar='sec', default=2, type=int,
                            help='wait for sec seconds before quitting (0 means forever).')
-    
-    argparser.add_argument('-x', '--external', metavar='<calvinip>', type=str,             
-                            help="exposed external calvin ip (e.g. outside of container)", 
+
+    argparser.add_argument('-x', '--external', metavar='<calvinip>', type=str,
+                            help="exposed external calvin ip (e.g. outside of container)",
                             dest='ext')
-                            
-    argparser.add_argument('-y', '--external-control', metavar='<url>', type=str,            
-                           help="exposed external control url (e.g. outside of container)", 
-                           dest='control_ext')                                              
-    
+
+    argparser.add_argument('-y', '--external-control', metavar='<url>', type=str,
+                           help="exposed external control url (e.g. outside of container)",
+                           dest='control_ext')
+
     argparser.add_argument('--keep-alive', dest='wait', action='store_const', const=0,
                            help='run forever (equivalent to -w 0 option).')
 
@@ -129,11 +129,12 @@ def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
 
 
 def compile_script(scriptfile, credentials):
-    _log.debug("Compiling %s ..." % file)
-    from calvin.Tools import cscompiler
-    app_info, errors, _ = cscompiler.compile_file(scriptfile, credentials)
+    _log.debug("Compiling %s ..." % scriptfile)
+    from calvin.Tools.cscompiler import compile_file
+    app_info, errors, _ = compile_file(scriptfile, credentials)
     if errors:
-        _log.error("{reason} {script} [{line}:{col}]".format(script=file, **errors[0]))
+        for error in errors:
+            log.error("{reason} {script} [{line}:{col}]".format(script=scriptfile, **error))
         return False
     return app_info
 
@@ -290,7 +291,7 @@ def main():
     return 0
 
 
-def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False, 
+def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False,
               credentials=None, outfile=None, configfile=None):
     """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
         runtimes from the same python script, since some objects otherwise gets unexceptedly shared.

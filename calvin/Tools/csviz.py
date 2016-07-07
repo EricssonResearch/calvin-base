@@ -22,9 +22,6 @@ import argparse
 
 from calvin.csparser.visualize import visualize_script, visualize_deployment, visualize_component
 
-
-
-
 def main():
     long_description = """
     Generate a DOT output for use with GraphViz to generate a vizualization
@@ -50,36 +47,25 @@ def main():
 
     args = argparser.parse_args()
 
-    exit_val = 0
-
     with open(args.script, 'r') as f:
         source_text = f.read()
 
-    # FIXME: [PP] New API
-    issues=[]
-    try:
-        if args.deployment:
-            res, issues = visualize_deployment(source_text)
-        elif args.component:
-            # res, issues = visualize_component(source_text, args.component)
-            sys.stderr.write("visualize_component_internals not yet implemented\n")
-            res = ""
-        else:
-            res, issues = visualize_script(source_text)
-        print(res)
-    except Exception as e:
-        sys.stderr.write(str(e))
-        sys.stderr.write("\n")
-        exit_val = 1
+    if args.deployment:
+        dot, issuetracker = visualize_deployment(source_text)
+    elif args.component:
+        dot, issuetracker = visualize_component(source_text, args.component)
+    else:
+        dot, issuetracker = visualize_script(source_text)
 
-    def report_issues(issues, filename=''):
-        sorted_issues = sorted(issues, key=lambda k: k.get('line', 0))
-        fmt = '{type}: {reason} {script} [{line}:{col}]'
-        for issue in sorted_issues:
-            sys.stderr.write(fmt.format(script=filename,  **issue) + '\n')
+    issue_format = '{type!c}: {reason} {script}:{line}'
+    for issue in issuetracker.formatted_issues(sort_key='line', custom_format=issue_format, script=args.script, line=0):
+        sys.stderr.write(issue + "\n")
 
+    print(dot)
 
-    report_issues(issues, args.script)
+    if issuetracker.error_count:
+        sys.exit(1)
+
 
 if __name__ == '__main__':
     sys.exit(main())

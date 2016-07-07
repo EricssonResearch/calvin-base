@@ -1,7 +1,6 @@
 
 import os
-from parser import calvin_parser
-from codegen import calvin_codegen, generate_comp_info
+from codegen import calvin_codegen
 from calvin.utilities.security import Security, security_enabled
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
@@ -24,15 +23,6 @@ def compile_script(source_text, filename, credentials=None, verify=True):
 
     # FIXME: [PP] Return issuetracker
     return deployable, issuetracker.errors(), issuetracker.warnings()
-
-def get_components_in_script(source_text, names=None):
-    # FIXME: Combine into single call
-    ir, errors, warnings = calvin_parser(source_text)
-    comps, issues = generate_comp_info(ir, names)
-    errors.extend([issue for issue in issues if issue['type'] == 'error'])
-    warnings.extend([issue for issue in issues if issue['type'] == 'warning'])
-
-    return comps, errors, warnings
 
 
 # FIXME: It might make sense to turn this function into a plain asynchronous security check.

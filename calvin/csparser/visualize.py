@@ -1,7 +1,7 @@
 import visitor
 import astnode as ast
-from codegen import CodeGen, query
-from parser import calvin_parser
+from codegen import calvin_astgen, query
+from parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore
 
 _docstore = DocumentationStore()
@@ -171,37 +171,21 @@ def visualize_script(source_text):
 
 
 def visualize_deployment(source_text):
-    # FIXME: [PP] Combine into single call
-    ast_root, issues, _ = calvin_parser(source_text)
-    cg = CodeGen(ast_root, 'temp')
-    cg.run()
-    issues.extend(cg.issues)
-
+    ast_root, issuetracker = calvin_astgen(source_text, 'visualizer')
     # Here we need the processed tree
     v = Visualize()
-    return v.process(cg.root), issues
+    dot_source = v.process(ast_root)
+    return dot_source, issuetracker
 
 def visualize_component(source_text, name):
-    # FIXME: Not working
-    # FIXME: [PP] Combine into single call
-    ast_root, issues, _ = calvin_parser(source_text)
-    cg = CodeGen(ast_root, 'temp')
-    comps, cg_issues = cg.export_components([name])
-    issues.extend(cg_issues)
-
-    if not comps:
-        return "digraph structs {ERROR}", issues
-    v = Visualize()
-    res = v.process(comps[0])
-    return res, issues
-
-
-
+    # STUB
+    from calvin.utilities.issuetracker import IssueTracker
+    it = IssueTracker()
+    it.add_error('Visualizing components not yet implemented.')
+    return "digraph structs {ERROR}", it
 
 
 if __name__ == '__main__':
-    from parser import calvin_parser
-
     source_text = """
     /* Actors */
     src : std.CountTimer()
@@ -210,7 +194,4 @@ if __name__ == '__main__':
     src.integer > snk.token
     """
 
-    ast, issues, _ = calvin_parser(source_text)
-
-    v = Visualize()
-    print v.process(ast)
+    print visualize_script(source_text)

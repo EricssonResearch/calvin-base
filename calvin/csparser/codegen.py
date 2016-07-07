@@ -677,9 +677,11 @@ class CodeGen(object):
             'connections': {},
             'valid': True
         }
+        # FIXME: Why is this needed here?
         program = query(ast_root, kind=ast.Block, attributes={'namespace':'__scriptname__'})
         if program:
             program[0].namespace = script_name
+        self.dump_tree('ROOT')
 
 
     def dump_tree(self, heading):
@@ -691,81 +693,52 @@ class CodeGen(object):
         printer.process(self.root)
 
 
-    def phase1(self, issue_tracker):
-        self.dump_tree('ROOT')
-        ##
+
+    def substitute_implicit_ports(self, issue_tracker):
         # Implicit port rewrite
         rw = ImplicitPortRewrite(issue_tracker)
         rw.visit(self.root)
         self.dump_tree('Port Rewrite')
 
-        ##
-        # Resolve Constants
+    def resolve_constants(self, issue_tracker):
         rc = ReplaceConstants(issue_tracker)
         rc.process(self.root)
         self.dump_tree('RESOLVED CONSTANTS')
 
-        ##
-        # Check graph consistency
+    def consistency_check(self, issue_tracker):
         cc = ConsistencyCheck(issue_tracker)
         cc.process(self.root)
         self.dump_tree('Consistency Check')
 
-
-    def phase2(self, issue_tracker, verify=True):
-        ##
-        # Expand components
+    def expand_components(self, issue_tracker, verify):
         expander = Expander(issue_tracker)
         expander.process(self.root, verify)
         self.dump_tree('EXPANDED')
 
-        ##
-        # Flatten blocks
+    def flatten(self, issue_tracker):
         flattener = Flatten(issue_tracker)
         flattener.process(self.root)
         self.dump_tree('FLATTENED')
 
-        ##
-        # "code" generation
+    def generate_code_from_ast(self, issue_tracker):
         gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
         gen_app_info.process()
 
+    def phase1(self, issue_tracker):
+        self.substitute_implicit_ports(issue_tracker)
+        self.resolve_constants(issue_tracker)
+        self.consistency_check(issue_tracker)
 
-    def run(self, issue_tracker, verify=True):
-        # issue_tracker = IssueTracker()
+    def phase2(self, issue_tracker, verify):
+        self.expand_components(issue_tracker, verify)
+        self.flatten(issue_tracker)
 
+    def generate_code(self, issue_tracker, verify):
         self.phase1(issue_tracker)
         self.phase2(issue_tracker, verify)
-
+        self.generate_code_from_ast(issue_tracker)
         self.app_info['valid'] = (issue_tracker.error_count == 0)
-        # self.issues = issue_tracker.issues
 
-    def export_components(self, names):
-        """
-        Return list of all components in script, or None if not found
-        If name is given, search only for component with that name.
-        """
-        issue_tracker = IssueTracker()
-
-        self.phase1(issue_tracker)
-
-        if issue_tracker.err_count == 0:
-            if names:
-                comps = []
-                for name in names:
-                    # NB. query returns a list
-                    comp = query(self.root, kind=ast.Component, attributes={'name':name}, maxdepth=1)
-                    if not comp:
-                        reason = "Component '{}' not found".format(name)
-                        issue_tracker.add_error(reason, self.root)
-                    else:
-                        comps.extend(comp)
-            else:
-                comps = query(self.root, kind=ast.Component, maxdepth=1)
-        else:
-            comps = None
-
-        return comps, issue_tracker.issues
 
 def query(root, kind=None, attributes=None, maxdepth=1024):
     finder = Finder()
@@ -774,6 +747,12 @@ def query(root, kind=None, attributes=None, maxdepth=1024):
     # print "QUERY", kind.__name__, attributes, finder.matches
     return finder.matches
 
+def _calvin_cg(source_text, app_name):
+    ast_root, issuetracker = calvin_parse(source_text)
+    cg = CodeGen(ast_root, app_name)
+    return cg, issuetracker
+
+# FIXME: [PP] Change calvin_ to calvinscript_
 def calvin_codegen(source_text, app_name, verify=True):
     """
     Generate application code from script, return deployable and issuetracker.
@@ -781,20 +760,53 @@ def calvin_codegen(source_text, app_name, verify=True):
     Parameter app_name is required to provide a namespace for the application.
     Optional parameter verify is deprecated, defaults to True.
     """
-    ast_root, issuetracker = calvin_parse(source_text)
-    cg = CodeGen(ast_root, app_name)
-    cg.run(issuetracker, verify)
+    cg, issuetracker = _calvin_cg(source_text, app_name)
+    cg.generate_code(issuetracker, verify)
     return cg.app_info, issuetracker
 
-# FIXME: [PP] Remove, use calvin_codegen
-# def generate_app_info(ast_root, name='anonymous', verify=True):
-#     cg = CodeGen(ast_root, name)
-#     cg.run()
-#     return cg.app_info, cg.issues
+def calvin_astgen(source_text, app_name, verify=True):
+    """
+    Generate AST from script, return processed AST and issuetracker.
 
-def generate_comp_info(ast_root, name=None, verify=True):
-    cg = CodeGen(ast_root, 'dummy', verify=verify)
-    return cg.export_components(name)
+    Parameter app_name is required to provide a namespace for the application.
+    Optional parameter verify is deprecated, defaults to True.
+    """
+    cg, issuetracker = _calvin_cg(source_text, app_name)
+    cg.phase1(issuetracker)
+    cg.phase2(issuetracker, verify)
+    return cg.root, issuetracker
+
+
+def calvin_components(source_text, names=None):
+    """
+    Generate AST from script, return requested components and issuetracker.
+
+    If there are errors during AST processing, no components will be returned.
+    Optional parameter names is a list of components to extract, if present (or None)
+    return all components found in script.
+    """
+    cg, issuetracker = _calvin_cg(source_text, '')
+    cg.phase1(issuetracker)
+
+    if issuetracker.error_count:
+        return [], issuetracker
+
+    if names:
+        comps = []
+        for name in names:
+            # NB. query returns a list
+            comp = query(cg.root, kind=ast.Component, attributes={'name':name}, maxdepth=1)
+            if not comp:
+                reason = "Component '{}' not found".format(name)
+                issuetracker.add_error(reason, cg.root)
+            else:
+                comps.extend(comp)
+    else:
+        comps = query(cg.root, kind=ast.Component, maxdepth=1)
+
+    return comps, issuetracker
+
+
 
 if __name__ == '__main__':
     script = 'inline'

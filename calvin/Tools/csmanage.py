@@ -29,7 +29,7 @@ from calvin.utilities.utils import get_home
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities import calvinuuid
 from calvin.actorstore.store import ActorStore, install_component
-from calvin.csparser.cscompile import get_components_in_script
+from calvin.csparser.codegen import calvin_components
 
 def parse_args():
     long_desc = """Manage the host's actor store and credentials"""
@@ -44,7 +44,7 @@ def parse_args():
 
     install_parser = cmdparsers.add_parser('install', help='install components and actors')
     install_parser.add_argument('--issue-fmt', dest='fmt', type=str,
-                       default='{issue_type}: {reason} {script} [{line}:{col}]',
+                       default='{type!c}: {reason} {script} {line}:{col}',
                        help='custom format for issue reporting.')
 
     install_parser = install_parser.add_subparsers(help='sub-command help', dest='cmd')
@@ -286,29 +286,31 @@ def manage_install_components(args):
             with open(filename, 'r') as source:
                 source_text = source.read()
         except:
-            return [], [{'reason': 'File not found', 'line': 0, 'col': 0}], []
-        return get_components_in_script(source_text, names)
+            from calvin.utilities.issuetracker import IssueTracker
+            it = IssueTracker()
+            it.add_error('File not found', {'script': filename})
+            return [], it
+        return calvin_components(source_text, names)
+
+    comps, issuetracker = get_components(args.script, args.component)
 
 
-    def report_issues(issues, issue_type, filename=''):
-        sorted_issues = sorted(issues, key=lambda k: k.get('line', 0))
-        for issue in sorted_issues:
-            sys.stderr.write(args.fmt.format(script=filename, issue_type=issue_type, **issue) + '\n')
-
-    comps, errors, warnings = get_components(args.script, args.component)
-
-
-    if errors:
-        warnings.append({'reason': 'Nothing installed', 'line': 0, 'col': 0})
+    if issuetracker.error_count:
+        issuetracker.add_warning('Nothing installed', {'script': args.script})
     else:
         for comp in comps:
             if not install_component(args.namespace, comp, args.force):
-                errors.append({'reason': 'Failed to install "{0}"'.format(comp.name), 'line': 0, 'col': 0})
+                if args.force:
+                    issuetracker.add_error('Failed to install "{0}"'.format(comp.name))
+                else:
+                    issuetracker.add_error("Failed to install '{0}', use '--force' to replace existing components".format(comp.name))
 
-    if warnings:
-        report_issues(warnings, 'Warning', args.script)
-    if errors:
-        report_issues(errors, 'Error', args.script)
+    for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=args.script, line=0, col=0):
+        sys.stderr.write(issue + "\n")
+    for issue in issuetracker.formatted_warnings(sort_key='line', custom_format=args.fmt, script=args.script, line=0, col=0):
+        sys.stderr.write(issue + "\n")
+
+    if issuetracker.error_count:
         return 1
 
 
