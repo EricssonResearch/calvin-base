@@ -1,50 +1,85 @@
 #!/bin/sh
 
-while getopts "b:sw" n
+INSTALL_STARTUP=no
+INSTALL_WEB=no
+INSTALL_RPI_DEPS=no
+INSTALL_NON_RPI_DEPS=no
+INSTALL_BRANCH=master
+REPLACE_PIP=no
+
+usage() {
+    printf -- "Usage: %s [-b master/develop] -sweu\n" $0
+    printf -- "\t-b\tselect branch of calvin to install [%s]\n" $INSTALL_BRANCH
+    printf -- "\t-s\trun calvin at startup [%s]\n" $INSTALL_STARTUP
+	printf -- "\t-w\trun web interface at startup [%s]\n" $INSTALL_WEB 
+    printf -- "\t-e\tinstall raspberry pi example dependencies [%s]\n" $INSTALL_RPI_DEPS
+    printf -- "\t-u\tinstall non-raspberry pi example dependencies [%s]\n" $INSTALL_NON_RPI_DEPS
+    printf -- "\t-p\treplace python-pip (may solve some installation issues) [%s]\n" $REPLACE_PIP
+    exit 0
+}
+
+while getopts "b:sweu" n
 do
 	case $n in
-	  b) branch="$OPTARG";;
-	  s) runtime_start=yes;;
-	  w) web_start=yes;;
-	  ?) printf -- "Usage: %s [-b master/develop] -s -w\n" $0
-         printf -- "-b\tselect branch of calvin to install\n"
-         printf -- "-s\trun calvin at startup\n"
-		 printf -- "-w\trun web interface at startup\n"
-	     exit 0;;
+	  b) INSTALL_BRANCH="$OPTARG";;
+	  s) INSTALL_STARTUP=yes;;
+	  w) INSTALL_WEB=yes;;
+      e) INSTALL_RPI_DEPS=yes;;
+      u) INSTALL_NON_RPI_DEPS=yes;;
+      p) REPLACE_PIP=yes;;
+	  ?) 
+          usage
+          ;;
 	esac
 done
 
-if [ -z "$branch" ]; then
-	branch="master"
-fi
 shift $(($OPTIND - 1))
 
-# install pre-requisites
+# install essential pre-requisites
+
 sudo apt-get update
 sudo apt-get install -y python python-dev build-essential git libssl-dev libffi-dev
 
-# As of this writing, the python-pip and python-requests packages in Debian Jessie are
-# out of sync. Remove athe default and install a newer version - this is less than ideal.
-sudo apt-get remove -y python-pip
-curl https://bootstrap.pypa.io/get-pip.py -o - | sudo python
+if test "$REPLACE_PIP"="yes"; then
+    # As of this writing, the python-pip and python-requests packages in Debian Jessie are
+    # out of sync. Remove the default and install a newer version - this is less than ideal.
+    sudo apt-get remove -y python-pip
+    curl https://bootstrap.pypa.io/get-pip.py -o - | sudo python
+fi
 
-# Get calvin
+if test "$INSTALL_RPI_DEPS"="yes"; then
+    sudo apt-get install sense-hat
+    pip install -r rpi-requirements.txt
+fi
+
+if test "$INSTALL_NON_RPI_DEPS"="yes"; then
+    sudo apt-get install python-pygame
+    sudo apt-get install python-opencv
+    pip install -r ex-requirements.txt
+fi
+
+
+# install calvin
+
+# clone from github
 git clone -b $branch https://www.github.com/EricssonResearch/calvin-base
-# and install it and its dependencies
+
+# install dependencies
 cd calvin-base
 sudo -H pip install -r requirements.txt -r test-requirements.txt
 
-# Install it editable
+# install calvin
 sudo pip install -e .
 
 # Calvin should now be installed, proceed with other stuff
 
-if [ x"$runtime_start" = xyes ]; then
+if [ x"$INSTALL_STARTUP" = xyes ]; then
 
 # install mdns
 sudo apt-get install -y libnss-mdns
 
 # create calvin startup script
+
 (sudo cat <<'EOF'
 #! /bin/sh
 # /etc/init.d/calvin
@@ -81,9 +116,9 @@ EOF
 # register script with startup
 sudo chmod 755 /etc/init.d/calvin.sh
 sudo update-rc.d calvin.sh defaults
-fi # runtime start
+fi # INSTALL_STARTUP
 
-if [ x"$web_start" = xyes ]; then
+if test "$INSTALL_WEB"="yes" ]; then
 # create csweb startup script
 (sudo cat <<'EOF'
 #! /bin/sh
@@ -122,9 +157,9 @@ EOF
 # register script with startup
 sudo chmod 755 /etc/init.d/csweb.sh
 sudo update-rc.d csweb.sh defaults
-fi # web start
+fi # INSTALL_WEB
 
-[ x$runtime_start = xyes ] && echo "Installed calvin at startup"
-[ x$web_start = xyes ] && echo "Installed calvin web interface at startup"
+[ "$INSTALL_STARTUP"="yes" ] && echo "Installed calvin at startup"
+[ "$INSTALL_WEB"="yes" ] && echo "Installed calvin web interface at startup"
 # done
 echo "Done. You're on your own."
