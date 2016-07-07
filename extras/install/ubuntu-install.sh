@@ -18,9 +18,9 @@ usage() {
     exit 0
 }
 
-while getopts "pb:sweu" n
+while getopts "pb:sweu" opt
 do
-	case $n in
+	case $opt in
 	  b) INSTALL_BRANCH="$OPTARG";;
 	  s) INSTALL_STARTUP=yes;;
 	  w) INSTALL_WEB=yes;;
@@ -62,7 +62,7 @@ fi
 # install calvin
 
 # clone from github
-git clone -b $branch https://www.github.com/EricssonResearch/calvin-base
+git clone -b $INSTALL_BRANCH https://www.github.com/EricssonResearch/calvin-base
 
 # install dependencies
 cd calvin-base
