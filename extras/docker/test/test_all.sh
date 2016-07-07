@@ -6,7 +6,12 @@ if test -z $HOST; then
     exit 1
 fi
 
-./test_system.sh -i erctcalvin/calvin:local -c -e $HOST -t proxy
-./test_system.sh -n -e $HOST -t -c proxy
-./test_system.sh -i erctcalvin/calvin:local -c -e $HOST -t dht
-./test_system.sh -n -e $HOST -t -c dht
+cd ..
+./setup_system.sh -i erctcalvin/calvin:local -c -e $HOST -t proxy
+./setup_system.sh cleanup
+./setup_system.sh -n -e $HOST -t -c proxy
+./setup_system.sh cleanup
+./setup_system.sh -i erctcalvin/calvin:local -c -e $HOST -t dht
+./setup_system.sh cleanup
+./setup_system.sh -n -e $HOST -t -c dht
+./setup_system.sh cleanup
