@@ -19,15 +19,12 @@ import os
 import sys
 import json
 import argparse
-from calvin.csparser.cscompile import compile_script
-
-def _appname_from_filename(filename):
-    return os.path.splitext(os.path.basename(filename))[0]
+from calvin.csparser.cscompile import compile_script, appname_from_filename
 
 def compile_file(filename, credentials=None):
     with open(filename, 'r') as source:
         sourceText = source.read()
-        appname = _appname_from_filename(filename)
+        appname = appname_from_filename(filename)
         return compile_script(sourceText, appname, credentials=credentials)
 
 def compile_generator(files):

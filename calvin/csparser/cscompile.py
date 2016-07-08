@@ -8,17 +8,23 @@ from calvin.utilities.issuetracker import IssueTracker
 
 _log = get_logger(__name__)
 
-def _appname_from_filename(filename):
-    return os.path.splitext(os.path.basename(filename))[0]
+def appname_from_filename(filename):
+    appname = os.path.splitext(os.path.basename(filename))[0]
+    # Dot . is invalid in application names (interpreted as actor path separator),
+    # so replace any . with _
+    appname = appname.replace('.', '_')
+    return appname
 
 
+# FIXME: filename is sometimes an appname and sometimes a path to a file, see
+#        code calling Security.verify_signature_get_files below
 def compile_script(source_text, filename, credentials=None, verify=True):
     """
     Compile a script and return a tuple (deployable, errors, warnings)
 
     N.B 'credentials' and 'verify' are intended for actor store access, currently unused
     """
-    appname =_appname_from_filename(filename)
+    appname = appname_from_filename(filename)
     return calvin_codegen(source_text, appname, verify=verify)
 
 
@@ -76,7 +82,7 @@ def compile_script_check_security(source_text, filename, cb, credentials=None, v
     #
     # Actual code for compile_script
     #
-    appname =_appname_from_filename(filename)
+    appname = appname_from_filename(filename)
     # FIXME: if node is None we bypass security even if enabled. Is that the intention?
     if node is not None and security_enabled():
         if credentials:
