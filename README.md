@@ -19,18 +19,20 @@ An early position paper on Calvin, [Calvin - Merging Cloud and IoT](http://www.s
 * [Secure Domain Transition of Calvin Actors](https://lup.lub.lu.se/student-papers/search/publication/8881650)
 * [Authorization Aspects of the Distributed Dataflow-oriented IoT Framework Calvin](https://lup.lub.lu.se/student-papers/search/publication/8879081)
 
+## Getting Started
+
 When you have gone through the material above and want to try it yourself, there is a quick start below, but you can also dive head first into [Installing Calvin](https://github.com/EricssonResearch/calvin-base/tree/master/extras/install/) or even [Calvin and Docker](https://github.com/EricssonResearch/calvin-base/tree/master/extras/docker/) if that is your preference. There should be enough information there to set up a small system of Calvin runtimes and deploy a simple distributed application.
 
-The next stop after that would be to have a look at the available [examples](https://github.com/EricssonResearch/calvin-base/tree/master/calvin/examples), where we have a collection of example applications. If you have a Raspberry Pi available, it should be straightforward to get started with them.
+The next stop after that would be to have a look at the available [examples](https://github.com/EricssonResearch/calvin-base/tree/master/calvin/examples), where we have a collection of example applications. If you have a Raspberry Pi available, it should be straightforward to get most of then up and running.
 
 There is also an abundance of detailed information on the [wiki](https://github.com/EricssonResearch/calvin-base/wiki).
 
 ## Contact
-This is a community project that was started by a team in Ericsson Research. If you have any suggestions, questions, or just want to say hello, you can send an e-mail to any of the members of the Calvin Team.<calvinteam@ericsson.com>.
+This is a community project that was started by a team in Ericsson Research. If you have questions or problems, post an issue and we'll get back go you as soon as we can.
 
 ## New in this version
 
-This release has focused on reworkin
+The focus of this release has been to rework some of the innards of Calvin in order to prepare for future extensions. Of course, it is inevitable that some new features sneak in, such as the new authentication framework (described in the [wiki](https://github.com/EricssonResearch/calvin-base/wiki/Security)), or just plain improvements, such as the new keyword `voidport` in CalvinScript - a shortcut to mark a port as unused in a script.
 
 ### Dockers ###
 
@@ -116,24 +118,6 @@ To deploy an application to the runtime, go to the `Deploy` tab, load a script a
 
 After deployment, the `Actor` tab lists the actors currently executing on this runtime, and the `Applications` tab shows all applications deployed from the current runtime. By selecting one of the application ids, it is possible to get a visual representation of the application in the form of a graph. It is also possible to turn on tracing in order to see what goes on w.r.t actions in each actor. Running applications can also be stopped here. 
 
-### Migration
-
-Once you have to runtimes up and running, they can be joined together to form a network with
-
-    $ cscontrol http://<first runtime address>:<controlport> nodes add calvinip://<other runtime address>:<port>
-
-Deploy an application to one of them (from the command line or the web interface) and visit the `Actors` tab in the web interface. It should now be possible to select an actor and migrate it to the other node.
-
-Alternatively, this can be done from the command line using the cscontrol utility:
-
-    $ cscontrol http://<first runtime address>:<controlport> actor migrate <actor id> <other runtime id>
-
-Where the necessary information (runtime id, actor id) can be gathered using the same utility. USe
-
-    $ cscontrol --help
-
-for more information. Note that the control uri is mandatory even for most of the help commands.
-
 ### Testing
 
 If necessary, install the extra packages needed for testing
@@ -155,17 +139,16 @@ Some tests are skipped (marked `s`), some are expected to fail (marked `x` or `X
 CalvinScript is a scripting language designed to take the ugliness out of writing calvin programs. Using your favorite editor, create a file named `myfirst.calvin` containing the following:
 
     # myfirst.calvin
-    source : std.Counter()
+    source : std.Trigger(tick=1, data="Hello, world")
     output : io.Print()
 
-    source.integer > output.token
+    source.date > output.token
 
 Save the file, and deploy and run the program (assuming you have a runtime running on localhost):
 
     $ cscontrol http://localhost:5001 myfirst.calvin
 
-The output should be identical to the earlier example.
-
+The application should produce "Hello, world" once every second.
 
 ## Open issues
 
