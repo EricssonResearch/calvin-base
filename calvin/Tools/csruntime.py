@@ -135,7 +135,7 @@ def compile_script(scriptfile, credentials):
     if issuetracker.error_count:
         fmt = "{type!c}: {reason} {script} {line}:{col}"
         for error in issuetracker.formatted_errors(sort_key='line', custom_format=fmt, script=scriptfile, line=0, col=0):
-            log.error(error)
+            _log.error(error)
         return False
     return app_info
 
