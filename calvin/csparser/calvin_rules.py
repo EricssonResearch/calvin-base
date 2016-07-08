@@ -118,7 +118,14 @@ t_ignore = ' \t'
 
 
 def t_error(t):
-    # Error output format: "<Informative text> (line:<line>, col:<col>)"
-    # e.g. "Expected token of type '=', found ')' (line:1, col:10)"
-    raise Exception("Illegal character '%s' (line:%d, col:%d)" %
-                    (t.value[0], t.lexer.lineno, t.lexpos - t.lexer.zerocol))
+    msg = "Illegal character '{}'".format(t.value[0])
+    syntax_error = SyntaxError(msg)
+    syntax_error.text = msg
+    syntax_error.lineno = t.lexer.lineno
+    syntax_error.offset = t.lexpos - t.lexer.zerocol
+    raise syntax_error
+
+
+
+
+

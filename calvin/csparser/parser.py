@@ -355,9 +355,15 @@ class CalvinParser(object):
         return info
 
     def parse(self, source_text):
+        # return ir (AST) and issuetracker
         self.issuetracker = IssueTracker()
         self.source_text = source_text
-        return self.parser.parse(source_text), self.issuetracker
+        try:
+            ir = self.parser.parse(source_text)
+        except SyntaxError as e:
+            self.issuetracker.add_error(e.text, {'line':e.lineno, 'col':e.offset})
+            ir = ast.Node()
+        return ir, self.issuetracker
 
 
 # FIXME: [PP] Optionally supply an IssueTracker
