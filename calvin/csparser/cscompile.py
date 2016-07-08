@@ -19,10 +19,7 @@ def compile_script(source_text, filename, credentials=None, verify=True):
     N.B 'credentials' and 'verify' are intended for actor store access, currently unused
     """
     appname =_appname_from_filename(filename)
-    deployable, issuetracker = calvin_codegen(source_text, appname, verify=verify)
-
-    # FIXME: [PP] Return issuetracker
-    return deployable, issuetracker
+    return calvin_codegen(source_text, appname, verify=verify)
 
 
 # FIXME: It might make sense to turn this function into a plain asynchronous security check.
