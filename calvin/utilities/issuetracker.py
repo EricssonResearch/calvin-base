@@ -10,6 +10,8 @@ class IssueFormatter(string.Formatter):
     to string formatting, e.g.
         issue_formatter.format("{foo!c}", foo="hello world!")
     returns "HELLO WORLD!"
+
+    Note that autonumbering, i.e. use of {}, is not possible.
     """
 
     # http://stackoverflow.com/q/17848202/1007047
@@ -17,14 +19,6 @@ class IssueFormatter(string.Formatter):
 
     def __init__(self):
         super(IssueFormatter, self).__init__()
-
-    def parse(self, s):
-        position = 0
-        for lit, name, spec, conv in super(IssueFormatter, self).parse(s):
-            if not name:
-                name = str(position)
-                position += 1
-            yield lit, name, spec, conv
 
     def convert_field(self, value, conversion):
         if conversion == 'c':
@@ -191,6 +185,9 @@ class IssueTracker(object):
         Any additional key-value arguments will be available to the formatter, e.g.
         custom_format="{type!c}: {reason} {filename}:{line}", filename="foo/bar.calvin".
         Values from the actual issue will take precedence over additional values for the same key.
+
+        Note that autonumbering, i.e. use of {}, is not allowed in the format strings, and while
+        indexed references, i.e. {0} {1}, are allowed they make no sense in this context.
         """
         return self._format_items(self.issues(sort_key=sort_key), custom_format, **kwargs)
 
@@ -218,7 +215,8 @@ if __name__ == '__main__':
     myfmt = IssueFormatter()
     print myfmt.format("{foo!u} {foo!c}", foo="hello")
     print myfmt.format("{0!u} {0!c}", "hello")
-    print myfmt.format("{!u} {!c}", "hello", "again")
+
+
 
     t = IssueTracker()
     t.add_error("Foo")
