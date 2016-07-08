@@ -12,39 +12,41 @@ There are a few [Ericsson Research blog](http://www.ericsson.com/research-blog/)
 
 If you could not attend the [Mobile World Congress 2016](https://www.mobileworldcongress.com) in person there is at least a teaser of what our team showed there: [Calvin smart IoT development](http://www.ericsson.com/research-blog/internet-of-things/calvin/)
 
-When you have gone through the material above and want to try it yourself, read the quick start section below or go to the [wiki](https://github.com/EricssonResearch/calvin-base/wiki) for more detailed information.
+An early position paper on Calvin, [Calvin - Merging Cloud and IoT](http://www.sciencedirect.com/science/article/pii/S1877050915008595) describes many of the underlying ideas and overall goals with this project. There are also a growing number of Calvin related master's theses available:
+
+* [Consistent Authentication in Distributed Networks](https://lup.lub.lu.se/student-papers/search/publication/8871006)
+* [Dynamic Fault Tolerance and Task Scheduling in Distributed Systems](https://lup.lub.lu.se/student-papers/search/publication/8876351)
+* [Secure Domain Transition of Calvin Actors](https://lup.lub.lu.se/student-papers/search/publication/8881650)
+* [Authorization Aspects of the Distributed Dataflow-oriented IoT Framework Calvin](https://lup.lub.lu.se/student-papers/search/publication/8879081)
+
+When you have gone through the material above and want to try it yourself, there is a quick start below, but you can also dive head first into [Installing Calvin](https://github.com/EricssonResearch/calvin-base/tree/master/extras/install/) or even [Calvin and Docker](https://github.com/EricssonResearch/calvin-base/tree/master/extras/docker/) if that is your preference. There should be enough information there to set up a small system of Calvin runtimes and deploy a simple distributed application.
+
+The next stop after that would be to have a look at the available [examples](https://github.com/EricssonResearch/calvin-base/tree/master/calvin/examples), where we have a collection of example applications. If you have a Raspberry Pi available, it should be straightforward to get started with them.
+
+There is also an abundance of detailed information on the [wiki](https://github.com/EricssonResearch/calvin-base/wiki).
 
 ## Contact
-This is a community project that was started by a team in Ericsson Research. If you have any suggestions, questions, or just want to say hello, you can send an e-mail to <calvinteam@ericsson.com>.
+This is a community project that was started by a team in Ericsson Research. If you have any suggestions, questions, or just want to say hello, you can send an e-mail to any of the members of the Calvin Team.<calvinteam@ericsson.com>.
 
 ## New in this version
 
+This release has focused on reworkin
+
 ### Dockers ###
 
-There are now a couple of examples of how to use Calvin with [Dockers](http://www.docker.io). It is still in an early phase, but if you are somewhat familiar with dockers, then a quick way of testing Calvin is to download an image and have a look. Instructions can be found in [here](https://github.com/EricssonResearch/calvin-base/tree/master/extras/docker). 
-
-### Capabilities ###
-
-There is now support for some new webservices, such as [tweeting](http://twitter.com), and checking the [forecast](http://www.openweathermap.com). There is also support for some new hardware.
+The instructions for using Calvin in Dockers have been reworked and expanded. The creation of images have been simplified. See [here](https://github.com/EricssonResearch/calvin-base/tree/master/extras/docker).
 
 ### Examples ###
 
-There are a selection of new examples demonstrating how to use some features of Calvin's, such as using runtime attributes to store hardware configuration, such as which GPIO-pins are in use on a Raspberry Pi, and credentials, such as an API-key. Check the examples folder for details.
+Some documentation have been added to the examples, and the necessary requirements are included as an option in the installation script available [here](https://github.com/EricssonResearch/calvin-base/tree/master/extras/install).
 
 ### Security ###
 
-This version introduces signing of actors and applications, as well as verification of signatures, policy controlled runtime authorization for actors, and an option for using a secure DHT implementation for the internal registry. None of this is currently active by default.
-
-### Visuals and use ###
-
-If an actor is hogging the scheduler for longer than 200 ms, a warning will be issued in the log. There is a new extended trace functionality with detailed metering of actors events. CSWeb has been given a new look and supports the extended trace logging. Deployment of applications can specify and update actor requirements to guide the deployment on runtimes.
+This version introduces a new flexible authentication framework for establishing the authenticity of the user that deploys and application, within a domain, the authentication procedure results in a set of user attributes associated with the instances of actors, the attributes are used as input for the authorization procedure. Similarly, a new flexible attribute based authorization framework  is introduced. The framework is similar to XACML but designed to be more compact and efficient, it uses JSON and JSON Web Tokens for rules and transport. The certificate and key management has been substantially updated. _Note_: As for previous releases, all security features are disabled by default.
 
 ### Under the hood ###
 
-Location of configuration files can now be specified using a special CALVIN\_CONFIG\_PATH environmental variable. There have also been changes to the configuration of the internal registry - check this if you have issues with a previously working installation. 
-
-In addition to this, new tests have been added, as well as some refactoring for pythonisity.
-
+A lot of work has gone into restructuring and refactoring in preparation of the features planned for later this year. The parser and compiler has received a much needed overhaul in order to simplify extensions to CalvinScript, and the implementation of actor ports have been improved to allow for a more dynamic and configurable handling of tokens. 
 
 ## Quick start
 
@@ -54,15 +56,15 @@ The latest version of Calvin can be found on [github](https://github.com/Ericsso
 
 ### Setup
 
-(For more information about installation options, see [the wiki](https://github.com/EricssonResearch/calvin-base/wiki/Installation))
+(For more information about installation options, see [the wiki](https://github.com/EricssonResearch/calvin-base/wiki/Installation)) or the [debian/raspbian/ubuntu instructions](https://github.com/EricssonResearch/calvin-base/tree/master/extras/install)
 
-To install Calvin, use the accompanying `setup.py`
+If all pre-requisites are installed, Calvin can be installed using the accompanying `setup.py`
 
     $ python setup.py install
 
-Alternatively, install the requirements using `pip`
+Alternatively, install using `pip`
 
-    $ pip install -r requirements.txt
+    $ pip install -e .
 
 To verify a working installation, try
 
