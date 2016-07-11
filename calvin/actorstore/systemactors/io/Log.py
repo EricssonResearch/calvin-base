@@ -28,9 +28,10 @@ class Log(Actor):
       data : data to be logger
     """
 
-    def exception_handler(self, action, args, context):
-        # Check args to verify that it is EOSToken
-        return action(self, *args)
+    def exception_handler(self, action_function, args, context):
+        # The action 'log' takes a single token
+        exception_token = args[0]
+        return action_function(self, "Exception '%s'" % (exception_token,))
 
     @manage(['loglevel'])
     def init(self, loglevel):
@@ -39,25 +40,25 @@ class Log(Actor):
         
     def setup(self):
         if self.loglevel == "INFO":
-            self.logger = _log.info
+            self._logger = _log.info
         elif self.loglevel == "WARNING":
-            self.logger = _log.warning
+            self._logger = _log.warning
         elif self.loglevel == "ERROR":
-            self.logger = _log.error
+            self._logger = _log.error
         else :
-            self.logger = _log.info
+            self._logger = _log.info
 
     def will_migrate(self):
-        self.logger(" -- migrating")
+        self._logger(" -- migrating")
     
     def did_migrate(self):
         self.setup()
-        self.logger(" -- finished migrating")
+        self._logger(" -- finished migrating")
     
     @condition(action_input=['data'])
-    def action(self, data):
-        self.logger("{}".format(data))
+    def log(self, data):
+        self._logger("{}".format(data))
         return ActionResult()
 
-    action_priority = (action, )
+    action_priority = (log, )
 

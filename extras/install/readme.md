@@ -116,7 +116,7 @@ Assuming Calvin has been installed and works as expected, create a file named `h
     src : std.Trigger(tick=1.0, data="Hello, world")
     snk : io.Log(loglevel="INFO")
     /* Connections */
-    src.data > snk.token
+    src.data > snk.data
 
 This is an example of _CalvinScript_ which is how an application is described in Calvin. There are two main parts to the script; First, the declaration of actors used in the application, and then a description of how they are connected. In this simple example, there are two actors, called `src` and `snk`. The first actor, `src` is of type `std.Trigger()` with the sole purpose of generating a tick to the system. To this purpose, it takes two parameters, `tick`, which is the interval, in seconds, with which to generate the data, and `data` which is what to output on each tick. The output is then sent on the `data` port of the actor.
 
@@ -179,3 +179,164 @@ Now, it is time to deploy the application with the deployment requirements we cr
     $ cscontrol http://192.168.2.3:5001 deploy --reqs hello.deployjson hello.calvin
 
 This will deploy the application, with the `src` actor being placed on runtime-0 and the `snk` actor being placed on runtime-1. When starting `csruntime` from the command line, the output will appear in the console, when using the `setup_system.sh` command, it is logged to a file corresponding to the name of the runtime, i.e. `runtime-0.log` and `runtime-1.log` in this case.
+
+## Writing a component
+
+CalvinScript allows you to group actors together in a component, which can then be used as a short cut when building scripts. For example, using the logging actor we used earlier, say we want to prepend "mylog:" to each logging entry. The script, amended to include this, would be:
+
+    /* Actors */
+    src : std.Trigger(tick=1.0, data="Hello, world")
+    prefix: text.PrefixString(prefix="mylog:")
+    snk : io.Log(loglevel="INFO")
+    /* Connections */
+    src.data > prefix.in
+    prefix.out > snk.data
+
+Then, later, you may find you want that same logging prefix, but on a logger with loglevel "WARNING". Rather than repeating the code, let us wrap it in a component, and parameterize the name and loglevel:
+
+    component MyLog(logname, loglevel) data -> {
+        prefix: text.PrefixString(prefix=logname)
+        snk : io.Log(loglevel=loglevel)
+
+        .data > prefix.in
+        prefix.out > snk.data
+    }
+
+This defines a component named `MyLog` with two parameters `logname` and `loglevel`, one inport `data`, and no outports. Note how the ports of a component are used (prefixed with `.` but no actorname.) This component can now be used (almost) as were it an actor. 
+
+    /* Actors */
+    src : std.Trigger(tick=1.0, data="Hello, world")
+    infolog : MyLog(logname="myinfolog:", loglevel="INFO")
+    warnlog : MyLog(logname="mywarnlog:", loglevel="WARNING")
+    /* Connections */
+    src.data > infolog.data
+    src.data > warnlog.data
+
+## Writing an actor
+
+With the currently quite limited (but growing!) selection of actors available, it is inevitable that a calvin developer will eventually end up with a problem which cannot be solved with existing actors, nor with components built from them. Consequently, writing a new actor, from scratch, is necessary. Below is a simple example, see the wiki entry on [Actors](https://github.com/EricssonResearch/calvin-base/wiki/Actors) for more.
+
+Say you have an application where you need to divide two numbers. A straightforward problem which, likely requires two in ports with the numbers, and one output with the result.
+
+    from calvin.actor.actor import Actor, condition, guard, ActionResult
+    
+    class InputDiv(Actor):
+    
+        """
+          Divides input on port 'dividend' with input on port 'divisor'
+          Inputs :
+            dividend : integer
+            divisor : integer
+          Output :
+            result
+        """
+    
+        def init(self):
+            pass
+    
+        @condition(action_input=[('dividend', 1), ('divisor', 1)], action_output=[('result', 1)])
+        def divide(self, numerator, denumerator):
+            result = numerator / denumerator
+            return ActionResult(production=(result,))
+    
+        action_priority = (divide,)
+
+To try it out, create a directory tree and save it there:
+
+    actors/
+        math/
+            InputDiv.py
+
+By default, calvin only uses pre-installed actors. In order to use this new one, create a file `calvin.conf` with the contents:
+
+    {
+      "global": {
+        "actor_paths": ["./actors"]
+      }
+    }
+
+This tells calvin to look for additional actors in the `./actors` directory.
+
+In the same directory, create a script `mathtest.calvin`, with
+
+    ten : std.Constant(data=10)
+    five : std.Constant(data=5)
+    div : math.InputDiv()
+    out : io.Log(loglevel="INFO")
+
+    ten.token > div.dividend
+    five.token > div.divisor
+    div.result > out.data
+
+(You will note that this is a rather inefficient way of dividing two numbers.)
+
+The directory structure should now be:
+
+    calvin.conf
+    mathtest.calvin
+    actors/
+        math/
+            InputDiv.py
+
+Run the application with
+
+    csruntime --host localhost mathtest.calvin
+
+Among the output should be the line
+
+    016-07-11 11:20:39,894 INFO     52645-calvin.Log: 2
+
+which is correct.
+
+But what happens if the divisor is 0? (It will make the application crash.) In order to handle it somewhat gracefully, we add a second action to the actor which checks the input on the ports, and forwards an _exception token_ if the divisor is 0. Edit the file `InputDiv.py` (or copy & paste) to contain the following:
+
+    from calvin.actor.actor import Actor, condition, guard, ActionResult
+    from calvin.runtime.north.calvin_token import ExceptionToken
+    
+    class InputDiv(Actor):
+        """
+          Divides input on port 'dividend' with input on port 'divisor'
+          Inputs :
+            dividend : integer
+            divisor : integer
+          Output :
+            result : an integer
+        """
+    
+        def init(self):
+            pass
+    
+        @condition(action_input=[('dividend', 1), ('divisor', 1)], action_output=[('result', 1)])
+        @guard(lambda self, n, d: d != 0)
+        def divide(self, numerator, denumerator):
+            """Normal case, return division"""
+            result = numerator / denumerator
+            return ActionResult(production=(result,))
+    
+        @condition(action_input=[('dividend', 1), ('divisor', 1)], action_output=[('result', 1)])
+        @guard(lambda self, n, d: d == 0)
+        def divide_by_zero(self, numerator, denumerator):
+            """Exceptional case: return exception token"""
+            result = ExceptionToken("Division by 0")
+            return ActionResult(production=(result,))
+    
+        action_priority = (divide_by_zero, divide)
+
+Changing the script `mathtest.calvin` to
+
+    ten : std.Constant(data=10)
+    zero : std.Constant(data=5)
+    div : math.InputDiv()
+    out : io.Log(loglevel="INFO")
+
+    ten.token > div.dividend
+    zero.token > div.divisor
+    div.result > out.data
+
+will give the log entry
+
+    2016-07-11 11:41:09,647 INFO     53133-calvin.Log: Exception '<ExceptionToken> Division by 0'
+
+which is far better than a crash.
+
+
