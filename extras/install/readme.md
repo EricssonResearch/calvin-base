@@ -8,7 +8,12 @@ The following has been tested on Raspbian Jessie (2016-05-27) and Ubuntu 16.04.
 
 The easiest way of installing Calvin on a Debian-based system (e.g. Debian, Ubuntu, Raspbian, etc) is to use the install script `extras/install/ubuntu-install.sh`. Executing it without parameters (it requires `sudo` powers) will install Calvin and all dependencies for a vanilla installation.
 
-    $ cd extras/install
+Fetch the script with
+
+    $ curl -o ubuntu-install.sh https://raw.githubusercontent.com/EricssonResearch/calvin-base/master/extras/install/ubuntu-install.sh
+
+And execute with
+
     $ ./ubuntu-install.sh
 
 Note that this will install Calvin (and dependencies) system-wide. The script accepts a selection of arguments:
@@ -29,9 +34,8 @@ To have Calvin start on system startup, add the flag `-s` and to have the Calvin
 
 This will ensure Calvin is up and running when the system boots, and that a webserver is running, presenting the calvin control GUI on port 8000 on the host. The `-b` flag lets you select which branch of Calvin to use &mdash; the `master` branch is usually more stable, but will often lack some of the more recent additions compared to `develop`. It's up to you which one you go with.
 
-To install some useful dependencies in order to run the examples in `calvin/examples`, add `-u` and, if on a raspberry pi, add `-r`:
+To install some useful dependencies in order to run the examples in `calvin/examples`, add `-u` and, if on a raspberry pi, add `-e`:
 
-    $ curl -o ubuntu-install.sh https://raw.githubusercontent.com/EricssonResearch/calvin-base/master/extras/install/ubuntu-install.sh
     $ ./ubuntu-install.sh -s -w -e -u -p
 
 Note: This will take some time - be patient.

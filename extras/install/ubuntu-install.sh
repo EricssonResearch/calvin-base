@@ -37,7 +37,7 @@ done
 shift $(($OPTIND - 1))
 
 # Getting started with sudo...
-sudo echo This will install Calvin & dependencies
+sudo echo This will install Calvin and dependencies
 
 # install essential pre-requisites
 
