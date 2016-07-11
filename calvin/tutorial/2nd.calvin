@@ -1,7 +1,0 @@
-# File 2nd.calvin
-source : std.Counter()
-delay : std.ClassicDelay(delay=0.5)
-output : io.Print()
-
-source.integer > delay.token
-delay.token > output.token

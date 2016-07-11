@@ -1,4 +1,4 @@
-# Brief Introduction to Calvin & CalvinScript
+# Installation and Getting Started
 
 ## Installation
 
