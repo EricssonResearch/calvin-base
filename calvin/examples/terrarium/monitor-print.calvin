@@ -2,7 +2,7 @@ define RED = [127,0,0]
 define GREEN = [0, 127, 0]
 
 /* Actors */
-src : std.CountTimer(sleep=5)
+src : std.Trigger(data=null tick=5.0)
 hygrometer : sensor.Humidity()
 humid_range : std.SetLimits(lower=40, upper=80)
 thermometer : sensor.Temperature()
@@ -20,8 +20,8 @@ sel : std.Select()
 term : std.Terminator()
 
 /* Connections */
-src.integer > hygrometer.trigger
-src.integer > thermometer.trigger
+src.data > hygrometer.trigger
+src.data > thermometer.trigger
 
 hygrometer.humidity > humid_range.dict
 thermometer.temperature > temp_range.dict
