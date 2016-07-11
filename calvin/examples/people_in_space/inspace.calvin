@@ -1,0 +1,31 @@
+/* Actors */
+tick : std.Trigger(tick=3600.0, data="http://api.open-notify.org/astros.json")
+iip : std.Init(data="nothing")
+client : net.HTTPGet()
+cmp : std.Compare(op="=")
+sel : std.Select()
+status : io.Print()
+to_json: json.FromString()
+get_list : json.GetValue()
+itemize: json.Items()
+format: text.Format(fmt="{name}, {craft}")
+
+
+/* Connections */
+tick.data > client.URL
+{} > client.header
+{} > client.params
+client.status > voidport
+client.header > voidport
+client.data > cmp.a
+iip.out > cmp.b
+cmp.result > sel.select
+client.data > sel.data
+sel.case_true > voidport
+sel.case_false > iip.in
+sel.case_false > to_json.string
+to_json.data > get_list.container
+"people" > get_list.key
+get_list.value > itemize.list
+itemize.item > format.dict
+format.text > status.token
