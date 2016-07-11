@@ -1,6 +1,6 @@
-tick : std.CountTimer()
+tick : std.Trigger(data=true, tick=1.0)
 thermometer : sensor.Temperature()
 out : io.Print()
 
-tick.integer > thermometer.measure
+tick.data> thermometer.measure
 thermometer.centigrade > out.token
