@@ -8,6 +8,9 @@ RUNTIMES=3
 USE_DOCKERS=yes
 RUNTESTS=
 
+HAS_DOCKER=$(which docker)
+HAS_CALVIN=$(which csruntime)
+
 usage() {
     echo "Usage: $(basename $0) -ctn -r <number>-i <image> -e <ip> [proxy/dht/cleanup]\n\
     -i <image>[:<tag>]   : Calvin image (and tag) to use [$IMAGE]\n\
@@ -20,9 +23,16 @@ usage() {
     exit 1
 }
 
-check_calvin() {
-    if test ! $(which csruntime); then
+check_native() {
+    if test ! $HAS_CALVIN; then
         echo "no csruntime in path, is calvin installed?"
+        exit 1
+    fi
+}
+
+check_docker() {
+    if test ! $HAS_DOCKER; then
+        echo "no docker in path, is it installed?"
         exit 1
     fi
 }
@@ -55,19 +65,23 @@ wait_for_runtimes() {
 }
 
 cleanup_dockers() {
-     docker kill $(docker ps | awk 'NR>1{ print $1 }' ) >& /dev/null
-     docker rm $(docker ps -f status=exited -f status=created | awk 'NR>1{ print $1 }') >& /dev/null
+     docker kill $(docker ps | awk 'NR>1{ print $1 }' ) > /dev/null 2>&1
+     docker rm $(docker ps -f status=exited -f status=created | awk 'NR>1{ print $1 }') > /dev/null 2>&1
 }
 
 cleanup_native() {
-    kill $(ps | grep csruntime | awk '{print $1}') >& /dev/null
+    kill $(ps | grep csruntime | awk '{print $1}') > /dev/null 2>&1
 
 }
 
 cleanup_all() {
-    cleanup_dockers
-    cleanup_native
-    rm runtime-?.log >& /dev/null
+    if test $HAS_DOCKER; then
+        cleanup_dockers
+    fi
+    if test $HAS_CALVIN; then
+        cleanup_native
+    fi
+    rm runtime-?.log > /dev/null 2>&1
 }
 
 proxy_docker_system() {
@@ -90,11 +104,10 @@ dht_docker_system() {
 }
 
 dht_native_system() {
-    check_calvin
-    csruntime --host $EXTERNAL_IP -c $CONTROLPORT --name runtime-0 -f runtime-0.log >& /dev/null &
+    csruntime --host $EXTERNAL_IP -c $CONTROLPORT --name runtime-0 -f runtime-0.log > /dev/null 2>&1 &
     wait_for_runtime 0
     for i in $seq ; do
-        csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log >& /dev/null &
+        csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log > /dev/null 2>&1 &
     done
     wait_for_runtimes
 }
@@ -105,7 +118,7 @@ proxy_native_system() {
     wait_for_runtime 0
     for i in $seq ; do
         CALVIN_GLOBAL_STORAGE_TYPE=\"proxy\" CALVIN_GLOBAL_STORAGE_PROXY=\"calvinip://$EXTERNAL_IP:$PORT\"\
-            csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log >& /dev/null &
+            csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log > /dev/null 2>&1 &
     done
     wait_for_runtimes
 }
@@ -113,19 +126,23 @@ proxy_native_system() {
 setup_dht_system() {
     if test -n "$USE_DOCKERS"; then
         echo setup dht system w/ dockers
+        check_docker
         dht_docker_system
     else
         echo setup dht system native
+        check_native
         dht_native_system
     fi
 }
 
 setup_proxy_system() {
     if test -n "$USE_DOCKERS"; then
+        check_dockers
         echo setup proxy system w/ dockers
         proxy_docker_system
     else
         echo setup proxy system native
+        check_native
         proxy_native_system
     fi
 }
@@ -208,7 +225,7 @@ fi
 i=1
 seq=""
 while test $i -le $RUNTIMES; do
-    seq+=" "$i
+    seq="$seq $i"
     i=$(($i+1)) 
 done
 
@@ -223,6 +240,7 @@ case $CMD in
         ;;
     dht)
         setup_dht_system
+        ;;
     esac
 
 if test -n "$RUNTESTS"; then

@@ -36,6 +36,9 @@ done
 
 shift $(($OPTIND - 1))
 
+# Getting started with sudo...
+sudo echo This will install Calvin & dependencies
+
 # install essential pre-requisites
 
 sudo apt-get update > /dev/null 2>&1
@@ -45,6 +48,7 @@ if test $? -ne 0; then
     usage 1
 fi
 
+echo Installing python prerequisites
 sudo apt-get install -y python python-dev build-essential git libssl-dev libffi-dev > /dev/null 2>&1
 
 if test $? -ne 0; then
@@ -53,6 +57,7 @@ if test $? -ne 0; then
 fi
 
 if test "$REPLACE_PIP" = "yes"; then
+    echo Replacing pip with latest version
     # As of this writing, the python-pip and python-requests packages in Debian Jessie are
     # out of sync. Remove the default and install a newer version - this is less than ideal.
     sudo apt-get remove -y python-pip > /dev/null 2>&1
@@ -60,23 +65,32 @@ if test "$REPLACE_PIP" = "yes"; then
 fi
 
 if test "$INSTALL_RPI_DEPS" = "yes"; then
-    sudo apt-get install sense-hat > /dev/null 2>&1
-    sudo -H pip install -r rpi-requirements.txt > /dev/null 2>&1
+    echo Installing sense-hat and dependencies
+    sudo apt-get install -y sense-hat > /dev/null 2>&1
+    echo Installing RPi.GPIO and mfrc522
+    sudo -H pip install RPi.GPIO > /dev/null 2>&1
+    sudo -H pip install -e git+https://github.com/lthiery/SPI-Py#egg=SPI-Py-1.0 > /dev/null 2>&1
+    sudo -H pip install -e git+https://github.com/olaan/MFRC522-Python#egg=mfrc522 > /dev/null 2>&1
 fi
 
 if test "$INSTALL_NON_RPI_DEPS" = "yes"; then
-    sudo apt-get install python-pygame > /dev/null 2>&1
-    sudo apt-get install python-opencv > /dev/null 2>&1
-    sudo -H pip install -r ex-requirements.txt > /dev/null 2>&1
+    echo Installing pygame
+    sudo apt-get install -y python-pygame > /dev/null 2>&1
+    echo Installing opencv
+    sudo apt-get install -y python-opencv > /dev/null 2>&1
+    echo Installing tweepy
+    sudo -H pip install tweepy > /dev/null 2>&1
 fi
 
 
 # install calvin
-
+echo Downloading and installing Calvin
 # clone from github
 git clone -b $INSTALL_BRANCH https://www.github.com/EricssonResearch/calvin-base
 
 # install dependencies
+
+echo Installing Calvin dependencies
 cd calvin-base
 sudo -H pip install -r requirements.txt -r test-requirements.txt > /dev/null 2>&1
 
@@ -87,6 +101,7 @@ sudo -H pip install -e . > /dev/null 2>&1
 
 if [ "$INSTALL_STARTUP" = yes ]; then
 
+echo Installing startup scripts
 # install mdns
 sudo apt-get install -y libnss-mdns > /dev/null 2>&1
 
@@ -131,6 +146,7 @@ fi # INSTALL_STARTUP
 
 if test "$INSTALL_WEB" = "yes" ; then
 # create csweb startup script
+echo Installing csweb startup scripts
 sudo sh -c "cat > /etc/init.d/csweb.sh" <<'EOF'
 #!/bin/sh
 # /etc/init.d/csweb
