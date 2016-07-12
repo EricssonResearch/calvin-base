@@ -1,7 +1,8 @@
 # Calvin and docker #
 
 Assuming you have a working installation of docker, either build an image using the
-supplied docker files, or fetch them from dockerhub.
+supplied docker files, or fetch them from dockerhub. 
+
 
 ## Building a docker image ##
 
@@ -14,13 +15,23 @@ for the image of the GitHub master branch, and
 
     $ make develop
 
-for the develop branch.
+for the develop branch. There are also raspberry pi images available, which can be built with
+
+    $ make PLATFORM=rpi master
+
+and similarly for develop, of course. There is also an image which includes dependencies necessary to run the examples:
+
+    $ make DEPS=y master
+
+and, for raspberry pi,
+
+    $ make DEPS=y PLATFORM=rpi master
 
 It is of course also possible to build them manually, e.g.
 
     $ docker build -t erctcalvin/calvin -f Dockerfile .
 
-for the standard and the raspberry pi images, respectively. They can be pulled from dockerhub using
+They can be pulled from dockerhub using
 
     $ docker pull erctcalvin/calvin:master
 
@@ -28,7 +39,9 @@ and
 
     $ docker pull erctcalvin/calvin:develop
 
-for the master and develop images, respectively.
+for the master and develop images, respectively. For the raspberry pi images, the prefix is `rpi-`, and for the images including dependencies, the suffix is `-deps`. So to fetch the raspberry pi image based on the master branch with all dependencies, use
+
+    $ docker pull erctcalvin/rpi-calvin-deps:master
 
 There is also a make target for when you have made changes (on the develop branch) and just want to
 include them:
