@@ -1,22 +1,96 @@
-component FlashStopLight(interval) -> {
-    """Use StopLight component to flash PhilipsHue red/green at intervals"""
-    light : hue.StopLight(address="192.168.0.101", username="newdeveloper", lightno="1")
-    on : std.Constantify(constant=true)
-    off : std.Constantify(constant=false)
-    alternate : std.Alternate()
-    c_1 : std.Counter()
-    c_2 : std.Counter()
-    pacer : std.ClassicDelay(delay=interval)
-    void : std.Terminator()
 
-    c_1.integer > on.in
-    c_2.integer > off.in
-    on.out > alternate.token_1
-    off.out > alternate.token_2
-    alternate.token > pacer.token
-    pacer.token > light.state
-    light.status > void.void
+component PhilipsHue(address, username, lightno) on, saturation, brightness, hue -> status {
+    url : URLBuilder(address=address, username=username, lightno=lightno)
+    command : CmdBuilder()
+    light : net.HTTPPut()
+
+    .on > command.on
+    .saturation > command.sat
+    .brightness > command.bri
+    .hue > command.hue
+
+    url.url > light.URL
+    {} > light.params
+    command.string > light.data
+    {"Content-Type": "application/json"} > light.header
+
+    light.status > .status
+    light.header > voidport
+    light.data > voidport
 }
 
-flash : FlashStopLight(interval=2.0)
+component StopLight(address, username, lightno) state -> status {
+    select: std.Deselect()
+    light : PhilipsHue(address=address, username=username, lightno=lightno)
+
+    true > light.on
+    255 > light.saturation
+    100 > light.brightness
+    .state > select.select
+
+    1000 > select.case_false
+    26000 > select.case_true
+    select.data > light.hue
+    light.status > .status
+
+}
+
+component URLBuilder(address, username, lightno) -> url {
+    format : text.Format(fmt="http://{address}/api/{username}/lights/{lightno}/state")
+    set_address: json.SetValue()
+    set_username: json.SetValue()
+    set_lightno: json.SetValue()
+
+    {} > set_address.container
+    "address" > set_address.key
+    address > set_address.value
+    set_address.container > set_username.container
+    "username" > set_username.key
+    username > set_username.value
+    set_username.container > set_lightno.container
+    "lightno" > set_lightno.key
+    lightno > set_lightno.value
+    set_lightno.container > format.dict
+    format.text > .url
+}
+
+component FlashStopLight(address, username, lightno, interval) -> {
+    """Use StopLight component to flash PhilipsHue red/green at intervals"""
+    light : StopLight(address=address, username=username, lightno=lightno)
+    on : std.Trigger(tick=0.0, data=true)
+    off: std.Trigger(tick=0.0, data=false)
+    alternate : std.Alternate()
+    pacer : std.ClassicDelay(delay=interval)
+
+    on.data > alternate.token_1
+    off.data > alternate.token_2
+    alternate.token > pacer.token
+    pacer.token > light.state
+    light.status > voidport
+}
+
+component CmdBuilder() on, sat, bri, hue -> string {
+    to_str : json.ToString()
+    set_on : json.SetValue()
+    set_sat: json.SetValue()
+    set_bri: json.SetValue()
+    set_hue: json.SetValue()
+
+    {} > set_on.container
+    "on" > set_on.key
+    .on > set_on.value
+    set_on.container > set_sat.container
+    "sat" > set_sat.key
+    .sat > set_sat.value
+    set_sat.container > set_bri.container
+    "bri" > set_bri.key
+    .bri > set_bri.value
+    set_bri.container > set_hue.container
+    "hue" > set_hue.key
+    .hue > set_hue.value
+    set_hue.container > to_str.data
+    to_str.string > .string
+}
+
+flash : FlashStopLight(address="philips-hue", username="username", lightno=1, interval=2.0)
 
