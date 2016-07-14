@@ -35,8 +35,12 @@ class Compare(Actor):
     Outputs:
       result : true or false according to result of 'a' OP 'b'
     """
-    @manage(['op'])
+    @manage(['relation'])
     def init(self, op):
+        self.relation = op
+        self.setup()
+
+    def setup(self):
         try:
             self.op = {
                 '<': operator.lt,
@@ -45,11 +49,14 @@ class Compare(Actor):
                 '!=': operator.ne,
                 '>=': operator.ge,
                 '>': operator.gt,
-            }[op]
+            }[self.relation]
         except KeyError:
             _log.warning('Invalid operator %s, will always produce FALSE as result' % str(op))
             self.op = None
-
+        
+    def did_migrate(self):
+        self.setup()
+        
     @condition(['a', 'b'], ['result'])
     def test(self, a, b):
         res = bool(self.op(a, b)) if self.op else False
