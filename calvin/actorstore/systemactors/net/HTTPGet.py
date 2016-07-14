@@ -38,9 +38,6 @@ class HTTPGet(Actor):
     def init(self):
         self.setup()
 
-    def did_migrate(self):
-        self.setup()
-
     def setup(self):
         self.request = None
         self.reset_request()
@@ -52,6 +49,12 @@ class HTTPGet(Actor):
             self.request = None
         self.received_headers = False
 
+    def will_migrate(self):
+        self.reset_request()        
+
+    def did_migrate(self):
+        self.setup()
+        
     @condition(action_input=['URL', 'params', 'header'])
     @guard(lambda self, url, params, header: self.request is None)
     def new_request(self, url, params, header):
