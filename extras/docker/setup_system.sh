@@ -7,19 +7,20 @@ CONTROLPORT="5001"
 RUNTIMES=3
 USE_DOCKERS=yes
 RUNTESTS=
+LOGLEVEL=INFO
 
 HAS_DOCKER=$(which docker)
 HAS_CALVIN=$(which csruntime)
 
 usage() {
-    echo "Usage: $(basename $0) -ctn -r <number>-i <image> -e <ip> [proxy/dht/cleanup]\n\
+    echo "Usage: $(basename $0) -ctnv -r <number>-i <image> -e <ip> [proxy/dht/cleanup]\n\
     -i <image>[:<tag>]   : Calvin image (and tag) to use [$IMAGE]\n\
     -e <external-ip>     : External IP to use\n\
     -n                   : Native, not dockers\n\
     -r <number>          : Number of extra runtimes beyond the first one\n\
     -t                   : Run tests (requires 3+1 runtimes)\n\
-    -c                   : Cleanup after tests"
-
+    -c                   : Cleanup after tests\n\
+    -v                   : Verbose"
     exit 1
 }
 
@@ -71,7 +72,6 @@ cleanup_dockers() {
 
 cleanup_native() {
     kill $(ps | grep csruntime | awk '{print $1}') > /dev/null 2>&1
-
 }
 
 cleanup_all() {
@@ -85,29 +85,29 @@ cleanup_all() {
 }
 
 proxy_docker_system() {
-    ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -l -p $PORT -c $CONTROLPORT -n runtime-0
+    ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -l -p $PORT -c $CONTROLPORT -n runtime-0 --loglevel=$LOGLEVEL
     wait_for_runtime 0
     for i in $seq; do
-        ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -r $EXTERNAL_IP:$PORT -n runtime-$i
+        ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -r $EXTERNAL_IP:$PORT -n runtime-$i --loglevel=$LOGLEVEL
     done
     wait_for_runtimes
 }
 
 dht_docker_system() {
-    ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -c $CONTROLPORT -n runtime-0
+    ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -c $CONTROLPORT -n runtime-0 --loglevel=$LOGLEVEL
     wait_for_runtime 0
     for i in $seq; do
-        ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -n runtime-$i
+        ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -n runtime-$i --loglevel=$LOGLEVEL
         sleep 0.5
     done
     wait_for_runtimes
 }
 
 dht_native_system() {
-    csruntime --host $EXTERNAL_IP -c $CONTROLPORT --name runtime-0 -f runtime-0.log > /dev/null 2>&1 &
+    csruntime --host $EXTERNAL_IP -c $CONTROLPORT --name runtime-0 -f runtime-0.log --loglevel=$LOGLEVEL > /dev/null 2>&1 &
     wait_for_runtime 0
     for i in $seq ; do
-        csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log > /dev/null 2>&1 &
+        csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log --loglevel=$LOGLEVEL > /dev/null 2>&1 &
     done
     wait_for_runtimes
 }
@@ -186,8 +186,11 @@ test_deploy() {
     fi
 }
 
-while getopts "ctr:i:e:hn" opt; do
+while getopts "ctvr:i:e:hn" opt; do
 	case $opt in
+        v)
+            LOGLEVEL=DEBUG
+            ;;
         c)
             CLEANUP=yes
             ;;
