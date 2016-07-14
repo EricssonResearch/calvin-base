@@ -187,12 +187,12 @@ class PortManager(object):
                     return
                 else:
                     raise response.CalvinResponseException(status)
-            else:
-                port_ids.extend([p.id for p in actor.inports.itervalues()])
-                port_ids.extend([p.id for p in actor.outports.itervalues()])
-                # Need to collect all callbacks into one
-                if callback:
-                    callback = CalvinCB(self._disconnecting_actor_cb, _callback=callback, port_ids=port_ids)
+
+            port_ids.extend([p.id for p in actor.inports.itervalues()])
+            port_ids.extend([p.id for p in actor.outports.itervalues()])
+            # Need to collect all callbacks into one
+            if callback:
+                callback = CalvinCB(self._disconnecting_actor_cb, _callback=callback, port_ids=port_ids)
         else:
             # Just one port to disconnect
             if port_id:
@@ -216,7 +216,7 @@ class PortManager(object):
                     port_ids.append(port.id)
 
         _log.analyze(self.node.id, "+", {'port_ids': port_ids})
-
+        
         # Run over copy of list of ports since modified inside the loop
         for port_id in port_ids[:]:
             _log.analyze(self.node.id, "+ PRE FACTORY", {'port_id': port_id})
@@ -224,7 +224,8 @@ class PortManager(object):
                             port_id, callback=callback)
             _log.analyze(self.node.id, "+ POST FACTORY", {'port_id': port_id,
                             'connections': map(lambda x: str(x), connections)})
-            for c in connections:
+            # Run over copy since connections modified (tricky!) in loop
+            for c in connections[:]:
                 c.disconnect()
             _log.analyze(self.node.id, "+ POST DISCONNECT", {'port_id': port_id,
                             'connection': str(c)})
