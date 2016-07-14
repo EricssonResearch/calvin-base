@@ -37,15 +37,16 @@ class FromString(Actor):
     def exception_handler(self, action, args, context):
         return ActionResult(production=(self.default,))
 
-    @manage(['default'])
+    @manage(['exception_output'])
     def init(self, exception_output=None):
-        self.default = ExceptionToken() if exception_output is None else exception_output
+        self.exception_output = exception_output
         self.setup()
 
     def did_migrate(self):
         self.setup()
 
     def setup(self):
+        self.default = ExceptionToken() if self.exception_output is None else self.exception_output
         self.use('calvinsys.native.python-json', shorthand='json')
 
     @condition(['string'], ['data'])
