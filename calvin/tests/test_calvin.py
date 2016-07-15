@@ -535,6 +535,53 @@ class TestActorMigration(CalvinTestBase):
         request_handler.delete_actor(peer, sum_)
         request_handler.delete_actor(peer, src)
 
+    def testFanOutPortLocalToRemoteMigration(self):
+        """Testing outport with fan-out local to remote migration"""
+
+        rt = self.runtime
+        peer = self.runtimes[0]
+        peer_id = peer.id
+
+        src = request_handler.new_actor_wargs(rt, "std.CountTimer", "src", sleep=0.1, steps=100)
+        snk_1 = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk-1", store_tokens=1)
+        snk_2 = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk-2", store_tokens=1)
+
+        request_handler.set_port_property(rt, src, 'out', 'integer',
+                                            port_properties={'routing': 'fanout', 'nbr_peers': 2})
+
+        request_handler.connect(rt, snk_1, 'token', rt.id, src, 'integer')
+        request_handler.connect(rt, snk_2, 'token', rt.id, src, 'integer')
+        time.sleep(1)
+
+        expected = range(1, 100)
+        actual = actual_tokens(rt, snk_1)
+
+        snk_1_start = len(actual)
+        assert(len(actual) > 1)
+        self.assertListPrefix(expected, actual)
+
+        actual = actual_tokens(rt, snk_2)
+        snk_2_start = len(actual)
+        assert(len(actual) > 1)
+        self.assertListPrefix(expected, actual)
+
+        request_handler.migrate(rt, src, peer_id)
+        time.sleep(1)
+
+        actual = actual_tokens(rt, snk_1)
+        # Make sure that we got at least 5 more tokens since we could have transfered but unprocessed in queue
+        assert(len(actual) > snk_1_start + 5)
+        self.assertListPrefix(expected, actual)
+
+        actual = actual_tokens(rt, snk_2)
+        # Make sure that we got at least 5 more tokens since we could have transfered but unprocessed in queue
+        assert(len(actual) > snk_2_start + 5)
+        self.assertListPrefix(expected, actual)
+
+        request_handler.delete_actor(peer, src)
+        request_handler.delete_actor(rt, snk_1)
+        request_handler.delete_actor(rt, snk_2)
+
     def testFanOutPortRemoteToLocalMigration(self):
         """Testing outport with fan-out remote to local migration"""
 
