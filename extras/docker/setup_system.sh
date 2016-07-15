@@ -114,11 +114,11 @@ dht_native_system() {
 
 proxy_native_system() {
     CALVIN_GLOBAL_STORAGE_TYPE=\"local\"\
-        csruntime --host $EXTERNAL_IP -p $PORT -c $CONTROLPORT --name runtime-0 -f runtime-0.log &
+        csruntime --host $EXTERNAL_IP -p $PORT -c $CONTROLPORT --name runtime-0 -f runtime-0.log --loglevel=$LOGLEVEL &
     wait_for_runtime 0
     for i in $seq ; do
         CALVIN_GLOBAL_STORAGE_TYPE=\"proxy\" CALVIN_GLOBAL_STORAGE_PROXY=\"calvinip://$EXTERNAL_IP:$PORT\"\
-            csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log > /dev/null 2>&1 &
+            csruntime --host $EXTERNAL_IP -p $(($PORT+2*$i)) -c $(($CONTROLPORT+2*$i)) --name runtime-$i -f runtime-$i.log  --loglevel=$LOGLEVEL > /dev/null 2>&1 &
     done
     wait_for_runtimes
 }
