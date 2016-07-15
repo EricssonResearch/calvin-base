@@ -60,7 +60,7 @@ The latest version of Calvin can be found on [github](https://github.com/Ericsso
 
 (For more information about installation options, see [the wiki](https://github.com/EricssonResearch/calvin-base/wiki/Installation)) or the [debian/raspbian/ubuntu instructions](https://github.com/EricssonResearch/calvin-base/tree/master/extras/install)
 
-If all pre-requisites are installed, Calvin can be installed using the accompanying `setup.py`
+When all pre-requisites are installed (see previous links), Calvin can be installed using the accompanying `setup.py`
 
     $ python setup.py install
 
@@ -91,6 +91,8 @@ It is also possible to start a runtime without deploying an application to it,
 
     $ csruntime --host <address> --controlport <controlport> --port <port>
 
+Note that csruntime will return until it exits; either have it run in the background (usually by adding `&` to the end of the command), or open a new terminal to continue.
+
 Applications can then be deployed remotely using
 
     $ cscontrol http://<address>:<controlport> deploy <script-file>
@@ -107,6 +109,7 @@ Alternatively, a nicer way of doing it is using the web interface, described nex
 Start a runtime
 
     $ csruntime --host localhost --controlport 5001 --port 5000
+
 
 Start web server
 
