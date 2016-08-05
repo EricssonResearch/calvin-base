@@ -98,11 +98,17 @@ class BaseClientProtocolFactory(CalvinCBClass, ClientFactory):
         self._addr = ""
         self._port = 0
         self._delimiter = None
+        self._connector = None
+        self.protocol = None
+        self._protocol_factory = None
 
     def startedConnecting(self, connector):
         pass
 
     def buildProtocol(self, addr):
+        if not self._protocol_factory:
+            raise Exception("No protocol factory set!")
+
         self.protocol = self._protocol_factory({'data_received': self._callbacks['data_received']},
                                                delimiter=self._delimiter, host=self._addr, port=self._port,
                                                factory=self)
@@ -113,6 +119,7 @@ class BaseClientProtocolFactory(CalvinCBClass, ClientFactory):
         if self._connector:
             # TODO: returns defered ?!?
             self._connector.disconnect()
+            self._connector = None
         self.protocol = None
 
     def send(self, data):
@@ -166,7 +173,8 @@ class TCPClientProtocolFactory(BaseClientProtocolFactory):
         self._addr = addr
         self._port = port
 
-        return reactor.connectTCP(addr, port, self)
+        self._connector = reactor.connectTCP(addr, port, self)
+        return self._connector
 
     def send(self, data):
         if self._protocol_type == "raw":

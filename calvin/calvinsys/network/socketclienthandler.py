@@ -72,7 +72,9 @@ class ClientHandler(object):
         return ClientConnection(self, handle)
 
     def disconnect(self, handle):
-        self._connections[handle]['connection'].stop()
+        if self.is_connected(handle):
+            self._connections[handle]['connection'].disconnect()
+            self._connections[handle]['connection'] = None
 
     def get_data(self, handle):
         return self._connections[handle]['data'].pop()
