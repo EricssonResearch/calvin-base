@@ -65,7 +65,12 @@ class TCPClient(Actor):
     @condition(action_input=['data_in'])
     @guard(lambda self, token: self.cc and self.cc.is_connected())
     def send(self, token):
-        self.cc.send(token)
+        if isinstance(token, basestring):
+            token = str(token)
+            self.cc.send(token)
+        else:
+            _log.error("Error token must be string or unicode, token is %s", repr(token))
+
         return ActionResult(production=())
 
     @condition(action_output=['data_out'])

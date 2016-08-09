@@ -15,6 +15,10 @@
 # limitations under the License.
 
 from calvin.actor.actor import Actor, ActionResult, manage, condition
+from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
 
 
 class Stringify(Actor):
@@ -28,12 +32,23 @@ class Stringify(Actor):
     """
 
     @manage()
-    def init(self):
-        pass
+    def init(self, encoding=None):
+        self.encoding = encoding
 
     @condition(['in'], ['out'])
     def stringify(self, input):
-        return ActionResult(production=(str(input), ))
+        try:
+            # Always unicode
+            if self.encoding:
+                new_token = unicode(input, self.encoding)
+            else:
+                new_token = unicode(input)
+
+            return ActionResult(production=(new_token, ))
+        except Exception as exc:
+            _log.error("Error %s, cant decode token '%s'", str(exc), repr(input))
+
+        return ActionResult(production=(ExceptionToken("Decode error"),))
 
     action_priority = (stringify, )
 

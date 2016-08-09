@@ -51,12 +51,12 @@ class Compare(Actor):
                 '>': operator.gt,
             }[self.relation]
         except KeyError:
-            _log.warning('Invalid operator %s, will always produce FALSE as result' % str(op))
+            _log.warning('Invalid operator %s, will always produce FALSE as result' % str(self.relation))
             self.op = None
-        
+
     def did_migrate(self):
         self.setup()
-        
+
     @condition(['a', 'b'], ['result'])
     def test(self, a, b):
         res = bool(self.op(a, b)) if self.op else False
