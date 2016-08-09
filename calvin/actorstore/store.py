@@ -393,7 +393,7 @@ class DocumentationStore(ActorStore):
         paths = self.paths_for_module(namespace)
         for path in paths:
             docpath = os.path.join(path, '__init__.py')
-            pymodule = self._load_pymodule('__init__', docpath)
+            pymodule, _ = self._load_pymodule('__init__', docpath)
             if pymodule and pymodule.__doc__:
                 doclines = pymodule.__doc__.splitlines()
                 doc['short_desc'] = doclines[0]
