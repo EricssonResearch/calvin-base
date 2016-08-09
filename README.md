@@ -145,7 +145,7 @@ CalvinScript is a scripting language designed to take the ugliness out of writin
     source : std.Trigger(tick=1, data="Hello, world")
     output : io.Print()
 
-    source.date > output.token
+    source.data > output.token
 
 Save the file, and deploy and run the program (assuming you have a runtime running on localhost):
 
