@@ -55,14 +55,8 @@ def _lookup(node, issue_tracker):
             'definition': comp.children[0]
         }
     else:
-        # FIXME: Harmonize metadata
-        metadata = DocumentationStore().actor_docs(node.actor_type)
-        if metadata:
-            metadata['is_known'] = True
-            metadata['inputs'] = [p for p, _ in metadata['inputs']]
-            metadata['outputs'] = [p for p, _ in metadata['outputs']]
-        else:
-            metadata = {'is_known': False}
+        metadata = DocumentationStore().metadata(node.actor_type)
+        if not metadata['is_known']:
             reason = "Not validating actor type: '{}'".format(node.actor_type)
             issue_tracker.add_warning(reason, node)
 

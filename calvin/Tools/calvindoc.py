@@ -21,19 +21,6 @@ import argparse
 from calvin.actorstore.store import DocumentationStore
 
 
-def all_docs(what=None):
-    ds = DocumentationStore()
-
-    raw = ds.help_raw(what)
-    print ds.help(what)
-
-    for actor in raw.get('actors', []):
-        print ds.help(what + '.' + actor)
-
-    for module in raw.get('modules', []):
-        all_docs(module)
-
-
 def main():
 
     long_description = """
@@ -44,25 +31,28 @@ def main():
 
     argparser = argparse.ArgumentParser(description=long_description)
     group = argparser.add_mutually_exclusive_group()
-    group.add_argument('what', metavar='<actor or module>', type=str, nargs='?', default='',
+    group.add_argument('what', metavar='<actor or module>', type=str, nargs='?', default=None,
                        help='What to look up documentation for, if empty show top level documentation')
     group.add_argument('--all', action='store_const', const=True, default=False,
                        help='Generate complete actor documentation in Markdown format')
     argparser.add_argument('--format', default=default_format, choices=['detailed', 'compact', 'raw'],
-                           help='Options "detailed" and "compact" returns Markdown-formatted text,'
+                           help='Options "detailed" and "compact" returns pretty-printed text,'
                                 ' while "raw" returns a JSON-formatted representation that can be'
                                 ' used to generated the documentation in other formats.')
+    argparser.add_argument('--prettyprinter', default='plain', choices=['plain', 'md'],
+                           help='When "--format detailed" is in use, this options allows a choice between plain text and markdown')
 
     args = argparser.parse_args()
     store = DocumentationStore()
 
     if args.all:
-        all_docs()
+        print store.documentation()
     else:
         if args.format == 'raw':
             print json.dumps(store.help_raw(args.what))
         else:
-            print store.help(args.what, args.format == 'compact')
+            compact = bool(args.format == 'compact')
+            print store.help(args.what, compact=compact, formatting=args.prettyprinter)
 
 if __name__ == '__main__':
     main()

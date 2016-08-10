@@ -11,22 +11,14 @@ def _refname(name):
 
 def _lookup_definition(actor_type, root):
     if '.' in actor_type:
-        doc = _docstore.help_raw(actor_type)
-        if not doc['name']:
+        doc = _docstore.metadata(actor_type)
+        if not doc['is_known']:
             return ([], [], '')
-        t = doc['type']
-
-        inports = [p for p,_ in doc['inputs']]
-        outports = [p for p,_ in doc['outputs']]
-    else:
-        t = 'component'
-        comps = query(root, kind=ast.Component, attributes={'name':actor_type}, maxdepth=2)
-        if not comps:
-            return ([], [], '')
-
-        inports, outports = comps[0].inports, comps[0].outports
-
-    return (inports, outports, t)
+        return (doc['inputs'], doc['outputs'], doc['type'])
+    comps = query(root, kind=ast.Component, attributes={'name':actor_type}, maxdepth=2)
+    if not comps:
+        return ([], [], '')
+    return (comps[0].inports, comps[0].outports, 'component')
 
 #
 # Implement _vis_xxx for each node type with the following, and ...

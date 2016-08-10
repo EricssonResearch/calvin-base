@@ -372,259 +372,6 @@ class ActorStore(Store):
         return l + actors
 
 
-class DocumentationStore(ActorStore):
-    """Interface to documentation"""
-
-    def module_docs(self, namespace):
-        """
-        Return a dict with docstrings for namespace.
-
-        Since a namespace can be implemented in more than one place,
-        the path where docstring was found is used as key.
-        """
-        doc = {
-            'ns': namespace, 'name': '',
-            'type': 'module',
-            'short_desc': '',
-            'long_desc': '',
-            'modules': self.modules(namespace),
-            'actors': self.actors(namespace),
-            }
-        paths = self.paths_for_module(namespace)
-        for path in paths:
-            docpath = os.path.join(path, '__init__.py')
-            pymodule, _ = self._load_pymodule('__init__', docpath)
-            if pymodule and pymodule.__doc__:
-                doclines = pymodule.__doc__.splitlines()
-                doc['short_desc'] = doclines[0]
-                doc['long_desc'] = '\n'.join(doclines[2:])
-                break
-        if not doc['short_desc'] and not doc['long_desc']:
-            doc['short_desc'] = 'No documentation for "%s"' % namespace
-        return doc
-
-
-    def actor_docs(self, actor_type):
-        found, is_primitive, actor, signer = self.lookup(actor_type)
-        if not found:
-            return None
-        if is_primitive:
-            docs = self.primitive_docs(actor_type, actor)
-        else:
-            docs = self.component_docs(actor_type, actor)
-        return docs
-
-
-    def primitive_docs(self, actor_type, actor_class):
-        """Combine info from class and docstring into actor raw docs"""
-        namespace, name = actor_type.rsplit('.', 1)
-        # Extract docs
-        inputs, outputs, doctext = self._parse_docstring(actor_class)
-
-        doc = {
-            'ns': namespace, 'name': name,
-            'type': 'actor',
-            'short_desc': doctext[0],
-            'long_desc': '\n'.join(doctext[1:]),
-            'args': self._get_args(actor_class),
-            'inputs': inputs,
-            'outputs': outputs,
-            }
-        return doc
-
-
-    def component_docs(self, comp_type, compdef):
-        """Combine info from compdef to raw docs"""
-        namespace, name = comp_type.rsplit('.', 1)
-        if type(compdef) is dict:
-            doctext = compdef['docstring'].splitlines()
-            return {
-                'ns': namespace, 'name': name,
-                'type': 'component',
-                 'short_desc': doctext[0],
-                 'long_desc': '\n'.join(doctext[1:]),
-                 'requires':list({compdef['structure']['actors'][a]['actor_type'] for a in compdef['structure']['actors']}),
-                 'args': {'mandatory':compdef['arg_identifiers'], 'optional':{}},
-                 'inputs': [(p, self._fetch_port_docs(compdef, 'in', p)) for p in compdef['inports']],
-                 'outputs': [(p, self._fetch_port_docs(compdef, 'out', p)) for p in compdef['outports']],
-            }
-        # print compdef.inports, compdef.outports
-        doctext = compdef.docstring.splitlines()
-        doc = {
-            'ns': namespace, 'name': name,
-            'type': 'component',
-            'short_desc': doctext[0],
-            'long_desc': '\n'.join(doctext[1:]),
-            'requires':["FIXME"], # FIXME
-            'args': {'mandatory':compdef.arg_names, 'optional':{}},
-            'inputs': [(x, "FIXME") for x in compdef.inports or []], # FIXME append port docs
-            'outputs': [(x, "FIXME") for x in compdef.outports or []], # FIXME append port docs
-            'definition':compdef.children[0]
-        }
-        return doc
-
-
-    def _fetch_port_docs(self, compdef, port_direction, port_name):
-        structure = compdef['structure']
-        for c in structure['connections']:
-            if port_direction.startswith('in'):
-                actor, port, target_actor, target_port = c['src'], c['src_port'],c['dst'], c['dst_port']
-            else:
-                actor, port, target_actor, target_port = c['dst'], c['dst_port'], c['src'], c['src_port']
-            if not actor and port == port_name and target_actor in structure['actors']:
-                return self.port_docs(structure['actors'][target_actor]['actor_type'], port_direction, target_port)
-        return 'Not documented'
-
-
-    def port_docs(self, actor_type, port_direction, port_name):
-        docs = ''
-        adoc = self.actor_docs(actor_type)
-        if not adoc:
-            return docs
-        pdocs = adoc['inputs'] if port_direction.startswith('in') else adoc['outputs']
-        for port, pdoc in pdocs:
-            if port == port_name:
-                docs = pdoc
-                break
-        return docs
-
-
-    def root_docs(self):
-        doc = {
-            'ns': None, 'name': 'Calvin',
-            'type': 'module',
-            'short_desc': 'Merging cloud and IoT',
-            'long_desc': """A systematic approach to handling impedence mismatch in device-to-device, device-to-service, and service-to-service operations.""",
-            'modules': self.modules(),
-            'footer': '(C) 2015',
-            }
-        return doc
-
-
-    def _list_items(self, items, namespace):
-        lines = []
-        for name in items:
-            full_name = namespace + "." + name if namespace else name
-            lines.append(self._format_terse(self.help_raw(full_name)))
-        return '\n\n'.join(lines)
-
-
-    def _list_ports(self, items):
-        lines = []
-        for name, desc in items:
-            lines.append("%s\n:    %s" % (name, desc))
-        return '\n\n'.join(lines)
-
-    def _escape_string_arg(self, arg):
-        if type(arg) != str:
-            return arg
-        return '"'+arg.encode('string_escape')+'"'
-
-    def _format_args(self, args):
-        opt_list = ['{0}={1}'.format(param, self._escape_string_arg(default)) for param, default in args['optional'].iteritems()]
-        arg_list = args['mandatory'] + opt_list
-        return ', '.join(arg_list)
-
-
-    def _format_detailed(self, raw):
-        doc = ''
-        if 'header' in raw:
-            doc += "{header}\n----\n".format(**raw)
-        if raw['type'] == 'module':
-            doc += self._format_detailed_module(raw)
-        else:
-            doc += self._format_detailed_actor(raw)
-        if 'footer' in raw:
-            doc += "\n----\n{footer}".format(**raw)
-        return doc
-
-
-    def _format_detailed_actor(self, raw):
-        doc = "#### {ns}.{name}({fargs})\n\n{short_desc}\n\n".format(fargs=self._format_args(raw['args']), **raw)
-        doc += "%s\n\n" % raw['long_desc'] if raw['long_desc'] else ''
-        if raw['type'] == 'component':
-            doc += '\n##### Requires\n\n{req_list}\n'.format(req_list=', '.join(raw['requires']))
-        if raw['inputs']:
-            doc += '\n##### Inputs\n\n{ports}\n'.format(ports=self._list_ports(raw['inputs']))
-        if raw['outputs']:
-            doc += '\n##### Outputs\n\n{ports}\n'.format(ports=self._list_ports(raw['outputs']))
-        return doc
-
-
-    def _format_detailed_module(self, raw):
-        if not raw['ns']:
-            doc = "## {name}\n\n{short_desc}\n\n".format(**raw)
-        else:
-            doc = "## Module: {ns}\n\n{short_desc}\n\n".format(**raw)
-        doc += "%s\n\n" % raw['long_desc'] if raw['long_desc'] else ''
-        if raw['modules']:
-            doc += '\n### Modules\n\n{items}\n'.format(items=self._list_items(raw['modules'], raw['ns']))
-        if 'actors' in raw and raw['actors']:
-            doc += '\n### Actors\n\n{items}\n'.format(items=self._list_items(raw['actors'], raw['ns']))
-        return doc
-
-
-    def _format_compact(self, raw):
-        doc = ''
-        if raw['type'] == 'module':
-            doc += self._format_compact_module(raw)
-        else:
-            doc += self._format_compact_actor(raw)
-        return doc
-
-
-    def _format_compact_actor(self, raw):
-        doc = "{ns}.{name}({fargs}): {short_desc}\n".format(fargs=self._format_args(raw['args']), **raw)
-        if raw['type'] == 'component':
-            doc += 'Requires: %s\n' % ', '.join(raw['requires'])
-        if raw['inputs']:
-           doc += 'Inputs: %s\n' % ', '.join([p for p, _ in raw['inputs']])
-        if raw['outputs']:
-           doc += 'Outputs: %s\n' % ', '.join([p for p, _ in raw['outputs']])
-        return doc
-
-
-    def _format_compact_module(self, raw):
-        doc = "%s: %s\n" % (raw['ns'] if raw['ns'] else raw['name'], raw['short_desc'])
-        if raw['modules']:
-            doc += 'Modules: %s\n' % ", ".join(raw['modules'])
-        if 'actors' in raw and raw['actors']:
-            doc += 'Actors: %s\n' % ", ".join(raw['actors'])
-        return doc
-
-
-    def _format_terse(self, raw):
-        """Return a terse description as a single line."""
-        title = raw['ns'] if raw['type'] == 'module' else raw['name']
-        doc = "%s\n:    %s" % (title , raw['short_desc'])
-        return doc
-
-
-    def help_raw(self, what):
-        """
-        Return help for 'what' in a structured form, but not suitable for printing as-is.
-        If what is None, return help on the command itself.
-        """
-        if what:
-            # First check for actors and components
-            doc = self.actor_docs(what)
-            if not doc:
-                doc = self.module_docs(what)
-        else:
-            doc = self.root_docs()
-        return doc
-
-
-    def help(self, what=None, compact=False, formatting='md'):
-        """Return help for """
-        raw = self.help_raw(what)
-        # print "raw", raw
-        if not raw:
-            doc = 'No help for "%s"' % what
-        else:
-            doc = self._format_compact(raw) if compact else self._format_detailed(raw)
-        return doc
-
 
 class GlobalStore(ActorStore):
     """ Interface to distributed global actor store
@@ -795,6 +542,323 @@ class GlobalStore(ActorStore):
         return filtered_actor_type_iter
 
 
+def _escape_string_arg(arg):
+    if type(arg) != str:
+        return arg
+    return '"{}"'.format(arg.encode('string_escape'))
+
+class DocObject(object):
+    """docstring for DocObject"""
+    def __init__(self, namespace, name=None, short_desc=None):
+        super(DocObject, self).__init__()
+        self.ns = namespace
+        self.name = name
+        self.short_desc = short_desc or "DocObject"
+
+    @property
+    def qualified_name(self):
+        if self.name:
+            return "{}.{}".format(self.ns, self.name)
+        return self.ns
+
+    def terse(self):
+        return "{} : {}".format(self.qualified_name, self.short_desc)
+
+    def compact(self):
+        return self.terse()
+
+    def detailed(self, md=False):
+        return self.terse()
+
+    def raw(self):
+        return self.__dict__
+
+    def json(self):
+        return self.__repr__()
+
+    def metadata(self):
+        return {'is_known': False}
+
+    def __repr__(self):
+        def _convert(x):
+            try:
+                return x.name or x.ns
+            except:
+                return None
+
+        r = {'type':str(self.__class__.__name__)}
+        r.update(self.__dict__)
+        return json.dumps(r, default=_convert)
+
+
+class ErrorDoc(DocObject):
+    """docstring for ErrDoc"""
+    def __init__(self, namespace, name, short_desc):
+        super(ErrorDoc, self).__init__(namespace, name, short_desc)
+        self.short_desc = "(Error) {}".format(short_desc or "Unknown error")
+
+
+class ModuleDoc(DocObject):
+    """docstring for ModuleDoc"""
+    def __init__(self, namespace, modules, actors, doclines):
+        short_desc = doclines[0] or 'No documentation'
+        super(ModuleDoc, self).__init__(namespace, None, short_desc)
+        self.modules = modules
+        self.actors = actors
+        self.long_desc = '\n'.join(doclines[1:])
+
+    def search(self, search_list):
+        if not search_list:
+            return self
+        name = search_list.pop(0)
+        for x in self.modules:
+            if name == x.ns:
+                return x.search(search_list)
+        for x in self.actors:
+            if name == x.name:
+                if not search_list:
+                    return x
+                return None # Error
+        return None
+
+
+    def compact(self):
+        d = {
+            'name': self.qualified_name,
+            'desc': self.short_desc,
+            'modules': ", ".join([x.ns for x in self.modules]) or "-",
+            'actors': ", ".join([x.name for x in self.actors]) or "-"
+        }
+        return "{name}\n{desc}\n\nModules: {modules}\nActors:  {actors}\n".format(**d)
+
+    def detailed(self, md=False):
+        if md:
+            FMT = "## Module: {name} [module_{name}]\n\n{desc}\n\n### Modules:\n\n{modules}\n\n### Actors:\n\n{actors}\n{hrule}\n"
+            MODULE_FMT = "[{0.ns}][module_{0.ns}]\n: {0.short_desc}\n"
+            ACTOR_FMT = "[{0.name}][actor_{0.ns}_{0.name}]\n: {0.short_desc}\n"
+        else:
+            FMT = "Module: {name}\n{heading}\n{desc}\n\nModules:\n{modules}\n\nActors:\n{actors}\n\n"
+            MODULE_FMT = "  {0.ns} : {0.short_desc}"
+            ACTOR_FMT = "  {0.name} : {0.short_desc}"
+        d = {
+            'name': self.qualified_name,
+            'desc': "\n".join([self.short_desc, self.long_desc]),
+            'modules': "\n".join([MODULE_FMT.format(x) for x in self.modules if type(x) is not ErrorDoc]) or "-",
+            'actors': "\n".join([ACTOR_FMT.format(x) for x in self.actors if type(x) is not ErrorDoc]) or "-",
+            'hrule': '\n----\n'
+        }
+        d['heading'] = '-'*(len(d['name']) + 8)
+        return FMT.format(**d)
+
+
+class ActorDoc(DocObject):
+    """docstring for ActorDoc"""
+    def __init__(self, namespace, name, args, inputs, outputs, doclines):
+        short_desc = doclines[0] or 'No documentation'
+        super(ActorDoc, self).__init__(namespace, name, short_desc)
+        self.args = args
+        self.inputs = inputs
+        self.outputs = outputs
+        self.long_desc = '\n'.join(doclines[1:])
+
+    @property
+    def formatted_args(self):
+        return self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()]
+
+    @property
+    def formatted_inports(self):
+        return [p for p, _ in self.inputs]
+
+    @property
+    def formatted_outports(self):
+        return [p for p, _ in self.outputs]
+
+    @property
+    def slug(self):
+        return self.qualified_name.replace('.', '_')
+
+    def metadata(self):
+        metadata = {
+            'ns': self.ns,
+            'name': self.name,
+            'type': 'actor',
+            'args': self.args,
+            'inputs': self.formatted_inports,
+            'outputs': self.formatted_outports,
+            'is_known': True
+        }
+        return metadata
+
+
+    def compact(self):
+        d = {
+            'name': self.qualified_name,
+            'args': ", ".join(self.formatted_args),
+            'desc': self.short_desc,
+            'inports': ", ".join(self.formatted_inports) or "-",
+            'outports': ", ".join(self.formatted_outports) or "-"
+        }
+        return "{name}({args})\n{desc}\n\nInports:  {inports}\nOutports: {outports}\n".format(**d)
+
+
+    def detailed(self, md=False):
+        if md:
+            FMT = "## Actor: {name}({args}) [actor_{slug}]\n\n{desc}\n\n### Inports:\n\n{inports}\n\n### Outports:\n\n{outports}\n{hrule}\n"
+            PORT_FMT = "{}\n: {}\n"
+        else:
+            FMT = "Actor: {name}({args})\n{heading}\n{desc}\n\nInports:\n{inports}\n\nOutports:\n{outports}\n\n"
+            PORT_FMT = "  {} : {}"
+        d = {
+            'name': self.qualified_name,
+            'slug': self.slug,
+            'args': ", ".join(self.formatted_args),
+            'desc': "\n".join([self.short_desc, self.long_desc]),
+            'inports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.inputs]) or "-",
+            'outports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.outputs]) or "-",
+            'hrule': '\n----\n'
+        }
+        d['heading'] = '-'*(len(d['name']) + len(d['args']) + 9)
+        return FMT.format(**d)
+
+
+class ComponentDoc(ActorDoc):
+    def __init__(self, namespace, name, args, inputs, outputs, doclines, requires, definition):
+        super(ComponentDoc, self).__init__(namespace, name, args, inputs, outputs, doclines)
+        self.requires = requires # ["FIXME"]
+        self.definition = definition # actor.children[0]
+
+
+    def metadata(self):
+        metadata = super(ComponentDoc, self).metadata()
+        metadata['type'] = 'component'
+        metadata['definition'] = self.definition
+        metadata['requires'] = self.requires
+        return metadata
+
+
+    def compact(self):
+        d = {
+            'base': super(ComponentDoc, self).compact(),
+            'requires': ", ".join(self.requires),
+        }
+        return "{base}\n\nRequires: {requires}".format(**d)
+
+
+    def detailed(self, md=False):
+        if md:
+            FMT = "## Component: {name}({args}) [actor_{slug}]\n\n{desc}\n\n### Inports:\n\n{inports}\n\n### Outports:\n\n{outports}\n### Requires: {requires}\n{hrule}\n"
+            PORT_FMT = "{}\n: {}\n"
+        else:
+            FMT = "Component: {name}({args})\n{heading}\n{desc}\n\nInports:\n{inports}\n\nOutports:\n{outports}\n\nRequires: {requires}\n\n"
+            PORT_FMT = "  {} : {}"
+        d = {
+            'name': self.qualified_name,
+            'slug': self.slug,
+            'args': ", ".join(self.formatted_args),
+            'desc': "\n".join([self.short_desc, self.long_desc]),
+            'inports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.inputs]) or "-",
+            'outports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.outputs]) or "-",
+            'requires': ", ".join(self.requires),
+            'hrule': '\n----\n'
+        }
+        d['heading'] = '-'*(len(d['name']) + len(d['args']) + 13)
+        return FMT.format(**d)
+
+
+class DocumentationStore(ActorStore):
+    """Interface to documentation"""
+    def __init__(self):
+        super(DocumentationStore, self).__init__()
+        self.docs = self.root_docs()
+
+
+    def module_docs(self, namespace):
+        modules = [self.module_docs(x) for x in self.modules(namespace)]
+        actors = [self.actor_docs(".".join([namespace, x])) for x in self.actors(namespace)]
+        paths = self.paths_for_module(namespace)
+        for path in paths:
+            docpath = os.path.join(path, '__init__.py')
+            pymodule, _ = self._load_pymodule('__init__', docpath)
+            if pymodule and pymodule.__doc__:
+                doclines = pymodule.__doc__.splitlines()
+                return ModuleDoc(namespace, modules, actors, doclines)
+        return ErrorDoc(namespace, None, "Unknown module")
+
+
+    def actor_docs(self, qualified_name):
+        found, is_primitive, actor, _ = self.lookup(qualified_name)
+        if not found:
+            return ErrorDoc(qualified_name, None, "Unknown actor")
+
+        namespace, name = qualified_name.rsplit('.', 1)
+        if is_primitive:
+            args = self._get_args(actor)
+            inputs, outputs, doclines = self._parse_docstring(actor)
+            doc = ActorDoc(namespace, name, args, inputs, outputs, doclines)
+        else:
+            if type(actor) is dict:
+                return ErrorDoc(namespace, name, "Old-style components are not valid")
+            args = {'mandatory':actor.arg_names, 'optional':{}}
+            inputs = [(x, "") for x in actor.inports or []] # FIXME append port docs
+            outputs = [(x, "") for x in actor.outports or []] # FIXME append port docs
+            doclines = actor.docstring.splitlines()
+            requires = [] # FIXME Requirements
+            definition = actor.children[0]
+            doc = ComponentDoc(namespace, name, args, inputs, outputs, doclines, requires, definition)
+        return doc
+
+
+    def root_docs(self):
+        modules = [self.module_docs(x) for x in self.modules()]
+        return ModuleDoc('Calvin', modules, [], ["A systematic approach to handling impedence mismatch in IoT."])
+
+
+    def metadata(self, qualified_name):
+        doc = self._help(qualified_name)
+        return doc.metadata()
+
+
+    def _help(self, what):
+        if what is None:
+            doc = self.docs
+        else:
+            search_list = what.split('.')
+            doc = self.docs.search(search_list)
+        if not doc:
+            doc = ErrorDoc(what, None, "No such entity")
+        return doc
+
+
+    def help_raw(self, what=None):
+        doc = self._help(what)
+        return doc.raw()
+
+
+    def help(self, what=None, compact=False, formatting='plain'):
+        """Return help for <what>"""
+        doc = self._help(what)
+        if compact:
+            return doc.compact()
+        return doc.detailed(md=bool(formatting == 'md'))
+
+
+    def documentation(self, formatting='md'):
+        doc = self.docs
+        docs = []
+        visit = [doc]
+        while visit:
+            next = visit.pop(0)
+            if type(next) is ErrorDoc:
+                continue
+            if type(next) is ModuleDoc:
+                visit.extend(next.actors)
+                visit.extend(next.modules)
+            docs.append(next)
+        docs = [x.detailed(md=bool(formatting == 'md')) for x in docs if type(x) is not ErrorDoc]
+        docs = "\n".join(docs)
+        return docs
+
+
 
 def install_component(namespace, definition, overwrite):
     astore = ActorStore()
@@ -803,6 +867,23 @@ def install_component(namespace, definition, overwrite):
 
 if __name__ == '__main__':
     import json
+    import sys
+
+    d = DocumentationStore()
+
+    # print d.documentation()
+    print d.help()
+    print d.metadata('std.Rip')
+    print d.metadata('foo')
+
+    print d.help()
+    print d.help('std')
+    print d.help('std.Select')
+    print d.help('std.Rip')
+    print d.help('std.Bazz')
+    print d.help('std.DelayedCounter')
+
+    sys.exit()
 
     a = ActorStore()
     ds = DocumentationStore()
