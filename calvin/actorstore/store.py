@@ -549,17 +549,28 @@ def _escape_string_arg(arg):
 
 class DocObject(object):
     """docstring for DocObject"""
-    def __init__(self, namespace, name=None, short_desc=None):
+    def __init__(self, namespace, name=None, docs=None):
         super(DocObject, self).__init__()
         self.ns = namespace
         self.name = name
-        self.short_desc = short_desc or "DocObject"
+        if type(docs) is list:
+            docs = "\n".join(docs)
+        self.docs = docs or "DocObject"
 
     @property
     def qualified_name(self):
         if self.name:
             return "{}.{}".format(self.ns, self.name)
         return self.ns
+
+    @property
+    def short_desc(self):
+        short_desc, _, _ = self.docs.partition('\n')
+        return short_desc
+
+    @property
+    def desc(self):
+        return self.docs
 
     def terse(self):
         return "{} : {}".format(self.qualified_name, self.short_desc)
@@ -594,18 +605,16 @@ class DocObject(object):
 class ErrorDoc(DocObject):
     """docstring for ErrDoc"""
     def __init__(self, namespace, name, short_desc):
-        super(ErrorDoc, self).__init__(namespace, name, short_desc)
-        self.short_desc = "(Error) {}".format(short_desc or "Unknown error")
+        docs = "(Error) {}".format(short_desc or "Unknown error")
+        super(ErrorDoc, self).__init__(namespace, name, docs)
 
 
 class ModuleDoc(DocObject):
     """docstring for ModuleDoc"""
     def __init__(self, namespace, modules, actors, doclines):
-        short_desc = doclines[0] or 'No documentation'
-        super(ModuleDoc, self).__init__(namespace, None, short_desc)
+        super(ModuleDoc, self).__init__(namespace, None, doclines)
         self.modules = modules
         self.actors = actors
-        self.long_desc = '\n'.join(doclines[1:])
 
     def search(self, search_list):
         if not search_list:
@@ -654,12 +663,10 @@ class ModuleDoc(DocObject):
 class ActorDoc(DocObject):
     """docstring for ActorDoc"""
     def __init__(self, namespace, name, args, inputs, outputs, doclines):
-        short_desc = doclines[0] or 'No documentation'
-        super(ActorDoc, self).__init__(namespace, name, short_desc)
+        super(ActorDoc, self).__init__(namespace, name, doclines)
         self.args = args
         self.inputs = inputs
         self.outputs = outputs
-        self.long_desc = '\n'.join(doclines[1:])
 
     @property
     def formatted_args(self):
