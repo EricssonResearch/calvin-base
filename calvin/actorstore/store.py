@@ -547,6 +547,12 @@ def _escape_string_arg(arg):
         return arg
     return '"{}"'.format(arg.encode('string_escape'))
 
+def _escape_md(txt):
+    escape = "\\`*_{}[]()<>#+-.!"
+    for c in escape:
+        txt = txt.replace(c, "\\"+c)
+    return txt
+
 class DocObject(object):
     """docstring for DocObject"""
     def __init__(self, namespace, name=None, docs=None):
@@ -651,7 +657,7 @@ class ModuleDoc(DocObject):
             ACTOR_FMT = "  {0.name} : {0.short_desc}"
         d = {
             'name': self.qualified_name,
-            'desc': "\n".join([self.short_desc, self.long_desc]),
+            'desc': _escape_md(self.desc) if md else self.desc,
             'modules': "\n".join([MODULE_FMT.format(x) for x in self.modules if type(x) is not ErrorDoc]) or "-",
             'actors': "\n".join([ACTOR_FMT.format(x) for x in self.actors if type(x) is not ErrorDoc]) or "-",
             'hrule': '\n----\n'
@@ -719,7 +725,7 @@ class ActorDoc(DocObject):
             'name': self.qualified_name,
             'slug': self.slug,
             'args': ", ".join(self.formatted_args),
-            'desc': "\n".join([self.short_desc, self.long_desc]),
+            'desc': _escape_md(self.desc) if md else self.desc,
             'inports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.inputs]) or "-",
             'outports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.outputs]) or "-",
             'hrule': '\n----\n'
@@ -762,7 +768,7 @@ class ComponentDoc(ActorDoc):
             'name': self.qualified_name,
             'slug': self.slug,
             'args': ", ".join(self.formatted_args),
-            'desc': "\n".join([self.short_desc, self.long_desc]),
+            'desc': _escape_md(self.desc) if md else self.desc,
             'inports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.inputs]) or "-",
             'outports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.outputs]) or "-",
             'requires': ", ".join(self.requires),
