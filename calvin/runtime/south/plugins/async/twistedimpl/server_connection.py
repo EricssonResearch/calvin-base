@@ -19,6 +19,7 @@ from twisted.internet.protocol import Factory
 from twisted.internet.protocol import DatagramProtocol
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
+from twisted.internet import error
 
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
@@ -28,6 +29,7 @@ class UDPServerProtocol(DatagramProtocol):
     def __init__(self, trigger, actor_id):
         self._trigger = trigger
         self._actor_id = actor_id
+        self._port = None
         self._data = []
 
     def datagramReceived(self, data, (host, port)):
@@ -45,7 +47,15 @@ class UDPServerProtocol(DatagramProtocol):
             raise Exception("No data available")
 
     def start(self, interface, port):
-        self._port = reactor.listenUDP(port, self, interface=interface)
+        try:
+            self._port = reactor.listenUDP(port, self, interface=interface)
+        except error.CannotListenError:
+            _log.exception("Could not listen on port %s:%s", interface, port)
+            raise
+        except Exception as exc:
+            _log.exception("Failed when trying listening on port %s:%s", interface, port)
+            raise
+
 
     def stop(self):
         self._port.close()
@@ -228,7 +238,14 @@ class ServerProtocolFactory(Factory):
         return connection
 
     def start(self, host, port):
-        self._port = reactor.listenTCP(port, self, interface=host)
+        try:
+            self._port = reactor.listenTCP(port, self, interface=host)
+        except error.CannotListenError:
+            _log.exception("Could not listen on port %s:%s", host, port)
+            raise
+        except Exception as exc:
+            _log.exception("Failed when trying listening on port %s:%s", host, port)
+            raise
 
     def stop(self):
         self._port.stopListening()

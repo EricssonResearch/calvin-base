@@ -116,8 +116,8 @@ def runtime(uri, control_uri, attributes=None, dispatch=False):
         else:
             start_node(uri, control_uri, **kwargs)
     except Exception as e:
-        print "Starting runtime failed:\n%s" % e
-        return 1
+        print "Starting runtime failed:", e
+        raise
 
 def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_storage_node, start_storage_node

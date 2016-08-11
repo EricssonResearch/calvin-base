@@ -22,6 +22,7 @@ import os
 import OpenSSL.crypto
 
 from twisted.internet import reactor, defer, threads
+from twisted.internet import error
 
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import AppendServer
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import SSDPServiceDiscovery,\
@@ -60,9 +61,16 @@ class ServerApp(object):
         self.kserver = self.server_type(id=self.id, node_name=self.node_name)
         self.kserver.bootstrap(bootstrap)
 
-        self.port = reactor.listenUDP(port,
-                                        self.kserver.protocol,
-                                        interface=iface)
+        try:
+            self.port = reactor.listenUDP(port,
+                                          self.kserver.protocol,
+                                          interface=iface)
+        except error.CannotListenError:
+            _log.exception("Could not listen on port %s:%s", iface, port)
+            raise
+        except Exception as exc:
+            _log.exception("Failed when trying listening on port %s:%s", iface, port)
+            raise
 
         return self.port.getHost().host, self.port.getHost().port
 
@@ -151,7 +159,7 @@ class AutoDHTServer(StorageBase):
         self.dht_server = None
         self._ssdps = None
         self._started = False
-        self._name= None
+        self._name = None
 
     def _derive_dht_id(self, cert):
         key = cert.digest("sha256")
@@ -211,7 +219,7 @@ class AutoDHTServer(StorageBase):
             def _later_start():
                 self._ssdps.start_search(SERVICE_UUID, callback=bootstrap_proxy, stop=False)
                 self._ssdps.update_server_params(SERVICE_UUID, cert=certstr)
-                
+
             logger("** msearch %s args: %s" % (self, repr(args)))
             reactor.callLater(0, _later_start)
 
@@ -244,9 +252,9 @@ class AutoDHTServer(StorageBase):
         self._ssdps = SSDPServiceDiscovery(iface)
         self._dlist += self._ssdps.start()
         domain = _conf.get("security", "security_domain_name")
-        is_ca=False
+        is_ca = False
         try:
-            if _conf.get("security","certificate_authority")=="True":
+            if _conf.get("security", "certificate_authority") == "True":
                 ca = certificate_authority.CA(domain)
                 #make sure private key exist
                 if ca.verify_private_key_exist():
@@ -263,7 +271,7 @@ class AutoDHTServer(StorageBase):
                 _log.debug("Local CA sign runtime CSR")
                 try:
                     content = open(csrfile, 'rt').read()
-                    certpath=ca.sign_csr(csrfile)
+                    certpath = ca.sign_csr(csrfile)
                     certificate.store_own_cert(certpath=certpath)
                     return self._signed_cert_available()
                 except:
@@ -273,10 +281,10 @@ class AutoDHTServer(StorageBase):
                 # Discover the signing CA
                 _log.debug("No signed cert, discover CA signing CSR")
                 self._sde_client = sde.Client(name, nodeid,
-                                          CalvinCB(self._ssdps.start_search,
-                                                   CA_SERVICE_UUID,
-                                                   callback=self._signed_cert_received),
-                                          self._signed_cert_available)
+                                              CalvinCB(self._ssdps.start_search,
+                                                       CA_SERVICE_UUID,
+                                                       callback=self._signed_cert_received),
+                                              self._signed_cert_available)
         else:
             _log.debug("runtime cert available")
             self._signed_cert_available(cert=cert, certstr=certstr)

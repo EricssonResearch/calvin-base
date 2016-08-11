@@ -20,6 +20,7 @@ from calvin.runtime.south.plugins.transports.lib.twisted import base_transport
 
 from twisted.protocols.basic import Int32StringReceiver
 from twisted.internet import reactor, protocol
+from twisted.internet import error
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -44,8 +45,14 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
     def start(self):
         callbacks = {'connected': [CalvinCB(self._connected)]}
         tcp_f = TCPServerFactory(callbacks)
-
-        self._tcp_server = reactor.listenTCP(self._port, tcp_f, interface=self._iface)
+        try:
+            self._tcp_server = reactor.listenTCP(self._port, tcp_f, interface=self._iface)
+        except error.CannotListenError:
+            _log.exception("Could not listen on port %s:%s", self._iface, self._port)
+            raise
+        except Exception as exc:
+            _log.exception("Failed when trying listening on port %s:%s", self._iface, self._port)
+            raise
         self._port = self._tcp_server.getHost().port
         self._callback_execute('server_started', self._port)
         return self._port
