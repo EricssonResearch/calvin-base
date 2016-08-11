@@ -638,32 +638,29 @@ class ModuleDoc(DocObject):
 
 
     def compact(self):
-        d = {
-            'name': self.qualified_name,
-            'desc': self.short_desc,
-            'modules': ", ".join([x.ns for x in self.modules]) or "-",
-            'actors': ", ".join([x.name for x in self.actors]) or "-"
+        FMT = "{0.qualified_name}\n{0.short_desc}\n\nModules: {xmodules}\nActors:  {xactors}\n"
+        x = {
+            'xmodules': ", ".join([x.ns for x in self.modules]) or "-",
+            'xactors': ", ".join([x.name for x in self.actors]) or "-"
         }
-        return "{name}\n{desc}\n\nModules: {modules}\nActors:  {actors}\n".format(**d)
+        return FMT.format(self, **x)
 
     def detailed(self, md=False):
         if md:
-            FMT = "## Module: {name} [module_{name}]\n\n{desc}\n\n### Modules:\n\n{modules}\n\n### Actors:\n\n{actors}\n{hrule}\n"
+            FMT = "## Module: {0.qualified_name} [module_{0.qualified_name}]\n\n{xdesc}\n\n### Modules:\n\n{xmodules}\n\n### Actors:\n\n{xactors}\n\n****\n"
             MODULE_FMT = "[{0.ns}][module_{0.ns}]\n: {0.short_desc}\n"
             ACTOR_FMT = "[{0.name}][actor_{0.ns}_{0.name}]\n: {0.short_desc}\n"
         else:
-            FMT = "Module: {name}\n{heading}\n{desc}\n\nModules:\n{modules}\n\nActors:\n{actors}\n\n"
+            FMT = "Module: {0.qualified_name}\n{xheading}\n{0.desc}\n\nModules:\n{xmodules}\n\nActors:\n{xactors}\n\n"
             MODULE_FMT = "  {0.ns} : {0.short_desc}"
             ACTOR_FMT = "  {0.name} : {0.short_desc}"
-        d = {
-            'name': self.qualified_name,
-            'desc': _escape_md(self.desc) if md else self.desc,
-            'modules': "\n".join([MODULE_FMT.format(x) for x in self.modules if type(x) is not ErrorDoc]) or "-",
-            'actors': "\n".join([ACTOR_FMT.format(x) for x in self.actors if type(x) is not ErrorDoc]) or "-",
-            'hrule': '\n----\n'
+        x= {
+            'xheading' : '-'*40,
+            'xdesc': _escape_md(self.desc),
+            'xmodules': "\n".join([MODULE_FMT.format(x) for x in self.modules if type(x) is not ErrorDoc]) or "-",
+            'xactors': "\n".join([ACTOR_FMT.format(x) for x in self.actors if type(x) is not ErrorDoc]) or "-",
         }
-        d['heading'] = '-'*(len(d['name']) + 8)
-        return FMT.format(**d)
+        return FMT.format(self, **x)
 
 
 class ActorDoc(DocObject):
@@ -671,24 +668,25 @@ class ActorDoc(DocObject):
     def __init__(self, namespace, name, args, inputs, outputs, doclines):
         super(ActorDoc, self).__init__(namespace, name, doclines)
         self.args = args
-        self.inputs = inputs
-        self.outputs = outputs
+        self.inputs = [p for p, _ in inputs]
+        self.input_docs = [d for _, d in inputs]
+        self.outputs = [p for p, _ in outputs]
+        self.output_docs = [d for _, d in outputs]
+
 
     @property
     def formatted_args(self):
         return self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()]
 
     @property
-    def formatted_inports(self):
-        return [p for p, _ in self.inputs]
-
-    @property
-    def formatted_outports(self):
-        return [p for p, _ in self.outputs]
-
-    @property
     def slug(self):
         return self.qualified_name.replace('.', '_')
+
+    def formatted_inputs(self, fmt):
+        return [fmt.format(p, doc) for p, doc in zip(self.inputs, self.input_docs)]
+
+    def formatted_outputs(self, fmt):
+        return [fmt.format(p, doc) for p, doc in zip(self.outputs, self.output_docs)]
 
     def metadata(self):
         metadata = {
@@ -696,50 +694,65 @@ class ActorDoc(DocObject):
             'name': self.name,
             'type': 'actor',
             'args': self.args,
-            'inputs': self.formatted_inports,
-            'outputs': self.formatted_outports,
+            'inputs': self.inputs,
+            'outputs': self.outputs,
             'is_known': True
         }
         return metadata
 
 
     def compact(self):
-        d = {
-            'name': self.qualified_name,
-            'args': ", ".join(self.formatted_args),
-            'desc': self.short_desc,
-            'inports': ", ".join(self.formatted_inports) or "-",
-            'outports': ", ".join(self.formatted_outports) or "-"
+        FMT = "{0.qualified_name}({xargs})\n{0.desc}\n\nInports:  {xinports}\nOutports: {xoutports}\n"
+        x = {
+            'xargs': ", ".join(self.formatted_args),
+            'xinports': ", ".join(self.inputs) or "-",
+            'xoutports': ", ".join(self.outputs) or "-"
         }
-        return "{name}({args})\n{desc}\n\nInports:  {inports}\nOutports: {outports}\n".format(**d)
+        return FMT.format(self, **x)
+
+
+    def _detailed_data(self, port_fmt):
+        return {
+            'xlabel' : 'Actor',
+            'xargs' : ", ".join(self.formatted_args),
+            'xdesc' : _escape_md(self.desc),
+            'xheading' : '-'*40,
+            'xinports' : "\n".join(self.formatted_inputs(port_fmt)) or "-",
+            'xoutports' : "\n".join(self.formatted_outputs(port_fmt)) or "-",
+        }
+
+
+    def _detailed_plain_fmt(self):
+        FMT = "{xlabel}: {0.qualified_name}({xargs})\n{xheading}\n{0.desc}\n\nInports:\n{xinports}\n\nOutports:\n{xoutports}\n\n"
+        PORT_FMT = "  {} : {}"
+        x = self._detailed_data(PORT_FMT)
+        return FMT, x
+
+
+    def _detailed_md_fmt(self):
+        FMT = "## {xlabel}: {0.qualified_name}({xargs}) [actor_{0.slug}]\n\n{xdesc}\n\n### Inports:\n\n{xinports}\n\n### Outports:\n\n{xoutports}\n\n****\n"
+        PORT_FMT = "{}\n: {}\n"
+        x = self._detailed_data(PORT_FMT)
+        return FMT, x
 
 
     def detailed(self, md=False):
         if md:
-            FMT = "## Actor: {name}({args}) [actor_{slug}]\n\n{desc}\n\n### Inports:\n\n{inports}\n\n### Outports:\n\n{outports}\n{hrule}\n"
-            PORT_FMT = "{}\n: {}\n"
+            fmt, x = self._detailed_md_fmt()
         else:
-            FMT = "Actor: {name}({args})\n{heading}\n{desc}\n\nInports:\n{inports}\n\nOutports:\n{outports}\n\n"
-            PORT_FMT = "  {} : {}"
-        d = {
-            'name': self.qualified_name,
-            'slug': self.slug,
-            'args': ", ".join(self.formatted_args),
-            'desc': _escape_md(self.desc) if md else self.desc,
-            'inports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.inputs]) or "-",
-            'outports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.outputs]) or "-",
-            'hrule': '\n----\n'
-        }
-        d['heading'] = '-'*(len(d['name']) + len(d['args']) + 9)
-        return FMT.format(**d)
+            fmt, x = self._detailed_plain_fmt()
+        return fmt.format(self, **x)
+
 
 
 class ComponentDoc(ActorDoc):
+    #
+    # Augment a couple of methods in the superclass
+    #
     def __init__(self, namespace, name, args, inputs, outputs, doclines, requires, definition):
         super(ComponentDoc, self).__init__(namespace, name, args, inputs, outputs, doclines)
-        self.requires = requires # ["FIXME"]
+        self.requires = requires # "FIXME"
         self.definition = definition # actor.children[0]
-
 
     def metadata(self):
         metadata = super(ComponentDoc, self).metadata()
@@ -748,34 +761,32 @@ class ComponentDoc(ActorDoc):
         metadata['requires'] = self.requires
         return metadata
 
-
     def compact(self):
-        d = {
-            'base': super(ComponentDoc, self).compact(),
-            'requires': ", ".join(self.requires),
+        FMT = "{xbase}\n\nRequires: {xrequires}"
+        x = {
+            'xbase': super(ComponentDoc, self).compact(),
+            'xrequires': ", ".join(self.requires),
         }
-        return "{base}\n\nRequires: {requires}".format(**d)
+        return FMT.format(**x)
 
+    def _detailed_data(self, port_fmt):
+        # Will be called from superclass' _detailed_xxx_fmt
+        x = super(ComponentDoc, self)._detailed_data(port_fmt)
+        x['xlabel'] = 'Component'
+        x['xrequires'] = ", ".join(self.requires)
+        return x
 
-    def detailed(self, md=False):
-        if md:
-            FMT = "## Component: {name}({args}) [actor_{slug}]\n\n{desc}\n\n### Inports:\n\n{inports}\n\n### Outports:\n\n{outports}\n### Requires: {requires}\n{hrule}\n"
-            PORT_FMT = "{}\n: {}\n"
-        else:
-            FMT = "Component: {name}({args})\n{heading}\n{desc}\n\nInports:\n{inports}\n\nOutports:\n{outports}\n\nRequires: {requires}\n\n"
-            PORT_FMT = "  {} : {}"
-        d = {
-            'name': self.qualified_name,
-            'slug': self.slug,
-            'args': ", ".join(self.formatted_args),
-            'desc': _escape_md(self.desc) if md else self.desc,
-            'inports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.inputs]) or "-",
-            'outports': "\n".join([PORT_FMT.format(p, doc) for p, doc in self.outputs]) or "-",
-            'requires': ", ".join(self.requires),
-            'hrule': '\n----\n'
-        }
-        d['heading'] = '-'*(len(d['name']) + len(d['args']) + 13)
-        return FMT.format(**d)
+    def _detailed_plain_fmt(self):
+        FMT, x = super(ComponentDoc, self)._detailed_plain_fmt()
+        FMT = FMT + "Requires: {xrequires}\n\n"
+        return FMT, x
+
+    def _detailed_md_fmt(self):
+        FMT, x = super(ComponentDoc, self)._detailed_md_fmt()
+        FMT = FMT.rstrip('\n*')
+        FMT = FMT + "\n### Requires: {xrequires}\n\n****\n"
+        return FMT, x
+
 
 
 class DocumentationStore(ActorStore):
@@ -886,8 +897,8 @@ if __name__ == '__main__':
 
     # print d.documentation()
     print d.help()
-    print d.metadata('std.Rip')
-    print d.metadata('foo')
+    # print d.metadata('std.Rip')
+    # print d.metadata('foo')
 
     print d.help()
     print d.help('std')
@@ -895,6 +906,13 @@ if __name__ == '__main__':
     print d.help('std.Rip')
     print d.help('std.Bazz')
     print d.help('std.DelayedCounter')
+
+    print d.help(compact=True)
+    print d.help('std', compact=True)
+    print d.help('std.Select', compact=True)
+    print d.help('std.Rip', compact=True)
+    print d.help('std.Bazz', compact=True)
+    print d.help('std.DelayedCounter', compact=True)
 
     sys.exit()
 
