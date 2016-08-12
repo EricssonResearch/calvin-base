@@ -122,6 +122,7 @@ class CalvinParser(object):
     def p_statement(self, p):
         """statement : assignment
                      | port_property
+                     | internal_port_property
                      | link"""
         p[0] = p[1]
 
@@ -143,6 +144,11 @@ class CalvinParser(object):
     def p_port_property(self, p):
         """port_property : IDENTIFIER DOT IDENTIFIER opt_direction LPAREN named_args RPAREN"""
         p[0] = ast.PortProperty(actor=p[1], port=p[3], direction=p[4], args=p[6], debug_info=self.debug_info(p, 1))
+
+
+    def p_internal_port_property(self, p):
+        """internal_port_property : DOT IDENTIFIER opt_direction LPAREN named_args RPAREN"""
+        p[0] = ast.PortProperty(actor=None, port=p[2], direction=p[3], args=p[5], debug_info=self.debug_info(p, 1))
 
 
     def p_link(self, p):

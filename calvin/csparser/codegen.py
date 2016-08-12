@@ -377,10 +377,8 @@ class Flatten(object):
 
     @visitor.when(ast.PortProperty)
     def visit(self, node):
-        if node.actor:
+        if node.actor is not None:
             node.actor = self.stack[-1] + ':' + node.actor
-        else:
-            node.actor = self.stack[-1]
 
     @visitor.when(ast.Block)
     def visit(self, node):
@@ -388,6 +386,64 @@ class Flatten(object):
         self.stack.append(node.namespace)
         blocks = [x for x in node.children if type(x) is ast.Block]
         map(self.visit, blocks)
+
+        # Retarget port properties
+        iips = query(node, kind=ast.InternalInPort, maxdepth=2)
+        for iip in iips:
+            targets = query(node, kind=ast.PortProperty, attributes={'actor':iip.actor, 'port':iip.port})
+            if not targets:
+                continue
+            for target in targets:
+                #FIXME Ugly with split how to fix that?
+                try:
+                    target.actor += ':' + iip.parent.outport.actor.rsplit(':',1)[1]
+                except IndexError:
+                    target.actor += ':' + iip.parent.outport.actor
+                target.port = iip.parent.outport.port
+
+        iops = query(node, kind=ast.InternalOutPort, maxdepth=2)
+        for iop in iops:
+            targets = query(node, kind=ast.PortProperty, attributes={'actor':iop.actor, 'port':iop.port})
+            for target in targets:
+                #FIXME Ugly with split how to fix that?
+                try:
+                    target.actor += ':' + iop.parent.inport.actor.rsplit(':',1)[1]
+                except IndexError:
+                    target.actor += ':' + iop.parent.inport.actor
+                target.port = iop.parent.inport.port
+
+        # Retarget internal port properties
+        iips = query(node, kind=ast.InternalInPort, maxdepth=2)
+        consumed = set()
+        for iip in iips:
+            targets = query(node, kind=ast.PortProperty, attributes={'actor':None, 'port':iip.port})
+            if not targets:
+                continue
+            ports = query(node, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
+            for target in targets:
+                for port in ports:
+                    clone = target.clone()
+                    clone.actor = port.parent.inport.actor
+                    clone.port = port.parent.inport.port
+                    node.add_child(clone)
+                    consumed.add(target)
+
+        iops = query(node, kind=ast.InternalOutPort, maxdepth=2)
+        for iop in iops:
+            targets = query(node, kind=ast.PortProperty, attributes={'actor':None, 'port':iop.port})
+            if not targets:
+                continue
+            ports = query(node, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
+            for target in targets:
+                for port in ports:
+                    clone = target.clone()
+                    clone.actor = port.parent.outport.actor
+                    clone.port = port.parent.outport.port
+                    node.add_child(clone)
+                    consumed.add(target)
+
+        for prop in consumed:
+            prop.delete()
 
         # Replace and delete links (manipulates children)
         iops = query(node, kind=ast.InternalOutPort, maxdepth=2)
@@ -678,7 +734,7 @@ class ConsistencyCheck(object):
 
 class CodeGen(object):
 
-    verbose = False
+    verbose = True
     verbose_nodes = False
 
     """

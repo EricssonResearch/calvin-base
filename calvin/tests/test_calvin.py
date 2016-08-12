@@ -2517,14 +2517,331 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.token
             src.integer > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testRoundRobin")
+        app_info, errors, warnings = compiler.compile(script, "testScript")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(.1)
 
-        snk1 = d.actor_map['testRoundRobin:snk1']
-        snk2 = d.actor_map['testRoundRobin:snk2']
+        snk1 = d.actor_map['testScript:snk1']
+        snk2 = d.actor_map['testScript:snk2']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        d.destroy()
+
+    def testPortPropertyOutsideComponentOutPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component CompCounter() -> seq {
+                compsrc    : std.Counter()
+                compsrc.integer > .seq
+            }
+            
+            src    : CompCounter()
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.seq(routing="round-robin")
+            src.seq > snk1.token
+            src.seq > snk2.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testScript")
+        print errors
+        print app_info
+        assert 'testScript:src:compsrc' in app_info['port_properties']
+        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
+        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+                'integer')
+        assert (app_info['port_properties']['testScript:src:compsrc'][0]
+                    ['properties']['routing'] == 'round-robin')
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testScript:snk1']
+        snk2 = d.actor_map['testScript:snk2']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        d.destroy()
+
+    def testPortPropertyOutsideComponentInPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component CompSink() seq -> {
+                compsnk    : io.StandardOut(store_tokens=1, quiet=1)
+                .seq > compsnk.token
+            }
+
+            src    : std.Counter()
+            snk1   : CompSink()
+            snk2   : CompSink()
+            src.integer(routing="round-robin")
+            snk1.seq(dummy="dummy1")
+            snk2.seq(dummy="dummy2")
+            src.integer > snk1.seq
+            src.integer > snk2.seq
+        """
+        app_info, errors, warnings = compiler.compile(script, "testScript")
+        print errors
+        print app_info
+        assert 'testScript:src' in app_info['port_properties']
+        assert 'port' in app_info['port_properties']['testScript:src'][0]
+        assert (app_info['port_properties']['testScript:src'][0]['port'] ==
+                'integer')
+        assert (app_info['port_properties']['testScript:src'][0]
+                    ['properties']['routing'] == 'round-robin')
+
+        assert 'port' in app_info['port_properties']['testScript:snk1:compsnk'][0]
+        assert (app_info['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testScript:snk1:compsnk'][0]
+                    ['properties']['dummy'] == 'dummy1')
+        assert 'port' in app_info['port_properties']['testScript:snk2:compsnk'][0]
+        assert (app_info['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testScript:snk2:compsnk'][0]
+                    ['properties']['dummy'] == 'dummy2')
+
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testScript:snk1:compsnk']
+        snk2 = d.actor_map['testScript:snk2:compsnk']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        d.destroy()
+
+    def testPortPropertyInsideComponentOutPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component CompCounter() -> seq {
+                compsrc    : std.Counter()
+                compsrc.integer > .seq
+                compsrc.integer(routing="round-robin")
+            }
+            
+            src    : CompCounter()
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.seq > snk1.token
+            src.seq > snk2.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testScript")
+        print errors
+        print app_info
+        assert 'testScript:src:compsrc' in app_info['port_properties']
+        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
+        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+                'integer')
+        assert (app_info['port_properties']['testScript:src:compsrc'][0]
+                    ['properties']['routing'] == 'round-robin')
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testScript:snk1']
+        snk2 = d.actor_map['testScript:snk2']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        d.destroy()
+
+    def testPortPropertyInsideComponentInPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component CompSink() seq -> {
+                compsnk    : io.StandardOut(store_tokens=1, quiet=1)
+                .seq > compsnk.token
+                compsnk.token(dummy="dummyx")
+            }
+
+            src    : std.Counter()
+            snk1   : CompSink()
+            snk2   : CompSink()
+            src.integer(routing="round-robin")
+            src.integer > snk1.seq
+            src.integer > snk2.seq
+        """
+        app_info, errors, warnings = compiler.compile(script, "testScript")
+        print errors
+        print app_info
+        assert 'testScript:src' in app_info['port_properties']
+        assert 'port' in app_info['port_properties']['testScript:src'][0]
+        assert (app_info['port_properties']['testScript:src'][0]['port'] ==
+                'integer')
+        assert (app_info['port_properties']['testScript:src'][0]
+                    ['properties']['routing'] == 'round-robin')
+
+        assert 'port' in app_info['port_properties']['testScript:snk1:compsnk'][0]
+        assert (app_info['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testScript:snk1:compsnk'][0]
+                    ['properties']['dummy'] == 'dummyx')
+        assert 'port' in app_info['port_properties']['testScript:snk2:compsnk'][0]
+        assert (app_info['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testScript:snk2:compsnk'][0]
+                    ['properties']['dummy'] == 'dummyx')
+
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testScript:snk1:compsnk']
+        snk2 = d.actor_map['testScript:snk2:compsnk']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        d.destroy()
+
+    def testPortPropertyInsideComponentInternalInPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component CompCounter() -> seq {
+                compsrc    : std.Counter()
+                compsrc.integer > .seq
+                .seq(dummy="dummyx")
+                compsrc.integer(routing="round-robin")
+            }
+            
+            src    : CompCounter()
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.seq > snk1.token
+            src.seq > snk2.token
+        """
+        app_info, errors, warnings = compiler.compile(script, "testScript")
+        print errors
+        print app_info
+        assert 'testScript:src:compsrc' in app_info['port_properties']
+        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
+        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+                'integer')
+        assert (app_info['port_properties']['testScript:src:compsrc'][0]
+                    ['properties']['routing'] == 'round-robin')
+
+        assert 'port' in app_info['port_properties']['testScript:snk1'][0]
+        assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testScript:snk1'][0]
+                    ['properties']['dummy'] == 'dummyx')
+        assert 'port' in app_info['port_properties']['testScript:snk2'][0]
+        assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testScript:snk2'][0]
+                    ['properties']['dummy'] == 'dummyx')
+
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testScript:snk1']
+        snk2 = d.actor_map['testScript:snk2']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        d.destroy()
+
+    def testPortPropertyInsideComponentInternalOutPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component CompSink() seq -> {
+                compsnk    : io.StandardOut(store_tokens=1, quiet=1)
+                .seq > compsnk.token
+                .seq(routing="round-robin")
+            }
+
+            src    : std.Counter()
+            snk1   : CompSink()
+            snk2   : CompSink()
+            src.integer > snk1.seq
+            src.integer > snk2.seq
+        """
+        app_info, errors, warnings = compiler.compile(script, "testScript")
+        print errors
+        print app_info
+        assert 'testScript:src' in app_info['port_properties']
+        assert 'port' in app_info['port_properties']['testScript:src'][0]
+        assert (app_info['port_properties']['testScript:src'][0]['port'] ==
+                'integer')
+        assert (app_info['port_properties']['testScript:src'][0]
+                    ['properties']['routing'] == 'round-robin')
+
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testScript:snk1:compsnk']
+        snk2 = d.actor_map['testScript:snk2:compsnk']
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
