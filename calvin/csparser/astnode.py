@@ -153,6 +153,13 @@ class PortProperty(Node):
         self.direction = kwargs.get('direction')
         self.add_children(kwargs.get('args', {}))
 
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {}.{} {} {}".format(self.__class__.__name__, str(self.actor), self.port, hex(id(self)),
+                                                self.debug_info)
+        else:
+            return "{} {}.{}".format(self.__class__.__name__, str(self.actor), self.port)
+
 class Link(Node):
     """docstring for LinkNode"""
     def __init__(self, **kwargs):
@@ -182,6 +189,13 @@ class Link(Node):
         self.inport.parent = None
         self.children[1] = value
 
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {} > {} {} {}".format(self.__class__.__name__, str(self.outport), str(self.inport),
+                                                hex(id(self)), self.debug_info)
+        else:
+            return "{} {} > {}".format(self.__class__.__name__, str(self.outport), str(self.inport))
+
 class Void(Node):
     """docstring for Void"""
     def __init__(self, **kwargs):
@@ -204,6 +218,13 @@ class Port(Node):
         self.children = None
         self.actor = kwargs.get('actor')
         self.port = kwargs.get('port')
+
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {}.{} {} {}".format(self.__class__.__name__, str(self.actor), self.port,
+                                                hex(id(self)), self.debug_info)
+        else:
+            return "{} {}.{}".format(self.__class__.__name__, str(self.actor), self.port)
 
 class PortList(Node):
     """docstring for LinkNode"""
