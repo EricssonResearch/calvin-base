@@ -84,12 +84,15 @@ class CalvinResponseException(Exception):
         super(CalvinResponseException, self).__init__()
         self.response = response
 
+    @property
     def status(self):
         return self.response.status
 
+    @property
     def data(self):
         return self.response.data
 
+    @property
     def success_list(self):
         return self.response.success_list
 
