@@ -56,7 +56,11 @@ class ScheduledFIFO(object):
         self.tentative_read_pos = {}
         self.reader_turn = None
         self.turn_pos = 0
-        self._type = "scheduled_fifo:" + port_properties['routing']
+        if isinstance(port_properties['routing'], (tuple, list)):
+            routing = port_properties['routing'][0]
+        else:
+            routing = port_properties['routing']
+        self._type = "scheduled_fifo:" + routing
         self._set_turn()
 
     def _set_turn(self):

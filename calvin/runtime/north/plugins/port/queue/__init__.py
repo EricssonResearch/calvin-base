@@ -28,11 +28,15 @@ for module in _MODULES.keys():
 
 def get(port, peer_port=None, peer_port_meta=None):
     #TODO implement more logic based on port and peer port properties
-    if 'routing' in port.properties and ('round-robin' == port.properties['routing'] or
-                                         'random' == port.properties['routing']):
-        selected_queue = "scheduled_fifo"
-    else:
-        selected_queue = "fanout_fifo"
+    
+    if 'routing' in port.properties:
+        routing_prop = port.properties['routing']
+        if isinstance(routing_prop, (tuple, list)):
+            routing_prop = routing_prop[0]
+        if 'round-robin' == routing_prop or 'random' == routing_prop:
+            selected_queue = "scheduled_fifo"
+        else:
+            selected_queue = "fanout_fifo"
     try:
         class_ = getattr(globals()[selected_queue], _MODULES[selected_queue])
         return class_(port.properties)

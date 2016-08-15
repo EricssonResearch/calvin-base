@@ -3,6 +3,7 @@ import visitor
 import astprint
 from parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore, GlobalStore
+from calvin.requests import calvinresponse
 
 
 def _create_signature(actor_type, metadata):
@@ -485,6 +486,47 @@ class Flatten(object):
         self.stack.pop()
 
 
+class ConsolidatePortProperty(object):
+    """
+    Consolidates port properties by removing duplicates and
+    moving properties to one per port, and handle conflicting
+    property settings
+    """
+    def __init__(self, issue_tracker):
+        super(ConsolidatePortProperty, self).__init__()
+        self.issue_tracker = issue_tracker
+
+    def process(self, root):
+        self.visit(root)
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        targets = query(node, kind=ast.PortProperty)
+        keep = []
+        remove = []
+        for target in targets:
+            if any([p.is_same_port(target) for p in keep]):
+                remove.append(target)
+                continue
+            # Not consolidated yet
+            keep.append(target)
+            same_port = [t for t in targets if t.is_same_port(target)]
+            for same in same_port:
+                # TODO Should catch exception!!!
+                try:
+                    target.consolidate(same)
+                except calvinresponse.CalvinResponseException as e:
+                    if e.status == calvinresponse.BAD_REQUEST:
+                        self.issue_tracker.add_error(e.data, target)
+                        self.issue_tracker.add_error(e.data, same)
+        for p in remove:
+            node.remove_child(p)
+
+
 class AppInfo(object):
     """docstring for AppInfo"""
     def __init__(self, app_info, root, issue_tracker):
@@ -800,6 +842,11 @@ class CodeGen(object):
         flattener.process(self.root)
         self.dump_tree('FLATTENED')
 
+    def consolidate(self, issue_tracker):
+        consolidate = ConsolidatePortProperty(issue_tracker)
+        consolidate.process(self.root)
+        self.dump_tree('CONSOLIDATED')
+
     def generate_code_from_ast(self, issue_tracker):
         gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
         gen_app_info.process()
@@ -813,6 +860,7 @@ class CodeGen(object):
     def phase2(self, issue_tracker, verify):
         self.expand_components(issue_tracker, verify)
         self.flatten(issue_tracker)
+        self.consolidate(issue_tracker)
 
     def generate_code(self, issue_tracker, verify):
         self.phase1(issue_tracker)

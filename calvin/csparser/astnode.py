@@ -1,5 +1,7 @@
 import inspect
 from copy import deepcopy
+from calvin.requests import calvinresponse
+
 
 class Node(object):
 
@@ -152,6 +154,52 @@ class PortProperty(Node):
         self.port = kwargs.get('port')
         self.direction = kwargs.get('direction')
         self.add_children(kwargs.get('args', {}))
+
+    def is_same_port(self, other):
+        return (self.actor == other.actor and self.port == other.port and
+            not (self.direction is not None and other.direction is not None and self.direction != other.direction))
+
+    def consolidate(self, other):
+        """
+        This method consolidates two port properties into one.
+        Handling duplicates and conflicts for the same port.
+        Assumes check that ports are identical is done!
+        """
+        my_properties = {p.ident.ident: p for p in self.children}
+        other_properties = {p.ident.ident: p for p in other.children}
+        consolidate = set(my_properties.keys()) & set(other_properties.keys())
+        #keep = set(my_properties.keys()) - set(other_properties.keys())
+        add = set(other_properties.keys()) - set(my_properties.keys())
+
+        for prop_name in consolidate:
+            # Properties can be tuples/list with alternatives in priority order
+            # Consolidate to a common subset in the order of our alternatives
+            if my_properties[prop_name].arg.value != other_properties[prop_name].arg.value:
+                if isinstance(my_properties[prop_name].arg.value, (tuple, list)):
+                    my_prop_list = my_properties[prop_name].arg.value 
+                else:
+                    my_prop_list = [my_properties[prop_name].arg.value]
+                if isinstance(other_properties[prop_name].arg.value, (tuple, list)):
+                    other_prop_list = other_properties[prop_name].arg.value 
+                else:
+                    other_prop_list = [other_properties[prop_name].arg.value]
+                common = set(my_prop_list) & set(other_prop_list)
+                if len(common) == 0:
+                    raise  calvinresponse.CalvinResponseException(
+                                calvinresponse.CalvinResponse(
+                                    status=calvinresponse.BAD_REQUEST,
+                                    data="Can't handle conflicting properties without common alternatives"))
+                # Ordered common
+                ordered_common = []
+                for p in my_prop_list:
+                    if p in common:
+                        ordered_common.append(p)
+                my_properties[prop_name].arg.value = ordered_common
+
+        for prop_name in add:
+            prop = other_properties[prop_name]
+            other.remove_child(prop)
+            self.add_child(prop)
 
     def __str__(self):
         if self._verbose_desc:
