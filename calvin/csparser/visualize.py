@@ -1,6 +1,6 @@
 import visitor
 import astnode as ast
-from codegen import calvin_astgen, query
+from codegen import calvin_astgen, calvin_components, query
 from parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore
 
@@ -99,7 +99,6 @@ class Visualize(object):
    """docstring for VizPrinter"""
    def __init__(self):
        super(Visualize, self).__init__()
-       self.expand_components = False
 
    def add(self, stmt):
        self.statements.append(stmt)
@@ -113,11 +112,22 @@ class Visualize(object):
            self.init(node)
            self.add('digraph structs { node [shape=plaintext]; rankdir=LR;')
            # self.add('digraph structs { node [shape=plaintext];')
-           self.visit(node)
+           if type(node) is ast.Component:
+               self.add('subgraph {' )
+               for p in node.inports:
+                   self.add('{{rank="source" {0}_out [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
+               for p in node.outports:
+                   self.add('{{rank="sink" {0}_in [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
+               if node.children:
+                   map(self.visit, node.children)
+               self.add('}')
+           else:
+               self.visit(node)
            self.add('}')
            return "\n".join(self.statements)
-       except:
-           print self.statements
+       except Exception as e:
+           print "DEBUG THIS",  self.statements
+           print "error", e
 
    @visitor.on('node')
    def visit(self, node):
@@ -128,19 +138,6 @@ class Visualize(object):
        if node.children:
            map(self.visit, node.children)
 
-   # FIXME: Make subgraph
-   @visitor.when(ast.Component)
-   def visit(self, node):
-       if self.expand_components:
-           self.add('subgraph { label=%s;' % node.name)
-           for p in node.inports:
-               self.add('{0}_out [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]'.format(p))
-           for p in node.outports:
-               self.add('{0}_in [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]'.format(p))
-           if node.children:
-               # print node.children
-               map(self.visit, node.children)
-           self.add('}')
 
    @visitor.when(ast.Assignment)
    def visit(self, node):
@@ -171,14 +168,28 @@ def visualize_deployment(source_text):
 
 def visualize_component(source_text, name):
     # STUB
-    from calvin.utilities.issuetracker import IssueTracker
-    it = IssueTracker()
-    it.add_error('Visualizing components not yet implemented.')
-    return "digraph structs {ERROR}", it
+    ir_list, issuetracker = calvin_components(source_text, names=[name])
+    v = Visualize()
+    dot_source = v.process(ir_list[0])
+    return dot_source, issuetracker
 
 
 if __name__ == '__main__':
     source_text = """
+    component FilterUnchanged() string -> string {
+      iip : std.Init(data="nothing")
+      cmp : std.Compare(op="=")
+      sel : std.Select()
+
+      .string > cmp.a
+      iip.out > cmp.b
+      cmp.result > sel.select
+      .string > sel.data
+      sel.case_true > voidport
+      sel.case_false > iip.in
+      sel.case_false > .string
+    }
+
     /* Actors */
     src : std.CountTimer()
     snk : io.Print()
@@ -186,4 +197,7 @@ if __name__ == '__main__':
     src.integer > snk.token
     """
 
-    print visualize_script(source_text)
+    dot_src, it =  visualize_component(source_text, "FilterUnchanged")
+    print dot_src
+    for issue in it.issues():
+        print issue
