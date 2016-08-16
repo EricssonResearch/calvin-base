@@ -2517,7 +2517,7 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.token
             src.integer > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -2556,7 +2556,7 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src:compsrc' in app_info['port_properties']
@@ -2604,7 +2604,7 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src' in app_info['port_properties']
@@ -2662,7 +2662,7 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src:compsrc' in app_info['port_properties']
@@ -2709,7 +2709,7 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src' in app_info['port_properties']
@@ -2768,7 +2768,7 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src:compsrc' in app_info['port_properties']
@@ -2826,7 +2826,7 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src' in app_info['port_properties']
@@ -2873,7 +2873,7 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src:compsrc' in app_info['port_properties']
@@ -2923,7 +2923,7 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert len(errors) == 0
@@ -2974,7 +2974,7 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert len(errors) == 2
@@ -2997,7 +2997,7 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src' in app_info['port_properties']
@@ -3049,7 +3049,7 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = compiler.compile(script, "testScript")
+        app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
         assert 'testScript:src:compsrc' in app_info['port_properties']
