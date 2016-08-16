@@ -138,6 +138,10 @@ class Visualize(object):
        if node.children:
            map(self.visit, node.children)
 
+   @visitor.when(ast.Component)
+   def visit(self, node):
+       # Just gobble up components so that they get displayed as as actors (with a different color)
+       pass
 
    @visitor.when(ast.Assignment)
    def visit(self, node):
