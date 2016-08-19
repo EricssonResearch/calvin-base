@@ -570,6 +570,10 @@ class DocObject(object):
         return self.ns
 
     @property
+    def slug(self):
+        return self.qualified_name.replace('.', '_')
+
+    @property
     def short_desc(self):
         short_desc, _, _ = self.docs.partition('\n')
         return short_desc
@@ -647,9 +651,9 @@ class ModuleDoc(DocObject):
 
     def detailed(self, md=False):
         if md:
-            FMT = "## Module: {0.qualified_name} [module_{0.qualified_name}]\n\n{xdesc}\n\n### Modules:\n\n{xmodules}\n\n### Actors:\n\n{xactors}\n\n****\n"
-            MODULE_FMT = "[{0.ns}][module_{0.ns}]\n: {0.short_desc}\n"
-            ACTOR_FMT = "[{0.name}][actor_{0.ns}_{0.name}]\n: {0.short_desc}\n"
+            FMT = "{xanchor}## Module: {0.qualified_name}\n\n{xdesc}\n\n### Modules:\n\n{xmodules}\n\n### Actors:\n\n{xactors}\n\n[\[Top\]](#module_Calvin) [\[Module: {0.ns}\]](#module_{0.ns})\n\n****\n"
+            MODULE_FMT = "[**{0.ns}**](#module_{0.ns})\n: {0.short_desc}\n\n"
+            ACTOR_FMT = "[**{0.name}**](#actor_{0.ns}_{0.name})\n: {0.short_desc}\n\n"
         else:
             FMT = "Module: {0.qualified_name}\n{xheading}\n{0.desc}\n\nModules:\n{xmodules}\n\nActors:\n{xactors}\n\n"
             MODULE_FMT = "  {0.ns} : {0.short_desc}"
@@ -657,8 +661,9 @@ class ModuleDoc(DocObject):
         x= {
             'xheading' : '-'*40,
             'xdesc': _escape_md(self.desc),
-            'xmodules': "\n".join([MODULE_FMT.format(x) for x in self.modules if type(x) is not ErrorDoc]) or "-",
-            'xactors': "\n".join([ACTOR_FMT.format(x) for x in self.actors if type(x) is not ErrorDoc]) or "-",
+            'xmodules': "\n".join([MODULE_FMT.format(x) for x in self.modules if type(x) is not ErrorDoc]) or "  -",
+            'xactors': "\n".join([ACTOR_FMT.format(x) for x in self.actors if type(x) is not ErrorDoc]) or "  -",
+            'xanchor' : '<a name="module_{}"></a>\n'.format(self.slug)
         }
         return FMT.format(self, **x)
 
@@ -677,10 +682,6 @@ class ActorDoc(DocObject):
     @property
     def formatted_args(self):
         return self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()]
-
-    @property
-    def slug(self):
-        return self.qualified_name.replace('.', '_')
 
     def formatted_inputs(self, fmt):
         return [fmt.format(p, doc) for p, doc in zip(self.inputs, self.input_docs)]
@@ -717,8 +718,9 @@ class ActorDoc(DocObject):
             'xargs' : ", ".join(self.formatted_args),
             'xdesc' : _escape_md(self.desc),
             'xheading' : '-'*40,
-            'xinports' : "\n".join(self.formatted_inputs(port_fmt)) or "-",
-            'xoutports' : "\n".join(self.formatted_outputs(port_fmt)) or "-",
+            'xinports' : "\n".join(self.formatted_inputs(port_fmt)) or "  -",
+            'xoutports' : "\n".join(self.formatted_outputs(port_fmt)) or "  -",
+            'xanchor' : '<a name="actor_{}"></a>\n'.format(self.slug)
         }
 
 
@@ -730,8 +732,8 @@ class ActorDoc(DocObject):
 
 
     def _detailed_md_fmt(self):
-        FMT = "## {xlabel}: {0.qualified_name}({xargs}) [actor_{0.slug}]\n\n{xdesc}\n\n### Inports:\n\n{xinports}\n\n### Outports:\n\n{xoutports}\n\n****\n"
-        PORT_FMT = "{}\n: {}\n"
+        FMT = "{xanchor}## {xlabel}: {0.qualified_name}({xargs})\n\n{xdesc}\n\n### Inports:\n\n{xinports}\n\n### Outports:\n\n{xoutports}\n\n[\[Top\]](#module_Calvin) [\[Module: {0.ns}\]](#module_{0.ns})\n\n****\n"
+        PORT_FMT = "**{}**\n: {}\n\n"
         x = self._detailed_data(PORT_FMT)
         return FMT, x
 
