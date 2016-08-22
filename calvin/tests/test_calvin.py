@@ -3029,6 +3029,63 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
+@pytest.mark.essential
+class TestCollectPort(CalvinTestBase):
+
+    def testCollectPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.01, steps=5)
+        src2 : std.CountTimer(sleep=0.01, steps=5)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-unordered", nbr_peers=2)
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(0.5)
+
+        snk = d.actor_map['testCollectPort:snk']
+        actual = request_handler.report(self.rt1, snk)
+        # FIXME We hope that the count timer will make the actors send alternating
+        expected = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]
+
+        self.assert_lists_equal(expected, actual, min_length=5)
+
+        d.destroy()
+
+    def testCollectPortRemote(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.01, steps=5)
+        src2 : std.CountTimer(sleep=0.01, steps=5)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-unordered", nbr_peers=2)
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        request_handler.migrate(self.rt1, snk, self.rt2.id)
+        time.sleep(1)
+        actual = request_handler.report(self.rt2, snk)
+        # FIXME We hope that the count timer will make the actors send alternating
+        expected = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]
+
+        self.assert_lists_equal(expected, actual, min_length=5)
+
         d.destroy()
 
     def testPortPropertyConsolidateInsideComponentInternalInPort(self):

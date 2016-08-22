@@ -62,9 +62,9 @@ def test_attach_endpoint_to_inport(inport, outport):
     assert inport.is_connected_to(first_outport.id)
 
     prev_endpoint = inport.attach_endpoint(endpoint)
-    assert prev_endpoint == first_endpoint
+    assert prev_endpoint == None
     assert inport.is_connected_to(outport.id)
-    assert not inport.is_connected_to(first_outport.id)
+    assert inport.is_connected_to(first_outport.id)
     assert inport.owner.did_connect.called
 
 

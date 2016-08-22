@@ -42,8 +42,8 @@ class QueueTests(unittest.TestCase):
         f.add_reader('p1.id')
         data = ['1', '2', '3', '4']
         for token in data:
-            self.assertTrue(f.slots_available(1))
-            self.assertTrue(f.write(Token(token)))
+            self.assertTrue(f.slots_available(1, None))
+            self.assertTrue(f.write(Token(token), None))
 
         self.verify_data(['1', '2'], [f.peek('p1.id') for _ in range(2)])
 
@@ -57,10 +57,10 @@ class QueueTests(unittest.TestCase):
         f.commit('p1.id')
 
         for token in ['5', '6', '7', '8']:
-            self.assertTrue(f.slots_available(1))
-            self.assertTrue(f.write(Token(token)))
+            self.assertTrue(f.slots_available(1, None))
+            self.assertTrue(f.write(Token(token), None))
 
-        self.assertFalse(f.slots_available(1))
+        self.assertFalse(f.slots_available(1, None))
 
         self.verify_data(['5', '6', '7', '8'], [f.peek('p1.id')
                                                 for _ in range(4)])
@@ -79,7 +79,7 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(f.tokens_available(0, "r2"))
 
         # Add something
-        self.assertTrue(f.write(Token('1')))
+        self.assertTrue(f.write(Token('1'), None))
         self.assertTrue(f.tokens_available(1, "r1"))
         self.assertTrue(f.tokens_available(1, "r2"))
 
@@ -87,14 +87,14 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(f.peek('r1'))
         f.commit('r1')
 
-        self.assertEquals([True] * 3, [f.write(Token(t)) for t in ['2', '3', '4']])
-        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
+        self.assertEquals([True] * 3, [f.write(Token(t), None) for t in ['2', '3', '4']])
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'), None)
         self.verify_data(['2', '3', '4'], [f.peek('r1') for _ in range(3)])
         f.commit("r1")
 
         # Reader r1 all done, ensure reader r2 can still read
         self.assertTrue(f.tokens_available(4, "r2"))
-        self.assertFalse(f.slots_available(1))
+        self.assertFalse(f.slots_available(1, None))
         self.assertFalse(f.tokens_available(1, "r1"))
 
         # Reader r2 reads something
@@ -102,7 +102,7 @@ class QueueTests(unittest.TestCase):
         f.commit("r2")
         self.assertTrue(f.tokens_available(1, "r2"))
 
-        self.assertTrue(f.write(Token('5')))
+        self.assertTrue(f.write(Token('5'), None))
         self.verify_data(['4', '5'], [f.peek("r2") for _ in range(2)])
 
         self.assertFalse(f.tokens_available(1, "r2"))
@@ -113,9 +113,9 @@ class QueueTests(unittest.TestCase):
         f.commit("r2")
         f.commit("r1")
 
-        self.assertTrue(f.write(Token('6')))
-        self.assertTrue(f.write(Token('7')))
-        self.assertTrue(f.write(Token('8')))
+        self.assertTrue(f.write(Token('6'), None))
+        self.assertTrue(f.write(Token('7'), None))
+        self.assertTrue(f.write(Token('8'), None))
 
         self.assertTrue([f.peek("r1")
                          for _ in range(3)], [f.peek("r2") for _ in range(3)])
@@ -128,25 +128,25 @@ class QueueTests(unittest.TestCase):
         f.add_reader("r1")
 
         for token in ['1', '2', '3', '4']:
-            self.assertTrue(f.slots_available(1))
-            self.assertTrue(f.write(Token(token)))
+            self.assertTrue(f.slots_available(1, None))
+            self.assertTrue(f.write(Token(token), None))
 
         # Fails, fifo full
-        self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
+        self.assertFalse(f.slots_available(1, None))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'), None)
 
         # Tentative, fifo still full
         self.verify_data(['1'], [f.peek("r1")])
-        self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
+        self.assertFalse(f.slots_available(1, None))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'), None)
 
         # commit previous reads, fifo 1 pos free
         f.commit('r1')
-        self.assertTrue(f.slots_available(1))
-        self.assertTrue(f.write(Token('5')))
+        self.assertTrue(f.slots_available(1, None))
+        self.assertTrue(f.write(Token('5'), None))
         # fifo full again
-        self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
+        self.assertFalse(f.slots_available(1, None))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'), None)
 
     def test4(self):
         """Testing rollback reads"""
@@ -154,23 +154,23 @@ class QueueTests(unittest.TestCase):
         f.add_reader('r1')
 
         for token in ['1', '2', '3', '4']:
-            self.assertTrue(f.slots_available(1))
-            self.assertTrue(f.write(Token(token)))
+            self.assertTrue(f.slots_available(1, None))
+            self.assertTrue(f.write(Token(token), None))
 
         # fifo full
-        self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
+        self.assertFalse(f.slots_available(1, None))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'), None)
 
         # tentative reads
         self.verify_data(['1', '2', '3', '4'], [f.peek("r1")
                                                 for _ in range(4)])
         # check still tentative
         self.assertTrue(f.tokens_available(0, "r1"))
-        self.assertTrue(f.slots_available(0))
+        self.assertTrue(f.slots_available(0, None))
 
         f.cancel("r1")
-        self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.common.QueueFull, f.write, Token('5'))
+        self.assertFalse(f.slots_available(1, None))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('5'), None)
         self.assertTrue(f.tokens_available(4, "r1"))
 
         # re-read
@@ -179,10 +179,10 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(f.tokens_available(3, "r1"))
 
         # one pos free in fifo
-        self.assertTrue(f.slots_available(1))
-        self.assertTrue(f.write(Token('a')))
-        self.assertFalse(f.slots_available(1))
-        self.assertRaises(queue.common.QueueFull, f.write, Token('b'))
+        self.assertTrue(f.slots_available(1, None))
+        self.assertTrue(f.write(Token('a'), None))
+        self.assertFalse(f.slots_available(1, None))
+        self.assertRaises(queue.common.QueueFull, f.write, Token('b'), None)
 
     def test_scheduled_queue_1(self):
         """Round-Robin scheduled queue test"""
@@ -198,12 +198,12 @@ class QueueTests(unittest.TestCase):
         self.assertFalse(f.tokens_available(1, "r2"))
 
         # Add something
-        self.assertTrue(f.write(Token('1')))
+        self.assertTrue(f.write(Token('1'), None))
         self.assertTrue(f.tokens_available(1, "r1"))
         self.assertFalse(f.tokens_available(1, "r2"))
 
         # Add something
-        self.assertTrue(f.write(Token('2')))
+        self.assertTrue(f.write(Token('2'), None))
         self.assertTrue(f.tokens_available(1, "r1"))
         self.assertFalse(f.tokens_available(2, "r1"))
         self.assertTrue(f.tokens_available(1, "r2"))
@@ -218,7 +218,7 @@ class QueueTests(unittest.TestCase):
         self.assertFalse(f.tokens_available(2, "r1"))
         self.assertFalse(f.tokens_available(1, "r2"))
 
-        self.assertEquals([True] * 2, [f.write(Token(t)) for t in ['3', '4']])
+        self.assertEquals([True] * 2, [f.write(Token(t), None) for t in ['3', '4']])
         self.verify_data(['1', '3'], [f.peek('r1') for _ in range(2)])
         f.commit("r1")
 
@@ -231,10 +231,10 @@ class QueueTests(unittest.TestCase):
         f.commit("r2")
         self.assertFalse(f.tokens_available(1, "r2"))
 
-        self.assertTrue(f.write(Token('5')))
+        self.assertTrue(f.write(Token('5'), None))
         self.verify_data(['5'], [f.peek("r1")])
 
-        self.assertTrue(f.write(Token('6')))
+        self.assertTrue(f.write(Token('6'), None))
         self.assertFalse(f.tokens_available(1, "r1"))
         self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")
         self.assertTrue(f.tokens_available(1, "r2"))
@@ -243,10 +243,10 @@ class QueueTests(unittest.TestCase):
         f.commit("r2")
         f.commit("r1")
 
-        self.assertTrue(f.write(Token('7')))
-        self.assertTrue(f.write(Token('8')))
-        self.assertTrue(f.write(Token('9')))
-        self.assertTrue(f.write(Token('10')))
+        self.assertTrue(f.write(Token('7'), None))
+        self.assertTrue(f.write(Token('8'), None))
+        self.assertTrue(f.write(Token('9'), None))
+        self.assertTrue(f.write(Token('10'), None))
 
         self.verify_data(['7', '9'], [f.peek("r1") for _ in range(2)])
         self.verify_data(['8', '10'], [f.peek("r2") for _ in range(2)])
@@ -267,7 +267,7 @@ class QueueTests(unittest.TestCase):
         self.assertFalse(f.tokens_available(1, "r2"))
 
         # Fill up
-        self.assertEquals([True] * 4, [f.write(Token(t)) for t in map(lambda x: str(x), range(1,5))])
+        self.assertEquals([True] * 4, [f.write(Token(t), None) for t in map(lambda x: str(x), range(1,5))])
         self.assertTrue(f.tokens_available(2, "r1"))
         self.assertTrue(f.tokens_available(2, "r2"))
 
@@ -328,7 +328,7 @@ class QueueTests(unittest.TestCase):
 
         for k in range(10):
             # Fill up
-            self.assertEquals([True] * 4, [f.write(Token(t)) for t in map(lambda x: str(x), range(k*4+1,k*4+5))])
+            self.assertEquals([True] * 4, [f.write(Token(t), None) for t in map(lambda x: str(x), range(k*4+1,k*4+5))])
 
             # Empty
             for r in ['r1', 'r2']:
@@ -366,7 +366,7 @@ class QueueTests(unittest.TestCase):
 
         for k in range(10):
             # Fill up
-            self.assertEquals([True] * 4, [f.write(Token(t)) for t in map(lambda x: str(x), range(k*4+1,k*4+5))])
+            self.assertEquals([True] * 4, [f.write(Token(t), None) for t in map(lambda x: str(x), range(k*4+1,k*4+5))])
 
             # Empty
             for r in ['r1', 'r2']:

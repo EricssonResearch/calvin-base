@@ -43,14 +43,14 @@ class TestLocalEndpoint(unittest.TestCase):
         assert self.local_out.is_connected
 
     def test_communicate(self):
-        self.peer_port.queue.write(0)
-        self.peer_port.queue.write(1)
+        self.peer_port.queue.write(0, None)
+        self.peer_port.queue.write(1, None)
 
         for e in self.peer_port.endpoints:
             e.communicate()
 
         assert self.peer_port.tokens_available(4)
-        self.local_out.port.queue.write(2)
+        self.local_out.port.queue.write(2, None)
         assert not self.peer_port.tokens_available(4)
         assert self.peer_port.tokens_available(3)
 

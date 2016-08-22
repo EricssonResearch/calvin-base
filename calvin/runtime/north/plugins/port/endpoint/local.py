@@ -31,15 +31,17 @@ class LocalInEndpoint(Endpoint):
     def __init__(self, port, peer_port):
         super(LocalInEndpoint, self).__init__(port)
         self.peer_port = peer_port
+        self.peer_id = peer_port.id
 
     def is_connected(self):
         return True
 
     def attached(self):
         self.port.queue.add_reader(self.port.id)
+        self.port.queue.add_writer(self.peer_id)
 
     def get_peer(self):
-        return ('local', self.peer_port.id)
+        return ('local', self.peer_id)
 
 
 class LocalOutEndpoint(Endpoint):
@@ -55,7 +57,8 @@ class LocalOutEndpoint(Endpoint):
         return True
 
     def attached(self):
-        self.port.queue.add_reader(self.peer_id)
+        self.port.queue.add_reader(self.peer_port.id)
+        self.port.queue.add_writer(self.port.id)
 
     def detached(self):
         # cancel any tentative reads to acked reads
@@ -72,7 +75,7 @@ class LocalOutEndpoint(Endpoint):
         while True:
             try:
                 nbr, token = self.port.queue.com_peek(self.peer_id)
-                self.peer_port.queue.com_write(token, nbr)
+                self.peer_port.queue.com_write(token, self.port.id, nbr)
                 self.port.queue.com_commit(self.peer_id, nbr)
                 sent = True
             except QueueEmpty:

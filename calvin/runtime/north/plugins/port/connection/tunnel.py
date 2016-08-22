@@ -356,11 +356,20 @@ class TunnelConnection(BaseConnection):
             """ Gets called when a token arrives on any port """
             try:
                 port = self._get_local_port(port_id=payload['peer_port_id'])
-                port.endpoint.recv_token(payload)
+                for e in port.endpoints:
+                    # We might have started a disconnect, just ignore in that case
+                    # it is sorted out if we connect again
+                    try:
+                        if e.peer_id == payload['port_id']:
+                            e.recv_token(payload)
+                            break
+                    except:
+                        pass
             except:
                 # Inform other end that it sent token to a port that does not exist on this node or
                 # that we have initiated a disconnect (endpoint does not have recv_token).
                 # Can happen e.g. when the actor and port just migrated and the token was in the air
+                _log.exception("recv_token_handler, ABORT")
                 reply = {'cmd': 'TOKEN_REPLY',
                          'port_id': payload['port_id'],
                          'peer_port_id': payload['peer_port_id'],

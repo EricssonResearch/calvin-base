@@ -27,9 +27,9 @@ from calvin.runtime.north.plugins.port import queue
 
 def fwrite(port, value):
     if isinstance(value, Token):
-        port.queue.write(value)
+        port.queue.write(value, None)
     else:
-        port.queue.write(Token(value=value))
+        port.queue.write(Token(value=value), None)
 
 
 def pwrite(actor, portname, value):

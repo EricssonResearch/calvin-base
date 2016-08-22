@@ -16,7 +16,8 @@
 
 # Queues
 _MODULES = {'fanout_fifo': 'FanoutFIFO',
-            'scheduled_fifo': 'ScheduledFIFO'}
+            'scheduled_fifo': 'ScheduledFIFO',
+            'collect_unordered': 'CollectUnordered'}
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -35,6 +36,8 @@ def get(port, peer_port=None, peer_port_meta=None):
             routing_prop = routing_prop[0]
         if 'round-robin' == routing_prop or 'random' == routing_prop:
             selected_queue = "scheduled_fifo"
+        elif 'collect-unordered' == routing_prop:
+            selected_queue = "collect_unordered"
         else:
             selected_queue = "fanout_fifo"
     try:

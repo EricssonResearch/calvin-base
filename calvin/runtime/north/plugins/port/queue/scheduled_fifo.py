@@ -100,7 +100,7 @@ class ScheduledFIFO(object):
     def _state(self):
         state = {
             'queuetype': self._type,
-            'fifo': {p: [t.encode() for t in self.fifo] for p, t in self.fifo.items()},
+            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
             'N': self.N,
             'readers': self.readers,
             'write_pos': self.write_pos,
@@ -113,13 +113,12 @@ class ScheduledFIFO(object):
 
     def _set_state(self, state):
         self._type = state.get('queuetype')
-        self.fifo = {p: [Token.decode(t) for t in self.fifo] for p, t in state['fifo'].items()}
+        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in state['fifo'].items()}
         self.N = state['N']
         self.readers = state['readers']
         self.write_pos = state['write_pos']
         self.read_pos = state['read_pos']
         self.tentative_read_pos = state['tentative_read_pos']
-        self.token_state = state['token_state']
         self.reader_turn = state["reader_turn"]
         self.turn_pos = state["turn_pos"]
         self._set_turn()
@@ -127,6 +126,12 @@ class ScheduledFIFO(object):
     @property
     def queue_type(self):
         return self._type
+
+    def add_writer(self, writer):
+        pass
+
+    def remove_writer(self, writer):
+        pass
 
     def add_reader(self, reader):
         if not isinstance(reader, basestring):
@@ -147,8 +152,11 @@ class ScheduledFIFO(object):
         del self.write_pos[reader]
         self.readers.remove(reader)
 
-    def write(self, data):
-        if not self.slots_available(1):
+    def get_peers(self):
+        return self.readers
+
+    def write(self, data, metadata):
+        if not self.slots_available(1, metadata):
             raise QueueFull()
         _log.debug("WRITING pos %s" % str(self.write_pos))
         # Write token in peer's FIFO
@@ -158,7 +166,7 @@ class ScheduledFIFO(object):
         self.write_pos[peer] = write_pos + 1
         return True
 
-    def slots_available(self, length):
+    def slots_available(self, length, metadata):
         if length >= self.N:
             return False
         if length == 1:
@@ -209,11 +217,11 @@ class ScheduledFIFO(object):
     # Queue operations used by communication which utilize a sequence number
     #
 
-    def com_write(self, data, sequence_nbr):
+    def com_write(self, data, metadata, sequence_nbr):
         peer = self.readers[self.reader_turn[self.turn_pos % self.N]]
         write_pos = self.write_pos[peer]
         if sequence_nbr == write_pos:
-            self.write(data)
+            self.write(data, metadata)
             return COMMIT_RESPONSE.handled
         elif sequence_nbr < write_pos:
             return COMMIT_RESPONSE.unhandled

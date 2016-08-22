@@ -34,7 +34,7 @@ class TunnelInEndpoint(Endpoint):
     def __init__(self, port, tunnel, peer_node_id, peer_port_id, trigger_loop):
         super(TunnelInEndpoint, self).__init__(port)
         self.tunnel = tunnel
-        self.peer_port_id = peer_port_id
+        self.peer_id = peer_port_id
         self.peer_node_id = peer_node_id
         self.trigger_loop = trigger_loop
 
@@ -47,10 +47,12 @@ class TunnelInEndpoint(Endpoint):
 
     def attached(self):
         self.port.queue.add_reader(self.port.id)
+        if self.peer_id is not None:
+            self.port.queue.add_writer(self.peer_id)
 
     def recv_token(self, payload):
         try:
-            r = self.port.queue.com_write(Token.decode(payload['token']), payload['sequencenbr'])
+            r = self.port.queue.com_write(Token.decode(payload['token']), self.peer_id, payload['sequencenbr'])
             if r == COMMIT_RESPONSE.handled:
                 # New token, trigger loop
                 self.trigger_loop()
@@ -73,10 +75,13 @@ class TunnelInEndpoint(Endpoint):
         self.tunnel.send(reply)
 
     def set_peer_port_id(self, id):
-        self.peer_port_id = id
+        if self.peer_id is None:
+            # If not set previously set it now
+            self.port.queue.add_writer(id)
+        self.peer_id = id
 
     def get_peer(self):
-        return (self.peer_node_id, self.peer_port_id)
+        return (self.peer_node_id, self.peer_id)
 
 
 class TunnelOutEndpoint(Endpoint):
@@ -104,6 +109,7 @@ class TunnelOutEndpoint(Endpoint):
 
     def attached(self):
         self.port.queue.add_reader(self.peer_id)
+        self.port.queue.add_writer(self.port.id)
 
     def detached(self):
         # cancel any tentative reads to acked reads

@@ -451,6 +451,7 @@ class Flatten(object):
         consumed = set()
         for iop in iops:
             targets = query(node, kind=ast.InPort, attributes={'actor':iop.actor, 'port':iop.port})
+            # FIXME FANIN
             if len(targets) is not 1:
                 # Covered by consistency check
                 continue
@@ -668,10 +669,6 @@ class ConsistencyCheck(object):
             if not matches:
                 reason = "Component {} is missing connection to outport '{}'".format(node.name, port)
                 self.issue_tracker.add_error(reason, node)
-            elif len(matches) > 1:
-                reason = "Component {} has multiple connections to outport '{}'".format(node.name, port)
-                for match in matches:
-                    self.issue_tracker.add_error(reason, match)
         for port in node.inports:
             matches = query(node, kind=ast.InternalOutPort, attributes={'port':port})
             if not matches:
@@ -713,10 +710,6 @@ class ConsistencyCheck(object):
             if not matches:
                 reason = "{} {} ({}.{}) is missing connection to inport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
                 self.issue_tracker.add_error(reason, node)
-            elif len(matches) > 1:
-                reason = "{} {} ({}.{}) has multiple connections to inport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
-                for match in matches:
-                    self.issue_tracker.add_error(reason, match)
 
         for port in node.metadata['outputs']:
             matches = query(self.block, kind=ast.OutPort, attributes={'actor':node.ident, 'port':port})

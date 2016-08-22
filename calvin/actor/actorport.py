@@ -105,40 +105,65 @@ class InPort(Port):
 
     def __init__(self, name, owner):
         super(InPort, self).__init__(name, owner)
-        self.endpoint = endpoint.Endpoint(self)
         self.properties['direction'] = 'in'
+        self.endpoints = []
 
     def __str__(self):
         s = super(InPort, self).__str__()
-        return s + " " + str(self.endpoint)
+        s = s + "%s: %s\n" % (self.properties.get('routing','default'), self.properties.get('nbr_peers', 1))
+        s = s + " [ "
+        for ep in self.endpoints:
+            s = s + str(ep) + " "
+        s = s + "]"
+        return s
 
     def is_connected(self):
-        return self.endpoint.is_connected()
+        if len(self.endpoints) < self.properties.get('nbr_peers', 1):
+            return False
+        for ep in self.endpoints:
+            if not ep.is_connected():
+                return False
+        return True
 
     def is_connected_to(self, peer_id):
-        return self.endpoint.is_connected() and self.endpoint.get_peer()[1] == peer_id
+        for ep in self.endpoints:
+            if ep.get_peer()[1] == peer_id:
+                return True
+        return False
 
     def attach_endpoint(self, endpoint_):
-        old_endpoint = self.endpoint
-        if type(old_endpoint) is not endpoint.Endpoint:
+        peer_id = endpoint_.peer_id
+        # Check if this is a reconnect after migration
+        match = [e for e in self.endpoints if e.peer_id == peer_id]
+        if not match:
+            old_endpoint = None
+        else:
+            old_endpoint = match[0]
             self.detach_endpoint(old_endpoint)
-        self.endpoint = endpoint_
-        self.endpoint.attached()
+
+        self.endpoints.append(endpoint_)
+        endpoint_.attached()
         self.owner.did_connect(self)
         return old_endpoint
 
     def detach_endpoint(self, endpoint_):
         # Only called from attach_endpoint with the old endpoint
-        if not self.endpoint == endpoint_:
-            _log.warning("Inport: No such endpoint")
+        if endpoint_ not in self.endpoints:
+            _log.warning("Outport: No such endpoint")
             return
-        self.endpoint = endpoint.Endpoint(self, former_peer_id=endpoint_.get_peer()[1])
+        self.endpoints.remove(endpoint_)
 
     def disconnect(self, peer_ids=None):
-        # Ignore peer_ids since we can only have one peer
-        self.owner.did_disconnect(self)
-        endpoints = [self.endpoint]
-        self.endpoint = endpoint.Endpoint(self, former_peer_id=self.endpoint.get_peer()[1])
+        if peer_ids is None:
+            endpoints = self.endpoints
+        else:
+            endpoints = [e for e in self.endpoints if e.get_peer()[1] in peer_ids]
+        # Remove all endpoints corresponding to the peer ids
+        self.endpoints = [e for e in self.endpoints if e not in endpoints]
+        for e in endpoints:
+            e.detached()
+        if len(self.endpoints) == 0:
+            self.owner.did_disconnect(self)
         return endpoints
 
     def peek_token(self, metadata=None):
@@ -158,7 +183,15 @@ class InPort(Port):
         return self.queue.tokens_available(length, metadata)
 
     def get_peers(self):
-        return [self.endpoint.get_peer()]
+        peers = []
+        for ep in self.endpoints:
+            peers.append(ep.get_peer())
+        queue_peers = self.queue.get_peers()
+        if len(peers) < len(queue_peers):
+            all = copy.copy(queue_peers)
+            all -= set([p[1] for p in peers])
+            peers.extend([(None, p) for p in all])
+        return peers
 
 
 class OutPort(Port):
@@ -225,23 +258,25 @@ class OutPort(Port):
         self.endpoints = [e for e in self.endpoints if e not in endpoints]
         for e in endpoints:
             e.detached()
-        self.owner.did_disconnect(self)
+        if len(self.endpoints) == 0:
+            self.owner.did_disconnect(self)
         return endpoints
 
     def write_token(self, data):
         """docstring for write_token"""
-        self.queue.write(data)
+        self.queue.write(data, self.id)
 
     def tokens_available(self, length):
         """Used by actor (owner) to check number of token slots available on the port."""
-        return self.queue.slots_available(length)
+        return self.queue.slots_available(length, self.id)
 
     def get_peers(self):
         peers = []
         for ep in self.endpoints:
             peers.append(ep.get_peer())
-        if len(peers) < len(self.queue.readers):
-            all = copy.copy(self.queue.readers)
+        queue_peers = self.queue.get_peers()
+        if len(peers) < len(queue_peers):
+            all = copy.copy(queue_peers)
             all -= set([p[1] for p in peers])
             peers.extend([(None, p) for p in all])
         return peers

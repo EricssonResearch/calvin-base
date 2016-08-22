@@ -73,6 +73,12 @@ class FanoutFIFO(object):
     def queue_type(self):
         return self._type
 
+    def add_writer(self, writer):
+        pass
+
+    def remove_writer(self, writer):
+        pass
+
     def add_reader(self, reader):
         if not isinstance(reader, basestring):
             raise Exception('Not a string: %s' % reader)
@@ -88,15 +94,18 @@ class FanoutFIFO(object):
         del self.tentative_read_pos[reader]
         self.readers.discard(reader)
 
-    def write(self, data):
-        if not self.slots_available(1):
+    def get_peers(self):
+        return self.readers
+
+    def write(self, data, metadata):
+        if not self.slots_available(1, metadata):
             raise QueueFull()
         write_pos = self.write_pos
         self.fifo[write_pos % self.N] = data
         self.write_pos = write_pos + 1
         return True
 
-    def slots_available(self, length):
+    def slots_available(self, length, metadata):
         last_readpos = min(self.read_pos.values() or [0])
         return (self.N - ((self.write_pos - last_readpos) % self.N) - 1) >= length
 
@@ -148,9 +157,9 @@ class FanoutFIFO(object):
     # Queue operations used by communication which utilize a sequence number
     #
 
-    def com_write(self, data, sequence_nbr):
+    def com_write(self, data, metadata, sequence_nbr):
         if sequence_nbr == self.write_pos:
-            self.write(data)
+            self.write(data, metadata)
             return COMMIT_RESPONSE.handled
         elif sequence_nbr < self.write_pos:
             return COMMIT_RESPONSE.unhandled
