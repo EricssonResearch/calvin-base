@@ -852,7 +852,7 @@ class Deployer(object):
         for src, dst_list in self.deployable['connections'].iteritems():
             if len(dst_list) > 1:
                 src_name, src_port = src.split('.')
-                # TODO get routing method from actor or calvinscript, now set only existing option
+                _log.debug("GET PROPERTIES for %s, %s.%s" % (src, src_name, src_port))
                 current_properties = self.node.pm.get_port_properties(
                                         actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port)
                 kwargs = {'nbr_peers': len(dst_list)}

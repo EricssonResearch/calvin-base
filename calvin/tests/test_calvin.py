@@ -3035,8 +3035,8 @@ class TestCollectPort(CalvinTestBase):
     def testCollectPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-        src1 : std.CountTimer(sleep=0.01, steps=5)
-        src2 : std.CountTimer(sleep=0.01, steps=5)
+        src1 : std.CountTimer(sleep=0.01, start=1, steps=5)
+        src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
         snk : io.StandardOut(store_tokens=1, quiet=1)
         snk.token(routing="collect-unordered", nbr_peers=2)
         src1.integer > snk.token
@@ -3053,18 +3053,109 @@ class TestCollectPort(CalvinTestBase):
 
         snk = d.actor_map['testCollectPort:snk']
         actual = request_handler.report(self.rt1, snk)
-        # FIXME We hope that the count timer will make the actors send alternating
-        expected = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]
 
-        self.assert_lists_equal(expected, actual, min_length=5)
+        high = [x for x in actual if x > 999]
+        low = [x for x in actual if x < 999]
+        self.assert_lists_equal(range(1001,1006), high, min_length=4)
+        self.assert_lists_equal(range(1,6), low, min_length=4)
+
+        d.destroy()
+
+    def testCollectPortComponentIn(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        component Dual() seqin -> seqout1, seqout2 {
+            id1    : std.Identity()
+            id2    : std.Identity()
+            .seqin(routing="round-robin")
+            .seqin > id1.token
+            .seqin > id2.token
+            id1.token > .seqout1
+            id2.token > .seqout2
+        }
+        src1 : std.CountTimer(sleep=0.01, start=1, steps=5)
+        src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
+        duo: Dual()
+        duo.seqin(routing="collect-unordered")
+        snk1 : io.StandardOut(store_tokens=1, quiet=1)
+        snk2 : io.StandardOut(store_tokens=1, quiet=1)
+        src1.integer > duo.seqin
+        src2.integer > duo.seqin
+        duo.seqout1 > snk1.token
+        duo.seqout2 > snk2.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(0.5)
+
+        snk1 = d.actor_map['testCollectPort:snk1']
+        snk2 = d.actor_map['testCollectPort:snk2']
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+        assert len(actual1) > 3
+        assert len(actual2) > 3
+        high = sorted([x for x in actual1 + actual2 if x > 999])
+        low = sorted([x for x in actual1 + actual2 if x < 999])
+        self.assert_lists_equal(range(1001,1006), high, min_length=4)
+        self.assert_lists_equal(range(1,6), low, min_length=4)
+
+        d.destroy()
+
+    def testCollectPortComponentOut(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        component Dual() seqin1, seqin2 -> seqout {
+            id1    : std.Identity()
+            id2    : std.Identity()
+            .seqout(routing="collect-unordered")
+            .seqin1 > id1.token
+            .seqin2 > id2.token
+            id1.token > .seqout
+            id2.token > .seqout
+        }
+        src1 : std.CountTimer(sleep=0.01, start=1, steps=5)
+        src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
+        duo: Dual()
+        duo.seqout(routing="round-robin")
+        snk1 : io.StandardOut(store_tokens=1, quiet=1)
+        snk2 : io.StandardOut(store_tokens=1, quiet=1)
+        src1.integer > duo.seqin1
+        src2.integer > duo.seqin2
+        duo.seqout > snk1.token
+        duo.seqout > snk2.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(0.5)
+
+        snk1 = d.actor_map['testCollectPort:snk1']
+        snk2 = d.actor_map['testCollectPort:snk2']
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+        assert len(actual1) > 3
+        assert len(actual2) > 3
+        high = sorted([x for x in actual1 + actual2 if x > 999])
+        low = sorted([x for x in actual1 + actual2 if x < 999])
+        self.assert_lists_equal(range(1001,1006), high, min_length=4)
+        self.assert_lists_equal(range(1,6), low, min_length=4)
 
         d.destroy()
 
     def testCollectPortRemote(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-        src1 : std.CountTimer(sleep=0.01, steps=5)
-        src2 : std.CountTimer(sleep=0.01, steps=5)
+        src1 : std.CountTimer(sleep=0.01, start=1, steps=5)
+        src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
         snk : io.StandardOut(store_tokens=1, quiet=1)
         snk.token(routing="collect-unordered", nbr_peers=2)
         src1.integer > snk.token
@@ -3081,11 +3172,11 @@ class TestCollectPort(CalvinTestBase):
         request_handler.migrate(self.rt1, snk, self.rt2.id)
         time.sleep(1)
         actual = request_handler.report(self.rt2, snk)
-        # FIXME We hope that the count timer will make the actors send alternating
-        expected = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]
 
-        self.assert_lists_equal(expected, actual, min_length=5)
-
+        high = [x for x in actual if x > 999]
+        low = [x for x in actual if x < 999]
+        self.assert_lists_equal(range(1001,1006), high, min_length=4)
+        self.assert_lists_equal(range(1,6), low, min_length=4)
         d.destroy()
 
     def testPortPropertyConsolidateInsideComponentInternalInPort(self):
