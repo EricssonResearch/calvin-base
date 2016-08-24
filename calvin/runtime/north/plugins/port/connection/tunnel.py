@@ -28,15 +28,21 @@ _log = calvinlogger.get_logger(__name__)
 class TunnelConnection(BaseConnection):
     """ Connect two ports that are remote over a Tunnel"""
 
-    def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
-        super(TunnelConnection, self).__init__(node, purpose, port, peer_port_meta, callback)
+    def __init__(self, node, purpose, port, peer_port_meta, callback, factory, **kwargs):
+        super(TunnelConnection, self).__init__(node, purpose, port, peer_port_meta, callback, factory)
         self.kwargs = kwargs
         if self.purpose != PURPOSE.INIT:
             self.token_tunnel = self.node.pm.connections_data[self.__class__.__name__]
 
     def connect(self, status=None, port_meta=None):
         # TODO: status & port_meta unused
-        
+        if self.peer_port_meta.node_id == self.node.id:
+            # FIXME the factory should provide the verification method instead of a simple node id match
+            # The peer port has moved to this node!
+            # Need ConnectionFactory to redo its job.
+            _log.analyze(self.node.id, "+ TUNNELED-TO-LOCAL", {'factory': self.factory})
+            self.factory.get(self.port, self.peer_port_meta, self.callback).connect()
+            return
         tunnel = None
         if self.peer_port_meta.node_id not in self.token_tunnel.tunnels.iterkeys():
             # No tunnel to peer, get one first

@@ -48,14 +48,14 @@ class ConnectionFactory(object):
 
     def get(self, port, peer_port_meta, callback=None, **kwargs):
         if peer_port_meta.is_local():
-            return LocalConnection(self.node, self.purpose, port, peer_port_meta, callback, **kwargs)
+            return LocalConnection(self.node, self.purpose, port, peer_port_meta, callback, self, **kwargs)
         elif self.purpose == PURPOSE.DISCONNECT and peer_port_meta.node_id is None:
             # A port that miss node info that we want to disconnect is already disconnected
             return Disconnected(self.node, self.purpose, port, peer_port_meta, callback, **kwargs)
         else:
             # Remote connection
             # TODO Currently we only have support for setting up a remote connection via tunnel
-            return TunnelConnection(self.node, self.purpose, port, peer_port_meta, callback, **kwargs)
+            return TunnelConnection(self.node, self.purpose, port, peer_port_meta, callback, self, **kwargs)
 
     def get_existing(self, port_id, callback=None, **kwargs):
         _log.analyze(self.node.id, "+", {'port_id': port_id})
@@ -92,7 +92,7 @@ class ConnectionFactory(object):
         for class_name in _MODULES.values():
             _log.debug("Init connection method %s" % class_name)
             C = globals()[class_name]
-            data[C.__name__] = C(self.node, PURPOSE.INIT, None, None, None, **self.kwargs).init()
+            data[C.__name__] = C(self.node, PURPOSE.INIT, None, None, None, self, **self.kwargs).init()
         return data
 
 class Disconnected(BaseConnection):

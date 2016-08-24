@@ -26,8 +26,8 @@ _log = calvinlogger.get_logger(__name__)
 class LocalConnection(BaseConnection):
     """ Connect two ports that are local"""
 
-    def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
-        super(LocalConnection, self).__init__(node, purpose, port, peer_port_meta, callback)
+    def __init__(self, node, purpose, port, peer_port_meta, callback, factory, **kwargs):
+        super(LocalConnection, self).__init__(node, purpose, port, peer_port_meta, callback, factory)
         self.kwargs = kwargs
 
     def connect(self):

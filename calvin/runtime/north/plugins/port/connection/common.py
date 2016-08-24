@@ -20,13 +20,14 @@ PURPOSE = enum('INIT', 'CONNECT', 'DISCONNECT')
 class BaseConnection(object):
     """BaseConnection"""
 
-    def __init__(self, node, purpose, port, peer_port_meta, callback, *args, **kwargs):
+    def __init__(self, node, purpose, port, peer_port_meta, callback, factory, *args, **kwargs):
         super(BaseConnection, self).__init__()
         self.node = node
         self.purpose = purpose
         self.port = port
         self.peer_port_meta = peer_port_meta
         self.callback = callback
+        self.factory = factory
         self._parallel_connections = []
 
     def parallel_connections(self, connections):
