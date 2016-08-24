@@ -154,12 +154,13 @@ class TwistedWaitObject(object):
 
 
 class AutoDHTServer(StorageBase):
-    def __init__(self):
+    def __init__(self, node):
         super(AutoDHTServer, self).__init__()
         self.dht_server = None
         self._ssdps = None
         self._started = False
         self._name = None
+        self.node = node
 
     def _derive_dht_id(self, cert):
         key = cert.digest("sha256")
@@ -249,7 +250,7 @@ class AutoDHTServer(StorageBase):
         self._name = name
 
         self._dlist = []
-        self._ssdps = SSDPServiceDiscovery(iface)
+        self._ssdps = SSDPServiceDiscovery(self.node, iface)
         self._dlist += self._ssdps.start()
         domain = _conf.get("security", "security_domain_name")
         is_ca = False

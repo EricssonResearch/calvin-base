@@ -58,14 +58,14 @@ MS = {SERVICE_UUID: MS_BOOTSTRAP, CA_SERVICE_UUID: MS_CSR}
 MS_BOOTSTRAP_RESP =   'HTTP/1.1 200 OK\r\n' + \
             'USN: %s::upnp:rootdevice\r\n' % SERVICE_UUID + \
             'SERVER: %s\r\nlast-seen: %s\r\nEXT: \r\nSERVICE: %s\r\n' + \
-            'LOCATION: http://calvin@github.se/%s/description-0.0.1.xml\r\n' % SERVICE_UUID + \
+            'LOCATION: %s\r\n' + \
             'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % SERVICE_UUID + \
             'DATE: %s\r\n'
 
 MS_CA_RESP = 'HTTP/1.1 200 OK\r\n' + \
             'USN: %s::upnp:rootdevice\r\n' % CA_SERVICE_UUID + \
             'SERVER: %s\r\nlast-seen: %s\r\nEXT: \r\n' + \
-            'LOCATION: http://calvin@github.se/%s/description-0.0.1.xml\r\n' % CA_SERVICE_UUID + \
+            'LOCATION: %s\r\n' + \
             'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % CA_SERVICE_UUID + \
             'DATE: %s\r\n' + \
             'CERTIFICATE: %s\r\n\r\n'
@@ -89,12 +89,13 @@ def parse_http_response(data):
 
 
 class ServerBase(DatagramProtocol):
-    def __init__(self, ips, dserver=None):
+    def __init__(self, node, ips, dserver=None):
         self._services = {}
         self._dstarted = dserver
         self.ignore_list = []
         self.ips = ips
         self._msearches_resp = {sid: {} for sid in MS.keys()}
+        self._node = node
 
     def startProtocol(self):
         if self._dstarted:
@@ -119,7 +120,7 @@ class ServerBase(DatagramProtocol):
                                 continue
 
                             response = MS_RESP[SERVICE_UUID] % ('%s:%d' % addr, str(time.time()),
-                                                  k, datetimeToString())
+                                                  k, self._node.control_uri + "/node/" + self._node.id, datetimeToString())
                             if "cert" in self._msearches_resp[SERVICE_UUID].keys():
                                 response += "CERTIFICATE: {}\r\n\r\n".format(self._msearches_resp[SERVICE_UUID]["cert"])
                             _log.debug("Sending response: %s" % repr(response))
@@ -246,7 +247,7 @@ class ClientBase(DatagramProtocol):
 
 
 class SSDPServiceDiscovery(ServiceDiscoveryBase):
-    def __init__(self, iface='', ignore_self=True):
+    def __init__(self, node, iface='', ignore_self=True):
         super(SSDPServiceDiscovery, self).__init__()
 
         self.ignore_self = ignore_self
@@ -255,6 +256,7 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         self.port = None
         self.searches = {}
         self.iface_send_list = []
+        self.node = node
 
         if self.iface in ["0.0.0.0", ""]:
             for a in netifaces.interfaces():
@@ -270,7 +272,7 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         dserver = defer.Deferred()
         dclient = defer.Deferred()
         try:
-            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.iface_send_list,
+            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.node, self.iface_send_list,
                                                 dserver=dserver), listenMultiple=True)
             self.ssdp.setTTL(5)
             for iface_ in self.iface_send_list:

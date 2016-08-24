@@ -128,11 +128,12 @@ class TwistedWaitObject(object):
 
 
 class AutoDHTServer(StorageBase):
-    def __init__(self):
+    def __init__(self, node):
         super(AutoDHTServer, self).__init__()
         self.dht_server = None
         self._ssdps = None
         self._started = False
+        self._node = node
 
     def start(self, iface='', network=None, bootstrap=None, cb=None, name=None, nodeid=None):
         if bootstrap is None:
@@ -147,7 +148,7 @@ class AutoDHTServer(StorageBase):
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = SSDPServiceDiscovery(iface)
+        self._ssdps = SSDPServiceDiscovery(self._node, iface)
         dlist += self._ssdps.start()
 
         _log.debug("Register service %s %s:%s" % (network, ip, port))

@@ -50,7 +50,7 @@ MS =    ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r\n' +
 MS_RESP =   'HTTP/1.1 200 OK\r\n' + \
             'USN: %s::upnp:rootdevice\r\n' % SERVICE_UUID + \
             'SERVER: %s\r\nlast-seen: %s\r\nEXT: \r\nSERVICE: %s\r\n' + \
-            'LOCATION: http://calvin@github.se/%s/description-0.0.1.xml\r\n' % SERVICE_UUID + \
+            'LOCATION: %s\r\n' + \
             'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % SERVICE_UUID + \
             'DATE: %s\r\n'
 
@@ -71,12 +71,13 @@ def parse_http_response(data):
 
 
 class ServerBase(DatagramProtocol):
-    def __init__(self, ips, cert=None, d=None):
+    def __init__(self, node, ips, cert=None, d=None):
         self._services = {}
         self._dstarted = d
         self.ignore_list = []
         self.ips = ips
         self.cert = cert
+        self.node = node
 
     def startProtocol(self):
         if self._dstarted:
@@ -101,7 +102,7 @@ class ServerBase(DatagramProtocol):
                                 continue
 
                             response = MS_RESP % ('%s:%d' % addr, str(time.time()),
-                                                  k, datetimeToString())
+                                                  k, self.node.control_uri + "/node/" + self.node.id, datetimeToString())
                             if self.cert != None:
                                 response = "{}CERTIFICATE: ".format(response)
                                 response = "{}{}".format(response, self.cert)
@@ -203,7 +204,7 @@ class ClientBase(DatagramProtocol):
 
 
 class SSDPServiceDiscovery(ServiceDiscoveryBase):
-    def __init__(self, iface='', cert=None, ignore_self=True):
+    def __init__(self, node, iface='', cert=None, ignore_self=True):
         super(SSDPServiceDiscovery, self).__init__()
 
         self.ignore_self = ignore_self
@@ -213,6 +214,7 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         self._backoff = .2
         self.iface_send_list = []
         self.cert = cert
+        self.node = node
 
         if self.iface in ["0.0.0.0", ""]:
             for a in netifaces.interfaces():
@@ -228,8 +230,8 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         dserver = defer.Deferred()
         dclient = defer.Deferred()
         try:
-            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.iface_send_list, cert=self.cert, d=dserver),
-                                                listenMultiple=True)
+            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.node, self.iface_send_list,
+                                                cert=self.cert, d=dserver), listenMultiple=True)
             self.ssdp.setTTL(5)
             for iface_ in self.iface_send_list:
                 d = self.ssdp.joinGroup(SSDP_ADDR, interface=iface_)

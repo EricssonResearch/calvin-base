@@ -21,9 +21,9 @@ from calvin.runtime.north.plugins.storage.proxy import StorageProxy
 
 def get(type_, node=None):
     if type_ == "dht":
-        return dht.AutoDHTServer()
+        return dht.AutoDHTServer(node)
     elif type_ == "securedht":
-        return securedht.AutoDHTServer()
+        return securedht.AutoDHTServer(node)
     elif type_ == "proxy":
         return StorageProxy(node)
     elif type_ == "local":
