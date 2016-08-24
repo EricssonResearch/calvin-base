@@ -590,43 +590,63 @@ class ConsolidatePortProperty(object):
 
         # Validate port properties
         port_properties = {p.ident.ident: p.arg.value for p in node.children}
-        for key, value in port_properties.items():
-            if key not in port_property_data.keys():
-                reason = "Port property {} is unknown".format(key)
-                self.issue_tracker.add_error(reason, node)
-                continue
-            ppdata = port_property_data[key]
-            if ppdata['type'] == "category":
-                if value not in ppdata['values']:
-                    reason = "Port property {} can only have values {}".format(key, ", ".join(ppdata['values'].keys()))
+        for key, values in port_properties.items():
+            if not isinstance(values, (list, tuple)):
+                values = [values]
+            for value in values:
+                if key not in port_property_data.keys():
+                    reason = "Port property {} is unknown".format(key)
                     self.issue_tracker.add_error(reason, node)
                     continue
-                if node.direction not in ppdata['values'][value]['direction']:
-                    reason = "Port property {}={} is only for {} ports".format(
-                        key, value, ppdata['values'][value]['direction'])
-                    self.issue_tracker.add_error(reason, node)
-                    continue
-            if ppdata['type'] == 'scalar':
-                if not isinstance(value, numbers.Number):
-                    reason = "Port property {} can only have scalar values".format(key)
-                    self.issue_tracker.add_error(reason, node)
-                    continue
-            if key == 'nbr_peers' and value > 1 and node.direction == 'in':
-                # Verify that inports with multiple connections have a routing property for multipeers
-                ports = query(node.parent, kind=ast.InPort, attributes={'actor': node.actor, 'port': node.port})
-                if not ports:
-                    ports = [node]
-                try:
-                    routing = port_properties['routing']
-                    if not port_property_data['routing']['values'][routing]['multipeer']:
+                ppdata = port_property_data[key]
+                if ppdata['type'] == "category":
+                    if value not in ppdata['values']:
+                        reason = "Port property {} can only have values {}".format(
+                            key, ", ".join(ppdata['values'].keys()))
+                        self.issue_tracker.add_error(reason, node)
+                        continue
+                    if node.direction not in ppdata['values'][value]['direction']:
+                        reason = "Port property {}={} is only for {} ports".format(
+                            key, value, ppdata['values'][value]['direction'])
+                        self.issue_tracker.add_error(reason, node)
+                        continue
+                if ppdata['type'] == 'scalar':
+                    if not isinstance(value, numbers.Number):
+                        reason = "Port property {} can only have scalar values".format(key)
+                        self.issue_tracker.add_error(reason, node)
+                        continue
+                if key == 'nbr_peers' and value > 1 and node.direction == 'in':
+                    # Verify that inports with multiple connections have a routing property for multipeers
+                    ports = query(node.parent, kind=ast.InPort, attributes={'actor': node.actor, 'port': node.port})
+                    if not ports:
+                        ports = [node]
+                    try:
+                        routings = port_properties['routing']
+                        if not isinstance(routings, (list, tuple)):
+                            routings = [routings]
+                        removed = []
+                        for routing in routings[:]:
+                            if not port_property_data['routing']['values'][routing]['multipeer']:
+                                routings.remove(routing)
+                                removed.append(routing)
+                        if routings:
+                            # Possible routings available
+                            if removed:
+                                # ... but some options are removed
+                                for p in node.children:
+                                    if p.ident.ident == "routing":
+                                        for routing_value in removed:
+                                            p.arg.value.remove(routing_value)
+                        else:
+                            # No routing for multiple peers
+                            for port in ports:
+                                reason = "Input ports with multiple connections need a routing port property that allow that."
+                                self.issue_tracker.add_error(reason, port)
+                            continue
+                    except KeyError:
                         for port in ports:
                             reason = "Input ports with multiple connections need a routing port property that allow that."
                             self.issue_tracker.add_error(reason, port)
-                            continue
-                except KeyError:
-                    for port in ports:
-                        reason = "Input ports with multiple connections need a routing port property that allow that."
-                        self.issue_tracker.add_error(reason, port)
                         continue
 
 

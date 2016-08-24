@@ -38,6 +38,64 @@ port_property_data = {
                 """,
         'type': 'scalar',
         'direction': 'inout'
+    },
+    'test1': {
+        'doc': """
+                This is a property used only for tests, needed to pass syntax checking.
+                """,
+        'type': 'category',
+        'values': {
+            'dummy': {
+                'direction': 'inout'
+            },
+            'dummy1': {
+                'direction': 'inout'
+            },
+            'dummy2': {
+                'direction': 'inout'
+            },
+            'dummyx': {
+                'direction': 'inout'
+            },
+            'dummyy': {
+                'direction': 'inout'
+            },
+            'dummyz': {
+                'direction': 'inout'
+            },
+            'dummyi': {
+                'direction': 'inout'
+            },
+        },
+    },
+    'test2': {
+        'doc': """
+                This is a property used only for tests, needed to pass syntax checking.
+                """,
+        'type': 'category',
+        'values': {
+            'dummy': {
+                'direction': 'inout'
+            },
+            'dummy1': {
+                'direction': 'inout'
+            },
+            'dummy2': {
+                'direction': 'inout'
+            },
+            'dummyx': {
+                'direction': 'inout'
+            },
+            'dummyy': {
+                'direction': 'inout'
+            },
+            'dummyz': {
+                'direction': 'inout'
+            },
+            'dummyi': {
+                'direction': 'inout'
+            }
+        }
     }
 }
 

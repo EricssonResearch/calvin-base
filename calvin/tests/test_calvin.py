@@ -2599,8 +2599,8 @@ class TestPortProperties(CalvinTestBase):
             snk1   : CompSink()
             snk2   : CompSink()
             src.integer(routing="round-robin")
-            snk1.seq(dummy="dummy1")
-            snk2.seq(dummy="dummy2")
+            snk1.seq(test1="dummy1")
+            snk2.seq(test1="dummy2")
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
@@ -2618,12 +2618,12 @@ class TestPortProperties(CalvinTestBase):
         assert (app_info['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
                 'token')
         assert (app_info['port_properties']['testScript:snk1:compsnk'][0]
-                    ['properties']['dummy'] == 'dummy1')
+                    ['properties']['test1'] == 'dummy1')
         assert 'port' in app_info['port_properties']['testScript:snk2:compsnk'][0]
         assert (app_info['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
                 'token')
         assert (app_info['port_properties']['testScript:snk2:compsnk'][0]
-                    ['properties']['dummy'] == 'dummy2')
+                    ['properties']['test1'] == 'dummy2')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -2699,7 +2699,7 @@ class TestPortProperties(CalvinTestBase):
             component CompSink() seq -> {
                 compsnk    : io.StandardOut(store_tokens=1, quiet=1)
                 .seq > compsnk.token
-                compsnk.token(dummy="dummyx")
+                compsnk.token(test1="dummyx")
             }
 
             src    : std.Counter()
@@ -2723,12 +2723,12 @@ class TestPortProperties(CalvinTestBase):
         assert (app_info['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
                 'token')
         assert (app_info['port_properties']['testScript:snk1:compsnk'][0]
-                    ['properties']['dummy'] == 'dummyx')
+                    ['properties']['test1'] == 'dummyx')
         assert 'port' in app_info['port_properties']['testScript:snk2:compsnk'][0]
         assert (app_info['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
                 'token')
         assert (app_info['port_properties']['testScript:snk2:compsnk'][0]
-                    ['properties']['dummy'] == 'dummyx')
+                    ['properties']['test1'] == 'dummyx')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -2758,7 +2758,7 @@ class TestPortProperties(CalvinTestBase):
             component CompCounter() -> seq {
                 compsrc    : std.Counter()
                 compsrc.integer > .seq
-                .seq(dummy="dummyx")
+                .seq(test1="dummyx")
                 compsrc.integer(routing="round-robin")
             }
             
@@ -2782,12 +2782,12 @@ class TestPortProperties(CalvinTestBase):
         assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
                 'token')
         assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['dummy'] == 'dummyx')
+                    ['properties']['test1'] == 'dummyx')
         assert 'port' in app_info['port_properties']['testScript:snk2'][0]
         assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
                 'token')
         assert (app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['dummy'] == 'dummyx')
+                    ['properties']['test1'] == 'dummyx')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3212,15 +3212,15 @@ class TestCollectPort(CalvinTestBase):
             component CompCounter() -> seq {
                 compsrc    : std.Counter()
                 compsrc.integer > .seq
-                .seq(dummy=["dummyx", "dummyy", "dummyz"], dummy2="dummyi")
+                .seq(test1=["dummyx", "dummyy", "dummyz"], test2="dummyi")
                 compsrc.integer(routing="round-robin")
             }
             
             src    : CompCounter()
             snk1   : io.StandardOut(store_tokens=1, quiet=1)
             snk2   : io.StandardOut(store_tokens=1, quiet=1)
-            snk1.token(dummy=["dummyz", "dummyy"])
-            snk2.token(dummy="dummyy")
+            snk1.token(test1=["dummyz", "dummyy"])
+            snk2.token(test1="dummyy")
             src.seq > snk1.token
             src.seq > snk2.token
         """
@@ -3238,22 +3238,22 @@ class TestCollectPort(CalvinTestBase):
         assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
                 'token')
         assert len(app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['dummy']) == 2
+                    ['properties']['test1']) == 2
         assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['dummy'][0] == 'dummyz')
+                    ['properties']['test1'][0] == 'dummyz')
         assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['dummy'][1] == 'dummyy')
+                    ['properties']['test1'][1] == 'dummyy')
         assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['dummy2'] == 'dummyi')
+                    ['properties']['test2'] == 'dummyi')
         assert 'port' in app_info['port_properties']['testScript:snk2'][0]
         assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
                 'token')
         assert len(app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['dummy']) == 1
+                    ['properties']['test1']) == 1
         assert (app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['dummy'][0] == 'dummyy')
+                    ['properties']['test1'][0] == 'dummyy')
         assert (app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['dummy2'] == 'dummyi')
+                    ['properties']['test2'] == 'dummyi')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
