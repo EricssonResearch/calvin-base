@@ -201,6 +201,13 @@ class PortProperty(Node):
             other.remove_child(prop)
             self.add_child(prop)
 
+    def add_property(self, ident, arg):
+        my_properties = [p for p in self.children if p.ident.ident == ident]
+        if my_properties:
+            my_properties[0].arg.value = arg
+        else:
+            self.add_child(NamedArg(ident=Id(ident=ident), arg=Value(value=arg)))
+
     def __str__(self):
         if self._verbose_desc:
             return "{} {}.{} {} {}".format(self.__class__.__name__, str(self.actor), self.port, hex(id(self)),

@@ -3038,7 +3038,7 @@ class TestCollectPort(CalvinTestBase):
         src1 : std.CountTimer(sleep=0.01, start=1, steps=5)
         src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
         snk : io.StandardOut(store_tokens=1, quiet=1)
-        snk.token(routing="collect-unordered", nbr_peers=2)
+        snk.token(routing="collect-unordered")
         src1.integer > snk.token
         src2.integer > snk.token
         """
@@ -3047,6 +3047,13 @@ class TestCollectPort(CalvinTestBase):
         print errors
         print app_info
         assert len(errors) == 0
+        assert 'testCollectPort:snk' in app_info['port_properties']
+        assert 'port' in app_info['port_properties']['testCollectPort:snk'][0]
+        assert (app_info['port_properties']['testCollectPort:snk'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testCollectPort:snk'][0]
+                    ['properties']['nbr_peers'] == 2)
+
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.5)
@@ -3089,6 +3096,14 @@ class TestCollectPort(CalvinTestBase):
         print errors
         print app_info
         assert len(errors) == 0
+        assert (app_info['port_properties']['testCollectPort:duo:id1'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testCollectPort:duo:id2'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testCollectPort:duo:id1'][0]
+                    ['properties']['nbr_peers'] == 2)
+        assert (app_info['port_properties']['testCollectPort:duo:id2'][0]
+                    ['properties']['nbr_peers'] == 2)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.5)
@@ -3134,6 +3149,14 @@ class TestCollectPort(CalvinTestBase):
         print errors
         print app_info
         assert len(errors) == 0
+        assert (app_info['port_properties']['testCollectPort:snk1'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testCollectPort:snk2'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testCollectPort:snk1'][0]
+                    ['properties']['nbr_peers'] == 2)
+        assert (app_info['port_properties']['testCollectPort:snk2'][0]
+                    ['properties']['nbr_peers'] == 2)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         time.sleep(0.5)
@@ -3166,6 +3189,10 @@ class TestCollectPort(CalvinTestBase):
         print errors
         print app_info
         assert len(errors) == 0
+        assert (app_info['port_properties']['testCollectPort:snk'][0]['port'] ==
+                'token')
+        assert (app_info['port_properties']['testCollectPort:snk'][0]
+                    ['properties']['nbr_peers'] == 2)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']

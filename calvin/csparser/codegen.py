@@ -1,10 +1,11 @@
 import astnode as ast
 import visitor
 import astprint
+import numbers
 from parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore, GlobalStore
 from calvin.requests import calvinresponse
-
+from calvin.csparser.port_property_syntax import port_property_data
 
 def _create_signature(actor_type, metadata):
     # Create the actor signature to be able to look it up in the GlobalStore if neccessary
@@ -504,11 +505,14 @@ class ConsolidatePortProperty(object):
     """
     Consolidates port properties by removing duplicates and
     moving properties to one per port, and handle conflicting
-    property settings
+    property settings. Also add the nbr_peers property for all
+    ports with the number of connecting peers.
     """
     def __init__(self, issue_tracker):
         super(ConsolidatePortProperty, self).__init__()
         self.issue_tracker = issue_tracker
+        self.inports = {}
+        self.outports = {}
 
     def process(self, root):
         self.visit(root)
@@ -530,7 +534,6 @@ class ConsolidatePortProperty(object):
             keep.append(target)
             same_port = [t for t in targets if t.is_same_port(target)]
             for same in same_port:
-                # TODO Should catch exception!!!
                 try:
                     target.consolidate(same)
                 except calvinresponse.CalvinResponseException as e:
@@ -539,6 +542,92 @@ class ConsolidatePortProperty(object):
                         self.issue_tracker.add_error(e.data, same)
         for p in remove:
             node.remove_child(p)
+
+        # Count links
+        links = [x for x in node.children if type(x) is ast.Link]
+        map(self.visit, links)
+        # Add empty port properties for any ports missing it
+        inports = [(x.actor, x.port) for x in node.children if type(x) is ast.PortProperty
+                        and (x.direction is None or x.direction == "in")]
+        outports = [(x.actor, x.port) for x in node.children if type(x) is ast.PortProperty
+                        and (x.direction is None or x.direction == "out")]
+        for port, nbr in self.inports.items():
+            if port not in inports:
+                node.add_child(ast.PortProperty(actor=port[0], port=port[1], direction="in"))
+        for port, nbr in self.outports.items():
+            if port not in outports:
+                node.add_child(ast.PortProperty(actor=port[0], port=port[1], direction="out"))
+        # Visit all port properties
+        portproperties = [x for x in node.children if type(x) is ast.PortProperty]
+        map(self.visit, portproperties)
+
+    @visitor.when(ast.Link)
+    def visit(self, link):
+        # Count incomming and outgoing links between ports
+        name = (link.inport.actor, link.inport.port)
+        self.inports[name] = self.inports.get(name, 0) + 1
+        name = (link.outport.actor, link.outport.port)
+        self.outports[name] = self.outports.get(name, 0) + 1
+
+    @visitor.when(ast.PortProperty)
+    def visit(self, node):
+        # Apply nbr_peers property and set direction if that is missing and no ambiguity
+        name = (node.actor, node.port)
+        if node.direction is None and name in self.inports.keys():
+            node.add_property(ident="nbr_peers", arg=self.inports[name])
+            if name not in self.outports.keys():
+                node.direction = "in"
+            else:
+                reason = "Port property need direction since ambigious names"
+                self.issue_tracker.add_error(reason, node)
+        elif node.direction is None and name in self.outports.keys():
+            node.add_property(ident="nbr_peers", arg=self.outports[name])
+            node.direction = "out"
+        elif node.direction == "in" and name in self.inports.keys():
+            node.add_property(ident="nbr_peers", arg=self.inports[name])
+        elif node.direction == "out" and name in self.outports.keys():
+            node.add_property(ident="nbr_peers", arg=self.outports[name])
+
+        # Validate port properties
+        port_properties = {p.ident.ident: p.arg.value for p in node.children}
+        for key, value in port_properties.items():
+            if key not in port_property_data.keys():
+                reason = "Port property {} is unknown".format(key)
+                self.issue_tracker.add_error(reason, node)
+                continue
+            ppdata = port_property_data[key]
+            if ppdata['type'] == "category":
+                if value not in ppdata['values']:
+                    reason = "Port property {} can only have values {}".format(key, ", ".join(ppdata['values'].keys()))
+                    self.issue_tracker.add_error(reason, node)
+                    continue
+                if node.direction not in ppdata['values'][value]['direction']:
+                    reason = "Port property {}={} is only for {} ports".format(
+                        key, value, ppdata['values'][value]['direction'])
+                    self.issue_tracker.add_error(reason, node)
+                    continue
+            if ppdata['type'] == 'scalar':
+                if not isinstance(value, numbers.Number):
+                    reason = "Port property {} can only have scalar values".format(key)
+                    self.issue_tracker.add_error(reason, node)
+                    continue
+            if key == 'nbr_peers' and value > 1 and node.direction == 'in':
+                # Verify that inports with multiple connections have a routing property for multipeers
+                ports = query(node.parent, kind=ast.InPort, attributes={'actor': node.actor, 'port': node.port})
+                if not ports:
+                    ports = [node]
+                try:
+                    routing = port_properties['routing']
+                    if not port_property_data['routing']['values'][routing]['multipeer']:
+                        for port in ports:
+                            reason = "Input ports with multiple connections need a routing port property that allow that."
+                            self.issue_tracker.add_error(reason, port)
+                            continue
+                except KeyError:
+                    for port in ports:
+                        reason = "Input ports with multiple connections need a routing port property that allow that."
+                        self.issue_tracker.add_error(reason, port)
+                        continue
 
 
 class AppInfo(object):
