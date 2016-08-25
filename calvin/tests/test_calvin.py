@@ -3227,6 +3227,14 @@ class TestCollectPort(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
         print app_info
+
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testScript:snk1']
+        snk2 = d.actor_map['testScript:snk2']
+
         assert 'testScript:src:compsrc' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
@@ -3255,12 +3263,252 @@ class TestCollectPort(CalvinTestBase):
         assert (app_info['port_properties']['testScript:snk2'][0]
                     ['properties']['test2'] == 'dummyi')
 
+
+@pytest.mark.essential
+class TestPortRouting(CalvinTestBase):
+
+    def testCollectPortRemoteMoveMany1(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
+        src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-unordered", nbr_peers=2)
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
+        snk = d.actor_map['testCollectPort:snk']
+        actuals = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals.append(request_handler.report(fr, snk))
+            assert len(actuals[i]) < len(actuals[i+1])
+            request_handler.migrate(fr, snk, to_id)
 
-        snk1 = d.actor_map['testScript:snk1']
-        snk2 = d.actor_map['testScript:snk2']
+        print actuals
+
+        high = [x for x in actuals[-1] if x > 999]
+        low = [x for x in actuals[-1] if x < 999]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,200), low, min_length=30)
+        d.destroy()
+
+    def testCollectPortRemoteMoveMany2(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
+        src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-unordered", nbr_peers=2)
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        src2 = d.actor_map['testCollectPort:src2']
+        request_handler.migrate(self.rt1, src2, self.rt2.id)
+        actuals = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals.append(request_handler.report(fr, snk))
+            assert len(actuals[i]) < len(actuals[i+1])
+            request_handler.migrate(fr, snk, to_id)
+
+        print actuals
+
+        high = [x for x in actuals[-1] if x > 999]
+        low = [x for x in actuals[-1] if x < 999]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,200), low, min_length=30)
+        d.destroy()
+
+    def testCollectPortRemoteMoveMany3(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
+        src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-unordered", nbr_peers=2)
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        src1 = d.actor_map['testCollectPort:src1']
+        src2 = d.actor_map['testCollectPort:src2']
+        request_handler.migrate(self.rt1, src1, self.rt2.id)
+        request_handler.migrate(self.rt1, src2, self.rt3.id)
+        actuals = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals.append(request_handler.report(fr, snk))
+            assert len(actuals[i]) < len(actuals[i+1])
+            request_handler.migrate(fr, snk, to_id)
+
+        print actuals
+
+        high = [x for x in actuals[-1] if x > 999]
+        low = [x for x in actuals[-1] if x < 999]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,200), low, min_length=30)
+        d.destroy()
+
+    def testRoundRobinPortRemoteMoveMany1(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.CountTimer(sleep=0.02, start=1, steps=100)
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="round-robin")
+            src.integer > snk1.token
+            src.integer > snk2.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk1 = d.actor_map['testRRPort:snk1']
+        snk2 = d.actor_map['testRRPort:snk2']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+        actuals1 = [[]]
+        actuals2 = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals1.append(request_handler.report(fr, snk1))
+            actuals2.append(request_handler.report(fr, snk2))
+            assert len(actuals1[i]) < len(actuals1[i+1])
+            assert len(actuals2[i]) < len(actuals2[i+1])
+            request_handler.migrate(fr, snk1, to_id)
+            request_handler.migrate(fr, snk2, to_id)
+
+        print actuals1, actuals2
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1], min_length=30)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1], min_length=30)
+
+        d.destroy()
+
+    def testRoundRobinPortRemoteMoveMany2(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.CountTimer(sleep=0.02, start=1, steps=100)
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="round-robin")
+            src.integer > snk1.token
+            src.integer > snk2.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk1 = d.actor_map['testRRPort:snk1']
+        snk2 = d.actor_map['testRRPort:snk2']
+        request_handler.migrate(self.rt1, snk2, self.rt2.id)
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+        actuals1 = [[]]
+        actuals2 = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            fr_id = ids[i%2]
+            actuals1.append(request_handler.report(fr, snk1))
+            actuals2.append(request_handler.report(to, snk2))
+            assert len(actuals1[i]) < len(actuals1[i+1])
+            assert len(actuals2[i]) < len(actuals2[i+1])
+            request_handler.migrate(fr, snk1, to_id)
+            request_handler.migrate(to, snk2, fr_id)
+
+        print actuals1, actuals2
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1], min_length=30)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1], min_length=30)
+
+        d.destroy()
+
+    def testRoundRobinPortRemoteMoveMany3(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.CountTimer(sleep=0.02, start=1, steps=100)
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="round-robin")
+            src.integer > snk1.token
+            src.integer > snk2.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk1 = d.actor_map['testRRPort:snk1']
+        snk2 = d.actor_map['testRRPort:snk2']
+        request_handler.migrate(self.rt1, snk1, self.rt2.id)
+        request_handler.migrate(self.rt1, snk2, self.rt3.id)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
@@ -3274,6 +3522,159 @@ class TestCollectPort(CalvinTestBase):
         self.assert_lists_equal(list(range(start, 20, 2)), actual1)
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        actuals1 = [[]]
+        actuals2 = [[]]
+        ids = [self.rt2.id, self.rt3.id]
+        rts = [self.rt2, self.rt3]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            fr_id = ids[i%2]
+            actuals1.append(request_handler.report(fr, snk1))
+            actuals2.append(request_handler.report(to, snk2))
+            assert len(actuals1[i]) < len(actuals1[i+1])
+            assert len(actuals2[i]) < len(actuals2[i+1])
+            request_handler.migrate(fr, snk1, to_id)
+            request_handler.migrate(to, snk2, fr_id)
+
+        print actuals1, actuals2
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1], min_length=30)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1], min_length=30)
+
+        d.destroy()
+
+    def testRandomPortRemoteMoveMany1(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.CountTimer(sleep=0.02, start=1, steps=100)
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            src.integer > snk1.token
+            src.integer > snk2.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk1 = d.actor_map['testRRPort:snk1']
+        snk2 = d.actor_map['testRRPort:snk2']
+        actuals1 = [[]]
+        actuals2 = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals1.append(request_handler.report(fr, snk1))
+            actuals2.append(request_handler.report(fr, snk2))
+            assert len(actuals1[i]) < len(actuals1[i+1])
+            assert len(actuals2[i]) < len(actuals2[i+1])
+            request_handler.migrate(fr, snk1, to_id)
+            request_handler.migrate(fr, snk2, to_id)
+
+        print actuals1, actuals2
+
+        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1]), min_length=60)
+
+        d.destroy()
+
+    def testRandomPortRemoteMoveMany2(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.CountTimer(sleep=0.02, start=1, steps=100)
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            src.integer > snk1.token
+            src.integer > snk2.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk1 = d.actor_map['testRRPort:snk1']
+        snk2 = d.actor_map['testRRPort:snk2']
+        request_handler.migrate(self.rt1, snk2, self.rt2.id)
+        actuals1 = [[]]
+        actuals2 = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            fr_id = ids[i%2]
+            actuals1.append(request_handler.report(fr, snk1))
+            actuals2.append(request_handler.report(to, snk2))
+            assert len(actuals1[i]) < len(actuals1[i+1])
+            assert len(actuals2[i]) < len(actuals2[i+1])
+            request_handler.migrate(fr, snk1, to_id)
+            request_handler.migrate(to, snk2, fr_id)
+
+        print actuals1, actuals2
+
+        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1]), min_length=60)
+
+        d.destroy()
+
+    def testRandomPortRemoteMoveMany3(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.CountTimer(sleep=0.02, start=1, steps=100)
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            src.integer > snk1.token
+            src.integer > snk2.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk1 = d.actor_map['testRRPort:snk1']
+        snk2 = d.actor_map['testRRPort:snk2']
+        request_handler.migrate(self.rt1, snk1, self.rt2.id)
+        request_handler.migrate(self.rt1, snk2, self.rt3.id)
+        actuals1 = [[]]
+        actuals2 = [[]]
+        ids = [self.rt2.id, self.rt3.id]
+        rts = [self.rt2, self.rt3]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            fr_id = ids[i%2]
+            actuals1.append(request_handler.report(fr, snk1))
+            actuals2.append(request_handler.report(to, snk2))
+            assert len(actuals1[i]) < len(actuals1[i+1])
+            assert len(actuals2[i]) < len(actuals2[i+1])
+            request_handler.migrate(fr, snk1, to_id)
+            request_handler.migrate(to, snk2, fr_id)
+
+        print actuals1, actuals2
+
+        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1]), min_length=60)
 
         d.destroy()
 
