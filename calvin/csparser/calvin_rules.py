@@ -66,14 +66,14 @@ def t_DOCSTRING(t):
 
 # FIXME: Strings need a better definition
 def t_STRING(t):
-    r'!?".*?"'
+    r'!?"([^"\\]|(\\.))*?"'
     is_raw = False
     if t.value.startswith('!'):
         # Keep as raw string
         is_raw = True
         t.value = t.value[1:]
     # Remove the double quotes
-    t.value = t.value.strip('"')
+    t.value = t.value[1:-1]
     if not is_raw:
         t.value = t.value.decode('string_escape')
     return t

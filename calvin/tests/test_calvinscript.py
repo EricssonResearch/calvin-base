@@ -672,6 +672,15 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Syntax error.")
 
+    def testStringLiteral(self):
+        # N.B raw string (r"") required to have same behaviour as script file
+        script = r"""
+        out: io.Print()
+        "{\"x\": \"X\n\"}" > out.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
 
 
 

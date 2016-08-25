@@ -30,7 +30,7 @@ class CalvinParser(object):
         if lexer:
             self.lexer = lexer
         else:
-            self.lexer = lex.lex(module=calvin_rules, debug=False, optimize=True)
+            self.lexer = lex.lex(module=calvin_rules, debug=False, optimize=False)
         # Since the parse may be called from other scripts, we want to have control
         # over where parse tables (and parser.out log) will be put if the tables
         # have to be recreated
