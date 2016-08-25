@@ -236,6 +236,12 @@ class CalvinParser(object):
         """identifier : IDENTIFIER"""
         p[0] = ast.Id(ident=p[1], debug_info=self.debug_info(p, 1))
 
+    # Concatenation of strings separated only by whitespace
+    # since linebreaks are not allowed inside strings
+    def p_string(self, p):
+        """string : STRING
+                  | string STRING"""
+        p[0] = p[1] if len(p) == 2 else p[1] + p[2]
 
     def p_value(self, p):
         """value : dictionary
@@ -243,7 +249,7 @@ class CalvinParser(object):
                  | bool
                  | null
                  | NUMBER
-                 | STRING"""
+                 | string"""
         p[0] = ast.Value(value=p[1], debug_info=self.debug_info(p, 1))
 
 
@@ -275,7 +281,7 @@ class CalvinParser(object):
 
 
     def p_member(self, p):
-        """member : STRING COLON value"""
+        """member : string COLON value"""
         p[0] = (p[1], p[3].value)
 
 

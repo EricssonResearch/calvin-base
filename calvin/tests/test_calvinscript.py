@@ -681,6 +681,23 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
+    def testStringLiteralNoLinebreaks(self):
+        # N.B raw string (r"") required to have same behaviour as script file
+        script = r"""
+        define FOO = "abc
+                      def"
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+
+    def testStringLiteralConcatenation(self):
+        # N.B raw string (r"") required to have same behaviour as script file
+        script = r"""
+        define FOO = "abc\n"
+                     "def"
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
 
 
 

@@ -64,9 +64,12 @@ def t_DOCSTRING(t):
     t.value = t.value.strip(' \n\t')
     return t
 
-# FIXME: Strings need a better definition
+# String allows escaping of any character
+# Multiline strings are not allowed, but
+# parser will concatenate sequential strings
+# separated by any number/kind of whitespace.
 def t_STRING(t):
-    r'!?"([^"\\]|(\\.))*?"'
+    r'!?"([^"\\\n]|(\\.))*?"'
     is_raw = False
     if t.value.startswith('!'):
         # Keep as raw string
