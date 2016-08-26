@@ -45,30 +45,28 @@ while getopts "dlr:c:p:he:i:n:-:v" opt; do
         i)
             IMAGE=$OPTARG
             ;;
-		e)
-			EXTERNAL_IP=$OPTARG
-			;;
-		n) 
-			NAME=$OPTARG
-			;;
+	e)
+		EXTERNAL_IP=$OPTARG
+		;;
+	n) 
+		NAME=$OPTARG
+		;;
         v)
             VERBOSE=yes
             ;;
-		-) 
-			VAL=${!OPTIND}
-			ARGS+=" --$OPTARG ${!OPTIND}"
-			OPTIND=$(( $OPTIND + 1))
-			;;
-		h)
-			usage;
-			;;
+	h)
+	    usage;
+	    ;;
+	-)
+		ARGS=$ARGS" --$OPTARG"
+		;;
 	esac
 done
 
 CALVIN_ENV=" -e CALVIN_GLOBAL_STORAGE_TYPE=$REGISTRY_TYPE"
 
 if test -n "$REGISTRY_PROXY"; then
-    CALVIN_ENV+=" -e CALVIN_GLOBAL_STORAGE_PROXY=$REGISTRY_PROXY"
+    CALVIN_ENV=$CALVIN_ENV" -e CALVIN_GLOBAL_STORAGE_PROXY=$REGISTRY_PROXY"
 fi
 
 if test -n "$NAME"; then

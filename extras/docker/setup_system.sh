@@ -42,7 +42,11 @@ wait_for_runtime() {
     retries=10
     rt=$1
     while test $retries -gt 0; do
-        res=$(cscontrol http://$EXTERNAL_IP:$CONTROLPORT storage get_index '["node_name", {"name": "runtime-'$rt'"}]')
+	if test -n $USE_DOCKERS; then
+            res=$(docker exec runtime-0 cscontrol http://$EXTERNAL_IP:$CONTROLPORT storage get_index '["node_name", {"name": "runtime-'$rt'"}]');
+	else
+	    res=$(cscontrol http://$EXTERNAL_IP:$CONTROLPORT storage get_index '["node_name", {"name": "runtime-'$rt'"}]');
+	fi
         result=${res#*result}
         # Successful result is 53 characters, error 13 - but exact comparison is a bit fragile
         if test ${#result} -gt 25; then
@@ -50,7 +54,7 @@ wait_for_runtime() {
             break
         fi
         retries=$((retries-1))
-        sleep 0.5
+        sleep 1
     done
     if test $retries -eq 0; then
         echo Too many retries for runtime-$rt, giving up
@@ -98,7 +102,7 @@ dht_docker_system() {
     wait_for_runtime 0
     for i in $seq; do
         ./dcsruntime.sh -i $IMAGE -e $EXTERNAL_IP -n runtime-$i --loglevel=$LOGLEVEL
-        sleep 0.5
+        sleep 1
     done
     wait_for_runtimes
 }
@@ -137,7 +141,7 @@ setup_dht_system() {
 
 setup_proxy_system() {
     if test -n "$USE_DOCKERS"; then
-        check_dockers
+        check_docker
         echo setup proxy system w/ dockers
         proxy_docker_system
     else
@@ -150,7 +154,11 @@ setup_proxy_system() {
 
 test_deploy() {
     echo deploying application
-    deploy_result=$(cscontrol http://$EXTERNAL_IP:$CONTROLPORT deploy --reqs test/pipeline.deployjson test/pipeline.calvin)
+    if test -n $USE_DOCKERS; then
+	deploy_result=$(docker exec runtime-0 cscontrol http://$EXTERNAL_IP:$CONTROLPORT deploy --reqs extras/docker/test/pipeline.deployjson extras/docker/test/pipeline.calvin);
+    else
+        deploy_result=$(cscontrol http://$EXTERNAL_IP:$CONTROLPORT deploy --reqs test/pipeline.deployjson test/pipeline.calvin);
+    fi
     sleep 1
 
     output=""
@@ -169,7 +177,7 @@ test_deploy() {
             SUCCESS=success
             break
         fi
-        sleep 0.2
+        sleep 1
         retries=$(($retries-1))
     done
 
