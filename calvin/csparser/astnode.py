@@ -179,6 +179,14 @@ class Void(Node):
         super(Void, self).__init__(**kwargs)
         self.children = None
 
+class TransformedPort(Node):
+    def __init__(self, **kwargs):
+        super(TransformedPort, self).__init__(**kwargs)
+        self.children = None
+        self.port = kwargs.get('port')
+        self.value = kwargs.get('value')
+
+
 # FIXME: Abstract
 class Port(Node):
     """docstring for LinkNode"""
@@ -282,6 +290,7 @@ def node_decoder(o):
         'NamedArg':NamedArg,
         'Link':Link,
         'Void':Void,
+        'TransformedPort':TransformedPort,
         'Port':Port,
         'InPort':InPort,
         'OutPort':OutPort,

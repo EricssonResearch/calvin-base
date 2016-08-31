@@ -185,8 +185,13 @@ class CalvinParser(object):
 
     def p_port(self, p):
         """port : inport
-                | internal_inport"""
+                | internal_inport
+                | transformed_inport"""
         p[0]=p[1]
+
+    def p_transformed_inport(self, p):
+        """transformed_inport : SLASH argument SLASH port"""
+        p[0] = ast.TransformedPort(port=p[4], value=p[2], debug_info=self.debug_info(p, 4))
 
     def p_implicit_port(self, p):
         """implicit_port : argument"""

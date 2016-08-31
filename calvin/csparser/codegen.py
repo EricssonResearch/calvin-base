@@ -148,6 +148,31 @@ class Finder(object):
         self.visit(root)
         return self.matches
 
+class PortlistRewrite(object):
+    """docstring for PortlistRewrite"""
+    def __init__(self, issue_tracker):
+        super(PortlistRewrite, self).__init__()
+        self.issue_tracker = issue_tracker
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if node.is_leaf():
+            return
+        map(self.visit, node.children[:])
+
+    @visitor.when(ast.PortList)
+    def visit(self, node):
+        link = node.parent
+        block = link.parent
+        for inport in node.children:
+            new_link = ast.Link(outport=link.outport.clone(), inport=inport)
+            block.add_child(new_link)
+        link.delete()
+
 
 class ImplicitPortRewrite(object):
     """
@@ -185,6 +210,25 @@ class ImplicitPortRewrite(object):
         block = link.parent
         block.add_child(const_actor)
 
+    @visitor.when(ast.TransformedPort)
+    def visit(self, node):
+        # std.Constantify(constant) ports: in/out
+        args = [ast.NamedArg(ident=ast.Id(ident='constant'), arg=node.value)]
+        self.counter += 1
+        transform_name = '_transform_'+str(self.counter)
+        transform_actor = ast.Assignment(ident=transform_name, actor_type='std.Constantify', args=args)
+        transform_actor.debug_info = node.value.debug_info
+        transform_actor_outport = ast.OutPort(actor=transform_name, port='out')
+        transform_actor_inport = ast.InPort(actor=transform_name, port='in')
+
+        link = node.parent
+        block = link.parent
+
+        block.add_child(transform_actor)
+
+        new_link = ast.Link(outport=transform_actor_outport, inport=node.port)
+        block.add_child(new_link)
+        link.inport = transform_actor_inport
 
     @visitor.when(ast.Void)
     def visit(self, node):
@@ -206,16 +250,6 @@ class ImplicitPortRewrite(object):
         link.replace_child(node, void_actor_port)
         block = link.parent
         block.add_child(void_actor)
-
-    @visitor.when(ast.PortList)
-    def visit(self, node):
-        link = node.parent
-        block = link.parent
-        for inport in node.children:
-            new_link = ast.Link(outport=link.outport.clone(), inport=inport)
-            block.add_child(new_link)
-        link.delete()
-
 
 
 class RestoreParents(object):
@@ -660,6 +694,11 @@ class CodeGen(object):
         printer.process(self.root)
 
 
+    def expand_portlists(self, issue_tracker):
+        rw = PortlistRewrite(issue_tracker)
+        rw.visit(self.root)
+        self.dump_tree('Portlist Expanded')
+
 
     def substitute_implicit_ports(self, issue_tracker):
         # Implicit port rewrite
@@ -692,6 +731,7 @@ class CodeGen(object):
         gen_app_info.process()
 
     def phase1(self, issue_tracker):
+        self.expand_portlists(issue_tracker)
         self.substitute_implicit_ports(issue_tracker)
         self.resolve_constants(issue_tracker)
         self.consistency_check(issue_tracker)
