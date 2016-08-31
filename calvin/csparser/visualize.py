@@ -1,3 +1,4 @@
+import inspect
 import visitor
 import astnode as ast
 from codegen import calvin_astgen, calvin_components, query
@@ -20,148 +21,170 @@ def _lookup_definition(actor_type, root):
         return ([], [], '')
     return (comps[0].inports, comps[0].outports, 'component')
 
-#
-# Implement _vis_xxx for each node type with the following, and ...
-#
-def _viz_op(self):
-    return "{}:{}_out:e".format(_refname(self.actor), self.port)
+class BaseRenderer(object):
+    """docstring for BaseRenderer"""
+    def __init__(self, debug=False):
+        super(BaseRenderer, self).__init__()
+        self.debug = debug
 
-def _viz_ip(self):
-    return "{}:{}_in:w".format(_refname(self.actor), self.port)
+    def _default(self, node, order):
+        if self.debug:
+            print "Not handling: {} ({})".format(node.__class__.__name__, order)
+        return ''
 
-def _viz_iop(self):
-    return "{}_out:e".format(self.port)
+    def _add(self, stmt):
+        if stmt:
+            self.statements.append(stmt)
 
-def _viz_iip(self):
-    return "{}_in:w".format(self.port)
+    def render(self, node, order):
+        handler = getattr(self, node.__class__.__name__, self._default)
+        args, _, _, _ = inspect.getargspec(handler)
+        if len(args) == 3:
+            self._add(handler(node, order))
+        elif order == 'preorder':
+            self._add(handler(node))
 
-def _viz_implp(self):
-    return "{}".format(self.arg)
+    def begin(self):
+        self.statements = []
+        self._add(self.preamble())
 
-def _viz_value(self):
-    return "{}".format(self.value)
+    def end(self):
+        self._add(self.postamble())
 
-def _viz_id(self):
-    return "{}".format(self.ident)
+    def result(self):
+        return ''.join(self.statements)
 
-def _viz_actor(self):
-    # ident, actor_type, args
-    root = self
-    while root.parent:
-        root = root.parent
-    _inports, _outports, _type = _lookup_definition(self.actor_type, root)
-    inlen = len(_inports)
-    outlen = len(_outports)
-    portrows = max(inlen, outlen)
-    inports = _inports + ['']*(portrows - inlen)
-    outports = _outports + ['']*(portrows - outlen)
-    hdrcolor = {
-        'actor': 'lightblue',
-        'component': 'lightyellow'
-    }.get(_type, 'tomato')
+    def preamble(self):
+        return ''
 
-    lines = []
-    lines.append('{} [label=<'.format(_refname(self.ident)))
-    lines.append('<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">')
-    # Name
-    lines.append('<TR><TD bgcolor="{1}" COLSPAN="3">{0}</TD></TR>'.format(self.ident, hdrcolor))
-    # Class
-    lines.append('<TR><TD COLSPAN="3">{}</TD></TR>'.format(self.actor_type))
-    is_first=True
-    for inport, outport in zip(inports, outports):
-        inref = ' bgcolor="lightgrey" PORT="{}_in"'.format(inport) if inport else ''
-        outref = ' bgcolor="lightgrey" PORT="{}_out"'.format(outport) if outport else ''
-        if is_first:
-            is_first = False
-            middle = '<TD ROWSPAN="{}">    </TD>'.format(portrows)
-        else:
-            middle = ''
-        lines.append('<TR><TD{0} align="left">{1}</TD>{4}<TD{2} align="right">{3}</TD></TR>'.format(inref, inport, outref, outport, middle))
-    lines.append('</TABLE>>];')
+    def postamble(self):
+        return ''
 
-    return '\n'.join(lines)
+# FIXME: Void, PortList, and TransformedPort not implemented
+# FIXME: Render Actor arguments
+class DotRenderer(BaseRenderer):
+    """docstring for BaseRenderer"""
+    def __init__(self, debug=False):
+        super(DotRenderer, self).__init__()
+        self.debug = debug
 
-#
-# ... monkey patch __str__ of the various node types
-#
-ast.OutPort.__str__ = _viz_op
-ast.InPort.__str__ = _viz_ip
-ast.InternalOutPort.__str__ = _viz_iop
-ast.InternalInPort.__str__ = _viz_iip
-ast.ImplicitPort.__str__ = _viz_implp
-ast.Value.__str__ = _viz_value
-ast.Id.__str__ = _viz_id
-ast.Assignment.__str__ = _viz_actor
+    def preamble(self):
+        return 'digraph structs { node [shape=plaintext]; rankdir=LR;\n'
 
+    def postamble(self):
+        return '}\n'
+
+    def Assignment(self, node):
+        # ident, actor_type, args
+        root = node
+        while root.parent:
+            root = root.parent
+        _inports, _outports, _type = _lookup_definition(node.actor_type, root)
+        inlen = len(_inports)
+        outlen = len(_outports)
+        portrows = max(inlen, outlen)
+        inports = _inports + ['']*(portrows - inlen)
+        outports = _outports + ['']*(portrows - outlen)
+        hdrcolor = {
+            'actor': 'lightblue',
+            'component': 'lightyellow'
+        }.get(_type, 'tomato')
+
+        lines = []
+        lines.append('{} [label=<'.format(_refname(node.ident)))
+        lines.append('<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">')
+        # Name
+        lines.append('<TR><TD bgcolor="{1}" COLSPAN="3">{0}</TD></TR>'.format(node.ident, hdrcolor))
+        # Class
+        lines.append('<TR><TD COLSPAN="3">{}</TD></TR>'.format(node.actor_type))
+        is_first=True
+        for inport, outport in zip(inports, outports):
+            inref = ' bgcolor="lightgrey" PORT="{}_in"'.format(inport) if inport else ''
+            outref = ' bgcolor="lightgrey" PORT="{}_out"'.format(outport) if outport else ''
+            if is_first:
+                is_first = False
+                middle = '<TD ROWSPAN="{}">    </TD>'.format(portrows)
+            else:
+                middle = ''
+            lines.append('<TR><TD{0} align="left">{1}</TD>{4}<TD{2} align="right">{3}</TD></TR>'.format(inref, inport, outref, outport, middle))
+        lines.append('</TABLE>>];\n')
+
+        return '\n'.join(lines)
+
+    def OutPort(self, node):
+        return "{}:{}_out:e".format(_refname(node.actor), node.port)
+
+    def InPort(self, node):
+        return "{}:{}_in:w".format(_refname(node.actor), node.port)
+
+    def InternalOutPort(self, node):
+        return "{}_out:e".format(node.port)
+
+    def InternalInPort(self, node):
+        return "{}_in:w".format(node.port)
+
+    def ImplicitPort(self, node):
+        return "{}".format(node.arg)
+
+    def Value(self, node):
+        return "{}".format(node.value)
+
+    def Id(self, node):
+        return "{}".format(node.ident)
+
+    def Link(self, node, order):
+        if order == 'inorder' : return ' -> '
+        if order == 'postorder' : return ';\n'
+
+    def Component(self, node, order):
+        if order == 'preorder':
+            lines = ['subgraph {']
+            for p in node.inports:
+                lines.append('{{rank="source" {0}_out [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
+            for p in node.outports:
+                lines.append('{{rank="sink" {0}_in [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
+            return '\n'.join(lines)
+
+        if order == 'postorder':
+            return '}\n'
 
 
 class Visualize(object):
    """docstring for VizPrinter"""
-   def __init__(self):
+   def __init__(self, renderer=None):
        super(Visualize, self).__init__()
+       self.renderer = renderer or DotRenderer()
 
-   def add(self, stmt):
-       self.statements.append(stmt)
-
-   def init(self, root):
-       self.root = root
-       self.statements = []
-
-   def process(self, node):
-       try:
-           self.init(node)
-           self.add('digraph structs { node [shape=plaintext]; rankdir=LR;')
-           # self.add('digraph structs { node [shape=plaintext];')
-           if type(node) is ast.Component:
-               self.add('subgraph {' )
-               for p in node.inports:
-                   self.add('{{rank="source" {0}_out [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
-               for p in node.outports:
-                   self.add('{{rank="sink" {0}_in [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
-               if node.children:
-                   map(self.visit, node.children)
-               self.add('}')
-           else:
-               self.visit(node)
-           self.add('}')
-           return "\n".join(self.statements)
-       except Exception as e:
-           print "DEBUG THIS",  self.statements
-           print "error", e
+   def process(self, root):
+       self.renderer.begin()
+       self.visit(root)
+       self.renderer.end()
+       return self.renderer.result()
 
    @visitor.on('node')
    def visit(self, node):
        pass
 
-   @visitor.when(ast.Node)
-   def visit(self, node):
-       if node.children:
-           map(self.visit, node.children)
-
-   @visitor.when(ast.Component)
-   def visit(self, node):
-       # Just gobble up components so that they get displayed as as actors (with a different color)
-       pass
-
    @visitor.when(ast.Assignment)
    def visit(self, node):
-       self.add(str(node))
+       self.renderer.render(node, order='preorder')
 
-
-   @visitor.when(ast.Link)
+   @visitor.when(ast.Node)
    def visit(self, node):
-       res = "{} -> {};".format(node.outport, node.inport)
-       self.add(res)
+       self.renderer.render(node, order='preorder')
+       for n in node.children or []:
+           self.visit(n)
+           self.renderer.render(node, order='postorder' if n is node.children[-1] else 'inorder')
 
 
 def visualize_script(source_text):
     """Process script and return graphviz (dot) source representing application."""
     # Here we need the unprocessed tree
     ir, issuetracker = calvin_parse(source_text)
-    v = Visualize()
+    r = DotRenderer(debug=True)
+    v = Visualize(renderer = r)
     dot_source = v.process(ir)
     return dot_source, issuetracker
-
 
 def visualize_deployment(source_text):
     ast_root, issuetracker = calvin_astgen(source_text, 'visualizer')
@@ -201,7 +224,13 @@ if __name__ == '__main__':
     src.integer > snk.token
     """
 
+    dot_src, it =  visualize_script(source_text)
+    print dot_src
+
+
+    dot_src, it =  visualize_deployment(source_text)
+    print dot_src
+
     dot_src, it =  visualize_component(source_text, "FilterUnchanged")
     print dot_src
-    for issue in it.issues():
-        print issue
+
