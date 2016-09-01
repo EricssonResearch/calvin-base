@@ -36,7 +36,7 @@ class BaseRenderer(object):
         if stmt:
             self.statements.append(stmt)
 
-    def render(self, node, order):
+    def render(self, node, order='preorder'):
         handler = getattr(self, node.__class__.__name__, self._default)
         args, _, _, _ = inspect.getargspec(handler)
         if len(args) == 3:
@@ -60,10 +60,12 @@ class BaseRenderer(object):
     def postamble(self):
         return ''
 
-# FIXME: Void, PortList, and TransformedPort not implemented
+# FIXME: PortList with TransformedPort breaks graphviz
 # FIXME: Render Actor arguments
 class DotRenderer(BaseRenderer):
-    """docstring for BaseRenderer"""
+
+    MAX_LABEL_LENGTH = 16
+
     def __init__(self, debug=False):
         super(DotRenderer, self).__init__()
         self.debug = debug
@@ -111,6 +113,10 @@ class DotRenderer(BaseRenderer):
 
         return '\n'.join(lines)
 
+    def PortList(self, node, order):
+        if order == 'inorder':
+            return ", "
+
     def OutPort(self, node):
         return "{}:{}_out:e".format(_refname(node.actor), node.port)
 
@@ -126,8 +132,21 @@ class DotRenderer(BaseRenderer):
     def ImplicitPort(self, node):
         return "{}".format(node.arg)
 
+    def TransformedPort(self, node):
+        # string_in:w [headlabel="/<value>/" labeldistance=4 labelangle=-10]
+        # N.B. port and value are properties of node, not children
+        self.render(node.port)
+        return ' [headlabel="{}" labeldistance=4 labelangle=-10]'.format(self.Value(node.value))
+
+    def Void(self, node):
+        return "voidport [arrowhead=dot]"
+
     def Value(self, node):
-        return "{}".format(node.value)
+        fmt = '\\"{}\\"' if type(node.value) is str else '{}'
+        s = fmt.format(node.value)
+        if len(s) > self.MAX_LABEL_LENGTH:
+            s = s[:self.MAX_LABEL_LENGTH/2-2] + " ... " + s[-self.MAX_LABEL_LENGTH/2-2:]
+        return s
 
     def Id(self, node):
         return "{}".format(node.ident)
@@ -181,7 +200,7 @@ def visualize_script(source_text):
     """Process script and return graphviz (dot) source representing application."""
     # Here we need the unprocessed tree
     ir, issuetracker = calvin_parse(source_text)
-    r = DotRenderer(debug=True)
+    r = DotRenderer(debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir)
     return dot_source, issuetracker
