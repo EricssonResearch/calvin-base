@@ -1,3 +1,5 @@
+import string
+import random
 import inspect
 import visitor
 import astnode as ast
@@ -61,14 +63,20 @@ class BaseRenderer(object):
         return ''
 
 # FIXME: PortList with TransformedPort breaks graphviz
-# FIXME: Render Actor arguments
 class DotRenderer(BaseRenderer):
 
-    MAX_LABEL_LENGTH = 16
-
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, show_args=False):
         super(DotRenderer, self).__init__()
         self.debug = debug
+        self.show_args = show_args
+
+    def _random_id(self):
+        return ''.join(random.choice(string.ascii_uppercase) for x in range(8))
+
+    def _truncate_label(self, label, maxlen=16):
+        if len(label) > maxlen:
+            label = label[:maxlen/2-2] + " ... " + label[-maxlen/2-2:]
+        return label
 
     def preamble(self):
         return 'digraph structs { node [shape=plaintext]; rankdir=LR;\n'
@@ -76,7 +84,7 @@ class DotRenderer(BaseRenderer):
     def postamble(self):
         return '}\n'
 
-    def Assignment(self, node):
+    def Assignment(self, node, order):
         # ident, actor_type, args
         root = node
         while root.parent:
@@ -92,26 +100,37 @@ class DotRenderer(BaseRenderer):
             'component': 'lightyellow'
         }.get(_type, 'tomato')
 
-        lines = []
-        lines.append('{} [label=<'.format(_refname(node.ident)))
-        lines.append('<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">')
-        # Name
-        lines.append('<TR><TD bgcolor="{1}" COLSPAN="3">{0}</TD></TR>'.format(node.ident, hdrcolor))
-        # Class
-        lines.append('<TR><TD COLSPAN="3">{}</TD></TR>'.format(node.actor_type))
-        is_first=True
-        for inport, outport in zip(inports, outports):
-            inref = ' bgcolor="lightgrey" PORT="{}_in"'.format(inport) if inport else ''
-            outref = ' bgcolor="lightgrey" PORT="{}_out"'.format(outport) if outport else ''
-            if is_first:
-                is_first = False
-                middle = '<TD ROWSPAN="{}">    </TD>'.format(portrows)
-            else:
-                middle = ''
-            lines.append('<TR><TD{0} align="left">{1}</TD>{4}<TD{2} align="right">{3}</TD></TR>'.format(inref, inport, outref, outport, middle))
-        lines.append('</TABLE>>];\n')
+        if order == 'preorder':
+            lines = []
+            lines.append('{} [label=<'.format(_refname(node.ident)))
+            lines.append('<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">')
+            # Name
+            lines.append('<TR><TD bgcolor="{1}" COLSPAN="3">{0}</TD></TR>'.format(node.ident, hdrcolor))
+            # Class
+            lines.append('<TR><TD COLSPAN="3">{}</TD></TR>'.format(node.actor_type))
+            # Skipping arguments arriving inorder by commenting them out for now
+            lines.append('<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">' if self.show_args else '/* ')
+            return '\n'.join(lines)
 
-        return '\n'.join(lines)
+        if order == 'inorder':
+            return '</TD></TR>\n<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">' if self.show_args else ', '
+
+        if order == 'postorder':
+            # Close comment
+            lines = ['</TD></TR>'if self.show_args else ' */']
+            is_first=True
+            for inport, outport in zip(inports, outports):
+                inref = ' bgcolor="lightgrey" PORT="{}_in"'.format(inport) if inport else ''
+                outref = ' bgcolor="lightgrey" PORT="{}_out"'.format(outport) if outport else ''
+                if is_first:
+                    is_first = False
+                    middle = '<TD ROWSPAN="{}">    </TD>'.format(portrows)
+                else:
+                    middle = ''
+                lines.append('<TR><TD{0} align="left">{1}</TD>{4}<TD{2} align="right">{3}</TD></TR>'.format(inref, inport, outref, outport, middle))
+            lines.append('</TABLE>>];\n')
+
+            return '\n'.join(lines)
 
     def PortList(self, node, order):
         if order == 'inorder':
@@ -133,20 +152,20 @@ class DotRenderer(BaseRenderer):
         return "{}".format(node.arg)
 
     def TransformedPort(self, node):
-        # string_in:w [headlabel="/<value>/" labeldistance=4 labelangle=-10]
         # N.B. port and value are properties of node, not children
         self.render(node.port)
         return ' [headlabel="{}" labeldistance=4 labelangle=-10]'.format(self.Value(node.value))
 
     def Void(self, node):
-        return "voidport [arrowhead=dot]"
+        return '{{{} [label=""]}} [arrowhead=tee]'.format(self._random_id())
 
     def Value(self, node):
-        fmt = '\\"{}\\"' if type(node.value) is str else '{}'
-        s = fmt.format(node.value)
-        if len(s) > self.MAX_LABEL_LENGTH:
-            s = s[:self.MAX_LABEL_LENGTH/2-2] + " ... " + s[-self.MAX_LABEL_LENGTH/2-2:]
-        return s
+        fmt = "'{}'" if type(node.value) is str else '{}'
+        return self._truncate_label(fmt.format(node.value))
+
+    def NamedArg(self, node, order):
+        if order == 'inorder':
+            return " = "
 
     def Id(self, node):
         return "{}".format(node.ident)
@@ -184,13 +203,11 @@ class Visualize(object):
    def visit(self, node):
        pass
 
-   @visitor.when(ast.Assignment)
-   def visit(self, node):
-       self.renderer.render(node, order='preorder')
-
    @visitor.when(ast.Node)
    def visit(self, node):
        self.renderer.render(node, order='preorder')
+       if not node.children:
+           self.renderer.render(node, order='postorder')
        for n in node.children or []:
            self.visit(n)
            self.renderer.render(node, order='postorder' if n is node.children[-1] else 'inorder')
@@ -200,7 +217,7 @@ def visualize_script(source_text):
     """Process script and return graphviz (dot) source representing application."""
     # Here we need the unprocessed tree
     ir, issuetracker = calvin_parse(source_text)
-    r = DotRenderer(debug=False)
+    r = DotRenderer(debug=False, show_args=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir)
     return dot_source, issuetracker
