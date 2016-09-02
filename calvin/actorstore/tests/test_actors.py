@@ -289,7 +289,11 @@ class ActorTester(object):
             for port, values in outputs.iteritems():
                 try:
                     vals = pread(aut, port, len(values))
-                    assert vals == values, "Expected output '%s' does not match '%s'" % (vals, values)
+                    if type(values) is set:
+                        # disregard order
+                        assert set(vals) == values, "Expected output set '%s' does not match '%s'" % (set(vals), values)
+                    else:
+                        assert vals == values, "Expected output '%s' does not match '%s'" % (vals, values)
                 except AssertionError as e:
                     print "Error:", str(e)
                     raise AssertionError("Failed test %d" % (test_index,))

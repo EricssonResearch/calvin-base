@@ -131,7 +131,7 @@ class Iterate(Actor):
         },
         {
             'in': {'token': {"a":"A", "b":1}},
-            'out': {'item': ["A", 1], 'index': ["a", "b"]},
+            'out': {'item': set([1, "A"]), 'index': set(["a", "b"])},
         },
         {
             'in': {'token': [""]},
