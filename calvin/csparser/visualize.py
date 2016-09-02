@@ -79,7 +79,7 @@ class DotRenderer(BaseRenderer):
         return label
 
     def preamble(self):
-        return 'digraph structs { node [shape=plaintext]; rankdir=LR;\n'
+        return 'digraph structs { node [shape=plaintext]; rankdir=LR splines=spline;\n'
 
     def postamble(self):
         return '}\n'
@@ -150,7 +150,6 @@ class DotRenderer(BaseRenderer):
             return '{{{} [label="'.format(self._random_id())
         if order == 'postorder':
             return '" shape=box]}'
-        # return "{}".format(node.arg)
 
     def TransformedPort(self, node):
         # N.B. port and value are properties of node, not children
