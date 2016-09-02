@@ -65,7 +65,7 @@ class BaseRenderer(object):
 # FIXME: PortList with TransformedPort breaks graphviz
 class DotRenderer(BaseRenderer):
 
-    def __init__(self, debug=False, show_args=False):
+    def __init__(self, show_args=False, debug=False):
         super(DotRenderer, self).__init__()
         self.debug = debug
         self.show_args = show_args
@@ -99,6 +99,7 @@ class DotRenderer(BaseRenderer):
             'actor': 'lightblue',
             'component': 'lightyellow'
         }.get(_type, 'tomato')
+        show_args = self.show_args and node.children
 
         if order == 'preorder':
             lines = []
@@ -109,15 +110,15 @@ class DotRenderer(BaseRenderer):
             # Class
             lines.append('<TR><TD COLSPAN="3">{}</TD></TR>'.format(node.actor_type))
             # Skipping arguments arriving inorder by commenting them out for now
-            lines.append('<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">' if self.show_args else '/* ')
+            lines.append('<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">' if show_args else '/* ')
             return '\n'.join(lines)
 
         if order == 'inorder':
-            return '</TD></TR>\n<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">' if self.show_args else ', '
+            return '</TD></TR>\n<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">' if show_args else ', '
 
         if order == 'postorder':
             # Close comment
-            lines = ['</TD></TR>'if self.show_args else ' */']
+            lines = ['</TD></TR>'if show_args else ' */']
             is_first=True
             for inport, outport in zip(inports, outports):
                 inref = ' bgcolor="lightgrey" PORT="{}_in"'.format(inport) if inport else ''
@@ -213,29 +214,31 @@ class Visualize(object):
            self.renderer.render(node, order='postorder' if n is node.children[-1] else 'inorder')
 
 
-def visualize_script(source_text):
+def visualize_script(source_text, show_args=False):
     """Process script and return graphviz (dot) source representing application."""
     # Here we need the unprocessed tree ...
     ir, issuetracker = calvin_parse(source_text)
     # ... but expand portlists to simplify rendering
     rw = PortlistRewrite(issuetracker)
     rw.visit(ir)
-    r = DotRenderer(debug=False, show_args=False)
+    r = DotRenderer(show_args, debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir)
     return dot_source, issuetracker
 
-def visualize_deployment(source_text):
+def visualize_deployment(source_text, show_args=False):
     ast_root, issuetracker = calvin_astgen(source_text, 'visualizer')
     # Here we need the processed tree
-    v = Visualize()
+    r = DotRenderer(show_args, debug=False)
+    v = Visualize(renderer = r)
     dot_source = v.process(ast_root)
     return dot_source, issuetracker
 
-def visualize_component(source_text, name):
+def visualize_component(source_text, name, show_args=False):
     # STUB
     ir_list, issuetracker = calvin_components(source_text, names=[name])
-    v = Visualize()
+    r = DotRenderer(show_args, debug=False)
+    v = Visualize(renderer = r)
     dot_source = v.process(ir_list[0])
     return dot_source, issuetracker
 
