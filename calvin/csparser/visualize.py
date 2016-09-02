@@ -148,8 +148,12 @@ class DotRenderer(BaseRenderer):
     def InternalInPort(self, node):
         return "{}_in:w".format(node.port)
 
-    def ImplicitPort(self, node):
-        return "{}".format(node.arg)
+    def ImplicitPort(self, node, order):
+        if order == 'preorder':
+            return '{{{} [label="'.format(self._random_id())
+        if order == 'postorder':
+            return '" shape=box]}'
+        # return "{}".format(node.arg)
 
     def TransformedPort(self, node):
         # N.B. port and value are properties of node, not children
