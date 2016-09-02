@@ -3,7 +3,7 @@ import random
 import inspect
 import visitor
 import astnode as ast
-from codegen import calvin_astgen, calvin_components, query
+from codegen import calvin_astgen, calvin_components, query, PortlistRewrite
 from parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore
 
@@ -132,10 +132,6 @@ class DotRenderer(BaseRenderer):
 
             return '\n'.join(lines)
 
-    def PortList(self, node, order):
-        if order == 'inorder':
-            return ", "
-
     def OutPort(self, node):
         return "{}:{}_out:e".format(_refname(node.actor), node.port)
 
@@ -158,7 +154,7 @@ class DotRenderer(BaseRenderer):
     def TransformedPort(self, node):
         # N.B. port and value are properties of node, not children
         self.render(node.port)
-        return ' [headlabel="{}" labeldistance=4 labelangle=-10]'.format(self.Value(node.value))
+        return ' [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0"><TR><TD>/{}/</TD></TR></TABLE>>]'.format(self.Value(node.value))
 
     def Void(self, node):
         return '{{{} [label=""]}} [arrowhead=tee]'.format(self._random_id())
@@ -219,8 +215,11 @@ class Visualize(object):
 
 def visualize_script(source_text):
     """Process script and return graphviz (dot) source representing application."""
-    # Here we need the unprocessed tree
+    # Here we need the unprocessed tree ...
     ir, issuetracker = calvin_parse(source_text)
+    # ... but expand portlists to simplify rendering
+    rw = PortlistRewrite(issuetracker)
+    rw.visit(ir)
     r = DotRenderer(debug=False, show_args=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir)
