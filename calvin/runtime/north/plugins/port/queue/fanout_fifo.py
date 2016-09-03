@@ -37,6 +37,10 @@ class FanoutFIFO(object):
         length += 1
         self.fifo = [Token(0)] * length
         self.N = length
+        try:
+            self.direction = port_properties.get('direction', None)
+        except:
+            self.direction = None
         self.readers = set()
         # NOTE: For simplicity, modulo operation is only used in fifo access,
         #       all read and write positions are monotonousy increasing
@@ -44,6 +48,7 @@ class FanoutFIFO(object):
         self.read_pos = {}
         self.tentative_read_pos = {}
         self._type = "fanout_fifo"
+        self.writer = None  # Not part of state, assumed not needed in migrated information
 
     def __str__(self):
         return "Tokens: %s, w:%i, r:%s, tr:%s" % (self.fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
@@ -56,11 +61,13 @@ class FanoutFIFO(object):
             'readers': list(self.readers),
             'write_pos': self.write_pos,
             'read_pos': self.read_pos,
-            'tentative_read_pos': self.tentative_read_pos
+            'tentative_read_pos': self.tentative_read_pos,
+            'direction': self.direction
         }
         return state
 
     def _set_state(self, state):
+        # TODO should take port property as argument besides state since it is anyway in port state.
         self._type = state.get('queuetype',"fanout_fifo")
         self.fifo = [Token.decode(d) for d in state['fifo']]
         self.N = state['N']
@@ -68,13 +75,14 @@ class FanoutFIFO(object):
         self.write_pos = state['write_pos']
         self.read_pos = state['read_pos']
         self.tentative_read_pos = state['tentative_read_pos']
+        self.direction = state.get('direction', None)
 
     @property
     def queue_type(self):
         return self._type
 
     def add_writer(self, writer):
-        pass
+        self.writer = writer
 
     def remove_writer(self, writer):
         pass
@@ -95,7 +103,12 @@ class FanoutFIFO(object):
         self.readers.discard(reader)
 
     def get_peers(self):
-        return self.readers
+        if self.direction == "out":
+            return self.readers
+        elif self.direction == "in" and self.writer is not None:
+            return set([self.writer])
+        else:
+            return None
 
     def write(self, data, metadata):
         if not self.slots_available(1, metadata):

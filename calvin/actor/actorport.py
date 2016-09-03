@@ -187,7 +187,7 @@ class InPort(Port):
         for ep in self.endpoints:
             peers.append(ep.get_peer())
         queue_peers = self.queue.get_peers()
-        if len(peers) < len(queue_peers):
+        if queue_peers is not None and len(peers) < len(queue_peers):
             all = copy.copy(queue_peers)
             all -= set([p[1] for p in peers])
             peers.extend([(None, p) for p in all])
@@ -275,7 +275,7 @@ class OutPort(Port):
         for ep in self.endpoints:
             peers.append(ep.get_peer())
         queue_peers = self.queue.get_peers()
-        if len(peers) < len(queue_peers):
+        if queue_peers is not None and len(peers) < len(queue_peers):
             all = copy.copy(queue_peers)
             all -= set([p[1] for p in peers])
             peers.extend([(None, p) for p in all])

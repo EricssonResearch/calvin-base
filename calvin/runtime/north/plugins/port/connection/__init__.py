@@ -51,7 +51,7 @@ class ConnectionFactory(object):
             return LocalConnection(self.node, self.purpose, port, peer_port_meta, callback, self, **kwargs)
         elif self.purpose == PURPOSE.DISCONNECT and peer_port_meta.node_id is None:
             # A port that miss node info that we want to disconnect is already disconnected
-            return Disconnected(self.node, self.purpose, port, peer_port_meta, callback, **kwargs)
+            return Disconnected(self.node, self.purpose, port, peer_port_meta, callback, self, **kwargs)
         else:
             # Remote connection
             # TODO Currently we only have support for setting up a remote connection via tunnel
@@ -85,6 +85,7 @@ class ConnectionFactory(object):
         # Make a connection instance aware of all parallel connection instances
         for connection in connections:
             connection.parallel_connections(connections)
+        _log.analyze(self.node.id, "+ DONE", {'port_id': port_id})
         return connections
 
     def init(self):
@@ -98,8 +99,8 @@ class ConnectionFactory(object):
 class Disconnected(BaseConnection):
     """ When a peer already is disconnected """
 
-    def __init__(self, node, purpose, port, peer_port_meta, callback, **kwargs):
-        super(Disconnected, self).__init__(node, purpose, port, peer_port_meta, callback)
+    def __init__(self, node, purpose, port, peer_port_meta, callback, factory, **kwargs):
+        super(Disconnected, self).__init__(node, purpose, port, peer_port_meta, callback, factory)
         self.kwargs = kwargs
 
     def disconnect(self):

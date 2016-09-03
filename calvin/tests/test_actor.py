@@ -137,7 +137,8 @@ def test_state(actor):
                                        'read_pos': {inport.id: 0},
                                        'readers': [inport.id],
                                        'tentative_read_pos': {inport.id: 0},
-                                       'write_pos': 0},
+                                       'write_pos': 0,
+                                       'direction': None},
                               'id': inport.id,
                               'name': 'token'}},
         'name': '',
@@ -154,7 +155,8 @@ def test_state(actor):
                                         'read_pos': {},
                                         'readers': [],
                                         'tentative_read_pos': {},
-                                        'write_pos': 0},
+                                        'write_pos': 0,
+                                       'direction': None},
                                'id': outport.id,
                                'name': 'token'}}}
     test_state = actor.state()

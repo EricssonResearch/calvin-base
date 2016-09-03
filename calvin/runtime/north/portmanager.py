@@ -252,6 +252,7 @@ class PortManager(object):
                 c.disconnect()
             _log.analyze(self.node.id, "+ POST DISCONNECT", {'port_id': port_id,
                             'connection': str(c)})
+        _log.analyze(self.node.id, "+ DONE", {'actor_id': actor_id})
 
     def _disconnecting_actor_cb(self, status, _callback, port_ids, port_id=None, actor_id=None):
         """ Get called for each of the actor's ports when disconnecting, but callback should only be called once
