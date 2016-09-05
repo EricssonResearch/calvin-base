@@ -31,18 +31,12 @@ class CollectUnordered(object):
     def __init__(self, port_properties):
         super(CollectUnordered, self).__init__()
         # Set default queue length to 4 if not specified
-        try:
-            length = port_properties.get('queue_length', 4)
-        except:
-            length = 4
+        length = port_properties.get('queue_length', 4)
         # Compensate length for FIFO having an unused slot
         length += 1
         # Each peer have it's own FIFO
         self.fifo = {}
-        try:
-            self.nbr_peers = port_properties['nbr_peers']
-        except:
-            self.nbr_peers = 1
+        self.nbr_peers = port_properties.get('nbr_peers', 1)
         self.N = length
         # Peers ordered by id
         self.writers = []

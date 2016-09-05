@@ -29,18 +29,12 @@ class FanoutFIFO(object):
     def __init__(self, port_properties):
         super(FanoutFIFO, self).__init__()
         # Set default queue length to 4 if not specified
-        try:
-            length = port_properties.get('queue_length', 4)
-        except:
-            length = 4
+        length = port_properties.get('queue_length', 4)
         # Compensate length for FIFO having an unused slot
         length += 1
         self.fifo = [Token(0)] * length
         self.N = length
-        try:
-            self.direction = port_properties.get('direction', None)
-        except:
-            self.direction = None
+        self.direction = port_properties.get('direction', None)
         self.readers = set()
         # NOTE: For simplicity, modulo operation is only used in fifo access,
         #       all read and write positions are monotonousy increasing
