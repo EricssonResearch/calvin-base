@@ -22,12 +22,15 @@ import json
 import re
 from types import ModuleType
 import hashlib
+import numbers
 
 from calvin.csparser.astnode import node_encoder, node_decoder
 from calvin.utilities import calvinconfig
 from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.csparser.port_property_syntax import port_property_data
+from calvin.requests import calvinresponse
 
 
 _log = get_logger(__name__)
@@ -218,8 +221,8 @@ class ActorStore(Store):
         actor_class, signer = self._load_pyclass(actor_type, actor_path)
         if actor_class:
             inports, outports = self._gather_ports(actor_class)
-            actor_class.inport_names = inports
-            actor_class.outport_names = outports
+            actor_class.inport_properties = {p: pp for p, pp in inports}
+            actor_class.outport_properties = {p: pp for p, pp in outports}
         return actor_class, signer
 
 
@@ -274,16 +277,90 @@ class ActorStore(Store):
                 continue
 
             if dest in [inputs, outputs]:
-                match = re.match(r'^\s*([a-zA-Z][a-zA-Z0-9_]*)\s*:?\s*(.*)$', line)
+                match = re.match(
+                    # Match port name
+                    r'^\s*([a-zA-Z][a-zA-Z0-9_]*)' +
+                    # Match optional port properties
+                    # property names is standard identifiers
+                    # property values kan be lists, strings or numbers
+                    # FIXME be more forgiving for putting whitespace at wrong places or any string value
+                    r'(\((?:[a-zA-Z][a-zA-Z0-9_]*=[a-zA-Z0-9_\-"\.\[\],\s]*)+\))?' +
+                    # Match optional documentation
+                    r'\s*:?\s*(.*)$', line)
                 if match:
-                    dest.append((match.group(1), match.group(2)))
+                    if match.group(2) is not None:
+                        try:
+                            prop_strings_split = [s for s in match.group(2)[1:-1].split(",")]
+                            prop_strings = []
+                            comb = False
+                            # Fix that list value got splitted
+                            for s in prop_strings_split:
+                                if r'[' in s:
+                                    prop_strings.append(s)
+                                    if r']' not in s:
+                                        comb = True
+                                elif comb:
+                                    prop_strings[-1] += ", " + s
+                                    if r']' in s:
+                                        comb = False
+                                elif not comb:
+                                    prop_strings.append(s)
+
+                            port_properties = {}
+                            for s in prop_strings:
+                                key, value = s.split("=", 1)
+                                port_properties[key.strip()] = json.loads(value)
+                        except:
+                            _log.exception("Malformed syntax for port properties %s in actor %s and port %s" %
+                                            (value, class_.__name__, match.group(1)))
+                            port_properties = {}
+                    else:
+                        port_properties = {}
+                    direction = "in" if dest == inputs else "out"
+                    # FIXME Should validation be moved to higher layer?
+                    issues = self._validate_port_properties(port_properties, direction)
+                    if issues:
+                        _log.error("Error in port property of actor %s: %s" % (class_.__name__,
+                                   ", ".join([r.data['reason'] for r in issues])))
+                    dest.append((match.group(1), match.group(3), port_properties))
 
         return (inputs, outputs, doctext)
 
 
+    def _validate_port_properties(self, port_properties, direction):
+        # TODO break out the validation and consolidate it with codegen.py:ConsolidatePortProperty
+        issues = []
+        for key, values in port_properties.items():
+            if not isinstance(values, (list, tuple)):
+                values = [values]
+            for value in values:
+                if key not in port_property_data.keys():
+                    reason = "Port property {} is unknown".format(key)
+                    issues.append(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST, {'reason': reason}))
+                    continue
+                ppdata = port_property_data[key]
+                if ppdata['type'] == "category":
+                    if value not in ppdata['values']:
+                        reason = "Port property {} can only have values {}".format(
+                            key, ", ".join(ppdata['values'].keys()))
+                        issues.append(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST, {'reason': reason}))
+                        continue
+                    if direction not in ppdata['values'][value]['direction']:
+                        reason = "Port property {}={} is only for {} ports".format(
+                            key, value, ppdata['values'][value]['direction'])
+                        issues.append(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST, {'reason': reason}))
+                        continue
+                if ppdata['type'] == 'scalar':
+                    if not isinstance(value, numbers.Number):
+                        reason = "Port property {} can only have scalar values".format(key)
+                        issues.append(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST, {'reason': reason}))
+                        continue
+        return issues
+
     def _gather_ports(self, class_):
         inputs, outputs, _ = self._parse_docstring(class_)
-        return ([p for (p, _) in inputs], [p for (p, _) in outputs])
+        # tuples with port names and port properties
+        return ([(p, pp) for (p, _, pp) in inputs], [(p, pp) for (p, _, pp) in outputs])
 
 
     def _get_args(self, actor_class):
@@ -831,10 +908,13 @@ class ActorDoc(DocObject):
     def __init__(self, namespace, name, args, inputs, outputs, doclines):
         super(ActorDoc, self).__init__(namespace, name, doclines)
         self.args = args
-        self.inputs = [p for p, _ in inputs]
-        self.input_docs = [d for _, d in inputs]
-        self.outputs = [p for p, _ in outputs]
-        self.output_docs = [d for _, d in outputs]
+        self.inputs = [p for p, _, _ in inputs]
+        self.input_properties = {p: pp for p, _, pp in inputs}
+        # TODO make better looking port property documentation
+        self.input_docs = [d + ' properties ' + str(pp) for _, d, pp in inputs]
+        self.outputs = [p for p, _, _ in outputs]
+        self.output_properties = {p: pp for p, _, pp in outputs}
+        self.output_docs = [d + ' properties ' + str(pp) for _, d, pp in outputs]
 
     def _port_fmt(self):
         return self.PORT_FMT_MD if self.use_md else self.PORT_FMT_PLAIN
@@ -881,7 +961,9 @@ class ActorDoc(DocObject):
             'type': 'actor',
             'args': self.args,
             'inputs': self.inputs,
+            'input_properties': self.input_properties,
             'outputs': self.outputs,
+            'output_properties': self.output_properties,
             'is_known': True
         }
         return metadata

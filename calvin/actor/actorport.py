@@ -28,7 +28,7 @@ _log = get_logger(__name__)
 class Port(object):
     """docstring for Port"""
 
-    def __init__(self, name, owner):
+    def __init__(self, name, owner, properties=None):
         super(Port, self).__init__()
         # Human readable port name
         self.name = name
@@ -41,6 +41,8 @@ class Port(object):
         self.properties = {}
         self.properties['routing'] = 'default'
         self.properties['nbr_peers'] = 1
+        if properties:
+            self.properties.update(properties)
 
     def __str__(self):
         return "%s id=%s" % (self.name, self.id)
@@ -103,8 +105,8 @@ class InPort(Port):
 
     """An inport can have only one endpoint."""
 
-    def __init__(self, name, owner):
-        super(InPort, self).__init__(name, owner)
+    def __init__(self, name, owner, properties=None):
+        super(InPort, self).__init__(name, owner, properties)
         self.properties['direction'] = 'in'
         self.endpoints = []
 
@@ -198,8 +200,8 @@ class OutPort(Port):
 
     """An outport can have many endpoints."""
 
-    def __init__(self, name, owner):
-        super(OutPort, self).__init__(name, owner)
+    def __init__(self, name, owner, properties=None):
+        super(OutPort, self).__init__(name, owner, properties)
         self.properties['routing'] = 'fanout'
         self.properties['direction'] = 'out'
         self.endpoints = []

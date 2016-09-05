@@ -3678,3 +3678,46 @@ class TestPortRouting(CalvinTestBase):
 
         d.destroy()
 
+    def testActorPortProperty(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        component Col() token -> token {
+            col : std.Collect()
+            .token > col.token
+            col.token > .token
+        }
+        src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
+        src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
+        colcomp : Col()
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        src1.integer > colcomp.token
+        src2.integer > colcomp.token
+        colcomp.token > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testActorPortProperty")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testActorPortProperty:snk']
+        actuals = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals.append(request_handler.report(fr, snk))
+            assert len(actuals[i]) < len(actuals[i+1])
+            request_handler.migrate(fr, snk, to_id)
+
+        print actuals
+
+        high = [x for x in actuals[-1] if x > 999]
+        low = [x for x in actuals[-1] if x < 999]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,200), low, min_length=30)
+        d.destroy()

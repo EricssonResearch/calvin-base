@@ -304,6 +304,20 @@ class Expander(object):
         if not node.metadata:
             node.metadata = _lookup(node, self.issue_tracker)
         if node.metadata['is_known'] and node.metadata['type'] == 'actor':
+            # Transfer actor declared port properties here so that they can be consolidated and validated
+            for port, pp in  node.metadata['input_properties'].items():
+                name = node.ident
+                port_property = ast.PortProperty(actor=name, port=port, direction="in", debug_info=node.debug_info)
+                for ident, value in pp.items():
+                    port_property.add_property(ident, value)
+                node.parent.add_child(port_property)
+            for port, pp in  node.metadata['output_properties'].items():
+                name = node.ident
+                port_property = ast.PortProperty(actor=name, port=port, direction="out", debug_info=node.debug_info)
+                for ident, value in pp.items():
+                    port_property.add_property(ident, value)
+                node.parent.add_child(port_property)
+            # Nothing more to do
             return
         if not node.metadata['is_known']:
             # Unknown actor => construct metadata from graph + args unless verify is True

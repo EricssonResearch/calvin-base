@@ -352,8 +352,8 @@ class Actor(object):
         self.subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
         self.authorization_checks = None
 
-        self.inports = {p: actorport.InPort(p, self) for p in self.inport_names}
-        self.outports = {p: actorport.OutPort(p, self) for p in self.outport_names}
+        self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.items()}
+        self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.items()}
 
         hooks = {
             (Actor.STATUS.PENDING, Actor.STATUS.ENABLED): self.will_start,
@@ -695,8 +695,8 @@ class ShadowActor(Actor):
     """A shadow actor try to behave as another actor but don't have any implementation"""
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
                  disable_state_checks=False, actor_id=None, security=None):
-        self.inport_names = []
-        self.outport_names = []
+        self.inport_properties = {}
+        self.outport_properties = {}
         super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions,
                                             disable_transition_checks=disable_transition_checks,
                                             disable_state_checks=disable_state_checks, actor_id=actor_id, 
@@ -709,11 +709,11 @@ class ShadowActor(Actor):
     def create_shadow_port(self, port_name, port_dir, port_id=None):
         # TODO check if we should create port against meta info
         if port_dir == "in":
-            self.inport_names.append(port_name)
+            self.inport_properties[port_name] = {}
             port = actorport.InPort(port_name, self)
             self.inports[port_name] = port
         else:
-            self.outport_names.append(port_name)
+            self.outport_properties[port_name] = {}
             port = actorport.OutPort(port_name, self)
             self.outports[port_name] = port
         return port
