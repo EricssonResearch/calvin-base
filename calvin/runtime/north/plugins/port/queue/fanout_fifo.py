@@ -61,8 +61,7 @@ class FanoutFIFO(object):
             'readers': list(self.readers),
             'write_pos': self.write_pos,
             'read_pos': self.read_pos,
-            'tentative_read_pos': self.tentative_read_pos,
-            'direction': self.direction
+            'tentative_read_pos': self.tentative_read_pos
         }
         return state
 
@@ -75,7 +74,6 @@ class FanoutFIFO(object):
         self.write_pos = state['write_pos']
         self.read_pos = state['read_pos']
         self.tentative_read_pos = state['tentative_read_pos']
-        self.direction = state.get('direction', None)
 
     @property
     def queue_type(self):
