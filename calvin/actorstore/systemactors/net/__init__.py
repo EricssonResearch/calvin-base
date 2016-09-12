@@ -1,1 +1,1 @@
-"""This module provides actor related to network access."""
+"""This module provides actors related to network access."""
