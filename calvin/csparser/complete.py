@@ -63,11 +63,12 @@ class Completion(object):
         return x
 
     def current_context(self):
-        query = lambda node: node.debug_info and node.debug_info.get('line') == self.lineno
-        nodes = self.finder.find_all(self.tree, query)
-        if not nodes:
-            return # self.tree.children[-1] if self.tree.children else ast.Node()
-        n = nodes[0] # pick any node
+        # Find the last node
+        n = self.tree
+        if not n:
+            return
+        while n.children:
+            n = n.children[-1]
         while type(n) is not ast.Block:
             n = n.parent
         return n
@@ -88,15 +89,17 @@ class Completion(object):
 
     @property
     def tree(self):
-        ir, issues = calvin_parse(self.source)
-        return ir or ast.Node()
+        """Parse code up to, but not including, the current line"""
+        lineno = self.lineno if self._first_line_is_zero else self.lineno - 1
+        src = "\n".join(self.source_lines[:lineno])
+        ir, issues = calvin_parse(src)
+        return ir
 
-    def source_line(self, line):
-        if not self._first_line_is_zero:
-            line = line - 1
-        if line < 0 or line >= len(self.source_lines):
+    def source_line(self, lineno):
+        lineno = lineno if self._first_line_is_zero else lineno - 1
+        if lineno < 0 or lineno >= len(self.source_lines):
             return ''
-        return self.source_lines[line]
+        return self.source_lines[lineno]
 
     def complete(self, lineno, col):
         """ Return tuple with ([<suggestions>], [<completions>])
@@ -108,7 +111,7 @@ class Completion(object):
         """
         self.lineno = lineno
         self.col = col
-        line = self.source_line(lineno)
+        line = self.source_line(self.lineno)
         line, suffix = line[:col], line[col:]
 
         completions = [
@@ -148,6 +151,8 @@ class Completion(object):
         partial = matched.group(2) or ''
         # 1. Match name with actor type, need to find relevant assignments
         actor_type = self.definition_for(name)
+        if not actor_type:
+            return [], []
         # 2. Get inports from actor metadata
         md = self.metadata_for(actor_type)
         ports = md.get(what, [])
@@ -192,6 +197,8 @@ class Finder(object):
         """
         Return a list of all nodes matching <kind>, at most <maxdepth> levels
         down from the starting node <node>
+        If root evaluates to False or is not a subclass of ast.Node, return None
+
         """
         self.depth = 0
         self.maxdepth = maxdepth
@@ -237,9 +244,12 @@ if __name__ == '__main__':
             completion = self.completion
             self.assertTrue(completion.metadata)
             self.assertTrue(completion.source)
+            self.assertEqual(completion.source_lines[6], 'snk:io.Print()')
             self.assertEqual(completion.source_line(7), 'snk:io.Print()')
             completion._first_line_is_zero = True
+            self.assertEqual(completion.source_lines[6], 'snk:io.Print()')
             self.assertEqual(completion.source_line(6), 'snk:io.Print()')
+
 
     class ActorCompletionTests(TestBase):
 
@@ -292,10 +302,10 @@ if __name__ == '__main__':
             self.assertEqual(set(suggestion), set(['token']))
             self.assertEqual(set(completion), set(['ken']))
 
-    class PortCompletionTestsPatched(PortCompletionTests):
+    class PortCompletionIncompleteSourceTests(PortCompletionTests):
 
         def setUp(self):
-            super(PortCompletionTestsPatched, self).setUp()
+            super(PortCompletionIncompleteSourceTests, self).setUp()
             # Patch complete to truncate the source code
             cmpl = self.completion.complete
             def complete_trunc(self, lineno, col):
@@ -307,7 +317,6 @@ if __name__ == '__main__':
                 return cmpl(lineno, col)
 
             self.completion.complete = types.MethodType(complete_trunc, self.completion, Completion)
-
 
 
 
@@ -330,7 +339,7 @@ if __name__ == '__main__':
             PortCompletionTests,
             PortPropertyCompletionTests,
             NoCompletions,
-            PortCompletionTestsPatched
+            PortCompletionIncompleteSourceTests,
         )
 
     try:
