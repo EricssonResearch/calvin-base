@@ -88,9 +88,20 @@ class Completion(object):
 
     @property
     def tree(self):
-        """Parse code up to, but not including, the current line"""
+        """
+        Parse code up to, but not including, the current line.
+        However, we could be inside component, in that case remove the opening statement.
+        FIXME: this is rather naive, but should work reasonably well
+        """
         lineno = self.lineno if self._first_line_is_zero else self.lineno - 1
-        src = "\n".join(self.source_lines[:lineno])
+        src_lines = self.source_lines[:lineno]
+        for l in reversed(src_lines):
+            if '}' in l:
+                break
+            if l.startswith('component'):
+                src_lines.remove(l)
+                break
+        src = "\n".join(src_lines)
         ir, issues = calvin_parse(src)
         return ir
 
@@ -295,11 +306,15 @@ if __name__ == '__main__':
             self.assertEqual(set(suggestion), set(['token']))
             self.assertEqual(set(completion), set(['token']))
 
-
         def test_inport_partial(self):
             suggestion, completion = self.completion.complete(9, 20)
             self.assertEqual(set(suggestion), set(['token']))
             self.assertEqual(set(completion), set(['ken']))
+
+        def test_outport_comp(self):
+            suggestion, completion = self.completion.complete(4, 8)
+            self.assertEqual(set(suggestion), set(['token']))
+            self.assertEqual(set(completion), set(['token']))
 
     class PortCompletionIncompleteSourceTests(PortCompletionTests):
 
