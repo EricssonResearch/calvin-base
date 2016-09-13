@@ -29,18 +29,20 @@ def node_control(control_uri, barrier=True):
             self._uri = None
             self.control_uri = control_uri
             self.request_handler = RequestHandler()
+            delay = 0.1
             # When barrier ordered make sure we can contact the runtime
             if barrier:
-                failed = True
+                success = False
                 # Try 20 times waiting for control API to be up and running
                 for i in range(20):
                     try:
                         self._id = self.request_handler.get_node_id(self)
-                        failed = False
+                        success = True
                         break
-                    except:
-                        time.sleep(0.1)
-                assert not failed
+                    except Exception:
+                        time.sleep(delay)
+                        delay = 2*delay if delay < 1.0 else 1.0
+                assert success
 
         @property
         def id(self):
