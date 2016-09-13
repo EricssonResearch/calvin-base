@@ -85,7 +85,6 @@ class Completion(object):
         """Set the source text to operate on"""
         self.source = source
         self.source_lines = source.split('\n')
-        self._tree = None
 
     @property
     def tree(self):
