@@ -137,7 +137,7 @@ class Completion(object):
             if m:
                 return handler(m)
 
-        return [], []
+        return self.wrap_result([], [])
 
     def _filter_partial(self, items, partial):
         start = len(partial)
@@ -145,16 +145,28 @@ class Completion(object):
         completions = [x[start:] for x in matches]
         return matches, completions
 
+    def wrap_result(self, suggestions, completions, kind=None, arg_dicts=None, postamble=None):
+        return {
+            'type': kind,
+            'suggestions': suggestions,
+            'completions': completions,
+            'arg_dicts': arg_dicts or [],
+            'postamble': postamble or '',
+        }
+
     def _complete_module(self, matched):
         partial = matched.group(1) or ''
         modules = self.metadata.keys()
-        return self._filter_partial(modules, partial)
+        s, c = self._filter_partial(modules, partial)
+        return self.wrap_result(s, c, 'module', postamble='.')
 
     def _complete_actor(self, matched):
         module = matched.group(1)
         partial = matched.group(2) or ''
-        actors = self.metadata.get(module, []).keys()
-        return self._filter_partial(actors, partial)
+        actors = sorted(self.metadata.get(module, []).keys())
+        args = [self.metadata[module][actor].get('args', {}) for actor in actors]
+        s, c = self._filter_partial(actors, partial)
+        return self.wrap_result(s, c, 'actor', arg_dicts=args)
 
     def _complete_port(self, matched, what):
         name = matched.group(1)
@@ -169,10 +181,12 @@ class Completion(object):
         return self._filter_partial(ports, partial)
 
     def _complete_outport(self, matched):
-        return self._complete_port(matched, 'outputs')
+        s, c = self._complete_port(matched, 'outputs')
+        return self.wrap_result(s, c, 'outport', postamble=' > ')
 
     def _complete_inport(self, matched):
-        return self._complete_port(matched, 'inputs')
+        s, c = self._complete_port(matched, 'inputs')
+        return self.wrap_result(s, c, 'inport')
 
     def _complete_portprop(self, matched):
         port = matched.group(1) or ''
@@ -264,57 +278,61 @@ if __name__ == '__main__':
     class ActorCompletionTests(TestBase):
 
         def test_completion_module(self):
-            suggestion, _ = self.completion.complete(7, 4)
-            self.assertEqual(set(suggestion), set(self.completion.metadata.keys()))
+            d = self.completion.complete(7, 4)
+            self.assertEqual(set(d['suggestions']), set(self.completion.metadata.keys()))
+            self.assertEqual('module', d['type'])
 
         def test_completion_module_partial(self):
-            suggestion, completion = self.completion.complete(7, 5)
-            self.assertEqual(set(suggestion), set(['io']))
-            self.assertEqual(set(completion), set(['o']))
+            d = self.completion.complete(7, 5)
+            self.assertEqual(set(d['suggestions']), set(['io']))
+            self.assertEqual(set(d['completions']), set(['o']))
 
         def test_completion_module_partial2(self):
-            suggestion, completion = self.completion.complete(6, 5)
-            self.assertEqual(set(suggestion), set(['std', 'sensor']))
-            self.assertEqual(set(completion), set(['td', 'ensor']))
+            d = self.completion.complete(6, 5)
+            self.assertEqual(set(d['suggestions']), set(['std', 'sensor']))
+            self.assertEqual(set(d['completions']), set(['td', 'ensor']))
 
         def test_completion_actor(self):
-            suggestion, completion = self.completion.complete(6, 8)
+            d = self.completion.complete(6, 8)
             expected = self.completion.metadata['std'].keys()
-            self.assertEqual(set(suggestion), set(expected))
-            self.assertEqual(set(completion), set(expected))
+            self.assertEqual(set(d['suggestions']), set(expected))
+            self.assertEqual(set(d['completions']), set(expected))
+            self.assertEqual('actor', d['type'])
 
         def test_completion_actor_partial(self):
-            suggestion, completion = self.completion.complete(6, 10)
+            d = self.completion.complete(6, 10)
             expected = [x for x in self.completion.metadata['std'].keys() if x.startswith('Co')]
-            self.assertEqual(set(suggestion), set(expected))
-            self.assertEqual(set(completion), set([x[2:] for x in expected]))
+            self.assertEqual(set(d['suggestions']), set(expected))
+            self.assertEqual(set(d['completions']), set([x[2:] for x in expected]))
 
     class PortCompletionTests(TestBase):
 
         def test_outport(self):
-            suggestion, completion = self.completion.complete(9, 4)
-            self.assertEqual(set(suggestion), set(['integer']))
-            self.assertEqual(set(completion), set(['integer']))
+            d = self.completion.complete(9, 4)
+            self.assertEqual(set(d['suggestions']), set(['integer']))
+            self.assertEqual(set(d['completions']), set(['integer']))
+            self.assertEqual('outport', d['type'])
 
         def test_outport_partial(self):
-            suggestion, completion = self.completion.complete(9, 6)
-            self.assertEqual(set(suggestion), set(['integer']))
-            self.assertEqual(set(completion), set(['teger']))
+            d = self.completion.complete(9, 6)
+            self.assertEqual(set(d['suggestions']), set(['integer']))
+            self.assertEqual(set(d['completions']), set(['teger']))
 
         def test_inport(self):
-            suggestion, completion = self.completion.complete(9, 18)
-            self.assertEqual(set(suggestion), set(['token']))
-            self.assertEqual(set(completion), set(['token']))
+            d = self.completion.complete(9, 18)
+            self.assertEqual(set(d['suggestions']), set(['token']))
+            self.assertEqual(set(d['completions']), set(['token']))
+            self.assertEqual('inport', d['type'])
 
         def test_inport_partial(self):
-            suggestion, completion = self.completion.complete(9, 20)
-            self.assertEqual(set(suggestion), set(['token']))
-            self.assertEqual(set(completion), set(['ken']))
+            d = self.completion.complete(9, 20)
+            self.assertEqual(set(d['suggestions']), set(['token']))
+            self.assertEqual(set(d['completions']), set(['ken']))
 
         def test_outport_comp(self):
-            suggestion, completion = self.completion.complete(4, 8)
-            self.assertEqual(set(suggestion), set(['token']))
-            self.assertEqual(set(completion), set(['token']))
+            d = self.completion.complete(4, 8)
+            self.assertEqual(set(d['suggestions']), set(['token']))
+            self.assertEqual(set(d['completions']), set(['token']))
 
     class PortCompletionIncompleteSourceTests(PortCompletionTests):
 
@@ -343,8 +361,8 @@ if __name__ == '__main__':
     class NoCompletions(TestBase):
 
         def test_completion_module(self):
-            suggestion, _ = self.completion.complete(1, 3)
-            self.assertEqual(set(suggestion), set([]))
+            d = self.completion.complete(1, 3)
+            self.assertEqual(set(d['suggestions']), set({}))
 
     def test_main():
         test_support.run_unittest(
