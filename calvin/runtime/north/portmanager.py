@@ -106,7 +106,8 @@ class PortManager(object):
             # Let a specific connection handler take care of the request
             peer_port_meta = PortMeta(self,
                                     port_id=payload['port_id'],
-                                    node_id=payload['from_rt_uuid'])
+                                    node_id=payload['from_rt_uuid'],
+                                    properties=payload['port_properties'])
             return ConnectionFactory(self.node, PURPOSE.CONNECT).get(
                     port, peer_port_meta, payload=payload).connection_request()
 

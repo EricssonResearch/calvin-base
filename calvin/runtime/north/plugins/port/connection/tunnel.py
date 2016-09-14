@@ -169,6 +169,12 @@ class TunnelConnection(BaseConnection):
                                      peer_port_id=self.peer_port_meta.port_id)
                 return
 
+        # Update our peer port's properties with newly recieved information
+        if self.peer_port_meta.properties is None:
+            self.peer_port_meta.properties = reply.data.get('port_properties', {})
+        else:
+            self.peer_port_meta.properties.update(reply.data.get('port_properties', {}))
+
         # Set up the port's endpoint
         tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
         self.port.set_queue(queue.get(self.port, peer_port_meta=self.peer_port_meta))
@@ -252,7 +258,7 @@ class TunnelConnection(BaseConnection):
         self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
 
         _log.analyze(self.node.id, "+ OK", payload, peer_node_id=self.peer_port_meta.node_id)
-        return response.CalvinResponse(response.OK, {'port_id': self.port.id})
+        return response.CalvinResponse(response.OK, {'port_id': self.port.id, 'port_properties': self.port.properties})
 
     def disconnect(self):
         """ Obtain any missing information to enable disconnecting one port peer and make the disconnect"""

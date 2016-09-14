@@ -31,9 +31,9 @@ def create_actor(node):
     actor_id = actor_manager.new('std.Identity', {})
     actor = actor_manager.actors[actor_id]
     actor._calvinsys = Mock()
-    actor.inports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}))
+    actor.inports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
     actor.inports['token'].queue.add_reader(actor.inports['token'].id)
-    actor.outports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}))
+    actor.outports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
     return actor
 
 

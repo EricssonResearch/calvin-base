@@ -42,7 +42,12 @@ def get(port, peer_port=None, peer_port_meta=None):
             selected_queue = "fanout_fifo"
     try:
         class_ = getattr(globals()[selected_queue], _MODULES[selected_queue])
-        return class_(port.properties)
+        peer_port_properties = {}
+        if peer_port is not None:
+            peer_port_properties = peer_port.properties
+        if peer_port_meta is not None and not peer_port_properties:
+            peer_port_properties = peer_port_meta.properties
+        return class_(port.properties, peer_port_properties=peer_port_properties)
     except:
         _log.exception("get_queue FAILED")
         return None

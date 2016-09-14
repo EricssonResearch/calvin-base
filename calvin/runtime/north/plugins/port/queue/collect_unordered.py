@@ -28,7 +28,7 @@ class CollectUnordered(object):
     only within a connection.
     """
 
-    def __init__(self, port_properties):
+    def __init__(self, port_properties, peer_port_properties):
         super(CollectUnordered, self).__init__()
         # Set default queue length to 4 if not specified
         length = port_properties.get('queue_length', 4)
