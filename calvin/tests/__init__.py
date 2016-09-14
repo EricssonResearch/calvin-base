@@ -43,6 +43,7 @@ class TestPort:
         self.name = name
         self.direction = direction
         self.peers = None
+        self.properties = {}
         self.queue = FanoutFIFO({'queue_length': 4, 'direction': direction}, {})
 
     def is_connected(self):

@@ -355,6 +355,11 @@ class ActorStore(Store):
                         reason = "Port property {} can only have scalar values".format(key)
                         issues.append(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST, {'reason': reason}))
                         continue
+                if ppdata['type'] == 'string':
+                    if not isinstance(value, basestring):
+                        reason = "Port property {} can only have string values".format(key)
+                        issues.append(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST, {'reason': reason}))
+                        continue
         return issues
 
     def _gather_ports(self, class_):

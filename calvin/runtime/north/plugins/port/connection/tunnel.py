@@ -183,12 +183,14 @@ class TunnelConnection(BaseConnection):
                                              tunnel,
                                              self.peer_port_meta.node_id,
                                              reply.data['port_id'],
+                                             self.peer_port_meta.properties,
                                              self.node.sched.trigger_loop)
         else:
             endp = endpoint.TunnelOutEndpoint(self.port,
                                               tunnel,
                                               self.peer_port_meta.node_id,
                                               reply.data['port_id'],
+                                              self.peer_port_meta.properties,
                                               self.node.sched.trigger_loop)
         if endp.use_monitor():
             # register into main loop
@@ -237,12 +239,14 @@ class TunnelConnection(BaseConnection):
                                              tunnel,
                                              self.peer_port_meta.node_id,
                                              self.peer_port_meta.port_id,
+                                             self.peer_port_meta.properties,
                                              self.node.sched.trigger_loop)
         else:
             endp = endpoint.TunnelOutEndpoint(self.port,
                                               tunnel,
                                               self.peer_port_meta.node_id,
                                               self.peer_port_meta.port_id,
+                                              self.peer_port_meta.properties,
                                               self.node.sched.trigger_loop)
         if endp.use_monitor():
             self.node.monitor.register_endpoint(endp)

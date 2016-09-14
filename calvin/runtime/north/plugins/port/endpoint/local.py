@@ -37,8 +37,8 @@ class LocalInEndpoint(Endpoint):
         return True
 
     def attached(self):
-        self.port.queue.add_reader(self.port.id)
-        self.port.queue.add_writer(self.peer_id)
+        self.port.queue.add_reader(self.port.id, self.port.properties)
+        self.port.queue.add_writer(self.peer_id, self.peer_port.properties)
 
     def get_peer(self):
         return ('local', self.peer_id)
@@ -57,8 +57,8 @@ class LocalOutEndpoint(Endpoint):
         return True
 
     def attached(self):
-        self.port.queue.add_reader(self.peer_port.id)
-        self.port.queue.add_writer(self.port.id)
+        self.port.queue.add_reader(self.peer_port.id, self.peer_port.properties)
+        self.port.queue.add_writer(self.port.id, self.port.properties)
 
     def detached(self):
         # cancel any tentative reads to acked reads

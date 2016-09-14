@@ -36,7 +36,7 @@ def get(port, peer_port=None, peer_port_meta=None):
             routing_prop = routing_prop[0]
         if 'round-robin' == routing_prop or 'random' == routing_prop:
             selected_queue = "scheduled_fifo"
-        elif 'collect-unordered' == routing_prop:
+        elif routing_prop in ['collect-unordered', 'collect-tagged']:
             selected_queue = "collect_unordered"
         else:
             selected_queue = "fanout_fifo"

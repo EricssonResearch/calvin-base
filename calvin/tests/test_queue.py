@@ -39,7 +39,7 @@ class QueueTests(unittest.TestCase):
     def test1(self):
         """Adding reader again (reconnect)"""
         f = queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {})
-        f.add_reader('p1.id')
+        f.add_reader('p1.id', {})
         data = ['1', '2', '3', '4']
         for token in data:
             self.assertTrue(f.slots_available(1, None))
@@ -48,7 +48,7 @@ class QueueTests(unittest.TestCase):
         self.verify_data(['1', '2'], [f.peek('p1.id') for _ in range(2)])
 
         f.commit('p1.id')
-        f.add_reader('p1.id')
+        f.add_reader('p1.id', {})
 
         self.verify_data(['3', '4'], [f.peek('p1.id') for _ in range(2)])
 
@@ -70,8 +70,8 @@ class QueueTests(unittest.TestCase):
         """Multiple readers"""
 
         f = queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {})
-        f.add_reader("r1")
-        f.add_reader("r2")
+        f.add_reader("r1", {})
+        f.add_reader("r2", {})
 
         # Ensure fifo is empty
         self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")
@@ -125,7 +125,7 @@ class QueueTests(unittest.TestCase):
     def test3(self):
         """Testing commit reads"""
         f = queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {})
-        f.add_reader("r1")
+        f.add_reader("r1", {})
 
         for token in ['1', '2', '3', '4']:
             self.assertTrue(f.slots_available(1, None))
@@ -151,7 +151,7 @@ class QueueTests(unittest.TestCase):
     def test4(self):
         """Testing rollback reads"""
         f = queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {})
-        f.add_reader('r1')
+        f.add_reader('r1', {})
 
         for token in ['1', '2', '3', '4']:
             self.assertTrue(f.slots_available(1, None))
@@ -188,8 +188,8 @@ class QueueTests(unittest.TestCase):
         """Round-Robin scheduled queue test"""
 
         f = queue.scheduled_fifo.ScheduledFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
-        f.add_reader("r1")
-        f.add_reader("r2")
+        f.add_reader("r1", {})
+        f.add_reader("r2", {})
 
         # Ensure fifo is empty
         self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")
@@ -257,8 +257,8 @@ class QueueTests(unittest.TestCase):
         """Round-Robin scheduled queue test"""
 
         f = queue.scheduled_fifo.ScheduledFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
-        f.add_reader("r1")
-        f.add_reader("r2")
+        f.add_reader("r1", {})
+        f.add_reader("r2", {})
 
         # Ensure fifo is empty
         self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")
@@ -314,8 +314,8 @@ class QueueTests(unittest.TestCase):
         """Round-Robin scheduled queue test"""
 
         f = queue.scheduled_fifo.ScheduledFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
-        f.add_reader("r1")
-        f.add_reader("r2")
+        f.add_reader("r1", {})
+        f.add_reader("r2", {})
 
         # Ensure fifo is empty
         self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")
@@ -352,8 +352,8 @@ class QueueTests(unittest.TestCase):
         """Random scheduled queue test"""
 
         f = queue.scheduled_fifo.ScheduledFIFO({'routing': 'random', 'nbr_peers': 2}, {})
-        f.add_reader("r1")
-        f.add_reader("r2")
+        f.add_reader("r1", {})
+        f.add_reader("r2", {})
 
         # Ensure fifo is empty
         self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")

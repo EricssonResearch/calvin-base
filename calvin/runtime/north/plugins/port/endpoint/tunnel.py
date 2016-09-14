@@ -31,11 +31,12 @@ class TunnelInEndpoint(Endpoint):
 
     """docstring for TunnelInEndpoint"""
 
-    def __init__(self, port, tunnel, peer_node_id, peer_port_id, trigger_loop):
+    def __init__(self, port, tunnel, peer_node_id, peer_port_id, peer_port_properties, trigger_loop):
         super(TunnelInEndpoint, self).__init__(port)
         self.tunnel = tunnel
         self.peer_id = peer_port_id
         self.peer_node_id = peer_node_id
+        self.peer_port_properties = peer_port_properties
         self.trigger_loop = trigger_loop
 
     def __str__(self):
@@ -46,9 +47,9 @@ class TunnelInEndpoint(Endpoint):
         return True
 
     def attached(self):
-        self.port.queue.add_reader(self.port.id)
+        self.port.queue.add_reader(self.port.id, self.port.properties)
         if self.peer_id is not None:
-            self.port.queue.add_writer(self.peer_id)
+            self.port.queue.add_writer(self.peer_id, self.peer_port_properties)
 
     def recv_token(self, payload):
         try:
@@ -77,7 +78,7 @@ class TunnelInEndpoint(Endpoint):
     def set_peer_port_id(self, id):
         if self.peer_id is None:
             # If not set previously set it now
-            self.port.queue.add_writer(id)
+            self.port.queue.add_writer(id, self.peer_port_properties)
         self.peer_id = id
 
     def get_peer(self):
@@ -88,11 +89,12 @@ class TunnelOutEndpoint(Endpoint):
 
     """docstring for TunnelOutEndpoint"""
 
-    def __init__(self, port, tunnel, peer_node_id, peer_port_id, trigger_loop):
+    def __init__(self, port, tunnel, peer_node_id, peer_port_id, peer_port_properties, trigger_loop):
         super(TunnelOutEndpoint, self).__init__(port)
         self.tunnel = tunnel
         self.peer_id = peer_port_id
         self.peer_node_id = peer_node_id
+        self.peer_port_properties = peer_port_properties
         self.trigger_loop = trigger_loop
         # Keep track of acked tokens, only contains something post call if acks comes out of order
         self.sequencenbrs_acked = []
@@ -108,8 +110,8 @@ class TunnelOutEndpoint(Endpoint):
         return True
 
     def attached(self):
-        self.port.queue.add_reader(self.peer_id)
-        self.port.queue.add_writer(self.port.id)
+        self.port.queue.add_reader(self.peer_id, self.peer_port_properties)
+        self.port.queue.add_writer(self.port.id, self.port.properties)
 
     def detached(self):
         # cancel any tentative reads to acked reads

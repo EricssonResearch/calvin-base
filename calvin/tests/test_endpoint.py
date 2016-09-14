@@ -80,8 +80,8 @@ class TestTunnelEndpoint(unittest.TestCase):
         self.trigger_loop = Mock()
         self.node_id = 123
         self.peer_node_id = 456
-        self.tunnel_in = TunnelInEndpoint(self.port, self.tunnel, self.peer_node_id, self.peer_port.id, self.trigger_loop)
-        self.tunnel_out = TunnelOutEndpoint(self.peer_port, self.tunnel, self.node_id, self.port.id, self.trigger_loop)
+        self.tunnel_in = TunnelInEndpoint(self.port, self.tunnel, self.peer_node_id, self.peer_port.id, {}, self.trigger_loop)
+        self.tunnel_out = TunnelOutEndpoint(self.peer_port, self.tunnel, self.node_id, self.port.id, {}, self.trigger_loop)
         self.port.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
         self.port.attach_endpoint(self.tunnel_in)
         self.peer_port.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))

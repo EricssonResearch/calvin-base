@@ -46,7 +46,12 @@ class CollectUnordered(object):
         self.read_pos = {}
         self.tentative_read_pos = {}
         self.turn_pos = 0
-        self._type = "collect:unordered"
+        if isinstance(port_properties['routing'], (tuple, list)):
+            routing = port_properties['routing'][0].split("-",1)[1]
+        else:
+            routing = port_properties['routing'].split("-",1)[1]
+        self._type = "collect:" + routing
+        self.tags = {}
 
     def __str__(self):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
@@ -61,7 +66,8 @@ class CollectUnordered(object):
             'write_pos': self.write_pos,
             'read_pos': self.read_pos,
             'tentative_read_pos': self.tentative_read_pos,
-            'turn_pos': self.turn_pos
+            'turn_pos': self.turn_pos,
+            'tags': self.tags
         }
         return state
 
@@ -74,12 +80,13 @@ class CollectUnordered(object):
         self.read_pos = state['read_pos']
         self.tentative_read_pos = state['tentative_read_pos']
         self.turn_pos = state["turn_pos"]
+        self.tags = state.get("tags", {})
 
     @property
     def queue_type(self):
         return self._type
 
-    def add_writer(self, writer):
+    def add_writer(self, writer, properties):
         if not isinstance(writer, basestring):
             raise Exception('Not a string: %s' % writer)
         if writer not in self.writers:
@@ -89,6 +96,7 @@ class CollectUnordered(object):
             self.fifo.setdefault(writer, [Token(0)] * self.N)
             self.writers.append(writer)
             self.writers.sort()
+        self.tags[writer] = properties.get("tag", writer)
 
     def remove_writer(self, writer):
         if not isinstance(writer, basestring):
@@ -98,7 +106,7 @@ class CollectUnordered(object):
         del self.write_pos[writer]
         self.writers.remove(writer)
 
-    def add_reader(self, reader):
+    def add_reader(self, reader, properties):
         pass
 
     def remove_reader(self, reader):
@@ -147,6 +155,9 @@ class CollectUnordered(object):
                 data = self.fifo[writer][read_pos % self.N]
                 self.tentative_read_pos[writer] = read_pos + 1
                 self.turn_pos += 1
+                if self._type == "collect:tagged":
+                    # Modify token to tagged value
+                    data = Token({self.tags[writer]: data.value})
                 return data
         raise QueueEmpty(reader=metadata)
 

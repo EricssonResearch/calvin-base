@@ -32,7 +32,7 @@ def create_actor(node):
     actor = actor_manager.actors[actor_id]
     actor._calvinsys = Mock()
     actor.inports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
-    actor.inports['token'].queue.add_reader(actor.inports['token'].id)
+    actor.inports['token'].queue.add_reader(actor.inports['token'].id, {})
     actor.outports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
     return actor
 
@@ -100,8 +100,8 @@ def test_connections():
 
     in_peer_port = TestPort("x", "out")
     out_peer_port = TestPort("y", "in")
-    out_peer_port.queue.add_reader(out_peer_port.id)
-    in_peer_port.queue.add_reader(inport.id)
+    out_peer_port.queue.add_reader(out_peer_port.id, {})
+    in_peer_port.queue.add_reader(inport.id, {})
 
     inport.attach_endpoint(LocalInEndpoint(inport, in_peer_port))
     outport.attach_endpoint(LocalOutEndpoint(outport, out_peer_port))

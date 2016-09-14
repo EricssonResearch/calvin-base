@@ -629,6 +629,11 @@ class ConsolidatePortProperty(object):
                         reason = "Port property {} can only have scalar values".format(key)
                         self.issue_tracker.add_error(reason, node)
                         continue
+                if ppdata['type'] == 'string':
+                    if not isinstance(value, basestring):
+                        reason = "Port property {} can only have string values".format(key)
+                        self.issue_tracker.add_error(reason, node)
+                        continue
                 if key == 'nbr_peers' and value > 1 and node.direction == 'in':
                     # Verify that inports with multiple connections have a routing property for multipeers
                     ports = query(node.parent, kind=ast.InPort, attributes={'actor': node.actor, 'port': node.port})

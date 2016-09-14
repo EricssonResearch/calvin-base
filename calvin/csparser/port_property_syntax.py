@@ -23,6 +23,15 @@ port_property_data = {
                 'direction': "in",
                 'multipeer': True
             },
+            'collect-tagged': {
+                'doc': """
+                    Collect tokens from multiple peers, actions see
+                    them individually as {<tag>: token}. Use property tag on
+                    a connected outport otherwise tag defaults to port id.
+                    """,
+                'direction': "in",
+                'multipeer': True
+            },
         }
     },
     'queue_length': {
@@ -37,6 +46,11 @@ port_property_data = {
                 connections at least for inports.
                 """,
         'type': 'scalar',
+        'direction': 'inout'
+    },
+    'tag': {
+        'doc': """Specifies a tag on e.g. an outport that can be retrived with certain inport routing properties""",
+        'type': 'string',
         'direction': 'inout'
     },
     'test1': {

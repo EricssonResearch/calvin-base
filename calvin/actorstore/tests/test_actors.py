@@ -239,10 +239,10 @@ class ActorTester(object):
         for inport in actor.inports.values():
             inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
             inport.endpoint = DummyInEndpoint(inport)
-            inport.queue.add_reader(inport.id)
+            inport.queue.add_reader(inport.id, {})
         for outport in actor.outports.values():
             outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
-            outport.queue.add_reader(actor.id)
+            outport.queue.add_reader(actor.id, {})
             outport.endpoints.append(DummyOutEndpoint(outport))
 
         self.actors[actorname] = actor

@@ -3387,6 +3387,150 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1,200), low, min_length=30)
         d.destroy()
 
+    def testCollectTagPortRemoteMoveMany1(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
+        src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-tagged", nbr_peers=2)
+        src1.integer(tag="src_one")
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        actuals = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals.append(request_handler.report(fr, snk))
+            assert len(actuals[i]) < len(actuals[i+1])
+            request_handler.migrate(fr, snk, to_id)
+
+        print actuals
+
+        assert all([len(t)==1 for t in actuals[-1]])
+        # Check that src_one tag is there also after last migration
+        assert "src_one" in set([t.keys()[0] for t in actuals[-1][len(actuals[-2])+1:]])
+        # Check that src_one tag is there before migration
+        assert "src_one" in set([t.keys()[0] for t in actuals[1]])
+
+        nbrs = [t.values()[0] for t in actuals[-1]]
+        high = [x for x in nbrs if x > 999]
+        low = [x for x in nbrs if x < 999]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,200), low, min_length=30)
+        d.destroy()
+
+    def testCollectTagPortRemoteMoveMany2(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
+        src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-tagged", nbr_peers=2)
+        src1.integer(tag="src_one")
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        src2 = d.actor_map['testCollectPort:src2']
+        request_handler.migrate(self.rt1, src2, self.rt2.id)
+        actuals = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals.append(request_handler.report(fr, snk))
+            assert len(actuals[i]) < len(actuals[i+1])
+            request_handler.migrate(fr, snk, to_id)
+
+        print actuals
+
+        assert all([len(t)==1 for t in actuals[-1]])
+        # Check that src_one tag is there also after last migration
+        assert "src_one" in set([t.keys()[0] for t in actuals[-1][len(actuals[-2])+1:]])
+        # Check that src_one tag is there before migration
+        assert "src_one" in set([t.keys()[0] for t in actuals[1]])
+
+        nbrs = [t.values()[0] for t in actuals[-1]]
+        high = [x for x in nbrs if x > 999]
+        low = [x for x in nbrs if x < 999]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,200), low, min_length=30)
+        d.destroy()
+
+    def testCollectTagPortRemoteMoveMany3(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
+        src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-tagged", nbr_peers=2)
+        src1.integer(tag="src_one")
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        src1 = d.actor_map['testCollectPort:src1']
+        src2 = d.actor_map['testCollectPort:src2']
+        request_handler.migrate(self.rt1, src1, self.rt2.id)
+        request_handler.migrate(self.rt1, src2, self.rt3.id)
+        actuals = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals.append(request_handler.report(fr, snk))
+            assert len(actuals[i]) < len(actuals[i+1])
+            request_handler.migrate(fr, snk, to_id)
+
+        print actuals
+
+        assert all([len(t)==1 for t in actuals[-1]])
+        # Check that src_one tag is there also after last migration
+        assert "src_one" in set([t.keys()[0] for t in actuals[-1][len(actuals[-2])+1:]])
+        # Check that src_one tag is there before migration
+        assert "src_one" in set([t.keys()[0] for t in actuals[1]])
+
+        nbrs = [t.values()[0] for t in actuals[-1]]
+        high = [x for x in nbrs if x > 999]
+        low = [x for x in nbrs if x < 999]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,200), low, min_length=30)
+        d.destroy()
+
     def testRoundRobinPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """

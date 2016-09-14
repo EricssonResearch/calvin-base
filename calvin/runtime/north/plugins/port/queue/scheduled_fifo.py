@@ -121,13 +121,13 @@ class ScheduledFIFO(object):
     def queue_type(self):
         return self._type
 
-    def add_writer(self, writer):
+    def add_writer(self, writer, properties):
         pass
 
     def remove_writer(self, writer):
         pass
 
-    def add_reader(self, reader):
+    def add_reader(self, reader, properties):
         if not isinstance(reader, basestring):
             raise Exception('Not a string: %s' % reader)
         if reader not in self.readers:
