@@ -941,6 +941,7 @@ class CalvinControl(object):
         path = match.group(1)
         what = '.'.join(path.strip('/').split('/'))
         ds = DocumentationStore()
+        what = None if not what else what
         data = ds.help_raw(what)
         self.send_response(handle, connection, json.dumps(data))
 

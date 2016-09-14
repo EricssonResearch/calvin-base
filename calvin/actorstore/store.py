@@ -653,10 +653,11 @@ class DocObject(object):
     def metadata(self):
         return {'is_known': False}
 
-
-    # FIXME: Get rid of
     def raw(self):
-        return self.__dict__
+        raw = self.metadata()
+        raw['short_desc'] = self.fshort_desc
+        raw['long_desc'] = self.fdesc
+        return raw
 
     # FIXME: Get rid of
     def json(self):
@@ -774,6 +775,12 @@ class ModuleDoc(DocObject):
                     return x
                 return None # Error
         return None
+
+    def raw(self):
+        raw = super(ModuleDoc, self).raw()
+        raw['modules'] = [x.ns for x in self.modules]
+        raw['actors'] = [x.name for x in self.actors]
+        return raw
 
 
 class ActorDoc(DocObject):
