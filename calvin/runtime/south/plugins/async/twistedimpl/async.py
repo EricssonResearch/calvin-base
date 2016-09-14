@@ -47,3 +47,4 @@ def stop_ioloop():
 
 # Thread function
 call_from_thread = reactor.callFromThread
+call_in_thread = reactor.callInThread
