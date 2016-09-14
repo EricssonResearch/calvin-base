@@ -237,7 +237,7 @@ def parse_args():
     cmd_storage.add_argument("cmd", metavar="<command>", choices=storage_commands, type=str,
                              help="one of %s" % (", ".join(storage_commands)))
     cmd_storage.add_argument("index", metavar="<index>",
-                             help="An index e.g. '[\"owner\", {\"personOrGroup\": \"Me\"}}]'", type=str, nargs='?')
+                             help="An index e.g. '[\"owner\", {\"personOrGroup\": \"Me\"}]'", type=str, nargs='?')
     cmd_storage.set_defaults(func=control_storage)
 
     return argparser.parse_args()
