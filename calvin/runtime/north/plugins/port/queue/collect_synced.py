@@ -1,0 +1,54 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2015 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from calvin.runtime.north.calvin_token import Token
+from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
+from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
+from calvin.utilities import calvinlogger
+
+_log = calvinlogger.get_logger(__name__)
+
+
+class CollectSynced(CollectBase):
+
+    """
+    A queue with fanin support, does not handle token order between connections
+    only within a connection.
+    """
+
+    def __init__(self, port_properties, peer_port_properties):
+        super(CollectSynced, self).__init__(port_properties, peer_port_properties)
+        self._type = "collect:all-tagged"
+
+    def tokens_available(self, length, metadata):
+        if length >= self.N:
+            return False
+        # All FIFOs need to have length tokens
+        for metadata in self.writers:
+            if self.write_pos[metadata] - self.tentative_read_pos[metadata] < length:
+                return False
+        return True
+
+    def peek(self, metadata=None):
+        if not self.tokens_available(1, metadata):
+            raise QueueEmpty(reader=metadata)
+        value = {}
+        for writer in self.writers:
+            read_pos = self.tentative_read_pos[writer]
+            data = self.fifo[writer][read_pos % self.N]
+            self.tentative_read_pos[writer] = read_pos + 1
+            value[self.tags[writer]] = data.value
+        return Token(value)
