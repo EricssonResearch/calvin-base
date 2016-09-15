@@ -594,6 +594,7 @@ class ConsolidatePortProperty(object):
             else:
                 reason = "Port property need direction since ambigious names"
                 self.issue_tracker.add_error(reason, node)
+                node.direction = "ambigious"
         elif node.direction is None and name in self.outports.keys():
             node.add_property(ident="nbr_peers", arg=self.outports[name])
             node.direction = "out"
