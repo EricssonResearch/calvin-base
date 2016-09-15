@@ -52,13 +52,18 @@ def pread(actor, portname, number=1):
     assert port
     if number > 0:
         if not pavailable(actor, portname, number):
-            raise AssertionError("Too few tokens available, %d, expected %d" % (pavailable(actor, portname), number))
+            try:
+                # Dig deep into queue, can break at any time
+                available = port.queue.write_pos - port.queue.tentative_read_pos[next(iter(port.queue.readers))]
+            except:
+                available = -9999
+            raise AssertionError("Too few tokens available, %d, expected %d" % (available, number))
     else:
         if pavailable(actor, portname, number+1):
-            raise AssertionError("Too many tokens available, %d, expected %d" % (pavailable(actor, portname), number))
+            raise AssertionError("Too many tokens available, expected %d" % number)
 
     values = [port.queue.peek(actor.id).value for _ in range(number)]
-    port.queue.commit(actor.id), True
+    port.queue.commit(actor.id)
     return values
 
 
@@ -237,11 +242,11 @@ class ActorTester(object):
             raise e
 
         for inport in actor.inports.values():
-            inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
+            inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "in"}, {}))
             inport.endpoint = DummyInEndpoint(inport)
             inport.queue.add_reader(inport.id, {})
         for outport in actor.outports.values():
-            outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
+            outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "out"}, {}))
             outport.queue.add_reader(actor.id, {})
             outport.endpoints.append(DummyOutEndpoint(outport))
 
