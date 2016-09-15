@@ -3567,12 +3567,58 @@ class TestPortRouting(CalvinTestBase):
 
         assert all([len(t)==2 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
-        assert "src_one" in set([k for k in t.keys() for t in actuals[-1][len(actuals[-2])+1:]])
+        assert "src_one" in set([k for t in actuals[-1][len(actuals[-2])+1:] for k in t.keys()])
         # Check that src_one tag is there before migration
-        assert "src_one" in set([k for k in t.keys() for t in actuals[1]])
+        assert "src_one" in set([k for t in actuals[1] for k in t.keys()])
 
         high = [x['src_two'] for x in actuals[-1]]
         low = [x['src_one'] for x in actuals[-1]]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,200), low, min_length=30)
+        d.destroy()
+
+    def testCollectAnyTagPortRemoteMoveMany1(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
+        src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk.token(routing="collect-any-tagged", nbr_peers=2)
+        src1.integer(tag="src_one")
+        src2.integer(tag="src_two")
+        src1.integer > snk.token
+        src2.integer > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        actuals = [[]]
+        ids = [self.rt1.id, self.rt2.id]
+        rts = [self.rt1, self.rt2]
+        for i in range(5):
+            time.sleep(0.2)
+            to = rts[(i+1)%2]
+            to_id = ids[(i+1)%2]
+            fr = rts[i%2]
+            actuals.append(request_handler.report(fr, snk))
+            assert len(actuals[i]) < len(actuals[i+1])
+            request_handler.migrate(fr, snk, to_id)
+
+        print actuals
+
+        assert all([len(t) in [1, 2] for t in actuals[-1]])
+        # Check that src_one tag is there also after last migration
+        assert "src_one" in set([k for t in actuals[-1][len(actuals[-2])+1:] for k in t.keys()])
+        # Check that src_one tag is there before migration
+        assert "src_one" in set([k for t in actuals[1] for k in t.keys()])
+
+        high = [x['src_two'] for x in actuals[-1] if 'src_two' in x]
+        low = [x['src_one'] for x in actuals[-1] if 'src_one' in x]
         self.assert_lists_equal(range(1001,1200), high, min_length=30)
         self.assert_lists_equal(range(1,200), low, min_length=30)
         d.destroy()

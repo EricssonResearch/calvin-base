@@ -18,7 +18,8 @@
 _MODULES = {'fanout_fifo': 'FanoutFIFO',
             'scheduled_fifo': 'ScheduledFIFO',
             'collect_unordered': 'CollectUnordered',
-            'collect_synced': 'CollectSynced'}
+            'collect_synced': 'CollectSynced',
+            'collect_any': 'CollectAny'}
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -39,8 +40,10 @@ def get(port, peer_port=None, peer_port_meta=None):
             selected_queue = "scheduled_fifo"
         elif routing_prop in ['collect-unordered', 'collect-tagged']:
             selected_queue = "collect_unordered"
-        elif routing_prop in ['collect-all-tagged']:
+        elif routing_prop == 'collect-all-tagged':
             selected_queue = "collect_synced"
+        elif routing_prop == 'collect-any-tagged':
+            selected_queue = "collect_any"
         else:
             selected_queue = "fanout_fifo"
     try:

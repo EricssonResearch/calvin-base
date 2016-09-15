@@ -41,6 +41,16 @@ port_property_data = {
                 'direction': "in",
                 'multipeer': True
             },
+            'collect-any-tagged': {
+                'doc': """
+                    Collect tokens from multiple peers, actions see
+                    them as one token {<tag1>: <token1>, ... <tagN>: <tokenN>}. The collected
+                    token is available when any of the peers have delivered tokens.
+                    Use property tag on a connected outport otherwise tag defaults to port id.
+                    """,
+                'direction': "in",
+                'multipeer': True
+            },
         }
     },
     'queue_length': {
