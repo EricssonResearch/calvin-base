@@ -31,7 +31,29 @@ _conf = calvinconfig.get()
 TRANSPORT_PLUGIN_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), *['south', 'plugins', 'transports'])
 TRANSPORT_PLUGIN_NS = "calvin.runtime.south.plugins.transports"
 
-class CalvinLink(object):
+
+class CalvinBaseLink(object):
+    """ Base class for a link
+    """
+
+    def __init__(self, peer_id):
+        super(CalvinBaseLink, self).__init__()
+        self.peer_id = peer_id
+
+    def reply_handler(self, payload):
+        raise NotImplementedError()
+
+    def send_with_reply(self, callback, msg, dest_peer_id=None):
+        raise NotImplementedError()
+
+    def send(self, msg, dest_peer_id=None):
+        raise NotImplementedError()
+
+    def close(self, dest_peer_id=None):
+        raise NotImplemented()
+
+
+class CalvinLink(CalvinBaseLink):
     """ CalvinLink class manage one RT to RT link between
         rt_id and peer_id using transport as mechanism.
         transport: a plug-in transport object
@@ -39,10 +61,10 @@ class CalvinLink(object):
     """
 
     def __init__(self, rt_id, peer_id, transport, old_link=None):
-        super(CalvinLink, self).__init__()
+        super(CalvinLink, self).__init__(peer_id)
         self.rt_id = rt_id
-        self.peer_id = peer_id
         self.transport = transport
+        self.routes = old_link.routes if old_link else []
         # FIXME replies should also be made independent on the link object,
         # to handle dying transports losing reply callbacks
         self.replies = old_link.replies if old_link else {}
@@ -82,7 +104,7 @@ class CalvinLink(object):
             # We ignore errors
             return
 
-    def send_with_reply(self, callback, msg):
+    def send_with_reply(self, callback, msg, dest_peer_id=None):
         """ Adds a message id to the message and send it,
             also registers the callback for the reply.
         """
@@ -90,9 +112,9 @@ class CalvinLink(object):
         self.replies[msg_id] = callback
         self.replies_timeout[msg_id] = async.DelayedCall(10.0, CalvinCB(self.reply_timeout, msg_id))
         msg['msg_uuid'] = msg_id
-        self.send(msg)
+        self.send(msg, dest_peer_id)
 
-    def send(self, msg):
+    def send(self, msg, dest_peer_id=None):
         """ Adds the from and to node ids to the message and
             sends the message using the transport.
 
@@ -100,14 +122,48 @@ class CalvinLink(object):
             two nodes. But is included for verification and to later allow routing of messages.
         """
         msg['from_rt_uuid'] = self.rt_id
-        msg['to_rt_uuid'] = self.peer_id
+        msg['to_rt_uuid'] = self.peer_id if dest_peer_id is None else dest_peer_id
         _log.analyze(self.rt_id, "SEND", msg)
         self.transport.send(msg)
 
-    def close(self):
+    def close(self, dest_peer_id=None):
         """ Disconnect the transport and hence the link object won't work anymore """
         _log.analyze(self.rt_id, "+ LINK", {})
-        self.transport.disconnect()
+        if dest_peer_id is None:
+            self.transport.disconnect()
+
+
+class CalvinRoutingLink(CalvinBaseLink):
+    """ CalvinRoutingLink class manage one RT to RT link between
+        this peer and peer_id using link as an proxy.
+    """
+
+    def __init__(self, peer_id, link):
+        super(CalvinRoutingLink, self).__init__(peer_id)
+        self.link = link
+
+    def send_route_request(self, callback):
+        """ Send route request on link """
+        msg = {'cmd': 'ROUTE_REQUEST', 'dest_peer_id': self.peer_id, 'org_peer_id': self.link.rt_id}
+        self.link.send_with_reply(callback, msg, self.peer_id)
+
+    def reply_handler(self, payload):
+        """ Call reply_handler on link """
+        self.link.reply_handler(payload)
+
+    def send_with_reply(self, callback, msg, dest_peer_id=None):
+        """ Call send_with_reply on link with peer_id.
+        """
+        self.link.send_with_reply(callback, msg, self.peer_id)
+
+    def send(self, msg, dest_peer_id=None):
+        """ Send msg on transport.
+        """
+        self.link.send(msg, self.peer_id)
+
+    def close(self, dest_peer_id=None):
+        """ Call disconnect on link """
+        self.link.disconnect(self.peer_id)
 
 
 class CalvinNetwork(object):
@@ -335,9 +391,65 @@ class CalvinNetwork(object):
             callback(status=response.CalvinResponse(response.NOT_FOUND, {'peer_node_id': key}))
             return
 
+        if 'proxy' not in value:
+            # join the peer node
+            # TODO: if connection fails, retry with other transport schemes
+            self.join([self.get_supported_uri(value['uri'])], callback, [key])
+        else:
+            if value['proxy'] in self.links:
+                self._request_route(value['proxy'], key, callback)
+            else:
+                self.node.storage.get_node(value['proxy'], CalvinCB(self.get_proxy_cb,
+                    dest_peer_id=key,
+                    callback=callback))
+
+    def get_proxy_cb(self, key, value, dest_peer_id, callback):
+        """ Called by storage when proxy node is (not) found """
+        # Test if value is None or False indicating node does not currently exist in storage
+        if not value:
+            # the peer_id did not exist in storage
+            callback(status=response.CalvinResponse(response.BAD_GATEWAY, {'peer_node_id': key}))
+            return
+
         # join the peer node
         # TODO: if connection fails, retry with other transport schemes
-        self.join([self.get_supported_uri(value['uri'])], callback, [key])
+        self.join([self.get_supported_uri(value['uri'])],
+            CalvinCB(self._join_proxy_cb, dest_peer_id=dest_peer_id, org_cb=callback),
+            [key])
+
+    def _join_proxy_cb(self, status, peer_node_id, dest_peer_id, org_cb, uri=None):
+        """ Called when join has finished """
+        # Test if status is None or False indicating connection failed
+        if not status:
+            org_cb(status=response.CalvinResponse(response.BAD_GATEWAY, {'peer_node_id': dest_peer_id}))
+            return
+
+        self._request_route(peer_node_id, dest_peer_id, org_cb)
+
+    def create_routinglink(self, peer_id, link):
+        return CalvinRoutingLink(peer_id, link)
+
+    def add_routinglink(self, link):
+        self.links[link.peer_id] = link
+        link.link.routes.append(link.peer_id)
+
+    def _request_route(self, peer_node_id, dest_peer_id, org_cb):
+        """ Send a request to peer_node_id to create a link to dest_peer_id """
+        routinglink = self.create_routinglink(dest_peer_id, self.links[peer_node_id])
+        self.add_routinglink(routinglink)
+        routinglink.send_route_request(CalvinCB(
+                self._request_route_cb,
+                routinglink=routinglink,
+                callback=org_cb))
+
+    def _request_route_cb(self, reply, routinglink, callback):
+        """ Called by link when route is (not) created """
+        if not reply:
+            callback(status=response.CalvinResponse(response.BAD_GATEWAY, {'peer_node_id': routinglink.peer_id}))
+            self.link_remove(routinglink.peer_id)
+            return
+
+        callback(status=response.CalvinResponse(True), peer_node_id=routinglink.peer_id)
 
     def get_supported_uri(self, uri_or_uris):
         """ Match configured transport interfaces with uris and return first match.
@@ -347,9 +459,9 @@ class CalvinNetwork(object):
             uris = [uri_or_uris]
         else :
             uris = uri_or_uris
-            
+
         transports = _conf.get(None, 'transports')
-            
+
         for transport in transports:
             for uri in uris:
                 if uri.startswith(transport):
@@ -361,6 +473,9 @@ class CalvinNetwork(object):
                                          'links_equal': link == self.links[rt_id].transport if rt_id in self.links else "Gone"},
                                          peer_node_id=rt_id)
         if rt_id in self.links and link == self.links[rt_id].transport:
+            for route in self.links[rt_id].routes[:]:
+                self.link_remove(route)
+                self.control.log_link_disconnected(route)
             self.link_remove(rt_id)
         self.control.log_link_disconnected(rt_id)
 
@@ -368,7 +483,12 @@ class CalvinNetwork(object):
         """ Removes a link to peer id """
         _log.analyze(self.node.id, "+", {}, peer_node_id=peer_id)
         try:
-            self.links.pop(peer_id)
+            link = self.links['peer_id']
+            if isinstance(link, CalvinRoutingLink):
+                link.link.routes.remove(peer_id)
+                self.links.pop(peer_id)
+            else:
+                self.links.pop(peer_id)
         except:
             pass
 
@@ -379,3 +499,10 @@ class CalvinNetwork(object):
 
     def list_links(self):
         return list(self.links.keys())
+
+    def forward_packet(self, payload):
+        try:
+            self.link_check(payload['to_rt_uuid'])
+        except:
+            raise Exception("ERROR_UNKNOWN_RUNTIME")
+        self.links[payload['to_rt_uuid']].transport.send(payload)
