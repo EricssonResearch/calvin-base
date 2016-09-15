@@ -52,7 +52,7 @@ class ExceptionHandler(Actor):
         self.token = None
 
     @condition([], ['token', 'status'])
-    @guard(lambda self: self.token and self.status)
+    @guard(lambda self: self.token is not None and self.status)
     def produce_with_exception(self):
         tok = self.replacement if self.replace else self.token
         status = self.status
@@ -61,14 +61,14 @@ class ExceptionHandler(Actor):
         return ActionResult(production=(tok, status.value))
 
     @condition([], ['token'])
-    @guard(lambda self: self.token and not self.status)
+    @guard(lambda self: self.token is not None and not self.status)
     def produce(self):
         tok = self.token
         self.token = None
         return ActionResult(production=(tok,))
 
     @condition(['token'])
-    @guard(lambda self, tok: not self.status)
+    @guard(lambda self, tok: not self.status and self.token is None)
     def consume(self, tok):
         self.token = tok
         self.status = None
@@ -88,6 +88,11 @@ class ExceptionHandler(Actor):
         {  # Exception
             'in': {'token': EOSToken()},
             'out': {'token': ['End of stream'], 'status':['End of stream']}
+        },
+        {  # Long list with Exceptions in middle
+            'setup': [lambda self: self.init(replace=True, replacement="EOS")],
+            'in': {'token': [0, 1, 2, EOSToken(), 0, 1, 2, EOSToken(), 0, 1, 2]},
+            'out': {'token': [0, 1, 2, 'EOS', 0, 1, 2, 'EOS', 0, 1, 2], 'status':['End of stream', 'End of stream']}
         },
         {  # Exception with replace (default)
             'setup': [lambda self: self.init(replace=True)],
