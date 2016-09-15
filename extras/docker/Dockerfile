@@ -1,6 +1,6 @@
 FROM alpine:3.2
 MAINTAINER ola.angelsmark@ericsson.com
-ARG branch
+ARG branch=master
 RUN apk --update add python py-pip openssl ca-certificates \
       && apk --update add --virtual build-dependencies build-base git gcc python-dev libffi-dev openssl-dev \
       && pip install --upgrade pip \
