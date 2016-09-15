@@ -18,6 +18,8 @@ from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
 from calvin.utilities import calvinlogger
+from calvin.runtime.north.calvin_token import ExceptionToken
+import copy
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -49,6 +51,18 @@ class CollectAny(CollectBase):
                 continue
             read_pos = self.tentative_read_pos[writer]
             data = self.fifo[writer][read_pos % self.N]
+            if isinstance(data, ExceptionToken):
+                # We found an exception token, will return it alone
+                # First cancel previous peeks
+                for w in self.writers:
+                    if w is writer:
+                        break
+                    self.tentative_read_pos[w] -= 1
+                # return exception token alone
+                data = copy.deepcopy(data)
+                data.value = {self.tags[writer]: data.value}
+                self.tentative_read_pos[writer] = read_pos + 1
+                return data
             self.tentative_read_pos[writer] = read_pos + 1
             value[self.tags[writer]] = data.value
         if value:

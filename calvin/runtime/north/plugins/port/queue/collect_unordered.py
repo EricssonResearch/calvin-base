@@ -18,6 +18,7 @@ from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
 from calvin.utilities import calvinlogger
+import copy
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -67,6 +68,9 @@ class CollectUnordered(CollectBase):
                 self.turn_pos += 1
                 if self._type == "collect:tagged":
                     # Modify token to tagged value
-                    data = Token({self.tags[writer]: data.value})
+                    # Make copy so that repeated peeks are not repeatedly tagging
+                    # Also copy to preserv Token class, potential exception token.
+                    data = copy.deepcopy(data)
+                    data.value = {self.tags[writer]: data.value}
                 return data
         raise QueueEmpty(reader=metadata)

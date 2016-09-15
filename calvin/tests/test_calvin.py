@@ -3623,6 +3623,134 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1,200), low, min_length=30)
         d.destroy()
 
+    def testCollectOneTagPortWithException(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
+        src2 : std.FiniteCounter(start=1001, steps=100)
+        expt : exception.ExceptionHandler(replace=true, replacement="exception")
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        exptsnk : io.StandardOut(store_tokens=1, quiet=1)
+        expt.token[in](routing="collect-tagged")
+        src1.integer(tag="src_one")
+        src2.integer(tag="src_two")
+        src1.integer > expt.token
+        src2.integer > expt.token
+        expt.token > snk.token
+        expt.status > exptsnk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        exptsnk = d.actor_map['testCollectPort:exptsnk']
+        exceptions = []
+        while len(exceptions) < 10:
+            time.sleep(0.1)
+            exceptions = request_handler.report(self.rt1, exptsnk)
+        actual = request_handler.report(self.rt1, snk)
+        assert len(actual) >= 3 * 10
+        print actual, exceptions
+
+        self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
+        high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
+        low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
+        self.assert_lists_equal(range(1001,1200), high, min_length=10)
+        self.assert_lists_equal(range(1,4)*10, low, min_length=30)
+
+        d.destroy()
+
+    def testCollectAnyTagPortWithException(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
+        src2 : std.FiniteCounter(start=1001, steps=100)
+        expt : exception.ExceptionHandler(replace=true, replacement="exception")
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        exptsnk : io.StandardOut(store_tokens=1, quiet=1)
+        expt.token[in](routing="collect-any-tagged")
+        src1.integer(tag="src_one")
+        src2.integer(tag="src_two")
+        src1.integer > expt.token
+        src2.integer > expt.token
+        expt.token > snk.token
+        expt.status > exptsnk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        exptsnk = d.actor_map['testCollectPort:exptsnk']
+        exceptions = []
+        while len(exceptions) < 10:
+            time.sleep(0.1)
+            exceptions = request_handler.report(self.rt1, exptsnk)
+        actual = request_handler.report(self.rt1, snk)
+        assert len(actual) >= 3 * 10
+        print actual, exceptions
+
+        self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
+        high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
+        low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,4)*10, low, min_length=30)
+
+        d.destroy()
+
+    def testCollectAllTagPortWithException(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+        src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
+        src2 : std.FiniteCounter(start=1001, steps=100)
+        expt : exception.ExceptionHandler(replace=true, replacement="exception")
+        snk : io.StandardOut(store_tokens=1, quiet=1)
+        exptsnk : io.StandardOut(store_tokens=1, quiet=1)
+        expt.token[in](routing="collect-all-tagged")
+        src1.integer(tag="src_one")
+        src2.integer(tag="src_two")
+        src1.integer > expt.token
+        src2.integer > expt.token
+        expt.token > snk.token
+        expt.status > exptsnk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        print errors
+        print app_info
+        assert len(errors) == 0
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        snk = d.actor_map['testCollectPort:snk']
+        exptsnk = d.actor_map['testCollectPort:exptsnk']
+        exceptions = []
+        while len(exceptions) < 10:
+            time.sleep(0.1)
+            exceptions = request_handler.report(self.rt1, exptsnk)
+        actual = request_handler.report(self.rt1, snk)
+        assert len(actual) >= 3 * 10
+        print actual, exceptions
+
+        self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
+        high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
+        low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
+        self.assert_lists_equal(range(1001,1200), high, min_length=30)
+        self.assert_lists_equal(range(1,4)*10, low, min_length=30)
+
+        # Test that kept in sync but skewed one token for every exception
+        comp = [x['src_two'] - x['src_one'] - 1000 for x in actual if isinstance(x, dict)]
+        self.assert_lists_equal(range(0,45,3), comp[0::3], min_length=5)
+        self.assert_lists_equal(range(0,45,3), comp[1::3], min_length=5)
+        self.assert_lists_equal(range(0,45,3), comp[2::3], min_length=5)
+        d.destroy()
+
     def testRoundRobinPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
