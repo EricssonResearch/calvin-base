@@ -1029,91 +1029,30 @@ if __name__ == '__main__':
     import sys
 
     d = DocumentationStore()
+    def gather_actors(module):
+        # Depth first
+        l = []
+        for m in d.modules(module):
+            l = l + gather_actors(m)
+        actors = d.actors(module)
+        if module:
+            # Add namespace
+            actors = ['.'.join([module, a]) for a in actors]
+        return l + actors
 
-    # print d.documentation()
-    print d.help()
-    # print d.metadata('std.Rip')
-    # print d.metadata('foo')
+    def list_actors():
+        print "Actors:"
+        l = gather_actors('')
+        for a in l:
+            print "  ", a
 
-    print d.help()
-    print d.help('std')
-    print d.help('std.Select')
-    print d.help('std.Rip')
-    print d.help('std.Bazz')
-    print d.help('std.DelayedCounter')
+    def list_actors_with_default_args():
+        l = gather_actors('')
+        # bad_args = [x for x in l if not 'args' in d.metadata(x)]
+        with_defaults = [x for x in l if 'args' in d.metadata(x) and d.metadata(x)['args']['optional']]
+        print "With default params:"
+        for a in with_defaults:
+            print "  ", a, ":", d.metadata(a)['args']['optional'].keys()
 
-    print d.help(compact=True)
-    print d.help('std', compact=True)
-    print d.help('std.Select', compact=True)
-    print d.help('std.Rip', compact=True)
-    print d.help('std.Bazz', compact=True)
-    print d.help('std.DelayedCounter', compact=True)
-
-    sys.exit()
-
-    a = ActorStore()
-    ds = DocumentationStore()
-
-    print ds.help()
-    print "====="
-    print ds.help(compact=True)
-    print "====="
-    print ds.help(what='xyz', compact=True)
-    print "====="
-    print ds.help(what='std', compact=False)
-
-
-    print ds.help(what='std', compact=True)
-    print ds.help(what='std.Constant', compact=False)
-    print "====="
-    print ds.help(what='std.SumActor', compact=True)
-    print "====="
-    print ds.help(what='std.Foo', compact=False)
-    print "====="
-    print ds.help(what='misc.ArgWrapper', compact=True)
-
-    print
-    for actor in ['std.Constant', 'std.Join', 'std.Identity', 'io.FileReader']:
-        found, is_primitive, actor_class, signer = a.lookup(actor)
-        if not found or not is_primitive:
-            raise Exception('Bad actor')
-        print actor, ":", ds._get_args(actor_class)
-    #
-    #
-    # print json.dumps(a.find_all_modules(), sort_keys=True, indent=4)
-    # print a.modules()
-    # print a.modules('foo')
-    # print a.modules('foo.bar')
-    # print a.modules('network')
-    # print ds.module_docs('foo.bar')
-    # print "\n================\n"
-    #
-    # for m in a.modules():
-    #     print m
-    #     print "  ", a.actors(m)
-    # actor_class =  a.lookup('std.Tee')
-    # print actor_class
-    # print a.lookup('misc.ArgWrapper')
-    # for x in ['std.Tee', 'foo', 'foo.bar', 'foo.bar.baz', 'misc.ArgWrapper', 'no.way']:
-    #     print
-    #     print "------------------------"
-    #     print ds.docs_for(x)
-    #     print "------------------------"
-    #
-    #
-    # astore = ActorStore()
-    # actor_types = []
-    #
-    # def gather_actors(module):
-    #     # Depth first
-    #     l = []
-    #     for m in DocumentationStore().modules(module):
-    #         l = l + gather_actors(m)
-    #     actors = DocumentationStore().actors(module)
-    #     if module:
-    #         # Add namespace
-    #         actors = ['.'.join([module, a]) for a in actors]
-    #     return l + actors
-    #
-    #
-    # print gather_actors('')
+    list_actors()
+    list_actors_with_default_args()
