@@ -179,7 +179,7 @@ class AppManager(object):
 
     def _destroy_app_info_cb(self, application_id, value, cb=None):
         _log.analyze(self._node.id, "+", {'application_id': application_id, 'value': value})
-        _log.debug("Destroy app info %s: %s" % application_id, value)
+        _log.debug("Destroy app info %s: %s" % (application_id, value))
         if value:
             self._destroy(Application(application_id, value['name'], value['origin_node_id'],
                                       self._node.am, value['actors_name_map']))
@@ -213,7 +213,7 @@ class AppManager(object):
     def _destroy_actor_cb(self, key, value, application, retries=0):
         """ Get actor callback """
         _log.analyze(self._node.id, "+", {'actor_id': key, 'value': value, 'retries': retries})
-        _log.debug("Destroy app peers actor cb %s" % key)
+        _log.debug("Destroy app peers actor cb %s - retry: %d" % (key, retries))
         if value and 'node_id' in value:
             application.update_node_info(value['node_id'], key)
         else:
