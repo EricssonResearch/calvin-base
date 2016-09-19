@@ -1823,3 +1823,103 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         self.assert_lists_equal(expected, actual, min_length=10)
 
         d.destroy()
+
+@pytest.mark.essential
+class TestConstantifyOnPort(CalvinTestBase):
+
+    def testLiteralOnPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src : std.Counter()
+            snk : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer > /"X"/ snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk = d.actor_map['testLiteralOnPort:snk']
+        actual = request_handler.report(self.rt1, snk)
+        expected = ['X']*len(actual)
+
+        self.assert_lists_equal(expected, actual, min_length=10)
+
+        d.destroy()
+
+    def testLiteralOnPortlist(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src : std.Counter()
+            snk1 : io.StandardOut(store_tokens=1, quiet=1)
+            snk2 : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer > /"X"/ snk1.token, snk2.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testLiteralOnPortlist")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testLiteralOnPortlist:snk1']
+        snk2 = d.actor_map['testLiteralOnPortlist:snk2']
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+        expected1 = ['X']*len(actual1)
+        expected2 = range(1, len(actual2))
+
+        self.assert_lists_equal(expected1, actual1, min_length=10)
+        self.assert_lists_equal(expected2, actual2, min_length=10)
+
+        d.destroy()
+
+    def testLiteralsOnPortlist(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src : std.Counter()
+            snk1 : io.StandardOut(store_tokens=1, quiet=1)
+            snk2 : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer > /"X"/ snk1.token, /"Y"/ snk2.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testLiteralsOnPortlist")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testLiteralsOnPortlist:snk1']
+        snk2 = d.actor_map['testLiteralsOnPortlist:snk2']
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+        expected1 = ['X']*len(actual1)
+        expected2 = ['Y']*len(actual2)
+
+        self.assert_lists_equal(expected1, actual1, min_length=10)
+        self.assert_lists_equal(expected2, actual2, min_length=10)
+
+        d.destroy()
+
+    def testConstantsOnPortlist(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            define FOO = "X"
+            define BAR = "Y"
+            src : std.Counter()
+            snk1 : io.StandardOut(store_tokens=1, quiet=1)
+            snk2 : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer > /FOO/ snk1.token, /BAR/ snk2.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testConstantsOnPortlist")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testConstantsOnPortlist:snk1']
+        snk2 = d.actor_map['testConstantsOnPortlist:snk2']
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+        expected1 = ['X']*len(actual1)
+        expected2 = ['Y']*len(actual2)
+
+        self.assert_lists_equal(expected1, actual1, min_length=10)
+        self.assert_lists_equal(expected2, actual2, min_length=10)
+
+        d.destroy()
