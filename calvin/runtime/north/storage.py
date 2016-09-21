@@ -284,9 +284,10 @@ class Storage(object):
         """
         if value:
             value = self.coder.decode(value)
-            org_cb(org_key, list(set(value + local_list)))
-        else:
-            org_cb(org_key, local_list if local_list else None)
+            if isinstance(value, (list, tuple, set)):
+                org_cb(org_key, list(set(value + local_list)))
+            else:
+                org_cb(org_key, local_list if local_list else None)
 
     def get_concat(self, prefix, key, cb):
         """ Get multiple values for registry key: prefix+key,
@@ -329,7 +330,8 @@ class Storage(object):
         if value:
             value = self.coder.decode(value)
             _log.analyze(self.node.id, "+ VALUE", {'value': value, 'key': org_key})
-            it.extend([(org_key, v) for v in value] if include_key else value)
+            if isinstance(value, (list, tuple, set)):
+                it.extend([(org_key, v) for v in value] if include_key else value)
         it.final()
         _log.analyze(self.node.id, "+ END", {'key': org_key, 'iter': str(it)})
 
