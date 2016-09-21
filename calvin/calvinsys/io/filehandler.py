@@ -14,14 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import os.path
 import os
 
-if 'tests.pytest' not in sys.modules:
-    from calvin.runtime.south.plugins.async import filedescriptor
-else:
-    import tests.calvin_file as filedescriptor
+from calvin.runtime.south.plugins.async import filedescriptor
 
 from calvin.utilities.calvinlogger import get_logger
 
