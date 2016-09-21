@@ -84,6 +84,14 @@ class DotRenderer(BaseRenderer):
     def postamble(self):
         return '}\n'
 
+    def Constant(self, node, order):
+        if order == 'preorder':
+            return '/* define '
+        if order == 'inorder':
+            return ' = '
+        if order == 'postorder':
+            return ' */\n'
+
     def Assignment(self, node, order):
         # ident, actor_type, args
         root = node
