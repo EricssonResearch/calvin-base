@@ -165,7 +165,7 @@ class DotRenderer(BaseRenderer):
         return ' [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0"><TR><TD>/{}/</TD></TR></TABLE>>]'.format(self.Value(node.value))
 
     def Void(self, node):
-        return '{{{} [label=""]}} [arrowhead=tee]'.format(self._random_id())
+        return '{{{} [shape="point" width=0.15]}}'.format(self._random_id())
 
     def Value(self, node):
         fmt = "'{}'" if type(node.value) is str else '{}'
