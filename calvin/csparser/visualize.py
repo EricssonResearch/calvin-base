@@ -112,7 +112,7 @@ class DotRenderer(BaseRenderer):
         if order == 'preorder':
             lines = []
             lines.append('{} [label=<'.format(_refname(node.ident)))
-            lines.append('<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">')
+            lines.append('<TABLE bgcolor="white" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">')
             # Name
             lines.append('<TR><TD bgcolor="{1}" COLSPAN="3">{0}</TD></TR>'.format(node.ident, hdrcolor))
             # Class
@@ -155,9 +155,9 @@ class DotRenderer(BaseRenderer):
 
     def ImplicitPort(self, node, order):
         if order == 'preorder':
-            return '{{{} [label="'.format(self._random_id())
+            return '{{{} [shape="box" style="filled" fillcolor="white" label="'.format(self._random_id())
         if order == 'postorder':
-            return '" shape=box]}'
+            return '" ]}'
 
     def TransformedPort(self, node):
         # N.B. port and value are properties of node, not children
@@ -184,11 +184,11 @@ class DotRenderer(BaseRenderer):
 
     def Component(self, node, order):
         if order == 'preorder':
-            lines = ['subgraph {']
+            lines = ['subgraph cluster_{0}{{ style="filled"; color="lightyellow"; label="Component: {0}";'.format(node.name)]
             for p in node.inports:
-                lines.append('{{rank="source" {0}_out [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
+                lines.append('{{/* rank="source" */ {0}_out [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
             for p in node.outports:
-                lines.append('{{rank="sink" {0}_in [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
+                lines.append('{{/* rank="sink" */ {0}_in [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
             return '\n'.join(lines)
 
         if order == 'postorder':
