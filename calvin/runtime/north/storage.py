@@ -289,6 +289,8 @@ class Storage(object):
                 org_cb(org_key, list(set(value + local_list)))
             else:
                 org_cb(org_key, local_list if local_list else None)
+        else:
+            org_cb(org_key, local_list if local_list else None)
 
     def get_concat(self, prefix, key, cb):
         """ Get multiple values for registry key: prefix+key,
