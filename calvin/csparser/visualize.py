@@ -69,6 +69,18 @@ class DotRenderer(BaseRenderer):
         super(DotRenderer, self).__init__()
         self.debug = debug
         self.show_args = show_args
+        self._namespace_stack = []
+
+    def push_namespace(self, ns):
+        self._namespace_stack.append(ns)
+
+    def pop_namespace(self):
+        if self._namespace_stack:
+            self._namespace_stack.pop()
+
+    @property
+    def namespace(self):
+        return "{}_".format(self._namespace_stack[-1]) if self._namespace_stack else ''
 
     def _random_id(self):
         return ''.join(random.choice(string.ascii_uppercase) for x in range(8))
@@ -111,7 +123,7 @@ class DotRenderer(BaseRenderer):
 
         if order == 'preorder':
             lines = []
-            lines.append('{} [label=<'.format(_refname(node.ident)))
+            lines.append('{}{} [label=<'.format(self.namespace, _refname(node.ident)))
             lines.append('<TABLE bgcolor="white" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">')
             # Name
             lines.append('<TR><TD bgcolor="{1}" COLSPAN="3">{0}</TD></TR>'.format(node.ident, hdrcolor))
@@ -142,16 +154,16 @@ class DotRenderer(BaseRenderer):
             return '\n'.join(lines)
 
     def OutPort(self, node):
-        return "{}:{}_out:e".format(_refname(node.actor), node.port)
+        return "{}{}:{}_out:e".format(self.namespace, _refname(node.actor), node.port)
 
     def InPort(self, node):
-        return "{}:{}_in:w".format(_refname(node.actor), node.port)
+        return "{}{}:{}_in:w".format(self.namespace, _refname(node.actor), node.port)
 
     def InternalOutPort(self, node):
-        return "{}_out:e".format(node.port)
+        return "{}{}_out:e".format(self.namespace, node.port)
 
     def InternalInPort(self, node):
-        return "{}_in:w".format(node.port)
+        return "{}{}_in:w".format(self.namespace, node.port)
 
     def ImplicitPort(self, node, order):
         if order == 'preorder':
@@ -184,14 +196,16 @@ class DotRenderer(BaseRenderer):
 
     def Component(self, node, order):
         if order == 'preorder':
-            lines = ['subgraph cluster_{0}{{ style="filled"; color="lightyellow"; label="Component: {0}";'.format(node.name)]
+            self.push_namespace(node.name)
+            lines = ['subgraph cluster_{0} {{ style="filled"; color="lightyellow"; label="Component: {0}";'.format(node.name)]
             for p in node.inports:
-                lines.append('{{/* rank="source" */ {0}_out [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
+                lines.append('{{/* rank="source" */ {1}{0}_out [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p, self.namespace))
             for p in node.outports:
-                lines.append('{{/* rank="sink" */ {0}_in [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p))
+                lines.append('{{/* rank="sink" */ {1}{0}_in [shape="cds" style="filled" fillcolor="lightgrey" label="{0}"]}};'.format(p, self.namespace))
             return '\n'.join(lines)
 
         if order == 'postorder':
+            self.pop_namespace()
             return '}\n'
 
 
