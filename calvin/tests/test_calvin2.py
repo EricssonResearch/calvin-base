@@ -14,19 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import unittest
 import time
 import pytest
-import multiprocessing
 
 from calvin.csparser import cscompile as compiler
 from calvin.Tools import cscompiler as compile_tool
 from calvin.Tools import deployer
 from calvin.utilities import calvinlogger
-from calvin.utilities.nodecontrol import dispatch_node
-from calvin.utilities.attribute_resolver import format_index_string
-from calvin.requests.request_handler import RequestHandler, RT
+from calvin.requests.request_handler import RequestHandler
+from . import helpers
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -38,139 +35,38 @@ def absolute_filename(filename):
 rt1 = None
 rt2 = None
 rt3 = None
-kill_peers = True
+test_type = None
 request_handler = None
 
+def expected_tokens(rt, actor_id, t_type='seq'):
+    return helpers.expected_tokens(request_handler, rt, actor_id, t_type)
 
+def wait_for_tokens(rt, actor_id, size=5, retries=20):
+    return helpers.wait_for_tokens(request_handler, rt, actor_id, size, retries)
+    
+def actual_tokens(rt, actor_id, size=5, retries=20):
+    return helpers.actual_tokens(request_handler, rt, actor_id, size, retries)
+   
+  
 def setup_module(module):
-    global rt1
-    global rt2
-    global rt3
-    global kill_peers
+    global rt1, rt2, rt3
+    global peerlist
     global request_handler
+    global test_type
 
-    ip_addr = None
-    bt_master_controluri = None
     request_handler = RequestHandler()
-
-    try:
-        ip_addr = os.environ["CALVIN_TEST_IP"]
-        purpose = os.environ["CALVIN_TEST_UUID"]
-        _log.debug("Running remote tests")
-    except KeyError:
-        _log.debug("Running local test")
-        pass
-
-    if ip_addr is None:
-        # Bluetooth tests assumes one master runtime with two connected peers
-        # CALVIN_TEST_BT_MASTERCONTROLURI is the control uri of the master runtime
-        try:
-            bt_master_controluri = os.environ["CALVIN_TEST_BT_MASTERCONTROLURI"]
-            _log.debug("Running Bluetooth tests")
-        except KeyError:
-            pass
-
-    if ip_addr:
-        remote_node_count = 2
-        kill_peers = False
-        test_peers = None
-
-        import socket
-        ports=[]
-        for a in range(2):
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(('', 0))
-            addr = s.getsockname()
-            ports.append(addr[1])
-            s.close()
-
-        rt1,_ = dispatch_node(["calvinip://%s:%s" % (ip_addr, ports[0])], "http://%s:%s" % (ip_addr, ports[1]))
-
-        _log.debug("First runtime started, control http://%s:%s, calvinip://%s:%s" % (ip_addr, ports[1], ip_addr, ports[0]))
-
-        interval = 0.5
-        for retries in range(1,20):
-            time.sleep(interval)
-            _log.debug("Trying to get test nodes for 'purpose' %s" % purpose)
-            test_peers = request_handler.get_index(rt1, format_index_string({'node_name':
-                                                                    {'organization': 'com.ericsson',
-                                                                     'purpose': purpose}
-                                                                  }))
-            if not test_peers is None and not test_peers["result"] is None and \
-                    len(test_peers["result"]) == remote_node_count:
-                test_peers = test_peers["result"]
-                break
-
-        if test_peers is None or len(test_peers) != remote_node_count:
-            _log.debug("Failed to find all remote nodes within time, peers = %s" % test_peers)
-            raise Exception("Not all nodes found dont run tests, peers = %s" % test_peers)
-
-        _log.debug("All remote nodes found!")
-
-        test_peer2_id = test_peers[0]
-        test_peer2 = request_handler.get_node(rt1, test_peer2_id)
-        if test_peer2:
-            rt2 = RT(test_peer2["control_uri"])
-            rt2.id = test_peer2_id
-            rt2.uri = test_peer2["uri"]
-        test_peer3_id = test_peers[1]
-        if test_peer3_id:
-            test_peer3 = request_handler.get_node(rt1, test_peer3_id)
-            if test_peer3:
-                rt3 = RT(test_peer3["control_uri"])
-                rt3.id = test_peer3_id
-                rt3.uri = test_peer3["uri"]
-    elif bt_master_controluri:
-        rt1 = RT(bt_master_controluri)
-        bt_master_id = request_handler.get_node_id(rt1)
-        data = request_handler.get_node(rt1, bt_master_id)
-        if data:
-            rt1.id = bt_master_id
-            rt1.uri = data["uri"]
-            test_peers = request_handler.get_nodes(rt1)
-            test_peer2_id = test_peers[0]
-            test_peer2 = request_handler.get_node(rt1, test_peer2_id)
-            if test_peer2:
-                rt2 = RT(test_peer2["control_uri"])
-                rt2.id = test_peer2_id
-                rt2.uri = test_peer2["uri"]
-            test_peer3_id = test_peers[1]
-            if test_peer3_id:
-                test_peer3 = request_handler.get_node(rt1, test_peer3_id)
-                if test_peer3:
-                    rt3 = RT(test_peer3["control_uri"])
-                    rt3.id = test_peer3_id
-                    rt3.uri = test_peer3["uri"]
-    else:
-        try:
-            ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
-        except:
-            import socket
-            ip_addr = socket.gethostbyname(socket.gethostname())
-        rt1,_ = dispatch_node(["calvinip://%s:5000" % (ip_addr,)], "http://localhost:5003")
-        rt2,_ = dispatch_node(["calvinip://%s:5001" % (ip_addr,)], "http://localhost:5004")
-        rt3,_ = dispatch_node(["calvinip://%s:5002" % (ip_addr,)], "http://localhost:5005")
-        time.sleep(.4)
-        request_handler.peer_setup(rt1, ["calvinip://%s:5001" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
-        request_handler.peer_setup(rt2, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5002" % (ip_addr, )])
-        request_handler.peer_setup(rt3, ["calvinip://%s:5000" % (ip_addr,), "calvinip://%s:5001" % (ip_addr, )])
-        time.sleep(.4)
+    test_type, [rt1, rt2, rt3], peerlist = helpers.setup_test_type(request_handler)
 
 
 def teardown_module(module):
     global rt1
     global rt2
     global rt3
-    global kill_peers
+    global test_type
+    global request_handler
 
-    request_handler.quit(rt1)
-    if kill_peers:
-        request_handler.quit(rt2)
-        request_handler.quit(rt3)
-    time.sleep(0.4)
-    for p in multiprocessing.active_children():
-        p.terminate()
-    time.sleep(0.4)
+    helpers.teardown_test_type(request_handler, [rt1, rt2, rt3], test_type)
+
 
 class CalvinTestBase(unittest.TestCase):
 
@@ -181,9 +77,12 @@ class CalvinTestBase(unittest.TestCase):
 
     def assert_lists_equal(self, expected, actual, min_length=5):
         self.assertTrue(len(actual) >= min_length, "Received data too short (%d), need at least %d" % (len(actual), min_length))
-        l = min([len(expected), len(actual)])
-        self.assertListEqual(expected[:l], actual[:l])
+        self._assert_lists_equal(expected, actual)
 
+    def _assert_lists_equal(self, expected, actual):
+        assert actual
+        assert reduce(lambda a, b: a and b[0] == b[1], zip(expected, actual), True) 
+        
     def compile_script(self, script, name):
         # Instead of rewriting tests after compiler.compile_script changed
         # from returning app_info, errors, warnings to app_info, issuetracker
@@ -191,6 +90,23 @@ class CalvinTestBase(unittest.TestCase):
         app_info, issuetracker = compiler.compile_script(script, name)
         return app_info, issuetracker.errors(), issuetracker.warnings()
 
+    def wait_for_migration(self, runtime, actors, retries=20):
+        retry = 0
+        if not isinstance(actors, list):
+            actors = [ actors ]
+        while retry < retries:
+            try:
+                for actor in actors:
+                    request_handler.get_actor(runtime, actor)
+                break
+            except Exception:
+                _log.info("Migration not finished, retrying in %d" % (retry,))
+                retry += 1
+                time.sleep(retry)
+
+    def migrate(self, source, dest, actor):
+        request_handler.migrate(source, actor, dest.id)
+        self.wait_for_migration(dest, [actor])
 
 @pytest.mark.essential
 class TestConnections(CalvinTestBase):
@@ -203,11 +119,10 @@ class TestConnections(CalvinTestBase):
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(.5)
-
-        actual = request_handler.report(self.rt1, snk)
-
-        self.assert_lists_equal(range(1, 10), actual)
+        actual = wait_for_tokens(self.rt1, snk)
+        expected = expected_tokens(self.rt1, src, 'seq')
+        
+        self.assert_lists_equal(expected, actual)
 
         request_handler.delete_actor(self.rt1, src)
         request_handler.delete_actor(self.rt1, snk)
@@ -219,12 +134,14 @@ class TestConnections(CalvinTestBase):
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(.4)
-        request_handler.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(.6)
+        pre_migrate = wait_for_tokens(self.rt1, snk)
 
-        actual = request_handler.report(self.rt2, snk)
-        self.assert_lists_equal(range(1, 10), actual)
+        self.migrate(self.rt1, self.rt2, snk)
+        
+        actual = wait_for_tokens(self.rt2, snk, len(pre_migrate)+5)
+        expected = expected_tokens(self.rt1, src)
+        
+        self.assert_lists_equal(expected, actual)
 
         request_handler.delete_actor(self.rt1, src)
         request_handler.delete_actor(self.rt2, snk)
@@ -236,18 +153,14 @@ class TestConnections(CalvinTestBase):
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(1)
-        request_handler.migrate(self.rt1, src, self.rt2.id)
+        actual = wait_for_tokens(self.rt1, snk)
 
-        interval = 0.5
-        for retries in range(1,5):
-            time.sleep(interval * retries)
-            actual = request_handler.report(self.rt1, snk)
-            if len(actual) > 10 :
-                break
+        self.migrate(self.rt1, self.rt2, src)
 
+        actual = actual_tokens(self.rt1, snk, len(actual)+5 )
+        expected = expected_tokens(self.rt2, src)
 
-        self.assert_lists_equal(range(1, 10), actual)
+        self.assert_lists_equal(expected, actual)
 
         request_handler.delete_actor(self.rt2, src)
         request_handler.delete_actor(self.rt1, snk)
@@ -259,14 +172,15 @@ class TestConnections(CalvinTestBase):
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(1)
-        request_handler.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(1)
-        request_handler.migrate(self.rt1, src, self.rt2.id)
-        time.sleep(1)
-
-        actual = request_handler.report(self.rt2, snk)
-        self.assert_lists_equal(range(1,15), actual, min_length=10)
+        pre_migrate = wait_for_tokens(self.rt1, snk)
+        self.migrate(self.rt1, self.rt2, snk)
+        mid_migrate = wait_for_tokens(self.rt2, snk, len(pre_migrate)+5)
+        self.migrate(self.rt1, self.rt2, src)
+        post_migrate = wait_for_tokens(self.rt2, snk, len(mid_migrate)+5)
+        
+        expected = expected_tokens(self.rt2, src)
+        
+        self.assert_lists_equal(expected, post_migrate, min_length=10)
 
         request_handler.delete_actor(self.rt2, src)
         request_handler.delete_actor(self.rt2, snk)
@@ -278,15 +192,14 @@ class TestConnections(CalvinTestBase):
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(1)
-        request_handler.migrate(self.rt1, src, self.rt2.id)
-        request_handler.report(self.rt1, snk)
-        time.sleep(1)
-        request_handler.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(1)
+        pre_migrate = wait_for_tokens(self.rt1, snk)
+        self.migrate(self.rt1, self.rt2, src)
+        mid_migrate = wait_for_tokens(self.rt1, snk, len(pre_migrate)+5)
+        self.migrate(self.rt1, self.rt2, snk)
+        post_migrate = wait_for_tokens(self.rt2, snk, len(mid_migrate)+5)
 
-        actual = request_handler.report(self.rt2, snk)
-        self.assert_lists_equal(range(1,20), actual, min_length=15)
+        expected = expected_tokens(self.rt2, src)
+        self.assert_lists_equal(expected, post_migrate, min_length=15)
 
         request_handler.delete_actor(self.rt2, src)
         request_handler.delete_actor(self.rt2, snk)
@@ -306,13 +219,15 @@ class TestScripts(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(1)
         snk = d.actor_map['simple:snk']
+        src = d.actor_map['simple:src']
 
-        actual = request_handler.report(self.rt1, (snk))
-        self.assert_lists_equal(range(1, 20), actual)
+        actual = wait_for_tokens(self.rt1, snk)
+        expected = expected_tokens(self.rt1, src)
 
-        d.destroy()
+        self.assert_lists_equal(expected, actual)
+
+        helpers.destroy_app(d)
 
     @pytest.mark.slow
     def testFileScript(self):
@@ -322,14 +237,16 @@ class TestScripts(CalvinTestBase):
         app_info, issuetracker = compile_tool.compile_file(scriptfile)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(1)
+
         src = d.actor_map['%s:src' % scriptname]
         snk = d.actor_map['%s:snk' % scriptname]
 
-        actual = request_handler.report(self.rt1, snk)
-        self.assert_lists_equal(range(1, 20), actual)
+        actual = wait_for_tokens(self.rt1, snk)        
+        expected = expected_tokens(self.rt1, src)
 
-        d.destroy()
+        self.assert_lists_equal(expected, actual)
+
+        helpers.destroy_app(d)
 
 
 @pytest.mark.essential
@@ -346,27 +263,35 @@ class TestMetering(CalvinTestBase):
 
         r = request_handler.register_metering(self.rt1)
         user_id = r['user_id']
-        metering_timeout = r['timeout']
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
+        
+        snk = d.actor_map["simple:snk"]
+        src = d.actor_map["simple:src"]
+        tokens = len(wait_for_tokens(self.rt1, snk, 10))
+        
         metainfo = request_handler.get_actorinfo_metering(self.rt1, user_id)
         data1 = request_handler.get_timed_metering(self.rt1, user_id)
-        time.sleep(0.5)
+
+        actual = wait_for_tokens(self.rt1, snk, tokens+10)
         data2 = request_handler.get_timed_metering(self.rt1, user_id)
-        snk = d.actor_map['simple:snk']
+
         assert snk in metainfo
         assert data1[snk][0][1] in metainfo[snk]
-        actual = request_handler.report(self.rt1, (snk))
-        self.assert_lists_equal(range(1, 20), actual)
+
+        expected = expected_tokens(self.rt1, src)
+        self.assert_lists_equal(expected, actual)
+        
         # Verify only new data
         assert max([data[0] for data in data1[snk]]) < min([data[0] for data in data2[snk]])
         # Verify about same number of tokens (time diff makes exact match not possible)
         diff = len(data1[snk]) + len(data2[snk]) - len(actual)
         assert diff > -3 and diff < 3
+        
         request_handler.unregister_metering(self.rt1, user_id)
-        d.destroy()
+        helpers.destroy_app(d)
+
 
     @pytest.mark.slow
     def testMigratingMetering(self):
@@ -385,27 +310,36 @@ class TestMetering(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        # migrate sink back and forth
-        time.sleep(0.5)
+
         snk = d.actor_map['simple:snk']
-        request_handler.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(0.5)
-        request_handler.migrate(self.rt2, snk, self.rt1.id)
-        time.sleep(0.5)
+        src = d.actor_map['simple:src']
+        tokens = len(wait_for_tokens(self.rt1, snk))
+        
+        # migrate sink back and forth
+        self.migrate(self.rt1, self.rt2, snk)
+        tokens = len(wait_for_tokens(self.rt2, snk, tokens+5))
+        self.migrate(self.rt2, self.rt1, snk)
+        tokens = len(wait_for_tokens(self.rt1, snk, tokens+5))
+
         # Get metering
         metainfo1 = request_handler.get_actorinfo_metering(self.rt1, user_id)
         metainfo2 = request_handler.get_actorinfo_metering(self.rt2, user_id)
         data1 = request_handler.get_timed_metering(self.rt1, user_id)
         data2 = request_handler.get_timed_metering(self.rt2, user_id)
+
         # Check metainfo
         assert snk in metainfo1
         assert snk in metainfo2
         assert data1[snk][0][1] in metainfo1[snk]
         assert data2[snk][0][1] in metainfo2[snk]
+
         # Check that the sink produced something
-        actual = request_handler.report(self.rt1, (snk))
-        self.assert_lists_equal(range(1, 20), actual)
+        expected = expected_tokens(self.rt1, src)
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
+
+        self.assert_lists_equal(expected, actual)
         # Verify action times of data2 is in middle of data1
+
         limits = (min([data[0] for data in data2[snk]]), max([data[0] for data in data2[snk]]))
         v = [data[0] for data in data1[snk]]
         assert len(filter(lambda x: x > limits[0] and x < limits[1], v)) == 0
@@ -416,7 +350,8 @@ class TestMetering(CalvinTestBase):
         assert diff > -3 and diff < 3
         request_handler.unregister_metering(self.rt1, user_id)
         request_handler.unregister_metering(self.rt2, user_id)
-        d.destroy()
+        helpers.destroy_app(d)
+
 
     @pytest.mark.slow
     def testAggregatedMigratingMetering(self):
@@ -435,13 +370,17 @@ class TestMetering(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        # migrate sink back and forth
-        time.sleep(0.5)
+        
         snk = d.actor_map['simple:snk']
-        request_handler.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(0.5)
-        request_handler.migrate(self.rt2, snk, self.rt1.id)
-        time.sleep(0.5)
+        src = d.actor_map['simple:src']
+        # migrate sink back and forth
+        tokens = len(wait_for_tokens(self.rt1, snk))
+
+        self.migrate(self.rt1, self.rt2, snk)
+        tokens = len(wait_for_tokens(self.rt2, snk, tokens+5))
+        self.migrate(self.rt2, self.rt1, snk)
+        tokens = len(wait_for_tokens(self.rt1, snk, tokens+5))
+        
         # Get metering
         metainfo1 = request_handler.get_actorinfo_metering(self.rt1, user_id)
         data1 = request_handler.get_timed_metering(self.rt1, user_id)
@@ -449,14 +388,18 @@ class TestMetering(CalvinTestBase):
         data2 = request_handler.get_timed_metering(self.rt2, user_id)
         agg1 = request_handler.get_aggregated_metering(self.rt1, user_id)
         metainfo2 = request_handler.get_actorinfo_metering(self.rt2, user_id)
+        
         # Check metainfo
         assert snk in metainfo1
         assert snk in metainfo2
         assert data1[snk][0][1] in metainfo1[snk]
         assert data2[snk][0][1] in metainfo2[snk]
+        
         # Check that the sink produced something
-        actual = request_handler.report(self.rt1, (snk))
-        self.assert_lists_equal(range(1, 20), actual)
+        expected = expected_tokens(self.rt1, src)
+        actual = actual_tokens(self.rt1, snk, len(expected))
+        self.assert_lists_equal(expected, actual)
+        
         # Verify about same number of tokens (time diff makes exact match not possible)
         total_timed = len(data1[snk]) + len(data2[snk])
         diff = total_timed - len(actual)
@@ -468,7 +411,7 @@ class TestMetering(CalvinTestBase):
         assert sum(agg2['activity'][snk].values()) <= len(data2[snk])
         request_handler.unregister_metering(self.rt1, user_id)
         request_handler.unregister_metering(self.rt2, user_id)
-        d.destroy()
+        helpers.destroy_app(d)
 
 
     @pytest.mark.slow
@@ -484,34 +427,45 @@ class TestMetering(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        # migrate sink back and forth
-        time.sleep(0.5)
+        
+        src = d.actor_map['simple:src']
         snk = d.actor_map['simple:snk']
-        request_handler.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(0.5)
-        request_handler.migrate(self.rt2, snk, self.rt1.id)
-        time.sleep(0.5)
+        
+        # migrate sink back and forth
+        tokens = len(wait_for_tokens(self.rt1, snk))
+        self.migrate(self.rt1, self.rt2, snk)
+        tokens = len(wait_for_tokens(self.rt2, snk, tokens+5))
+        self.migrate(self.rt2, self.rt1, snk)
+        tokens = len(wait_for_tokens(self.rt1, snk, tokens+5))
+
         # Metering
         r1 = request_handler.register_metering(self.rt1)
         user_id = r1['user_id']
+
         # Register as same user to keep it simple
         r2 = request_handler.register_metering(self.rt2, user_id)
         metainfo1 = request_handler.get_actorinfo_metering(self.rt1, user_id)
         agg2 = request_handler.get_aggregated_metering(self.rt2, user_id)
         agg1 = request_handler.get_aggregated_metering(self.rt1, user_id)
         metainfo2 = request_handler.get_actorinfo_metering(self.rt2, user_id)
+
         # Check metainfo
         assert snk in metainfo1
         assert snk in metainfo2
+
         # Check that the sink produced something
-        actual = request_handler.report(self.rt1, (snk))
-        self.assert_lists_equal(range(1, 20), actual)
+        expected = expected_tokens(self.rt1, src)
+        actual = actual_tokens(self.rt1, snk, len(expected))
+
+        self.assert_lists_equal(expected, actual)
+        
         total_agg = sum(agg1['activity'][snk].values()) + sum(agg2['activity'][snk].values())
         diff = total_agg - len(actual)
         assert diff > -3 and diff < 3
         request_handler.unregister_metering(self.rt1, user_id)
         request_handler.unregister_metering(self.rt2, user_id)
-        d.destroy()
+        
+        helpers.destroy_app(d)
 
 
 class TestStateMigration(CalvinTestBase):
@@ -528,19 +482,19 @@ class TestStateMigration(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(1)
+        
+        src = d.actor_map['simple:src']
         csum = d.actor_map['simple:sum']
         snk = d.actor_map['simple:snk']
 
-        request_handler.migrate(self.rt1, csum, self.rt2.id)
-        time.sleep(1)
-
-        actual = request_handler.report(self.rt1, snk)
-        expected = [sum(range(i+1)) for i in range(1,10)]
+        tokens = len(wait_for_tokens(self.rt1, snk))
+        self.migrate(self.rt1, self.rt2, csum)
+    
+        actual = request_handler.report(self.rt1, snk, tokens+5)
+        expected = expected_tokens(self.rt1, src, 'sum')
 
         self.assert_lists_equal(expected, actual)
-
-        d.destroy()
+        helpers.destroy_app(d)
 
 
 @pytest.mark.slow
@@ -548,6 +502,8 @@ class TestStateMigration(CalvinTestBase):
 class TestAppLifeCycle(CalvinTestBase):
 
     def testAppDestructionOneRemote(self):
+        from functools import partial
+        
         _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
@@ -559,44 +515,51 @@ class TestAppLifeCycle(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(1)
+
         src = d.actor_map['simple:src']
         csum = d.actor_map['simple:sum']
         snk = d.actor_map['simple:snk']
 
-        request_handler.migrate(self.rt1, csum, self.rt2.id)
-        time.sleep(.5)
+        tokens = len(wait_for_tokens(self.rt1, snk))
+        self.migrate(self.rt1, self.rt2, csum)
+        
+        actual = actual_tokens(self.rt1, snk, tokens+5)
+        expected = expected_tokens(self.rt1, src, 'sum')
 
-        actual = request_handler.report(self.rt1, snk)
-        expected = [sum(range(i+1)) for i in range(1,10)]
         self.assert_lists_equal(expected, actual)
-        request_handler.delete_application(self.rt1, d.app_id)
+        
+        helpers.delete_app(request_handler, self.rt1, d.app_id)
+        
+        def check_actors(runtime):
+            for actor in src, csum, snk:
+                a = request_handler.get_actor(runtime, actor)
+                if a is not None:
+                    _log.info("Actor '%r' still present on runtime '%r" % (actor, runtime.id, ))
+                    return False
+            return True
 
-        for a in range(0, 20):
-            all_removed = None
-            try:
-                self.assertFalse(request_handler.get_actor(self.rt1, src))
-                self.assertFalse(request_handler.get_actor(self.rt1, csum))
-                self.assertFalse(request_handler.get_actor(self.rt1, snk))
-                self.assertFalse(request_handler.get_actor(self.rt2, src))
-                self.assertFalse(request_handler.get_actor(self.rt2, csum))
-                self.assertFalse(request_handler.get_actor(self.rt2, snk))
-                self.assertFalse(request_handler.get_actor(self.rt3, src))
-                self.assertFalse(request_handler.get_actor(self.rt3, csum))
-                self.assertFalse(request_handler.get_actor(self.rt3, snk))
-            except AssertionError as e:
-                print a, e
-                all_removed = e
-            if all_removed is None:
-                break
-            time.sleep(1)
+        for rt in [ self.rt1, self.rt2, self.rt3 ]:
+            check_rt = partial(check_actors, rt)
+            all_gone = helpers.retry(20, check_rt, lambda x: x, "Not all actors gone on rt '%r'" % (rt.id, ))
+            assert all_gone
 
-        if all_removed:
-            raise all_removed
-
-        self.assertFalse(request_handler.get_application(self.rt1, d.app_id))
-        self.assertFalse(request_handler.get_application(self.rt2, d.app_id))
-        self.assertFalse(request_handler.get_application(self.rt3, d.app_id))
+        def check_application(runtime):
+            try :
+                app = request_handler.get_application(runtime, d.app_id)
+            except Exception as e:
+                msg = str(e.message)
+                if msg.startswith(404):
+                    return True
+            return app is None
+            
+        for rt in [ self.rt1, self.rt2, self.rt3 ]:
+            check_rt = partial(check_application, rt)
+            all_gone = helpers.retry(20, check_rt, lambda x: x, "Application still present on rt '%r'" % (rt.id, ))
+            assert all_gone
+            
+        self.assertTrue(request_handler.get_application(self.rt1, d.app_id) is None)
+        self.assertTrue(request_handler.get_application(self.rt2, d.app_id) is None)
+        self.assertTrue(request_handler.get_application(self.rt3, d.app_id) is None)
 
     def testAppDestructionAllRemote(self):
         _log.analyze("TESTRUN", "+", {})
@@ -607,52 +570,60 @@ class TestAppLifeCycle(CalvinTestBase):
           src.integer > sum.integer
           sum.integer > snk.token
           """
-        import sys
-        from twisted.python import log
-        log.startLogging(sys.stdout)
+        #? import sys
+        #? from twisted.python import log
+        #? log.startLogging(sys.stdout)
 
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.2)
+
         src = d.actor_map['simple:src']
         csum = d.actor_map['simple:sum']
         snk = d.actor_map['simple:snk']
 
-        request_handler.migrate(self.rt1, src, self.rt2.id)
-        request_handler.migrate(self.rt1, csum, self.rt2.id)
-        request_handler.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(.5)
+        tokens = len(wait_for_tokens(self.rt1, snk))
+        
+        self.migrate(self.rt1, self.rt2, src)
+        self.migrate(self.rt1, self.rt2, csum)
+        self.migrate(self.rt1, self.rt2, snk)
+        
+        actual = actual_tokens(self.rt2, snk, tokens+5)
+        expected = expected_tokens(self.rt2, src, 'sum')
 
-        actual = request_handler.report(self.rt2, snk)
-        expected = [sum(range(i+1)) for i in range(1,10)]
         self.assert_lists_equal(expected, actual)
-        request_handler.delete_application(self.rt1, d.app_id)
+        
+        helpers.delete_app(request_handler, self.rt1, d.app_id)
 
+        def verify_gone(runtime, actor):
+            import json
+            a = request_handler.get_actor(runtime, actor)
+            if a is not None:
+                _log.info("Actor: %s" % (json.dumps(a, default=str, indent=2)))
+            return a is None
+            
+        delay = 0.1
         for a in range(20):
             all_removed = None
             try:
-                self.assertFalse(request_handler.get_actor(self.rt1, csum))
-                self.assertFalse(request_handler.get_actor(self.rt1, snk))
-                self.assertFalse(request_handler.get_actor(self.rt2, src))
-                self.assertFalse(request_handler.get_actor(self.rt2, csum))
-                self.assertFalse(request_handler.get_actor(self.rt2, snk))
-                self.assertFalse(request_handler.get_actor(self.rt3, src))
-                self.assertFalse(request_handler.get_actor(self.rt3, csum))
-                self.assertFalse(request_handler.get_actor(self.rt3, snk))
+                for rt in [ self.rt1, self.rt2, self.rt3 ]:
+                    for actor in [ src, csum, snk ]:
+                        self.assertTrue(verify_gone(rt, actor))
             except AssertionError as e:
                 print a, e
                 all_removed = e
             if all_removed is None:
                 break
-            time.sleep(1)
+            _log.info("Not all actors gone, checking in %f" % (delay,))
+            time.sleep(delay)
+            delay *= 2
 
         if all_removed:
             raise all_removed
 
-        self.assertFalse(request_handler.get_application(self.rt1, d.app_id))
-        self.assertFalse(request_handler.get_application(self.rt2, d.app_id))
-        self.assertFalse(request_handler.get_application(self.rt3, d.app_id))
+        self.assertTrue(request_handler.get_application(self.rt1, d.app_id) is None)
+        self.assertTrue(request_handler.get_application(self.rt2, d.app_id) is None)
+        self.assertTrue(request_handler.get_application(self.rt3, d.app_id) is None)
 
 
 @pytest.mark.essential
@@ -666,9 +637,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.1)
-
-        actual = request_handler.report(self.rt1, snk)
+        actual = actual_tokens(self.rt1, snk, 10)
 
         self.assert_lists_equal(range(1, 10), actual)
 
@@ -688,14 +657,12 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
-        time.sleep(0.06)
-
         snk = d.actor_map['simple:snk']
-        actual = request_handler.report(self.rt1, snk)
 
+        actual = actual_tokens(self.rt1, snk, 10)
         self.assert_lists_equal(range(1, 10), actual)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def test20(self):
         _log.analyze("TESTRUN", "+", {})
@@ -706,11 +673,9 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
         request_handler.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.2)
+        actual = actual_tokens(self.rt1, snk, 10)
 
-        actual = request_handler.report(self.rt1, snk)
-
-        self.assert_lists_equal(range(1, 11), actual)
+        self.assert_lists_equal(range(1, 10), actual)
 
         request_handler.delete_actor(self.rt1, src)
         request_handler.delete_actor(self.rt1, ity)
@@ -725,19 +690,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         request_handler.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
         request_handler.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
 
-        interval = 0.5
-
-        for retries in range(1, 5):
-            time.sleep(retries * interval)
-            actual = request_handler.report(self.rt3, snk)
-            if len(actual) > 10:
-                break
-
-        while len(actual) < 10:
-            time.sleep(0.1)
-            actual = request_handler.report(self.rt3, snk)
-
-        self.assert_lists_equal(range(1, 11), actual)
+        actual = actual_tokens(self.rt3, snk, 10)
+        self.assert_lists_equal(range(1,10), actual)
 
         request_handler.delete_actor(self.rt1, src)
         request_handler.delete_actor(self.rt2, ity)
@@ -752,21 +706,11 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         request_handler.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
         request_handler.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
 
-        interval = 0.5
+        actual = actual_tokens(self.rt3, snk, 10)
+        self.assert_lists_equal(range(1,10), actual)
 
-        for retries in range(1, 5):
-            time.sleep(retries * interval)
-            actual = request_handler.report(self.rt3, snk)
-            if len(actual) > 10:
-                break
-
-        self.assert_lists_equal(range(1, 11), actual)
-
-        time.sleep(0.1)
-
-        actual = request_handler.report(self.rt3, snk)
-
-        self.assert_lists_equal(range(1, 10), actual)
+        actual = actual_tokens(self.rt3, snk, len(actual)+1)
+        self.assert_lists_equal(range(1,len(actual)), actual)
 
         request_handler.delete_actor(self.rt1, src)
         request_handler.delete_actor(self.rt2, ity)
@@ -781,9 +725,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         request_handler.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
 
-        time.sleep(0.2)
-
-        actual = request_handler.report(self.rt1, snk)
+        actual = actual_tokens(self.rt1, snk, 10)
 
         self.assert_lists_equal(range(1, 10), actual)
 
@@ -805,15 +747,13 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "simple")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.4)
-
         snk = d.actor_map['simple:snk']
-        actual = request_handler.report(self.rt1, snk)
-        expected = list(range(1, 10))
+        
+        actual = actual_tokens(self.rt1, snk, 10)        
+        self.assert_lists_equal(range(1,10), actual)
 
-        self.assert_lists_equal(expected, actual)
+        helpers.destroy_app(d)
 
-        d.destroy()
 
     def test30(self):
         _log.analyze("TESTRUN", "+", {})
@@ -827,10 +767,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         request_handler.connect(self.rt1, snk1, 'token', self.rt1.id, src, 'integer')
         request_handler.connect(self.rt1, snk2, 'token', self.rt1.id, src, 'integer')
 
-        time.sleep(0.2)
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
+        actual1 = actual_tokens(self.rt1, snk1, 10)
+        actual2 = actual_tokens(self.rt1, snk2, 10)
 
         self.assert_lists_equal(list(range(1, 10)), actual1)
         self.assert_lists_equal(list(range(1, 10)), actual2)
@@ -853,12 +791,11 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "test31")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.1)
-
+        
         snk1 = d.actor_map['test31:snk1']
         snk2 = d.actor_map['test31:snk2']
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
+        actual1 = actual_tokens(self.rt1, snk1, 10)
+        actual2 = actual_tokens(self.rt1, snk2, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual1)
@@ -890,12 +827,11 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "test32")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.1)
 
         snk1 = d.actor_map['test32:snk1']
         snk2 = d.actor_map['test32:snk2']
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
+        actual1 = actual_tokens(self.rt1, snk1, 10)
+        actual2 = actual_tokens(self.rt1, snk2, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual1)
@@ -921,10 +857,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
-        time.sleep(1.0)
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
+        actual1 = actual_tokens(self.rt1, snk1, 10)
+        actual2 = actual_tokens(self.rt1, snk2, 10)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -958,15 +892,13 @@ class TestNullPorts(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.4)
 
-        snk = d.actor_map['testVoidActor:snk']
-        actual = request_handler.report(self.rt1, snk)
+        snk = d.actor_map['testVoidActor:snk']        
+        actual = wait_for_tokens(self.rt1, snk, 10)
         expected = list(range(1, 10))
-
         self.assert_lists_equal(expected, actual)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testTerminatorActor(self):
         # Verify that the null port of a std.Terminator actor behaves as expected
@@ -983,15 +915,14 @@ class TestNullPorts(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
-
+        
         snk = d.actor_map['testTerminatorActor:snk']
-        actual = request_handler.report(self.rt1, snk)
+        actual = wait_for_tokens(self.rt1, snk)        
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
+        helpers.destroy_app(d)
 
-        d.destroy()
 
 @pytest.mark.essential
 class TestCompare(CalvinTestBase):
@@ -1012,15 +943,13 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.05)
 
         snk = d.actor_map['testBadOp:snk']
-        actual = request_handler.report(self.rt1, snk)
+        actual = wait_for_tokens(self.rt1, snk, 10)
         expected = [0] * 10
 
         self.assert_lists_equal(expected, actual)
-
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testEqual(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1038,15 +967,15 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.1)
 
         snk = d.actor_map['testEqual:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = [x == 5 for x in range(1, 10)]
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual)
+        helpers.destroy_app(d)
 
-        d.destroy()
 
     def testGreaterThanOrEqual(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1064,15 +993,14 @@ class TestCompare(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.1)
 
         snk = d.actor_map['testGreaterThanOrEqual:snk']
-        actual = request_handler.report(self.rt1, snk)
         expected = [x >= 5 for x in range(1, 10)]
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual)
+        helpers.destroy_app(d)
 
-        d.destroy()
 
 
 @pytest.mark.essential
@@ -1096,15 +1024,13 @@ class TestSelect(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.2)
 
         snk = d.actor_map['testTrue:snk']
-        actual = request_handler.report(self.rt1, snk)
+        actual = wait_for_tokens(self.rt1, snk, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
-
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testFalse(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1124,15 +1050,15 @@ class TestSelect(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
 
         snk = d.actor_map['testFalse:snk']
-        actual = request_handler.report(self.rt1, snk)
+      
+        actual = wait_for_tokens(self.rt1, snk, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
+        helpers.destroy_app(d)
 
-        d.destroy()
 
     def testBadSelect(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1152,15 +1078,14 @@ class TestSelect(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
 
         snk = d.actor_map['testBadSelect:snk']
-        actual = request_handler.report(self.rt1, snk)
+        actual = wait_for_tokens(self.rt1, snk, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
-
-        d.destroy()
+        
+        helpers.destroy_app(d)
 
 
 @pytest.mark.essential
@@ -1189,15 +1114,14 @@ class TestDeselect(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
 
         snk = d.actor_map['testDeselectTrue:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = [1] * 5 + [0] * 5
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
-
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testDeselectFalse(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1222,15 +1146,16 @@ class TestDeselect(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
 
         snk = d.actor_map['testDeselectFalse:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = [0] * 5 + [1] * 5
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
+        
+        helpers.destroy_app(d)
 
-        d.destroy()
 
     def testDeselectBadSelect(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1251,15 +1176,15 @@ class TestDeselect(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
 
         snk = d.actor_map['testDeselectBadSelect:snk']
-        actual = request_handler.report(self.rt1, snk)
-        expected = [0] * 10
 
+        expected = [0] * 10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
 
 @pytest.mark.essential
@@ -1278,79 +1203,23 @@ class TestLineJoin(CalvinTestBase):
             src.out   > join.line
             join.text > snk.token
         """ % (datafile, )
+        
         app_info, errors, warnings = self.compile_script(script, "testBasicJoin")
         print errors
+       
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(1)
 
-        snk = d.actor_map['testBasicJoin:snk']
-        actual = request_handler.report(self.rt1, snk)
         with open(datafile, "r") as fp:
             expected = ["\n".join([l.rstrip() for l in fp.readlines()])]
 
+        snk = d.actor_map['testBasicJoin:snk']
+
+        actual = wait_for_tokens(self.rt1, snk, 1)
+
         self.assert_lists_equal(expected, actual, min_length=1)
 
-        d.destroy()
-
-    @pytest.mark.xfail
-    def testCustomTriggerJoin(self):
-        _log.analyze("TESTRUN", "+", {})
-        datafile = absolute_filename('data.txt')
-        script = """
-            fname : std.Constant(data="%s")
-            src   : io.FileReader()
-            join  : text.LineJoin()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
-
-            fname.token > src.filename
-            src.out   > join.line
-            join.text > snk.token
-        """ % (datafile, )
-        app_info, errors, warnings = self.compile_script(script, "testCustomTriggerJoin")
-        d = deployer.Deployer(self.rt1, app_info)
-        d.deploy()
-        time.sleep(0.5)
-
-        snk = d.actor_map['testCustomTriggerJoin:snk']
-        actual = request_handler.report(self.rt1, snk)
-        with open(datafile, "r") as fp:
-            expected = [l.rstrip() for l in fp.readlines()]
-            expected = ['\n'.join(expected[:4]), '\n'.join(expected[4:])]
-
-        self.assert_lists_equal(expected, actual, min_length=2)
-
-        d.destroy()
-
-    @pytest.mark.xfail
-    def testEmptyStringTriggerJoin(self):
-        _log.analyze("TESTRUN", "+", {})
-        datafile = absolute_filename('data.txt')
-        script = """
-            fname : std.Constant(data="%s")
-            src   : io.FileReader()
-            join  : text.LineJoin()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
-
-            fname.token > src.filename
-            src.out   > join.line
-            join.text > snk.token
-        """ % (datafile, )
-        app_info, errors, warnings = self.compile_script(script, "testCustomTriggerJoin")
-        d = deployer.Deployer(self.rt1, app_info)
-        d.deploy()
-        time.sleep(0.5)
-
-        snk = d.actor_map['testCustomTriggerJoin:snk']
-        actual = request_handler.report(self.rt1, snk)
-        with open(datafile, "r") as fp:
-            expected = [l.rstrip() for l in fp.readlines()]
-            expected = ['\n'.join(expected[:10]), '\n'.join(expected[10:])]
-
-        self.assert_lists_equal(expected, actual, min_length=2)
-
-        d.destroy()
-
+        helpers.destroy_app(d)
 
 
 @pytest.mark.essential
@@ -1372,15 +1241,16 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testRegexMatch:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["24.1632"]
+        actual = wait_for_tokens(self.rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
-        d.destroy()
+        helpers.destroy_app(d)
+
 
 
     def testRegexNoMatch(self):
@@ -1399,15 +1269,15 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testRegexNoMatch:snk']
-        actual = request_handler.report(self.rt1, snk)
         expected = ["x24.1632"]
-
+        actual = wait_for_tokens(self.rt1, snk, 1)
+        
         self.assert_lists_equal(expected, actual, min_length=1)
 
-        d.destroy()
+        helpers.destroy_app(d)
+
 
     def testRegexCapture(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1425,15 +1295,16 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testRegexCapture:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["24"]
+        actual = wait_for_tokens(self.rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
-        d.destroy()
+        helpers.destroy_app(d)
+
 
     def testRegexMultiCapture(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1451,15 +1322,15 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testRegexMultiCapture:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["24"]
+        actual = wait_for_tokens(self.rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
 
     def testRegexCaptureNoMatch(self):
@@ -1478,15 +1349,15 @@ class TestRegex(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testRegexCaptureNoMatch:snk']
-        actual = request_handler.report(self.rt1, snk)
         expected = ["x24.1632"]
+        actual = wait_for_tokens(self.rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
-        d.destroy()
+        helpers.destroy_app(d)
+
 
 @pytest.mark.essential
 class TestConstantAsArguments(CalvinTestBase):
@@ -1503,15 +1374,15 @@ class TestConstantAsArguments(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testConstant:snk']
-        actual = request_handler.report(self.rt1, snk)
-        expected = [42]*10
 
+        expected = [42]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testConstantRecursive(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1526,15 +1397,15 @@ class TestConstantAsArguments(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testConstantRecursive:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = [42]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
 
 @pytest.mark.essential
@@ -1553,12 +1424,13 @@ class TestConstantOnPort(CalvinTestBase):
         time.sleep(.1)
 
         snk = d.actor_map['testLiteralOnPort:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = [42]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testConstantOnPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1571,15 +1443,15 @@ class TestConstantOnPort(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testConstantOnPort:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["Hello"]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testConstantRecursiveOnPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1593,15 +1465,15 @@ class TestConstantOnPort(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testConstantRecursiveOnPort:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["yay"]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
 
 @pytest.mark.essential
@@ -1623,15 +1495,15 @@ class TestConstantAndComponents(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testLiteralOnCompPort:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["42"]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testConstantOnCompPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1650,15 +1522,15 @@ class TestConstantAndComponents(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testConstantOnCompPort:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["42"]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testStringConstantOnCompPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1677,15 +1549,16 @@ class TestConstantAndComponents(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testStringConstantOnCompPort:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["42"]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
+        helpers.destroy_app(d)
+
 
 @pytest.mark.essential
 class TestConstantAndComponentsArguments(CalvinTestBase):
@@ -1705,15 +1578,15 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testComponentArgument")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testComponentArgument:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["hup"]*5
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=5)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testComponentConstantArgument(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1731,16 +1604,15 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgument")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testComponentConstantArgument:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["hup"]*5
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=5)
-
-        d.destroy()
-
+        
+        helpers.destroy_app(d)
 
 
     def testComponentConstantArgumentDirect(self):
@@ -1759,16 +1631,15 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgumentDirect")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testComponentConstantArgumentDirect:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["hup"]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
-
+        helpers.destroy_app(d)
 
     def testComponentArgumentAsImplicitActor(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1786,16 +1657,15 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testComponentArgumentAsImplicitActor")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testComponentArgumentAsImplicitActor:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["hup"]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
-        d.destroy()
-
+        helpers.destroy_app(d)
 
     def testComponentConstantArgumentAsImplicitActor(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1814,14 +1684,13 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgumentAsImplicitActor")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk = d.actor_map['testComponentConstantArgumentAsImplicitActor:snk']
-        actual = request_handler.report(self.rt1, snk)
+
         expected = ["hup"]*10
+        actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
-
         d.destroy()
 
 @pytest.mark.essential
@@ -1837,10 +1706,10 @@ class TestConstantifyOnPort(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
-
+        
         snk = d.actor_map['testLiteralOnPort:snk']
-        actual = request_handler.report(self.rt1, snk)
+
+        actual = wait_for_tokens(self.rt1, snk, 10)
         expected = ['X']*len(actual)
 
         self.assert_lists_equal(expected, actual, min_length=10)
@@ -1858,12 +1727,13 @@ class TestConstantifyOnPort(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPortlist")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testLiteralOnPortlist:snk1']
         snk2 = d.actor_map['testLiteralOnPortlist:snk2']
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
+        
+        actual1 = wait_for_tokens(self.rt1, snk1, 10)
+        actual2 = wait_for_tokens(self.rt1, snk2, 10)
+        
         expected1 = ['X']*len(actual1)
         expected2 = range(1, len(actual2))
 
@@ -1883,12 +1753,12 @@ class TestConstantifyOnPort(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testLiteralsOnPortlist")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testLiteralsOnPortlist:snk1']
         snk2 = d.actor_map['testLiteralsOnPortlist:snk2']
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
+        actual1 = wait_for_tokens(self.rt1, snk1, 10)
+        actual2 = wait_for_tokens(self.rt1, snk2, 10)
+        
         expected1 = ['X']*len(actual1)
         expected2 = ['Y']*len(actual2)
 
@@ -1910,12 +1780,12 @@ class TestConstantifyOnPort(CalvinTestBase):
         app_info, errors, warnings = self.compile_script(script, "testConstantsOnPortlist")
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testConstantsOnPortlist:snk1']
         snk2 = d.actor_map['testConstantsOnPortlist:snk2']
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
+
+        actual1 = wait_for_tokens(self.rt1, snk1, 10)
+        actual2 = wait_for_tokens(self.rt1, snk2, 10)
         expected1 = ['X']*len(actual1)
         expected2 = ['Y']*len(actual2)
 
