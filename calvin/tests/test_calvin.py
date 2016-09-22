@@ -3029,6 +3029,79 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
+        d.destroy()
+
+    def testPortPropertyConsolidateInsideComponentInternalInPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component CompCounter() -> seq {
+                compsrc    : std.Counter()
+                compsrc.integer > .seq
+                .seq(test1=["dummyx", "dummyy", "dummyz"], test2="dummyi")
+                compsrc.integer(routing="round-robin")
+            }
+            
+            src    : CompCounter()
+            snk1   : io.StandardOut(store_tokens=1, quiet=1)
+            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1.token(test1=["dummyz", "dummyy"])
+            snk2.token(test1="dummyy")
+            src.seq > snk1.token
+            src.seq > snk2.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        print app_info
+        assert 'testScript:src:compsrc' in app_info['port_properties']
+        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
+        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+                'integer')
+        assert (app_info['port_properties']['testScript:src:compsrc'][0]
+                    ['properties']['routing'] == 'round-robin')
+
+        assert 'port' in app_info['port_properties']['testScript:snk1'][0]
+        assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
+                'token')
+        assert len(app_info['port_properties']['testScript:snk1'][0]
+                    ['properties']['test1']) == 2
+        assert (app_info['port_properties']['testScript:snk1'][0]
+                    ['properties']['test1'][0] == 'dummyz')
+        assert (app_info['port_properties']['testScript:snk1'][0]
+                    ['properties']['test1'][1] == 'dummyy')
+        assert (app_info['port_properties']['testScript:snk1'][0]
+                    ['properties']['test2'] == 'dummyi')
+        assert 'port' in app_info['port_properties']['testScript:snk2'][0]
+        assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
+                'token')
+        assert len(app_info['port_properties']['testScript:snk2'][0]
+                    ['properties']['test1']) == 1
+        assert (app_info['port_properties']['testScript:snk2'][0]
+                    ['properties']['test1'][0] == 'dummyy')
+        assert (app_info['port_properties']['testScript:snk2'][0]
+                    ['properties']['test2'] == 'dummyi')
+
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(.1)
+
+        snk1 = d.actor_map['testScript:snk1']
+        snk2 = d.actor_map['testScript:snk2']
+        snk1_meta = request_handler.get_actor(self.rt1, snk1)
+        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_token_id = snk1_meta['inports'][0]['id']
+        snk2_token_id = snk2_meta['inports'][0]['id']
+
+        actual1 = request_handler.report(self.rt1, snk1)
+        actual2 = request_handler.report(self.rt1, snk2)
+
+        # Round robin lowest peer id get first token
+        start = 1 if snk1_token_id < snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
+        start = 1 if snk1_token_id > snk2_token_id else 2
+        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
+
+        d.destroy()
+
 @pytest.mark.essential
 class TestCollectPort(CalvinTestBase):
 
@@ -3205,63 +3278,6 @@ class TestCollectPort(CalvinTestBase):
         self.assert_lists_equal(range(1001,1006), high, min_length=4)
         self.assert_lists_equal(range(1,6), low, min_length=4)
         d.destroy()
-
-    def testPortPropertyConsolidateInsideComponentInternalInPort(self):
-        _log.analyze("TESTRUN", "+", {})
-        script = """
-            component CompCounter() -> seq {
-                compsrc    : std.Counter()
-                compsrc.integer > .seq
-                .seq(test1=["dummyx", "dummyy", "dummyz"], test2="dummyi")
-                compsrc.integer(routing="round-robin")
-            }
-            
-            src    : CompCounter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
-            snk1.token(test1=["dummyz", "dummyy"])
-            snk2.token(test1="dummyy")
-            src.seq > snk1.token
-            src.seq > snk2.token
-        """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
-
-        d = deployer.Deployer(self.rt1, app_info)
-        d.deploy()
-        time.sleep(.1)
-
-        snk1 = d.actor_map['testScript:snk1']
-        snk2 = d.actor_map['testScript:snk2']
-
-        assert 'testScript:src:compsrc' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
-                'integer')
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing'] == 'round-robin')
-
-        assert 'port' in app_info['port_properties']['testScript:snk1'][0]
-        assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
-                'token')
-        assert len(app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test1']) == 2
-        assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test1'][0] == 'dummyz')
-        assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test1'][1] == 'dummyy')
-        assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test2'] == 'dummyi')
-        assert 'port' in app_info['port_properties']['testScript:snk2'][0]
-        assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
-                'token')
-        assert len(app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['test1']) == 1
-        assert (app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['test1'][0] == 'dummyy')
-        assert (app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['test2'] == 'dummyi')
 
 
 @pytest.mark.essential
@@ -3872,21 +3888,10 @@ class TestPortRouting(CalvinTestBase):
         snk2 = d.actor_map['testRRPort:snk2']
         request_handler.migrate(self.rt1, snk1, self.rt2.id)
         request_handler.migrate(self.rt1, snk2, self.rt3.id)
-
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
-
-        # Round robin lowest peer id get first token
-        start = 1 if snk1_token_id < snk2_token_id else 2
-        self.assert_lists_equal(list(range(start, 20, 2)), actual1)
-        start = 1 if snk1_token_id > snk2_token_id else 2
-        self.assert_lists_equal(list(range(start, 20, 2)), actual2)
-
         actuals1 = [[]]
         actuals2 = [[]]
         ids = [self.rt2.id, self.rt3.id]
