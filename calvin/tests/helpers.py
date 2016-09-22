@@ -168,14 +168,23 @@ def setup_distributed(control_uri, purpose, request_handler):
 def setup_local(ip_addr, request_handler):  
     def check_storage(rt, n, index):
         index_string = format_index_string(index)
-        while True:
-            peers = request_handler.get_index(rt, index_string, timeout=120)
+        retries = 0
+        while retries < 120:
+            try:
+                retries += 1
+                peers = request_handler.get_index(rt, index_string, timeout=60)
+            except:
+                _log.info("Timed out when finding peers retrying")
+                retries += 39  # A timeout counts more we don't want to wait 60*100 seconds
+                continue
             if len(peers['result']) >= n:
                 _log.info("Found %d peers (%r)" % (len(peers['result']), peers['result']))
-                break
+                return
             _log.info("Only %d peers found (%r)" % (len(peers['result']), peers['result']))
             time.sleep(1)
-              
+        # No more retrying
+        raise Exception("Storage check failed, could not find peers.")
+
     hosts = [
         ("calvinip://%s:%d" % (ip_addr, d), "http://%s:%d" % (ip_addr, d+1)) for d in range(5200, 5206, 2)
     ]
@@ -257,7 +266,7 @@ def setup_test_type(request_handler):
             test_type = "bluetooth"
         except KeyError:
             pass
-    
+
     if not test_type:
         try:
             ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
@@ -265,7 +274,7 @@ def setup_test_type(request_handler):
             import socket
             ip_addr = socket.gethostbyname(socket.gethostname())
         test_type = "local"
-         
+
     if test_type == "distributed":
         runtimes = setup_distributed(control_uri, purpose, request_handler)
     elif test_type == "bluetooth":
