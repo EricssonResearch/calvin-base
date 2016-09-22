@@ -23,14 +23,12 @@ class ModuleDocs(TestBase):
         self.assertEqual("Calvin", actual[:6])
 
     def test_help_root_arg_none(self):
-        # FIXME: We should probably allow empty string rather than None
         actual = self.ds.help(what=None, compact=True)
         self.assertEqual("Calvin", actual[:6])
 
     def test_help_root_arg_empty_string(self):
-        # FIXME: We should probably allow empty string rather than None
         actual = self.ds.help(what="", compact=True)
-        self.assertEqual("Error", actual[1:6])
+        self.assertEqual("Calvin", actual[:6])
 
     def test_help_raw_root_no_args(self):
         actual = self.ds.help_raw()
@@ -39,16 +37,14 @@ class ModuleDocs(TestBase):
         self.assertFalse(actual['actors'])
 
     def test_help_raw_root_arg_none(self):
-        # FIXME: We should probably allow empty string rather than None
         actual = self.ds.help_raw(what=None)
         self.assertTrue(actual['modules'])
         self.assertTrue('std' in actual['modules'])
         self.assertFalse(actual['actors'])
 
     def test_help_raw_root_arg_empty_string(self):
-        # FIXME: We should probably allow empty string rather than None
         actual = self.ds.help_raw(what="")
-        self.assertEqual(actual['short_desc'], 'No such entity')
+        self.assertEqual(actual['short_desc'], 'A systematic approach to handling impedence mismatch in IoT.')
 
     def test_help_raw_std(self):
         actual = self.ds.help_raw(what='std')

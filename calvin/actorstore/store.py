@@ -981,7 +981,7 @@ class DocumentationStore(ActorStore):
 
 
     def _help(self, what):
-        if what is None:
+        if not what:
             doc = self.docs
         else:
             search_list = what.split('.')
