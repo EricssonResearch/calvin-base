@@ -12,6 +12,11 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 def retry(retries, function, criterion, error_msg):
+    """
+        Executes 'result = function()' until 'criterion(result)' evaluates to a true value.
+        Raises 'Exception(error_msg)' if criterion is not fulfilled after 'retries' attempts
+    
+    """
     delay = 0.2
     retry = 0
     while retry < retries:
@@ -30,12 +35,15 @@ def retry(retries, function, criterion, error_msg):
         delay *= 2; retry += 1
         time.sleep(delay)
     raise Exception(error_msg)
-    return result
             
 def wait_for_tokens(request_handler, rt, actor_id, size=5, retries=10):
+    """An alias for 'actual_tokens'"""
     return actual_tokens(request_handler, rt, actor_id, size, retries)
     
 def actual_tokens(request_handler, rt, actor_id, size=5, retries=10):
+    """
+    Uses 'request_handler' to fetch the report from actor 'actor_id' on runtime 'rt'.
+    """
     from functools import partial
     func = partial(request_handler.report, rt, actor_id)
     criterion = lambda tokens: len(tokens) >= size
@@ -43,11 +51,18 @@ def actual_tokens(request_handler, rt, actor_id, size=5, retries=10):
 
 
 def destroy_app(deployer, retries=10):
+    """
+    Tries to destroy the app connected with deployer. 
+    """
     criteria = lambda _: True
     return retry(retries, deployer.destroy, criteria, "Destruction of app failed")
     
 
 def deploy_app(request_handler, deployer, runtimes, retries=10):
+    """
+    Deploys app associated w/ deployer and then tries to verify its
+    presence in registry (for all runtimes).
+    """
     deployer.deploy()
     
     def check_application():
@@ -62,6 +77,9 @@ def deploy_app(request_handler, deployer, runtimes, retries=10):
     
 
 def delete_app(request_handler, runtime, app_id, retries=10):
+    """
+    Deletes an app and then tries to verify it is actually gone.
+    """
     from functools import partial
     
     def delete_application():
@@ -127,8 +145,6 @@ def setup_distributed(control_uri, purpose, request_handler):
     index = {"node_name": {"organization": "com.ericsson", "purpose": purpose}}
     index_string = format_index_string(index)
     
-    interval = 1
-
     get_index = partial(request_handler.get_index, runtime, index_string)
     
     def criteria(peers):
@@ -257,12 +273,11 @@ def setup_test_type(request_handler):
     else:
         runtimes = setup_local(ip_addr, request_handler)
 
-    peerlist = [rt.control_uri for rt in runtimes]
-    
-    return test_type, runtimes, peerlist
+    return test_type, runtimes
     
 
 def teardown_test_type(test_type, runtimes, request_handler):
+    from functools import partial
     def wait_for_it(peer):
         while True:
             try:
@@ -274,7 +289,8 @@ def teardown_test_type(test_type, runtimes, request_handler):
     if test_type == "local":
         for peer in runtimes:
             request_handler.quit(peer)
-            wait_for_it(peer)
+            retry(10, partial(request_handler.get_node_id, peer), lambda _: True, "Failed to stop peer %r" % (peer,))
+            # wait_for_it(peer)
         for p in multiprocessing.active_children():
             p.terminate()
             time.sleep(1)
