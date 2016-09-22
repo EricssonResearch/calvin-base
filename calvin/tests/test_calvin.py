@@ -303,13 +303,12 @@ class TestRemoteConnection(CalvinTestBase):
         request_handler.connect(peer, csum, 'integer', rt.id, src, 'integer')
         
         # Wait for some tokens
-        wait_for_tokens(rt, snk)
+        actual = wait_for_tokens(rt, snk, 10)
 
         request_handler.disconnect(rt, src)
 
-        # Fetch sent/received
+        # Fetch sent
         expected = expected_tokens(rt, src, 'sum')
-        actual = actual_tokens(rt, snk, len(expected))
         
         self.assert_lists_equal(expected, actual)
 
@@ -332,7 +331,7 @@ class TestRemoteConnection(CalvinTestBase):
         request_handler.connect(peer, alt, 'token_1', rt.id, src1, 'integer')
         request_handler.connect(peer, alt, 'token_2', rt.id, src2, 'integer')
         
-        wait_for_tokens(rt, snk1)
+        actual = wait_for_tokens(rt, snk1, 10)
 
         request_handler.disconnect(rt, src1)
         request_handler.disconnect(rt, src2)
@@ -340,8 +339,6 @@ class TestRemoteConnection(CalvinTestBase):
         expected_1 = expected_tokens(rt, src1, 'seq')
         expected_2 = expected_tokens(rt, src2, 'seq')
         expected = helpers.flatten_zip(zip(expected_1, expected_2))
-
-        actual = actual_tokens(rt, snk1, len(expected))
 
         self.assert_lists_equal(expected, actual)
 
@@ -368,8 +365,8 @@ class TestRemoteConnection(CalvinTestBase):
         request_handler.connect(peer, alt, 'token_2', rt.id, src2, 'integer')
         
         # Wait for some tokens
-        wait_for_tokens(rt, snk1)
-        wait_for_tokens(peer, snk2)
+        actual_1 = wait_for_tokens(rt, snk1, 10)
+        actual_2 = wait_for_tokens(peer, snk2, 10)
         
         request_handler.disconnect(rt, src1)
         request_handler.disconnect(rt, src2)
@@ -377,12 +374,9 @@ class TestRemoteConnection(CalvinTestBase):
         expected_1 = expected_tokens(rt, src1, 'seq')
         expected_2 = expected_tokens(rt, src2, 'seq')
         expected = helpers.flatten_zip(zip(expected_1, expected_2))
-        actual = actual_tokens(rt, snk1, len(expected))
 
-        self.assert_lists_equal(expected, actual)
-        
-        actual = actual_tokens(peer, snk2, len(expected))
-        self.assert_lists_equal(expected_1, actual)
+        self.assert_lists_equal(expected, actual_1)
+        self.assert_lists_equal(expected_1, actual_2)
 
         request_handler.delete_actor(rt, snk1)
         request_handler.delete_actor(peer, snk2)
