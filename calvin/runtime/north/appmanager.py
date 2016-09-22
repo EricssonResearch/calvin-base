@@ -180,7 +180,7 @@ class AppManager(object):
     def _destroy_app_info_cb(self, key, value, cb):
         application_id = key
         _log.analyze(self._node.id, "+", {'application_id': application_id, 'value': value})
-        _log.info("Destroy app info %s: %s" % (application_id, value))
+        _log.debug("Destroy app info %s: %s" % (application_id, value))
         if value:
             self._destroy(Application(application_id, value['name'], value['origin_node_id'],
                                       self._node.am, value['actors_name_map']), cb=cb)
