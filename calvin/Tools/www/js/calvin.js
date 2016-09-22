@@ -566,8 +566,21 @@ function getPeer(id)
                     peer = new runtimeObject(id);
                     peers[peers.length] = peer;
                 }
-                peer.uri = data.uri;
-                peer.control_uri = data.control_uri;
+                if (data.uri) {
+                    peer.uri = data.uri;
+                } else {
+                    peer.uri = "";
+                }
+                if (data.control_uri) {
+                    peer.control_uri = data.control_uri;
+                } else {
+                    peer.control_uri = "";
+                }
+                if (data.proxy) {
+                    peer.proxy = data.proxy;
+                } else {
+                    peer.proxy = "";
+                }
                 peer.attributes = data.attributes;
                 if (peer.attributes.indexed_public) {
                     for (attribute in peer.attributes.indexed_public) {
@@ -889,7 +902,7 @@ function getPortState(port_id)
 }
 
 // Helper for adding a table row with elements
-function AddTableItem(tableRef, element1, element2, element3, element4, element5, element6, element7)
+function AddTableItem(tableRef, element1, element2, element3, element4, element5, element6, element7, element8)
 {
     var row = tableRef.insertRow();
     if (element1) {
@@ -925,6 +938,11 @@ function AddTableItem(tableRef, element1, element2, element3, element4, element5
     if (element7) {
         var cell = row.insertCell(6);
         cell.appendChild(element7);
+    }
+
+    if (element8) {
+        var cell = row.insertCell(7);
+        cell.appendChild(element8);
     }
 
     return row;
@@ -1083,9 +1101,23 @@ function showPeer(peer)
         btnDeploy.value = 'Deploy...';
         btnDeploy.setAttribute("onclick", "showDeployApplication(this.id)");
 
-        row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.node_name.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnConfigure, btnDestroy, btnDeploy);
+        row = AddTableItem(tableRef,
+            document.createTextNode(peer.id),
+            document.createTextNode(peer.node_name.name),
+            document.createTextNode(peer.uri),
+            document.createTextNode(peer.control_uri),
+            document.createTextNode(peer.proxy),
+            btnConfigure,
+            btnDestroy,
+            btnDeploy);
     } else {
-        row = AddTableItem(tableRef, document.createTextNode(peer.id), document.createTextNode(peer.node_name.name), document.createTextNode(peer.uri), document.createTextNode(peer.control_uri), btnConfigure);
+        row = AddTableItem(tableRef,
+            document.createTextNode(peer.id),
+            document.createTextNode(peer.node_name.name),
+            document.createTextNode(peer.uri),
+            document.createTextNode(peer.control_uri),
+            document.createTextNode(peer.proxy),
+            btnConfigure);
     }
 
     row.id = peer.id;

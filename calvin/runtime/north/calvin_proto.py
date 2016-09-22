@@ -19,9 +19,7 @@ from calvin.utilities.utils import enum
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
-from calvin.utilities.security import Security
 from calvin.utilities import proxyconfig
-from calvin.actorstore.store import ActorStore
 import calvin.requests.calvinresponse as response
 
 _log = calvinlogger.get_logger(__name__)
@@ -168,6 +166,7 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_NEW': [CalvinCB(self.tunnel_new_handler)],
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
+            'ROUTE_REQUEST': [CalvinCB(self.route_request_handler)],
             'REPLY': [CalvinCB(self.reply_handler)],
             'AUTHENTICATION_DECISION': [CalvinCB(self.authentication_decision_handler)],
             'AUTHORIZATION_REGISTER': [CalvinCB(self.authorization_register_handler)],
@@ -203,10 +202,13 @@ class CalvinProto(CalvinCBClass):
         except:
             raise Exception("ERROR_UNKNOWN_RUNTIME")
 
-        if not ('cmd' in payload and payload['cmd'] in self.callback_valid_names()):
-            raise Exception("ERROR_UNKOWN_COMMAND")
-        # Call the proper handler for the command using CalvinCBClass
-        self._callback_execute(payload['cmd'], payload)
+        if payload['to_rt_uuid'] == self.rt_id:
+            if not ('cmd' in payload and payload['cmd'] in self.callback_valid_names()):
+                raise Exception("ERROR_UNKOWN_COMMAND")
+            # Call the proper handler for the command using CalvinCBClass
+            self._callback_execute(payload['cmd'], payload)
+        else:
+            self.network.forward_packet(payload)
 
     #
     # Remote commands supported by protocol
@@ -215,12 +217,17 @@ class CalvinProto(CalvinCBClass):
     #### PROXY NODES ####
 
     def proxy_config_handler(self, payload):
-        status = proxyconfig.set_proxy_config(
-                                hex(payload['vid']),
-                                hex(payload['pid']),
-                                payload['from_rt_uuid'],
-                                self.node.storage)
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(status).encode()}
+        """ Configure a node using this node as a proxyconfig
+        """
+        proxyconfig.set_proxy_config(payload['from_rt_uuid'],
+            hex(payload['vid']),
+            hex(payload['pid']),
+            payload['name'],
+            self.node.storage,
+            CalvinCB(self.proxy_config_handler_cb, payload=payload))
+
+    def proxy_config_handler_cb(self, payload, status):
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
 
     #### ACTORS ####
@@ -362,7 +369,7 @@ class CalvinProto(CalvinCBClass):
             # Need to join the other peer first
             # Create a tunnel object which is not inserted on a link yet
             tunnel = CalvinTunnel(self.network.links, self.tunnels, None, tunnel_type, policy, rt_id=self.node.id)
-            self.network.link_request(to_rt_uuid, 
+            self.network.link_request(to_rt_uuid,
                                         CalvinCB(self._tunnel_link_request_finished, tunnel=tunnel,
                                                     to_rt_uuid=to_rt_uuid, tunnel_type=tunnel_type, policy=policy))
             return tunnel
@@ -508,6 +515,37 @@ class CalvinProto(CalvinCBClass):
             _log.analyze(self.rt_id, "+ EXCEPTION TUNNEL RECV HANDLER", {'payload': payload, 'exception': str(e)},
                                                                 peer_node_id=payload['from_rt_uuid'], tb=True)
 
+    #### ROUTING ####
+
+    def route_request_handler(self, payload):
+        """ Handle route request command """
+        if payload['org_peer_id'] not in self.network.links:
+            routinglink = self.network.create_routinglink(payload['org_peer_id'], self.network.links[payload['from_rt_uuid']])
+            self.network.add_routinglink(routinglink)
+        if payload['dest_peer_id'] == self.rt_id:
+            msg = {
+                'cmd': 'REPLY',
+                'msg_uuid': payload['msg_uuid'],
+                'value': response.CalvinResponse(True, {'peer_id': self.rt_id}).encode()
+            }
+            self.network.links[payload['org_peer_id']].send(msg)
+        else:
+            if self.node.network.link_request(payload['dest_peer_id'], CalvinCB(self._forward_route_request, payload=payload)):
+                self._forward_route_request(payload=payload, status=response.CalvinResponse(True))
+
+    def _forward_route_request(self, payload, status):
+        if status:
+            self.network.links[payload['dest_peer_id']].send(payload)
+        else:
+            msg = {
+                'cmd': 'REPLY',
+                'msg_uuid': payload['msg_uuid'],
+                'value': response.CalvinResponse(False, {'peer_id': payload['dest_peer_id']}).encode()
+            }
+            self.network.links[payload['org_peer_id']].send(msg)
+            self.network.remove_link(payload['org_peer_id'])
+
+
     #### PORTS ####
 
     def port_connect(self, callback=None, port_id=None, port_properties=None, peer_port_meta=None, **kwargs):
@@ -547,14 +585,14 @@ class CalvinProto(CalvinCBClass):
     #### AUTHENTICATION ####
 
     def authentication_decision(self, auth_server_uuid, callback, jwt):
-        """ 
+        """
         Return a response to an authentication request.
 
-        auth_server_uuid: node uuid for the runtime that acts as authentication server 
+        auth_server_uuid: node uuid for the runtime that acts as authentication server
         callback: called when finished with the authentication decision
         jwt: signed JSON Web Token (JWT) containing the authentication request
         """
-        if self.node.network.link_request(auth_server_uuid, 
+        if self.node.network.link_request(auth_server_uuid,
                                           CalvinCB(self._authentication_decision,
                                                    auth_server_uuid=auth_server_uuid,
                                                    callback=callback,
@@ -574,7 +612,7 @@ class CalvinProto(CalvinCBClass):
         """
         Return a response to the authentication request in the payload.
 
-        Signed JSON Web Tokens (JWT) with timestamps and information about 
+        Signed JSON Web Tokens (JWT) with timestamps and information about
         sender and receiver are used for both the request and response.
         A Policy Decision Point (PDP) is used to determine if access is permitted.
         """
@@ -583,7 +621,7 @@ class CalvinProto(CalvinCBClass):
         else:
             try:
                 decoded = self.node.authentication.decode_request(payload)
-                self.node.authentication.adp.authenticate(decoded["request"], 
+                self.node.authentication.adp.authenticate(decoded["request"],
                                     callback=CalvinCB(self._authentication_decision_handler, payload, decoded))
                 return
             except Exception:
