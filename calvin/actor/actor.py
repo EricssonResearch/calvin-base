@@ -27,6 +27,7 @@ from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.csparser.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
 
 _log = get_logger(__name__)
 
@@ -338,9 +339,10 @@ class Actor(object):
         self.id = actor_id or calvinuuid.uuid("ACTOR")
         _log.debug("New actor id: %s, supplied actor id %s" % (self.id, actor_id))
         self._deployment_requirements = []
+        self._port_property_capabilities = None
         self._signature = None
         self._component_members = set([self.id])  # We are only part of component if this is extended
-        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'subject_attributes', 'migration_info'))
+        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'subject_attributes', 'migration_info', "_port_property_capabilities"))
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
@@ -646,11 +648,31 @@ class Actor(object):
             self._deployment_requirements = deploy_reqs
 
     def requirements_get(self):
-        return self._deployment_requirements + (
-                [{'op': 'actor_reqs_match',
-                  'kwargs': {'requires': self.requires},
-                  'type': '+'}]
-                if hasattr(self, 'requires') else [])
+        if self._port_property_capabilities is None:
+            self._port_property_capabilities = self._derive_port_property_capabilities()
+        capability_port = [{
+                'op': 'port_property_match',
+                'kwargs': {'port_property': self._port_property_capabilities},
+                'type': '+'
+            }]
+        if hasattr(self, 'requires'):
+            capability_require = [{
+                'op': 'actor_reqs_match',
+                'kwargs': {'requires': self.requires},
+                'type': '+'
+            }]
+        else:
+            capability_require = []
+        return self._deployment_requirements + capability_require + capability_port
+
+    def _derive_port_property_capabilities(self):
+        port_property_capabilities = set([])
+        for port in self.inports.values():
+            port_property_capabilities.update(get_port_property_capabilities(port.properties))
+        for port in self.outports.values():
+            port_property_capabilities.update(get_port_property_capabilities(port.properties))
+        _log.debug("derive_port_property_capabilities:" + str(port_property_capabilities))
+        return get_port_property_runtime(port_property_capabilities)
 
     def signature_set(self, signature):
         if self._signature is None:

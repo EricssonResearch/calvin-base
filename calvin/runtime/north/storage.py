@@ -16,6 +16,7 @@
 
 from calvin.runtime.north.plugins.storage import storage_factory
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
+from calvin.csparser.port_property_syntax import list_port_property_capabilities
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
@@ -521,6 +522,13 @@ class Storage(object):
                 self.add_index(['node', 'capabilities', c], node.id, root_prefix_level=3)
         except:
             _log.debug("Add node capabilities failed", exc_info=True)
+            pass
+        # Add the port property capabilities
+        try:
+            for c in list_port_property_capabilities():
+                self.add_index(['node', 'capabilities', c], node.id, root_prefix_level=3)
+        except:
+            _log.debug("Add node port property capabilities failed", exc_info=True)
             pass
 
     def remove_node_index(self, node, cb=None):

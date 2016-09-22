@@ -120,10 +120,11 @@ def test_state(actor):
     correct_state = {
         '_component_members': set([actor.id]),
         '_deployment_requirements': [],
-        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name', 'subject_attributes', 'migration_info']),
+        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name', 'subject_attributes', 'migration_info', '_port_property_capabilities']),
         '_signature': None,
         'dump': False,
         'id': actor.id,
+        '_port_property_capabilities': None,
         'inports': {'token': {'properties': {'direction': 'in',
                                              'routing': 'default',
                                              'nbr_peers': 1},
@@ -191,10 +192,15 @@ def test_component(actor):
 
 
 def test_requirements(actor):
-    assert actor.requirements_get() == []
+    ppr = { 'kwargs': {
+                'port_property': ['portproperty.runtime.base.1', 'portproperty.runtime.constrained.1']},
+            'op': 'port_property_match',
+            'type': '+'
+    }
+    assert actor.requirements_get() == [ppr]
     actor.requirements_add([1, 2, 3])
-    assert actor.requirements_get() == [1, 2, 3]
+    assert actor.requirements_get() == [1, 2, 3, ppr]
     actor.requirements_add([4, 5])
-    assert actor.requirements_get() == [4, 5]
+    assert actor.requirements_get() == [4, 5, ppr]
     actor.requirements_add([6, 7], extend=True)
-    assert actor.requirements_get() == [4, 5, 6, 7]
+    assert actor.requirements_get() == [4, 5, 6, 7, ppr]
