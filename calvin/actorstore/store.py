@@ -688,6 +688,9 @@ class ErrorDoc(DocObject):
     def flabel(self):
         return "Error"
 
+    def search(self, search_list):
+        _log.debug("Actor module {}/ is missing file __init__.py".format(self.ns))
+        return self
 
 class ModuleDoc(DocObject):
     """docstring for ModuleDoc"""
