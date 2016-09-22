@@ -28,6 +28,7 @@ class CountTimer(Actor):
 
     @manage(exclude=['timer'])
     def init(self, sleep=0.1, start=1, steps=sys.maxint):
+        self.start = start
         self.count = start
         self.sleep = sleep
         self.steps = steps + start
@@ -93,7 +94,7 @@ class CountTimer(Actor):
         return ActionResult()
 
     def report(self):
-        return self.count
+        return self.count - self.start
 
     action_priority = (step_no_periodic, step_periodic, stop)
     requires = ['calvinsys.events.timer']
