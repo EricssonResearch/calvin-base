@@ -107,6 +107,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Actor c (io.StandardOut) is missing connection to inport 'token'")
 
+    # FIXME: Why does this test generate two errors while
+    #        'testBadComponent3' generates a single error?
     def testCheckInportConnections2(self):
         script = """
         a:std.CountTimer()
@@ -117,7 +119,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
-        self.assertEqual(errors[0]['reason'], "Actor c (io.StandardOut) has multiple connections to inport 'token'")
+        self.assertEqual(errors[0]['reason'], "Input ports with multiple connections need a routing port property that allow that.")
 
     def testBadComponent1(self):
         script = """
@@ -149,6 +151,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to outport 'out'")
 
+    # FIXME: Why does this test generate a single error while
+    #        'testCheckInportConnections2' generates two errors?
     def testBadComponent3(self):
         script = """
         component Foo() -> out {
@@ -161,9 +165,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         a.out > b.token
         """
         result, errors, warnings = self.parse('inline', script)
-        self.assertEqual(len(errors), 2)
-        self.assertEqual(errors[0]['reason'], "Component Foo has multiple connections to outport 'out'")
-        self.assertEqual(errors[1]['reason'], "Component Foo has multiple connections to outport 'out'")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Input ports with multiple connections need a routing port property that allow that.")
 
     def testBadComponent4(self):
         script = """
