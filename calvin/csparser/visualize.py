@@ -174,7 +174,8 @@ class DotRenderer(BaseRenderer):
     def TransformedPort(self, node):
         # N.B. port and value are properties of node, not children
         self.render(node.port)
-        return ' [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0"><TR><TD>/{}/</TD></TR></TABLE>>]'.format(self.Value(node.value))
+        val = self.Value(node.value) if type(node.value) is ast.Value else self.Id(node.value)
+        return ' [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0"><TR><TD>/{}/</TD></TR></TABLE>>]'.format(val)
 
     def Void(self, node):
         return '{{{} [shape="point" width=0.15]}}'.format(self._random_id())
