@@ -3254,7 +3254,7 @@ class TestCollectPort(CalvinTestBase):
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
-        request_handler.migrate(self.rt1, snk, self.rt2.id)
+        self.migrate(self.rt1, self.rt2, snk)
         actual = wait_for_tokens(self.rt2, snk, 10)
 
         high = [x for x in actual if x > 999]
@@ -3286,14 +3286,12 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
@@ -3322,16 +3320,14 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src2 = d.actor_map['testCollectPort:src2']
-        request_handler.migrate(self.rt1, src2, self.rt2.id)
+        self.migrate(self.rt1, self.rt2, src2)
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
@@ -3361,17 +3357,15 @@ class TestPortRouting(CalvinTestBase):
         snk = d.actor_map['testCollectPort:snk']
         src1 = d.actor_map['testCollectPort:src1']
         src2 = d.actor_map['testCollectPort:src2']
-        request_handler.migrate(self.rt1, src1, self.rt2.id)
-        request_handler.migrate(self.rt1, src2, self.rt3.id)
+        self.migrate(self.rt1, self.rt2, src1)
+        self.migrate(self.rt1, self.rt3, src2)
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
@@ -3401,14 +3395,12 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
@@ -3445,17 +3437,15 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src2 = d.actor_map['testCollectPort:src2']
-        request_handler.migrate(self.rt1, src2, self.rt2.id)
+        self.migrate(self.rt1, self.rt2, src2)
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             assert len(actuals[i]) < len(actuals[i+1])
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
@@ -3493,17 +3483,15 @@ class TestPortRouting(CalvinTestBase):
         snk = d.actor_map['testCollectPort:snk']
         src1 = d.actor_map['testCollectPort:src1']
         src2 = d.actor_map['testCollectPort:src2']
-        request_handler.migrate(self.rt1, src1, self.rt2.id)
-        request_handler.migrate(self.rt1, src2, self.rt3.id)
+        self.migrate(self.rt1, self.rt2, src1)
+        self.migrate(self.rt1, self.rt3, src2)
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
@@ -3541,14 +3529,12 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
@@ -3585,14 +3571,12 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
@@ -3752,17 +3736,16 @@ class TestPortRouting(CalvinTestBase):
         snk2_token_id = snk2_meta['inports'][0]['id']
         actuals1 = [[]]
         actuals2 = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actual1, actual2 = actual_tokens_multiple(fr, [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actual1, actual2 = actual_tokens_multiple(fr, [snk1, snk2],
+                                min(100, len(actuals1[i]) + len(actuals2[i]) + 10))
             actuals1.append(actual1)
             actuals2.append(actual2)
-            request_handler.migrate(fr, snk1, to_id)
-            request_handler.migrate(fr, snk2, to_id)
+            self.migrate(fr, to, snk1)
+            self.migrate(fr, to, snk2)
 
         print actuals1, actuals2
 
@@ -3793,25 +3776,23 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        request_handler.migrate(self.rt1, snk2, self.rt2.id)
+        self.migrate(self.rt1, self.rt2, snk2)
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
         actuals1 = [[]]
         actuals2 = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            fr_id = ids[i%2]
-            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2],
+                                min(100, len(actuals1[i]) + len(actuals2[i]) + 10))
             actuals1.append(actual1)
             actuals2.append(actual2)
-            request_handler.migrate(fr, snk1, to_id)
-            request_handler.migrate(to, snk2, fr_id)
+            self.migrate(fr, to, snk1)
+            self.migrate(to, fr, snk2)
 
         print actuals1, actuals2
 
@@ -3842,26 +3823,24 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        request_handler.migrate(self.rt1, snk1, self.rt2.id)
-        request_handler.migrate(self.rt1, snk2, self.rt3.id)
+        self.migrate(self.rt1, self.rt2, snk1)
+        self.migrate(self.rt1, self.rt3, snk2)
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
         actuals1 = [[]]
         actuals2 = [[]]
-        ids = [self.rt2.id, self.rt3.id]
         rts = [self.rt2, self.rt3]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            fr_id = ids[i%2]
-            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2],
+                                min(100, len(actuals1[i]) + len(actuals2[i]) + 10))
             actuals1.append(actual1)
             actuals2.append(actual2)
-            request_handler.migrate(fr, snk1, to_id)
-            request_handler.migrate(to, snk2, fr_id)
+            self.migrate(fr, to, snk1)
+            self.migrate(to, fr, snk2)
 
         print actuals1, actuals2
 
@@ -3894,17 +3873,16 @@ class TestPortRouting(CalvinTestBase):
         snk2 = d.actor_map['testRRPort:snk2']
         actuals1 = [[]]
         actuals2 = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actual1, actual2 = actual_tokens_multiple(fr, [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actual1, actual2 = actual_tokens_multiple(fr, [snk1, snk2],
+                                min(100, len(actuals1[i]) + len(actuals2[i]) + 10))
             actuals1.append(actual1)
             actuals2.append(actual2)
-            request_handler.migrate(fr, snk1, to_id)
-            request_handler.migrate(fr, snk2, to_id)
+            self.migrate(fr, to, snk1)
+            self.migrate(fr, to, snk2)
 
         print actuals1, actuals2
 
@@ -3931,21 +3909,19 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        request_handler.migrate(self.rt1, snk2, self.rt2.id)
+        self.migrate(self.rt1, self.rt2, snk2)
         actuals1 = [[]]
         actuals2 = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            fr_id = ids[i%2]
-            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2],
+                                min(100, len(actuals1[i]) + len(actuals2[i]) + 10))
             actuals1.append(actual1)
             actuals2.append(actual2)
-            request_handler.migrate(fr, snk1, to_id)
-            request_handler.migrate(to, snk2, fr_id)
+            self.migrate(fr, to, snk1)
+            self.migrate(to, fr, snk2)
 
         print actuals1, actuals2
 
@@ -3972,22 +3948,20 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        request_handler.migrate(self.rt1, snk1, self.rt2.id)
-        request_handler.migrate(self.rt1, snk2, self.rt3.id)
+        self.migrate(self.rt1, self.rt2, snk1)
+        self.migrate(self.rt1, self.rt3, snk2)
         actuals1 = [[]]
         actuals2 = [[]]
-        ids = [self.rt2.id, self.rt3.id]
         rts = [self.rt2, self.rt3]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            fr_id = ids[i%2]
-            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2],
+                                min(100, len(actuals1[i]) + len(actuals2[i]) + 10))
             actuals1.append(actual1)
             actuals2.append(actual2)
-            request_handler.migrate(fr, snk1, to_id)
-            request_handler.migrate(to, snk2, fr_id)
+            self.migrate(fr, to, snk1)
+            self.migrate(to, fr, snk2)
 
         print actuals1, actuals2
 
@@ -4020,14 +3994,12 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testActorPortProperty:snk']
         actuals = [[]]
-        ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
             to = rts[(i+1)%2]
-            to_id = ids[(i+1)%2]
             fr = rts[i%2]
             actuals.append(wait_for_tokens(fr, snk, i*10))
-            request_handler.migrate(fr, snk, to_id)
+            self.migrate(fr, to, snk)
 
         print actuals
 
