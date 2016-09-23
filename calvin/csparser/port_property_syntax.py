@@ -247,8 +247,6 @@ def get_port_property_runtime(properties, prepend=True):
         if rt == "all":
             continue
         available = set(list_port_property_capabilities(which=rt))
-        print "get_port_property_runtime " + rt + " available: " + str(available)
-        print "get_port_property_runtime " + rt + " properties: " + str(properties)
         if properties.issubset(available):
             runtimes.append(rt)
     if prepend:
