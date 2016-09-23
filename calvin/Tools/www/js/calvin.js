@@ -1763,20 +1763,26 @@ function deployHandler()
     var script = $("#deploy_script").val();
     var name = $("#script_name").val();
     var reqs = $("#migrate_reqs").val();
-    deployApplication(peer.control_uri, script, reqs, name);
+    var creds = $("#credentials_conf").val();
+    deployApplication(peer.control_uri, script, reqs, name, creds);
 }
 
 // Deploy application with "script" and "name" to runtime with "uri"
-function deployApplication(uri, script, reqs, name)
+function deployApplication(uri, script, reqs, name, creds)
 {
     var url = uri + '/deploy';
-    var data;
+    var tmp = {'script': script, 'name': name};
+
     if (reqs) {
-        var requirements = JSON.parse(reqs);
-        data = JSON.stringify({'script': script, 'deploy_info': requirements, 'name': name});
-    } else {
-        data = JSON.stringify({'script': script, 'name': name});
+        tmp.deploy_info = JSON.parse(reqs);
     }
+
+    if (creds) {
+        tmp.sec_credentials = JSON.parse(creds);
+    }
+
+    var data = JSON.stringify(tmp);
+
     console.log("deployApplication url: " + url + " data: " + data);
     $.ajax({
         timeout: 20000,
@@ -1913,6 +1919,21 @@ jQuery(document).ready(function() {
         reader.readAsText(file);
     });
 
+    // handle file select in credentials
+    var fileInputCredentials = document.getElementById('fileInputCredentials');
+    var fileDisplayCredentials = document.getElementById('credentials_conf');
+    fileInputCredentials.addEventListener('change', function(e) {
+        var file = fileInputCredentials.files[0];
+        var reader = new FileReader();
+
+        reader.onload = function(e) {
+            console.log(e.target.result);
+            fileDisplayCredentials.innerHTML = e.target.result;
+        }
+
+        reader.readAsText(file);
+    });
+
     // handle file select in set requirements
     var fileInputRequirements = document.getElementById('fileInputRequirements');
     var fileDisplayRequirements = document.getElementById('requirements');
@@ -1933,6 +1954,11 @@ jQuery(document).ready(function() {
     })
 
     $('#tabRuntimeConfig a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+    })
+
+    $('#tabDeployApplication a').click(function (e) {
         e.preventDefault();
         $(this).tab('show');
     })

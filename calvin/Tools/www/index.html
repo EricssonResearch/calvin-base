@@ -274,85 +274,108 @@
 </div>
 
 <!-- Application deployment dialog -->
-<div id="deployDialog" title="Deploy application" style="display:none; width: 800px; height: 900px" class="modal modal-dialog">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h4 class="modal-title">Deploy</h4>
-        </div>
-        <div class="modal-body">
-            <form>
-                <input type="file" id="fileInputDeploy" accept=".calvin">
-                <br>
-                <label for="deploy_script">Script:</label>
-                <br>
-                <textarea name="deploy_script" id="deploy_script" rows="20" cols="100"></textarea>
-                <br>
-                <label for="deploy_requirements">Requirements:</label>
-                <br>
-                <input type="file" id="fileInputMigrateApplication" accept=".deployjson">
-                <br>
-                <textarea name="migrate_reqs" id="migrate_reqs" rows="20" cols="100"></textarea>
-                <br>
-                <label for="script_name">Script name:</label>
-                <br>
-                <input type="text" name="script_name" id="script_name">
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" onclick="deployHandler()" data-dismiss="modal">Deploy</button>
-            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+<div class="modal fade" id="deployDialog" tabindex="-1" role="dialog" aria-labelledby="deployDialogLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="deployDialogLabel">Deploy</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <ul class="nav nav-tabs" id="tabDeployApplication">
+                        <li class="active"><a data-target="#tabDeployScript" data-toggle="tab"><h4>Script</h4></a></li>
+                        <li><a data-target="#tabDeployRequirements" data-toggle="tab"><h4>Requirements</h4></a></li>
+                        <li><a data-target="#tabDeployCredentials" data-toggle="tab"><h4>Credentials</h4></a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div id="tabDeployScript" class="tab-pane active">
+                            <input type="file" id="fileInputDeploy" accept=".calvin">
+                            <br>
+                            <label for="deploy_script">Script:</label>
+                            <br>
+                            <textarea name="deploy_script" id="deploy_script" rows="20" cols="100"></textarea>
+                            <br>
+                            <label for="script_name">Script name:</label>
+                            <br>
+                            <input type="text" name="script_name" id="script_name">
+                        </div>
+                        <div id="tabDeployRequirements" class="tab-pane">
+                            <label for="deploy_requirements">Requirements:</label>
+                            <br>
+                            <input type="file" id="fileInputMigrateApplication" accept=".deployjson">
+                            <br>
+                            <textarea name="migrate_reqs" id="migrate_reqs" rows="20" cols="100"></textarea>
+                        </div>
+                        <div id="tabDeployCredentials" class="tab-pane">
+                            <label for="credentials">Credentials:</label>
+                            <br>
+                            <input type="file" id="fileInputCredentials">
+                            <br>
+                            <textarea name="credentials_conf" id="credentials_conf" rows="20" cols="100"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="deployHandler()" data-dismiss="modal">Deploy</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Event log dialog -->
-<div id="traceDialog" title="Event trace filter" style="display:none; height: 500px; width: 300px;" class="modal modal-dialog">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h4 class="modal-title">Event Trace Filter</h4>
-        </div>
-        <div class="modal-body">
-            <form>
-                <input type="checkbox" id="chkTraceLinkConnected" checked="">Link connect<br>
-                <input type="checkbox" id="chkTraceLinkDisconnected" checked="">Link disconnect<br>
-                <input type="checkbox" id="chkTraceActorFiring" onchange="toggleActionResult()" checked="">Actor firings<br>
-                &nbsp;&nbsp;<input type="checkbox" id="chkTraceActorFiringActionResult">Action result<br>
-                <input type="checkbox" id="chkTraceActorNew" checked="">Actor new<br>
-                <input type="checkbox" id="chkTraceActorDestroy" checked="">Actor destroy<br>
-                <input type="checkbox" id="chkTraceActorMigrate" checked="">Actor migrate<br>
-                <input type="checkbox" id="chkTraceApplicationNew" checked="">Application new<br>
-                <input type="checkbox" id="chkTraceApplicationDestroy" checked="">Application destroy<br>
-                Application: <select id="traceApplicationSelector"></select>
-                <br>
-                <label for="trace_size">Trace rows:</label>
-                <input type="number" name="trace_size" id="trace_size" value="30">
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" onclick="startTrace()">Start Trace</button>
-            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+<div class="modal fade" id="traceDialog" tabindex="-1" role="dialog" aria-labelledby="traceDialogLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="traceDialogLabel">Event Trace Filter</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <input type="checkbox" id="chkTraceLinkConnected" checked="">Link connect<br>
+                    <input type="checkbox" id="chkTraceLinkDisconnected" checked="">Link disconnect<br>
+                    <input type="checkbox" id="chkTraceActorFiring" onchange="toggleActionResult()" checked="">Actor firings<br>
+                    &nbsp;&nbsp;<input type="checkbox" id="chkTraceActorFiringActionResult">Action result<br>
+                    <input type="checkbox" id="chkTraceActorNew" checked="">Actor new<br>
+                    <input type="checkbox" id="chkTraceActorDestroy" checked="">Actor destroy<br>
+                    <input type="checkbox" id="chkTraceActorMigrate" checked="">Actor migrate<br>
+                    <input type="checkbox" id="chkTraceApplicationNew" checked="">Application new<br>
+                    <input type="checkbox" id="chkTraceApplicationDestroy" checked="">Application destroy<br>
+                    Application: <select id="traceApplicationSelector"></select>
+                    <br>
+                    <label for="trace_size">Trace rows:</label>
+                    <input type="number" name="trace_size" id="trace_size" value="30">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="startTrace()">Start Trace</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Set requirements dialog -->
-<div id="requirementsDialog" title="Set requirements" style="display:none; width: 600px; height: 800px" class="modal modal-dialog">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h4 class="modal-title">Set requirements</h4>
-        </div>
-        <div class="modal-body">
-            <form>
-                <label for="requirements">Requirements:</label>
-                <br>
-                <input type="file" id="fileInputRequirements" accept=".deployjson">
-                <br>
-                <textarea name="requirements" id="requirements" rows="20" cols="100"></textarea>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" onclick="setRequirementsHandler()" data-dismiss="modal">Set requirements</button>
-            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+<div class="modal fade" id="requirementsDialog" tabindex="-1" role="dialog" aria-labelledby="requirementsDialogLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="requirementsDialogLabel">Set requirements</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <label for="requirements">Requirements:</label>
+                    <br>
+                    <input type="file" id="fileInputRequirements" accept=".deployjson">
+                    <br>
+                    <textarea name="requirements" id="requirements" rows="20" cols="100"></textarea>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="setRequirementsHandler()" data-dismiss="modal">Set requirements</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
