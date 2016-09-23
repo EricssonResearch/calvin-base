@@ -3292,7 +3292,7 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3330,7 +3330,7 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3370,7 +3370,7 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3407,7 +3407,7 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3453,7 +3453,7 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             assert len(actuals[i]) < len(actuals[i+1])
             request_handler.migrate(fr, snk, to_id)
 
@@ -3502,7 +3502,7 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3547,7 +3547,7 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3591,7 +3591,7 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -4026,13 +4026,13 @@ class TestPortRouting(CalvinTestBase):
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, 10))
+            actuals.append(wait_for_tokens(fr, snk, i*10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=15)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=15)
         helpers.destroy_app(d)
