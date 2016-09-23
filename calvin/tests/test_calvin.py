@@ -2541,7 +2541,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyOutsideComponentOutPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -2586,7 +2586,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyOutsideComponentInPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -2645,7 +2645,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyInsideComponentOutPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -2690,7 +2690,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyInsideComponentInPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -2748,7 +2748,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyInsideComponentInternalInPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -2806,7 +2806,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyInsideComponentInternalOutPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -2852,7 +2852,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyTupleOutPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -2900,7 +2900,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyConsolidateOutPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -2950,7 +2950,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyConsolidateRejectOutPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3022,7 +3022,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testPortPropertyConsolidateInsideComponentInternalInPort(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3092,7 +3092,7 @@ class TestPortProperties(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
 @pytest.mark.essential
 class TestCollectPort(CalvinTestBase):
@@ -3130,7 +3130,7 @@ class TestCollectPort(CalvinTestBase):
         self.assert_lists_equal(range(1001,1006), high, min_length=4)
         self.assert_lists_equal(range(1,6), low, min_length=4)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectPortComponentIn(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3180,7 +3180,7 @@ class TestCollectPort(CalvinTestBase):
         self.assert_lists_equal(range(1001,1006), high, min_length=4)
         self.assert_lists_equal(range(1,6), low, min_length=4)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectPortComponentOut(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3230,7 +3230,7 @@ class TestCollectPort(CalvinTestBase):
         self.assert_lists_equal(range(1001,1006), high, min_length=4)
         self.assert_lists_equal(range(1,6), low, min_length=4)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectPortRemote(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3261,7 +3261,7 @@ class TestCollectPort(CalvinTestBase):
         low = [x for x in actual if x < 999]
         self.assert_lists_equal(range(1001,1006), high, min_length=4)
         self.assert_lists_equal(range(1,6), low, min_length=4)
-        d.destroy()
+        helpers.destroy_app(d)
 
 
 @pytest.mark.essential
@@ -3301,7 +3301,7 @@ class TestPortRouting(CalvinTestBase):
         low = [x for x in actuals[-1] if x < 999]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectPortRemoteMoveMany2(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3339,7 +3339,7 @@ class TestPortRouting(CalvinTestBase):
         low = [x for x in actuals[-1] if x < 999]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectPortRemoteMoveMany3(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3379,7 +3379,7 @@ class TestPortRouting(CalvinTestBase):
         low = [x for x in actuals[-1] if x < 999]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3423,7 +3423,7 @@ class TestPortRouting(CalvinTestBase):
         low = [x for x in nbrs if x < 999]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectTagPortRemoteMoveMany2(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3470,7 +3470,7 @@ class TestPortRouting(CalvinTestBase):
         low = [x for x in nbrs if x < 999]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectTagPortRemoteMoveMany3(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3518,7 +3518,7 @@ class TestPortRouting(CalvinTestBase):
         low = [x for x in nbrs if x < 999]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectAllTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3562,7 +3562,7 @@ class TestPortRouting(CalvinTestBase):
         low = [x['src_one'] for x in actuals[-1]]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectAnyTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3606,7 +3606,7 @@ class TestPortRouting(CalvinTestBase):
         low = [x['src_one'] for x in actuals[-1] if 'src_one' in x]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectOneTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3644,7 +3644,7 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1001,1200), high, min_length=15)
         self.assert_lists_equal(range(1,4)*10, low, min_length=15)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectAnyTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3682,7 +3682,7 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1001,1200), high, min_length=15)
         self.assert_lists_equal(range(1,4)*10, low, min_length=15)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testCollectAllTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3725,7 +3725,7 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(0,45,3), comp[0::3], min_length=5)
         self.assert_lists_equal(range(0,45,3), comp[1::3], min_length=5)
         self.assert_lists_equal(range(0,45,3), comp[2::3], min_length=5)
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testRoundRobinPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3772,7 +3772,7 @@ class TestPortRouting(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1][:-4], min_length=20)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testRoundRobinPortRemoteMoveMany2(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3821,7 +3821,7 @@ class TestPortRouting(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1][:-4], min_length=20)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testRoundRobinPortRemoteMoveMany3(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3871,7 +3871,7 @@ class TestPortRouting(CalvinTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1][:-4], min_length=20)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testRandomPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3910,7 +3910,7 @@ class TestPortRouting(CalvinTestBase):
 
         self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testRandomPortRemoteMoveMany2(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3951,7 +3951,7 @@ class TestPortRouting(CalvinTestBase):
 
         self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testRandomPortRemoteMoveMany3(self):
         _log.analyze("TESTRUN", "+", {})
@@ -3993,7 +3993,7 @@ class TestPortRouting(CalvinTestBase):
 
         self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
-        d.destroy()
+        helpers.destroy_app(d)
 
     def testActorPortProperty(self):
         _log.analyze("TESTRUN", "+", {})
@@ -4035,4 +4035,4 @@ class TestPortRouting(CalvinTestBase):
         low = [x for x in actuals[-1] if x < 999]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
-        d.destroy()
+        helpers.destroy_app(d)
