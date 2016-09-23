@@ -1048,8 +1048,8 @@ class DocumentationStore(ActorStore):
             if type(actor) is dict:
                 return ErrorDoc(namespace, name, "Old-style components are not valid")
             args = {'mandatory':actor.arg_names, 'optional':{}}
-            inputs = [(x, "") for x in actor.inports or []] # FIXME append port docs
-            outputs = [(x, "") for x in actor.outports or []] # FIXME append port docs
+            inputs = [(x, "", {}) for x in actor.inports or []] # FIXME append port docs and port properties
+            outputs = [(x, "", {}) for x in actor.outports or []] # FIXME append port docs and port properties
             doclines = actor.docstring.splitlines()
             requires = [] # FIXME Requirements
             definition = actor.children[0]
