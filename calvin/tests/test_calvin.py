@@ -50,9 +50,12 @@ def expected_tokens(rt, actor_id, t_type='seq'):
 
 def wait_for_tokens(rt, actor_id, size=5, retries=20):
     return helpers.wait_for_tokens(request_handler, rt, actor_id, size, retries)
-    
+
 def actual_tokens(rt, actor_id, size=5, retries=20):
     return helpers.actual_tokens(request_handler, rt, actor_id, size, retries)
+
+def actual_tokens_multiple(rt, actor_ids, size=5, retries=20):
+    return helpers.actual_tokens_multiple(request_handler, rt, actor_ids, size, retries)
 
 def get_runtime(n=1):
     import random
@@ -2521,17 +2524,16 @@ class TestPortProperties(CalvinTestBase):
         print errors
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -2567,17 +2569,16 @@ class TestPortProperties(CalvinTestBase):
                     ['properties']['routing'] == 'round-robin')
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -2627,17 +2628,16 @@ class TestPortProperties(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
         snk2 = d.actor_map['testScript:snk2:compsnk']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -2673,17 +2673,16 @@ class TestPortProperties(CalvinTestBase):
                     ['properties']['routing'] == 'round-robin')
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -2732,17 +2731,16 @@ class TestPortProperties(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
         snk2 = d.actor_map['testScript:snk2:compsnk']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -2791,17 +2789,16 @@ class TestPortProperties(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -2838,17 +2835,16 @@ class TestPortProperties(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
         snk2 = d.actor_map['testScript:snk2:compsnk']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -2887,17 +2883,16 @@ class TestPortProperties(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -2938,17 +2933,16 @@ class TestPortProperties(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -3011,17 +3005,16 @@ class TestPortProperties(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
         snk2 = d.actor_map['testScript:snk2:compsnk']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -3082,17 +3075,16 @@ class TestPortProperties(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(.1)
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
+        actual1 = wait_for_tokens(self.rt1, snk1, 11)
+        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -3129,10 +3121,9 @@ class TestCollectPort(CalvinTestBase):
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
 
         snk = d.actor_map['testCollectPort:snk']
-        actual = request_handler.report(self.rt1, snk)
+        actual = wait_for_tokens(self.rt1, snk, 10)
 
         high = [x for x in actual if x > 999]
         low = [x for x in actual if x < 999]
@@ -3179,14 +3170,11 @@ class TestCollectPort(CalvinTestBase):
                     ['properties']['nbr_peers'] == 2)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
 
         snk1 = d.actor_map['testCollectPort:snk1']
         snk2 = d.actor_map['testCollectPort:snk2']
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
-        assert len(actual1) > 3
-        assert len(actual2) > 3
+        actual1, actual2 = actual_tokens_multiple(self.rt1, [snk1, snk2], 10)
+
         high = sorted([x for x in actual1 + actual2 if x > 999])
         low = sorted([x for x in actual1 + actual2 if x < 999])
         self.assert_lists_equal(range(1001,1006), high, min_length=4)
@@ -3232,14 +3220,11 @@ class TestCollectPort(CalvinTestBase):
                     ['properties']['nbr_peers'] == 2)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
-        time.sleep(0.5)
 
         snk1 = d.actor_map['testCollectPort:snk1']
         snk2 = d.actor_map['testCollectPort:snk2']
-        actual1 = request_handler.report(self.rt1, snk1)
-        actual2 = request_handler.report(self.rt1, snk2)
-        assert len(actual1) > 3
-        assert len(actual2) > 3
+        actual1, actual2 = actual_tokens_multiple(self.rt1, [snk1, snk2], 10)
+
         high = sorted([x for x in actual1 + actual2 if x > 999])
         low = sorted([x for x in actual1 + actual2 if x < 999])
         self.assert_lists_equal(range(1001,1006), high, min_length=4)
@@ -3270,8 +3255,7 @@ class TestCollectPort(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         request_handler.migrate(self.rt1, snk, self.rt2.id)
-        time.sleep(1)
-        actual = request_handler.report(self.rt2, snk)
+        actual = wait_for_tokens(self.rt2, snk, 10)
 
         high = [x for x in actual if x > 999]
         low = [x for x in actual if x < 999]
@@ -3305,20 +3289,18 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
-            assert len(actuals[i]) < len(actuals[i+1])
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()
 
     def testCollectPortRemoteMoveMany2(self):
@@ -3345,20 +3327,18 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
-            assert len(actuals[i]) < len(actuals[i+1])
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()
 
     def testCollectPortRemoteMoveMany3(self):
@@ -3387,20 +3367,18 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
-            assert len(actuals[i]) < len(actuals[i+1])
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()
 
     def testCollectTagPortRemoteMoveMany1(self):
@@ -3426,12 +3404,10 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
-            assert len(actuals[i]) < len(actuals[i+1])
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3445,8 +3421,8 @@ class TestPortRouting(CalvinTestBase):
         nbrs = [t.values()[0] for t in actuals[-1]]
         high = [x for x in nbrs if x > 999]
         low = [x for x in nbrs if x < 999]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()
 
     def testCollectTagPortRemoteMoveMany2(self):
@@ -3474,11 +3450,10 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
             assert len(actuals[i]) < len(actuals[i+1])
             request_handler.migrate(fr, snk, to_id)
 
@@ -3493,8 +3468,8 @@ class TestPortRouting(CalvinTestBase):
         nbrs = [t.values()[0] for t in actuals[-1]]
         high = [x for x in nbrs if x > 999]
         low = [x for x in nbrs if x < 999]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()
 
     def testCollectTagPortRemoteMoveMany3(self):
@@ -3524,12 +3499,10 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
-            assert len(actuals[i]) < len(actuals[i+1])
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3543,8 +3516,8 @@ class TestPortRouting(CalvinTestBase):
         nbrs = [t.values()[0] for t in actuals[-1]]
         high = [x for x in nbrs if x > 999]
         low = [x for x in nbrs if x < 999]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()
 
     def testCollectAllTagPortRemoteMoveMany1(self):
@@ -3571,12 +3544,10 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
-            assert len(actuals[i]) < len(actuals[i+1])
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3589,8 +3560,8 @@ class TestPortRouting(CalvinTestBase):
 
         high = [x['src_two'] for x in actuals[-1]]
         low = [x['src_one'] for x in actuals[-1]]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()
 
     def testCollectAnyTagPortRemoteMoveMany1(self):
@@ -3617,12 +3588,10 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
-            assert len(actuals[i]) < len(actuals[i+1])
+            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 5))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
@@ -3635,8 +3604,8 @@ class TestPortRouting(CalvinTestBase):
 
         high = [x['src_two'] for x in actuals[-1] if 'src_two' in x]
         low = [x['src_one'] for x in actuals[-1] if 'src_one' in x]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()
 
     def testCollectOneTagPortWithException(self):
@@ -3664,10 +3633,7 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
-        exceptions = []
-        while len(exceptions) < 10:
-            time.sleep(0.1)
-            exceptions = request_handler.report(self.rt1, exptsnk)
+        exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
         actual = request_handler.report(self.rt1, snk)
         assert len(actual) >= 3 * 10
         print actual, exceptions
@@ -3675,8 +3641,8 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
-        self.assert_lists_equal(range(1001,1200), high, min_length=10)
-        self.assert_lists_equal(range(1,4)*10, low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high, min_length=15)
+        self.assert_lists_equal(range(1,4)*10, low, min_length=15)
 
         d.destroy()
 
@@ -3705,10 +3671,7 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
-        exceptions = []
-        while len(exceptions) < 10:
-            time.sleep(0.1)
-            exceptions = request_handler.report(self.rt1, exptsnk)
+        exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
         actual = request_handler.report(self.rt1, snk)
         assert len(actual) >= 3 * 10
         print actual, exceptions
@@ -3716,8 +3679,8 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,4)*10, low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high, min_length=15)
+        self.assert_lists_equal(range(1,4)*10, low, min_length=15)
 
         d.destroy()
 
@@ -3746,10 +3709,7 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
-        exceptions = []
-        while len(exceptions) < 10:
-            time.sleep(0.1)
-            exceptions = request_handler.report(self.rt1, exptsnk)
+        exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
         actual = request_handler.report(self.rt1, snk)
         assert len(actual) >= 3 * 10
         print actual, exceptions
@@ -3757,8 +3717,8 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,4)*10, low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high, min_length=15)
+        self.assert_lists_equal(range(1,4)*10, low, min_length=15)
 
         # Test that kept in sync but skewed one token for every exception
         comp = [x['src_two'] - x['src_one'] - 1000 for x in actual if isinstance(x, dict)]
@@ -3795,14 +3755,12 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals1.append(request_handler.report(fr, snk1))
-            actuals2.append(request_handler.report(fr, snk2))
-            assert len(actuals1[i]) < len(actuals1[i+1])
-            assert len(actuals2[i]) < len(actuals2[i+1])
+            actual1, actual2 = actual_tokens_multiple(fr, [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actuals1.append(actual1)
+            actuals2.append(actual2)
             request_handler.migrate(fr, snk1, to_id)
             request_handler.migrate(fr, snk2, to_id)
 
@@ -3810,9 +3768,9 @@ class TestPortRouting(CalvinTestBase):
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
-        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1], min_length=30)
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1][:-4], min_length=20)
         start = 1 if snk1_token_id > snk2_token_id else 2
-        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1], min_length=30)
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1][:-4], min_length=20)
 
         d.destroy()
 
@@ -3845,15 +3803,13 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
             fr_id = ids[i%2]
-            actuals1.append(request_handler.report(fr, snk1))
-            actuals2.append(request_handler.report(to, snk2))
-            assert len(actuals1[i]) < len(actuals1[i+1])
-            assert len(actuals2[i]) < len(actuals2[i+1])
+            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actuals1.append(actual1)
+            actuals2.append(actual2)
             request_handler.migrate(fr, snk1, to_id)
             request_handler.migrate(to, snk2, fr_id)
 
@@ -3861,9 +3817,9 @@ class TestPortRouting(CalvinTestBase):
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
-        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1], min_length=30)
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1][:-4], min_length=20)
         start = 1 if snk1_token_id > snk2_token_id else 2
-        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1], min_length=30)
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1][:-4], min_length=20)
 
         d.destroy()
 
@@ -3897,15 +3853,13 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt2.id, self.rt3.id]
         rts = [self.rt2, self.rt3]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
             fr_id = ids[i%2]
-            actuals1.append(request_handler.report(fr, snk1))
-            actuals2.append(request_handler.report(to, snk2))
-            assert len(actuals1[i]) < len(actuals1[i+1])
-            assert len(actuals2[i]) < len(actuals2[i+1])
+            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actuals1.append(actual1)
+            actuals2.append(actual2)
             request_handler.migrate(fr, snk1, to_id)
             request_handler.migrate(to, snk2, fr_id)
 
@@ -3913,9 +3867,9 @@ class TestPortRouting(CalvinTestBase):
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
-        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1], min_length=30)
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals1[-1][:-4], min_length=20)
         start = 1 if snk1_token_id > snk2_token_id else 2
-        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1], min_length=30)
+        self.assert_lists_equal(list(range(start, 200, 2)), actuals2[-1][:-4], min_length=20)
 
         d.destroy()
 
@@ -3943,20 +3897,18 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals1.append(request_handler.report(fr, snk1))
-            actuals2.append(request_handler.report(fr, snk2))
-            assert len(actuals1[i]) < len(actuals1[i+1])
-            assert len(actuals2[i]) < len(actuals2[i+1])
+            actual1, actual2 = actual_tokens_multiple(fr, [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actuals1.append(actual1)
+            actuals2.append(actual2)
             request_handler.migrate(fr, snk1, to_id)
             request_handler.migrate(fr, snk2, to_id)
 
         print actuals1, actuals2
 
-        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1]), min_length=60)
+        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
         d.destroy()
 
@@ -3985,21 +3937,19 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
             fr_id = ids[i%2]
-            actuals1.append(request_handler.report(fr, snk1))
-            actuals2.append(request_handler.report(to, snk2))
-            assert len(actuals1[i]) < len(actuals1[i+1])
-            assert len(actuals2[i]) < len(actuals2[i+1])
+            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actuals1.append(actual1)
+            actuals2.append(actual2)
             request_handler.migrate(fr, snk1, to_id)
             request_handler.migrate(to, snk2, fr_id)
 
         print actuals1, actuals2
 
-        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1]), min_length=60)
+        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
         d.destroy()
 
@@ -4029,21 +3979,19 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt2.id, self.rt3.id]
         rts = [self.rt2, self.rt3]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
             fr_id = ids[i%2]
-            actuals1.append(request_handler.report(fr, snk1))
-            actuals2.append(request_handler.report(to, snk2))
-            assert len(actuals1[i]) < len(actuals1[i+1])
-            assert len(actuals2[i]) < len(actuals2[i+1])
+            actual1, actual2 = actual_tokens_multiple([fr, to], [snk1, snk2], len(actuals1[i]) + len(actuals2[i]) + 10)
+            actuals1.append(actual1)
+            actuals2.append(actual2)
             request_handler.migrate(fr, snk1, to_id)
             request_handler.migrate(to, snk2, fr_id)
 
         print actuals1, actuals2
 
-        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1]), min_length=60)
+        self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
         d.destroy()
 
@@ -4075,18 +4023,16 @@ class TestPortRouting(CalvinTestBase):
         ids = [self.rt1.id, self.rt2.id]
         rts = [self.rt1, self.rt2]
         for i in range(5):
-            time.sleep(0.2)
             to = rts[(i+1)%2]
             to_id = ids[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(request_handler.report(fr, snk))
-            assert len(actuals[i]) < len(actuals[i+1])
+            actuals.append(wait_for_tokens(fr, snk, 10))
             request_handler.migrate(fr, snk, to_id)
 
         print actuals
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high, min_length=30)
-        self.assert_lists_equal(range(1,200), low, min_length=30)
+        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
+        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         d.destroy()

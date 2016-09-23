@@ -32,14 +32,14 @@ def retry(retries, function, criterion, error_msg):
                 raise e
         except Exception as e:
             _log.info("Encountered '%s'" % (e,))
-        delay *= 2; retry += 1
+        delay = min(2, delay * 2); retry += 1
         time.sleep(delay)
     raise Exception(error_msg)
             
 def wait_for_tokens(request_handler, rt, actor_id, size=5, retries=10):
     """An alias for 'actual_tokens'"""
     return actual_tokens(request_handler, rt, actor_id, size, retries)
-    
+
 def actual_tokens(request_handler, rt, actor_id, size=5, retries=10):
     """
     Uses 'request_handler' to fetch the report from actor 'actor_id' on runtime 'rt'.
@@ -47,8 +47,30 @@ def actual_tokens(request_handler, rt, actor_id, size=5, retries=10):
     from functools import partial
     func = partial(request_handler.report, rt, actor_id)
     criterion = lambda tokens: len(tokens) >= size
-    return retry(retries, func, criterion, "Not enough tokens")
+    return retry(retries, func, criterion, "Not enough tokens, expected %d" % size)
 
+
+def multi_report(request_handler, rt, actor_ids):
+    """
+    Helper uses 'request_handler' to fetch the report from actors in 'actor_ids' list on runtime(s) 'rt'.
+    """
+    result = []
+    if isinstance(rt, (list, tuple, set)):
+        args = zip(rt, actor_ids)
+    else:
+        args = zip([rt]*len(actor_ids), actor_ids)
+    for runtime, actor_id in args:
+        result.append(request_handler.report(runtime, actor_id))
+    return result
+
+def actual_tokens_multiple(request_handler, rt, actor_ids, size=5, retries=10):
+    """
+    Uses 'request_handler' to fetch the report from actors in 'actor_ids' list on runtime(s) 'rt'.
+    """
+    from functools import partial
+    func = partial(multi_report, request_handler, rt, actor_ids)
+    criterion = lambda tokens: sum([len(t) for t in tokens]) >= size
+    return retry(retries, func, criterion, "Not enough tokens, expected %d" % size)
 
 def destroy_app(deployer, retries=10):
     """
