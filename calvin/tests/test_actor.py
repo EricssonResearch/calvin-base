@@ -192,15 +192,14 @@ def test_component(actor):
 
 
 def test_requirements(actor):
-    ppr = { 'kwargs': {
-                'port_property': ['portproperty.runtime.base.1', 'portproperty.runtime.constrained.1']},
-            'op': 'port_property_match',
-            'type': '+'
-    }
-    assert actor.requirements_get() == [ppr]
+    assert actor.requirements_get()[:-1] == []
+    assert actor.requirements_get()[-1]['op'] == 'port_property_match'
     actor.requirements_add([1, 2, 3])
-    assert actor.requirements_get() == [1, 2, 3, ppr]
+    assert actor.requirements_get()[:-1] == [1, 2, 3]
+    assert actor.requirements_get()[-1]['op'] == 'port_property_match'
     actor.requirements_add([4, 5])
-    assert actor.requirements_get() == [4, 5, ppr]
+    assert actor.requirements_get()[:-1] == [4, 5]
+    assert actor.requirements_get()[-1]['op'] == 'port_property_match'
     actor.requirements_add([6, 7], extend=True)
-    assert actor.requirements_get() == [4, 5, 6, 7, ppr]
+    assert actor.requirements_get()[:-1] == [4, 5, 6, 7]
+    assert actor.requirements_get()[-1]['op'] == 'port_property_match'
