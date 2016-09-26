@@ -163,8 +163,8 @@ class Completion(object):
         module = matched.group(1)
         partial = matched.group(2) or ''
         actors = sorted(self.metadata.get(module, []).keys())
-        args = [self.metadata[module][actor].get('args', {}) for actor in actors]
         s, c = self._filter_partial(actors, partial)
+        args = [self.metadata[module][actor].get('args', {}) for actor in s]
         return self.wrap_result(s, c, 'actor', arg_dicts=args)
 
     def _complete_port(self, matched, what):

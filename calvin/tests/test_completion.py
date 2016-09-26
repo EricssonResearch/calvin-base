@@ -62,12 +62,14 @@ class ActorCompletionTests(TestBase):
         self.assertEqual(set(d['suggestions']), set(expected))
         self.assertEqual(set(d['completions']), set(expected))
         self.assertEqual('actor', d['type'])
+        self.assertEqual(len(d['completions']), len(d['arg_dicts']))
 
     def test_completion_actor_partial(self):
         d = self.completion.complete(6, 10)
         expected = [x for x in self.completion.metadata['std'].keys() if x.startswith('Co')]
         self.assertEqual(set(d['suggestions']), set(expected))
         self.assertEqual(set(d['completions']), set([x[2:] for x in expected]))
+        self.assertEqual(len(d['completions']), len(d['arg_dicts']))
 
 class PortCompletionTests(TestBase):
 
