@@ -1012,7 +1012,7 @@ def query(root, kind=None, attributes=None, maxdepth=1024):
     return finder.matches
 
 def _calvin_cg(source_text, app_name):
-    ast_root, issuetracker = calvin_parse(source_text)
+    ast_root, _, issuetracker = calvin_parse(source_text)
     cg = CodeGen(ast_root, app_name)
     return cg, issuetracker
 

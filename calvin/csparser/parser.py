@@ -43,9 +43,13 @@ class CalvinParser(object):
     def p_script(self, p):
         """script : opt_constdefs opt_compdefs opt_program"""
         s = ast.Node()
-        s.add_children(p[1] + p[2] + p[3])
-        p[0] = s
-
+        s.add_children(p[1] + p[2] + p[3][0])
+        root = ast.Node()
+        root.add_child(s.clone())
+        d = ast.Node()
+        d.add_children(p[1] + p[3][1])
+        root.add_child(d)
+        p[0] = root
 
     def p_opt_constdefs(self, p):
         """opt_constdefs :
@@ -119,17 +123,26 @@ class CalvinParser(object):
         """opt_program :
                        | program"""
         if len(p) == 1:
-            p[0] = []
+            p[0] = [[],[]]
         else:
-            p[0] = [ast.Block(program=p[1], namespace='__scriptname__', debug_info=self.debug_info(p, 1))]
+            p[0] = [
+                [ast.Block(program=p[1][0], namespace='__scriptname__', debug_info=self.debug_info(p, 1))],
+                p[1][1]
+            ]
 
     def p_program(self, p):
         """program : program statement
                    | statement """
         if len(p) == 2:
-            p[0] = [p[1]]
+            if type(p[1]) in [ast.Group, ast.Rule, ast.RuleApply]:
+                p[0] = [[], [p[1]]]
+            else:
+                p[0] = [[p[1]], []]
         else:
-            p[0] = p[1] + [p[2]]
+            if type(p[2]) in [ast.Group, ast.Rule, ast.RuleApply]:
+                p[0] = [p[1][0], p[1][1] + [p[2]]]
+            else:
+                p[0] = [p[1][0] + [p[2]], p[1][1]]
 
     def p_statement(self, p):
         """statement : assignment
@@ -454,11 +467,13 @@ class CalvinParser(object):
         self.issuetracker = IssueTracker()
         self.source_text = source_text
         try:
-            ir = self.parser.parse(source_text)
+            root = self.parser.parse(source_text)
+            ir, deploy_ir = root.children
         except SyntaxError as e:
             self.issuetracker.add_error(e.text, {'line':e.lineno, 'col':e.offset})
             ir = ast.Node()
-        return ir, self.issuetracker
+            deploy_ir = ast.Node()
+        return ir, deploy_ir, self.issuetracker
 
 
 # FIXME: [PP] Optionally supply an IssueTracker
@@ -533,12 +548,18 @@ apply actor, actor: some_rule | node_attr(node_spec=NODE1) ~ current()
             print "Error: Could not read file: '%s'" % script
             sys.exit(1)
 
-    ir, it = calvin_parse(source_text)
+    ir, deploy_ir, it = calvin_parse(source_text)
     if it.issue_count == 0:
         print "No issues"
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
         print i
 
+    print "CalvinScript:"
     bp = astprint.BracePrinter()
     bp.visit(ir)
+    print
+    print "DeployScript:"
+    bp = astprint.BracePrinter()
+    bp.visit(deploy_ir)
+
 
