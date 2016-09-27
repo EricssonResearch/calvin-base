@@ -343,6 +343,43 @@ class Component(Node):
         self.docstring = kwargs.get('docstring')
         self.add_child(Block(program=kwargs.get('program', [])))
 
+class Rule(Node):
+    def __init__(self, **kwargs):
+        super(Rule, self).__init__(**kwargs)
+        self.rule = kwargs.get('rule')
+        self.add_children([kwargs.get('expression')])
+
+class RuleExpression(Node):
+    def __init__(self, **kwargs):
+        super(RuleExpression, self).__init__(**kwargs)
+        self.add_children([kwargs.get('predicate'), kwargs.get('setop'), kwargs.get('expression')])
+
+class RulePredicate(Node):
+    def __init__(self, **kwargs):
+        super(RulePredicate, self).__init__(**kwargs)
+        self.predicate = kwargs.get('predicate')
+        self.add_children(kwargs.get('args'))
+
+class RuleSetOp(Node):
+    def __init__(self, **kwargs):
+        super(RuleSetOp, self).__init__(**kwargs)
+        self.op = kwargs.get('op')
+        self.children = None
+
+class Group(Node):
+    def __init__(self, **kwargs):
+        super(Group, self).__init__(**kwargs)
+        self.group = kwargs.get('group')
+        self.add_children(kwargs.get('members'))
+
+class RuleApply(Node):
+    def __init__(self, **kwargs):
+        super(RuleApply, self).__init__(**kwargs)
+        self.optional = kwargs.get('optional')
+        self.rule = kwargs.get('rule')
+        self.add_children(kwargs.get('targets'))
+
+
 ################################
 #
 # Helpers for JSON serialization
