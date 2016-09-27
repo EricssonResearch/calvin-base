@@ -78,9 +78,8 @@ def destroy_app(deployer, retries=10):
     """
     Tries to destroy the app connected with deployer. 
     """
-    criteria = lambda _: True
-    return retry(retries, deployer.destroy, criteria, "Destruction of app failed")
-    
+    return delete_app(deployer.request_handler, deployer.runtime, deployer.app_id, retries)
+
 
 def deploy_app(request_handler, deployer, runtimes, retries=10):
     """
