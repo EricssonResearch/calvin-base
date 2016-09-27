@@ -932,8 +932,9 @@ class CalvinControl(object):
                 self.tunnel_client.send(msg)
 
     def storage_cb(self, key, value, handle, connection):
-        self.send_response(handle, connection, None if value is None else json.dumps(value),
-                           status=calvinresponse.NOT_FOUND if None else calvinresponse.OK)
+        missing = value is None or value is False
+        self.send_response(handle, connection, None if missing else json.dumps(value),
+                           status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
 
     def handle_get_actor_doc(self, handle, connection, match, data, hdr):
         """ Query ActorStore for documentation

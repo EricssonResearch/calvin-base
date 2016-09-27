@@ -110,13 +110,20 @@ class CalvinTestBase(unittest.TestCase):
             actors = [ actors ]
         while retry < retries:
             try:
-                for actor in actors:
-                    request_handler.get_actor(runtime, actor)
-                break
-            except Exception:
-                _log.info("Migration not finished, retrying in %d" % (retry,))
+                current = request_handler.get_actors(runtime)
+                if set(actors).issubset(set(current)):
+                    break
+                else:
+                    _log.info("Migration not finished, retrying in %f" % (retry * 0.1,))
+                    retry += 1
+                    time.sleep(retry * 0.1)
+            except Exception as e:
+                _log.info("Migration not finished %s, retrying in %f" % (str(e), retry * 0.1,))
                 retry += 1
-                time.sleep(retry)
+                time.sleep(retry * 0.1)
+        if retry == retries:
+            _log.info("Migration failed, after %d retires" % (retry,))
+            raise Exception("Migration failed")
 
     def migrate(self, source, dest, actor):
         request_handler.migrate(source, actor, dest.id)
@@ -1242,10 +1249,13 @@ class TestAppLifeCycle(CalvinTestBase):
         
         def check_actors_gone(runtime):
             for actor in src, csum, snk:
-                a = request_handler.get_actor(runtime, actor)
-                if a is not None:
-                    _log.info("Actor '%r' still present on runtime '%r" % (actor, runtime.id, ))
-                    return False
+                try:
+                    a = request_handler.get_actor(runtime, actor)
+                    if a is not None:
+                        _log.info("Actor '%r' still present on runtime '%r" % (actor, runtime.id, ))
+                        return False
+                except:
+                    pass
             return True
 
         for rt in [ self.rt1, self.rt2, self.rt3 ]:
@@ -1258,7 +1268,7 @@ class TestAppLifeCycle(CalvinTestBase):
                 app = request_handler.get_application(runtime, d.app_id)
             except Exception as e:
                 msg = str(e.message)
-                if msg.startswith(404):
+                if msg.startswith("404"):
                     return True
             return app is None
             
@@ -1266,10 +1276,6 @@ class TestAppLifeCycle(CalvinTestBase):
             check_rt = partial(check_application_gone, rt)
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Application still present on rt '%r'" % (rt.id, ))
             assert all_gone
-            
-        self.assertTrue(request_handler.get_application(self.rt1, d.app_id) is None)
-        self.assertTrue(request_handler.get_application(self.rt2, d.app_id) is None)
-        self.assertTrue(request_handler.get_application(self.rt3, d.app_id) is None)
 
     def testAppDestructionAllRemote(self):
         from functools import partial
@@ -1308,10 +1314,13 @@ class TestAppLifeCycle(CalvinTestBase):
 
         def check_actors_gone(runtime):
             for actor in src, csum, snk:
-                a = request_handler.get_actor(runtime, actor)
-                if a is not None:
-                    _log.info("Actor '%r' still present on runtime '%r" % (actor, runtime.id, ))
-                    return False
+                try:
+                    a = request_handler.get_actor(runtime, actor)
+                    if a is not None:
+                        _log.info("Actor '%r' still present on runtime '%r" % (actor, runtime.id, ))
+                        return False
+                except:
+                    pass
             return True
 
         for rt in [ self.rt1, self.rt2, self.rt3 ]:
@@ -1324,7 +1333,7 @@ class TestAppLifeCycle(CalvinTestBase):
                 app = request_handler.get_application(runtime, d.app_id)
             except Exception as e:
                 msg = str(e.message)
-                if msg.startswith(404):
+                if msg.startswith("404"):
                     return True
             return app is None
             
@@ -1332,10 +1341,6 @@ class TestAppLifeCycle(CalvinTestBase):
             check_rt = partial(check_application_gone, rt)
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Application still present on rt '%r'" % (rt.id, ))
             assert all_gone
-
-        self.assertTrue(request_handler.get_application(self.rt1, d.app_id) is None)
-        self.assertTrue(request_handler.get_application(self.rt2, d.app_id) is None)
-        self.assertTrue(request_handler.get_application(self.rt3, d.app_id) is None)
 
 
 @pytest.mark.essential
@@ -3776,11 +3781,11 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        self.migrate(self.rt1, self.rt2, snk2)
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
+        self.migrate(self.rt1, self.rt2, snk2)
         actuals1 = [[]]
         actuals2 = [[]]
         rts = [self.rt1, self.rt2]
@@ -3823,12 +3828,12 @@ class TestPortRouting(CalvinTestBase):
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        self.migrate(self.rt1, self.rt2, snk1)
-        self.migrate(self.rt1, self.rt3, snk2)
         snk1_meta = request_handler.get_actor(self.rt1, snk1)
         snk2_meta = request_handler.get_actor(self.rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
+        self.migrate(self.rt1, self.rt2, snk1)
+        self.migrate(self.rt1, self.rt3, snk2)
         actuals1 = [[]]
         actuals2 = [[]]
         rts = [self.rt2, self.rt3]

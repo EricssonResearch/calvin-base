@@ -17,7 +17,7 @@ def retry(retries, function, criterion, error_msg):
         Raises 'Exception(error_msg)' if criterion is not fulfilled after 'retries' attempts
     
     """
-    delay = 0.2
+    delay = 0.1
     retry = 0
     while retry < retries:
         try:
@@ -25,15 +25,17 @@ def retry(retries, function, criterion, error_msg):
             try:
                 if criterion(result):
                     if retry > 0:
-                        _log.info("Criterion satisfied after %d retries" % (retry,))
+                        _log.info("Criterion %s(%s) satisfied after %d retries" %
+                                    (str(criterion), str(function), retry,))
                     return result
             except Exception as e:
                 _log.error("Erroneous criteria '%r" % (e, ))
                 raise e
         except Exception as e:
-            _log.info("Encountered '%s'" % (e,))
-        delay = min(2, delay * 2); retry += 1
+            _log.info("Encountered exception when retrying '%s'" % (e,))
+        delay = min(2, delay * 1.5); retry += 1
         time.sleep(delay)
+        _log.info("Criterion still not satisfied after %d retries" % (retry,))
     raise Exception(error_msg)
             
 def wait_for_tokens(request_handler, rt, actor_id, size=5, retries=10):
@@ -89,12 +91,14 @@ def deploy_app(request_handler, deployer, runtimes, retries=10):
     
     def check_application():
         for rt in runtimes:
-            if request_handler.get_application(rt, deployer.app_id) is None:
+            try:
+                if request_handler.get_application(rt, deployer.app_id) is None:
+                    return False
+            except:
                 return False
-        else :
-            _log.info("Application found on all peers, continuing")
-            return True
-    
+        _log.info("Application found on all peers, continuing")
+        return True
+
     return retry(retries, check_application, lambda r: r, "Application not found on all peers")
     
 
@@ -103,27 +107,26 @@ def delete_app(request_handler, runtime, app_id, retries=10):
     Deletes an app and then tries to verify it is actually gone.
     """
     from functools import partial
-    
-    def delete_application():
+
+    def verify_gone(request_handler, runtime, app_id):
         try:
-            request_handler.delete_application(runtime, app_id)
+            request_handler.get_application(runtime, app_id)
+            return False
+        except:
             return True
-        except Exception as e:
-            msg = str(e.message)
-            if msg.startswith("500"):
-                _log.info("Got 500")
-                return False
-            elif msg.startswith("404"):
-                _log.info("Application gone (looks like)")
-                return True
-            else:
-                _log.info("Unknown error '%r'" % (e, ))
-                # Unknown exception, passthrough
-                pass
-                
-    retry(retries, delete_application,  lambda r: r, "Delete application failed")
-    verify_gone = partial(request_handler.get_application, runtime, app_id)
-    retry(retries, verify_gone, lambda r: r is None, "Application not deleted")
+
+    try:
+        request_handler.delete_application(runtime, app_id)
+    except Exception as e:
+        msg = str(e.message)
+        if msg.startswith("500"):
+            _log.error("Delete App got 500")
+        elif msg.startswith("404"):
+            _log.error("Delete App got 404")
+        else:
+            _log.error("Delete App got unknown error %s" % str(msg))
+
+    retry(retries, partial(verify_gone, request_handler, runtime, app_id), lambda r: r, "Application not deleted")
     
 
 def flatten_zip(lz):
