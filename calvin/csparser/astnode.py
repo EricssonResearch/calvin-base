@@ -352,17 +352,29 @@ class Rule(Node):
 class RuleExpression(Node):
     def __init__(self, **kwargs):
         super(RuleExpression, self).__init__(**kwargs)
-        self.add_children([kwargs.get('predicate'), kwargs.get('setop'), kwargs.get('expression')])
+        if kwargs and 'first_predicate' in kwargs:
+            self.add_child(kwargs.get('first_predicate'))
 
 class RulePredicate(Node):
     def __init__(self, **kwargs):
         super(RulePredicate, self).__init__(**kwargs)
         self.predicate = kwargs.get('predicate')
-        self.add_children(kwargs.get('args'))
+        self.op = kwargs.get('op')
+        self.add_children(kwargs.get('args', []))
+
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {} {} {} {}".format(
+                self.__class__.__name__, "" if self.op is None else self.op.op,
+                self.predicate.ident, hex(id(self)), self.debug_info)
+        else:
+            return "{} {} {}".format(
+                self.__class__.__name__, "" if self.op is None else self.op.op, self.predicate.ident)
 
 class RuleSetOp(Node):
     def __init__(self, **kwargs):
         super(RuleSetOp, self).__init__(**kwargs)
+        # op is & intersection, | union, ~ (and not) remove
         self.op = kwargs.get('op')
         self.children = None
 

@@ -170,21 +170,43 @@ class CalvinParser(object):
         p[0] = ast.Rule(rule=p[2], expression=p[4], debug_info=self.debug_info(p, 1))
 
     def p_expression(self, p):
-        """expression : predicate
-                      | predicate setop expression"""
-        if len(p) == 4:
-            p[0] = ast.RuleExpression(predicate=p[1], setop=p[2], expression=p[3], debug_info=self.debug_info(p, 1))
-        else:
+        """expression : expression predicate
+                      | first_predicate"""
+        if len(p) > 2:
+            p[1].add_child(p[2])
             p[0] = p[1]
+        else:
+            p[0] = ast.RuleExpression(first_predicate=p[1])
 
-    def p_predicate(self, p):
-        """predicate : identifier
-                     | identifier LPAREN named_args RPAREN"""
+    def p_first_predicate(self, p):
+        """first_predicate : identifier
+                           | NOT identifier
+                           | identifier LPAREN named_args RPAREN
+                           | NOT identifier LPAREN named_args RPAREN"""
         # print p[1], p[3], self.debug_info(p, 1)
         if len(p) == 2:
-            p[0] = p[1]
-        else:
+            # identifier
+            p[0] = ast.RulePredicate(predicate=p[1], debug_info=self.debug_info(p, 1))
+        elif len(p) == 3:
+            # NOT identifier
+            p[0] = ast.RulePredicate(predicate=p[2], op=ast.RuleSetOp(op="~"), debug_info=self.debug_info(p, 1))
+        elif len(p) == 5:
+            # identifier LPAREN named_args RPAREN
             p[0] = ast.RulePredicate(predicate=p[1], args=p[3], debug_info=self.debug_info(p, 1))
+        else:
+            # NOT identifier LPAREN named_args RPAREN
+            p[0] = ast.RulePredicate(predicate=p[2], op=ast.RuleSetOp(op="~"), args=p[4], debug_info=self.debug_info(p, 1))
+
+    def p_predicate(self, p):
+        """predicate : setop identifier
+                     | setop identifier LPAREN named_args RPAREN"""
+        # print p[1], p[3], self.debug_info(p, 1)
+        if len(p) == 3:
+            # setop identifier
+            p[0] = ast.RulePredicate(predicate=p[2], op=p[1], debug_info=self.debug_info(p, 1))
+        else:
+            # setop identifier LPAREN named_args RPAREN
+            p[0] = ast.RulePredicate(predicate=p[2], op=p[1], args=p[4], debug_info=self.debug_info(p, 1))
 
     def p_setop(self, p):
         """setop : AND
