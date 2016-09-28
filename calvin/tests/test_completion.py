@@ -14,8 +14,9 @@ class TestBase(unittest.TestCase):
     }
     src:std.Counter()
     snk:io.Print()
+    log:io.Print()
 
-    src.integer > snk.token
+    src.integer > snk.token, log.token
     """
 
     def setUp(self):
@@ -74,24 +75,30 @@ class ActorCompletionTests(TestBase):
 class PortCompletionTests(TestBase):
 
     def test_outport(self):
-        d = self.completion.complete(9, 4)
+        d = self.completion.complete(10, 4)
         self.assertEqual(set(d['suggestions']), set(['integer']))
         self.assertEqual(set(d['completions']), set(['integer']))
         self.assertEqual('outport', d['type'])
 
     def test_outport_partial(self):
-        d = self.completion.complete(9, 6)
+        d = self.completion.complete(10, 6)
         self.assertEqual(set(d['suggestions']), set(['integer']))
         self.assertEqual(set(d['completions']), set(['teger']))
 
     def test_inport(self):
-        d = self.completion.complete(9, 18)
+        d = self.completion.complete(10, 18)
+        self.assertEqual(set(d['suggestions']), set(['token']))
+        self.assertEqual(set(d['completions']), set(['token']))
+        self.assertEqual('inport', d['type'])
+
+    def test_inport_list(self):
+        d = self.completion.complete(10, 29)
         self.assertEqual(set(d['suggestions']), set(['token']))
         self.assertEqual(set(d['completions']), set(['token']))
         self.assertEqual('inport', d['type'])
 
     def test_inport_partial(self):
-        d = self.completion.complete(9, 20)
+        d = self.completion.complete(10, 20)
         self.assertEqual(set(d['suggestions']), set(['token']))
         self.assertEqual(set(d['completions']), set(['ken']))
 

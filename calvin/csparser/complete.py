@@ -19,7 +19,7 @@ class Completion(object):
     RE_MODULE   = r'\s*[a-z][a-zA-Z0-9_]*\s*:\s*((?:[a-z][a-zA-Z0-9_]*)?)$'
     RE_ACTOR    = r'\s*[a-z][a-zA-Z0-9_]*\s*:\s*([a-z][a-zA-Z0-9_]*)\.((?:[A-Z][a-zA-Z0-9_]*)?)$'
     RE_OUTPORT  = r'\s*([a-z][a-zA-Z0-9_]*)\.((?:[a-z][a-zA-Z0-9_]*)?)$'
-    RE_INPORT   = r'.*>\s*([a-z][a-zA-Z0-9_]*)\.((?:[a-z][a-zA-Z0-9_]*)?)$'
+    RE_INPORT   = r'.*>\s*(?:[^,]+,\s*)*(?:\/.*?\/)?\s*([a-z][a-zA-Z0-9_]*)\.((?:[a-z][a-zA-Z0-9_]*)?)$'
     RE_PORTPROP = r'\s*([a-z][a-zA-Z0-9_]*\.[a-z][a-zA-Z0-9_]*)\s*\((?:[^,]+,)*\s*$'
 
     def __init__(self, first_line_is_zero=False):
