@@ -107,8 +107,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Actor c (io.StandardOut) is missing connection to inport 'token'")
 
-    # FIXME: Why does this test generate two errors while
-    #        'testBadComponent3' generates a single error?
     def testCheckInportConnections2(self):
         script = """
         a:std.CountTimer()
@@ -119,7 +117,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 2)
-        self.assertEqual(errors[0]['reason'], "Input ports with multiple connections need a routing port property that allow that.")
+        self.assertEqual(errors[0]['reason'], "Input port 'c.token' with multiple connections ('a.integer') must have a routing port property.")
+        self.assertEqual(errors[1]['reason'], "Input port 'c.token' with multiple connections ('b.integer') must have a routing port property.")
 
     def testBadComponent1(self):
         script = """
@@ -151,8 +150,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to outport 'out'")
 
-    # FIXME: Why does this test generate a single error while
-    #        'testCheckInportConnections2' generates two errors?
     def testBadComponent3(self):
         script = """
         component Foo() -> out {
@@ -166,7 +163,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['reason'], "Input ports with multiple connections need a routing port property that allow that.")
+        self.assertEqual(errors[0]['reason'], "Input port 'b.token' with multiple connections ('a:a.integer') must have a routing port property.")
 
     def testBadComponent4(self):
         script = """

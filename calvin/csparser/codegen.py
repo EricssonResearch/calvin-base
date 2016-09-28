@@ -646,7 +646,7 @@ class ConsolidatePortProperty(object):
                             routings = [routings]
                         removed = []
                         for routing in routings[:]:
-                            if not port_property_data['routing']['values'][routing]['multipeer']:
+                            if not port_property_data['routing']['values'][routing].get('multipeer', False):
                                 routings.remove(routing)
                                 removed.append(routing)
                         if routings:
@@ -659,15 +659,27 @@ class ConsolidatePortProperty(object):
                                             p.arg.value.remove(routing_value)
                         else:
                             # No routing for multiple peers
-                            for port in ports:
-                                reason = "Input ports with multiple connections need a routing port property that allow that."
-                                self.issue_tracker.add_error(reason, port)
+                            self._issue_on_ports(ports)
                             continue
                     except KeyError:
-                        for port in ports:
-                            reason = "Input ports with multiple connections need a routing port property that allow that."
-                            self.issue_tracker.add_error(reason, port)
+                        self._issue_on_ports(ports)
                         continue
+
+    def _issue_on_ports(self, ports):
+        for port in ports:
+            try:
+                actor_name = port.actor.split(':',1)[1]
+            except:
+                actor_name = port.actor
+            port_name = "'{}.{}'".format(actor_name, port.port)
+            try:
+                actor_name = port.parent.outport.actor.split(':',1)[1]
+                peer_name = "('{}.{}')".format(actor_name, port.parent.outport.port)
+            except:
+                peer_name = ""
+            reason = "Input port {} with multiple connections {} must have a routing port property.".format(
+                        port_name, peer_name)
+            self.issue_tracker.add_error(reason, port)
 
 
 class AppInfo(object):
