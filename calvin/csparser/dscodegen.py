@@ -80,7 +80,8 @@ class DeployInfo(object):
             self.current_target = union_group['requirements']
         value['type'] = "-" if "~" in node.op.op else "+"
         value['op'] = node.predicate.ident
-        value['kwargs'] = {a.ident.ident: a.arg.value for a in node.children}
+        value['kwargs'] = {a.ident.ident: a.arg.ident if isinstance(a.arg, ast.Id) else a.arg.value
+                            for a in node.children}
         self.current_target.append(value)
         # FIXME We don't handle mixing union and intersection in same expression
         if node.next_sibling() is None:
@@ -165,7 +166,7 @@ class SetOpOnFirstPredicate(object):
 
 class DSCodeGen(object):
 
-    verbose = True
+    verbose = False
     verbose_nodes = False
 
     """
