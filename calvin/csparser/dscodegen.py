@@ -60,19 +60,16 @@ class DeployInfo(object):
 
     @visitor.when(ast.RuleApply)
     def visit(self, node):
-        print "RuleApply"
         for target in node.children:
             actor_name = target.ident
             self.deploy_info['requirements'].setdefault(actor_name, [])
             self.current_target = self.deploy_info['requirements'][actor_name]
             if not node.rule.is_leaf():
-                print "visit rule expression", len(node.rule.children), str(node.rule.children[0])
                 map(self.visit, node.rule.children)
             self.current_target = None
 
     @visitor.when(ast.RulePredicate)
     def visit(self, node):
-        print "RulePredicate", str(node), str(self.current_target)
         if self.current_target is None:
             return
         value = {}
@@ -116,7 +113,6 @@ class FoldInRuleExpression(object):
 
     @visitor.when(ast.RulePredicate)
     def visit(self, node):
-        print "Fold - RulePredicate", node.predicate.ident, node.type
         if node.type != "rule":
             return
         rules = query(self.root, kind=ast.Rule, attributes={('rule', 'ident'): node.predicate.ident})
@@ -166,7 +162,6 @@ class SetOpOnFirstPredicate(object):
             else:
                 # Make the op match the next predicate (besides any ~ operator)
                 node.op.op = next_predicate.op.op[0] + node.op.op
-        print "SetOp -", node.predicate.ident, node.op.op
 
 class DSCodeGen(object):
 
@@ -179,12 +174,10 @@ class DSCodeGen(object):
     def __init__(self, ast_root, script_name):
         super(DSCodeGen, self).__init__()
         self.root = ast_root
-        # self.verify = verify
         self.deploy_info = {
             'requirements':{},
             'valid': True
         }
-        print "DSCodeGen"
         self.dump_tree('ROOT')
 
 
@@ -197,23 +190,20 @@ class DSCodeGen(object):
         printer.process(self.root)
 
     def set_op_on_first_predicates(self, issue_tracker):
-        print "set_op_on_first_predicates"
         f = SetOpOnFirstPredicate(issue_tracker)
         f.process(self.root)
         self.dump_tree('Set Op On First Predicate')
 
     def fold_in_rule_expr(self, issue_tracker):
-        print "fold_in_rule_expr"
         f = FoldInRuleExpression(issue_tracker)
         f.process(self.root)
         self.dump_tree('Fold In Rule Expression')
 
     def generate_code_from_ast(self, issue_tracker):
-        print "generate_code_from_ast"
         gen_deploy_info = DeployInfo(self.deploy_info, self.root, issue_tracker)
         gen_deploy_info.process()
 
-    def generate_code(self, issue_tracker, verify):
+    def generate_code(self, issue_tracker):
         self.set_op_on_first_predicates(issue_tracker)
         self.fold_in_rule_expr(issue_tracker)
         self.generate_code_from_ast(issue_tracker)
@@ -232,33 +222,13 @@ def _calvin_cg(source_text, app_name):
     cg = DSCodeGen(ast_root, app_name)
     return cg, issuetracker
 
-def calvin_codegen(source_text, app_name, verify=True):
+def calvin_dscodegen(source_text, app_name):
     """
-    Generate application code from script, return deployable and issuetracker.
+    Generate deployment info from script, return deploy_info and issuetracker.
 
     Parameter app_name is required to provide a namespace for the application.
-    Optional parameter verify is deprecated, defaults to True.
     """
     cg, issuetracker = _calvin_cg(source_text, app_name)
-    cg.generate_code(issuetracker, verify)
+    cg.generate_code(issuetracker)
     return cg.deploy_info, issuetracker
-
-
-if __name__ == '__main__':
-    script = 'inline'
-    source_text = \
-    """
-    snk : io.Print()
-    1 > snk.token
-    """
-    ai, it = calvin_codegen(source_text, script)
-    if it.issue_count == 0:
-        print "No issues"
-        print ai
-    for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
-        print i
-
-
-
-
 

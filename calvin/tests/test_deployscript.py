@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.csparser.dscodegen import calvin_codegen
+from calvin.csparser.dscodegen import calvin_dscodegen
 import unittest
 import json
 import difflib
@@ -43,12 +43,12 @@ class CalvinTestBase(unittest.TestCase):
             raise e
         return text
 
-    def parse(self, test, source_text=None, verify=True):
+    def parse(self, test, source_text=None):
         if not source_text:
             test = self.test_script_dir + test + '.calvin'
             source_text = self._read_file(test)
 
-        requirements, issuetracker = calvin_codegen(source_text, test, verify=verify)
+        requirements, issuetracker = calvin_dscodegen(source_text, test)
         errors = issuetracker.errors(sort_key='reason')
         warnings = issuetracker.warnings(sort_key='reason')
 
@@ -116,3 +116,23 @@ class DeployScriptCheckerTest(CalvinTestBase):
         self.assertFalse(errors)
         pprint.pprint(result)
 
+    def testCheckOnlyDeployScript(self):
+        script = """
+        rule union: node_attr(node_name={"name": "simple_rt1"}) | node_attr(node_name={"name": "simple_rt2"})
+        rule hierarchical: union & ~current()
+        apply a, b: hierarchical 
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertFalse(errors)
+        pprint.pprint(result)
+
+    def testCheckOnlyCalvinScript(self):
+        script = """
+        a:std.CountTimer()
+        b:io.Print()
+
+        a.integer > b.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertFalse(errors)
+        pprint.pprint(result)
