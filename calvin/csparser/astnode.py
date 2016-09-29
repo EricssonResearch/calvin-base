@@ -27,11 +27,24 @@ class Node(object):
             # No or empty attr dict matches.
             return True
         for key, value in attr_dict.iteritems():
-            attr_value = getattr(self, key, None)
-            if inspect.isclass(value):
-                attr_value = type(attr_value)
-            if value != attr_value:
-                return False
+            if isinstance(key, tuple):
+                # Allow matching of sub attributes, usefull when having Id values
+                try:
+                    attr_value = self
+                    for inner_key in key:
+                        attr_value = getattr(attr_value, inner_key, None)
+                    if inspect.isclass(value):
+                        attr_value = type(attr_value)
+                    if value != attr_value:
+                        return False
+                except:
+                    return False
+            else:
+                attr_value = getattr(self, key, None)
+                if inspect.isclass(value):
+                    attr_value = type(attr_value)
+                if value != attr_value:
+                    return False
         return True
 
     def is_leaf(self):
@@ -347,6 +360,7 @@ class Rule(Node):
     def __init__(self, **kwargs):
         super(Rule, self).__init__(**kwargs)
         self.rule = kwargs.get('rule')
+        # FIXME We only have one expression why is this a child?
         self.add_children([kwargs.get('expression')])
 
 class RuleExpression(Node):
@@ -359,7 +373,8 @@ class RulePredicate(Node):
     def __init__(self, **kwargs):
         super(RulePredicate, self).__init__(**kwargs)
         self.predicate = kwargs.get('predicate')
-        self.op = kwargs.get('op')
+        self.op = kwargs.get('op', RuleSetOp(op=""))
+        self.type = kwargs.get('type')
         self.add_children(kwargs.get('args', []))
 
     def __str__(self):
@@ -374,7 +389,7 @@ class RulePredicate(Node):
 class RuleSetOp(Node):
     def __init__(self, **kwargs):
         super(RuleSetOp, self).__init__(**kwargs)
-        # op is & intersection, | union, ~ (and not) remove
+        # op is & intersection, | union and/or with the unary ~ not operator
         self.op = kwargs.get('op')
         self.children = None
 

@@ -186,16 +186,16 @@ class CalvinParser(object):
         # print p[1], p[3], self.debug_info(p, 1)
         if len(p) == 2:
             # identifier
-            p[0] = ast.RulePredicate(predicate=p[1], debug_info=self.debug_info(p, 1))
+            p[0] = ast.RulePredicate(predicate=p[1], type="rule", debug_info=self.debug_info(p, 1))
         elif len(p) == 3:
             # NOT identifier
-            p[0] = ast.RulePredicate(predicate=p[2], op=ast.RuleSetOp(op="~"), debug_info=self.debug_info(p, 1))
+            p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=ast.RuleSetOp(op="~"), debug_info=self.debug_info(p, 1))
         elif len(p) == 5:
             # identifier LPAREN named_args RPAREN
-            p[0] = ast.RulePredicate(predicate=p[1], args=p[3], debug_info=self.debug_info(p, 1))
+            p[0] = ast.RulePredicate(predicate=p[1], type="constraint", args=p[3], debug_info=self.debug_info(p, 1))
         else:
             # NOT identifier LPAREN named_args RPAREN
-            p[0] = ast.RulePredicate(predicate=p[2], op=ast.RuleSetOp(op="~"), args=p[4], debug_info=self.debug_info(p, 1))
+            p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=ast.RuleSetOp(op="~"), args=p[4], debug_info=self.debug_info(p, 1))
 
     def p_predicate(self, p):
         """predicate : setop identifier
@@ -203,17 +203,21 @@ class CalvinParser(object):
         # print p[1], p[3], self.debug_info(p, 1)
         if len(p) == 3:
             # setop identifier
-            p[0] = ast.RulePredicate(predicate=p[2], op=p[1], debug_info=self.debug_info(p, 1))
+            p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=p[1], debug_info=self.debug_info(p, 1))
         else:
             # setop identifier LPAREN named_args RPAREN
-            p[0] = ast.RulePredicate(predicate=p[2], op=p[1], args=p[4], debug_info=self.debug_info(p, 1))
+            p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=p[1], args=p[4], debug_info=self.debug_info(p, 1))
 
     def p_setop(self, p):
         """setop : AND
                  | OR
-                 | NOT"""
+                 | AND NOT
+                 | OR NOT"""
         #print p[1], self.debug_info(p, 1)
-        p[0] = ast.RuleSetOp(op=p[1])
+        if len(p) == 2:
+            p[0] = ast.RuleSetOp(op=p[1])
+        else:
+            p[0] = ast.RuleSetOp(op=p[1] + p[2])
 
     def p_apply(self, p):
         """apply : APPLY ident_list COLON expression
