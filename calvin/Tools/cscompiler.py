@@ -20,16 +20,20 @@ import sys
 import json
 import argparse
 from calvin.csparser.cscompile import compile_script, appname_from_filename
+from calvin.csparser.dscodegen import calvin_dscodegen
 
-def compile_file(filename, credentials=None):
+def compile_file(filename, ds, credentials=None):
     with open(filename, 'r') as source:
         sourceText = source.read()
         appname = appname_from_filename(filename)
-        return compile_script(sourceText, appname, credentials=credentials)
+        if ds:
+            return calvin_dscodegen(sourceText, appname)
+        else:
+            return compile_script(sourceText, appname, credentials=credentials)
 
-def compile_generator(files):
+def compile_generator(files, ds):
     for filename in files:
-        deployable, issuetracker = compile_file(filename)
+        deployable, issuetracker = compile_file(filename, ds)
         yield((deployable, issuetracker, filename))
 
 
@@ -57,12 +61,14 @@ def main():
                            help='custom format for issue reporting.')
     argparser.add_argument('--verbose', action='store_true',
                            help='informational output from the compiler')
+    argparser.add_argument('--deployscript', action='store_true',
+                           help='generate deployjson file')
 
     args = argparser.parse_args()
 
 
     exit_code = 0
-    for deployable, issuetracker, filename in compile_generator(args.files):
+    for deployable, issuetracker, filename in compile_generator(args.files, args.deployscript):
         if issuetracker.error_count:
             for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=filename, line=0, col=0):
                 sys.stderr.write(issue + "\n")
