@@ -40,7 +40,7 @@ class TestBase(unittest.TestCase):
         rule src_rule: node_attr(node_name=NODE1)
 
         rule dst_rule: node_attr(node_name=NODE1) & node_attr(node_name={"name": "testNode2"})
-        rule src_rule: node_attr(node_name=NODE1) | node_attr(node_name=NODE2) ~ current()
+        rule src_rule: node_attr(node_name=NODE1) | node_attr(node_name=NODE2) & ~current()
         rule combined_rule: dst_rule & src_rule | current()
         rule long: node_attr(node_name={"name": "testNode2"}) & node_attr(owner={"personOrGroup": "me"}) & node_attr(adress={"locality": "Lund"})
         rule not_rule: ~node_attr(node_name={"name": "testNode2"})
@@ -51,7 +51,7 @@ class TestBase(unittest.TestCase):
         # apply rules, '*' indicates optional rule
         apply src: combined_rule
         apply* delay, print: long
-        apply src, print: dst_rule | node_attr(node_spec=NODE1) ~ current()
+        apply src, print: dst_rule | node_attr(node_spec=NODE1) & ~current()
     '''
 
     def setUp(self):
