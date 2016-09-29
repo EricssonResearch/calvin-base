@@ -68,6 +68,24 @@ class Node(object):
             self.children.remove(child)
             child.parent = None
 
+    def next_sibling(self):
+        if not self.parent:
+            return None
+        i = self.parent.children.index(self)
+        try:
+            return self.parent.children[i + 1]
+        except:
+            return None
+
+    def prev_sibling(self):
+        if not self.parent:
+            return None
+        i = self.parent.children.index(self)
+        try:
+            return self.parent.children[i - 1]
+        except:
+            return None
+
     def delete(self):
         if not self.parent:
             raise Exception("Can't remove root node {}".format(self))

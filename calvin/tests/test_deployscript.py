@@ -19,6 +19,7 @@ import unittest
 import json
 import difflib
 import pytest
+import pprint
 
 def absolute_filename(filename):
     import os.path
@@ -58,7 +59,7 @@ class CalvinTestBase(unittest.TestCase):
 class DeployScriptCheckerTest(CalvinTestBase):
     """Test the DeployScript checker"""
 
-    def testCheckSimpleScript(self):
+    def testCheckSimpleScript1(self):
         script = """
         a:std.CountTimer()
         b:io.Print()
@@ -70,5 +71,48 @@ class DeployScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertFalse(errors)
-        print result
+        pprint.pprint(result)
+
+    def testCheckSimpleScript2(self):
+        script = """
+        a:std.CountTimer()
+        b:io.Print()
+
+        a.integer > b.token
+        
+        rule simple: node_attr(node_name={"name": "simple_rt"}) & node_attr(owner={"personOrGroup": "me"})
+        apply a, b: simple 
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertFalse(errors)
+        pprint.pprint(result)
+
+    def testCheckSimpleScript3(self):
+        script = """
+        a:std.CountTimer()
+        b:io.Print()
+
+        a.integer > b.token
+        
+        rule simple: node_attr(node_name={"name": "simple_rt1"}) | node_attr(node_name={"name": "simple_rt2"})
+        apply a, b: simple 
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertFalse(errors)
+        pprint.pprint(result)
+
+    def testCheckHierarchicalScript1(self):
+        script = """
+        a:std.CountTimer()
+        b:io.Print()
+
+        a.integer > b.token
+        
+        rule union: node_attr(node_name={"name": "simple_rt1"}) | node_attr(node_name={"name": "simple_rt2"})
+        rule hierarchical: union & ~current()
+        apply a, b: hierarchical 
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertFalse(errors)
+        pprint.pprint(result)
 

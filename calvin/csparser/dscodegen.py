@@ -44,6 +44,7 @@ class DeployInfo(object):
         self.deploy_info = deploy_info
         self.issue_tracker = issue_tracker
         self.current_target = None
+        self.stacked_target = None
 
     def process(self):
         self.visit(self.root)
@@ -75,12 +76,19 @@ class DeployInfo(object):
         if self.current_target is None:
             return
         value = {}
-        # FIXME handle union group
+        if "|" in node.op.op and not self.stacked_target:
+            union_group = {'op': "union_group", 'type': '+', 'requirements': []}
+            self.current_target.append(union_group)
+            self.stacked_target = self.current_target
+            self.current_target = union_group['requirements']
         value['type'] = "-" if "~" in node.op.op else "+"
         value['op'] = node.predicate.ident
         value['kwargs'] = {a.ident.ident: a.arg.value for a in node.children}
-
         self.current_target.append(value)
+        # FIXME We don't handle mixing union and intersection in same expression
+        if node.next_sibling() is None:
+            self.current_target = self.stacked_target
+            self.stacked_target = None
 
 class FoldInRuleExpression(object):
     """docstring for FoldInRuleExpression"""
@@ -124,6 +132,42 @@ class FoldInRuleExpression(object):
         if not clone.is_leaf():
             map(self.visit, clone.children)
 
+class SetOpOnFirstPredicate(object):
+    """docstring for SetOpOnFirstPredicate"""
+    def __init__(self, issue_tracker):
+        super(SetOpOnFirstPredicate, self).__init__()
+        self.issue_tracker = issue_tracker
+
+    def process(self, root):
+        self.root = root
+        self.visit(root)
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children)
+
+    @visitor.when(ast.RuleApply)
+    def visit(self, node):
+        if not node.rule.is_leaf():
+            map(self.visit, node.rule.children)
+
+    @visitor.when(ast.RulePredicate)
+    def visit(self, node):
+        if len(node.op.op) == 0 or (len(node.op.op) == 1 and node.op.op == "~"):
+            next_predicate = node.next_sibling()
+            if next_predicate is None:
+                # Alone in the expression set & anyway
+                node.op.op = "&" + node.op.op
+            else:
+                # Make the op match the next predicate (besides any ~ operator)
+                node.op.op = next_predicate.op.op[0] + node.op.op
+        print "SetOp -", node.predicate.ident, node.op.op
+
 class DSCodeGen(object):
 
     verbose = True
@@ -152,6 +196,11 @@ class DSCodeGen(object):
         print "========\n{}\n========".format(heading)
         printer.process(self.root)
 
+    def set_op_on_first_predicates(self, issue_tracker):
+        print "set_op_on_first_predicates"
+        f = SetOpOnFirstPredicate(issue_tracker)
+        f.process(self.root)
+        self.dump_tree('Set Op On First Predicate')
 
     def fold_in_rule_expr(self, issue_tracker):
         print "fold_in_rule_expr"
@@ -165,6 +214,7 @@ class DSCodeGen(object):
         gen_deploy_info.process()
 
     def generate_code(self, issue_tracker, verify):
+        self.set_op_on_first_predicates(issue_tracker)
         self.fold_in_rule_expr(issue_tracker)
         self.generate_code_from_ast(issue_tracker)
         self.deploy_info['valid'] = (issue_tracker.error_count == 0)
