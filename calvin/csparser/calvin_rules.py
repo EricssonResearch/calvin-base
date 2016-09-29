@@ -19,7 +19,7 @@ import ply.lex as lex
 # Make sure we have an initial value for zerocol
 lex.Lexer.zerocol = 0
 
-keywords = {'component': 'COMPONENT', 'define': 'DEFINE', 'voidport': 'VOID'}
+keywords = {x:x.upper() for x in ['component', 'define', 'voidport', 'rule', 'group', 'apply']}
 
 tokens = [
     'IDENTIFIER', 'STRING', 'NUMBER',
@@ -28,6 +28,7 @@ tokens = [
     'LBRACK', 'RBRACK',
     'DOT', 'COMMA', 'COLON',
     'GT', 'EQ',
+    'AND', 'OR', 'NOT', 'STAR',
     'RARROW', 'SLASH',
     'DOCSTRING',
     'FALSE', 'TRUE', 'NULL'
@@ -47,6 +48,11 @@ t_GT = r'>'
 t_EQ = r'='
 t_RARROW = r'->'
 t_SLASH = r'/'
+t_AND = r'&'
+t_OR = r'\|'
+t_NOT = r'~'
+t_STAR = r'\*'
+
 # t_FALSE = r'false'
 # t_TRUE = r'true'
 # t_NULL = r'null'

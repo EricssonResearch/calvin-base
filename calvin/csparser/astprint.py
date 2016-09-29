@@ -178,6 +178,42 @@ class BracePrinter(object):
             print "{})".format(self._indentation())
         self._visit(node, preorder=f, postorder=g)
 
+    @visitor.when(ast.RuleSetOp)
+    def visit(self, node):
+        print "{}( {} {} )".format(self._indentation(), node, node.op)
+
+    @visitor.when(ast.Group)
+    def visit(self, node):
+        def f(node):
+            print "{}( {} {}".format(self._indentation(), node, node.group.ident)
+            self.indent += 1
+        def g(node):
+            self.indent -= 1
+            print "{})".format(self._indentation())
+        self._visit(node, preorder=f, postorder=g)
+
+    @visitor.when(ast.RuleApply)
+    def visit(self, node):
+        def f(node):
+            print "{}( {} optional={} {}".format(self._indentation(), node, node.optional, node.rule)
+            self.indent += 1
+        def g(node):
+            self.indent -= 1
+            print "{})".format(self._indentation())
+        self._visit(node, preorder=f, postorder=g)
+
+
+    @visitor.when(ast.Rule)
+    def visit(self, node):
+        def f(node):
+            print "{}( {} {}".format(self._indentation(), node, node.rule.ident)
+            self.indent += 1
+        def g(node):
+            self.indent -= 1
+            print "{})".format(self._indentation())
+        self._visit(node, preorder=f, postorder=g)
+
+
 if __name__ == '__main__':
     ast.Node._verbose_desc = True
 

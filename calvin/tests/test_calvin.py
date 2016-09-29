@@ -4013,3 +4013,38 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=15)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=15)
         helpers.destroy_app(d)
+
+@pytest.mark.essential
+@pytest.mark.slow
+class TestDeployScript(CalvinTestBase):
+
+    def testDeployScriptSimple(self):
+        script = r"""
+      src : std.CountTimer()
+      snk : io.StandardOut(store_tokens=1, quiet=1)
+      src.integer > snk.token
+
+      rule simple: node_attr_match(index=["node_name", {"organization": "com.ericsson"}])
+      apply src, snk: simple 
+        """
+
+        rt = self.rt1
+        response = helpers.deploy_script(request_handler, "simple", script, rt)
+
+        print response
+
+        src = response['actor_map']['simple:src']
+        snk = response['actor_map']['simple:snk']
+
+        rt_src = request_handler.get_node(rt, response['placement'][src])["control_uri"]
+        rt_snk = request_handler.get_node(rt, response['placement'][snk])["control_uri"]
+
+        assert response["requirements_fulfilled"]
+
+        wait_for_tokens(rt_src, snk)
+        expected = expected_tokens(rt_src, src, 'seq')
+        actual = actual_tokens(rt_snk, snk, len(expected))
+        request_handler.disconnect(rt_src, src)
+
+        self.assert_lists_equal(expected, actual)
+        helpers.delete_app(request_handler, rt, response['application_id'])

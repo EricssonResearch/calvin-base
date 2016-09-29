@@ -19,6 +19,7 @@ import time
 import json
 from random import randint
 from calvin.csparser import cscompile as compiler
+from calvin.csparser.dscodegen import calvin_dscodegen
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north import metering
 from calvin.utilities.calvinlogger import get_logger
@@ -1310,9 +1311,22 @@ class CalvinControl(object):
                 "+ COMPILED",
                 {'app_info': app_info, 'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()}
             )
+            # TODO When deployscript codegen is less experimental do it as part of the cscompiler
+            # Now just run it here seperate if script is supplied and no seperate deploy_info
+            if "script" in data and "deploy_info" in data and data["deploy_info"] is None:
+                deploy_info, ds_issuestracker = calvin_dscodegen(data["script"], data["name"])
+                if ds_issuestracker.error_count:
+                    _log.warning("Deployscript contained errors:")
+                    _log.warning(ds_issuestracker.formatted_issues())
+                    deploy_info = None
+                elif not deploy_info['requirements']:
+                    deploy_info = None
+            else:
+                deploy_info = data["deploy_info"] if "deploy_info" in data else None
+
             d = Deployer(
                     deployable=app_info,
-                    deploy_info=data["deploy_info"] if "deploy_info" in data else None,
+                    deploy_info=deploy_info,
                     node=self.node,
                     name=data["name"] if "name" in data else None,
                     security=security,

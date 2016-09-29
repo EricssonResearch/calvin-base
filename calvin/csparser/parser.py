@@ -36,16 +36,20 @@ class CalvinParser(object):
         # have to be recreated
         this_file = os.path.realpath(__file__)
         containing_dir = os.path.dirname(this_file)
-        self.parser = yacc.yacc(module=self, debug=False, optimize=True, outputdir=containing_dir)
+        self.parser = yacc.yacc(module=self, debug=True, optimize=False, outputdir=containing_dir)
 
     tokens = calvin_tokens
 
     def p_script(self, p):
         """script : opt_constdefs opt_compdefs opt_program"""
         s = ast.Node()
-        s.add_children(p[1] + p[2] + p[3])
-        p[0] = s
-
+        s.add_children(p[1] + p[2] + p[3][0])
+        root = ast.Node()
+        root.add_child(s.clone())
+        d = ast.Node()
+        d.add_children(p[1] + p[3][1])
+        root.add_child(d)
+        p[0] = root
 
     def p_opt_constdefs(self, p):
         """opt_constdefs :
@@ -88,7 +92,7 @@ class CalvinParser(object):
 
 
     def p_compdef(self, p):
-        """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring program RBRACE"""
+        """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring comp_statements RBRACE"""
         p[0] = ast.Component(name=p[2], arg_names=p[4], inports=p[6], outports=p[8], docstring=p[10], program=p[11], debug_info=self.debug_info(p, 1))
 
 
@@ -100,32 +104,130 @@ class CalvinParser(object):
         else:
             p[0] = p[1]
 
-
-    def p_opt_program(self, p):
-        """opt_program :
-                       | program"""
-        if len(p) == 1:
-            p[0] = []
-        else:
-            p[0] = [ast.Block(program=p[1], namespace='__scriptname__', debug_info=self.debug_info(p, 1))]
-
-
-    def p_program(self, p):
-        """program : program statement
-                   | statement """
+    def p_comp_statements(self, p):
+        """comp_statements : comp_statements comp_statement
+                           | comp_statement"""
         if len(p) == 2:
             p[0] = [p[1]]
         else:
             p[0] = p[1] + [p[2]]
 
+    def p_comp_statement(self, p):
+        """comp_statement : assignment
+                          | port_property
+                          | internal_port_property
+                          | link"""
+        p[0] = p[1]
+
+    def p_opt_program(self, p):
+        """opt_program :
+                       | program"""
+        if len(p) == 1:
+            p[0] = [[],[]]
+        else:
+            p[0] = [
+                [ast.Block(program=p[1][0], namespace='__scriptname__', debug_info=self.debug_info(p, 1))],
+                p[1][1]
+            ]
+
+    def p_program(self, p):
+        """program : program statement
+                   | statement """
+        if len(p) == 2:
+            if type(p[1]) in [ast.Group, ast.Rule, ast.RuleApply]:
+                p[0] = [[], [p[1]]]
+            else:
+                p[0] = [[p[1]], []]
+        else:
+            if type(p[2]) in [ast.Group, ast.Rule, ast.RuleApply]:
+                p[0] = [p[1][0], p[1][1] + [p[2]]]
+            else:
+                p[0] = [p[1][0] + [p[2]], p[1][1]]
 
     def p_statement(self, p):
         """statement : assignment
                      | port_property
-                     | internal_port_property
-                     | link"""
+                     | link
+                     | rule
+                     | group
+                     | apply"""
         p[0] = p[1]
 
+    def p_group(self, p):
+        """group : GROUP identifier COLON ident_list"""
+        p[0] = ast.Group(group=p[2], members=p[4], debug_info=self.debug_info(p, 1))
+
+    def p_ident_list(self, p):
+        """ident_list :
+                       | ident_list identifier COMMA
+                       | ident_list identifier"""
+        if len(p) > 2:
+            p[1].append(p[2])
+        p[0] = p[1] if len(p) > 1 else []
+
+    def p_rule(self, p):
+        """rule : RULE identifier COLON expression"""
+        p[0] = ast.Rule(rule=p[2], expression=p[4], debug_info=self.debug_info(p, 1))
+
+    def p_expression(self, p):
+        """expression : expression predicate
+                      | first_predicate"""
+        if len(p) > 2:
+            p[1].add_child(p[2])
+            p[0] = p[1]
+        else:
+            p[0] = ast.RuleExpression(first_predicate=p[1])
+
+    def p_first_predicate(self, p):
+        """first_predicate : identifier
+                           | NOT identifier
+                           | identifier LPAREN named_args RPAREN
+                           | NOT identifier LPAREN named_args RPAREN"""
+        # print p[1], p[3], self.debug_info(p, 1)
+        if len(p) == 2:
+            # identifier
+            p[0] = ast.RulePredicate(predicate=p[1], type="rule", debug_info=self.debug_info(p, 1))
+        elif len(p) == 3:
+            # NOT identifier
+            p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=ast.RuleSetOp(op="~"), debug_info=self.debug_info(p, 1))
+        elif len(p) == 5:
+            # identifier LPAREN named_args RPAREN
+            p[0] = ast.RulePredicate(predicate=p[1], type="constraint", args=p[3], debug_info=self.debug_info(p, 1))
+        else:
+            # NOT identifier LPAREN named_args RPAREN
+            p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=ast.RuleSetOp(op="~"), args=p[4], debug_info=self.debug_info(p, 1))
+
+    def p_predicate(self, p):
+        """predicate : setop identifier
+                     | setop identifier LPAREN named_args RPAREN"""
+        # print p[1], p[3], self.debug_info(p, 1)
+        if len(p) == 3:
+            # setop identifier
+            p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=p[1], debug_info=self.debug_info(p, 1))
+        else:
+            # setop identifier LPAREN named_args RPAREN
+            p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=p[1], args=p[4], debug_info=self.debug_info(p, 1))
+
+    def p_setop(self, p):
+        """setop : AND
+                 | OR
+                 | AND NOT
+                 | OR NOT"""
+        #print p[1], self.debug_info(p, 1)
+        if len(p) == 2:
+            p[0] = ast.RuleSetOp(op=p[1])
+        else:
+            p[0] = ast.RuleSetOp(op=p[1] + p[2])
+
+    def p_apply(self, p):
+        """apply : APPLY ident_list COLON expression
+                 | APPLY STAR ident_list COLON expression"""
+        if len(p) == 5:
+            # print p[2], p[4], self.debug_info(p, 1)
+            p[0] = ast.RuleApply(optional=False, targets=p[2], rule=p[4], debug_info=self.debug_info(p,1))
+        else:
+            # print p[2], p[3], p[5], self.debug_info(p, 1)
+            p[0] = ast.RuleApply(optional=True, targets=p[3], rule=p[5], debug_info=self.debug_info(p,1))
 
     def p_assignment(self, p):
         """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
@@ -178,7 +280,7 @@ class CalvinParser(object):
     #     p[0] = ast.Portmap(p[1], p[3])
 
     def p_void(self, p):
-        """void : VOID"""
+        """void : VOIDPORT"""
         p[0] = ast.Void(debug_info=self.debug_info(p, 1))
 
     def p_portlist(self, p):
@@ -391,11 +493,13 @@ class CalvinParser(object):
         self.issuetracker = IssueTracker()
         self.source_text = source_text
         try:
-            ir = self.parser.parse(source_text)
+            root = self.parser.parse(source_text)
+            ir, deploy_ir = root.children
         except SyntaxError as e:
             self.issuetracker.add_error(e.text, {'line':e.lineno, 'col':e.offset})
             ir = ast.Node()
-        return ir, self.issuetracker
+            deploy_ir = ast.Node()
+        return ir, deploy_ir, self.issuetracker
 
 
 # FIXME: [PP] Optionally supply an IssueTracker
@@ -408,11 +512,17 @@ def calvin_parse(source_text):
 if __name__ == '__main__':
     import sys
     import json
+    import astprint
+
 
     if len(sys.argv) < 2:
         script = 'inline'
         source_text = \
 '''
+define NODE1={"organization": "org.testexample", "name": "testNode1"}
+define NODE2={"organization": "org.testexample", "name": "testNode2"}
+
+
 define ARG=-1
 
 component Foo(arg) in -> out {
@@ -437,6 +547,22 @@ delay.token > src.in
 
 src.out(routing="round-robin")
 delay.token[in](routing="round-robin")
+
+# define rules
+rule src_rule: node_attr(node_spec=NODE1)
+
+rule dst_rule: node_attr(node_spec=NODE1) | node_attr(node_spec={"name": "testNode2"})
+rule src_rule: node_attr(node_spec=NODE1) | node_attr(node_spec=NODE2) ~ current()
+rule combined_rule: dst_rule & src_rule | current()
+
+# define a group
+group group_name: actor, some_group
+
+# apply rules, '*' indicates optional rule
+apply actor: some_rule
+apply* actor, actor: some_rule
+apply actor, actor: some_rule | node_attr(node_spec=NODE1) ~ current()
+
 '''
     else:
         script = sys.argv[1]
@@ -448,8 +574,18 @@ delay.token[in](routing="round-robin")
             print "Error: Could not read file: '%s'" % script
             sys.exit(1)
 
-    ir, it = calvin_parse(source_text)
+    ir, deploy_ir, it = calvin_parse(source_text)
     if it.issue_count == 0:
         print "No issues"
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
         print i
+
+    print "CalvinScript:"
+    bp = astprint.BracePrinter()
+    bp.visit(ir)
+    print
+    print "DeployScript:"
+    bp = astprint.BracePrinter()
+    bp.visit(deploy_ir)
+
+

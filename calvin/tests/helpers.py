@@ -128,6 +128,27 @@ def delete_app(request_handler, runtime, app_id, retries=10):
     retry(retries, partial(verify_gone, request_handler, runtime, app_id), lambda r: r, "Application not deleted")
     
 
+def deploy_script(request_handler, name, script, runtime, retries=10):
+    """
+    Deploys script and then tries to verify its
+    presence in registry on the runtime.
+    """
+
+    response = request_handler.deploy_application(runtime, name, script)
+    app_id = response['application_id']
+
+    def check_application():
+        try:
+            if request_handler.get_application(runtime, app_id) is None:
+                return False
+        except:
+            return False
+        _log.info("Application found, continuing")
+        return True
+
+    retry(retries, check_application, lambda r: r, "Application not found")
+    return response
+
 def flatten_zip(lz):
     return [] if not lz else [ lz[0][0], lz[0][1] ] + flatten_zip(lz[1:])
     
