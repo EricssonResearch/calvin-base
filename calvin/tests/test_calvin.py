@@ -951,7 +951,7 @@ class TestScripts(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         scriptname = 'test1'
         scriptfile = absolute_filename("scripts/%s.calvin" % (scriptname, ))
-        app_info, issuetracker = compile_tool.compile_file(scriptfile)
+        app_info, issuetracker = compile_tool.compile_file(scriptfile, False)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 

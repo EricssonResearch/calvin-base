@@ -183,7 +183,7 @@ class CompInternalsViz(ScriptViz):
 
 
 def visualize_deployment(filename):
-    deployable, errors, warnings = cscompiler.compile_file(filename)
+    deployable, errors, warnings = cscompiler.compile_file(filename, False)
     return AppViz(deployable).render()
 
 
