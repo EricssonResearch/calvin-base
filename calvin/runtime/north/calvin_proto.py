@@ -481,10 +481,6 @@ class CalvinProto(CalvinCBClass):
     def tunnel_destroy_handler(self, payload):
         """ Destroy tunnel (response side) """
         try:
-            self.network.link_check(payload['to_rt_uuid'])
-        except:
-            raise Exception("ERROR_UNKNOWN_RUNTIME")
-        try:
             tunnel = self.tunnels[payload['from_rt_uuid']][payload['tunnel_id']]
         except:
             raise Exception("ERROR_UNKNOWN_TUNNEL")
