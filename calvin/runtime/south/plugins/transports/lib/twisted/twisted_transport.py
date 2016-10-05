@@ -193,7 +193,7 @@ class CalvinServer(base_transport.BaseServer):
         self._callbacks = callbacks
 
         # TODO: Get iface from addr and lookup host
-        iface = ''
+        iface = '::'
 
         self._transport = server_transport(iface=iface, port=self._listen_uri.port or 0)
         self._client_transport = client_transport
