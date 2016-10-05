@@ -1,4 +1,5 @@
 /* Constants */
+define host = "127.0.0.1"
 define serverport = 5683
 define filebasename = "calvin/testcases/tc1_"
 define filesuffix = "log"
@@ -6,9 +7,10 @@ define filesuffix = "log"
 
 /* Actors */
 logger : io.FileWriter(basename=filebasename, suffix=filesuffix)
-server : net.CoAPServer(objectsecurity=1)
+server : net.CoAPServer(objectsecurity=0)
 
-/* Connections */
+/* Connections 
+host > server.host */  
 serverport > server.port
 server.data_out > logger.data
 
