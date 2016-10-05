@@ -37,6 +37,9 @@ _log = get_logger(__name__)
 
 uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
+# Base
+re_get_base_doc = re.compile(r"GET /\sHTTP/1")
+
 control_api_doc = ""
 
 control_api_doc += \
@@ -778,6 +781,7 @@ class CalvinControl(object):
 
         # Set routes for requests
         self.routes = [
+            (re_get_base_doc, self.handle_get_base_doc),
             (re_get_actor_doc, self.handle_get_actor_doc),
             (re_post_log, self.handle_post_log),
             (re_delete_log, self.handle_delete_log),
@@ -896,15 +900,20 @@ class CalvinControl(object):
             if not found:
                 _log.error("No route found for: %s\n%s" % (command, data))
                 self.send_response(handle, connection, None, status=404)
-        except:
+        except Exception as e:
+            _log.info("Failed to parse request", exc_info=e)
             self.send_response(handle, connection, None, status=calvinresponse.BAD_REQUEST)
 
-    def send_response(self, handle, connection, data, status=200):
+    def send_response(self, handle, connection, data, status=200, content_type=None):
         """ Send response header text/html
         """
+
+        content_type = content_type or "Content-Type: application/json"
+        content_type += "\n"
+
         header = "HTTP/1.0 " + \
             str(status) + " " + calvinresponse.RESPONSE_CODES[status] + \
-            "\n" + ("" if data is None else "Content-Type: application/json\n") + \
+            "\n" + ("" if data is None else content_type ) + \
             "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" + \
             "Access-Control-Allow-Origin: *\r\n" + "\n"
 
@@ -936,6 +945,53 @@ class CalvinControl(object):
         missing = value is None or value is False
         self.send_response(handle, connection, None if missing else json.dumps(value),
                            status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
+
+    def handle_get_base_doc(self, handle, connection, match, data, hdr):
+        """ Query get all docs
+        """
+
+        lines = control_api_doc.split("\n")
+
+        want_json = 'accept' in hdr and hdr['accept'] == "application/json"
+
+        if not want_json:
+            data = """
+            <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+            <html>
+            <title>Calvin control API</title>
+            <body>
+            <xmp style="display:none;">"""
+
+            block = []
+            for line in lines:
+                if not line and block:
+                    data += '- __' + block.pop(1).strip().replace('_', '\_') + '__' + "\n"
+                    data += "```\n" + "\n".join(s for s in block) + "\n```\n"
+                    block =  []
+                elif line:
+                    # same block
+                    block.append(line)
+            data += """
+            </xmp>
+            <script src="//strapdownjs.com/v/0.2/strapdown.js"></script>
+            </body>
+            </html>
+            """
+            self.send_response(handle, connection, data, status=200, content_type="Content-Type: text/HTML")
+        else:
+            data = []
+            block = []
+            for line in lines:
+                if not line and block:
+                    item = {'title': block.pop(1).strip().replace('_', '\_').strip()}
+                    item['doc_rows'] = [ a.strip() for a in block ]
+                    data.append(item)
+                    block =  []
+                elif line:
+                    # same block
+                    block.append(line)
+
+            self.send_response(handle, connection, json.dumps(data), status=200)
 
     def handle_get_actor_doc(self, handle, connection, match, data, hdr):
         """ Query ActorStore for documentation
