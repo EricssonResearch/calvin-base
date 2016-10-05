@@ -150,10 +150,7 @@ class CoAPServer(CalvinCBClass):
 	    if peer_addr:
 		conn, uri = self._scn.accept()
                 proto_callbacks = {'data': [CalvinCB(self._new_data)]}
-		new_proto=generateCoAP(proto_callbacks)
-		new_proto.setOwnURI(('', self._serverport))
-
-                p = dtls_port.DTLSServerPort(0, proto=new_proto, reactor=reactor, connection=conn)
+                p = dtls_port.DTLSServerPort(0, proto=generateCoAP(proto_callbacks), reactor=reactor, connection=conn)
                 p.startReading()
 
     def stop(self):
