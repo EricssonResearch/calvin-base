@@ -154,8 +154,10 @@ class TestReplication(CalvinTestBase):
         src = d.actor_map['testScript:src']
         asum = d.actor_map['testScript:sum']
         snk = d.actor_map['testScript:snk']
-        
+
         result = request_handler.replicate(self.rt1, asum)
+        asum_sum_first = request_handler.report(self.rt1, asum)
+        actual_first = request_handler.report(self.rt1, snk)
         time.sleep(0.5)
         print result
         asum2 = result['actor_id']
@@ -171,12 +173,14 @@ class TestReplication(CalvinTestBase):
         for port in asum2_meta['outports']:
             r = request_handler.get_port(self.rt1, asum2, port['id'])
             print port['id'], ': ', r
-        
-        time.sleep(1)
+
         actual = request_handler.report(self.rt1, snk)
         print actual
-        expected = expected_tokens(self.rt1, src, 'sum')
-        print expected
-        assert expected[:50] == sorted(actual)[:50]
+        asum_sum = request_handler.report(self.rt1, asum)
+        asum2_sum = request_handler.report(self.rt1, asum2)
+        print asum_sum, asum2_sum
+        assert len(actual) > len(actual_first)
+        assert asum_sum > asum_sum_first
+        assert asum2_sum > asum_sum_first
         helpers.destroy_app(d)
 

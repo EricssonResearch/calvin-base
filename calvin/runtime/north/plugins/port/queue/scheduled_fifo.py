@@ -170,13 +170,13 @@ class ScheduledFIFO(object):
         return self.readers
 
     def write(self, data, metadata):
-        _log.debug("WRITE1 %s" % metadata)
+        #_log.debug("WRITE1 %s" % metadata)
         if not self.slots_available(1, metadata):
             raise QueueFull()
         # Write token in peer's FIFO
         peer = self.readers[self._update_turn()]
         write_pos = self.write_pos[peer]
-        _log.debug("WRITE2 %s %s %d\n%s" % (metadata, peer, write_pos, str(map(str, self.fifo[peer]))))
+        #_log.debug("WRITE2 %s %s %d\n%s" % (metadata, peer, write_pos, str(map(str, self.fifo[peer]))))
         self.fifo[peer][write_pos % self.N] = data
         self.write_pos[peer] = write_pos + 1
         return True
@@ -187,7 +187,6 @@ class ScheduledFIFO(object):
         if length == 1:
             # shortcut for common special case
             peer = self.readers[self.reader_turn[self.turn_pos % self.N]]
-            _log.debug("SLOT_AVAIL %s %s" % (metadata, str(peer)))
             return self.write_pos[peer] - self.read_pos[peer] < self.N - 1
         # list of peer indexes that will be written to
         peers = [self.reader_turn[i % self.N] for i in range(self.turn_pos, self.turn_pos + length)]
