@@ -56,8 +56,6 @@ class CoAPClient(CalvinCBClass):
 	self.securitycontext = securitycontext
 
     def request(self, command, mtype, url, options, data):
-	# DTLS connection requires to set up a secure connection before handling the request.	
-	# If url is set, a secure connection to that url already has been set up.
 	if url is not self.url:
             self.url = url
             urlobject = urlparse(url)
@@ -92,7 +90,7 @@ class CoAPClient(CalvinCBClass):
 	    uripath = uripath[1:]
 	request.opt.uri_path = uripath
 	
-	# Handle options. Valid option keys: etag, observe, location_path, uri_path, content_format, uri_query, accept, block2 and block1.
+	#deal with options. Valid option keys: etag, observe, location_path, uri_path, content_format, uri_query, accept, block2 and block1.
 	for option in options:
             if type(options[option]) is unicode:
 	        setattr(request.opt, option, str(options[option]))

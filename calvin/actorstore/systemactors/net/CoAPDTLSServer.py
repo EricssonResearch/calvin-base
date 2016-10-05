@@ -29,7 +29,7 @@ class CoAPDTLSServer(Actor):
       host : IP address to listen on
       port : port to listen on
     Output:
-      data_out : Data received in POST requests as tokens.
+      data_out : Data received on the UDP port will be sent as tokens.
     """
 
     @manage(['port'])
