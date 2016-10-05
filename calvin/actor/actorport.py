@@ -65,9 +65,17 @@ class Port(object):
             # Want to replace an existing queue type (e.g. during migration)
             raise NotImplementedError("FIXME Can't swap queue types")
 
-    def _state(self):
+    def _state(self, remap=None):
         """Return port state for serialization."""
-        return {'name': self.name, 'id': self.id, 'queue': self.queue._state(), 'properties': self.properties}
+        if remap is None:
+            return {'name': self.name, 'id': self.id, 'queue': self.queue._state(), 'properties': self.properties}
+        else:
+            return {
+                'name': self.name,
+                'id': remap[self.id],
+                'queue': self.queue._state(remap),
+                'properties': self.properties
+            }
 
     def _set_state(self, state):
         """Set port state."""

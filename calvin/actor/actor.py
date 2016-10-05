@@ -25,6 +25,7 @@ from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
+from calvin.runtime.north.replicationmanager import ReplicationData
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.csparser.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
@@ -342,7 +343,7 @@ class Actor(object):
         self._port_property_capabilities = None
         self._signature = None
         self._component_members = set([self.id])  # We are only part of component if this is extended
-        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'subject_attributes', 'migration_info', "_port_property_capabilities"))
+        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'subject_attributes', 'migration_info', "_port_property_capabilities", "_replication_data"))
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
@@ -353,6 +354,7 @@ class Actor(object):
         self.sec = security
         self.subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
         self.authorization_checks = None
+        self._replication_data = ReplicationData(initialize=False)
 
         self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.items()}
         self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.items()}
@@ -543,15 +545,15 @@ class Actor(object):
         self.fsm.transition_to(Actor.STATUS.PENDING)
 
     @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING, STATUS.MIGRATABLE])
-    def state(self):
+    def state(self, remap=None):
         state = {}
         # Manual state handling
         # Not available until after __init__ completes
         state['_managed'] = list(self._managed)
-        state['inports'] = {port: self.inports[port]._state()
-                            for port in self.inports}
+        state['inports'] = {
+            port: self.inports[port]._state(remap=remap) for port in self.inports}
         state['outports'] = {
-            port: self.outports[port]._state() for port in self.outports}
+            port: self.outports[port]._state(remap=remap) for port in self.outports}
         state['_component_members'] = list(self._component_members)
 
         # Managed state handling

@@ -44,6 +44,7 @@ ACTOR_PATH = '/actor/{}'
 ACTORS = '/actors'
 ACTOR_DISABLE = '/actor/{}/disable'
 ACTOR_MIGRATE = '/actor/{}/migrate'
+ACTOR_REPLICATE = '/actor/{}/replicate'
 APPLICATION_PATH = '/application/{}'
 APPLICATION_MIGRATE = '/application/{}/migrate'
 ACTOR_PORT = '/actor/{}/port/{}'
@@ -218,6 +219,11 @@ class RequestHandler(object):
         data = {'peer_node_id': dst_id}
         path = ACTOR_MIGRATE.format(actor_id)
         r = self._post(rt, timeout, async, path, data)
+        return self.check_response(r)
+
+    def replicate(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
+        path = ACTOR_REPLICATE.format(actor_id)
+        r = self._post(rt, timeout, async, path)
         return self.check_response(r)
 
     def migrate_use_req(self, rt, actor_id, requirements, extend=False, move=False, timeout=DEFAULT_TIMEOUT,

@@ -51,17 +51,30 @@ class CollectBase(object):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
         return "Tokens: %s\nw:%s, r:%s, tr:%s" % (fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
 
-    def _state(self):
-        state = {
-            'queuetype': self._type,
-            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
-            'N': self.N,
-            'writers': self.writers,
-            'write_pos': self.write_pos,
-            'read_pos': self.read_pos,
-            'tentative_read_pos': self.tentative_read_pos,
-            'tags': self.tags
-        }
+    def _state(self, remap=None):
+        if remap is None:
+            state = {
+                'queuetype': self._type,
+                'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
+                'N': self.N,
+                'writers': self.writers,
+                'write_pos': self.write_pos,
+                'read_pos': self.read_pos,
+                'tentative_read_pos': self.tentative_read_pos,
+                'tags': self.tags
+            }
+        else:
+            state = {
+                'queuetype': self._type,
+                'fifo': {p: [Token(0).encode() for t in tokens] for p, tokens in self.fifo.items()},
+                'N': self.N,
+                'writers': sorted([pid for pid in self.writers]),
+                'write_pos': {pid: 0 for pid in self.write_pos.keys()},
+                'read_pos': {pid: 0 for pid in self.read_pos.keys()},
+                'tentative_read_pos': {pid: 0 for pid in self.tentative_read_pos.keys()},
+                # TODO Need unique tags, how should these be created
+                'tags': {pid: tag for pid, tag in self.tags.items()}
+            }
         return state
 
     def _set_state(self, state):
@@ -110,7 +123,6 @@ class CollectBase(object):
     def write(self, data, metadata):
         if not self.slots_available(1, metadata):
             raise QueueFull()
-        _log.debug("WRITING pos %s" % str(self.write_pos))
         # Write token in peer's FIFO
         write_pos = self.write_pos[metadata]
         self.fifo[metadata][write_pos % self.N] = data
@@ -148,7 +160,6 @@ class CollectBase(object):
     #
 
     def com_write(self, data, metadata, sequence_nbr):
-        _log.debug("collect_unordered:com_write token:%s, writer: %s, nbr: %d\n%s" % (str(data), metadata, sequence_nbr, str(self)))
         write_pos = self.write_pos[metadata]
         if sequence_nbr == write_pos:
             self.write(data, metadata)

@@ -296,6 +296,15 @@ re_post_actor_disable = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid
 re_get_port = re.compile(
     r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
+control_api_doc += \
+    """
+    POST /actor/{actor-id}/replicate
+    ONLY FOR TEST. Will replicate an actor directly
+    Response status code: OK or NOT_FOUND
+    Response: {'actor_id': <replicated actor instance id>}
+"""
+re_post_actor_replicate = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/replicate\sHTTP/1")
+
 # control_api_doc += \
 """
     GET /actor/{actor-id}/port/{port-id}/state
@@ -801,6 +810,7 @@ class CalvinControl(object):
             (re_get_actor_report, self.handle_get_actor_report),
             (re_post_actor_migrate, self.handle_actor_migrate),
             (re_post_actor_disable, self.handle_actor_disable),
+            (re_post_actor_replicate, self.handle_actor_replicate),
             (re_get_port, self.handle_get_port),
             (re_get_port_state, self.handle_get_port_state),
             (re_post_connect, self.handle_connect),
@@ -1248,6 +1258,21 @@ class CalvinControl(object):
         except:
             status = calvinresponse.NOT_FOUND
         self.send_response(handle, connection, None, status)
+
+    def handle_actor_replicate(self, handle, connection, match, data, hdr):
+        try:
+            self.node.rm.supervise_actor(match.group(1), {})
+            self.node.rm.replicate(
+                match.group(1), self.node.id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
+            status = calvinresponse.OK
+        except:
+            _log.exception("Failed test replication")
+            status = calvinresponse.NOT_FOUND
+        if status != calvinresponse.OK:
+            self.send_response(handle, connection, None, status)
+
+    def handle_actor_replicate_cb(self, handle, connection, status):
+        self.send_response(handle, connection, json.dumps(status.data), status=status.status)
 
     def handle_get_port(self, handle, connection, match, data, hdr):
         """ Get port from id

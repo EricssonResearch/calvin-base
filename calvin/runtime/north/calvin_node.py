@@ -23,6 +23,7 @@ import logging
 from calvin.calvinsys import Sys as CalvinSys
 
 from calvin.runtime.north import actormanager
+from calvin.runtime.north import replicationmanager
 from calvin.runtime.north import appmanager
 from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
@@ -90,6 +91,7 @@ class Node(object):
         self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
+        self.rm = replicationmanager.ReplicationManager(self)
         self.control = calvincontrol.get_calvincontrol()
         
         _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler

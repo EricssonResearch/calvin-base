@@ -91,18 +91,32 @@ class ScheduledFIFO(object):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
         return "Tokens: %s\nw:%s, r:%s, tr:%s" % (fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
 
-    def _state(self):
-        state = {
-            'queuetype': self._type,
-            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
-            'N': self.N,
-            'readers': self.readers,
-            'write_pos': self.write_pos,
-            'read_pos': self.read_pos,
-            'tentative_read_pos': self.tentative_read_pos,
-            'reader_turn': self.reader_turn,
-            'turn_pos': self.turn_pos
-        }
+    def _state(self, remap=None):
+        if remap is None:
+            state = {
+                'queuetype': self._type,
+                'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
+                'N': self.N,
+                'readers': self.readers,
+                'write_pos': self.write_pos,
+                'read_pos': self.read_pos,
+                'tentative_read_pos': self.tentative_read_pos,
+                'reader_turn': self.reader_turn,
+                'turn_pos': self.turn_pos
+            }
+        else:
+            # Remapping of port ids implies reset of tokens
+            state = {
+                'queuetype': self._type,
+                'fifo': {remap[p]: [Token(0).encode() for t in tokens] for p, tokens in self.fifo.items()},
+                'N': self.N,
+                'readers': sorted([remap[pid] if pid in remap else pid for pid in self.readers]),
+                'write_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.write_pos.keys()},
+                'read_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.read_pos.keys()},
+                'tentative_read_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.tentative_read_pos.keys()},
+                'reader_turn': None,
+                'turn_pos': 0
+            }
         return state
 
     def _set_state(self, state):
@@ -115,6 +129,9 @@ class ScheduledFIFO(object):
         self.tentative_read_pos = state['tentative_read_pos']
         self.reader_turn = state["reader_turn"]
         self.turn_pos = state["turn_pos"]
+        if len(self.readers) > self.nbr_peers:
+            # If the peer has been replicated just set it to nbr connected
+            self.nbr_peers = len(self.readers)
         self._set_turn()
 
     @property
@@ -137,6 +154,9 @@ class ScheduledFIFO(object):
             self.fifo.setdefault(reader, [Token(0)] * self.N)
             self.readers.append(reader)
             self.readers.sort()
+        if len(self.readers) > self.nbr_peers:
+            _log.debug("ADD_READER %s" % reader)
+            self.nbr_peers = len(self.readers)
 
     def remove_reader(self, reader):
         if not isinstance(reader, basestring):
@@ -150,12 +170,13 @@ class ScheduledFIFO(object):
         return self.readers
 
     def write(self, data, metadata):
+        _log.debug("WRITE1 %s" % metadata)
         if not self.slots_available(1, metadata):
             raise QueueFull()
-        _log.debug("WRITING pos %s" % str(self.write_pos))
         # Write token in peer's FIFO
         peer = self.readers[self._update_turn()]
         write_pos = self.write_pos[peer]
+        _log.debug("WRITE2 %s %s %d\n%s" % (metadata, peer, write_pos, str(map(str, self.fifo[peer]))))
         self.fifo[peer][write_pos % self.N] = data
         self.write_pos[peer] = write_pos + 1
         return True
@@ -166,6 +187,7 @@ class ScheduledFIFO(object):
         if length == 1:
             # shortcut for common special case
             peer = self.readers[self.reader_turn[self.turn_pos % self.N]]
+            _log.debug("SLOT_AVAIL %s %s" % (metadata, str(peer)))
             return self.write_pos[peer] - self.read_pos[peer] < self.N - 1
         # list of peer indexes that will be written to
         peers = [self.reader_turn[i % self.N] for i in range(self.turn_pos, self.turn_pos + length)]
@@ -224,7 +246,10 @@ class ScheduledFIFO(object):
 
     def com_peek(self, metadata=None):
         pos = self.tentative_read_pos[metadata]
-        return (pos, self.peek(metadata))
+        #_log.debug("COM_PEEK %s read_pos: %d" % (metadata, pos))
+        r = (pos, self.peek(metadata))
+        #_log.debug("COM_PEEK2 %s read_pos: %d" % (metadata, pos))
+        return r
 
     def com_commit(self, reader, sequence_nbr):
         """ Will commit one token when the sequence_nbr matches
