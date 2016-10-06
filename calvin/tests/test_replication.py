@@ -180,7 +180,131 @@ class TestReplication(CalvinTestBase):
         asum2_sum = request_handler.report(self.rt1, asum2)
         print asum_sum, asum2_sum
         assert len(actual) > len(actual_first)
+        # This works since local is so fast, otherwise check how it is done in testSimpleRemoteReplication
         assert asum_sum > asum_sum_first
         assert asum2_sum > asum_sum_first
         helpers.destroy_app(d)
 
+    def testSimpleRemoteReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            sum   : std.Sum()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-unordered")
+            src.integer > sum.integer
+            sum.integer > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        asum = d.actor_map['testScript:sum']
+        snk = d.actor_map['testScript:snk']
+
+        asum_sum_first = [request_handler.report(self.rt1, asum)]
+        result = request_handler.replicate(self.rt1, asum, self.rt2.id)
+        asum_sum_first.append(request_handler.report(self.rt1, asum))
+        actual_first = request_handler.report(self.rt1, snk)
+        time.sleep(0.5)
+        print result
+        asum2 = result['actor_id']
+        actors = request_handler.get_actors(self.rt2)
+        assert asum2 in actors
+        asum_meta = request_handler.get_actor(self.rt1, asum)
+        asum2_meta = request_handler.get_actor(self.rt2, asum2)
+        print asum_meta
+        print asum2_meta
+        for port in asum2_meta['inports']:
+            r = request_handler.get_port(self.rt2, asum2, port['id'])
+            print port['id'], ': ', r
+        for port in asum2_meta['outports']:
+            r = request_handler.get_port(self.rt2, asum2, port['id'])
+            print port['id'], ': ', r
+
+        actual = request_handler.report(self.rt1, snk)
+        print actual
+        asum_sum = request_handler.report(self.rt1, asum)
+        asum2_sum = request_handler.report(self.rt2, asum2)
+        print asum_sum, asum2_sum
+        assert len(actual) > len(actual_first)
+        assert asum_sum > asum_sum_first[0]
+        assert asum_sum > asum_sum_first[1]
+        assert asum2_sum > asum_sum_first[0]
+
+        # Find first cumsum that is different and then that the replicated actor is beyond that
+        cumsum = helpers.expected_sum(1000)
+        i = [i for i,v in enumerate(actual) if cumsum[i] != v]
+        assert cumsum[i[0]] < asum2_sum
+        helpers.destroy_app(d)
+
+    def testManyRemoteReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            sum   : std.Sum()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-unordered")
+            src.integer > sum.integer
+            sum.integer > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        asum = d.actor_map['testScript:sum']
+        snk = d.actor_map['testScript:snk']
+
+        asum_sum_first = [request_handler.report(self.rt1, asum)]
+        rts =[self.rt2.id, self.rt3.id]
+        result=[]
+        for i in range(5):
+            result.append(request_handler.replicate(self.rt1, asum, rts[i%2]))
+        asum_sum_first.append(request_handler.report(self.rt1, asum))
+        actual_first = request_handler.report(self.rt1, snk)
+        time.sleep(0.5)
+        print result
+        asum2 = [r['actor_id'] for r in result]
+        actors = [request_handler.get_actors(self.rt2), request_handler.get_actors(self.rt3)]
+        for i in range(5):
+            assert asum2[i] in actors[i%2]
+        asum_meta = request_handler.get_actor(self.rt1, asum)
+        asum2_meta = request_handler.get_actor(self.rt2, asum2[4])
+        print asum_meta
+        print asum2_meta
+        for port in asum2_meta['inports']:
+            r = request_handler.get_port(self.rt2, asum2[4], port['id'])
+            print port['id'], ': ', r
+        for port in asum2_meta['outports']:
+            r = request_handler.get_port(self.rt2, asum2[4], port['id'])
+            print port['id'], ': ', r
+
+        actual = request_handler.report(self.rt1, snk)
+        print actual
+        asum_sum = request_handler.report(self.rt1, asum)
+        asum2_sum = []
+        rts =[self.rt2, self.rt3]
+        for i in range(5):
+            asum2_sum.append(request_handler.report(rts[i%2], asum2[i]))
+        print asum_sum, asum2_sum
+        assert len(actual) > len(actual_first)
+        assert asum_sum > asum_sum_first[0]
+        assert asum_sum > asum_sum_first[1]
+        for i in range(5):
+            assert asum2_sum[i] > asum_sum_first[0]
+        # Find first cumsum that is different and then that the replicated actor is beyond that
+        cumsum = helpers.expected_sum(1000)
+        i = [i for i,v in enumerate(actual) if cumsum[i] != v]
+        for ii in range(5):
+            assert cumsum[i[0]] < asum2_sum[ii]
+        helpers.destroy_app(d)

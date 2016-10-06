@@ -34,14 +34,18 @@ class ReplicationData(object):
         self.requirements = requirements
         self.counter = 0
 
-    def state(self):
+    def state(self, remap=None):
         state = {}
         if self.id is not None:
+            # Replicas only need to keep track of id and master actor
+            # Other data need to be synced from registry anyway when e.g. switching master
             state['id'] = self.id
             state['master'] = self.master
-            state['instances'] = self.instances
-            state['requirements'] = self.requirements
-            state['counter'] = self.counter
+            if remap is None:
+                # For normal migration include these
+                state['instances'] = self.instances
+                state['requirements'] = self.requirements
+                state['counter'] = self.counter
         return state
 
     def set_state(self, state):
@@ -76,7 +80,7 @@ class ReplicationManager(object):
     def list_master_actors(self):
         return [a_id for a_id, a in self.node.am.actors.items() if a._replication_data.master == a_id]
 
-    def replicate(self, actor_id, to_node_id, callback):
+    def replicate(self, actor_id, dst_node_id, callback):
         actor = self.node.am.actors[actor_id]
         if actor._replication_data.id is None or actor._replication_data.master != actor.id:
             # Only replicate master actor
@@ -97,7 +101,7 @@ class ReplicationManager(object):
         state = actor.state(remap_ports)
         state['name'] = new_name
         state['id'] = new_id
-        if to_node_id == self.node.id:
+        if dst_node_id == self.node.id:
             # Make copies to make sure no objects are shared between actors
             state = copy.deepcopy(state)
             ports = copy.deepcopy(ports)
@@ -105,7 +109,7 @@ class ReplicationManager(object):
             callback=CalvinCB(self._replicated, actor_id=new_id, callback=callback))
         else:
             self.node.proto.actor_new(
-                self.node.id, CalvinCB(self._replicated, actor_id=new_id, callback=callback), actor_type, state, ports)
+                dst_node_id, CalvinCB(self._replicated, actor_id=new_id, callback=callback), actor_type, state, ports)
 
     def _replicated(self, status, actor_id=None, callback=None):
         _log.analyze(self.node.id, "+", {'status': status, 'actor_id': actor_id})

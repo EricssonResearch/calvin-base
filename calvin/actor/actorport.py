@@ -153,7 +153,13 @@ class InPort(Port):
 
         self.endpoints.append(endpoint_)
         endpoint_.attached()
-        self.owner.did_connect(self)
+        nbr_peers = len(self.queue.get_peers())
+        if nbr_peers > self.properties['nbr_peers']:
+            # We have more peers due to replication
+            self.properties['nbr_peers'] = nbr_peers
+        else:
+            # No need to tell actor it could be fully connected since it was that also before
+            self.owner.did_connect(self)
         return old_endpoint
 
     def detach_endpoint(self, endpoint_):
@@ -249,7 +255,13 @@ class OutPort(Port):
 
         self.endpoints.append(endpoint_)
         endpoint_.attached()
-        self.owner.did_connect(self)
+        nbr_peers = len(self.queue.get_peers())
+        if nbr_peers > self.properties['nbr_peers']:
+            # We have more peers due to replication
+            self.properties['nbr_peers'] = nbr_peers
+        else:
+            # No need to tell actor it could be fully connected since it was that also before
+            self.owner.did_connect(self)
         return old_endpoint
 
     def detach_endpoint(self, endpoint_):

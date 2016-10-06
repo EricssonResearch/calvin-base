@@ -1262,8 +1262,12 @@ class CalvinControl(object):
     def handle_actor_replicate(self, handle, connection, match, data, hdr):
         try:
             self.node.rm.supervise_actor(match.group(1), {})
+            try:
+                node_id = data['peer_node_id']
+            except:
+                node_id = self.node.id
             self.node.rm.replicate(
-                match.group(1), self.node.id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
+                match.group(1), node_id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
             status = calvinresponse.OK
         except:
             _log.exception("Failed test replication")

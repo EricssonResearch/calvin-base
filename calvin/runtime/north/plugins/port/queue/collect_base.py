@@ -101,6 +101,10 @@ class CollectBase(object):
             self.fifo.setdefault(writer, [Token(0)] * self.N)
             self.writers.append(writer)
             self.writers.sort()
+        if len(self.writers) > self.nbr_peers:
+            _log.debug("ADD_WRITER %s" % writer)
+            self.nbr_peers = len(self.writers)
+
         self.tags[writer] = properties.get("tag", writer)
 
     def remove_writer(self, writer):

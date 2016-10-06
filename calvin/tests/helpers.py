@@ -153,20 +153,21 @@ def flatten_zip(lz):
     return [] if not lz else [ lz[0][0], lz[0][1] ] + flatten_zip(lz[1:])
     
 
-def expected_tokens(request_handler, rt, actor_id, t_type):
-    # Helper for 'std.CountTimer' actor
-    def expected_counter(n):
-        return [i for i in range(1, n + 1)]
+# Helper for 'std.CountTimer' actor
+def expected_counter(n):
+    return [i for i in range(1, n + 1)]
 
-    # Helper for 'std.Sum' 
-    def expected_sum(n):
-        def cumsum(l):
-            s = 0
-            for n in l:
-                s = s + n
-                yield s
-            
-        return list(cumsum(range(1, n + 1)))
+# Helper for 'std.Sum' 
+def expected_sum(n):
+    def cumsum(l):
+        s = 0
+        for n in l:
+            s = s + n
+            yield s
+        
+    return list(cumsum(range(1, n + 1)))
+
+def expected_tokens(request_handler, rt, actor_id, t_type):
     
     tokens = request_handler.report(rt, actor_id)
 

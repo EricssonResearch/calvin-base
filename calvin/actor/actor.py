@@ -544,7 +544,7 @@ class Actor(object):
     def disable(self):
         self.fsm.transition_to(Actor.STATUS.PENDING)
 
-    @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING, STATUS.MIGRATABLE])
+    @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING, STATUS.ENABLED, STATUS.MIGRATABLE])
     def state(self, remap=None):
         state = {}
         # Manual state handling
@@ -560,7 +560,10 @@ class Actor(object):
         for key in self._managed:
             obj = self.__dict__[key]
             if _implements_state(obj):
-                state[key] = obj.state()
+                try:
+                    state[key] = obj.state(remap)
+                except:
+                    state[key] = obj.state()
             else:
                 state[key] = obj
 
