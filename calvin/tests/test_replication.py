@@ -308,3 +308,118 @@ class TestReplication(CalvinTestBase):
         for ii in range(5):
             assert cumsum[i[0]] < asum2_sum[ii]
         helpers.destroy_app(d)
+
+    def testSimpleTagReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            sum   : std.Sum()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > sum.integer
+            sum.integer > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        asum = d.actor_map['testScript:sum']
+        snk = d.actor_map['testScript:snk']
+
+        result = request_handler.replicate(self.rt1, asum)
+        asum_sum_first = request_handler.report(self.rt1, asum)
+        actual_first = request_handler.report(self.rt1, snk)
+        time.sleep(0.5)
+        print result
+        asum2 = result['actor_id']
+        actors = request_handler.get_actors(self.rt1)
+        assert asum2 in actors
+        asum_meta = request_handler.get_actor(self.rt1, asum)
+        asum2_meta = request_handler.get_actor(self.rt1, asum2)
+        print asum_meta
+        print asum2_meta
+        for port in asum2_meta['inports']:
+            r = request_handler.get_port(self.rt1, asum2, port['id'])
+            print port['id'], ': ', r
+        for port in asum2_meta['outports']:
+            r = request_handler.get_port(self.rt1, asum2, port['id'])
+            print port['id'], ': ', r
+
+        actual = request_handler.report(self.rt1, snk)
+        asum_sum = request_handler.report(self.rt1, asum)
+        asum2_sum = request_handler.report(self.rt1, asum2)
+        print asum_sum, asum2_sum
+        assert len(actual) > len(actual_first)
+        # This works since local is so fast, otherwise check how it is done in testSimpleRemoteReplication
+        assert asum_sum > asum_sum_first
+        assert asum2_sum > asum_sum_first
+        id1 = asum_meta['outports'][0]['id']
+        id2 = asum2_meta['outports'][0]['id']
+        assert [a[id1] for a in actual if id1 in a]
+        assert [a[id2] for a in actual if id2 in a]
+        helpers.destroy_app(d)
+
+    def testSimpleFanOutTagReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            sum   : std.Sum()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="fanout")
+            snk.token(routing="collect-tagged")
+            src.integer > sum.integer
+            sum.integer > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        asum = d.actor_map['testScript:sum']
+        snk = d.actor_map['testScript:snk']
+
+        result = request_handler.replicate(self.rt1, asum)
+        asum_sum_first = request_handler.report(self.rt1, asum)
+        actual_first = request_handler.report(self.rt1, snk)
+        time.sleep(0.5)
+        print result
+        asum2 = result['actor_id']
+        actors = request_handler.get_actors(self.rt1)
+        assert asum2 in actors
+        asum_meta = request_handler.get_actor(self.rt1, asum)
+        asum2_meta = request_handler.get_actor(self.rt1, asum2)
+        print asum_meta
+        print asum2_meta
+        for port in asum2_meta['inports']:
+            r = request_handler.get_port(self.rt1, asum2, port['id'])
+            print port['id'], ': ', r
+        for port in asum2_meta['outports']:
+            r = request_handler.get_port(self.rt1, asum2, port['id'])
+            print port['id'], ': ', r
+
+        actual = request_handler.report(self.rt1, snk)
+        asum_sum = request_handler.report(self.rt1, asum)
+        asum2_sum = request_handler.report(self.rt1, asum2)
+        print asum_sum, asum2_sum
+        assert len(actual) > len(actual_first)
+        # This works since local is so fast, otherwise check how it is done in testSimpleRemoteReplication
+        assert asum_sum > asum_sum_first
+        assert asum2_sum > asum_sum_first
+        id1 = asum_meta['outports'][0]['id']
+        id2 = asum2_meta['outports'][0]['id']
+        a1 = [a[id1] for a in actual if id1 in a]
+        a2 = [a[id2] for a in actual if id2 in a]
+        print a1
+        print a2
+        assert a1
+        assert a2
+        helpers.destroy_app(d)
+
