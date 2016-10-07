@@ -629,6 +629,8 @@ class Storage(object):
             self.add_port(p, node_id, actor.id)
         data["outports"] = outports
         data["is_shadow"] = isinstance(actor, ShadowActor)
+        if actor._replication_data.id:
+            data["replication_id"] = actor._replication_data.id
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):
@@ -668,6 +670,80 @@ class Storage(object):
         Delete port from storage
         """
         self.delete(prefix="port-", key=port_id, cb=cb)
+
+    def add_replica(self, replication_id, actor_id, app_id=None, cb=None):
+        self.add_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
+
+    def remove_replica(self, replication_id, actor_id, cb=None):
+        self.remove_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
+
+    def get_replica(self, replication_id, cb=None):
+        self.get_index(['replicas', 'actors', replication_id], cb=cb)
+
+    def add_replication_cb(self, key, value, org_cb, id_, callback_ids):
+        if value == False:
+            del callback_ids[:]
+            if org_cb:
+                return org_cb(False)
+        try:
+            callback_ids.remove(id_)
+        except:
+            return
+        if not callback_ids:
+            if org_cb:
+                return org_cb(True)
+
+    def add_replication(self, replication_data, cb=None):
+        data = replication_data.state(None)
+        instances = data.pop('instances')
+        data.pop('counter')
+        callback_ids = instances + [data['id']]
+        self.set(prefix="replication-", key=data['id'], value=data,
+            cb=CalvinCB(self.add_replication_cb, org_cb=cb, id_=data['id'], callback_ids=callback_ids))
+        for a in instances:
+            self.add_replica(data['id'], a,
+                cb=CalvinCB(self.add_replication_cb, org_cb=cb, id_=a, callback_ids=callback_ids))
+
+    def remove_replication_cb(self, key, value, org_cb, id_, callback_ids):
+        if value == False:
+            del callback_ids[:]
+            if org_cb:
+                return org_cb(False)
+        try:
+            callback_ids.remove(id_)
+        except:
+            return
+        if not callback_ids:
+            if org_cb:
+                return org_cb(True)
+
+    def remove_replication(self, replication_id, cb=None):
+        callback_ids = [1, 2]
+        self.delete(prefix="replication-", key=replication_id,
+            cb=CalvinCB(self.remove_replication_cb, org_cb=cb, id_=1, callback_ids=callback_ids))
+        self.delete_index(['replicas', 'actors', replication_id], root_prefix_level=3,
+            cb=CalvinCB(self.remove_replication_cb, org_cb=cb, id_=2, callback_ids=callback_ids))
+
+    def get_replication_cb(self, key, value, org_cb, data):
+        if not value and '_sent_cb' not in data:
+            data['_sent_cb'] = True
+            return org_cb(False)
+        if isinstance(value, (list, tuple, set)):
+            # The instances
+            data['instances'] = value
+            data['counter'] = len(value) - 1  # The original is not counted
+        else:
+            # Dictionare with the rest of replication data
+            data.update(value)
+        if 'instances' in data and 'id' in data:
+            return org_cb(True)
+
+    def get_replication(self, replication_id, cb=None):
+        data = {}
+        self.get(prefix="replication-", key=replication_id,
+            cb=CalvinCB(self.get_replication_cb, org_cb=cb, data=data))
+        self.get_replica(replication_id,
+                cb=CalvinCB(self.get_replication_cb, org_cb=cb, data=data))
 
     def index_cb(self, key, value, org_cb, index_items):
         """
@@ -767,6 +843,30 @@ class Storage(object):
         # make copy of indexes since altered in callbacks
         for i in indexes[:]:
             self.remove(prefix="index-", key=i, value=[value],
+                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
+
+    def delete_index(self, index, root_prefix_level=2, cb=None):
+        """
+        Remove index entry in registry
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
+               e.g. node/address/example_street/3/buildingA/level3/room3003,
+               node/affiliation/owner/com.ericsson/Harald,
+               node/affiliation/name/com.ericsson/laptop,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
+        root_prefix_level: the top level of the index that can be searched separately,
+               with e.g. =1 then node/address can't be split
+        cb: Callback with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and
+            value indicate success.
+        """
+
+        indexes = self._index_strings(index, root_prefix_level)
+
+        # make copy of indexes since altered in callbacks
+        for i in indexes[:]:
+            self.delete(prefix="index-", key=i,
                         cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
 
     def get_index(self, index, cb=None):

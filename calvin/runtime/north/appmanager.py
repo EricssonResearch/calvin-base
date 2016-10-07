@@ -195,39 +195,71 @@ class AppManager(object):
         except:
             pass
         application.clear_node_info()
-        # Loop over copy of app's actors, since modified inside loop
-        for actor_id in application.actors.keys()[:]:
+        application.actor_replicas = []
+        application.replication_ids = []
+        for actor_id in application.actors.keys():
             if actor_id in self._node.am.list_actors():
-                _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id})
-                # TODO: Check if it went ok
-                self._node.am.destroy(actor_id)
-                application.remove_actor(actor_id)
+                # TODO fix this if master can switch from original actor
+                replicas = self._node.am.actors[actor_id]._replication_data.get_replicas(actor_id)
+                _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id, 'replicas': replicas})
+                application.actor_replicas.extend(replicas)
+                application.update_node_info(self._node.id, actor_id)
             else:
                 _log.analyze(self._node.id, "+ REMOTE ACTOR", {'actor_id': actor_id})
                 self.storage.get_actor(actor_id, CalvinCB(func=self._destroy_actor_cb, application=application))
 
-        if not application.actors or application.complete_node_info():
-            # Actors list already empty, all actors were local or the storage was calling the cb in-loop
-            _log.analyze(self._node.id, "+ DONE", {})
+        _log.analyze(self._node.id, "+ LOCAL REPLICAS", {'replicas': application.actor_replicas})
+        for actor_id in application.actor_replicas[:]:
+            application.actors[actor_id] = "noname"
+            application.actor_replicas.remove(actor_id)
+            if actor_id in self._node.am.list_actors():
+                application.update_node_info(self._node.id, actor_id)
+            else:
+                self.storage.get_actor(actor_id,
+                    CalvinCB(func=self._destroy_actor_cb, application=application, check_replica=False))
+
+        if application.complete_node_info() and not application.replication_ids and not application.actor_replicas:
+            # All actors were local
+            _log.analyze(self._node.id, "+ DONE", {'actors': application.actors, 'replicas': application.actor_replicas})
             self._destroy_final(application)
 
-    def _destroy_actor_cb(self, key, value, application, retries=0):
+    def _destroy_actor_cb(self, key, value, application, retries=0, check_replica=True):
         """ Get actor callback """
-        _log.analyze(self._node.id, "+", {'actor_id': key, 'value': value, 'retries': retries})
-        _log.debug("Destroy app peers actor cb %s - retry: %d" % (key, retries))
+        _log.analyze(self._node.id, "+", {'actor_id': key, 'value': value, 'retries': retries,
+                                        'check_replica': check_replica})
+        _log.debug("Destroy app peers actor cb %s - retry: %d\n%s" % (key, retries, str(value)))
         if value and 'node_id' in value:
             application.update_node_info(value['node_id'], key)
+            if 'replication_id' in value and check_replica:
+                application.replication_ids.append(value['replication_id'])
+                self.storage.get_replica(value['replication_id'],
+                    cb=CalvinCB(func=self._replicas_cb, application=application))
         else:
             if retries<10:
                 # FIXME add backoff time
                 _log.analyze(self._node.id, "+ RETRY", {'actor_id': key, 'value': value, 'retries': retries})
-                self.storage.get_actor(key, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries+1)))
+                self.storage.get_actor(key, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries+1), check_replica=check_replica))
             else:
                 # FIXME report failure
                 _log.analyze(self._node.id, "+ GIVE UP", {'actor_id': key, 'value': value, 'retries': retries})
                 application.update_node_info(None, key)
 
-        if application.complete_node_info():
+        if application.complete_node_info() and not application.replication_ids and not application.actor_replicas:
+            self._destroy_final(application)
+
+    def _replicas_cb(self, key, value, application):
+        application.replication_ids.remove(key)
+        if isinstance(value, (list, tuple, set)):
+            application.actor_replicas.extend(value)
+        for actor_id in application.actor_replicas[:]:
+            application.actors[actor_id] = "noname"
+            application.actor_replicas.remove(actor_id)
+            if actor_id in self._node.am.list_actors():
+                application.update_node_info(self._node.id, actor_id)
+            else:
+                self.storage.get_actor(actor_id,
+                    CalvinCB(func=self._destroy_actor_cb, application=application, check_replica=False))
+        if application.complete_node_info() and not application.replication_ids:
             self._destroy_final(application)
 
     def _destroy_final(self, application):
@@ -240,7 +272,18 @@ class AppManager(object):
         for node_id, actor_ids in application.node_info.iteritems():
             if not node_id:
                 _log.analyze(self._node.id, "+ UNKNOWN NODE", {})
-                application._destroy_node_ids[None] = response.CalvinResponse(False)
+                application._destroy_node_ids[None] = response.CalvinResponse(False, data=actor_ids)
+                continue
+            if node_id == self._node.id:
+                ok = True
+                for actor_id in actor_ids:
+                    if actor_id in self._node.am.list_actors():
+                        _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id})
+                        try:
+                            self._node.am.destroy(actor_id)
+                        except:
+                            ok = False
+                application._destroy_node_ids[node_id] = response.CalvinResponse(ok)
                 continue
             # Inform peers to destroy their part of the application
             self._node.proto.app_destroy(node_id, CalvinCB(self._destroy_final_cb, application, node_id),
@@ -266,8 +309,12 @@ class AppManager(object):
         if all(application._destroy_node_ids.values()):
             application.destroy_cb(status=response.CalvinResponse(True))
         else:
-            application.destroy_cb(status=response.CalvinResponse(False))
-            
+            # Missing is the actors that could not be found.
+            # FIXME retry? They could have moved
+            missing = []
+            for status in application._destroy_node_ids.values():
+                missing += [] if status.data is None else status.data
+            application.destroy_cb(status=response.CalvinResponse(False, data=missing))
         self._node.control.log_application_destroy(application.id)
 
     def destroy_request(self, application_id, actor_ids):
@@ -275,11 +322,14 @@ class AppManager(object):
         _log.debug("Destroy request, app: %s, actors: %s" % (application_id, actor_ids))
         _log.analyze(self._node.id, "+", {'application_id': application_id, 'actor_ids': actor_ids})
         reply = response.CalvinResponse(True)
+        missing = []
         for actor_id in actor_ids:
             if actor_id in self._node.am.list_actors():
                 self._node.am.destroy(actor_id)
             else:
                 reply = response.CalvinResponse(False)
+                missing = actor_id
+        reply.data = missing
         if application_id in self.applications:
             del self.applications[application_id]
         _log.debug("Destroy request reply %s" % reply)

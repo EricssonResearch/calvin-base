@@ -184,6 +184,12 @@ class TestReplication(CalvinTestBase):
         assert asum_sum > asum_sum_first
         assert asum2_sum > asum_sum_first
         helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert asum not in actors
+        assert asum2 not in actors
+        assert src not in actors
+        assert snk not in actors
 
     def testSimpleRemoteReplication(self):
         _log.analyze("TESTRUN", "+", {})
@@ -238,10 +244,16 @@ class TestReplication(CalvinTestBase):
         assert asum2_sum > asum_sum_first[0]
 
         # Find first cumsum that is different and then that the replicated actor is beyond that
-        cumsum = helpers.expected_sum(1000)
+        cumsum = helpers.expected_sum(10000)
         i = [i for i,v in enumerate(actual) if cumsum[i] != v]
         assert cumsum[i[0]] < asum2_sum
         helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1) + request_handler.get_actors(self.rt2)
+        assert asum not in actors
+        assert asum2 not in actors
+        assert src not in actors
+        assert snk not in actors
 
     def testManyRemoteReplication(self):
         _log.analyze("TESTRUN", "+", {})
@@ -303,11 +315,19 @@ class TestReplication(CalvinTestBase):
         for i in range(5):
             assert asum2_sum[i] > asum_sum_first[0]
         # Find first cumsum that is different and then that the replicated actor is beyond that
-        cumsum = helpers.expected_sum(1000)
+        cumsum = helpers.expected_sum(10000)
         i = [i for i,v in enumerate(actual) if cumsum[i] != v]
         for ii in range(5):
             assert cumsum[i[0]] < asum2_sum[ii]
         helpers.destroy_app(d)
+        time.sleep(1)
+        actors = (request_handler.get_actors(self.rt1) + request_handler.get_actors(self.rt2) +
+                    request_handler.get_actors(self.rt3))
+        assert asum not in actors
+        for i in range(5):
+            assert asum2[i] not in actors
+        assert src not in actors
+        assert snk not in actors
 
     def testSimpleTagReplication(self):
         _log.analyze("TESTRUN", "+", {})
@@ -363,6 +383,12 @@ class TestReplication(CalvinTestBase):
         assert [a[id1] for a in actual if id1 in a]
         assert [a[id2] for a in actual if id2 in a]
         helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert asum not in actors
+        assert asum2 not in actors
+        assert src not in actors
+        assert snk not in actors
 
     def testSimpleFanOutTagReplication(self):
         _log.analyze("TESTRUN", "+", {})
@@ -422,4 +448,10 @@ class TestReplication(CalvinTestBase):
         assert a1
         assert a2
         helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert asum not in actors
+        assert asum2 not in actors
+        assert src not in actors
+        assert snk not in actors
 

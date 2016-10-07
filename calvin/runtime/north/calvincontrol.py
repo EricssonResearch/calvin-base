@@ -193,7 +193,7 @@ control_api_doc += \
     DELETE /application/{application-id}
     Stop application (only applications launched from this node)
     Response status code: OK, NOT_FOUND, INTERNAL_ERROR
-    Response: none
+    Response: [<actor_id>, ...] when error list of actors (replicas) in application not destroyed 
 """
 re_del_application = re.compile(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
@@ -1166,7 +1166,11 @@ class CalvinControl(object):
             self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
 
     def handle_del_application_cb(self, handle, connection, status=None):
-        self.send_response(handle, connection, None, status=status.status)
+        if not status and status.data:
+            data = json.dumps(status.data)
+        else:
+            data = None
+        self.send_response(handle, connection, data, status=status.status)
 
     def handle_new_actor(self, handle, connection, match, data, hdr):
         """ Create actor

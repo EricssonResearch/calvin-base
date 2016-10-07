@@ -37,15 +37,15 @@ class ReplicationData(object):
     def state(self, remap=None):
         state = {}
         if self.id is not None:
-            # Replicas only need to keep track of id and master actor
+            # Replicas only need to keep track of id, master actor and their count number
             # Other data need to be synced from registry anyway when e.g. switching master
             state['id'] = self.id
             state['master'] = self.master
+            state['counter'] = self.counter
             if remap is None:
                 # For normal migration include these
                 state['instances'] = self.instances
                 state['requirements'] = self.requirements
-                state['counter'] = self.counter
         return state
 
     def set_state(self, state):
@@ -54,6 +54,18 @@ class ReplicationData(object):
         self.instances = state.get('instances', [])
         self.requirements = state.get('requirements', {})
         self.counter = state.get('counter', 0)
+
+    def add_replica(self, actor_id):
+        if actor_id in self.instances:
+            return
+        self.instances.append(actor_id)
+        self.counter += 1
+
+    def get_replicas(self, when_master=None):
+        if self.id and self.instances and (when_master is None or when_master == self.master):
+            return [a for a in self.instances if a != self.master]
+        else:
+            return []
 
 class ReplicationManager(object):
     def __init__(self, node):
@@ -71,9 +83,9 @@ class ReplicationManager(object):
                 actor_id=actor_id, master=actor_id, requirements=requirements)
         else:
             return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
-            
-        #TODO update storage
-        
+
+        # TODO add a callback to make sure storing worked
+        self.node.storage.add_replication(actor._replication_data, cb=None)
         #TODO trigger replication loop
         return calvinresponse.CalvinResponse(True)
 
@@ -86,10 +98,11 @@ class ReplicationManager(object):
             # Only replicate master actor
             raise Exception("Only replicate master actor")
         #actor.will_replicate()
+        _log.analyze(self.node.id, "+", actor._replication_data.state(None))
         # TODO make name a property that combine name and counter in actor
-        actor._replication_data.counter += 1
-        new_name = actor.name + "/{}".format(actor._replication_data.counter)
         new_id = uuid("ACTOR")
+        actor._replication_data.add_replica(new_id)
+        new_name = actor.name + "/{}".format(actor._replication_data.counter)
         actor_type = actor._type
         ports = actor.connections(self.node.id)
         ports['actor_name'] = new_name
@@ -105,14 +118,21 @@ class ReplicationManager(object):
             # Make copies to make sure no objects are shared between actors
             state = copy.deepcopy(state)
             ports = copy.deepcopy(ports)
-            self.node.am.new_from_migration(actor_type, state=state, prev_connections=ports,
-            callback=CalvinCB(self._replicated, actor_id=new_id, callback=callback))
+            self.node.am.new_from_migration(
+                actor_type, state=state, prev_connections=ports, callback=CalvinCB(
+                    self._replicated,
+                    replication_id=actor._replication_data.id,
+                    actor_id=new_id, callback=callback))
         else:
             self.node.proto.actor_new(
-                dst_node_id, CalvinCB(self._replicated, actor_id=new_id, callback=callback), actor_type, state, ports)
+                dst_node_id, CalvinCB(self._replicated, replication_id=actor._replication_data.id,
+                                         actor_id=new_id, callback=callback), actor_type, state, ports)
 
-    def _replicated(self, status, actor_id=None, callback=None):
-        _log.analyze(self.node.id, "+", {'status': status, 'actor_id': actor_id})
+    def _replicated(self, status, replication_id=None, actor_id=None, callback=None):
+        _log.analyze(self.node.id, "+", {'status': status, 'replication_id': replication_id, 'actor_id': actor_id})
+        if status:
+            # TODO add callback for storing
+            self.node.storage.add_replica(replication_id, actor_id)
         if callback:
             status.data = {'actor_id': actor_id}
             callback(status)
