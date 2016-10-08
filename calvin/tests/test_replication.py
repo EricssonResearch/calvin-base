@@ -455,3 +455,85 @@ class TestReplication(CalvinTestBase):
         assert src not in actors
         assert snk not in actors
 
+    def testMultiPortReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src1    : std.FiniteCounter(start=0)
+            src2    : std.FiniteCounter(start=10000)
+            alt   : std.Alternate()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src1.integer(routing="fanout")
+            src2.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src1.integer > alt.token_1
+            src2.integer > alt.token_2
+            alt.token > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src1 = d.actor_map['testScript:src1']
+        src2 = d.actor_map['testScript:src2']
+        alt = d.actor_map['testScript:alt']
+        snk = d.actor_map['testScript:snk']
+
+        result = request_handler.replicate(self.rt1, alt)
+        actual_first = request_handler.report(self.rt1, snk)
+        time.sleep(1)
+        print result
+        alt2 = result['actor_id']
+        actors = request_handler.get_actors(self.rt1)
+        assert alt2 in actors
+        alt_meta = request_handler.get_actor(self.rt1, alt)
+        alt2_meta = request_handler.get_actor(self.rt1, alt2)
+        print alt_meta
+        print alt2_meta
+        for port in alt2_meta['inports']:
+            r = request_handler.get_port(self.rt1, alt2, port['id'])
+            print port['id'], ': ', r
+        for port in alt2_meta['outports']:
+            r = request_handler.get_port(self.rt1, alt2, port['id'])
+            print port['id'], ': ', r
+
+        id1 = alt_meta['outports'][0]['id']
+        id2 = alt2_meta['outports'][0]['id']
+
+        for i in range(10):
+            actual = request_handler.report(self.rt1, snk)
+            a1 = [a[id1] for a in actual if id1 in a]
+            a2 = [a[id2] for a in actual if id2 in a]
+            if len(a2) > 15:
+                break
+            time.sleep(0.1)
+        print a1
+        print a2
+        h1 = [a for a in a1 if a >9999]
+        h2 = [a for a in a2 if a >9999]
+        l1 = [a for a in a1 if a <10000]
+        l2 = [a for a in a2 if a <10000]
+        print "h1", h1
+        print "h2", h2
+        print "l1", l1
+        print "l2", l2
+        assert len(a1) > 15
+        assert len(a2) > 15
+        assert len(h1) > 15
+        assert len(h2) > 15
+        assert len(l1) > 15
+        assert len(l2) > 15
+        assert l1 == range(l1[0], l1[-1]+1)
+        assert l2 == range(l2[0], l2[-1]+1)
+        assert not (set(h1) & set(h2))
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert alt not in actors
+        assert alt2 not in actors
+        assert src1 not in actors
+        assert src2 not in actors
+        assert snk not in actors
+
