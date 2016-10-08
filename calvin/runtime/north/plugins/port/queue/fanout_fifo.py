@@ -38,12 +38,14 @@ class FanoutFIFO(object):
         self.fifo = [Token(0)] * length
         self.N = length
         self.direction = port_properties.get('direction', None)
+        self.nbr_peers = port_properties.get('nbr_peers', 1)
         self.readers = set()
         # NOTE: For simplicity, modulo operation is only used in fifo access,
         #       all read and write positions are monotonousy increasing
         self.write_pos = 0
         self.read_pos = {}
         self.tentative_read_pos = {}
+        self.reader_offset = {}
         self._type = "fanout_fifo"
         self.writer = None  # Not part of state, assumed not needed in migrated information
 
@@ -59,7 +61,8 @@ class FanoutFIFO(object):
                 'readers': list(self.readers),
                 'write_pos': self.write_pos,
                 'read_pos': self.read_pos,
-                'tentative_read_pos': self.tentative_read_pos
+                'tentative_read_pos': self.tentative_read_pos,
+                'reader_offset': self.reader_offset
             }
         else:
             # Remapping of port ids, also implies reset of tokens
@@ -70,12 +73,12 @@ class FanoutFIFO(object):
                 'readers': [remap[pid] if pid in remap else pid for pid in self.readers],
                 'write_pos': 0,
                 'read_pos': {remap[pid] if pid in remap else pid: 0 for pid, pos in self.read_pos.items()},
-                'tentative_read_pos': {remap[pid] if pid in remap else pid: 0 for pid, pos in self.tentative_read_pos.items()}
+                'tentative_read_pos': {remap[pid] if pid in remap else pid: 0 for pid, pos in self.tentative_read_pos.items()},
+                'reader_offset': {remap[pid] if pid in remap else pid: 0 for pid, pos in self.reader_offset.items()}
             }
         return state
 
     def _set_state(self, state):
-        # TODO should take port property as argument besides state since it is anyway in port state.
         self._type = state.get('queuetype',"fanout_fifo")
         self.fifo = [Token.decode(d) for d in state['fifo']]
         self.N = state['N']
@@ -83,6 +86,7 @@ class FanoutFIFO(object):
         self.write_pos = state['write_pos']
         self.read_pos = state['read_pos']
         self.tentative_read_pos = state['tentative_read_pos']
+        self.reader_offset = state.get('reader_offset', {pid: 0 for pid in self.readers})
 
     @property
     def queue_type(self):
@@ -98,9 +102,19 @@ class FanoutFIFO(object):
         if not isinstance(reader, basestring):
             raise Exception('Not a string: %s' % reader)
         if reader not in self.readers:
-            self.read_pos[reader] = 0
-            self.tentative_read_pos[reader] = 0
             self.readers.add(reader)
+            if len(self.readers) > self.nbr_peers:
+                self.nbr_peers = len(self.readers)
+                # Replicated actor connect for first time, start from oldest possible
+                oldest = min(self.read_pos.values())
+                #_log.info("ADD_READER %s %s %d" % (reader, str(id(self)), oldest))
+                self.reader_offset[reader] = oldest
+                self.read_pos[reader] = oldest
+                self.tentative_read_pos[reader] = oldest
+            else:
+                self.reader_offset[reader] = 0
+                self.read_pos[reader] = 0
+                self.tentative_read_pos[reader] = 0
 
     def remove_reader(self, reader):
         if not isinstance(reader, basestring):
@@ -188,7 +202,7 @@ class FanoutFIFO(object):
 
     def com_peek(self, metadata=None):
         pos = self.tentative_read_pos[metadata]
-        return (pos, self.peek(metadata))
+        return (pos - self.reader_offset[metadata], self.peek(metadata))
 
     def com_commit(self, reader, sequence_nbr):
         """ Will commit one token when the sequence_nbr matches
@@ -197,6 +211,7 @@ class FanoutFIFO(object):
             reader: peer_id
             sequence_nbr: token sequence_nbr
         """
+        sequence_nbr += self.reader_offset[reader]
         if sequence_nbr >= self.tentative_read_pos[reader]:
             return COMMIT_RESPONSE.invalid
         if self.read_pos[reader] < self.tentative_read_pos[reader]:
@@ -212,6 +227,7 @@ class FanoutFIFO(object):
             reader: peer_id
             sequence_nbr: token sequence_nbr
         """
+        sequence_nbr += self.reader_offset[reader]
         if (sequence_nbr >= self.tentative_read_pos[reader] and
             sequence_nbr < self.reader_pos[reader]):
             return COMMIT_RESPONSE.invalid
