@@ -399,6 +399,10 @@ class Actor(object):
         """Override in actor subclass if actions need to be taken before destruction."""
         pass
 
+    def will_replicate(self, state):
+        """Override in actor subclass if actions need to be taken before replication."""
+        pass
+
     def __getitem__(self, attr):
         if attr in self._using:
             return self._using[attr]

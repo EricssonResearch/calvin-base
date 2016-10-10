@@ -20,6 +20,7 @@ from calvin.requests import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinuuid import uuid
 from calvin.utilities.calvinlogger import get_logger
+from calvin.actor.actorstate import ActorState
 
 _log = get_logger(__name__)
 
@@ -97,7 +98,6 @@ class ReplicationManager(object):
         if actor._replication_data.id is None or actor._replication_data.master != actor.id:
             # Only replicate master actor
             raise Exception("Only replicate master actor")
-        #actor.will_replicate()
         _log.analyze(self.node.id, "+", actor._replication_data.state(None))
         # TODO make name a property that combine name and counter in actor
         new_id = uuid("ACTOR")
@@ -114,6 +114,7 @@ class ReplicationManager(object):
         state = actor.state(remap_ports)
         state['name'] = new_name
         state['id'] = new_id
+        actor.will_replicate(ActorState(state, actor._replication_data))
         if dst_node_id == self.node.id:
             # Make copies to make sure no objects are shared between actors
             state = copy.deepcopy(state)

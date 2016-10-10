@@ -26,11 +26,20 @@ class FiniteCounter(Actor):
       integer : Integer
     """
 
-    @manage(['count', 'ends', 'restart'])
-    def init(self, start=0, steps=sys.maxint, repeat=False):
+    @manage(['count', 'ends', 'restart', 'start', 'replicate_mult'])
+    def init(self, start=0, steps=sys.maxint, repeat=False, replicate_mult=False):
         self.count = start
         self.ends = start + steps
-        self.restart = start if repeat else self.ends + 1 
+        self.restart = start if repeat else self.ends + 1
+        self.start = start
+        self.replicate_mult = replicate_mult
+
+    def will_replicate(self, state):
+        if state.replication_count > 0 and self.replicate_mult:
+            m = state.replication_count + 1
+        else:
+            m = 1
+        state.count = self.start * m
 
     @condition(action_output=['integer'])
     @guard(lambda self: self.count < self.ends)
