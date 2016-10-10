@@ -537,3 +537,98 @@ class TestReplication(CalvinTestBase):
         assert src2 not in actors
         assert snk not in actors
 
+    def testMultiActorReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src1    : std.FiniteCounter(start=0)
+            src2    : std.FiniteCounter(start=10000, replicate_mult=true)
+            alt   : std.Alternate()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src1.integer(routing="fanout")
+            src2.integer(routing="random")
+            alt.token_2(routing="collect-unordered")
+            snk.token(routing="collect-tagged")
+            src1.integer > alt.token_1
+            src2.integer > alt.token_2
+            alt.token > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src1 = d.actor_map['testScript:src1']
+        src2 = d.actor_map['testScript:src2']
+        alt = d.actor_map['testScript:alt']
+        snk = d.actor_map['testScript:snk']
+
+        result = request_handler.replicate(self.rt1, alt)
+        result_src = request_handler.replicate(self.rt1, src2)
+        actual_first = request_handler.report(self.rt1, snk)
+        time.sleep(1)
+        print result, result_src
+        alt2 = result['actor_id']
+        src22 = result_src['actor_id']
+        actors = request_handler.get_actors(self.rt1)
+        assert alt2 in actors
+        alt_meta = request_handler.get_actor(self.rt1, alt)
+        alt2_meta = request_handler.get_actor(self.rt1, alt2)
+        print alt_meta
+        print alt2_meta
+        for port in alt2_meta['inports']:
+            r = request_handler.get_port(self.rt1, alt2, port['id'])
+            print port['id'], ': ', r
+        for port in alt2_meta['outports']:
+            r = request_handler.get_port(self.rt1, alt2, port['id'])
+            print port['id'], ': ', r
+
+        id1 = alt_meta['outports'][0]['id']
+        id2 = alt2_meta['outports'][0]['id']
+
+        for i in range(10):
+            actual = request_handler.report(self.rt1, snk)
+            a1 = [a[id1] for a in actual if id1 in a]
+            a2 = [a[id2] for a in actual if id2 in a]
+            if len(a2) > 15:
+                break
+            time.sleep(0.1)
+        print a1
+        print a2
+        h1 = [a for a in a1 if a >9999 and a<20000]
+        h2 = [a for a in a2 if a >9999 and a<20000]
+        hh1 = [a for a in a1 if a >19999]
+        hh2 = [a for a in a2 if a >19999]
+        l1 = [a for a in a1 if a <10000]
+        l2 = [a for a in a2 if a <10000]
+        print "*h1", h1
+        print "*h2", h2
+        print "*hh1", hh1
+        print "*hh2", hh2
+        print "*l1", l1
+        print "*l2", l2
+        assert len(a1) > 15
+        assert len(a2) > 15
+        assert len(h1) > 15
+        assert len(h2) > 15
+        assert len(hh1) > 15
+        assert len(hh2) > 15
+        assert len(l1) > 15
+        assert len(l2) > 15
+        assert l1 == range(l1[0], l1[-1]+1)
+        assert l2 == range(l2[0], l2[-1]+1)
+        assert not (set(h1) & set(h2))
+        assert not (set(hh1) & set(hh2))
+        hh = sorted(hh1+hh2)
+        assert hh[:-7] == range(hh[0], hh[-7])
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert alt not in actors
+        assert alt2 not in actors
+        assert src1 not in actors
+        assert src2 not in actors
+        assert src22 not in actors
+        assert snk not in actors
+

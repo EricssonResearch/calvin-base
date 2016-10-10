@@ -108,7 +108,7 @@ class ScheduledFIFO(object):
             # Remapping of port ids implies reset of tokens
             state = {
                 'queuetype': self._type,
-                'fifo': {remap[p]: [Token(0).encode() for t in tokens] for p, tokens in self.fifo.items()},
+                'fifo': {remap[p] if p in remap else p: [Token(0).encode() for t in tokens] for p, tokens in self.fifo.items()},
                 'N': self.N,
                 'readers': sorted([remap[pid] if pid in remap else pid for pid in self.readers]),
                 'write_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.write_pos.keys()},
