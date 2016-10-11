@@ -160,9 +160,7 @@ class CalvinProto(CalvinCBClass):
             'APP_DESTROY': [CalvinCB(self.app_destroy_handler)],
             'PORT_CONNECT': [CalvinCB(self.port_connect_handler)],
             'PORT_DISCONNECT': [CalvinCB(self.port_disconnect_handler)],
-            'PORT_PENDING_MIGRATE': [CalvinCB(self.not_impl_handler)],
-            'PORT_COMMIT_MIGRATE': [CalvinCB(self.not_impl_handler)],
-            'PORT_CANCEL_MIGRATE': [CalvinCB(self.not_impl_handler)],
+            'PORT_REMOTE_CONNECT': [CalvinCB(self.port_remote_connect_handler)],
             'TUNNEL_NEW': [CalvinCB(self.tunnel_new_handler)],
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
@@ -576,6 +574,34 @@ class CalvinProto(CalvinCBClass):
         reply = self.node.pm.disconnection_request(payload)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def port_remote_connect(self, port_id, node_id, peer_port_id, callback=None):
+        if self.node.network.link_request(node_id, CalvinCB(self._port_remote_connect,
+                                                        port_id=port_id,
+                                                        node_id=node_id,
+                                                        peer_port_id=peer_port_id,
+                                                        callback=callback)):
+                self._port_remote_connect(port_id, node_id, peer_port_id, callback=callback,
+                                status=response.CalvinResponse(True))
+
+    def _port_remote_connect(self, port_id, node_id, peer_port_id, status=None, callback=None):
+        """ Request remote node to execute a port connect
+        """
+        if status:
+            msg = {'cmd': 'PORT_REMOTE_CONNECT', 'port_id': port_id,
+                    'peer_port_id': peer_port_id}
+            self.network.links[node_id].send_with_reply(callback, msg)
+        elif callback:
+            callback(status=status)
+
+    def port_remote_connect_handler(self, payload):
+        """ Handle request for remote port connection """
+        self.node.pm.connect(port_id=payload['port_id'], peer_port_id=payload['peer_port_id'], callback=CalvinCB(self._port_remote_connect_handler, payload=payload))
+
+    def _port_remote_connect_handler(self, payload, status, **kwargs):
+        # Send reply
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
         self.network.links[payload['from_rt_uuid']].send(msg)
 
     #### AUTHENTICATION ####
