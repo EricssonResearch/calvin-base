@@ -34,6 +34,8 @@ class ReplicationData(object):
         # TODO requirements should be plugin operation, now just do target number
         self.requirements = requirements
         self.counter = 0
+        # {<actor_id>: {'known_peer_ports': [peer-ports id list], <org-port-id: <replicated-port-id>, ...}, ...}
+        self.remaped_ports = {}
 
     def state(self, remap=None):
         state = {}
@@ -47,6 +49,7 @@ class ReplicationData(object):
                 # For normal migration include these
                 state['instances'] = self.instances
                 state['requirements'] = self.requirements
+                state['remaped_ports'] = self.remaped_ports
         return state
 
     def set_state(self, state):
@@ -55,6 +58,7 @@ class ReplicationData(object):
         self.instances = state.get('instances', [])
         self.requirements = state.get('requirements', {})
         self.counter = state.get('counter', 0)
+        self.remaped_ports = state.get('remaped_ports', {})
 
     def add_replica(self, actor_id):
         if actor_id in self.instances:
@@ -67,6 +71,28 @@ class ReplicationData(object):
             return [a for a in self.instances if a != self.master]
         else:
             return []
+
+    def is_master(self, actor_id):
+        return self.id is not None and self.master == actor_id
+
+    def set_remaped_ports(self, actor_id, remap_ports, ports):
+        self.remaped_ports[actor_id] = remap_ports
+        # Remember the ports that we knew at replication time
+        self.remaped_ports[actor_id]['known_peer_ports'] = (
+            [pp[1] for p in (ports['inports'].values() + ports['outports'].values()) for pp in p])
+
+    def connect_verification(self, actor_id, port_id, peer_port_id):
+        if not self.is_master(actor_id):
+            return []
+        connects = []
+        for aid, ports in self.remaped_ports.items():
+            if peer_port_id in ports['known_peer_ports']:
+                continue
+            # Got a port connect from an unknown peer port must be a new replica created simultaneously
+            # as <aid> replica. Need to inform <aid> replica to do the connection
+            connects.append((aid, ports[port_id], peer_port_id))
+        return connects
+
 
 class ReplicationManager(object):
     def __init__(self, node):
@@ -95,7 +121,7 @@ class ReplicationManager(object):
 
     def replicate(self, actor_id, dst_node_id, callback):
         actor = self.node.am.actors[actor_id]
-        if actor._replication_data.id is None or actor._replication_data.master != actor.id:
+        if not actor._replication_data.is_master(actor.id):
             # Only replicate master actor
             raise Exception("Only replicate master actor")
         _log.analyze(self.node.id, "+", actor._replication_data.state(None))
@@ -108,6 +134,7 @@ class ReplicationManager(object):
         ports['actor_name'] = new_name
         ports['actor_id'] = new_id
         remap_ports = {pid: uuid("PORT") for pid in ports['inports'].keys() + ports['outports'].keys()}
+        actor._replication_data.set_remaped_ports(new_id, remap_ports, ports)
         ports['inports'] = {remap_ports[pid]: v for pid, v in ports['inports'].items()}
         ports['outports'] = {remap_ports[pid]: v for pid, v in ports['outports'].items()}
         _log.analyze(self.node.id, "+ GET STATE", remap_ports)
@@ -137,3 +164,26 @@ class ReplicationManager(object):
         if callback:
             status.data = {'actor_id': actor_id}
             callback(status)
+
+    def connect_verification(self, actor_id, port_id, peer_port_id, peer_node_id):
+        actor = self.node.am.actors[actor_id]
+        connects = actor._replication_data.connect_verification(actor_id, port_id, peer_port_id)
+        for actor_id, port_id, peer_port_id in connects:
+            if actor_id in self.node.am.actors:
+                # This actors replica is local
+                self.node.pm.connect(actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id)
+                _log.debug("our connected(actor_id=%s, port_id=%s, peer_port_id=%s)" % (actor_id, port_id, peer_port_id))
+            elif peer_node_id == self.node.id:
+                # The peer actor replica is local
+                self.node.pm.connect(port_id=peer_port_id, peer_port_id=port_id)
+                _log.debug("peer connected(actor_id=%s, port_id=%s, peer_port_id=%s)" %
+                            (actor_id, port_id, peer_port_id))
+            else:
+                # Tell peer actor replica to connect to our replica
+                _log.debug("port remote connect request %s %s %s %s" % (actor_id, port_id, peer_port_id, peer_node_id))
+                self.node.proto.port_remote_connect(peer_port_id=port_id, port_id=peer_port_id, node_id=peer_node_id,
+                    callback=CalvinCB(
+                        self._port_connected_remote, actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id, peer_node_id=peer_node_id))
+
+    def _port_connected_remote(self, status, actor_id, port_id, peer_port_id, peer_node_id):
+        _log.debug("PORT REMOTE CONNECTED %s %s %s %s %s" % (actor_id, port_id, peer_port_id, peer_node_id, str(status)))

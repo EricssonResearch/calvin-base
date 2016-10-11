@@ -632,3 +632,158 @@ class TestReplication(CalvinTestBase):
         assert src22 not in actors
         assert snk not in actors
 
+    def testScaleOut1(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.FiniteCounter(start=10000, replicate_mult=true)
+            mid   : std.Identity()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            mid.token[in](routing="collect-unordered")
+            mid.token[out](routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > mid.token
+            mid.token > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        mid = d.actor_map['testScript:mid']
+        snk = d.actor_map['testScript:snk']
+
+        srcr = []
+        midr = []
+
+        for i in range(10):
+            result_src = request_handler.replicate(self.rt1, src)
+            srcr.append(result_src['actor_id'])
+            if i % 5 == 0:
+                result_mid = request_handler.replicate(self.rt1, mid)
+                midr.append(result_mid['actor_id'])
+
+        last_mid_meta = request_handler.get_actor(self.rt1, midr[-1])
+        mid_port_id = last_mid_meta['outports'][0]['id']
+        for i in range(10):
+            actual = request_handler.report(self.rt1, snk)
+            a_last = [a[mid_port_id] for a in actual if mid_port_id in a and a[mid_port_id]>110000]
+            
+            if len(a_last) > 10:
+                break
+            time.sleep(0.1)
+        ports = set([])
+        map(lambda a: ports.update(a.keys()), actual)
+        assert len(ports) == (len(midr) + 1)
+        actual_mids = {}
+        for p in ports:
+            di = [a[p] for a in actual if p in a]
+            dd = {}
+            map(lambda a: dd.setdefault(int(a)/10000,[]).append(a), di)
+            actual_mids[p] = dd
+            assert all(dd.values())
+        for p in ports:
+            print p
+            for k, v in actual_mids[p].items():
+                print "\t", k, ": ", str(v)
+
+        for i in range(1,12):
+            sets = [set(vv[i]) for p, vv in actual_mids.items()]
+            assert not set.intersection(*sets)
+
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert src not in actors
+        assert mid not in actors
+        assert snk not in actors
+        assert not (set(srcr) & set(actors))
+        assert not (set(midr) & set(actors))
+
+    def testScaleOut2(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.FiniteCounter(start=10000, replicate_mult=true)
+            mid   : std.Identity()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            mid.token[in](routing="collect-unordered")
+            mid.token[out](routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > mid.token
+            mid.token > snk.token
+        """
+
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        mid = d.actor_map['testScript:mid']
+        snk = d.actor_map['testScript:snk']
+
+        srcrf = []
+        midrf = []
+
+        for i in range(10):
+            result_src = request_handler.async_replicate(self.rt1, src, self.rt2.id)
+            srcrf.append(result_src)
+            if i % 5 == 0:
+                result_mid = request_handler.async_replicate(self.rt1, mid, self.rt3.id)
+                midrf.append(result_mid)
+
+        srcr = map(lambda x: request_handler.async_response(x)['actor_id'], srcrf)
+        midr = map(lambda x: request_handler.async_response(x)['actor_id'], midrf)
+
+        last_mid_meta = request_handler.get_actor(self.rt1, midr[-1])
+        mid_port_id = last_mid_meta['outports'][0]['id']
+        for i in range(10):
+            actual = request_handler.report(self.rt1, snk)
+            a_last = [a[mid_port_id] for a in actual if mid_port_id in a and a[mid_port_id]>110000]
+            if len(a_last) > 10:
+                break
+            time.sleep(0.1)
+
+        mid_meta = map(lambda x: (x, request_handler.get_actor(self.rt1, x)), [mid] + midr)
+        # actor_id, inport, outport
+        mid_ports = [(x[0],
+                      (x[1]['inports'][0]['id'], request_handler.get_port(self.rt1, x[0], x[1]['inports'][0]['id'])),
+                      (x[1]['outports'][0]['id'], request_handler.get_port(self.rt1, x[0], x[1]['outports'][0]['id'])))
+                      for x in mid_meta]
+        mid_peer_ports = [(x[0], (x[1][0], x[1][1]['peers']), (x[2][0], x[2][1]['peers'])) for x in mid_ports]
+        import pprint
+        pprint.pprint(mid_peer_ports, width=250)
+        ports = set([])
+        map(lambda a: ports.update(a.keys()), actual)
+        assert len(ports) == (len(midr) + 1)
+        actual_mids = {}
+        for p in ports:
+            di = [a[p] for a in actual if p in a]
+            dd = {}
+            map(lambda a: dd.setdefault(int(a)/10000,[]).append(a), di)
+            actual_mids[p] = dd
+            assert all(dd.values())
+        for p in ports:
+            print p
+            for k, v in actual_mids[p].items():
+                print "\t", k, ": ", str(v)
+
+        for i in range(1,12):
+            sets = [set(vv[i]) for p, vv in actual_mids.items() if i in vv]
+            assert not set.intersection(*sets)
+
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1) + request_handler.get_actors(self.rt2) + request_handler.get_actors(self.rt3)
+        assert src not in actors
+        assert mid not in actors
+        assert snk not in actors
+        assert not (set(srcr) & set(actors))
+        assert not (set(midr) & set(actors))

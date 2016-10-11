@@ -35,6 +35,9 @@ class LocalConnection(BaseConnection):
                         peer_node_id=self.peer_port_meta.node_id)
         port1 = self.port
         port2 = self.peer_port_meta.port
+
+        self.node.rm.connect_verification(port2.owner.id, port2.id, port1.id, self.node.id)
+
         # Local connect wants the first port to be an inport
         inport, outport = (port1, port2) if port1.direction == 'in' else (port2, port1)
         self._connect_via_local(inport, outport)
