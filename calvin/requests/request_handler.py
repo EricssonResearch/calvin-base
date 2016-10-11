@@ -376,10 +376,9 @@ class RequestHandler(object):
         if exceptions:
             raise Exception(max(exceptions))
 
-
-# Generate async_* versions of all functions in RequestHandler with async argument set to True
-for func_name, func in inspect.getmembers(RequestHandler, predicate=inspect.ismethod):
-    if ((hasattr(func, '__code__') and 'async' in func.__code__.co_varnames and
-            func.__name__ not in ['_get', '_post', '_delete'])
-            or func.__name__ == 'peer_setup'):
-        setattr(RequestHandler, 'async_' + func_name, partial(func, async=True))
+    def __getattr__(self, name):
+        if name.startswith("async_"):
+            func = name[6:]
+            return partial(getattr(self, func), async=True)
+        else:
+            raise AttributeError("Unknown request handler attribute %s" % name)
