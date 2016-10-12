@@ -744,12 +744,14 @@ class TestReplication(CalvinTestBase):
 
         last_mid_meta = request_handler.get_actor(self.rt1, midr[-1])
         mid_port_id = last_mid_meta['outports'][0]['id']
-        for i in range(10):
+        for i in range(50):
             actual = request_handler.report(self.rt1, snk)
             a_last = [a[mid_port_id] for a in actual if mid_port_id in a and a[mid_port_id]>110000]
             if len(a_last) > 10:
                 break
             time.sleep(0.1)
+
+        assert len([a[mid_port_id] for a in actual if mid_port_id in a and a[mid_port_id]>110000]) > 10
 
         mid_meta = map(lambda x: (x, request_handler.get_actor(self.rt1, x)), [mid] + midr)
         # actor_id, inport, outport
