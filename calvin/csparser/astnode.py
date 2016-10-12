@@ -207,11 +207,11 @@ class PortProperty(Node):
             # Consolidate to a common subset in the order of our alternatives
             if my_properties[prop_name].arg.value != other_properties[prop_name].arg.value:
                 if isinstance(my_properties[prop_name].arg.value, (tuple, list)):
-                    my_prop_list = my_properties[prop_name].arg.value 
+                    my_prop_list = my_properties[prop_name].arg.value
                 else:
                     my_prop_list = [my_properties[prop_name].arg.value]
                 if isinstance(other_properties[prop_name].arg.value, (tuple, list)):
-                    other_prop_list = other_properties[prop_name].arg.value 
+                    other_prop_list = other_properties[prop_name].arg.value
                 else:
                     other_prop_list = [other_properties[prop_name].arg.value]
                 common = set(my_prop_list) & set(other_prop_list)
@@ -466,7 +466,13 @@ def node_decoder(o):
         'InternalInPort':InternalInPort,
         'InternalOutPort':InternalOutPort,
         'Block':Block,
-        'Component':Component
+        'Component':Component,
+        'RuleApply':RuleApply,
+        'Group':Group,
+        'RuleSetOp':RuleSetOp,
+        'RulePredicate':RulePredicate,
+        'RuleExpression':RuleExpression,
+        'Rule':Rule
     }.get(o['class'])()
     instance.__dict__ = o['data']
     return instance
