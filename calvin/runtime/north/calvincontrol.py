@@ -1316,16 +1316,21 @@ class CalvinControl(object):
             _log.analyze(self.node.id, "+", data)
             if 'app_info' not in data:
                 kwargs = {}
+                credentials = ""
                 # Supply security verification data when available
                 if "sec_credentials" in data:
-                    kwargs['credentials'] = data['sec_credentials']
-                    if "sec_sign" in data:
-                        kwargs['content'] = {
+                    credentials = data['sec_credentials']
+                    content = {}
+                    if not "sec_sign" in data:
+                        data['sec_sign'] = {}
+                    content = {
                             'file': data["script"],
                             'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
                 compiler.compile_script_check_security(
                     data["script"],
                     filename=data["name"],
+                    credentials=credentials,
+                    content=content,
                     node=self.node,
                     verify=(data["check"] if "check" in data else True),
                     cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
@@ -1344,24 +1349,26 @@ class CalvinControl(object):
                 issuetracker = IssueTracker()
                 self.handle_deploy_cont(app_info, issuetracker, handle, connection, data)
         except Exception as e:
-            _log.exception("Deployer failed")
+            _log.exception("Deployer failed, e={}".format(e))
             self.send_response(handle, connection, json.dumps({'exception': str(e)}),
                                status=calvinresponse.INTERNAL_ERROR)
 
     def handle_deploy_cont(self, app_info, issuetracker, handle, connection, data, security=None):
         try:
             if issuetracker.error_count:
-                four_oh_ones = [e for e in issuetracker.errors() if 'status' in e and e['status' == 401]]
-                if four_oh_ones:
-                    _log.error("Security verification of script failed")
-                    status = calvinresponse.UNAUTHORIZED
-                    body = None
-                else:
-                    _log.exception("Compilation failed")
-                    body = json.dumps({'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()})
-                    status=calvinresponse.BAD_REQUEST
-                self.send_response(handle, connection, body, status=status)
-                return
+                four_oh_ones = [e for e in issuetracker.errors(sort_key='reason')]
+                errors = issuetracker.errors(sort_key='reason')
+                for e in errors:
+                    if 'status' in e and e['status'] == 401:
+                        _log.error("Security verification of script failed")
+                        status = calvinresponse.UNAUTHORIZED
+                        body = None
+                    else:
+                        _log.exception("Compilation failed")
+                        body = json.dumps({'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()})
+                        status=calvinresponse.BAD_REQUEST
+                    self.send_response(handle, connection, body, status=status)
+                    return
             _log.analyze(
                 self.node.id,
                 "+ COMPILED",
