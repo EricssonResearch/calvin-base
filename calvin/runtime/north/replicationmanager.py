@@ -21,6 +21,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinuuid import uuid
 from calvin.utilities.calvinlogger import get_logger
 from calvin.actor.actorstate import ActorState
+from calvin.actor.actorport import PortMeta
 
 _log = get_logger(__name__)
 
@@ -172,18 +173,37 @@ class ReplicationManager(object):
             if actor_id in self.node.am.actors:
                 # This actors replica is local
                 self.node.pm.connect(actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id)
-                _log.debug("our connected(actor_id=%s, port_id=%s, peer_port_id=%s)" % (actor_id, port_id, peer_port_id))
+                _log.debug("Our connected(actor_id=%s, port_id=%s, peer_port_id=%s)" % (actor_id, port_id, peer_port_id))
             elif peer_node_id == self.node.id:
                 # The peer actor replica is local
                 self.node.pm.connect(port_id=peer_port_id, peer_port_id=port_id)
-                _log.debug("peer connected(actor_id=%s, port_id=%s, peer_port_id=%s)" %
+                _log.debug("Peer connected(actor_id=%s, port_id=%s, peer_port_id=%s)" %
                             (actor_id, port_id, peer_port_id))
             else:
                 # Tell peer actor replica to connect to our replica
-                _log.debug("port remote connect request %s %s %s %s" % (actor_id, port_id, peer_port_id, peer_node_id))
+                _log.debug("Port remote connect request %s %s %s %s" % (actor_id, port_id, peer_port_id, peer_node_id))
                 self.node.proto.port_remote_connect(peer_port_id=port_id, port_id=peer_port_id, node_id=peer_node_id,
                     callback=CalvinCB(
                         self._port_connected_remote, actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id, peer_node_id=peer_node_id))
 
     def _port_connected_remote(self, status, actor_id, port_id, peer_port_id, peer_node_id):
-        _log.debug("PORT REMOTE CONNECTED %s %s %s %s %s" % (actor_id, port_id, peer_port_id, peer_node_id, str(status)))
+        _log.debug("Port remote connected %s %s %s %s %s" % (actor_id, port_id, peer_port_id, peer_node_id, str(status)))
+        if not status:
+            # Failed request for connecting, likely the actor having the peer port has migrated.
+            # Find it and try again.
+            peer_port_meta = PortMeta(self, port_id=peer_port_id)
+            try:
+                peer_port_meta.retrieve(callback=CalvinCB(self._found_peer_node, actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id))
+            except calvinresponse.CalvinResponseException as e:
+                _log.exception("Failed retrieving peer port meta info %s" % str(e))
+                return
+
+    def _found_peer_node(self, status, actor_id, port_id, peer_port_id, port_meta):
+        if not status:
+            # FIXME retry here? Now just ignore.
+            _log.error("Failed finding peer node %s %s %s %s" % (actor_id, port_id, peer_port_id, str(status)))
+            return
+        _log.debug("Found peer node %s %s %s %s" % (actor_id, port_id, peer_port_id, str(status)))
+        self._port_connected_remote(
+            status=calvinresponse.CalvinResponse(True),
+            actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id, peer_node_id=port_meta.node_id)

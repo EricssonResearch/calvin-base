@@ -760,6 +760,11 @@ class TestReplication(CalvinTestBase):
         mid_peer_ports = [(x[0], (x[1][0], x[1][1]['peers']), (x[2][0], x[2][1]['peers'])) for x in mid_ports]
         import pprint
         pprint.pprint(mid_peer_ports, width=250)
+
+        for a in mid_peer_ports:
+            assert len(a[1][1]) == 11
+            assert len(a[2][1]) == 1
+
         ports = set([])
         map(lambda a: ports.update(a.keys()), actual)
         assert len(ports) == (len(midr) + 1)
