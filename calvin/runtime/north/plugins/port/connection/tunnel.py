@@ -388,7 +388,7 @@ class TunnelConnection(BaseConnection):
                 # Inform other end that it sent token to a port that does not exist on this node or
                 # that we have initiated a disconnect (endpoint does not have recv_token).
                 # Can happen e.g. when the actor and port just migrated and the token was in the air
-                _log.exception("recv_token_handler, ABORT")
+                _log.debug("recv_token_handler, ABORT")
                 reply = {'cmd': 'TOKEN_REPLY',
                          'port_id': payload['port_id'],
                          'peer_port_id': payload['peer_port_id'],
