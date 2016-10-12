@@ -1318,6 +1318,7 @@ class CalvinControl(object):
                 kwargs = {}
                 credentials = ""
                 # Supply security verification data when available
+                content = None
                 if "sec_credentials" in data:
                     credentials = data['sec_credentials']
                     content = {}
