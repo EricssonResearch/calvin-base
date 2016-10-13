@@ -121,7 +121,9 @@ class FanoutFIFO(object):
             raise Exception('Not a string: %s' % reader)
         del self.read_pos[reader]
         del self.tentative_read_pos[reader]
+        del self.reader_offset[reader]
         self.readers.discard(reader)
+        self.nbr_peers -= 1
 
     def get_peers(self):
         if self.direction == "out":

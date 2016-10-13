@@ -48,5 +48,5 @@ class Endpoint(object):
     def attached(self):
         pass
 
-    def detached(self):
+    def detached(self, terminate=False):
         pass

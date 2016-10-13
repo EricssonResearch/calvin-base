@@ -185,7 +185,7 @@ class PortManager(object):
 
         ConnectionFactory(self.node, PURPOSE.CONNECT).get(local_port, port_meta, callback).connect()
 
-    def disconnect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None):
+    def disconnect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=False):
         """ Do disconnect for port(s)
             callback: an optional callback that gets called with status when finished
             ports identified by only local actor_id:
@@ -216,7 +216,8 @@ class PortManager(object):
             port_ids.extend([p.id for p in actor.outports.itervalues()])
             # Need to collect all callbacks into one
             if callback:
-                callback = CalvinCB(self._disconnecting_actor_cb, _callback=callback, port_ids=port_ids)
+                callback = CalvinCB(self._disconnecting_actor_cb, _callback=callback,
+                                    port_ids=port_ids, actor_id=actor_id)
         else:
             # Just one port to disconnect
             if port_id:
@@ -250,7 +251,7 @@ class PortManager(object):
                             'connections': map(lambda x: str(x), connections)})
             # Run over copy since connections modified (tricky!) in loop
             for c in connections[:]:
-                c.disconnect()
+                c.disconnect(terminate=terminate)
             _log.analyze(self.node.id, "+ POST DISCONNECT", {'port_id': port_id,
                             'connection': str(c)})
         _log.analyze(self.node.id, "+ DONE", {'actor_id': actor_id})
@@ -304,7 +305,8 @@ class PortManager(object):
         else:
             # Disconnect and destroy endpoints
             return ConnectionFactory(self.node, PURPOSE.DISCONNECT).get(
-                    local_port_meta.port, peer_port_meta, payload=payload).disconnection_request()
+                    local_port_meta.port, peer_port_meta, payload=payload
+                    ).disconnection_request(payload.get('terminate', False))
 
     def add_ports_of_actor(self, actor):
         """ Add an actor's ports to the dictionary, used by actor manager """

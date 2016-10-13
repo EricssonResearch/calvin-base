@@ -169,17 +169,21 @@ class InPort(Port):
             return
         self.endpoints.remove(endpoint_)
 
-    def disconnect(self, peer_ids=None):
+    def disconnect(self, peer_ids=None, terminate=False):
         if peer_ids is None:
             endpoints = self.endpoints
         else:
             endpoints = [e for e in self.endpoints if e.get_peer()[1] in peer_ids]
+        _log.debug("actorinport.disconnect   remove: %s current: %s %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints], "TERMINATE" if terminate else ""))
         # Remove all endpoints corresponding to the peer ids
         self.endpoints = [e for e in self.endpoints if e not in endpoints]
         for e in endpoints:
-            e.detached()
+            e.detached(terminate=terminate)
+        if terminate:
+            self.properties['nbr_peers'] -= len(endpoints)
         if len(self.endpoints) == 0:
             self.owner.did_disconnect(self)
+        _log.debug("actorinport.disconnected remove: %s current: %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints]))
         return endpoints
 
     def peek_token(self, metadata=None):
@@ -271,17 +275,22 @@ class OutPort(Port):
             return
         self.endpoints.remove(endpoint_)
 
-    def disconnect(self, peer_ids=None):
+    def disconnect(self, peer_ids=None, terminate=False):
         if peer_ids is None:
             endpoints = self.endpoints
         else:
             endpoints = [e for e in self.endpoints if e.get_peer()[1] in peer_ids]
+        _log.debug("actoroutport.disconnect   remove: %s current: %s %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints], "TERMINATE" if terminate else ""))
         # Remove all endpoints corresponding to the peer ids
         self.endpoints = [e for e in self.endpoints if e not in endpoints]
         for e in endpoints:
-            e.detached()
+            e.detached(terminate=terminate)
+        if terminate:
+            self.properties['nbr_peers'] -= len(endpoints)
+        
         if len(self.endpoints) == 0:
             self.owner.did_disconnect(self)
+        _log.debug("actoroutport.disconnected remove: %s current: %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints]))
         return endpoints
 
     def write_token(self, data):

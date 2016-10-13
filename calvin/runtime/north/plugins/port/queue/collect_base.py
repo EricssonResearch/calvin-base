@@ -114,6 +114,7 @@ class CollectBase(object):
         del self.tentative_read_pos[writer]
         del self.write_pos[writer]
         self.writers.remove(writer)
+        self.nbr_peers -= 1
 
     def add_reader(self, reader, properties):
         pass

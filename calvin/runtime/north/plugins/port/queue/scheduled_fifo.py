@@ -74,6 +74,17 @@ class ScheduledFIFO(object):
         else:
             raise Exception("UNKNOWN QUEUE TYPE" + routing)
 
+    def _reset_turn(self):
+        routing = self._type.split(':',1)[1]
+        if routing == "round-robin":
+            # Populate with alternating values up to N
+            pos = self.reader_turn[self.turn_pos % self.N]
+            self.reader_turn = [p for n in range(self.N) for p in range(self.nbr_peers)][pos:self.N+pos]
+        elif routing == "random":
+            # Populate with random values up to N
+            self.reader_turn = [random.randrange(self.nbr_peers) for n in range(self.N)]
+        self.turn_pos = 0
+
     def _round_robin(self):
         reader = self.reader_turn[self.turn_pos % self.N]
         prev = self.reader_turn[(self.turn_pos - 1) % self.N]
@@ -164,7 +175,10 @@ class ScheduledFIFO(object):
         del self.read_pos[reader]
         del self.tentative_read_pos[reader]
         del self.write_pos[reader]
+        del self.fifo[reader]
         self.readers.remove(reader)
+        self.nbr_peers -= 1
+        self._reset_turn()
 
     def get_peers(self):
         return self.readers

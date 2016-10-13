@@ -328,13 +328,40 @@ class AppManager(object):
                 self._node.am.destroy(actor_id)
             else:
                 reply = response.CalvinResponse(False)
-                missing = actor_id
+                missing.append(actor_id)
         reply.data = missing
         if application_id in self.applications:
             del self.applications[application_id]
         _log.debug("Destroy request reply %s" % reply)
         _log.analyze(self._node.id, "+ RESPONSE", {'reply': str(reply)})
         return reply
+
+    def destroy_request_with_disconnect(self, application_id, actor_ids, callback=None):
+        _log.analyze(self._node.id, "+", {'application_id': application_id, 'actor_ids': actor_ids})
+        missing = []
+        for actor_id in actor_ids[:]:
+            if actor_id in self._node.am.list_actors():
+                self._node.am.destroy_with_disconnect(actor_id,
+                    callback=CalvinCB(self._destroy_request_with_disconnect_cb, application_id=application_id,
+                                        actor_ids=actor_ids, actor_id=actor_id, callback=callback, missing=missing))
+            else:
+                self._destroy_request_with_disconnect_cb(
+                    application_id=application_id, actor_ids=actor_ids, callback=callback,
+                    missing=missing, actor_id=actor_id, status=response.CalvinResponse(False))
+
+    def _destroy_request_with_disconnect_cb(self, application_id, actor_ids, missing, status, actor_id, callback=None):
+        actor_ids.remove(actor_id)
+        if not status:
+            missing.append(actor_id)
+        if actor_ids:
+            return
+        if application_id in self.applications:
+            del self.applications[application_id]
+        if callback:
+            if missing:
+                callback(status=response.CalvinResponse(False, missing))
+            else:
+                callback(status=response.CalvinResponse(True))
 
     def list_applications(self):
         """ Returns list of applications """

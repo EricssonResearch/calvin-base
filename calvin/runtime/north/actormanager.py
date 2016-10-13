@@ -208,6 +208,18 @@ class ActorManager(object):
         del self.actors[actor_id]
         self.node.control.log_actor_destroy(a.id)
 
+    def destroy_with_disconnect(self, actor_id, callback=None):
+        if actor_id not in self.actors:
+            self._actor_not_found(actor_id)
+        self.node.pm.disconnect(callback=CalvinCB(self._destroy_with_disconnect_cb,
+                                                  callback=callback),
+                                actor_id=actor_id, terminate=True)
+
+    def _destroy_with_disconnect_cb(self, status, actor_id, callback=None, **kwargs):
+        self.destroy(actor_id)
+        if callback:
+            callback(status=status)
+
     # DEPRECATED: Enabling of an actor is dependent on whether it's connected or not
     def enable(self, actor_id):
         if actor_id not in self.actors:

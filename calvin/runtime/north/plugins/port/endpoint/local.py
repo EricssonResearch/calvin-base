@@ -40,6 +40,10 @@ class LocalInEndpoint(Endpoint):
         self.port.queue.add_reader(self.port.id, self.port.properties)
         self.port.queue.add_writer(self.peer_id, self.peer_port.properties)
 
+    def detached(self, terminate=False):
+        if terminate:
+            self.port.queue.remove_writer(self.peer_port.id)
+
     def get_peer(self):
         return ('local', self.peer_id)
 
@@ -60,9 +64,11 @@ class LocalOutEndpoint(Endpoint):
         self.port.queue.add_reader(self.peer_port.id, self.peer_port.properties)
         self.port.queue.add_writer(self.port.id, self.port.properties)
 
-    def detached(self):
+    def detached(self, terminate=False):
         # cancel any tentative reads to acked reads
         self.port.queue.cancel(self.peer_port.id)
+        if terminate:
+            self.port.queue.remove_reader(self.peer_port.id)
 
     def get_peer(self):
         return ('local', self.peer_id)

@@ -312,15 +312,17 @@ class CalvinProto(CalvinCBClass):
 
     #### APPS ####
 
-    def app_destroy(self, to_rt_uuid, callback, app_id, actor_ids):
+    def app_destroy(self, to_rt_uuid, callback, app_id, actor_ids, **kwargs):
         """ Destroys an application with remote actors on to_rt_uuid node
             callback: called when finished with the peer's respons as argument
-            app_id: the application to destroy
+            app_id: the application to destroy (could be None if only actors to be destroyed)
             actor_ids: optional list of actors to destroy
+            kwargs: optionally take 
+                'disconnect': True/False to disconnect actors first
         """
         if self.network.link_request(to_rt_uuid):
             # Already have link just continue in _app_destroy
-            self._app_destroy(to_rt_uuid, callback, app_id, actor_ids, status=response.CalvinResponse(True))
+            self._app_destroy(to_rt_uuid, callback, app_id, actor_ids, status=response.CalvinResponse(True), **kwargs)
         else:
             # Request link before continue in _app_destroy
             self.node.network.link_request(to_rt_uuid, CalvinCB(self._app_destroy,
@@ -329,20 +331,30 @@ class CalvinProto(CalvinCBClass):
                                                         app_id=app_id,
                                                         actor_ids=actor_ids))
 
-    def _app_destroy(self, to_rt_uuid, callback, app_id, actor_ids, status, peer_node_id=None, uri=None):
+    def _app_destroy(self, to_rt_uuid, callback, app_id, actor_ids, status, peer_node_id=None, uri=None, **kwargs):
         """ Got link? continue app destruction """
         if status:
             msg = {'cmd': 'APP_DESTROY', 'app_uuid': app_id, 'actor_uuids': actor_ids}
+            msg.update(kwargs)
             self.network.links[to_rt_uuid].send_with_reply(callback, msg)
         elif callback:
             callback(status=status)
 
     def app_destroy_handler(self, payload):
         """ Peer request destruction of app and its actors """
-        reply = self.node.app_manager.destroy_request(payload['app_uuid'],
-                                                      payload['actor_uuids'] if 'actor_uuids' in payload else [])
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        self.network.links[payload['from_rt_uuid']].send(msg)
+        if payload.get('disconnect', False):
+            self.node.app_manager.destroy_request_with_disconnect(payload['app_uuid'],
+                  payload['actor_uuids'] if 'actor_uuids' in payload else [],
+                  callback=CalvinCB(self._app_destroy_handler, payload=payload))
+        else:
+            reply = self.node.app_manager.destroy_request(payload['app_uuid'],
+                                                          payload['actor_uuids'] if 'actor_uuids' in payload else [])
+            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+            self.network.links[payload['from_rt_uuid']].send(msg)
+
+    def _app_destroy_handler(self, payload, status):
+            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
+            self.network.links[payload['from_rt_uuid']].send(msg)
 
     #### TUNNELS ####
 

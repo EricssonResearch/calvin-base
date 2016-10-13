@@ -67,6 +67,14 @@ class ReplicationData(object):
         self.instances.append(actor_id)
         self.counter += 1
 
+    def remove_replica(self):
+        if len(self.instances) < 2:
+            return None
+        actor_id = self.instances.pop()
+        # Should counter reflect current? Probably not, better to introduce seperate current count
+        # self.counter -= 1
+        return actor_id
+
     def get_replicas(self, when_master=None):
         if self.id and self.instances and (when_master is None or when_master == self.master):
             return [a for a in self.instances if a != self.master]
@@ -109,6 +117,9 @@ class ReplicationManager(object):
         if actor._replication_data.id is None:
             actor._replication_data = ReplicationData(
                 actor_id=actor_id, master=actor_id, requirements=requirements)
+        elif actor._replication_data.is_master(actor_id):
+            # If we already is master that is OK
+            return calvinresponse.CalvinResponse(True)
         else:
             return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
 
@@ -121,10 +132,17 @@ class ReplicationManager(object):
         return [a_id for a_id, a in self.node.am.actors.items() if a._replication_data.master == a_id]
 
     def replicate(self, actor_id, dst_node_id, callback):
-        actor = self.node.am.actors[actor_id]
+        try:
+            actor = self.node.am.actors[actor_id]
+        except:
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+            return
         if not actor._replication_data.is_master(actor.id):
             # Only replicate master actor
-            raise Exception("Only replicate master actor")
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+            return
         _log.analyze(self.node.id, "+", actor._replication_data.state(None))
         # TODO make name a property that combine name and counter in actor
         new_id = uuid("ACTOR")
@@ -163,7 +181,7 @@ class ReplicationManager(object):
             # TODO add callback for storing
             self.node.storage.add_replica(replication_id, actor_id)
         if callback:
-            status.data = {'actor_id': actor_id}
+            status.data = {'actor_id': actor_id, 'replication_id': replication_id}
             callback(status)
 
     def connect_verification(self, actor_id, port_id, peer_port_id, peer_node_id):
@@ -207,3 +225,44 @@ class ReplicationManager(object):
         self._port_connected_remote(
             status=calvinresponse.CalvinResponse(True),
             actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id, peer_node_id=port_meta.node_id)
+
+    def dereplicate(self, actor_id, callback):
+        try:
+            replication_data = self.node.am.actors[actor_id]._replication_data
+        except:
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+            return
+        if not replication_data.is_master(actor_id):
+            # Only dereplicate by master actor
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+            return
+        last_replica_id = replication_data.remove_replica()
+        if last_replica_id is None:
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+            return
+        if last_replica_id in self.node.am.actors:
+            self.node.am.destroy_with_disconnect(last_replica_id, callback=callback)
+        else:
+            self.node.storage.get_actor(last_replica_id,
+                CalvinCB(func=self._dereplicate_actor_cb, replication_data=replication_data, cb=callback))
+
+    def _dereplicate_actor_cb(self, key, value, replication_data, cb):
+        """ Get actor callback """
+        _log.analyze(self.node.id, "+", {'actor_id': key, 'value': value})
+        if value and 'node_id' in value:
+            # Use app destroy since it can remotely destroy actors
+            self.node.proto.app_destroy(value['node_id'],
+                CalvinCB(self._dereplicated, replication_data=replication_data, last_replica_id=key, 
+                            node_id=value['node_id'], cb=cb),
+                None, [key], disconnect=True)
+        else:
+            # FIXME Should do retries
+            if cb:
+                cb(calvinresponse.CalvinResponse(False))
+
+    def _dereplicated(self, status, replication_data, last_replica_id, node_id, cb):
+        if cb:
+            cb(status)

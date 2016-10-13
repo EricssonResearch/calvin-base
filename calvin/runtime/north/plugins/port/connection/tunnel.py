@@ -267,18 +267,19 @@ class TunnelConnection(BaseConnection):
         _log.analyze(self.node.id, "+ OK", payload, peer_node_id=self.peer_port_meta.node_id)
         return response.CalvinResponse(response.OK, {'port_id': self.port.id, 'port_properties': self.port.properties})
 
-    def disconnect(self):
+    def disconnect(self, terminate=False):
         """ Obtain any missing information to enable disconnecting one port peer and make the disconnect"""
 
         _log.analyze(self.node.id, "+", {'port_id': self.port.id})
         # Disconnect and destroy the endpoints
-        self._destroy_endpoints()
+        self._destroy_endpoints(terminate=terminate)
 
         # Inform peer port of disconnection
         self.node.proto.port_disconnect(callback=CalvinCB(self._disconnected_peer),
                                     port_id=self.port.id,
                                     peer_node_id=self.peer_port_meta.node_id,
-                                    peer_port_id=self.peer_port_meta.port_id)
+                                    peer_port_id=self.peer_port_meta.port_id,
+                                    terminate=terminate)
 
     def _disconnected_peer(self, reply):
         """ Get called for each peer port when diconnecting but callback should only be called once"""
@@ -298,14 +299,14 @@ class TunnelConnection(BaseConnection):
             if self.callback:
                 self.callback(status=response.CalvinResponse(True), port_id=self.port.id)
 
-    def disconnection_request(self):
+    def disconnection_request(self, terminate=False):
         """ A request from a peer to disconnect a port"""
         # Disconnect and destroy endpoints
-        self._destroy_endpoints()
+        self._destroy_endpoints(terminate=terminate)
         return response.CalvinResponse(True)
 
-    def _destroy_endpoints(self):
-        endpoints = self.port.disconnect(peer_ids=[self.peer_port_meta.port_id])
+    def _destroy_endpoints(self, terminate=False):
+        endpoints = self.port.disconnect(peer_ids=[self.peer_port_meta.port_id], terminate=terminate)
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
         for ep in endpoints:

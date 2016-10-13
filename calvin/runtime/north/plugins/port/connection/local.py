@@ -81,11 +81,11 @@ class LocalConnection(BaseConnection):
         self.node.storage.add_port(inport, self.node.id, inport.owner.id)
         self.node.storage.add_port(outport, self.node.id, outport.owner.id)
 
-    def disconnect(self):
+    def disconnect(self, terminate=False):
         """ Obtain any missing information to enable disconnecting one peer port and make the disconnect"""
 
         _log.analyze(self.node.id, "+", {'port_id': self.port.id})
-        endpoints = self.port.disconnect(peer_ids=[self.peer_port_meta.port_id])
+        endpoints = self.port.disconnect(peer_ids=[self.peer_port_meta.port_id], terminate=terminate)
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
         for ep in endpoints:
@@ -95,7 +95,7 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP DESTROYED", {'port_id': self.port.id})
 
         # Disconnect other end also, which is also local
-        endpoints = self.peer_port_meta.port.disconnect(peer_ids=[self.port.id])
+        endpoints = self.peer_port_meta.port.disconnect(peer_ids=[self.port.id], terminate=terminate)
         _log.analyze(self.node.id, "+ EP PEER", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
         for ep in endpoints:
@@ -103,6 +103,11 @@ class LocalConnection(BaseConnection):
                 self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
         _log.analyze(self.node.id, "+ DISCONNECTED", {'port_id': self.port.id})
+
+        # Update storage
+        if terminate:
+            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+            self.node.storage.add_port(self.peer_port_meta.port, self.node.id, self.peer_port_meta.port.owner.id)
 
         try:
             # Remove this peer from the list of peer connections

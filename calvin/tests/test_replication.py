@@ -794,3 +794,69 @@ class TestReplication(CalvinTestBase):
         assert snk not in actors
         assert not (set(srcr) & set(actors))
         assert not (set(midr) & set(actors))
+
+    def testSimpleDereplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            sum   : std.Sum()
+            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-unordered")
+            src.integer > sum.integer
+            sum.integer > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        asum = d.actor_map['testScript:sum']
+        snk = d.actor_map['testScript:snk']
+
+        result = request_handler.replicate(self.rt1, asum)
+        deresult1a = request_handler.replicate(self.rt1, asum, self.rt2.id)
+        deresult2a = request_handler.replicate(self.rt1, asum)
+        time.sleep(0.5)
+        deresult1b = request_handler.replicate(self.rt1, asum, dereplicate=True)
+        deresult2b = request_handler.replicate(self.rt1, asum, dereplicate=True)
+        print result, deresult1a, deresult1b, deresult2a, deresult2b
+        time.sleep(0.5)
+        asum_sum_first = request_handler.report(self.rt1, asum)
+        actual_first = request_handler.report(self.rt1, snk)
+        asum2 = result['actor_id']
+        actors = request_handler.get_actors(self.rt1)
+        assert asum2 in actors
+        asum_meta = request_handler.get_actor(self.rt1, asum)
+        asum2_meta = request_handler.get_actor(self.rt1, asum2)
+        print asum_meta
+        print asum2_meta
+        for port in asum2_meta['inports']:
+            r = request_handler.get_port(self.rt1, asum2, port['id'])
+            print port['id'], ': ', r
+        for port in asum2_meta['outports']:
+            r = request_handler.get_port(self.rt1, asum2, port['id'])
+            print port['id'], ': ', r
+
+        actual = request_handler.report(self.rt1, snk)
+        print actual
+        asum_sum = request_handler.report(self.rt1, asum)
+        asum2_sum = request_handler.report(self.rt1, asum2)
+        print asum_sum, asum2_sum
+        assert len(actual) > len(actual_first)
+        # This works since local is so fast, otherwise check how it is done in testSimpleRemoteReplication
+        assert asum_sum > asum_sum_first
+        assert asum2_sum > asum_sum_first
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1) + request_handler.get_actors(self.rt2)
+        assert asum not in actors
+        assert asum2 not in actors
+        assert src not in actors
+        assert snk not in actors
+        assert deresult1a['actor_id'] not in actors
+        assert deresult2a['actor_id'] not in actors
+

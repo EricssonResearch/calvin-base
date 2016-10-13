@@ -103,6 +103,6 @@ class Disconnected(BaseConnection):
         super(Disconnected, self).__init__(node, purpose, port, peer_port_meta, callback, factory)
         self.kwargs = kwargs
 
-    def disconnect(self):
+    def disconnect(self, terminate=False):
         if self.callback:
             self.callback(status=response.CalvinResponse(True), port_id=self.port.id)

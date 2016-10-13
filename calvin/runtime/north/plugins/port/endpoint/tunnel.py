@@ -51,6 +51,10 @@ class TunnelInEndpoint(Endpoint):
         if self.peer_id is not None:
             self.port.queue.add_writer(self.peer_id, self.peer_port_properties)
 
+    def detached(self, terminate=False):
+        if terminate and self.peer_id is not None:
+            self.port.queue.remove_writer(self.peer_id)
+
     def recv_token(self, payload):
         try:
             r = self.port.queue.com_write(Token.decode(payload['token']), self.peer_id, payload['sequencenbr'])
@@ -113,11 +117,13 @@ class TunnelOutEndpoint(Endpoint):
         self.port.queue.add_reader(self.peer_id, self.peer_port_properties)
         self.port.queue.add_writer(self.port.id, self.port.properties)
 
-    def detached(self):
+    def detached(self, terminate=False):
         # cancel any tentative reads to acked reads
         # Tunneled transport tokens after last continuous acked token will be resent later,
         # receiver will just ack them again if rereceived
         self.port.queue.cancel(self.peer_id)
+        if terminate:
+            self.port.queue.remove_reader(self.peer_id)
 
     def reply(self, sequencenbr, status):
         _log.debug("Reply on port %s/%s/%s [%i] %s" % (self.port.owner.name, self.peer_id, self.port.name, sequencenbr, status))

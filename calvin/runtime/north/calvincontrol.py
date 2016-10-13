@@ -1265,7 +1265,22 @@ class CalvinControl(object):
 
     def handle_actor_replicate(self, handle, connection, match, data, hdr):
         try:
-            self.node.rm.supervise_actor(match.group(1), {})
+            dereplicate = data['dereplicate']
+        except:
+            dereplicate = False
+        if dereplicate:
+            try:
+                self.node.rm.dereplicate(
+                    match.group(1), CalvinCB(self.handle_actor_replicate_cb, handle, connection))
+            except:
+                _log.exception("Dereplication failed")
+            return
+        try:
+            # Ignore return status, we are not allowed to make superviser twice
+            status = self.node.rm.supervise_actor(match.group(1), {}).status
+            if status != calvinresponse.OK:
+                self.send_response(handle, connection, None, status)
+                return
             try:
                 node_id = data['peer_node_id']
             except:
