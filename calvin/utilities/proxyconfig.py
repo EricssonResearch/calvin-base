@@ -16,7 +16,7 @@ proxy_devices = {
             "0x1":
             {
                 "ProductName": "uCalvin",
-                "capabilities": ["calvinsys.events.timer"],
+                "capabilities": ["calvinsys.io.gpiohandler", "calvinsys.sensors.environmental"],
                 "port_property_capability": "runtime.constrained.1"
             }
         }
