@@ -1,0 +1,9 @@
+{
+	"private": {
+		"io": {
+			"stdout": {
+				"url": "http://localhost:8087/add_message"
+			}
+		}
+	}
+}

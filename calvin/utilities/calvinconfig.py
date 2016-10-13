@@ -100,6 +100,7 @@ class CalvinConfig(object):
                 'metering_aggregated_timeout': 3600.0,  # Larger or equal to metering_timeout
                 'media_framework': 'defaultimpl',
                 'display_plugin': 'stdout_impl',
+                'stdout_plugin': 'defaultimpl',
                 'transports': ['calvinip'],
                 'control_proxy': None
             },

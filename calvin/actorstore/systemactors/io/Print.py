@@ -18,24 +18,37 @@ from calvin.actor.actor import Actor, ActionResult, manage, condition
 
 class Print(Actor):
     """
-    Print tokens to suitable device
+    Print data to standard out of runtime. Note that what constitutes standard out varies.
 
     Input:
-      token : Any token
+      token : data to write
     """
 
     def exception_handler(self, action, args, context):
         # Check args to verify that it is EOSToken
         return action(self, *args)
 
-    @manage()
+    @manage(exclude=['stdout'])
     def init(self):
-        pass
+        self.setup()
+
+    def setup(self):
+        self.use("calvinsys.io.stdout", shorthand="stdout")
+        self.stdout = self["stdout"]
+        self.stdout.enable()
+                
+    def will_migrate(self):
+        self.stdout.disable()
+        
+    def did_migrate(self):
+        self.setup()
 
     @condition(action_input=['token'])
-    def action(self, token):
-        print str(token).strip()
+    def write(self, data):
+        self.stdout.writeln(str(data))
         return ActionResult()
 
-    action_priority = (action, )
-
+    action_priority = (write, )
+    
+    requires = ['calvinsys.io.stdout']
+    
