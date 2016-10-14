@@ -74,10 +74,10 @@ class OPCUAClient(object):
     def _disconnect(self):
         self._client.disconnect()
         self._client = None
-        self._set_state(OPCUAClient.STATE.init)
+        self._set_state(OPCUAClient.STATE["init"])
 
     def disconnect(self):
-        if self.state == OPCUAClient.STATE.ready:
+        if self.state == OPCUAClient.STATE["ready"]:
             async.call_in_thread(self._disconnect)
             
     def add_change(self, change):
