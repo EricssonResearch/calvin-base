@@ -22,6 +22,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
 from calvin.utilities.security import Security, security_enabled
 from calvin.actor.actor import ShadowActor
+from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = get_logger(__name__)
 
@@ -220,7 +221,7 @@ class ActorManager(object):
             self._actor_not_found(actor_id)
         self.node.pm.disconnect(callback=CalvinCB(self._destroy_with_disconnect_cb,
                                                   callback=callback),
-                                actor_id=actor_id, terminate=True)
+                                actor_id=actor_id, terminate=DISCONNECT.TERMINATE)
 
     def _destroy_with_disconnect_cb(self, status, actor_id, callback=None, **kwargs):
         self.destroy(actor_id)

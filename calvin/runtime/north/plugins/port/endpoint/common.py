@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from calvin.runtime.north.plugins.port import DISCONNECT
+
 class Endpoint(object):
 
     """docstring for Endpoint"""
@@ -48,5 +50,5 @@ class Endpoint(object):
     def attached(self):
         pass
 
-    def detached(self, terminate=False):
+    def detached(self, terminate=DISCONNECT.TEMPORARY):
         pass

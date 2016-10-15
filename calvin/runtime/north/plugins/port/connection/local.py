@@ -19,6 +19,7 @@ from calvin.runtime.north.plugins.port import queue
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.port.connection.common import BaseConnection
+from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -81,7 +82,7 @@ class LocalConnection(BaseConnection):
         self.node.storage.add_port(inport, self.node.id, inport.owner.id)
         self.node.storage.add_port(outport, self.node.id, outport.owner.id)
 
-    def disconnect(self, terminate=False):
+    def disconnect(self, terminate=DISCONNECT.TEMPORARY):
         """ Obtain any missing information to enable disconnecting one peer port and make the disconnect"""
 
         _log.analyze(self.node.id, "+", {'port_id': self.port.id})
@@ -95,7 +96,8 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP DESTROYED", {'port_id': self.port.id})
 
         # Disconnect other end also, which is also local
-        endpoints = self.peer_port_meta.port.disconnect(peer_ids=[self.port.id], terminate=terminate)
+        terminate_peer = DISCONNECT.EXHAUST_PEER if terminate == DISCONNECT.EXHAUST else terminate
+        endpoints = self.peer_port_meta.port.disconnect(peer_ids=[self.port.id], terminate=terminate_peer)
         _log.analyze(self.node.id, "+ EP PEER", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
         for ep in endpoints:

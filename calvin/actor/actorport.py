@@ -17,9 +17,9 @@
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port import queue
-from calvin.runtime.north.plugins.port import endpoint
 import calvin.requests.calvinresponse as response
 from calvin.utilities.calvinlogger import get_logger
+from calvin.runtime.north.plugins.port import DISCONNECT
 import copy
 
 _log = get_logger(__name__)
@@ -169,7 +169,7 @@ class InPort(Port):
             return
         self.endpoints.remove(endpoint_)
 
-    def disconnect(self, peer_ids=None, terminate=False):
+    def disconnect(self, peer_ids=None, terminate=DISCONNECT.TEMPORARY):
         if peer_ids is None:
             endpoints = self.endpoints
         else:
@@ -275,7 +275,7 @@ class OutPort(Port):
             return
         self.endpoints.remove(endpoint_)
 
-    def disconnect(self, peer_ids=None, terminate=False):
+    def disconnect(self, peer_ids=None, terminate=DISCONNECT.TEMPORARY):
         if peer_ids is None:
             endpoints = self.endpoints
         else:

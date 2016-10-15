@@ -20,9 +20,10 @@ from calvin.actor.actorport import PortMeta
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinlogger
 from calvin.actor.actor import ShadowActor
+from calvin.utilities.utils import enum
+from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = calvinlogger.get_logger(__name__)
-
 
 class PortManager(object):
     """
@@ -185,7 +186,7 @@ class PortManager(object):
 
         ConnectionFactory(self.node, PURPOSE.CONNECT).get(local_port, port_meta, callback).connect()
 
-    def disconnect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=False):
+    def disconnect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=DISCONNECT.TEMPORARY):
         """ Do disconnect for port(s)
             callback: an optional callback that gets called with status when finished
             ports identified by only local actor_id:

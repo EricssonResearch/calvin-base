@@ -18,6 +18,7 @@ from calvin.actor.actorport import PortMeta
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.port.connection.common import BaseConnection, PURPOSE
+from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -103,6 +104,6 @@ class Disconnected(BaseConnection):
         super(Disconnected, self).__init__(node, purpose, port, peer_port_meta, callback, factory)
         self.kwargs = kwargs
 
-    def disconnect(self, terminate=False):
+    def disconnect(self, terminate=DISCONNECT.TEMPORARY):
         if self.callback:
             self.callback(status=response.CalvinResponse(True), port_id=self.port.id)

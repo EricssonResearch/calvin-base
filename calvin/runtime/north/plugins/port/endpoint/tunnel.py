@@ -17,6 +17,7 @@
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 from calvin.runtime.north.plugins.port.queue.common import COMMIT_RESPONSE, QueueEmpty, QueueFull
+from calvin.runtime.north.plugins.port import DISCONNECT
 import time
 from calvin.utilities.calvinlogger import get_logger
 
@@ -51,7 +52,7 @@ class TunnelInEndpoint(Endpoint):
         if self.peer_id is not None:
             self.port.queue.add_writer(self.peer_id, self.peer_port_properties)
 
-    def detached(self, terminate=False):
+    def detached(self, terminate=DISCONNECT.TEMPORARY):
         if terminate and self.peer_id is not None:
             self.port.queue.remove_writer(self.peer_id)
 
@@ -117,7 +118,7 @@ class TunnelOutEndpoint(Endpoint):
         self.port.queue.add_reader(self.peer_id, self.peer_port_properties)
         self.port.queue.add_writer(self.port.id, self.port.properties)
 
-    def detached(self, terminate=False):
+    def detached(self, terminate=DISCONNECT.TEMPORARY):
         # cancel any tentative reads to acked reads
         # Tunneled transport tokens after last continuous acked token will be resent later,
         # receiver will just ack them again if rereceived
