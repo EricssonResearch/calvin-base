@@ -317,10 +317,14 @@ class PortManager(object):
 
     def remove_ports_of_actor(self, actor):
         """ Remove an actor's ports in the dictionary, used by actor manager """
+        port_ids = []
         for port in actor.inports.values():
+            port_ids.append(port.id)
             self.ports.pop(port.id)
         for port in actor.outports.values():
+            port_ids.append(port.id)
             self.ports.pop(port.id)
+        return port_ids
 
     def _get_local_port(self, actor_id=None, port_name=None, port_dir=None, port_id=None):
         """ Return a port if it is local otherwise raise exception """

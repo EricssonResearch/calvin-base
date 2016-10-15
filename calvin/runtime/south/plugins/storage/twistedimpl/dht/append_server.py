@@ -277,9 +277,11 @@ class AppendServer(Server):
         node = Node(dkey)
 
         def store(nodes):
-            _log.debug("setting '%s' on %s" % (key, map(str, nodes)))
+            _log.debug("setting '%s' to %s on %s" % (key, value, map(str, nodes)))
             # if this node is close too, then store here as well
-            if not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]):
+            if (not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]) or
+                dkey in self.storage):
+                _log.debug("setting '%s' to %s locally" % (key, value))
                 self.storage[dkey] = value
             ds = [self.protocol.callStore(n, dkey, value) for n in nodes]
             return defer.DeferredList(ds).addCallback(self._anyRespondSuccess)

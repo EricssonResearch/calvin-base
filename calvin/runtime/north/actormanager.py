@@ -194,7 +194,8 @@ class ActorManager(object):
             raise(e)
         return a
 
-    def destroy(self, actor_id):
+    def destroy(self, actor_id, temporary=False):
+        """ Destroy an actor, temporary should be True when migrating """
         if actor_id not in self.actors:
             self._actor_not_found(actor_id)
 
@@ -202,11 +203,17 @@ class ActorManager(object):
         self.node.metering.remove_actor_info(actor_id)
         a = self.actors[actor_id]
         a.will_end()
-        self.node.pm.remove_ports_of_actor(a)
+        port_ids = self.node.pm.remove_ports_of_actor(a)
         # @TOOD - insert callback here
-        self.node.storage.delete_actor(actor_id)
+        if not temporary:
+            self.node.storage.delete_actor(actor_id, cb=self._destroy_log_cb)
+            for port_id in port_ids:
+                self.node.storage.delete_port(port_id)
+            self.node.control.log_actor_destroy(a.id)
         del self.actors[actor_id]
-        self.node.control.log_actor_destroy(a.id)
+
+    def _destroy_log_cb(self, key, value):
+        _log.debug("DESTROY CB %s %s %s" % (key, value, self.node.id))
 
     def destroy_with_disconnect(self, actor_id, callback=None):
         if actor_id not in self.actors:
@@ -375,7 +382,7 @@ class ActorManager(object):
         _log.analyze(self.node.id, "+ DISCONNECTED", {'actor_name': actor.name, 'actor_id': actor.id, 'status': status})
         if status:
             state = actor.state()
-            self.destroy(actor.id)
+            self.destroy(actor.id, temporary=True)
             self.node.proto.actor_new(node_id, callback, actor_type, state, ports)
         else:
             # FIXME handle errors!!!
