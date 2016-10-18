@@ -36,9 +36,6 @@ class SimpleUDP(Actor):
         self.sender = None
         self.setup()
 
-    def will_migrate(self):
-        self.sender.disconnect()
-
     def did_migrate(self):
         self.setup()
 
