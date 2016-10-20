@@ -1607,7 +1607,7 @@ function eventHandler(event)
             cell8.appendChild(document.createTextNode(data.action_result));
         }
     } else if(data.type == "actor_new") {
-        var actor = findActor(data.actor);
+        var actor = findActor(data.actor_id);
         if (!actor) {
             actor = new actorObject(data.actor);
             actors[actors.length] = actor;
