@@ -41,6 +41,19 @@ class Image(object):
         """
         return self.image.detect_face(image)
 
+    def to_string(self, image, format):
+        """
+        Return a string representation of the image. Uses StringIO
+        """
+        return self.image.to_string(image, format)
+
+    def from_string(self, img_str):
+        """
+        Unpacks images formated with to_string()
+        """
+        return self.image.from_string(img_str)
+
+    
     def close(self):
         """
         Close display

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
+from calvin.utilities.calvinlogger import get_actor_logger
 from calvin.actor.actor import Actor, ActionResult, manage, condition
+
+_log = get_actor_logger(__name__)
 
 
 class Random(Actor):
@@ -33,13 +35,19 @@ class Random(Actor):
         self.min = minimum
         self.max = maximum
 
+        self.setup()
+
+    def setup(self):
+        self.use('calvinsys.native.python-random', shorthand="random")
+
+    def did_migrate(self):
+        self.setup()
+
     @condition(action_input=['trigger'], action_output=['integer'])
     def action(self, trigger):
-        n = random.randint(self.min, self.max)
-        return ActionResult(production=(n, ))
+        result = self['random'].randint(self.min, self.max)
+        return ActionResult(production=(result, ))
 
-    action_priority = (action,)
+    action_priority = (action, )
 
-    def report(self):
-        return self.count
-
+    requires = ['calvinsys.native.python-random']

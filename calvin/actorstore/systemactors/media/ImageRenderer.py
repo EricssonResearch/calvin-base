@@ -14,7 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from calvin.utilities.calvinlogger import get_actor_logger
 from calvin.actor.actor import Actor, ActionResult, condition, manage
+
+_log = get_actor_logger(__name__)
 
 
 class ImageRenderer(Actor):

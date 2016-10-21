@@ -20,6 +20,7 @@ from StringIO import StringIO
 import cv2
 import os
 import numpy
+from PIL import Image as PIL_Image
 
 
 class Image(object):
@@ -67,6 +68,22 @@ class Image(object):
                     continue
                 return True
         return False
+
+    def to_string(self, image, format):
+        buffer = StringIO()
+        image.save(buffer, format=format)
+        return buffer.getvalue()
+
+    def from_string(self, img_str):
+        buffer = StringIO(img_str)
+        image = self.open(buffer)
+        return image
+
+    def new(self, mode, size):
+        return PIL_Image.new(mode, size)
+
+    def open(self, fp):
+        return PIL_Image.open(fp)
 
     def close(self):
         """

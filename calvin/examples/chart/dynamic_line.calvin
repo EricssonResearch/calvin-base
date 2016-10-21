@@ -1,0 +1,27 @@
+/////////////////////////////////////////////////
+//              Chart definitions              //
+/////////////////////////////////////////////////
+define CHART_PARAMETERS = {"chart_title": "A Simple Line Chart",
+                           "chart_legend": ["A legend"],
+                           "chart_size": [600, 450],
+                           "axes_type": "xxyy",
+                           "axes_label": [[1, "Title x-axis"], [3, "Title y-axis"]]}
+
+/////////////////////////////////////////////////
+//              Actor definitions              //
+/////////////////////////////////////////////////
+bar_chart : chart.DynamicLine(chart_param=CHART_PARAMETERS)
+screen : media.ImageRenderer(width=600, height=450)
+counter : std.CountTimer(sleep=1)
+random : std.Random(minimum=25, maximum=75)
+
+
+/////////////////////////////////////////////////
+//                  Main script                //
+/////////////////////////////////////////////////
+counter.integer > bar_chart.label
+
+counter.integer > random.trigger
+random.integer > bar_chart.value
+
+bar_chart.img > screen.image
