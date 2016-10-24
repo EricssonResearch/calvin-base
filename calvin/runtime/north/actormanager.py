@@ -216,14 +216,34 @@ class ActorManager(object):
     def _destroy_log_cb(self, key, value):
         _log.debug("DESTROY CB %s %s %s" % (key, value, self.node.id))
 
-    def destroy_with_disconnect(self, actor_id, callback=None):
+    def destroy_with_disconnect(self, actor_id, terminate=DISCONNECT.TERMINATE, callback=None):
         if actor_id not in self.actors:
             self._actor_not_found(actor_id)
+        if terminate == DISCONNECT.EXHAUST:
+            actor = self.actors[actor_id]
+            actor.exhaust(CalvinCB(self._destroy_with_disconnect_exhausted, actor_id=actor_id, terminate=terminate, callback=callback))
+            # Exhaust first disconnects all inports then all outports after inports exhausted
+            self.node.pm.disconnect(callback=CalvinCB(self._destroy_with_disconnect_in_cb, terminate=terminate,
+                                                      callback=callback),
+                                    actor_id=actor_id, port_dir="in", terminate=terminate)
+        else:
+            self.node.pm.disconnect(callback=CalvinCB(self._destroy_with_disconnect_cb,
+                                                      callback=callback),
+                                    actor_id=actor_id, terminate=terminate)
+
+    def _destroy_with_disconnect_exhausted(self, status, actor_id, terminate, callback=None):
+        # FIXME handled failed exhaust when we do return anything but OK
+        _log.debug("Disconnected and exhausted all inports %s %s" % (actor_id, str(status)))
         self.node.pm.disconnect(callback=CalvinCB(self._destroy_with_disconnect_cb,
                                                   callback=callback),
-                                actor_id=actor_id, terminate=DISCONNECT.TERMINATE)
+                                actor_id=actor_id, port_dir="out", terminate=terminate)
+
+    def _destroy_with_disconnect_in_cb(self, status, actor_id, terminate, callback=None, **kwargs):
+        # FIXME handle failed disconnect
+        _log.debug("Disconnected all inports %s %s" % (actor_id, str(status)))
 
     def _destroy_with_disconnect_cb(self, status, actor_id, callback=None, **kwargs):
+        _log.debug("Disconnected all ports %s %s" % (actor_id, str(status)))
         self.destroy(actor_id)
         if callback:
             callback(status=status)

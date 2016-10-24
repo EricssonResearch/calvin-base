@@ -22,6 +22,7 @@ from calvin.utilities.calvinuuid import uuid
 from calvin.utilities.calvinlogger import get_logger
 from calvin.actor.actorstate import ActorState
 from calvin.actor.actorport import PortMeta
+from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = get_logger(__name__)
 
@@ -226,7 +227,8 @@ class ReplicationManager(object):
             status=calvinresponse.CalvinResponse(True),
             actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id, peer_node_id=port_meta.node_id)
 
-    def dereplicate(self, actor_id, callback):
+    def dereplicate(self, actor_id, callback, exhaust=False):
+        terminate = DISCONNECT.EXHAUST if exhaust else DISCONNECT.TERMINATE
         try:
             replication_data = self.node.am.actors[actor_id]._replication_data
         except:
@@ -244,12 +246,13 @@ class ReplicationManager(object):
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
         if last_replica_id in self.node.am.actors:
-            self.node.am.destroy_with_disconnect(last_replica_id, callback=callback)
+            self.node.am.destroy_with_disconnect(last_replica_id, terminate=terminate, callback=callback)
         else:
             self.node.storage.get_actor(last_replica_id,
-                CalvinCB(func=self._dereplicate_actor_cb, replication_data=replication_data, cb=callback))
+                CalvinCB(func=self._dereplicate_actor_cb,
+                            replication_data=replication_data, terminate=terminate, cb=callback))
 
-    def _dereplicate_actor_cb(self, key, value, replication_data, cb):
+    def _dereplicate_actor_cb(self, key, value, replication_data, terminate, cb):
         """ Get actor callback """
         _log.analyze(self.node.id, "+", {'actor_id': key, 'value': value})
         if value and 'node_id' in value:
@@ -257,7 +260,7 @@ class ReplicationManager(object):
             self.node.proto.app_destroy(value['node_id'],
                 CalvinCB(self._dereplicated, replication_data=replication_data, last_replica_id=key, 
                             node_id=value['node_id'], cb=cb),
-                None, [key], disconnect=True)
+                None, [key], disconnect=terminate)
         else:
             # FIXME Should do retries
             if cb:

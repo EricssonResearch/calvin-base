@@ -89,7 +89,9 @@ class LocalConnection(BaseConnection):
         endpoints = self.port.disconnect(peer_ids=[self.peer_port_meta.port_id], terminate=terminate)
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
+        exhausted_tokens = {}
         for ep in endpoints:
+            exhausted_tokens.update(ep.exhausted_tokens)
             if ep.use_monitor():
                 self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
@@ -100,11 +102,16 @@ class LocalConnection(BaseConnection):
         endpoints = self.peer_port_meta.port.disconnect(peer_ids=[self.port.id], terminate=terminate_peer)
         _log.analyze(self.node.id, "+ EP PEER", {'port_id': self.port.id, 'endpoints': endpoints})
         # Should only be one but maybe future ports will have multiple endpoints for a peer
+        peer_exhausted_tokens = {}
         for ep in endpoints:
+            peer_exhausted_tokens.update(ep.exhausted_tokens)
             if ep.use_monitor():
                 self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
         _log.analyze(self.node.id, "+ DISCONNECTED", {'port_id': self.port.id})
+
+        self.port.exhausted_tokens(peer_exhausted_tokens)
+        self.peer_port_meta.port.exhausted_tokens(exhausted_tokens)
 
         # Update storage
         if terminate:

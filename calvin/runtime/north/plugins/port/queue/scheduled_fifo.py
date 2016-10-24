@@ -17,6 +17,7 @@
 import random
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
+from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
@@ -170,8 +171,8 @@ class ScheduledFIFO(object):
             self.nbr_peers = len(self.readers)
 
     def remove_reader(self, reader):
-        if not isinstance(reader, basestring):
-            raise Exception('Not a string: %s' % reader)
+        if reader not in self.readers:
+            return
         del self.read_pos[reader]
         del self.tentative_read_pos[reader]
         del self.write_pos[reader]
@@ -179,6 +180,31 @@ class ScheduledFIFO(object):
         self.readers.remove(reader)
         self.nbr_peers -= 1
         self._reset_turn()
+
+    def is_exhausting(self):
+        return bool(self.termination)
+
+    def exhaust(self, peer_id, terminate):
+        _log.debug("exhaust %s %s %s" % (self._type, peer_id, DISCONNECT.reverse_mapping[terminate]))
+        if peer_id not in self.readers:
+            # FIXME handle writer
+            return []
+        if terminate == DISCONNECT.EXHAUST_PEER_SEND or terminate == DISCONNECT.EXHAUST_OUTPORT:
+            # Retrive remaining tokens to be returned
+            tokens = []
+            for read_pos in range(self.read_pos[peer_id], self.write_pos[peer_id]):
+                tokens.append([read_pos, self.fifo[peer_id][read_pos % self.N]])
+            # Remove the queue to peer, so no more writing
+            self.remove_reader(peer_id)
+            return tokens
+        else:
+            self.remove_reader(peer_id)
+        return []
+
+    def set_exhausted_tokens(self, tokens):
+        _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
+        if tokens and tokens.values()[0]:
+            _log.error("Got exhaust tokens on scheduler_fifo port %s" % str(tokens))
 
     def get_peers(self):
         return self.readers
@@ -215,8 +241,6 @@ class ScheduledFIFO(object):
         return True
 
     def tokens_available(self, length, metadata):
-        if not isinstance(metadata, basestring):
-            raise Exception('Not a string: %s' % metadata)
         if metadata not in self.readers:
             raise Exception("No reader %s in %s" % (metadata, self.readers))
         return (self.write_pos[metadata] - self.tentative_read_pos[metadata]) >= length
@@ -224,11 +248,7 @@ class ScheduledFIFO(object):
     #
     # Reading is done tentatively until committed
     #
-    def peek(self, metadata=None):
-        if not isinstance(metadata, basestring):
-            raise Exception('Not a string: %s' % metadata)
-        if metadata not in self.readers:
-            raise Exception("Unknown reader: '%s'" % metadata)
+    def peek(self, metadata):
         if not self.tokens_available(1, metadata):
             raise QueueEmpty(reader=metadata)
         read_pos = self.tentative_read_pos[metadata]
@@ -236,10 +256,10 @@ class ScheduledFIFO(object):
         self.tentative_read_pos[metadata] = read_pos + 1
         return data
 
-    def commit(self, metadata=None):
+    def commit(self, metadata):
         self.read_pos[metadata] = self.tentative_read_pos[metadata]
 
-    def cancel(self, metadata=None):
+    def cancel(self, metadata):
         self.tentative_read_pos[metadata] = self.read_pos[metadata]
 
     #
@@ -257,7 +277,7 @@ class ScheduledFIFO(object):
         else:
             return COMMIT_RESPONSE.invalid
 
-    def com_peek(self, metadata=None):
+    def com_peek(self, metadata):
         pos = self.tentative_read_pos[metadata]
         #_log.debug("COM_PEEK %s read_pos: %d" % (metadata, pos))
         r = (pos, self.peek(metadata))

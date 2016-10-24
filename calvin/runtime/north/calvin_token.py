@@ -43,6 +43,9 @@ class Token(object):
     def __str__(self):
         return "<%s> %s" % (self.__class__.__name__, str(self.value))
 
+    def __repr__(self):
+        # To get it printed nicely also in lists
+        return self.__str__()
 
 class ExceptionToken(Token):
 

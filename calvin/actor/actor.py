@@ -26,6 +26,8 @@ from calvin.runtime.north.calvin_token import Token, ExceptionToken
 from calvin.runtime.north import calvincontrol
 from calvin.runtime.north import metering
 from calvin.runtime.north.replicationmanager import ReplicationData
+import calvin.requests.calvinresponse as response
+from calvin.runtime.south.plugins.async import async
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.csparser.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
@@ -116,7 +118,7 @@ def condition(action_input=[], action_output=[]):
 
             if not input_ok or not output_ok:
                 _log.debug("%s.%s not runnable (%s, %s)" % (self.name, action_method.__name__, input_ok, output_ok))
-                return ActionResult(did_fire=False)
+                return ActionResult(did_fire=False, input_ok=input_ok, output_ok=output_ok)
             #
             # Build the arguments for the action from the input port(s)
             #
@@ -235,9 +237,11 @@ class ActionResult(object):
 
     """Return type from action and @guard"""
 
-    def __init__(self, did_fire=True, production=()):
+    def __init__(self, did_fire=True, production=(), input_ok=True, output_ok=True):
         super(ActionResult, self).__init__()
         self.did_fire = did_fire
+        self.input_ok = input_ok
+        self.output_ok = output_ok
         self.tokens_consumed = 0
         self.tokens_produced = 0
         self.production = production
@@ -255,6 +259,8 @@ class ActionResult(object):
              production will be DISCARDED
         """
         self.did_fire |= other_result.did_fire
+        self.input_ok &= other_result.input_ok
+        self.output_ok &= other_result.output_ok
         self.tokens_consumed += other_result.tokens_consumed
         self.tokens_produced += other_result.tokens_produced
 
@@ -355,6 +361,7 @@ class Actor(object):
         self.subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
         self.authorization_checks = None
         self._replication_data = ReplicationData(initialize=False)
+        self._exhaust_cb = None
 
         self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.items()}
         self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.items()}
@@ -474,6 +481,9 @@ class Actor(object):
         # If we made it here, all ports are disconnected
         self.fsm.transition_to(Actor.STATUS.READY)
 
+    def exhaust(self, callback):
+        self._exhaust_cb = callback
+
     @verify_status([STATUS.ENABLED])
     def fire(self):
         start_time = time.time()
@@ -515,13 +525,23 @@ class Actor(object):
                     # Every other minute warn if an actor runs for longer than 200 ms
                     self._last_time_warning = start_time
                     _log.warning("%s (%s) actor blocked for %f sec" % (self.name, self._type, diff))
+                if action_result.output_ok and self._exhaust_cb is not None:
+                    # We are in exhaustion and stopped firing while token slots available, i.e. exhausted inputs or deadlock
+                    # FIXME handle exhaustion deadlock
+                    # After fire loop call callback
+                    async.DelayedCall(0, self._exhaust_cb, status=response.CalvinResponse(True))
+                    self._exhaust_cb = None
                 # We reached the end of the list without ANY firing => return
                 return total_result
         # Redundant as of now, kept as reminder for when rewriting exception handling.
         raise Exception('Exit from fire should ALWAYS be from previous line.')
 
     def enabled(self):
-        return self.fsm.state() == Actor.STATUS.ENABLED
+        # We want to run even if not fully connected during exhaustion
+        r = self.fsm.state() == Actor.STATUS.ENABLED or self._exhaust_cb is not None
+        if not r:
+            _log.debug("Actor %s %s not enabled" % (self.name, self.id))
+        return r
 
     def denied(self):
         return self.fsm.state() == Actor.STATUS.DENIED

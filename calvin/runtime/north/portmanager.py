@@ -186,11 +186,13 @@ class PortManager(object):
 
         ConnectionFactory(self.node, PURPOSE.CONNECT).get(local_port, port_meta, callback).connect()
 
-    def disconnect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=DISCONNECT.TEMPORARY):
+    def disconnect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None,
+                   terminate=DISCONNECT.TEMPORARY):
         """ Do disconnect for port(s)
             callback: an optional callback that gets called with status when finished
             ports identified by only local actor_id:
                 actor_id: the actor that all ports will be disconnected on
+                port_dir: when set to "in" or "out" selects all the in or out ports, respectively
                 callback will be called once when all ports are diconnected or first failed
             local port identified by:
                 actor_id, port_name and port_dir='in'/'out' or
@@ -200,7 +202,7 @@ class PortManager(object):
             disconnect -*> _disconnect_port -*> _disconnected_port (-*> _disconnecting_actor_cb) -> !
         """
         port_ids = []
-        if actor_id and not (port_id or port_name or port_dir):
+        if actor_id and not (port_id or port_name):
             # We disconnect all ports on an actor
             try:
                 actor = self.node.am.actors[actor_id]
@@ -213,8 +215,11 @@ class PortManager(object):
                 else:
                     raise response.CalvinResponseException(status)
 
-            port_ids.extend([p.id for p in actor.inports.itervalues()])
-            port_ids.extend([p.id for p in actor.outports.itervalues()])
+            # It is possible to select only in or out ports
+            if port_dir is None or port_dir == "in":
+                port_ids.extend([p.id for p in actor.inports.itervalues()])
+            if port_dir is None or port_dir == "out":
+                port_ids.extend([p.id for p in actor.outports.itervalues()])
             # Need to collect all callbacks into one
             if callback:
                 callback = CalvinCB(self._disconnecting_actor_cb, _callback=callback,

@@ -44,7 +44,7 @@ class CollectSynced(CollectBase):
                 return False
         return True
 
-    def peek(self, metadata=None):
+    def peek(self, metadata):
         if not self.tokens_available(1, metadata):
             raise QueueEmpty(reader=metadata)
         value = {}

@@ -16,6 +16,7 @@
 
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
+from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
@@ -46,6 +47,8 @@ class CollectBase(object):
         self.read_pos = {}
         self.tentative_read_pos = {}
         self.tags = {}
+        self.exhausted_tokens = {}
+        self.termination = {}
 
     def __str__(self):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
@@ -122,6 +125,51 @@ class CollectBase(object):
     def remove_reader(self, reader):
         pass
 
+    def is_exhausting(self):
+        return bool(self.termination)
+
+    def exhaust(self, peer_id, terminate):
+        # We can't do anything until we consumed the last token
+        self.termination[peer_id] = terminate
+        _log.debug("exhaust %s %s %s" % (self._type, peer_id, DISCONNECT.reverse_mapping[terminate]))
+        return []
+
+    def set_exhausted_tokens(self, tokens):
+        _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
+        _log.debug("current exhausted_tokens %s" % (self.exhausted_tokens))
+        _log.debug("writers exhausted_tokens %s" % (self.writers))
+        self.exhausted_tokens.update(tokens)
+        remove = []
+        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+            if peer_id not in self.writers:
+                # Make sure only writers in the exhausted_tokens
+                remove.append(peer_id)
+                continue
+            if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
+                remove.append(peer_id)
+        for peer_id in remove:
+            del self.exhausted_tokens[peer_id]
+        # Remove any terminated queues if empty
+        for peer_id in tokens.keys():
+            if peer_id not in self.writers:
+                continue
+            if (self.write_pos[peer_id] == self.read_pos[peer_id] and
+                self.termination[peer_id] == DISCONNECT.EXHAUST_PEER_RECV):
+                self.remove_writer(peer_id)
+                del self.termination[peer_id]
+
+    def _transfer_exhaust_tokens(self, peer_id, exhausted_tokens):
+        # exhausted tokens are in sequence order, but could contain tokens already in queue
+        for pos, token in exhausted_tokens[:]:
+            if not self.slots_available(1, peer_id):
+                break
+            r = self.com_write(token, peer_id, pos)
+            _log.debug("exhausted_tokens on %s: (%d, %s) %s" % (
+                peer_id, pos, str(token), COMMIT_RESPONSE.reverse_mapping[r]))
+            # This is a token that now is in the queue, was in the queue or is invalid, for all cases remove it
+            exhausted_tokens.pop(0)
+        return not bool(exhausted_tokens)
+
     def get_peers(self):
         return self.writers
 
@@ -135,8 +183,6 @@ class CollectBase(object):
         return True
 
     def slots_available(self, length, metadata):
-        if not isinstance(metadata, basestring):
-            raise Exception('Not a string: %s' % metadata)
         if metadata not in self.writers:
             raise Exception("No writer %s in %s" % (metadata, self.writers))
         return length < self.N and (self.write_pos[metadata] - self.read_pos[metadata]) < (self.N - length)
@@ -149,14 +195,31 @@ class CollectBase(object):
     # The commit and cancel are only used in action firings not communication.
     # It is always all peeked tokens that are commited or canceled.
     #
-    def peek(self, metadata=None):
+    def peek(self, metadata):
         raise NotImplementedError("Sub-class must override")
 
-    def commit(self, metadata=None):
+    def commit(self, metadata):
         for writer in self.writers:
             self.read_pos[writer] = self.tentative_read_pos[writer]
+        # Transfer in exhausted tokens when possible
+        remove = []
+        _log.debug("commit collect exhausted_tokens %s" % self.exhausted_tokens)
+        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+            if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
+                remove.append(peer_id)
+        for peer_id in remove:
+            del self.exhausted_tokens[peer_id]
+        # When a terminated queue is fully consumed remove it
+        remove = []
+        for peer_id, termination in self.termination.items():
+            if (self.write_pos[peer_id] == self.read_pos[peer_id] and
+                termination == DISCONNECT.EXHAUST_PEER_RECV):
+                remove.append(peer_id)
+        for peer_id in remove:
+            self.remove_writer(peer_id)
+            del self.termination[peer_id]
 
-    def cancel(self, metadata=None):
+    def cancel(self, metadata):
         for writer in self.writers:
             self.tentative_read_pos[writer] = self.read_pos[writer]
 
@@ -174,7 +237,7 @@ class CollectBase(object):
         else:
             return COMMIT_RESPONSE.invalid
 
-    def com_peek(self, metadata=None):
+    def com_peek(self, metadata):
         raise NotImplementedError("The unordered fanin queue should not be used on an outport")
 
     def com_commit(self, reader, sequence_nbr):

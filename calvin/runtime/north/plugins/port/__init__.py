@@ -7,4 +7,4 @@ from calvin.utilities.utils import enum
 # EXHAUST and EXHAUST_PEER are used at actor port, endpoint and connection level
 # EXHAUST_INPORT, EXHAUST_OUTPORT, EXHAUST_PEER_SEND, EXHAUST_PEER_RECV are used at queue level
 DISCONNECT = enum('TEMPORARY', 'TERMINATE', 'EXHAUST', 'EXHAUST_PEER',
-                  'EXHAUST_INPORT', 'EXHAUST_OUTPORT', 'EXHAUST_PEER_SEND', 'EXHAUST_PEER_RECV')
+                  'EXHAUST_INPORT', 'EXHAUST_OUTPORT', 'EXHAUST_PEER_RECV', 'EXHAUST_PEER_SEND')

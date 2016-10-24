@@ -44,7 +44,7 @@ class CollectAny(CollectBase):
                 return True
         return False
 
-    def peek(self, metadata=None):
+    def peek(self, metadata):
         value = {}
         for writer in self.writers:
             if self.write_pos[writer] == self.tentative_read_pos[writer]:

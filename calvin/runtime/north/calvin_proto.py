@@ -344,7 +344,7 @@ class CalvinProto(CalvinCBClass):
         """ Peer request destruction of app and its actors """
         if payload.get('disconnect', False):
             self.node.app_manager.destroy_request_with_disconnect(payload['app_uuid'],
-                  payload['actor_uuids'] if 'actor_uuids' in payload else [],
+                  payload['actor_uuids'] if 'actor_uuids' in payload else [], payload['disconnect'],
                   callback=CalvinCB(self._app_destroy_handler, payload=payload))
         else:
             reply = self.node.app_manager.destroy_request(payload['app_uuid'],

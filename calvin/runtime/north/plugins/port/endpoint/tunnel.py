@@ -53,8 +53,12 @@ class TunnelInEndpoint(Endpoint):
             self.port.queue.add_writer(self.peer_id, self.peer_port_properties)
 
     def detached(self, terminate=DISCONNECT.TEMPORARY):
-        if terminate and self.peer_id is not None:
+        if terminate == DISCONNECT.TERMINATE and self.peer_id is not None:
             self.port.queue.remove_writer(self.peer_id)
+        elif terminate == DISCONNECT.EXHAUST:
+            self.port.queue.exhaust(QueueExhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_INPORT, endpoint=self))
+        elif terminate == DISCONNECT.EXHAUST_PEER:
+            self.port.queue.exhaust(QueueExhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_PEER_RECV, endpoint=self))
 
     def recv_token(self, payload):
         try:
@@ -119,12 +123,18 @@ class TunnelOutEndpoint(Endpoint):
         self.port.queue.add_writer(self.port.id, self.port.properties)
 
     def detached(self, terminate=DISCONNECT.TEMPORARY):
-        # cancel any tentative reads to acked reads
-        # Tunneled transport tokens after last continuous acked token will be resent later,
-        # receiver will just ack them again if rereceived
-        self.port.queue.cancel(self.peer_id)
-        if terminate:
+        if terminate == DISCONNECT.TEMPORARY:
+            # cancel any tentative reads to acked reads
+            # Tunneled transport tokens after last continuous acked token will be resent later,
+            # receiver will just ack them again if rereceived
+            self.port.queue.cancel(self.peer_id)
+        elif terminate == DISCONNECT.TERMINATE:
+            self.port.queue.cancel(self.peer_id)
             self.port.queue.remove_reader(self.peer_id)
+        elif terminate == DISCONNECT.EXHAUST:
+            self.port.queue.exhaust(QueueExhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_OUTPORT, endpoint=self))
+        elif terminate == DISCONNECT.EXHAUST_PEER:
+            self.port.queue.exhaust(QueueExhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_PEER_SEND, endpoint=self))
 
     def reply(self, sequencenbr, status):
         _log.debug("Reply on port %s/%s/%s [%i] %s" % (self.port.owner.name, self.peer_id, self.port.name, sequencenbr, status))

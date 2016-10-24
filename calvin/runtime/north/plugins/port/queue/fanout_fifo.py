@@ -16,6 +16,7 @@
 
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
+from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
@@ -48,6 +49,8 @@ class FanoutFIFO(object):
         self.reader_offset = {}
         self._type = "fanout_fifo"
         self.writer = None  # Not part of state, assumed not needed in migrated information
+        self.exhausted_tokens = {}
+        self.termination = {}
 
     def __str__(self):
         return "Tokens: %s, w:%i, r:%s, tr:%s" % (self.fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
@@ -101,29 +104,71 @@ class FanoutFIFO(object):
     def add_reader(self, reader, properties):
         if not isinstance(reader, basestring):
             raise Exception('Not a string: %s' % reader)
-        if reader not in self.readers:
-            self.readers.add(reader)
-            if len(self.readers) > self.nbr_peers:
-                self.nbr_peers = len(self.readers)
-                # Replicated actor connect for first time, start from oldest possible
-                oldest = min(self.read_pos.values())
-                #_log.info("ADD_READER %s %s %d" % (reader, str(id(self)), oldest))
-                self.reader_offset[reader] = oldest
-                self.read_pos[reader] = oldest
-                self.tentative_read_pos[reader] = oldest
-            else:
-                self.reader_offset[reader] = 0
-                self.read_pos[reader] = 0
-                self.tentative_read_pos[reader] = 0
+        if reader in self.readers:
+            return
+        self.readers.add(reader)
+        if len(self.readers) > self.nbr_peers:
+            self.nbr_peers = len(self.readers)
+            # Replicated actor connect for first time, start from oldest possible
+            oldest = min(self.read_pos.values())
+            #_log.info("ADD_READER %s %s %d" % (reader, str(id(self)), oldest))
+            self.reader_offset[reader] = oldest
+            self.read_pos[reader] = oldest
+            self.tentative_read_pos[reader] = oldest
+        else:
+            self.reader_offset[reader] = 0
+            self.read_pos[reader] = 0
+            self.tentative_read_pos[reader] = 0
 
     def remove_reader(self, reader):
-        if not isinstance(reader, basestring):
-            raise Exception('Not a string: %s' % reader)
+        if reader not in self.readers:
+            return
         del self.read_pos[reader]
         del self.tentative_read_pos[reader]
         del self.reader_offset[reader]
         self.readers.discard(reader)
         self.nbr_peers -= 1
+
+    def is_exhausting(self):
+        return bool(self.termination)
+
+    def exhaust(self, peer_id, terminate):
+        self.termination[peer_id] = terminate
+        _log.debug("exhaust %s %s %s" % (self._type, peer_id, DISCONNECT.reverse_mapping[terminate]))
+        if peer_id not in self.readers:
+            return []
+        if terminate == DISCONNECT.EXHAUST_PEER_SEND or terminate == DISCONNECT.EXHAUST_OUTPORT:
+            # Retrive remaining tokens to be returned
+            tokens = []
+            for read_pos in range(self.read_pos[peer_id], self.write_pos):
+                tokens.append([read_pos, self.fifo[read_pos % self.N]])
+            # Remove the peer, so no more waiting for this peer to read
+            self.remove_reader(peer_id)
+            _log.debug("Send exhaust tokens %s" % tokens)
+            return tokens
+        return []
+
+    def set_exhausted_tokens(self, tokens):
+        _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
+        self.exhausted_tokens.update(tokens)
+        remove = []
+        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+            if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
+                remove.append(peer_id)
+        for peer_id in remove:
+            del self.exhausted_tokens[peer_id]
+
+    def _transfer_exhaust_tokens(self, peer_id, exhausted_tokens):
+        # exhausted tokens are in sequence order, but could contain tokens already in queue
+        for pos, token in exhausted_tokens[:]:
+            if not self.slots_available(1, peer_id):
+                break
+            r = self.com_write(token, peer_id, pos)
+            _log.debug("exhausted_tokens on %s: (%d, %s) %s" % (
+                peer_id, pos, str(token), COMMIT_RESPONSE.reverse_mapping[r]))
+            # This is a token that now is in the queue, was in the queue or is invalid, for all cases remove it
+            exhausted_tokens.pop(0)
+        return not bool(exhausted_tokens)
 
     def get_peers(self):
         if self.direction == "out":
@@ -146,26 +191,20 @@ class FanoutFIFO(object):
         return (self.N - ((self.write_pos - last_readpos) % self.N) - 1) >= length
 
     def tokens_available(self, length, metadata):
-        if metadata is None and len(self.readers) == 1:
-            # we only have one reader for in port queues (the own port id)
-            # TODO create seperate FIFO without fanout possibility instead
-            metadata = next(iter(self.readers))
-        if not isinstance(metadata, basestring):
-            raise Exception('Not a string: %s' % metadata)
         if metadata not in self.readers:
             raise Exception("No reader %s in %s" % (metadata, self.readers))
+        try:
+            if self.exhausts[metadata].terminate == DISCONNECT.EXHAUST_PEER_SEND:
+                # We stop sending tokens directly to actor that want to be destroyed
+                return False
+        except:
+            pass
         return (self.write_pos - self.tentative_read_pos[metadata]) >= length
 
     #
     # Reading is done tentatively until committed
     #
-    def peek(self, metadata=None):
-        if metadata is None and len(self.readers) == 1:
-            # we only have one reader for in port queues (the own port id)
-            # TODO create seperate FIFO without fanout possibility instead
-            metadata = next(iter(self.readers))
-        if not isinstance(metadata, basestring):
-            raise Exception('Not a string: %s' % metadata)
+    def peek(self, metadata):
         if metadata not in self.readers:
             raise Exception("Unknown reader: '%s'" % metadata)
         if not self.tokens_available(1, metadata):
@@ -175,18 +214,14 @@ class FanoutFIFO(object):
         self.tentative_read_pos[metadata] = read_pos + 1
         return data
 
-    def commit(self, metadata=None):
-        if metadata is None and len(self.readers) == 1:
-            # we only have one reader for in port queues (the own port id)
-            # TODO create seperate FIFO without fanout possibility instead
-            metadata = next(iter(self.readers))
+    def commit(self, metadata):
         self.read_pos[metadata] = self.tentative_read_pos[metadata]
+        if metadata in self.exhausted_tokens:
+            if self._transfer_exhaust_tokens(metadata, self.exhausted_tokens[metadata]):
+                # Emptied
+                del self.exhausted_tokens[metadata]
 
-    def cancel(self, metadata=None):
-        if metadata is None and len(self.readers) == 1:
-            # we only have one reader for in port queues (the own port id)
-            # TODO create seperate FIFO without fanout possibility instead
-            metadata = next(iter(self.readers))
+    def cancel(self, metadata):
         self.tentative_read_pos[metadata] = self.read_pos[metadata]
 
     #
@@ -202,7 +237,7 @@ class FanoutFIFO(object):
         else:
             return COMMIT_RESPONSE.invalid
 
-    def com_peek(self, metadata=None):
+    def com_peek(self, metadata):
         pos = self.tentative_read_pos[metadata]
         return (pos - self.reader_offset[metadata], self.peek(metadata))
 

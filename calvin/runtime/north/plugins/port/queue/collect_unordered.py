@@ -61,7 +61,7 @@ class CollectUnordered(CollectBase):
                 return True
         return False
 
-    def peek(self, metadata=None):
+    def peek(self, metadata):
         for i in xrange(self.turn_pos, self.turn_pos + len(self.writers)):
             writer = self.writers[i % len(self.writers)]
             if self.write_pos[writer] - self.tentative_read_pos[writer] >= 1:

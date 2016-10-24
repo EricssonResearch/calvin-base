@@ -24,6 +24,7 @@ class Endpoint(object):
         super(Endpoint, self).__init__()
         self.port = port
         self.former_peer_id = former_peer_id
+        self.exhausted_tokens = {}
 
     def __str__(self):
         return "%s(port_id=%s)" % (self.__class__.__name__, self.port.id)

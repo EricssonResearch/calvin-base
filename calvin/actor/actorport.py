@@ -84,6 +84,9 @@ class Port(object):
         self.queue._set_state(state.pop('queue'))
         self.properties.update(state.pop('properties', {}))
 
+    def exhausted_tokens(self, tokens):
+        self.queue.set_exhausted_tokens(tokens)
+
     def attach_endpoint(self, endpoint_):
         """
         Connect port to counterpart.
@@ -98,11 +101,9 @@ class Port(object):
         raise Exception("Can't detach endpoint from  port %s.%s with id: %s" % (
             self.owner.name, self.name, self.id))
 
-    def disconnect(self):
-        """Disconnect port from counterpart. Raises an exception if port is not connected."""
-        # FIXME: Implement disconnect
-        raise Exception("Can't disconnect port %s.%s with id: %s" % (
-            self.owner.name, self.name, self.id))
+    def disconnect(self, peer_ids, terminate):
+        """Disconnect port from counterpart."""
+        raise Exception("Must be implemented in sub-classes")
 
     @property
     def direction(self):
@@ -174,12 +175,12 @@ class InPort(Port):
             endpoints = self.endpoints
         else:
             endpoints = [e for e in self.endpoints if e.get_peer()[1] in peer_ids]
-        _log.debug("actorinport.disconnect   remove: %s current: %s %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints], "TERMINATE" if terminate else ""))
+        _log.debug("actorinport.disconnect   remove: %s current: %s %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints], DISCONNECT.reverse_mapping[terminate]))
         # Remove all endpoints corresponding to the peer ids
         self.endpoints = [e for e in self.endpoints if e not in endpoints]
         for e in endpoints:
             e.detached(terminate=terminate)
-        if terminate:
+        if terminate >= DISCONNECT.TERMINATE:
             self.properties['nbr_peers'] -= len(endpoints)
         if len(self.endpoints) == 0:
             self.owner.did_disconnect(self)
@@ -188,18 +189,26 @@ class InPort(Port):
 
     def peek_token(self, metadata=None):
         """Used by actor (owner) to peek a token from the port. Following peeks will get next token. Reset with peek_cancel."""
+        if metadata is None:
+            metadata = self.id
         return self.queue.peek(metadata)
 
     def peek_cancel(self, metadata=None):
         """Used by actor (owner) to cancel port peeking to front token."""
+        if metadata is None:
+            metadata = self.id
         return self.queue.cancel(metadata)
 
     def peek_commit(self, metadata=None):
-        """Used by actor (owner) to cancel port peeking to front token."""
-        return self.queue.commit()
+        """Used by actor (owner) to commit port peeking to front token."""
+        if metadata is None:
+            metadata = self.id
+        return self.queue.commit(metadata)
 
     def tokens_available(self, length, metadata=None):
         """Used by actor (owner) to check number of tokens on the port."""
+        if metadata is None:
+            metadata = self.id
         return self.queue.tokens_available(length, metadata)
 
     def get_peers(self):
@@ -208,7 +217,7 @@ class InPort(Port):
             peers.append(ep.get_peer())
         queue_peers = self.queue.get_peers()
         if queue_peers is not None and len(peers) < len(queue_peers):
-            all = copy.copy(queue_peers)
+            all = set(queue_peers)
             all -= set([p[1] for p in peers])
             peers.extend([(None, p) for p in all])
         return peers
@@ -280,14 +289,13 @@ class OutPort(Port):
             endpoints = self.endpoints
         else:
             endpoints = [e for e in self.endpoints if e.get_peer()[1] in peer_ids]
-        _log.debug("actoroutport.disconnect   remove: %s current: %s %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints], "TERMINATE" if terminate else ""))
+        _log.debug("actoroutport.disconnect   remove: %s current: %s %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints], DISCONNECT.reverse_mapping[terminate]))
         # Remove all endpoints corresponding to the peer ids
         self.endpoints = [e for e in self.endpoints if e not in endpoints]
         for e in endpoints:
             e.detached(terminate=terminate)
         if terminate:
             self.properties['nbr_peers'] -= len(endpoints)
-        
         if len(self.endpoints) == 0:
             self.owner.did_disconnect(self)
         _log.debug("actoroutport.disconnected remove: %s current: %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints]))
@@ -307,7 +315,7 @@ class OutPort(Port):
             peers.append(ep.get_peer())
         queue_peers = self.queue.get_peers()
         if queue_peers is not None and len(peers) < len(queue_peers):
-            all = copy.copy(queue_peers)
+            all = set(queue_peers)
             all -= set([p[1] for p in peers])
             peers.extend([(None, p) for p in all])
         return peers

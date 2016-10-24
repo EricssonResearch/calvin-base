@@ -1269,9 +1269,10 @@ class CalvinControl(object):
         except:
             dereplicate = False
         if dereplicate:
+            exhaust = data.get('exhaust', False)
             try:
                 self.node.rm.dereplicate(
-                    match.group(1), CalvinCB(self.handle_actor_replicate_cb, handle, connection))
+                    match.group(1), CalvinCB(self.handle_actor_replicate_cb, handle, connection), exhaust)
             except:
                 _log.exception("Dereplication failed")
             return

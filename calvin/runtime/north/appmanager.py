@@ -336,12 +336,12 @@ class AppManager(object):
         _log.analyze(self._node.id, "+ RESPONSE", {'reply': str(reply)})
         return reply
 
-    def destroy_request_with_disconnect(self, application_id, actor_ids, callback=None):
+    def destroy_request_with_disconnect(self, application_id, actor_ids, terminate, callback=None):
         _log.analyze(self._node.id, "+", {'application_id': application_id, 'actor_ids': actor_ids})
         missing = []
         for actor_id in actor_ids[:]:
             if actor_id in self._node.am.list_actors():
-                self._node.am.destroy_with_disconnect(actor_id,
+                self._node.am.destroy_with_disconnect(actor_id, terminate,
                     callback=CalvinCB(self._destroy_request_with_disconnect_cb, application_id=application_id,
                                         actor_ids=actor_ids, actor_id=actor_id, callback=callback, missing=missing))
             else:
