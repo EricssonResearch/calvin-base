@@ -54,3 +54,15 @@ def uniq_list(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
+
+class Mock(object):
+    """A mock object that returns same answer to any attr or dict"""
+    def __init__(self, value):
+        super(Mock, self).__init__()
+        self.value = value
+
+    def __getattr__(self, name):
+        return self.value
+
+    def __getitem__(self, name):
+        return self.value
