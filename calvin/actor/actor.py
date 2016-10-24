@@ -429,9 +429,12 @@ class Actor(object):
             self.name, self._type, self.fsm, ip, op)
         return s
 
-    @verify_status([STATUS.READY, STATUS.PENDING])
+    @verify_status([STATUS.READY, STATUS.PENDING, STATUS.ENABLED])
     def did_connect(self, port):
         """Called when a port is connected, checks actor is fully connected."""
+        if self.fsm.state() == Actor.STATUS.ENABLED:
+            # We already was enabled thats fine now with dynamic port connections
+            return
         _log.debug("actor.did_connect BEGIN %s %s " % (self.name, self.id))
         # If we happen to be in READY, go to PENDING
         if self.fsm.state() == Actor.STATUS.READY:

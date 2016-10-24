@@ -88,10 +88,10 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+", {'port_id': self.port.id})
         endpoints = self.port.disconnect(peer_ids=[self.peer_port_meta.port_id], terminate=terminate)
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
-        # Should only be one but maybe future ports will have multiple endpoints for a peer
-        exhausted_tokens = {}
+        remaining_tokens = {}
+        # Can only be one for the one peer as argument to disconnect, but loop for simplicity
         for ep in endpoints:
-            exhausted_tokens.update(ep.exhausted_tokens)
+            remaining_tokens.update(ep.remaining_tokens)
             if ep.use_monitor():
                 self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
@@ -101,19 +101,19 @@ class LocalConnection(BaseConnection):
         terminate_peer = DISCONNECT.EXHAUST_PEER if terminate == DISCONNECT.EXHAUST else terminate
         endpoints = self.peer_port_meta.port.disconnect(peer_ids=[self.port.id], terminate=terminate_peer)
         _log.analyze(self.node.id, "+ EP PEER", {'port_id': self.port.id, 'endpoints': endpoints})
-        # Should only be one but maybe future ports will have multiple endpoints for a peer
-        peer_exhausted_tokens = {}
+        peer_remaining_tokens = {}
+        # Can only be one for the one peer as argument to disconnect, but loop for simplicity
         for ep in endpoints:
-            peer_exhausted_tokens.update(ep.exhausted_tokens)
+            peer_remaining_tokens.update(ep.remaining_tokens)
             if ep.use_monitor():
                 self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
         _log.analyze(self.node.id, "+ DISCONNECTED", {'port_id': self.port.id})
 
-        self.port.exhausted_tokens(peer_exhausted_tokens)
-        self.peer_port_meta.port.exhausted_tokens(exhausted_tokens)
+        self.port.exhausted_tokens(peer_remaining_tokens)
+        self.peer_port_meta.port.exhausted_tokens(remaining_tokens)
 
-        # Update storage
+        # Update storage, the ports are disconnected even if an inport during exhaustion still delivers tokens
         if terminate:
             self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
             self.node.storage.add_port(self.peer_port_meta.port, self.node.id, self.peer_port_meta.port.owner.id)

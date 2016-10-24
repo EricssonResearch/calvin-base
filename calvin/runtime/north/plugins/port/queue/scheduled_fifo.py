@@ -181,8 +181,8 @@ class ScheduledFIFO(object):
         self.nbr_peers -= 1
         self._reset_turn()
 
-    def is_exhausting(self):
-        return bool(self.termination)
+    def is_exhausting(self, peer_id=None):
+        return False
 
     def exhaust(self, peer_id, terminate):
         _log.debug("exhaust %s %s %s" % (self._type, peer_id, DISCONNECT.reverse_mapping[terminate]))
@@ -205,6 +205,7 @@ class ScheduledFIFO(object):
         _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
         if tokens and tokens.values()[0]:
             _log.error("Got exhaust tokens on scheduler_fifo port %s" % str(tokens))
+        return self.nbr_peers
 
     def get_peers(self):
         return self.readers

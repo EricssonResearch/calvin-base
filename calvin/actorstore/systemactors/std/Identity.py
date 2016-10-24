@@ -25,9 +25,10 @@ class Identity(Actor):
     Outputs:
       token : the same token
     """
-    @manage(['dump'])
+    @manage(['dump', 'last'])
     def init(self, dump=False):
         self.dump = dump
+        self.last = None
 
     def log(self, data):
         print "%s<%s>: %s" % (self.__class__.__name__, self.id, data)
@@ -36,7 +37,11 @@ class Identity(Actor):
     def donothing(self, input):
         if self.dump:
             self.log(input)
+        self.last = input
         return ActionResult(production=(input, ))
+
+    def report(self):
+        return self.last
 
     action_priority = (donothing, )
 

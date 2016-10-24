@@ -129,15 +129,18 @@ class FanoutFIFO(object):
         self.readers.discard(reader)
         self.nbr_peers -= 1
 
-    def is_exhausting(self):
-        return bool(self.termination)
+    def is_exhausting(self, peer_id=None):
+        if peer_id is None:
+            return bool(self.termination)
+        else:
+            return peer_id in self.termination
 
     def exhaust(self, peer_id, terminate):
         self.termination[peer_id] = terminate
         _log.debug("exhaust %s %s %s" % (self._type, peer_id, DISCONNECT.reverse_mapping[terminate]))
         if peer_id not in self.readers:
             return []
-        if terminate == DISCONNECT.EXHAUST_PEER_SEND or terminate == DISCONNECT.EXHAUST_OUTPORT:
+        if terminate in [DISCONNECT.EXHAUST_PEER_SEND, DISCONNECT.EXHAUST_OUTPORT]:
             # Retrive remaining tokens to be returned
             tokens = []
             for read_pos in range(self.read_pos[peer_id], self.write_pos):
@@ -145,6 +148,7 @@ class FanoutFIFO(object):
             # Remove the peer, so no more waiting for this peer to read
             self.remove_reader(peer_id)
             _log.debug("Send exhaust tokens %s" % tokens)
+            del self.termination[peer_id]
             return tokens
         return []
 
@@ -157,6 +161,18 @@ class FanoutFIFO(object):
                 remove.append(peer_id)
         for peer_id in remove:
             del self.exhausted_tokens[peer_id]
+        # If fully consumed remove peer_ids in tokens
+        for peer_id in tokens.keys():
+            if (self.termination.get(peer_id, -1) in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
+                min(self.read_pos.values() or [0]) == self.write_pos):
+                del self.termination[peer_id]
+                # Acting as inport then only one reader, remove it if still around
+                try:
+                    reader = self.readers[0]
+                    self.remove_reader(reader)
+                except:
+                    _log.exception("Tried to remove reader on fanout fifo")
+        return self.nbr_peers
 
     def _transfer_exhaust_tokens(self, peer_id, exhausted_tokens):
         # exhausted tokens are in sequence order, but could contain tokens already in queue
@@ -193,12 +209,6 @@ class FanoutFIFO(object):
     def tokens_available(self, length, metadata):
         if metadata not in self.readers:
             raise Exception("No reader %s in %s" % (metadata, self.readers))
-        try:
-            if self.exhausts[metadata].terminate == DISCONNECT.EXHAUST_PEER_SEND:
-                # We stop sending tokens directly to actor that want to be destroyed
-                return False
-        except:
-            pass
         return (self.write_pos - self.tentative_read_pos[metadata]) >= length
 
     #
@@ -220,6 +230,16 @@ class FanoutFIFO(object):
             if self._transfer_exhaust_tokens(metadata, self.exhausted_tokens[metadata]):
                 # Emptied
                 del self.exhausted_tokens[metadata]
+        # If fully consumed remove queue
+        if (self.termination.get(metadata, -1) in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
+            min(self.read_pos.values() or [0]) == self.write_pos):
+            del self.termination[metadata]
+            # Acting as inport then only one reader, remove it if still around
+            try:
+                reader = self.readers[0]
+                self.remove_reader(reader)
+            except:
+                _log.exception("Tried to remove reader on fanout fifo")
 
     def cancel(self, metadata):
         self.tentative_read_pos[metadata] = self.read_pos[metadata]

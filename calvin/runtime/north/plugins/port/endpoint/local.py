@@ -46,10 +46,10 @@ class LocalInEndpoint(Endpoint):
             self.port.queue.remove_writer(self.peer_port.id)
         elif terminate == DISCONNECT.EXHAUST:
             tokens = self.port.queue.exhaust(peer_id=self.peer_port.id, terminate=DISCONNECT.EXHAUST_INPORT)
-            self.exhausted_tokens = {self.peer_port.id: tokens}
+            self.remaining_tokens = {self.port.id: tokens}
         elif terminate == DISCONNECT.EXHAUST_PEER:
             tokens = self.port.queue.exhaust(peer_id=self.peer_port.id, terminate=DISCONNECT.EXHAUST_PEER_RECV)
-            self.exhausted_tokens = {self.peer_port.id: tokens}
+            self.remaining_tokens = {self.port.id: tokens}
 
     def get_peer(self):
         return ('local', self.peer_id)
@@ -80,10 +80,10 @@ class LocalOutEndpoint(Endpoint):
             self.port.queue.remove_reader(self.peer_port.id)
         elif terminate == DISCONNECT.EXHAUST:
             tokens = self.port.queue.exhaust(peer_id=self.peer_port.id, terminate=DISCONNECT.EXHAUST_OUTPORT)
-            self.exhausted_tokens = {self.port.id: tokens}
+            self.remaining_tokens = {self.port.id: tokens}
         elif terminate == DISCONNECT.EXHAUST_PEER:
             tokens = self.port.queue.exhaust(peer_id=self.peer_port.id, terminate=DISCONNECT.EXHAUST_PEER_SEND)
-            self.exhausted_tokens = {self.peer_port.id: tokens}
+            self.remaining_tokens = {self.port.id: tokens}
 
     def get_peer(self):
         return ('local', self.peer_id)

@@ -20,6 +20,8 @@ from calvin.runtime.north.plugins.port import queue
 import calvin.requests.calvinresponse as response
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.north.plugins.port import DISCONNECT
+from calvin.runtime.south.plugins.async import async
+
 import copy
 
 _log = get_logger(__name__)
@@ -83,9 +85,6 @@ class Port(object):
         self.id = state.pop('id')
         self.queue._set_state(state.pop('queue'))
         self.properties.update(state.pop('properties', {}))
-
-    def exhausted_tokens(self, tokens):
-        self.queue.set_exhausted_tokens(tokens)
 
     def attach_endpoint(self, endpoint_):
         """
@@ -182,10 +181,18 @@ class InPort(Port):
             e.detached(terminate=terminate)
         if terminate >= DISCONNECT.TERMINATE:
             self.properties['nbr_peers'] -= len(endpoints)
-        if len(self.endpoints) == 0:
+        exhausting = any([self.queue.is_exhausting(e.peer_id) for e in endpoints])
+        if len(self.endpoints) == 0 and not exhausting:
             self.owner.did_disconnect(self)
         _log.debug("actorinport.disconnected remove: %s current: %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints]))
         return endpoints
+
+    def exhausted_tokens(self, tokens):
+        self.queue.set_exhausted_tokens(tokens)
+        exhausting = any([self.queue.is_exhausting(peer_id) for peer_id in tokens.keys()])
+        if len(self.endpoints) == 0 and not exhausting:
+            self.owner.did_disconnect(self)
+            _log.debug("actorinport.exhausted_tokens did_disconnect")
 
     def peek_token(self, metadata=None):
         """Used by actor (owner) to peek a token from the port. Following peeks will get next token. Reset with peek_cancel."""
@@ -203,7 +210,12 @@ class InPort(Port):
         """Used by actor (owner) to commit port peeking to front token."""
         if metadata is None:
             metadata = self.id
-        return self.queue.commit(metadata)
+        e = self.queue.is_exhausting()
+        r = self.queue.commit(metadata)
+        if e and not self.queue.is_exhausting():
+            # Finsihed handling exhaustion
+            async.DelayedCall(0, self.owner.did_disconnect)
+        return r
 
     def tokens_available(self, length, metadata=None):
         """Used by actor (owner) to check number of tokens on the port."""
@@ -300,6 +312,9 @@ class OutPort(Port):
             self.owner.did_disconnect(self)
         _log.debug("actoroutport.disconnected remove: %s current: %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints]))
         return endpoints
+
+    def exhausted_tokens(self, tokens):
+        self.queue.set_exhausted_tokens(tokens)
 
     def write_token(self, data):
         """docstring for write_token"""

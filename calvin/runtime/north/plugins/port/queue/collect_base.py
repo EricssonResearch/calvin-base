@@ -125,8 +125,11 @@ class CollectBase(object):
     def remove_reader(self, reader):
         pass
 
-    def is_exhausting(self):
-        return bool(self.termination)
+    def is_exhausting(self, peer_id=None):
+        if peer_id is None:
+            return bool(self.termination)
+        else:
+            return peer_id in self.termination
 
     def exhaust(self, peer_id, terminate):
         # We can't do anything until we consumed the last token
@@ -136,8 +139,6 @@ class CollectBase(object):
 
     def set_exhausted_tokens(self, tokens):
         _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
-        _log.debug("current exhausted_tokens %s" % (self.exhausted_tokens))
-        _log.debug("writers exhausted_tokens %s" % (self.writers))
         self.exhausted_tokens.update(tokens)
         remove = []
         for peer_id, exhausted_tokens in self.exhausted_tokens.items():
@@ -154,9 +155,10 @@ class CollectBase(object):
             if peer_id not in self.writers:
                 continue
             if (self.write_pos[peer_id] == self.read_pos[peer_id] and
-                self.termination[peer_id] == DISCONNECT.EXHAUST_PEER_RECV):
+                self.termination[peer_id] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT]):
                 self.remove_writer(peer_id)
                 del self.termination[peer_id]
+        return self.nbr_peers
 
     def _transfer_exhaust_tokens(self, peer_id, exhausted_tokens):
         # exhausted tokens are in sequence order, but could contain tokens already in queue
@@ -213,7 +215,7 @@ class CollectBase(object):
         remove = []
         for peer_id, termination in self.termination.items():
             if (self.write_pos[peer_id] == self.read_pos[peer_id] and
-                termination == DISCONNECT.EXHAUST_PEER_RECV):
+                termination in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT]):
                 remove.append(peer_id)
         for peer_id in remove:
             self.remove_writer(peer_id)

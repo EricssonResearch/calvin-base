@@ -888,9 +888,12 @@ class TestReplication(CalvinTestBase):
         deresult2a = request_handler.replicate(self.rt1, ident)
         time.sleep(0.5)
         actual_first = request_handler.report(self.rt1, snk)
+        ident_report2 = request_handler.report(self.rt1, deresult2a['actor_id'])
         deresult1b = request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True)
+        ident_report1 = request_handler.report(self.rt1, deresult1a['actor_id'])
         deresult2b = request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True)
         print result, deresult1a, deresult1b, deresult2a, deresult2b
+        print ident_report1, ident_report2
         time.sleep(0.5)
         actual_second = request_handler.report(self.rt1, snk)
         ident2 = result['actor_id']
