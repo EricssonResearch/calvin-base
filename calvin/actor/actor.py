@@ -159,7 +159,12 @@ def condition(action_input=[], action_output=[]):
                 # Commit to the read from the FIFOs
                 #
                 for (portname, _) in action_input:
-                    self.inports[portname].peek_commit()
+                    try:
+                        exhausted = self.inports[portname].peek_commit()
+                        if exhausted:
+                            action_result.exhausted_ports.add(self.inports[portname])
+                    except:
+                        _log.exception("PORTCOMMIT EXCEPTION")
                 #
                 # Write the results from the action to the output port(s)
                 #
@@ -245,6 +250,7 @@ class ActionResult(object):
         self.tokens_consumed = 0
         self.tokens_produced = 0
         self.production = production
+        self.exhausted_ports = set([])
 
     def __str__(self):
         fmtstr = "%s - did_fire:%s, consumed:%d, produced:%d"
@@ -263,6 +269,7 @@ class ActionResult(object):
         self.output_ok &= other_result.output_ok
         self.tokens_consumed += other_result.tokens_consumed
         self.tokens_produced += other_result.tokens_produced
+        self.exhausted_ports |= other_result.exhausted_ports
 
 
 def _implements_state(obj):
@@ -463,6 +470,7 @@ class Actor(object):
     def did_disconnect(self, port):
         """Called when a port is disconnected, checks actor is fully disconnected."""
         # If the actor is MIGRATABLE, return since it will be migrated soon.
+        _log.debug("Actor %s did_disconnect %s" % (self.id, Actor.STATUS.reverse_mapping[self.fsm.state()]))
         if self.fsm.state() == Actor.STATUS.MIGRATABLE:
             return
         # If we happen to be in ENABLED/DENIED, go to PENDING
@@ -528,6 +536,14 @@ class Actor(object):
                     # Every other minute warn if an actor runs for longer than 200 ms
                     self._last_time_warning = start_time
                     _log.warning("%s (%s) actor blocked for %f sec" % (self.name, self._type, diff))
+                for port in action_result.exhausted_ports:
+                    # Might result in actor changing to PENDING
+                    try:
+                        port.finished_exhaustion()
+                    except:
+                        _log.exception("FINSIHED EXHAUSTION FAILED")
+                if self._exhaust_cb is not None:
+                    _log.debug("EXHAUSTINGCB %s" % action_result.output_ok)
                 if action_result.output_ok and self._exhaust_cb is not None:
                     # We are in exhaustion and stopped firing while token slots available, i.e. exhausted inputs or deadlock
                     # FIXME handle exhaustion deadlock

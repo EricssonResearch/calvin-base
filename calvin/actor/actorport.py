@@ -20,7 +20,6 @@ from calvin.runtime.north.plugins.port import queue
 import calvin.requests.calvinresponse as response
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.north.plugins.port import DISCONNECT
-from calvin.runtime.south.plugins.async import async
 
 import copy
 
@@ -194,6 +193,11 @@ class InPort(Port):
             self.owner.did_disconnect(self)
             _log.debug("actorinport.exhausted_tokens did_disconnect")
 
+    def finished_exhaustion(self):
+        if len(self.endpoints) == 0 and not self.queue.is_exhausting():
+            self.owner.did_disconnect(self)
+            _log.debug("actorinport.finished_exhaustion did_disconnect")
+
     def peek_token(self, metadata=None):
         """Used by actor (owner) to peek a token from the port. Following peeks will get next token. Reset with peek_cancel."""
         if metadata is None:
@@ -210,12 +214,8 @@ class InPort(Port):
         """Used by actor (owner) to commit port peeking to front token."""
         if metadata is None:
             metadata = self.id
-        e = self.queue.is_exhausting()
-        r = self.queue.commit(metadata)
-        if e and not self.queue.is_exhausting():
-            # Finsihed handling exhaustion
-            async.DelayedCall(0, self.owner.did_disconnect)
-        return r
+        # The return has information on if the queue exhausted the remaining tokens
+        return self.queue.commit(metadata)
 
     def tokens_available(self, length, metadata=None):
         """Used by actor (owner) to check number of tokens on the port."""

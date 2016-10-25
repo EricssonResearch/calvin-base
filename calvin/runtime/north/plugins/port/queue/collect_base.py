@@ -220,6 +220,7 @@ class CollectBase(object):
         for peer_id in remove:
             self.remove_writer(peer_id)
             del self.termination[peer_id]
+        return bool(remove)
 
     def cancel(self, metadata):
         for writer in self.writers:

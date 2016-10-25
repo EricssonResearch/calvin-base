@@ -259,6 +259,7 @@ class ScheduledFIFO(object):
 
     def commit(self, metadata):
         self.read_pos[metadata] = self.tentative_read_pos[metadata]
+        return False
 
     def cancel(self, metadata):
         self.tentative_read_pos[metadata] = self.read_pos[metadata]

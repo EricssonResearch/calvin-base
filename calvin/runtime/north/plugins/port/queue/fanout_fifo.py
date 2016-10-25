@@ -153,7 +153,7 @@ class FanoutFIFO(object):
         return []
 
     def set_exhausted_tokens(self, tokens):
-        _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
+        _log.debug("set_exhausted_tokens %s %s %s" % (self._type, tokens, {k:DISCONNECT.reverse_mapping[v] for k, v in self.termination.items()}))
         self.exhausted_tokens.update(tokens)
         remove = []
         for peer_id, exhausted_tokens in self.exhausted_tokens.items():
@@ -168,7 +168,7 @@ class FanoutFIFO(object):
                 del self.termination[peer_id]
                 # Acting as inport then only one reader, remove it if still around
                 try:
-                    reader = self.readers[0]
+                    reader = next(iter(self.readers))
                     self.remove_reader(reader)
                 except:
                     _log.exception("Tried to remove reader on fanout fifo")
@@ -207,6 +207,8 @@ class FanoutFIFO(object):
         return (self.N - ((self.write_pos - last_readpos) % self.N) - 1) >= length
 
     def tokens_available(self, length, metadata):
+        if not self.readers:
+            return False
         if metadata not in self.readers:
             raise Exception("No reader %s in %s" % (metadata, self.readers))
         return (self.write_pos - self.tentative_read_pos[metadata]) >= length
@@ -226,20 +228,28 @@ class FanoutFIFO(object):
 
     def commit(self, metadata):
         self.read_pos[metadata] = self.tentative_read_pos[metadata]
-        if metadata in self.exhausted_tokens:
-            if self._transfer_exhaust_tokens(metadata, self.exhausted_tokens[metadata]):
+        remove = []
+        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+            if self._transfer_exhaust_tokens(peer_id, self.exhausted_tokens[peer_id]):
                 # Emptied
-                del self.exhausted_tokens[metadata]
+                remove.append(peer_id)
+        for peer_id in remove:
+            del self.exhausted_tokens[peer_id]
         # If fully consumed remove queue
+        terminated = False
+        if self.termination:
+            _log.debug("COMMIT %s %s" % (metadata, {k:DISCONNECT.reverse_mapping[v] for k, v in self.termination.items()}))
         if (self.termination.get(metadata, -1) in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
             min(self.read_pos.values() or [0]) == self.write_pos):
             del self.termination[metadata]
+            terminated = True
             # Acting as inport then only one reader, remove it if still around
             try:
                 reader = self.readers[0]
                 self.remove_reader(reader)
             except:
                 _log.exception("Tried to remove reader on fanout fifo")
+        return terminated
 
     def cancel(self, metadata):
         self.tentative_read_pos[metadata] = self.read_pos[metadata]

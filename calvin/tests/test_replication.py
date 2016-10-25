@@ -939,3 +939,87 @@ class TestReplication(CalvinTestBase):
         assert deresult1a['actor_id'] not in actors
         assert deresult2a['actor_id'] not in actors
 
+    def testSlowExhaustDereplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            ident  : std.Identity()
+            delay  : std.ClassicDelay()
+            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            delay.token[in](routing="collect-tagged")
+            src.integer > ident.token
+            ident.token > delay.token
+            delay.token > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        ident = d.actor_map['testScript:ident']
+        snk = d.actor_map['testScript:snk']
+
+        result = request_handler.replicate(self.rt1, ident)
+        deresult1a = request_handler.replicate(self.rt1, ident)
+        deresult2a = request_handler.replicate(self.rt1, ident)
+        time.sleep(0.5)
+        actual_first = request_handler.report(self.rt1, snk)
+        ident_report2 = request_handler.report(self.rt1, deresult2a['actor_id'])
+        deresult1b = request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True)
+        ident_report1 = request_handler.report(self.rt1, deresult1a['actor_id'])
+        deresult2b = request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True)
+        print result, deresult1a, deresult1b, deresult2a, deresult2b
+        print ident_report1, ident_report2
+        time.sleep(0.2)
+        # Stop the flood of tokens, to make sure all are passed
+        r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
+        print "STOPPED Counter", r
+        time.sleep(5)
+        actual_second = request_handler.report(self.rt1, snk)
+        ident2 = result['actor_id']
+        actors = request_handler.get_actors(self.rt1)
+        assert ident2 in actors
+        ident_meta = request_handler.get_actor(self.rt1, ident)
+        ident2_meta = request_handler.get_actor(self.rt1, ident2)
+        print ident_meta
+        print ident2_meta
+        for port in ident2_meta['inports']:
+            r = request_handler.get_port(self.rt1, ident2, port['id'])
+            print port['id'], ': ', r
+        for port in ident2_meta['outports']:
+            r = request_handler.get_port(self.rt1, ident2, port['id'])
+            print port['id'], ': ', r
+
+        actual = request_handler.report(self.rt1, snk)
+        #print actual
+        assert len(actual) > len(actual_first)
+        assert len(actual_second) > len(actual_first)
+
+        a = {}
+        for t in actual_second:
+            for k, v in t.items():
+                a.setdefault(k,[]).append(v)
+        print a
+
+        assert not set.intersection(*[set(v) for v in a.values()])
+        aa = []
+        for v in a.values():
+            aa.extend(v)
+        s = sorted(aa)
+        assert s == range(s[0], s[-1]+1)
+
+        # This works since local is so fast, otherwise check how it is done in testSimpleRemoteReplication
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert ident not in actors
+        assert ident2 not in actors
+        assert src not in actors
+        assert snk not in actors
+        assert deresult1a['actor_id'] not in actors
+        assert deresult2a['actor_id'] not in actors
+

@@ -31,7 +31,7 @@ class Identity(Actor):
         self.last = None
 
     def log(self, data):
-        print "%s<%s>: %s" % (self.__class__.__name__, self.id, data)
+        print "%s<%s,%s>: %s" % (self.__class__.__name__, self.name, self.id, data)
 
     @condition(['token'], ['token'])
     def donothing(self, input):
