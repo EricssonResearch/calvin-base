@@ -1235,7 +1235,28 @@ function showActor()
         btnMigrate.id = actor.id;
         btnMigrate.value = 'Migrate';
         btnMigrate.setAttribute("onclick", "migrate(this.id)");
-        AddTableItem(tableRef, selectNode, btnMigrate);
+
+        var btnReplicate = document.createElement('input');
+        btnReplicate.type = 'button';
+        btnReplicate.className = "btn btn-primary btn-xs";
+        btnReplicate.id = actor.id;
+        btnReplicate.value = 'Replicate';
+        btnReplicate.setAttribute("onclick", "replicate(this.id)");
+
+        var btnDereplicate = document.createElement('input');
+        btnDereplicate.type = 'button';
+        btnDereplicate.className = "btn btn-primary btn-xs";
+        btnDereplicate.id = actor.id;
+        btnDereplicate.value = 'Dereplicate';
+        btnDereplicate.setAttribute("onclick", "dereplicate(this.id)");
+
+        var row = tableRef.insertRow();
+        var cell = row.insertCell(0);
+        cell.appendChild(selectNode);
+        var cell = row.insertCell(1);
+        cell.appendChild(btnMigrate);
+        cell.appendChild(btnReplicate);
+        cell.appendChild(btnDereplicate);
 
         // Add ports
         var portSelector = document.getElementById("portSelector");
@@ -1340,6 +1361,92 @@ function migrate(actor_id)
             }
         } else {
             showError("Failed to migrate, no node with id: " + actor.peer_id);
+        }
+    }
+}
+
+// Replicate actor with "actor_id" to selected (or unselected) runtime in combobox in actorsTable
+function replicate(actor_id)
+{
+    var combo = document.getElementById('selectRuntime');
+    try {
+        var peer_id = combo.options[combo.selectedIndex].id;
+    } catch(err) {
+        var peer_id = "same";
+    }
+    var actor = findActor(actor_id);
+    if (actor) {
+        var node = findRuntime(actor.peer_id);
+        if (node) {
+            if (node.control_uri) {
+                var url = node.control_uri + '/actor/' + actor.id + '/replicate';
+                if (peer_id == "same") {
+                    var data = JSON.stringify({});
+                } else {
+                    var data = JSON.stringify({'peer_node_id': peer_id});
+                }
+                console.log("replicate - url: " + url + " data: " + data);
+                $.ajax({
+                    timeout: 5000,
+                    beforeSend: function() {
+                        startSpin();
+                    },
+                    complete: function() {
+                        stopSpin();
+                    },
+                    url: url,
+                    type: 'POST',
+                    data: data,
+                    success: function() {
+                        showSuccess("Actor " + actor_id + " replicated");
+                    },
+                    error: function() {
+                        showError("Failed to replicate " + actor_id);
+                    }
+                });
+            } else {
+                showError("Node " + actor.peer_id + " has no control API");
+            }
+        } else {
+            showError("Failed to replicate, no node with id: " + actor.peer_id);
+        }
+    }
+}
+
+// Dereplicate actor with "actor_id"
+function dereplicate(actor_id)
+{
+    var actor = findActor(actor_id);
+    if (actor) {
+        var node = findRuntime(actor.peer_id);
+        if (node) {
+            if (node.control_uri) {
+                var url = node.control_uri + '/actor/' + actor.id + '/replicate';
+                var data = JSON.stringify({'dereplicate': true, 'exhaust': true});
+                console.log("replicate - url: " + url + " data: " + data);
+                $.ajax({
+                    timeout: 5000,
+                    beforeSend: function() {
+                        startSpin();
+                    },
+                    complete: function() {
+                        stopSpin();
+                    },
+                    url: url,
+                    type: 'POST',
+                    data: data,
+                    success: function() {
+                        showSuccess("Actor " + actor_id + " dereplicated");
+                    },
+                    error: function() {
+                        showError("Failed to dereplicate " + actor_id);
+                    }
+                });
+            } else {
+                showError("Node " + actor.peer_id + " has no control API");
+            }
+        } else {
+            showError("Failed to dereplicate, no node with id: " + actor.peer_id);
         }
     }
 }
@@ -1476,6 +1583,12 @@ function startTrace() {
     }
     if (document.getElementById("chkTraceActorMigrate").checked) {
         events.push("actor_migrate");
+    }
+    if (document.getElementById("chkTraceActorReplicate").checked) {
+        events.push("actor_replicate");
+    }
+    if (document.getElementById("chkTraceActorDereplicate").checked) {
+        events.push("actor_dereplicate");
     }
     if (document.getElementById("chkTraceApplicationNew").checked) {
         events.push("application_new");
@@ -1620,6 +1733,20 @@ function eventHandler(event)
         cell4.appendChild(document.createTextNode(actor.name));
         cell5.appendChild(document.createTextNode(actor.type));
         cell6.appendChild(document.createTextNode(actor.is_shadow));
+    } else if(data.type == "actor_replicate") {
+        cell3.appendChild(document.createTextNode(data.replica_actor_id));
+        cell4.appendChild(document.createTextNode(data.replication_id));
+        var actor = findActor(data.actor_id);
+        if (actor) {
+            cell5.appendChild(document.createTextNode(actor.name + " replica"));
+        }
+    } else if(data.type == "actor_dereplicate") {
+        cell3.appendChild(document.createTextNode(data.replica_actor_id));
+        cell4.appendChild(document.createTextNode(data.replication_id));
+        var actor = findActor(data.actor_id);
+        if (actor) {
+            cell5.appendChild(document.createTextNode(actor.name + " replica"));
+        }
     } else if(data.type == "actor_destroy") {
         var actor_name = "";
         var actor = findActor(data.actor_id);

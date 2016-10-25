@@ -775,6 +775,8 @@ class CalvinControl(object):
     LOG_APPLICATION_DESTROY = 6
     LOG_LINK_CONNECTED = 7
     LOG_LINK_DISCONNECTED = 8
+    LOG_ACTOR_REPLICATE = 9
+    LOG_ACTOR_DEREPLICATE = 10
 
     def __init__(self):
         self.node = None
@@ -1041,6 +1043,10 @@ class CalvinControl(object):
                         events.append(self.LOG_ACTOR_DESTROY)
                     elif event == 'actor_migrate':
                         events.append(self.LOG_ACTOR_MIGRATE)
+                    elif event == 'actor_replicate':
+                        events.append(self.LOG_ACTOR_REPLICATE)
+                    elif event == 'actor_dereplicate':
+                        events.append(self.LOG_ACTOR_DEREPLICATE)
                     elif event == 'application_new':
                         events.append(self.LOG_APPLICATION_NEW)
                     elif event == 'application_destroy':
@@ -1789,6 +1795,57 @@ class CalvinControl(object):
                     data['type'] = 'actor_migrate'
                     data['actor_id'] = actor_id
                     data['dest_node_id'] = dest_node_id
+                    if logger.connection is not None:
+                        if not logger.connection.connection_lost:
+                            logger.connection.send("data: %s\n\n" % json.dumps(data))
+                        else:
+                            disconnected.append(user_id)
+                    elif self.tunnel_client is not None and logger.handle is not None:
+                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                        self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_actor_replicate(self, actor_id, replica_actor_id, replication_id, dest_node_id):
+        """ Trace actor replication
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_ACTOR_REPLICATE in logger.events:
+                if not logger.actors or actor_id in logger.actors:
+                    data = {}
+                    data['timestamp'] = time.time()
+                    data['node_id'] = self.node.id
+                    data['type'] = 'actor_replicate'
+                    data['actor_id'] = actor_id
+                    data['dest_node_id'] = dest_node_id
+                    data['replication_id'] = replication_id
+                    data['replica_actor_id'] = replica_actor_id
+                    if logger.connection is not None:
+                        if not logger.connection.connection_lost:
+                            logger.connection.send("data: %s\n\n" % json.dumps(data))
+                        else:
+                            disconnected.append(user_id)
+                    elif self.tunnel_client is not None and logger.handle is not None:
+                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                        self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_actor_dereplicate(self, actor_id, replica_actor_id, replication_id):
+        """ Trace actor dereplication
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_ACTOR_DEREPLICATE in logger.events:
+                if not logger.actors or actor_id in logger.actors:
+                    data = {}
+                    data['timestamp'] = time.time()
+                    data['node_id'] = self.node.id
+                    data['type'] = 'actor_dereplicate'
+                    data['actor_id'] = actor_id
+                    data['replication_id'] = replication_id
+                    data['replica_actor_id'] = replica_actor_id
                     if logger.connection is not None:
                         if not logger.connection.connection_lost:
                             logger.connection.send("data: %s\n\n" % json.dumps(data))

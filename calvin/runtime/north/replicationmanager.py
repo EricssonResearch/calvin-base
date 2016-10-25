@@ -170,17 +170,22 @@ class ReplicationManager(object):
                 actor_type, state=state, prev_connections=ports, callback=CalvinCB(
                     self._replicated,
                     replication_id=actor._replication_data.id,
-                    actor_id=new_id, callback=callback))
+                    actor_id=new_id, callback=callback, master_id=actor.id, dst_node_id=dst_node_id))
         else:
             self.node.proto.actor_new(
                 dst_node_id, CalvinCB(self._replicated, replication_id=actor._replication_data.id,
-                                         actor_id=new_id, callback=callback), actor_type, state, ports)
+                                         actor_id=new_id, callback=callback, master_id=actor.id,
+                                         dst_node_id=dst_node_id),
+                actor_type, state, ports)
 
-    def _replicated(self, status, replication_id=None, actor_id=None, callback=None):
+    def _replicated(self, status, replication_id=None, actor_id=None, callback=None, master_id=None, dst_node_id=None):
         _log.analyze(self.node.id, "+", {'status': status, 'replication_id': replication_id, 'actor_id': actor_id})
         if status:
             # TODO add callback for storing
             self.node.storage.add_replica(replication_id, actor_id)
+            self.node.control.log_actor_replicate(
+                actor_id=master_id, replica_actor_id=actor_id,
+                replication_id=replication_id, dest_node_id=dst_node_id)
         if callback:
             status.data = {'actor_id': actor_id, 'replication_id': replication_id}
             callback(status)
@@ -267,5 +272,9 @@ class ReplicationManager(object):
                 cb(calvinresponse.CalvinResponse(False))
 
     def _dereplicated(self, status, replication_data, last_replica_id, node_id, cb):
+        if status:
+            self.node.control.log_actor_dereplicate(
+                actor_id=replication_data.master, replica_actor_id=last_replica_id,
+                replication_id=replication_data.id)
         if cb:
             cb(status)
