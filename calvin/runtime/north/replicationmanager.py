@@ -251,7 +251,10 @@ class ReplicationManager(object):
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
         if last_replica_id in self.node.am.actors:
-            self.node.am.destroy_with_disconnect(last_replica_id, terminate=terminate, callback=callback)
+            self.node.am.destroy_with_disconnect(last_replica_id, terminate=terminate,
+                callback=CalvinCB(self._dereplicated, replication_data=replication_data,
+                                    last_replica_id=last_replica_id, 
+                                    node_id=None, cb=callback))
         else:
             self.node.storage.get_actor(last_replica_id,
                 CalvinCB(func=self._dereplicate_actor_cb,
