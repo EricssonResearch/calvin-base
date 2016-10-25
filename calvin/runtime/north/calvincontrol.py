@@ -253,7 +253,7 @@ control_api_doc += \
     Response status code: OK or NOT_FOUND
     Response: Depends on actor
 """
-re_get_actor_report = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report\sHTTP/1")
+re_actor_report = re.compile(r"(?:GET|POST) /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report\sHTTP/1")
 
 control_api_doc += \
     """
@@ -807,7 +807,7 @@ class CalvinControl(object):
             (re_get_actors, self.handle_get_actors),
             (re_get_actor, self.handle_get_actor),
             (re_del_actor, self.handle_del_actor),
-            (re_get_actor_report, self.handle_get_actor_report),
+            (re_actor_report, self.handle_actor_report),
             (re_post_actor_migrate, self.handle_actor_migrate),
             (re_post_actor_disable, self.handle_actor_disable),
             (re_post_actor_replicate, self.handle_actor_replicate),
@@ -1209,11 +1209,12 @@ class CalvinControl(object):
             status = calvinresponse.NOT_FOUND
         self.send_response(handle, connection, None, status=status)
 
-    def handle_get_actor_report(self, handle, connection, match, data, hdr):
+    def handle_actor_report(self, handle, connection, match, data, hdr):
         """ Get report from actor
         """
         try:
-            report = self.node.am.report(match.group(1))
+            # Now we allow passing in arguments (must be dictionary or None)
+            report = self.node.am.report(match.group(1), data)
             status = calvinresponse.OK
         except:
             _log.exception("Actor report failed")

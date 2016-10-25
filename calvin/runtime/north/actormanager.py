@@ -501,11 +501,11 @@ class ActorManager(object):
         actor = self.actors.get(actor_id, None)
         return actor._type if actor else 'BAD ACTOR'
 
-    def report(self, actor_id):
+    def report(self, actor_id, kwargs):
         if actor_id not in self.actors:
             self._actor_not_found(actor_id)
 
-        return self.actors[actor_id].report()
+        return self.actors[actor_id].report(**(kwargs if kwargs and isinstance(kwargs, dict) else {}))
 
     def enabled_actors(self):
         return [actor for actor in self.actors.values() if actor.enabled()]
