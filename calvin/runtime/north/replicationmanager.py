@@ -280,4 +280,5 @@ class ReplicationManager(object):
                 actor_id=replication_data.master, replica_actor_id=last_replica_id,
                 replication_id=replication_data.id)
         if cb:
+            status.data = {'actor_id': last_replica_id}
             cb(status)

@@ -155,6 +155,19 @@ function addActorToGraph(actor)
     }
 }
 
+function removeActorFromGraph(actor)
+{
+    if (document.getElementById("chkDrawApplication").checked) {
+        if (graphTimer) {
+            clearTimeout(graphTimer);
+        }
+
+        graph.removeNode(actor.id);
+
+        graphTimer = setTimeout(updateGraph, 1000);
+    }
+}
+
 function addPortToGraph(port)
 {
     if (document.getElementById("chkDrawApplication").checked && document.getElementById("chkDrawConnections").checked) {
@@ -284,6 +297,17 @@ function findActor(id)
     for (index in actors) {
         if (actors[index].id == id) {
             return actors[index];
+        }
+    }
+}
+
+// Return actor from id and remove it
+function popActor(id)
+{
+    var index;
+    for (index in actors) {
+        if (actors[index].id == id) {
+            return actors.splice(index, 1);
         }
     }
 }
@@ -1397,8 +1421,9 @@ function replicate(actor_id)
                     url: url,
                     type: 'POST',
                     data: data,
-                    success: function() {
-                        showSuccess("Actor " + actor_id + " replicated");
+                    success: function(data) {
+                        //getActor(data['actor_id'], false);
+                        showSuccess("Actor " + actor_id + " replicated as " + data['actor_id']);
                     },
                     error: function() {
                         showError("Failed to replicate " + actor_id);
@@ -1435,7 +1460,8 @@ function dereplicate(actor_id)
                     url: url,
                     type: 'POST',
                     data: data,
-                    success: function() {
+                    success: function(data) {
+                        //popActor(data['actor_id'])
                         showSuccess("Actor " + actor_id + " dereplicated");
                     },
                     error: function() {
@@ -1736,16 +1762,23 @@ function eventHandler(event)
     } else if(data.type == "actor_replicate") {
         cell3.appendChild(document.createTextNode(data.replica_actor_id));
         cell4.appendChild(document.createTextNode(data.replication_id));
+        // FIXME do it properly with adding to application drawing (we might have several apps)
         var actor = findActor(data.actor_id);
         if (actor) {
             cell5.appendChild(document.createTextNode(actor.name + " replica"));
         }
+        getActor(data.replica_actor_id, false);
     } else if(data.type == "actor_dereplicate") {
         cell3.appendChild(document.createTextNode(data.replica_actor_id));
         cell4.appendChild(document.createTextNode(data.replication_id));
         var actor = findActor(data.actor_id);
         if (actor) {
             cell5.appendChild(document.createTextNode(actor.name + " replica"));
+        }
+        // FIXME do it properly with adding to application drawing (we might have several apps)
+        var actor = findActor(data.replica_actor_id)
+        if (actor) {
+            removeActorFromGraph(actor);
         }
     } else if(data.type == "actor_destroy") {
         var actor_name = "";
