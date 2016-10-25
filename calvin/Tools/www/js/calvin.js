@@ -1260,6 +1260,7 @@ function showActor()
         btnMigrate.value = 'Migrate';
         btnMigrate.setAttribute("onclick", "migrate(this.id)");
 
+        // FIXME now during testing we have manual control over replication, this will be removed later 
         var btnReplicate = document.createElement('input');
         btnReplicate.type = 'button';
         btnReplicate.className = "btn btn-primary btn-xs";
@@ -1267,6 +1268,7 @@ function showActor()
         btnReplicate.value = 'Replicate';
         btnReplicate.setAttribute("onclick", "replicate(this.id)");
 
+        // FIXME now during testing we have manual control over dereplication, this will be removed later 
         var btnDereplicate = document.createElement('input');
         btnDereplicate.type = 'button';
         btnDereplicate.className = "btn btn-primary btn-xs";
@@ -1390,6 +1392,7 @@ function migrate(actor_id)
 }
 
 // Replicate actor with "actor_id" to selected (or unselected) runtime in combobox in actorsTable
+// FIXME now during testing we have manual control over replication, this will be removed later 
 function replicate(actor_id)
 {
     var combo = document.getElementById('selectRuntime');
@@ -1439,6 +1442,7 @@ function replicate(actor_id)
 }
 
 // Dereplicate actor with "actor_id"
+// FIXME now during testing we have manual control over replication, this will be removed later 
 function dereplicate(actor_id)
 {
     var actor = findActor(actor_id);
