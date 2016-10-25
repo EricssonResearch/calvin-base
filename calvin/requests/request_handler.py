@@ -270,9 +270,12 @@ class RequestHandler(object):
         r = self._post(rt, timeout, async, SET_PORT_PROPERTY, data)
         return self.check_response(r)
 
-    def report(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
+    def report(self, rt, actor_id, kwargs=None, timeout=DEFAULT_TIMEOUT, async=False):
         path = ACTOR_REPORT.format(actor_id)
-        r = self._get(rt, timeout, async, path)
+        if kwargs:
+            r = self._post(rt, timeout, async, path, kwargs)
+        else:
+            r = self._get(rt, timeout, async, path)
         return self.check_response(r)
 
     def get_applications(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
