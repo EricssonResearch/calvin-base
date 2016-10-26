@@ -1292,6 +1292,11 @@ function showActor()
                 optionPeer.id = peers[index].id;
                 selectNode.options.add(optionPeer);
                 sortCombo(selectNode);
+            } else {
+                var optionPeer = new Option("Same");
+                optionPeer.id = peers[index].id;
+                selectNode.options.add(optionPeer);
+                sortCombo(selectNode);
             }
         }
         var btnMigrate = document.createElement('input');
@@ -1398,6 +1403,10 @@ function migrate(actor_id)
     var peer_id = combo.options[combo.selectedIndex].id;
     var actor = findActor(actor_id);
     if (actor) {
+        if (actor.peer_id == peer_id) {
+            showError("Can't migrate to same node");
+            return
+        }
         var node = findRuntime(actor.peer_id);
         if (node) {
             if (node.control_uri) {
