@@ -312,7 +312,7 @@ class PortManager(object):
             # Disconnect and destroy endpoints
             return ConnectionFactory(self.node, PURPOSE.DISCONNECT).get(
                     local_port_meta.port, peer_port_meta, payload=payload
-                    ).disconnection_request(payload.get('terminate', False))
+                    ).disconnection_request(payload.get('terminate', False), payload.get('remaining_tokens', {}))
 
     def add_ports_of_actor(self, actor):
         """ Add an actor's ports to the dictionary, used by actor manager """

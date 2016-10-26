@@ -16,6 +16,7 @@
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port import endpoint
+from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.calvin_proto import CalvinTunnel
 from calvin.runtime.north.plugins.port import queue
 import calvin.requests.calvinresponse as response
@@ -273,7 +274,8 @@ class TunnelConnection(BaseConnection):
 
         _log.analyze(self.node.id, "+", {'port_id': self.port.id})
         # Disconnect and destroy the endpoints
-        self._destroy_endpoints(terminate=terminate)
+        remaining_tokens = self._destroy_endpoints(terminate=terminate)
+        self._serialize_remaining_tokens(remaining_tokens)
 
         terminate_peer = DISCONNECT.EXHAUST_PEER if terminate == DISCONNECT.EXHAUST else terminate
         # Inform peer port of disconnection
@@ -281,7 +283,8 @@ class TunnelConnection(BaseConnection):
                                     port_id=self.port.id,
                                     peer_node_id=self.peer_port_meta.node_id,
                                     peer_port_id=self.peer_port_meta.port_id,
-                                    terminate=terminate_peer)
+                                    terminate=terminate_peer,
+                                    remaining_tokens=remaining_tokens)
 
     def _disconnected_peer(self, reply):
         """ Get called for each peer port when diconnecting but callback should only be called once"""
@@ -296,25 +299,53 @@ class TunnelConnection(BaseConnection):
             self.parallel_set('sent_callback', True)
             if self.callback:
                 self.callback(status=response.CalvinResponse(False), port_id=self.port.id)
+            return
+        try:
+            remaining_tokens = reply.data['remaining_tokens']
+            self._deserialize_remaining_tokens(remaining_tokens)
+        except:
+            _log.exception("Did not have remaining_tokens")
+            remaining_tokens = {}
+        self.port.exhausted_tokens(remaining_tokens)
+        #if terminate:
+        #    self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
         if not getattr(self, 'sent_callback', False) and not self._parallel_connections:
             # Last peer connection we should send OK
             if self.callback:
                 self.callback(status=response.CalvinResponse(True), port_id=self.port.id)
 
-    def disconnection_request(self, terminate=DISCONNECT.TEMPORARY):
+    def _serialize_remaining_tokens(self, remaining_tokens):
+        for peer_id, tokens in remaining_tokens.items():
+            for token in tokens:
+                token[1] = token[1].encode()
+
+    def _deserialize_remaining_tokens(self, remaining_tokens):
+        for peer_id, tokens in remaining_tokens.items():
+            for token in tokens:
+                token[1] = Token.decode(token[1])
+
+    def disconnection_request(self, terminate=DISCONNECT.TEMPORARY, peer_remaining_tokens=None):
         """ A request from a peer to disconnect a port"""
         # Disconnect and destroy endpoints
-        self._destroy_endpoints(terminate=terminate)
-        return response.CalvinResponse(True)
+        remaining_tokens = self._destroy_endpoints(terminate=terminate)
+        self._deserialize_remaining_tokens(peer_remaining_tokens)
+        self.port.exhausted_tokens(peer_remaining_tokens)
+        if terminate:
+            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+        self._serialize_remaining_tokens(remaining_tokens)
+        return response.CalvinResponse(True, {'remaining_tokens': remaining_tokens})
 
     def _destroy_endpoints(self, terminate=DISCONNECT.TEMPORARY):
         endpoints = self.port.disconnect(peer_ids=[self.peer_port_meta.port_id], terminate=terminate)
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
-        # Should only be one but maybe future ports will have multiple endpoints for a peer
+        remaining_tokens = {}
+        # Can only be one for the one peer as argument to disconnect, but loop for simplicity
         for ep in endpoints:
+            remaining_tokens.update(ep.remaining_tokens)
             if ep.use_monitor():
                 self.node.monitor.unregister_endpoint(ep)
             ep.destroy()
+        return remaining_tokens
 
     class TokenTunnel(object):
         """ Handles token transport over tunnel, common instance for all token tunnel connections """

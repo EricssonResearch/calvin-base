@@ -56,9 +56,11 @@ class TunnelInEndpoint(Endpoint):
         if terminate == DISCONNECT.TERMINATE and self.peer_id is not None:
             self.port.queue.remove_writer(self.peer_id)
         elif terminate == DISCONNECT.EXHAUST:
-            self.port.queue.exhaust(QueueExhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_INPORT, endpoint=self))
+            tokens = self.port.queue.exhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_INPORT)
+            self.remaining_tokens = {self.port.id: tokens}
         elif terminate == DISCONNECT.EXHAUST_PEER:
-            self.port.queue.exhaust(QueueExhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_PEER_RECV, endpoint=self))
+            tokens = self.port.queue.exhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_PEER_RECV)
+            self.remaining_tokens = {self.port.id: tokens}
 
     def recv_token(self, payload):
         try:
@@ -132,9 +134,11 @@ class TunnelOutEndpoint(Endpoint):
             self.port.queue.cancel(self.peer_id)
             self.port.queue.remove_reader(self.peer_id)
         elif terminate == DISCONNECT.EXHAUST:
-            self.port.queue.exhaust(QueueExhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_OUTPORT, endpoint=self))
+            tokens = self.port.queue.exhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_OUTPORT)
+            self.remaining_tokens = {self.port.id: tokens}
         elif terminate == DISCONNECT.EXHAUST_PEER:
-            self.port.queue.exhaust(QueueExhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_PEER_SEND, endpoint=self))
+            tokens = self.port.queue.exhaust(peer_id=self.peer_id, terminate=DISCONNECT.EXHAUST_PEER_SEND)
+            self.remaining_tokens = {self.port.id: tokens}
 
     def reply(self, sequencenbr, status):
         _log.debug("Reply on port %s/%s/%s [%i] %s" % (self.port.owner.name, self.peer_id, self.port.name, sequencenbr, status))
