@@ -1023,3 +1023,57 @@ class TestReplication(CalvinTestBase):
         assert deresult1a['actor_id'] not in actors
         assert deresult2a['actor_id'] not in actors
 
+    def testManySlowExhaustDereplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            ident  : std.Identity()
+            delay  : std.ClassicDelay()
+            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            delay.token[in](routing="collect-tagged")
+            src.integer > ident.token
+            ident.token > delay.token
+            delay.token > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.3)
+
+        src = d.actor_map['testScript:src']
+        ident = d.actor_map['testScript:ident']
+        snk = d.actor_map['testScript:snk']
+
+        result_rep = []
+        for i in range(10):
+            result_rep.append(request_handler.replicate(self.rt1, ident))
+        result_derep = []
+        for i in range(5):
+            result_derep.append(request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True))
+        for i in range(10):
+            result_rep.append(request_handler.replicate(self.rt1, ident))
+        for i in range(10):
+            result_derep.append(request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True))
+        time.sleep(0.5)
+        # Stop the flood of tokens, to make sure all are passed
+        r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
+        print "STOPPED Counter", r
+        time.sleep(5)
+        actual = request_handler.report(self.rt1, snk)
+        actors = request_handler.get_actors(self.rt1)
+        for r in result_rep[:5]:
+            assert r['actor_id'] in actors
+        for r in result_derep:
+            assert r['actor_id'] not in actors
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert ident not in actors
+        assert src not in actors
+        assert snk not in actors
+        for r in result_rep:
+            assert r['actor_id'] not in actors
+
