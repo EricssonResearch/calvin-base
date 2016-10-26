@@ -631,6 +631,7 @@ class Storage(object):
         data["is_shadow"] = isinstance(actor, ShadowActor)
         if actor._replication_data.id:
             data["replication_id"] = actor._replication_data.id
+            data["replication_master_id"] = actor._replication_data.master
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):

@@ -126,6 +126,7 @@ class ReplicationManager(object):
 
         # TODO add a callback to make sure storing worked
         self.node.storage.add_replication(actor._replication_data, cb=None)
+        self.node.storage.add_actor(actor, self.node.id, cb=None)
         #TODO trigger replication loop
         return calvinresponse.CalvinResponse(True)
 
@@ -276,6 +277,8 @@ class ReplicationManager(object):
 
     def _dereplicated(self, status, replication_data, last_replica_id, node_id, cb):
         if status:
+            # TODO add callback for storing
+            self.node.storage.remove_replica(replication_data.id, last_replica_id)
             self.node.control.log_actor_dereplicate(
                 actor_id=replication_data.master, replica_actor_id=last_replica_id,
                 replication_id=replication_data.id)

@@ -307,7 +307,7 @@ function popActor(id)
     var index;
     for (index in actors) {
         if (actors[index].id == id) {
-            return actors.splice(index, 1);
+            return actors.splice(index, 1)[0];
         }
     }
 }
@@ -775,7 +775,7 @@ function getApplication(uri, id)
 }
 
 // Get actor with id "id"
-function getActor(id, show)
+function getActor(id, show, replicas)
 {
     var url = connect_uri + '/actor/' + id;
     console.log("getActor - url: " + url)
@@ -825,12 +825,53 @@ function getActor(id, show)
                     sortCombo(actorSelector);
                     addActorToGraph(actor);
                 }
+                if (replicas && "replication_master_id" in data && data.replication_master_id == actor.id) {
+                    actor.master = true
+                    actor.replication_id = data.replication_id
+                    getReplicas(data.replication_id)
+                } else {
+                    actor.master = false
+                }
             } else {
                 console.log("getActor - Empty response");
             }
         },
         error: function() {
             showError("Failed to get actor, url: " + url);
+        }
+    });
+}
+
+// Get replicas for replication with id "id"
+function getReplicas(id)
+{
+    var url = connect_uri + '/index/replicas/actors/' + id;
+    console.log("getReplicas - url: " + url)
+    $.ajax({
+        timeout: 20000,
+        beforeSend: function() {
+            startSpin();
+        },
+        complete: function() {
+            stopSpin();
+        },
+        dataType: 'json',
+        url: url,
+        type: 'GET',
+        success: function(data) {
+            if (data) {
+                console.log("getReplicas - Response: " + JSON.stringify(data));
+                var index
+                for (index in data.result) {
+                    var actor_id = data.result[index]
+                    getActor(actor_id, false, false)
+                }
+            } else {
+                console.log("getReplicas - Empty response");
+            }
+        },
+        error: function() {
+            showError("Failed to get replicas, url: " + url);
         }
     });
 }
@@ -1193,7 +1234,7 @@ function showApplication()
 
         var index;
         for (index in application.actors) {
-            getActor(application.actors[index], false);
+            getActor(application.actors[index], false, true);
         }
         startGraphEvents(application);
     }
@@ -1206,7 +1247,7 @@ function updateSelectedActor()
     var selectOptions = document.getElementById("actorSelector").options;
     var actorID = selectOptions[selectedIndex].id;
     if (actorID) {
-        getActor(actorID, true);
+        getActor(actorID, true, false);
     }
 }
 
@@ -1375,7 +1416,7 @@ function migrate(actor_id)
                     type: 'POST',
                     data: data,
                     success: function() {
-                        getActor(actor_id, true);
+                        getActor(actor_id, true, false);
                         showSuccess("Actor " + actor_id + " migrated");
                     },
                     error: function() {
@@ -1425,7 +1466,6 @@ function replicate(actor_id)
                     type: 'POST',
                     data: data,
                     success: function(data) {
-                        //getActor(data['actor_id'], false);
                         showSuccess("Actor " + actor_id + " replicated as " + data['actor_id']);
                     },
                     error: function() {
@@ -1465,7 +1505,6 @@ function dereplicate(actor_id)
                     type: 'POST',
                     data: data,
                     success: function(data) {
-                        //popActor(data['actor_id'])
                         showSuccess("Actor " + actor_id + " dereplicated");
                     },
                     error: function() {
@@ -1771,18 +1810,12 @@ function eventHandler(event)
         if (actor) {
             cell5.appendChild(document.createTextNode(actor.name + " replica"));
         }
-        getActor(data.replica_actor_id, false);
     } else if(data.type == "actor_dereplicate") {
         cell3.appendChild(document.createTextNode(data.replica_actor_id));
         cell4.appendChild(document.createTextNode(data.replication_id));
         var actor = findActor(data.actor_id);
         if (actor) {
             cell5.appendChild(document.createTextNode(actor.name + " replica"));
-        }
-        // FIXME do it properly with adding to application drawing (we might have several apps)
-        var actor = findActor(data.replica_actor_id)
-        if (actor) {
-            removeActorFromGraph(actor);
         }
     } else if(data.type == "actor_destroy") {
         var actor_name = "";
@@ -1819,7 +1852,7 @@ function eventHandler(event)
 // Start event stream for graph
 function startGraphEvents(application)
 {
-    var events = ["actor_new"];
+    var events = ["actor_new", "actor_replicate", "actor_dereplicate"];
     var actors = application.actors;
     for (var index in peers) {
         if (peers[index].control_uri) {
@@ -1902,6 +1935,29 @@ function graphEventHandler(event)
             actor.peer_id = data.node_id;
             actor.is_shadow = data.is_shadow;
             addActorToGraph(actor);
+        }
+    } else if(data.type == "actor_replicate") {
+        var actor = findActor(data.actor_id);
+        if (actor) {
+            actor.master = true
+            actor.replication_id = data.replication_id
+        }
+        getActor(data.replica_actor_id, false, false);
+    } else if(data.type == "actor_dereplicate") {
+        var actor = popActor(data.replica_actor_id);
+        console.log("Dereplicated - " + actor);
+        if (actor) {
+            console.log("Dereplicated - found " + actor.id);
+            removeActorFromGraph(actor);
+            var actorSelector = document.getElementById("actorSelector");
+            var index;
+            for (index in actorSelector.options) {
+                if (actorSelector.options[index].id == actor.id) {
+                    break;
+                }
+            }
+            actorSelector.options.remove(index);
+            sortCombo(actorSelector);
         }
     } else {
         console.log("graphEventHandler - Unknown event type:" + data.type);
