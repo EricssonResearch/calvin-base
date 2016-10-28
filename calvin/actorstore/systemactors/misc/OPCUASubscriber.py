@@ -21,9 +21,9 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-class OPCUAClient(Actor):
+class OPCUASubscriber(Actor):
     """
-    An OPCUA Client. Connects to given OPCUA server and sets up subscriptions everything it can find in the supplied namespace.
+    An OPCUA Client. Connects to given OPCUA server and sets up subscriptions for given node id's
     
     Output:
         variable : {
@@ -35,28 +35,31 @@ class OPCUAClient(Actor):
                       "Name": <name of variable>,
                       "ServerTimestamp": <server timestamp>,
                       "SourceTimestamp": <source timestamp>,
+                      "CalvinTimestamp": <local timestamp>
                       "Value": <variable value>,
                       "Type": <type of variable (or contents for compound variables)>,
                       "Id": <id of variable>
                     }
-    
-
     """
 
-    @manage(['server_settings']) 
-    def init(self, endpoint, namespace):
-        self.server_settings = {"endpoint": endpoint, "namespace": namespace}
+    @manage(['endpoint', 'nodeids']) 
+    def init(self, endpoint, nodeids):
+        self.endpoint = endpoint
+        self.nodeids = nodeids
         self.setup()
 
     def did_migrate(self):
         self.setup()
- 
+
     def will_migrate(self):
+        self['opcua'].stop_subscription()
+
+    def will_end(self):
         self['opcua'].shutdown()
         
     def setup(self):
         self.use('calvinsys.opcua.client', shorthand='opcua')
-        self['opcua'].startup(self.server_settings)
+        self['opcua'].start_subscription(self.endpoint, self.nodeids)
 
     @condition(action_output=['variable'])
     @guard(lambda self: self['opcua'].variable_changed)

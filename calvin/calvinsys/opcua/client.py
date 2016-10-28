@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.plugins.async import async, threads
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.opcua import client
+import time
 
 _log = get_logger(__name__)
 
@@ -24,20 +25,9 @@ _log = get_logger(__name__)
 class OPCUAClient(object):
     """
         A calvinsys module for communicating with an OPCUAServer
-        
-        Requires endpoint, name, namespace in /opcua/server
-        
-        {
-                'endpoint': <endpoint>,
-                'name': <name>,
-                'namespace': <namespace>
-        }
-                
-        or provided using self.server_settings().
-        
     """
     
-    INTERVAL = 100 # Interval to use in subscription check, probably ms      
+    INTERVAL = 100 # Interval to use in subscription check, probably ms
     
     STATE = {"init": 1, "ready": 2, "running": 3}
     
@@ -61,14 +51,14 @@ class OPCUAClient(object):
         
     def _connect(self):
         try:
-            self._client = client.OPCUAClient(self.server_settings["endpoint"])
-            self._client.connect(self.server_settings["namespace"])
+            self._client = client.OPCUAClient(self.endpoint)
+            self._client.connect()
             self._set_state(OPCUAClient.STATE["ready"])
         except Exception as e:
             print e
 
-    def connect(self, server_settings):
-        self.server_settings = server_settings
+    def connect(self, endpoint):
+        self.endpoint = endpoint
         async.call_in_thread(self._connect)
     
     def _disconnect(self):
@@ -90,13 +80,14 @@ class OPCUAClient(object):
         variable = self._changed_variables.pop(0)
         if not self._changed_variables :
             self.variable_changed = False
-        variable['Endpoint'] = self.server_settings['endpoint']
+        variable['Endpoint'] = self.endpoint
+        variable['CalvinTimestamp'] = time.time()
         return variable
     
-    def _start(self):
+    def _start(self, nodeids):
         self._subscription = self._client.create_subscription(OPCUAClient.INTERVAL, self.add_change)
-        variables = self._client.all_variables(self.server_settings["namespace"])
-        for v in variables:
+        self._variables = self._client.collect_variables(nodeids)
+        for v in self._variables:
             try:
                 self._handles.append(self._client.subscribe_change(self._subscription, v))
             except Exception as e:
@@ -105,17 +96,15 @@ class OPCUAClient(object):
         # self._handle = self._client.subscribe_change(self._subscription, variables)
         self._set_state(OPCUAClient.STATE["running"])
 
-    def start(self):
-        async.run_in_thread(self._start)
         
     def _stop(self):
         self._client.unsubscribe(self._subscription, self._handle)
         self._subscription = None
         self._set_state(OPCUAClient.STATE["ready"])
 
-    def stop(self):
+    def stop_subscription(self):
         if self.state == OPCUAClient.STATE["running"]:
-            async.run_in_thread(self._stop)
+            async.call_in_thread(self._stop)
             
     def _shutdown(self):
         if self.state == OPCUAClient.STATE["running"]:
@@ -126,16 +115,13 @@ class OPCUAClient(object):
          
     def shutdown(self):
          async.call_in_thread(self._shutdown)
-    
-    def _startup(self):
-        _log.info("connecting")
-        self._connect()
-        _log.info("starting")
-        self._start()
 
-    def startup(self, server_settings):
-        self.server_settings = server_settings
-        async.call_in_thread(self._startup)
+    def start_subscription(self, endpoint, nodeids):
+        self.endpoint = endpoint
+        threads.call_multiple_in_thread([
+            (self._connect, [], {}),
+            (self._start, [nodeids], {})
+        ])
         
 def register(node, actor):
     return OPCUAClient(node, actor)

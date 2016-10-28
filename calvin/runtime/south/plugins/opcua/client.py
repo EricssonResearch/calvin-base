@@ -74,11 +74,9 @@ class OPCUAClient(object):
         self._handle = None
         self._subscription = None
             
-    def connect(self, namespace=""):
+    def connect(self):
         self._client = opcua.Client(self._endpoint)
-        self._client.connect()   
-        _log.debug("Collecting variables from %r" % (namespace,))
-        self._collect_variables(namespace)
+        self._client.connect()
     
     def disconnect(self):
         if not self._running and self._client:
@@ -122,6 +120,17 @@ class OPCUAClient(object):
         folder = objects.get_child(namespace)
         self._variables = self.get_variables(folder)
 
+    def collect_variables(self, nodeids):
+        vars = []
+        for n in nodeids:
+            var = None
+            try:
+                var = self._client.get_node(str(n))
+            except Exception as e:
+                _log.warning("Failed to get node %s: %s" % (n,e))
+            vars.append(var)
+        return vars
+            
     def create_subscription(self, interval, handler):
         """Create OPCUA subscription
            interval: how frequently (prob in ms) to check for changes
