@@ -1475,10 +1475,10 @@ function replicate(actor_id)
                     type: 'POST',
                     data: data,
                     success: function(data) {
-                        showSuccess("Actor " + actor_id + " replicated as " + data['actor_id']);
+                        showSuccess("Actor " + actor.name +"("+ actor_id +")" + " replicated as " + data['actor_id']);
                     },
                     error: function() {
-                        showError("Failed to replicate " + actor_id);
+                        showError("Failed to replicate " + actor.name +"("+ actor_id +")");
                     }
                 });
             } else {
@@ -1503,7 +1503,7 @@ function dereplicate(actor_id)
                 var data = JSON.stringify({'dereplicate': true, 'exhaust': true});
                 console.log("replicate - url: " + url + " data: " + data);
                 $.ajax({
-                    timeout: 5000,
+                    timeout: 30000,  // long timeout since it takes time to exhasut tokens if downstream is slow
                     beforeSend: function() {
                         startSpin();
                     },
@@ -1514,10 +1514,14 @@ function dereplicate(actor_id)
                     type: 'POST',
                     data: data,
                     success: function(data) {
-                        showSuccess("Actor " + actor_id + " dereplicated");
+                        showSuccess("Actor " + actor.name +"("+ actor_id +")" + " dereplicated");
                     },
-                    error: function() {
-                        showError("Failed to dereplicate " + actor_id);
+                    error: function(data, status) {
+                        if (status == "timeout") {
+                            showError("Timeout when dereplicated " + actor.name +"("+ actor_id +")");
+                        } else {
+                            showError("Failed to dereplicate " + actor.name +"("+ actor_id +")");
+                        }
                     }
                 });
             } else {
@@ -1813,18 +1817,17 @@ function eventHandler(event)
         cell6.appendChild(document.createTextNode(actor.is_shadow));
     } else if(data.type == "actor_replicate") {
         cell3.appendChild(document.createTextNode(data.replica_actor_id));
-        cell4.appendChild(document.createTextNode(data.replication_id));
-        // FIXME do it properly with adding to application drawing (we might have several apps)
+        cell5.appendChild(document.createTextNode(data.replication_id));
         var actor = findActor(data.actor_id);
         if (actor) {
-            cell5.appendChild(document.createTextNode(actor.name + " replica"));
+            cell4.appendChild(document.createTextNode(actor.name + " replica"));
         }
     } else if(data.type == "actor_dereplicate") {
         cell3.appendChild(document.createTextNode(data.replica_actor_id));
-        cell4.appendChild(document.createTextNode(data.replication_id));
+        cell5.appendChild(document.createTextNode(data.replication_id));
         var actor = findActor(data.actor_id);
         if (actor) {
-            cell5.appendChild(document.createTextNode(actor.name + " replica"));
+            cell4.appendChild(document.createTextNode(actor.name + " replica"));
         }
     } else if(data.type == "actor_destroy") {
         var actor_name = "";
