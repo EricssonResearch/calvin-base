@@ -117,7 +117,7 @@ def condition(action_input=[], action_output=[]):
             )
 
             if not input_ok or not output_ok:
-                _log.debug("%s.%s not runnable (%s, %s)" % (self.name, action_method.__name__, input_ok, output_ok))
+                _log.debug("\t%s.%s Fired:N In:%s, Out:%s, Guard:X" % (self.name, action_method.__name__, "Y" if input_ok else "N", "Y" if output_ok else "N"))
                 return ActionResult(did_fire=False, input_ok=input_ok, output_ok=output_ok)
             #
             # Build the arguments for the action from the input port(s)
@@ -144,6 +144,8 @@ def condition(action_input=[], action_output=[]):
                 #
                 # Perform the action (N.B. the method may be wrapped in a guard)
                 #
+                if not hasattr(action_method, "_guard"):
+                    _log.debug("\t%s.%s Fired:Y In:Y, Out:Y, Guard:X" % (self.name, action_method.__name__))
                 action_result = action_method(self, *args)
 
             valid_production = False
@@ -209,11 +211,12 @@ def guard(action_guard):
         def guard_wrapper(self, *args):
             retval = ActionResult(did_fire=False)
             guard_ok = action_guard(self, *args)
-            _log.debug("%s.%s guard returned %s" % (self.name, action_method.__name__, guard_ok))
+            _log.debug("\t%s.%s Fired:%s In:Y, Out:Y, Guard:%s" % (self.name, action_method.__name__, "Y" if guard_ok else "N", "Y" if guard_ok else "N"))
             if guard_ok:
                 retval = action_method(self, *args)
             return retval
 
+        guard_wrapper._guard = True
         return guard_wrapper
     return wrap
 
@@ -524,10 +527,6 @@ class Actor(object):
                         action_result.tokens_produced,
                         action_result.tokens_consumed,
                         action_result.production)
-                    _log.debug("Actor %s(%s) did fire %s -> %s" % (
-                        self._type, self.id,
-                        action_method.__name__,
-                        str(action_result)))
                     break
 
             if not action_result.did_fire:

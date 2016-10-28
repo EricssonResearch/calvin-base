@@ -74,8 +74,8 @@ class Scheduler(object):
 
         activity = total.did_fire or activity
 
-        _log.debug("looped_once for %s at %s again in %s" %
-                   ("ALL" if all_ else local_trigger_set, time.time(), 0 if activity else self._heartbeat))
+        #_log.debug("looped_once for %s at %s again in %s" %
+        #           ("ALL" if all_ else local_trigger_set, time.time(), 0 if activity else self._heartbeat))
 
         if activity:
             # Something happened - run again
@@ -104,7 +104,6 @@ class Scheduler(object):
                     _log.debug("Ignoring fire")
                     return
 
-                _log.debug(self._trigger_set)
                 if self._loop_once is None:
                     self._loop_once = async.DelayedCall(0, self.loop_once)
 
@@ -120,8 +119,8 @@ class Scheduler(object):
             #     _log.debug("ignoring actor %s(%s)" % (actor._type, actor.id))
             #     continue
             try:
+                _log.debug("Fire actor %s (%s, %s)" % (actor.name, actor._type, actor.id))
                 action_result = actor.fire()
-                _log.debug("fired actor %s(%s)" % (actor._type, actor.id))
                 total.merge(action_result)
                 total.actor_ids.add(actor.id)
             except Exception as e:
@@ -158,12 +157,13 @@ class DebugScheduler(Scheduler):
         super(DebugScheduler, self).__init__(node, actor_mgr, monitor)
 
     def trigger_loop(self, delay=0, actor_ids=None):
-        import inspect
-        import traceback
+        #import inspect
+        #import traceback
         super(DebugScheduler, self).trigger_loop(delay, actor_ids)
-        (frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
-        _log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
-        _log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
+        #(frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
+        #_log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
+        #_log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
+        _log.analyze(self.node.id, "+ Triggered", None, tb=True)
 
     def _log_exception_during_fire(self, e):
         from infi.traceback import format_exception
