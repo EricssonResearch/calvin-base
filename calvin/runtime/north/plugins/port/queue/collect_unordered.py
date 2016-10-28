@@ -38,6 +38,7 @@ class CollectUnordered(CollectBase):
         else:
             routing = port_properties['routing'].split("-",1)[1]
         self._type = "collect:" + routing
+        self.peek_turn_pos = -1
 
     def _state(self, remap=None):
         state = super(CollectUnordered, self)._state(remap)
@@ -68,7 +69,9 @@ class CollectUnordered(CollectBase):
                 read_pos = self.tentative_read_pos[writer]
                 data = self.fifo[writer][read_pos % self.N]
                 self.tentative_read_pos[writer] = read_pos + 1
-                self.turn_pos += 1
+                if self.peek_turn_pos == -1:
+                    self.peek_turn_pos = self.turn_pos
+                self.turn_pos = (i + 1)  % len(self.writers)
                 if self._type == "collect:tagged":
                     # Modify token to tagged value
                     # Make copy so that repeated peeks are not repeatedly tagging
@@ -77,3 +80,12 @@ class CollectUnordered(CollectBase):
                     data.value = {self.tags[writer]: data.value}
                 return data
         raise QueueEmpty(reader=metadata)
+
+    def commit(self, metadata):
+        self.peek_turn_pos = -1
+        return super(CollectUnordered, self).commit(metadata)
+
+    def cancel(self, metadata):
+        self.turn_pos = self.peek_turn_pos
+        self.peek_turn_pos = -1
+        super(CollectUnordered, self).cancel(metadata)

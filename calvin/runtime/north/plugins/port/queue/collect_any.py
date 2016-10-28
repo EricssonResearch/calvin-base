@@ -38,7 +38,7 @@ class CollectAny(CollectBase):
     def tokens_available(self, length, metadata):
         if length >= self.N:
             return False
-        # All FIFOs need to have length tokens
+        # Any FIFOs need to have length tokens
         for metadata in self.writers:
             if self.write_pos[metadata] - self.tentative_read_pos[metadata] >= length:
                 return True

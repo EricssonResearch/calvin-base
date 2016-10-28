@@ -387,3 +387,80 @@ class QueueTests(unittest.TestCase):
         assert len(set(values['r1']).intersection(set(values['r2']))) == 0
         assert sorted(values['r1']) == values['r1']
         assert sorted(values['r2']) == values['r2']
+
+    def test_collect_unordered1(self):
+        f = queue.collect_unordered.CollectUnordered({'routing': 'collect-unordered', 'nbr_peers': 10}, {})
+        for i in range(10):
+            f.add_writer("w"+str(i), {})
+        # Fill queue
+        try:
+            for t in range(40):
+                for i in range(10):
+                    f.write(Token(i), "w"+str(i))
+        except:
+            pass
+
+        tokens = []
+        try:
+            for i in range(1000):
+                tokens.append(f.peek(None))
+                f.commit(None)
+        except:
+            pass
+        print [t.value for t in tokens]
+        assert [t.value for t in tokens] == range(0,10) * 4
+
+    def test_collect_unordered2(self):
+        f = queue.collect_unordered.CollectUnordered({'routing': 'collect-unordered', 'nbr_peers': 10}, {})
+        for i in range(10):
+            f.add_writer("w"+str(i), {})
+        # Fill queue
+        try:
+            for t in range(40):
+                for i in range(10):
+                    f.write(Token(i), "w"+str(i))
+        except:
+            pass
+
+        tokens = []
+        try:
+            for i in range(1000):
+                tokens.append(f.peek(None))
+                if i % 2 == 1:
+                    f.commit(None)
+                else:
+                    f.cancel(None)
+        except:
+            pass
+        print [t.value for t in tokens]
+        assert [t.value for t in tokens] == [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9] * 4
+
+    def test_collect_unordered3(self):
+        f = queue.collect_unordered.CollectUnordered({'routing': 'collect-unordered', 'nbr_peers': 10}, {})
+        for i in range(10):
+            f.add_writer("w"+str(i), {})
+        # Fill queue
+        try:
+            for t in range(40):
+                for i in range(0,6):
+                    f.write(Token(i), "w"+str(i))
+        except:
+            pass
+
+        tokens = []
+        try:
+            for i in range(1000):
+                tokens.append(f.peek(None))
+                if i % 2 == 1:
+                    f.commit(None)
+                else:
+                    f.cancel(None)
+                try:
+                    f.write(Token(0), "w0")
+                except:
+                    pass
+        except:
+            pass
+        print [t.value for t in tokens]
+        s = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5] * 4 + [0] * 12
+        assert [t.value for t in tokens][:len(s)] == s
