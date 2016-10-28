@@ -1,0 +1,3 @@
+This example uses the paho-mqtt implementation of the mqtt-plugin, thus csruntime needs to be started with either the `calvin.conf` file from this directory, or by specifying the plugin on the command line:
+
+    CALVIN_GLOBAL_MQTT_PLUGIN=\"paho_impl\" csruntime --host <ip> ...
