@@ -60,7 +60,7 @@ class CalvinLink(CalvinBaseLink):
         old_link: should be supplied when we replace an existing link, will be closed
     """
 
-    def __init__(self, rt_id, peer_id, transport, old_link=None):
+    def __init__(self, rt_id, peer_id, transport, server_node_name=None, old_link=None):
         super(CalvinLink, self).__init__(peer_id)
         self.rt_id = rt_id
         self.transport = transport
@@ -216,6 +216,7 @@ class CalvinNetwork(object):
                 self.transport_modules[m] = importlib.import_module(TRANSPORT_PLUGIN_NS + "." + m)
                 # Get a dictionary of schemas -> transport factory
                 schema_objects = self.transport_modules[m].register(self.node.id,
+                                                                    self.node.node_name,
                                                                     {'join_finished': [CalvinCB(self.join_finished)],
                                                                      'data_received': [self.recv_handler],
                                                                      'peer_disconnected': [CalvinCB(self.peer_disconnected)]},
@@ -241,7 +242,7 @@ class CalvinNetwork(object):
             schema, addr = uri.split(':', 1)
             self.transports[schema].listen(uri)
 
-    def join(self, uris, callback=None, corresponding_peer_ids=None):
+    def join(self, uris, callback=None, corresponding_peer_ids=None, corresponding_server_node_names=None):
         """ Join the peers accessable from list of URIs
             It is possible to have a list of corresponding peer_ids,
             which is used to filter the uris list for already connected
@@ -257,13 +258,17 @@ class CalvinNetwork(object):
         """
         _log.analyze(self.node.id, "+ BEGIN", {'uris': uris,
                                                'peer_ids': corresponding_peer_ids,
+                                               'server_node_names': corresponding_server_node_names,
                                                'pending_joins': self.pending_joins,
                                                'pending_joins_by_id': self.pending_joins_by_id}, tb=True)
         # For each URI and when available a peer id
         if not (corresponding_peer_ids and len(uris) == len(corresponding_peer_ids)):
             corresponding_peer_ids = [None] * len(uris)
+        # For each URI and when available a server node name
+        if not (corresponding_server_node_names and len(uris) == len(corresponding_server_node_names)):
+            corresponding_server_node_names = [None] * len(uris)
 
-        for uri, peer_id in zip(uris, corresponding_peer_ids):
+        for uri, peer_id, server_node_name in zip(uris, corresponding_peer_ids, corresponding_server_node_names):
             if not (uri in self.pending_joins or peer_id in self.pending_joins_by_id or peer_id in self.links):
                 # No simultaneous join detected
                 schema = uri.split(":", 1)[0]
@@ -276,7 +281,7 @@ class CalvinNetwork(object):
                         self.pending_joins[uri] = [callback]
                     # Ask the transport plugin to do the join
                     _log.analyze(self.node.id, "+ TRANSPORT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                    self.transports[schema].join(uri)
+                    self.transports[schema].join(uri, server_node_name)
             else:
                 # We have simultaneous joins
                 _log.analyze(self.node.id, "+ SIMULTANEOUS", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
@@ -334,7 +339,7 @@ class CalvinNetwork(object):
             elif not is_orginator and self.node.id < peer_id:
                 # Peer requested it and peer have highest node id, hence the one in links is ours and we replace it
                 _log.analyze(self.node.id, "+ REPLACE", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self.links[peer_id])
+                self.links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, old_link=self.links[peer_id])
         else:
             # No simultaneous join detected, just add the link
             _log.analyze(self.node.id, "+ INSERT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id, tb=True)
@@ -384,6 +389,12 @@ class CalvinNetwork(object):
 
     def link_request_finished(self, key, value, callback):
         """ Called by storage when the node is (not) found """
+        matching = [s for s in value['attributes']['indexed_public'] if "node_name" in s]
+        if matching:
+            first_match = matching[0].split("node_name/")[1]
+            server_node_name_as_str = first_match.replace("/","-")
+        else:
+            server_node_name_as_str = None
         _log.analyze(self.node.id, "+", {'value': value}, peer_node_id=key, tb=True)
         # Test if value is None or False indicating node does not currently exist in storage
         if not value:
@@ -394,7 +405,7 @@ class CalvinNetwork(object):
         if 'proxy' not in value:
             # join the peer node
             # TODO: if connection fails, retry with other transport schemes
-            self.join([self.get_supported_uri(value['uri'])], callback, [key])
+            self.join([self.get_supported_uri(value['uri'])], callback, [key], [server_node_name_as_str])
         else:
             if value['proxy'] in self.links:
                 self._request_route(value['proxy'], key, callback)
@@ -415,7 +426,8 @@ class CalvinNetwork(object):
         # TODO: if connection fails, retry with other transport schemes
         self.join([self.get_supported_uri(value['uri'])],
             CalvinCB(self._join_proxy_cb, dest_peer_id=dest_peer_id, org_cb=callback),
-            [key])
+            [key],
+            [server_node_name_as_str])
 
     def _join_proxy_cb(self, status, peer_node_id, dest_peer_id, org_cb, uri=None):
         """ Called when join has finished """

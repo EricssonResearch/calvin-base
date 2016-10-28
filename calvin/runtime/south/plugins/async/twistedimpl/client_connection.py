@@ -24,6 +24,9 @@ from calvin.utilities.calvin_callback import CalvinCBClass
 
 _log = get_logger(__name__)
 
+from calvin.utilities import calvinconfig
+_conf = calvinconfig.get()
+
 
 class DummyError(object):
     def __init__(self, str_):
@@ -149,7 +152,7 @@ class UDPClientProtocolFactory(BaseClientProtocolFactory):
 
 
 class TCPClientProtocolFactory(BaseClientProtocolFactory):
-    def __init__(self, mode, delimiter="\r\n", callbacks=None):
+    def __init__(self, mode, delimiter="\r\n", node_name=None, server_node_name=None, callbacks=None):
         super(TCPClientProtocolFactory, self).__init__(callbacks)
         self._protocol_factory = None
         self._protocol_type = mode
@@ -158,6 +161,7 @@ class TCPClientProtocolFactory(BaseClientProtocolFactory):
         self._delimiter = delimiter
         self._addr = ""
         self._port = 0
+        self._server_node_name=server_node_name
 
         if mode == "raw":
             self._protocol_factory = RawProtocol
@@ -172,9 +176,32 @@ class TCPClientProtocolFactory(BaseClientProtocolFactory):
     def connect(self, addr, port):
         self._addr = addr
         self._port = port
+        control_interface_security = _conf.get("security","control_interface_security")
 
-        self._connector = reactor.connectTCP(addr, port, self)
-        return self._connector
+        if control_interface_security=="tls":
+            try:
+                ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
+                twisted_trusted_ca_cert = ssl.Certificate.loadPEM(ca_cert_list_str[0])
+                self.options = ssl.optionsForClientTLS(self._server_node_name, twisted_trusted_ca_cert)
+            except Exception as err:
+                _log.error("Failed to fetch client credentials, err={}".format(err))
+                raise
+ 
+            try:
+                endpoint = endpoints.SSL4ClientEndpoint(reactor,
+                                                        self._host_ip,
+                                                        int(self._host_port),
+                                                        self.options)
+            except:
+                _log.error("Client failed connectSSL")
+                raise
+            try:
+                endpoint.connect(self._factory)
+            except Exception as e:
+                _log.error("Failed endpoint.connect, e={}".format(e))
+                raise
+        else:
+            return reactor.connectTCP(addr, port, self)
 
     def send(self, data):
         if self._protocol_type == "raw":

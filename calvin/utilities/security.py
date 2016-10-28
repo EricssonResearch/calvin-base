@@ -104,7 +104,7 @@ class Security(object):
         self.node = node
         self.subject_attributes = {}
         try:
-            self.truststore_for_signing = certificate.get_truststore_path(self.node.node_name, certificate.TRUSTSTORE_SIGN)
+            self.truststore_for_signing = certificate.get_truststore_path(certificate.TRUSTSTORE_SIGN)
         except Exception as err:
             _log.error("Failed to determine trust store path" % err)
             raise Exception("Failed to load trust store path ")
@@ -482,7 +482,7 @@ class Security(object):
                 with open(filename, 'rt') as f:
                     file_content = f.read()
             except:
-                _log.debug("Security: file can't be opened")
+                _log.debug("verify_signature_get_files: file can't be opened, filename={}".format(filename))
                 return None
         return {'sign': sign_content, 'file': file_content}
 

@@ -158,7 +158,7 @@ class CA():
                               'runtimes_dir': '$dir/runtimes',
                               'email_in_dn': 'no',
                               'x509_extensions': 'usr_cert',
-                              'copy_extensions': 'none',
+                              'copy_extensions': 'copy',
                               'certs': '$dir/certs',
                               'default_days': '365',
                               'policy': 'policy_any',
@@ -168,10 +168,10 @@ class CA():
                               'name_opt': 'ca_default',
                               'crl': '$dir/crl.pem',
                               'default_md': 'sha256'},
-               'v3_ca': {'subjectKeyIdentifier': 'hash',
+               'v3_ca': {'basicConstraints':'CA:true',
+                        'subjectKeyIdentifier': 'hash',
                          'authorityKeyIdentifier':
-                         'keyid:always,issuer:always',
-                         'basicConstraints': 'CA:true'},
+                         'keyid:always,issuer:always'},
                'usr_cert': {'subjectKeyIdentifier': 'hash',
                             'authorityKeyIdentifier': 'keyid,issuer',
                             'basicConstraints': 'CA:false'},
@@ -559,7 +559,13 @@ class CA():
             stdout, stderr = log.communicate("y\r\n")
             if log.returncode != 0:
                 raise IOError(stderr)
-
+            try:
+                with open(signed,'ab') as rt_fd:
+                    with open(self.configuration["CA_default"]["certificate"],'rb') as ca_fd:
+                        rt_fd.write(ca_fd.read())
+            except Exception as err:
+                _log.debug("Failed to append ca cert, err={}".format(err))
+                raise
             fp = certificate.fingerprint(signed)
             newcert = "{}.pem".format(fp.replace(":", "")[-40:])
         except:

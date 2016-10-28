@@ -107,7 +107,8 @@ class PolicyDecisionPoint(object):
                 node_id = request["resource"]["node_id"]
                 request["resource"] = self.registered_nodes[node_id]
                 request["resource"]["node_id"] = node_id
-            except Exception:
+            except Exception as exc:
+                _log.exception("_authorize_cont, exc={}".format(exc))
                 pass
         try:
             requires = request["action"]["requires"]
@@ -227,7 +228,8 @@ class PolicyDecisionPoint(object):
                     return ("deny", [])
             else:
                 return ("not_applicable", [])
-        except Exception:
+        except Exception as exc:
+            _log.exception("Failed to get policies from PRP, exc={}".format(exc))
             return ("indeterminate", [])
 
     def create_response(self, decision, obligations):
@@ -316,7 +318,8 @@ class PolicyDecisionPoint(object):
                     return (rule["effect"], rule.get("obligations", []))
                 else:
                     return ("not_applicable", [])
-            except Exception:
+            except Exception as exc:
+                _log.exception("Rule decision exception, exc={}".format(exc))
                 return ("indeterminate", [])
         else:
             # If no condition in the rule, return the rule effect directly.

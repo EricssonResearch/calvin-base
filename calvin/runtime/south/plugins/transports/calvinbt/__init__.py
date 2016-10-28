@@ -19,7 +19,7 @@ import traceback
 factories = {}
 
 
-def register(_id, callbacks, schemas, formats):
+def register(_id, node_name, callbacks, schemas, formats):
     ret = {}
     if 'calvinbt' in schemas:
         try:

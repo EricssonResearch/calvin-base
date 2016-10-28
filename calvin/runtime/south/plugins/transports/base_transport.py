@@ -18,7 +18,8 @@ from calvin.utilities.calvin_callback import CalvinCBClass
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
 
 from urlparse import urlparse
-
+from calvin.utilities import calvinlogger
+_log = calvinlogger.get_logger(__name__)
 
 class URI(object):
     def __init__(self, uri):
@@ -53,7 +54,6 @@ class BaseTransport(CalvinCBClass):
     def __init__(self, local_id, remote_uri, callbacks):
         """docstring for __init__"""
         super(BaseTransport, self).__init__(callbacks=callbacks)
-
         # Override the setting of these in subclass
         self._coder = None                     # Active coder set for transport
         self._rtt = 2000                       # round trip time on ms

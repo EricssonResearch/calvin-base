@@ -319,7 +319,7 @@ class AttributeResolver(object):
         The sub-parts are concatenated by '+' to be able to use it as a filename.
         """
         try:
-            return '+'.join(["" if i is None else i for i in self.attr['indexed_public']['node_name']])
+            return '-'.join(["" if i is None else i for i in self.attr['indexed_public']['node_name']])
         except:
             return None
 

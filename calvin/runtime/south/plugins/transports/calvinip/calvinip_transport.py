@@ -24,8 +24,9 @@ _log = calvinlogger.get_logger(__name__)
 
 class CalvinTransportFactory(base_transport.BaseTransportFactory):
 
-    def __init__(self, rt_id, callbacks):
+    def __init__(self, rt_id, node_name, callbacks):
         super(CalvinTransportFactory, self).__init__(rt_id, callbacks=callbacks)
+        self._node_name = node_name
         self._peers = {}
         self._servers = {}
         self._callbacks = callbacks
@@ -33,15 +34,18 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
     def _peer_connected(self):
         pass
 
-    def join(self, uri):
+    def join(self, uri, server_node_name=None):
         """docstring for join"""
         schema, peer_addr = uri.split(':', 1)
         if schema != 'calvinip':
             raise Exception("Cant handle schema %s!!" % schema)
 
         try:
-            tp = twisted_transport.CalvinTransport(self._rt_id, uri, self._callbacks,
-                                                   TwistedCalvinTransport)
+            tp = twisted_transport.CalvinTransport(self._rt_id,
+                                                   uri, self._callbacks,
+                                                   TwistedCalvinTransport,
+                                                   node_name=self._node_name,
+                                                   server_node_name=server_node_name)
             self._peers[peer_addr] = tp
             tp.connect()
             # self._callback_execute('join_finished', peer_id, tp)
@@ -69,7 +73,7 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
 
         try:
             tp = twisted_transport.CalvinServer(
-                self._rt_id, uri, self._callbacks, TwistedCalvinServer, TwistedCalvinTransport)
+                self._rt_id, self._node_name, uri, self._callbacks, TwistedCalvinServer, TwistedCalvinTransport)
             self._servers[uri] = tp
             tp.start()
         except:

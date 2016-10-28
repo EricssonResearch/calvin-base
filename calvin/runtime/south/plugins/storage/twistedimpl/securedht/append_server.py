@@ -1025,13 +1025,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         """
         _log.debug("addCACert")
         try:
-            # Read CA's cacert.pem file
-            name_dir = certificate.get_own_credentials_path(self.node_name)
-            trusted_roots_dir = certificate.get_truststore_path(self.node_name, certificate.TRUSTSTORE_TRANSPORT)
-            for i in os.listdir(trusted_roots_dir):
-                cafile = open(os.path.join(trusted_roots_dir,i), 'rt')
-                cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cafile.read())
-                self.trustedStore.add_cert(cert)
+            ca_cert_list_str, ca_cert_list_x509, self.trustedStore = certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
         except:
             logger(self.sourceNode, "Failed to load all CA-certs")
 

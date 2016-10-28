@@ -108,7 +108,6 @@ Start runtime, compile calvinscript and deploy application.
 
 def runtime(uri, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_node, start_node
-
     kwargs = {'attributes': attributes} if attributes else {}
     try:
         if dispatch:

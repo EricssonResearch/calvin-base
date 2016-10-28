@@ -16,13 +16,18 @@
 
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
+from calvin.utilities import certificate
+from calvin.utilities import runtime_credentials
 from calvin.runtime.south.plugins.transports.lib.twisted import base_transport
 
 from twisted.protocols.basic import Int32StringReceiver
-from twisted.internet import reactor, protocol
 from twisted.internet import error
+from twisted.internet import reactor, protocol, ssl, endpoints
 
 _log = calvinlogger.get_logger(__name__)
+
+from calvin.utilities import calvinconfig
+_conf = calvinconfig.get()
 
 
 def create_uri(ip, port):
@@ -34,25 +39,44 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
     """
     """
 
-    def __init__(self, iface='', port=0, callbacks=None, *args, **kwargs):
+    def __init__(self, iface='', node_name=None, port=0, callbacks=None, *args, **kwargs):
         super(TwistedCalvinServer, self).__init__(callbacks=callbacks)
         self._iface = iface
+        self._node_name=node_name
         self._port = port
         self._addr = None
         self._tcp_server = None
         self._callbacks = callbacks
+        self._runtime_credentials = None
 
     def start(self):
         callbacks = {'connected': [CalvinCB(self._connected)]}
         tcp_f = TCPServerFactory(callbacks)
-        try:
-            self._tcp_server = reactor.listenTCP(self._port, tcp_f, interface=self._iface)
-        except error.CannotListenError:
-            _log.exception("Could not listen on port %s:%s", self._iface, self._port)
-            raise
-        except Exception as exc:
-            _log.exception("Failed when trying listening on port %s:%s", self._iface, self._port)
-            raise
+        runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
+        if runtime_to_runtime_security=="tls":
+            _log.debug("TwistedCalvinServer with TLS chosen")
+            try:
+                self._runtime_credentials = runtime_credentials.RuntimeCredentials(self._node_name)
+                ca_cert_list_str, ca_cert_list_x509, truststore =certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
+                #TODO: figure out how to set more than one root cert in twisted truststore
+                twisted_trusted_ca_cert = ssl.Certificate.loadPEM(ca_cert_list_str[0])
+                server_credentials_data = self._runtime_credentials.get_runtime_credentials()
+                server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
+            except Exception as err:
+                _log.exception("Server failed to load credentials, err={}".format(err))
+            try:
+                self._tcp_server = reactor.listenSSL(self._port, tcp_f, server_credentials.options(twisted_trusted_ca_cert), interface=self._iface)
+            except Exception as err:
+                _log.exception("Server failed listenSSL, err={}".format(err))
+        else:
+            try:
+                self._tcp_server = reactor.listenTCP(self._port, tcp_f, interface=self._iface)
+            except error.CannotListenError:
+                _log.exception("Could not listen on port %s:%s", self._iface, self._port)
+                raise
+            except Exception as exc:
+                _log.exception("Failed when trying listening on port %s:%s", self._iface, self._port)
+                raise
         self._port = self._tcp_server.getHost().port
         self._callback_execute('server_started', self._port)
         return self._port
@@ -108,12 +132,15 @@ class TCPServerFactory(protocol.ServerFactory):
 
 # Client
 class TwistedCalvinTransport(base_transport.CalvinTransportBase):
-    def __init__(self, host, port, callbacks=None, proto=None, *args, **kwargs):
+    def __init__(self, host, port, callbacks=None, proto=None, node_name=None, server_node_name=None, *args, **kwargs):
         super(TwistedCalvinTransport, self).__init__(host, port, callbacks=callbacks)
         self._host_ip = host
         self._host_port = port
         self._proto = proto
         self._factory = None
+        self._node_name = node_name
+        self._server_node_name=server_node_name
+        self._runtime_credentials = None
 
         # Server created us already have a proto
         if proto:
@@ -145,7 +172,37 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
                      'set_proto': [CalvinCB(self._set_proto)]}
 
         self._factory = TCPClientFactory(callbacks)
-        reactor.connectTCP(self._host_ip, int(self._host_port), self._factory)
+        runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
+        if runtime_to_runtime_security=="tls":
+            _log.debug("TwistedCalvinTransport with TLS chosen")
+            try:
+                self._runtime_credentials = runtime_credentials.RuntimeCredentials(self._node_name)
+                ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
+                #TODO: figure out how to set more than one root cert in twisted truststore
+                twisted_trusted_ca_cert = ssl.Certificate.loadPEM(ca_cert_list_str[0])
+                client_credentials_data =self._runtime_credentials.get_runtime_credentials()
+                client_credentials = ssl.PrivateCertificate.loadPEM(client_credentials_data)
+            except Exception as err:
+                _log.error("Failed to load client credentials, err={}".format(err))
+                raise
+            options = ssl.optionsForClientTLS(self._server_node_name,
+                                               twisted_trusted_ca_cert,
+                                               client_credentials)
+            try:
+                endpoint = endpoints.SSL4ClientEndpoint(reactor,
+                                                        self._host_ip,
+                                                        int(self._host_port),
+                                                        options)
+            except:
+                _log.error("Client failed connectSSL")
+                raise
+            try:
+                endpoint.connect(self._factory)
+            except Exception as e:
+                _log.error("Failed endpoint.connect, e={}".format(e))
+                raise
+        else:
+            reactor.connectTCP(self._host_ip, int(self._host_port), self._factory)
 
     def _set_proto(self, proto):
         _log.debug("%s, %s, %s" % (self, '_set_proto', proto))

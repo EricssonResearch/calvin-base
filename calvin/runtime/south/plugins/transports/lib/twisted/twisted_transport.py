@@ -26,14 +26,16 @@ _join_request = {'cmd': 'JOIN_REQUEST', 'id': None, 'sid': None, 'serializers': 
 
 
 class CalvinTransport(base_transport.BaseTransport):
-    def __init__(self, rt_id, remote_uri, callbacks, transport, proto=None):
+    def __init__(self, rt_id, remote_uri, callbacks, transport, proto=None, node_name=None, server_node_name=None):
         """docstring for __init__"""
+        _log.info("rt_id={}, node_name={}, remote_uri={}, callbacks={}, transport={}, server_node_name={}".format(rt_id, node_name, remote_uri, callbacks, transport, server_node_name))
         super(CalvinTransport, self).__init__(rt_id, remote_uri, callbacks=callbacks)
 
         self._rt_id = rt_id
+        self._node_name = node_name
         self._remote_rt_id = None
         self._coder = None
-        self._transport = transport(self._uri.hostname, self._uri.port, callbacks, proto=proto)
+        self._transport = transport(self._uri.hostname, self._uri.port, callbacks, proto=proto, node_name=self._node_name, server_node_name=server_node_name)
         self._rtt = 2000  # Init rt in ms
 
         # TODO: This should be incoming param
@@ -184,9 +186,10 @@ class CalvinTransport(base_transport.BaseTransport):
 
 
 class CalvinServer(base_transport.BaseServer):
-    def __init__(self, rt_id, listen_uri, callbacks, server_transport, client_transport):
+    def __init__(self, rt_id, node_name, listen_uri, callbacks, server_transport, client_transport):
         super(CalvinServer, self).__init__(rt_id, listen_uri, callbacks=callbacks)
         self._rt_id = rt_id
+        self._node_name = node_name
 
         self._port = None
         self._peers = {}
@@ -195,7 +198,7 @@ class CalvinServer(base_transport.BaseServer):
         # TODO: Get iface from addr and lookup host
         iface = '::'
 
-        self._transport = server_transport(iface=iface, port=self._listen_uri.port or 0)
+        self._transport = server_transport(iface=iface, node_name=self._node_name, port=self._listen_uri.port or 0)
         self._client_transport = client_transport
 
     def _started(self, port):
@@ -214,7 +217,8 @@ class CalvinServer(base_transport.BaseServer):
             before we can callback upper layers
         """
         tp = CalvinTransport(self._rt_id, uri, self._callbacks,
-                             self._client_transport, proto=protocol)
+                             self._client_transport, proto=protocol,
+                             node_name=self._node_name)
 
         self._callback_execute('peer_connected', tp, tp.get_uri())
 

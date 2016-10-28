@@ -20,9 +20,15 @@ from twisted.internet.protocol import DatagramProtocol
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 from twisted.internet import error
+from calvin.utilities import certificate
+from calvin.utilities import runtime_credentials
+from twisted.internet import reactor, protocol, ssl, endpoints
 
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
+
+from calvin.utilities import calvinconfig
+_conf = calvinconfig.get()
 
 
 class UDPServerProtocol(DatagramProtocol):
@@ -156,7 +162,6 @@ class HTTPProtocol(LineReceiver):
         self._actor_id = actor_id
         self._expected_length = 0
 
-    def connectionMade(self):
         self.factory.connections.append(self)
         self.factory.trigger()
 
@@ -212,7 +217,7 @@ class HTTPProtocol(LineReceiver):
 
 
 class ServerProtocolFactory(Factory):
-    def __init__(self, trigger, mode='line', delimiter='\r\n', max_length=8192, actor_id=None):
+    def __init__(self, trigger, mode='line', delimiter='\r\n', max_length=8192, actor_id=None, node_name=None):
         self._trigger             = trigger
         self.mode                = mode
         self.delimiter           = delimiter
@@ -221,6 +226,7 @@ class ServerProtocolFactory(Factory):
         self.pending_connections = []
         self._port               = None
         self._actor_id           = actor_id
+        self._node_name          = node_name
 
     def trigger(self):
         self._trigger(actor_ids=[self._actor_id])
@@ -238,14 +244,25 @@ class ServerProtocolFactory(Factory):
         return connection
 
     def start(self, host, port):
-        try:
+        control_interface_security = _conf.get("security","control_interface_security")
+        if control_interface_security=="tls":
+            _log.debug("ServerProtocolFactory with TLS enabled chosen")
+            try:
+                #TODO: figure out how to set more than one root cert in twisted truststore
+                runtime_cred = runtime_credentials.RuntimeCredentials(self._node_name)
+                server_credentials_data = runtime_cred.get_runtime_credentials()
+                server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
+            except Exception as err:
+                _log.error("Failed to fetch server credentials, err={}".format(err))
+                raise
+            try:
+                self._tls_server = reactor.listenSSL(port, self, server_credentials.options(), interface=host)
+            except Exception as err:
+                _log.error("Server failed listenSSL, err={}".format(err))
+            self._port = self._tls_server.getHost().port
+        else:
             self._port = reactor.listenTCP(port, self, interface=host)
-        except error.CannotListenError:
-            _log.exception("Could not listen on port %s:%s", host, port)
-            raise
-        except Exception as exc:
-            _log.exception("Failed when trying listening on port %s:%s", host, port)
-            raise
+
 
     def stop(self):
         self._port.stopListening()

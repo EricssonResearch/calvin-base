@@ -654,6 +654,7 @@ class CalvinProto(CalvinCBClass):
                                                    callback=callback,
                                                    jwt=jwt)):
             # Already have link, just continue in _authorization_register.
+            _log.debug("authorization_register, Already have link, just continue in _authorization_register.")
             self._authorization_register(authz_server_uuid, callback, jwt, status=response.CalvinResponse(True))
 
     def _authorization_register(self, authz_server_uuid, callback, jwt, status, peer_node_id=None, uri=None):
@@ -677,7 +678,8 @@ class CalvinProto(CalvinCBClass):
                 decoded = self.node.authorization.decode_request(payload)
                 self.node.authorization.pdp.register_node(decoded["iss"], decoded["attributes"])
                 reply = response.CalvinResponse(response.OK)
-            except Exception:
+            except Exception as exc:
+                _log.exception("authorization_register_handler, exc={}".format(exc))
                 reply = response.CalvinResponse(response.INTERNAL_ERROR)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
@@ -723,7 +725,8 @@ class CalvinProto(CalvinCBClass):
                 self.node.authorization.pdp.authorize(decoded["request"],
                                     callback=CalvinCB(self._authorization_decision_handler, payload, decoded))
                 return
-            except Exception:
+            except Exception as exc:
+                _log.exception("authorization_decision_handler, exc={}".format(exc))
                 reply = response.CalvinResponse(response.INTERNAL_ERROR)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
@@ -734,7 +737,8 @@ class CalvinProto(CalvinCBClass):
             jwt_response = self.node.authorization.encode_response(request, authz_response)
             data_response = {"jwt": jwt_response, "cert_name": self.node.cert_name}
             reply = response.CalvinResponse(response.OK, data_response)
-        except Exception:
+        except Exception as exc:
+            _log.exception("_authorization_decision_handler, exc={}".format(exc))
             reply = response.CalvinResponse(response.INTERNAL_ERROR)
         # Send reply
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}

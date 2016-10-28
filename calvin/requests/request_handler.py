@@ -77,8 +77,9 @@ class RT(object):
 
 class RequestHandler(object):
 
-    def __init__(self):
+    def __init__(self,verify=None):
         self.future_responses = []
+        self.verify=verify
 
     def check_response(self, response, success=range(200, 207), key=None):
         if isinstance(response, Response):
@@ -100,7 +101,11 @@ class RequestHandler(object):
 
     def _send(self, rt, timeout, send_func, path, data=None):
         rt = get_runtime(rt)
-        if data is not None:
+        if self.verify and data is not None:
+            return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data), verify=self.verify)
+        elif self.verify and data is None:
+            return send_func(rt.control_uri + path, timeout=timeout, verify=self.verify)
+        elif data is not None:
             return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data))
         else:
             return send_func(rt.control_uri + path, timeout=timeout)

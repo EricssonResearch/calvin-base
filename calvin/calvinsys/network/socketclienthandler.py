@@ -52,11 +52,12 @@ class ClientHandler(object):
         self._trigger_sched()
 
     # External API
-    def connect(self, addr, port, mode="raw", connection_type="TCP", delimiter="\r\n"):
+    def connect(self, addr, port, server_node_name=None, mode="raw", connection_type="TCP", delimiter="\r\n"):
         handle = "%s:%s:%s" % (self._actor.id, addr, port)
 
         if connection_type == "TCP":
             connection_factory = client_connection.TCPClientProtocolFactory(mode=mode, delimiter=delimiter,
+                                                                            server_node_name=server_node_name,
                                                                             callbacks={'data_received':
                                                                                        [CalvinCB(self._push_data, handle)]})
 

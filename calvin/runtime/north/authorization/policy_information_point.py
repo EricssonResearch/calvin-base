@@ -39,7 +39,7 @@ class PolicyInformationPoint(object):
         self.actor_desc = None
 
     def get_attribute_value(self, attribute_type, attribute):
-    	"""Return the specified attribute if it exists in attributes dictionary"""
+        """Return the specified attribute if it exists in attributes dictionary"""
         value = self.attributes[attribute_type][attribute]
         if hasattr(value, '__call__'):
             # The value is a function, call the function.

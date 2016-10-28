@@ -19,12 +19,12 @@ import traceback
 factories = {}
 
 
-def register(_id, callbacks, schemas, formats):
+def register(_id, node_name, callbacks, schemas, formats):
     ret = {}
     if 'calvinip' in schemas:
         try:
             import calvinip_transport
-            f = calvinip_transport.CalvinTransportFactory(_id, callbacks)
+            f = calvinip_transport.CalvinTransportFactory(_id, node_name, callbacks)
             factories[_id] = f
             ret['calvinip'] = f
         except ImportError:

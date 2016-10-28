@@ -135,7 +135,7 @@ control_api_doc += \
     Response:
     {
         "attributes": {...},
-        "control_uri": "http://<address>:<controlport>",
+        "control_uri": "http(s)://<address>:<controlport>",
         "uri": "calvinip://<address>:<port>"
     }
 """
@@ -851,7 +851,7 @@ class CalvinControl(object):
                 self.external_host = self.host
             _log.info("Control API trying to listening on: %s:%s" % (self.host, self.port))
 
-            self.server = server_connection.ServerProtocolFactory(self.handle_request, "http")
+            self.server = server_connection.ServerProtocolFactory(self.handle_request, "http", node_name=node.node_name)
             self.server.start(self.host, self.port)
 
             # Create tunnel server

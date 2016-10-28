@@ -24,6 +24,7 @@ import json
 from calvin.actorstore import store
 from calvin.utilities import certificate
 from calvin.utilities import certificate_authority
+from calvin.utilities import runtime_credentials
 from calvin.utilities import code_signer
 from calvin.utilities.utils import get_home
 from calvin.utilities.attribute_resolver import AttributeResolver
@@ -246,8 +247,6 @@ def parse_args():
 
     cmd_runtime_trust = runtime_parser.add_parser('trust', help='manage the runtime\'s trusted certificates')
     #required arguments
-    cmd_runtime_trust.add_argument('node_name', metavar='<node_name>', type=str,
-                           help='name of the runtime for which the CA certificate is to be imported')
     cmd_runtime_trust.add_argument('cacert', metavar='<cacert>', type=str,
                            help='path to CA certificate to trust')
     cmd_runtime_trust.add_argument('type', metavar='<type>', type=str,
@@ -321,7 +320,7 @@ def manage_install_components(args):
 def manage_ca_create(args):
     if not args.domain:
         raise Exception("No domain supplied")
-    certificate_authority.CA(domain=args.domain, commonName=args.domain+"CA", security_dir=args.dir, force=args.force)
+    certificate_authority.CA(domain=args.domain, commonName=args.domain+" CA", security_dir=args.dir, force=args.force)
 
 def manage_ca_remove(args):
     if not args.domain:
@@ -409,6 +408,7 @@ def manage_cs_sign(args):
 ######################
 # manage runtime
 ######################
+
 def manage_runtime_create(args):
     if args.domain:
         if not args.attr:
@@ -421,7 +421,7 @@ def manage_runtime_create(args):
         attributes=AttributeResolver(attr)
         node_name=attributes.get_node_name_as_str()
         nodeid = calvinuuid.uuid("NODE")
-        print "CSR created at:" + certificate.new_runtime(node_name, args.domain, security_dir=args.dir, nodeid=nodeid)
+        runtime_credentials.RuntimeCredentials(node_name, args.domain, security_dir=args.dir, nodeid=nodeid)
 
 def manage_runtime_export(args):
     raise Exception("Not yet implemented")
@@ -430,21 +430,20 @@ def manage_runtime_remove(args):
     if not args.domain:
         raise Exception("No domain supplied")
     domaindir = os.path.join(args.dir, args.domain) if args.dir else None
-    certificate.remove_domain(args.domain, domaindir)
+    runtime = runtime_credentials.RuntimeCredentials(args.node_name, security_dir=args.dir)
+    runtime.remove_runtime(args.node_name, domaindir)
 
 def manage_runtime_import(args):
     if not args.certificate:
         raise Exception("No certificate supplied")
-    certificate.store_own_cert(certpath=args.certificate, security_dir=args.dir )
+    runtime = runtime_credentials.RuntimeCredentials(args.node_name, security_dir=args.dir)
+    runtime.store_own_cert(certpath=args.certificate)
 
 def manage_runtime_trust(args):
     if not args.cacert:
         raise Exception("No path to CA cert supplied")
     if not args.type:
         raise Exception("No type supplied")
-    if not args.node_name:
-        raise Exception("No runtime name supplied")
-
     if args.type=="transport":
         certificate.store_trusted_root_cert(args.cacert, "truststore_for_transport", security_dir=args.dir)
     elif args.type=="code_authenticity":
