@@ -1028,7 +1028,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             ident  : std.Identity()
-            delay  : std.ClassicDelay()
+            delay  : std.ClassicDelay(delay=0.1)
             snk    : io.StandardOut(store_tokens=1, quiet=1)
             src.integer(routing="random")
             delay.token[in](routing="collect-tagged")
@@ -1052,16 +1052,20 @@ class TestReplication(CalvinTestBase):
             result_rep.append(request_handler.replicate(self.rt1, ident))
         result_derep = []
         for i in range(5):
-            result_derep.append(request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True))
+            t = time.time()
+            result_derep.append(request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True, timeout=10))
+            print "dereplicate", i, time.time() - t, time.strftime("%H:%M:%S",time.localtime(t))
         for i in range(10):
             result_rep.append(request_handler.replicate(self.rt1, ident))
         for i in range(10):
-            result_derep.append(request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True))
+            t = time.time()
+            result_derep.append(request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True, timeout=10))
+            print "dereplicate", i, time.time() - t, time.strftime("%H:%M:%S",time.localtime(t))
         time.sleep(0.5)
         # Stop the flood of tokens, to make sure all are passed
         r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
         print "STOPPED Counter", r
-        time.sleep(5)
+        time.sleep(1)
         actual = request_handler.report(self.rt1, snk)
         actors = request_handler.get_actors(self.rt1)
         for r in result_rep[:5]:
@@ -1160,3 +1164,98 @@ class TestReplication(CalvinTestBase):
         assert deresult1a['actor_id'] not in actors
         assert deresult2a['actor_id'] not in actors
 
+    def testManySlowCollect(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.Counter()
+            i0     : std.Identity()
+            i1     : std.Identity()
+            i2     : std.Identity()
+            i3     : std.Identity()
+            i4     : std.Identity()
+            i5     : std.Identity()
+            i6     : std.Identity()
+            i7     : std.Identity()
+            i8     : std.Identity()
+            i9     : std.Identity()
+            i10     : std.Identity()
+            i11     : std.Identity()
+            i12     : std.Identity()
+            i13     : std.Identity()
+            i14     : std.Identity()
+            i15     : std.Identity()
+            i16     : std.Identity()
+            i17     : std.Identity()
+            i18     : std.Identity()
+            i19     : std.Identity()
+            delay  : std.ClassicDelay(delay=0.1)
+            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            delay.token[in](routing="collect-tagged")
+            src.integer > i0.token
+            src.integer > i1.token
+            src.integer > i2.token
+            src.integer > i3.token
+            src.integer > i4.token
+            src.integer > i5.token
+            src.integer > i6.token
+            src.integer > i7.token
+            src.integer > i8.token
+            src.integer > i9.token
+            src.integer > i10.token
+            src.integer > i11.token
+            src.integer > i12.token
+            src.integer > i13.token
+            src.integer > i14.token
+            src.integer > i15.token
+            src.integer > i16.token
+            src.integer > i17.token
+            src.integer > i18.token
+            src.integer > i19.token
+            i0.token > delay.token
+            i1.token > delay.token
+            i2.token > delay.token
+            i3.token > delay.token
+            i4.token > delay.token
+            i5.token > delay.token
+            i6.token > delay.token
+            i7.token > delay.token
+            i8.token > delay.token
+            i9.token > delay.token
+            i10.token > delay.token
+            i11.token > delay.token
+            i12.token > delay.token
+            i13.token > delay.token
+            i14.token > delay.token
+            i15.token > delay.token
+            i16.token > delay.token
+            i17.token > delay.token
+            i18.token > delay.token
+            i19.token > delay.token
+            delay.token > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(0.2)
+        src = d.actor_map['testScript:src']
+        snk = d.actor_map['testScript:snk']
+        # Stop the flood of tokens, to make sure all are passed
+        r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
+        print "STOPPED Counter", r
+        time.sleep(5)
+        actual = []
+        for i in range(20):
+            print i
+            a = request_handler.report(self.rt1, snk)
+            if len(a) == len(actual):
+                actual = a
+                break
+            actual = a
+            time.sleep(1)
+        a = {}
+        for t in actual:
+            for k, v in t.items():
+                a.setdefault(k,[]).append(v)
+        print a
