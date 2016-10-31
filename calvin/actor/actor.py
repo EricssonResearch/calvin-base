@@ -144,9 +144,10 @@ def condition(action_input=[], action_output=[]):
                 #
                 # Perform the action (N.B. the method may be wrapped in a guard)
                 #
-                if not hasattr(action_method, "_guard"):
-                    _log.debug("\t%s.%s Fired:Y In:Y, Out:Y, Guard:X" % (self.name, action_method.__name__))
                 action_result = action_method(self, *args)
+                guard_str = "X" if action_result.guard_ok is None else ("Y" if action_result.guard_ok else "N")
+                _log.debug("\t%s.%s Fired:%s In:Y, Out:Y, Guard:%s" % (
+                    self.name, action_method.__name__, "Y" if action_result.did_fire else "N", guard_str))
 
             valid_production = False
             if action_result.did_fire and (len(contract_output) == len(action_result.production)):
@@ -211,12 +212,11 @@ def guard(action_guard):
         def guard_wrapper(self, *args):
             retval = ActionResult(did_fire=False)
             guard_ok = action_guard(self, *args)
-            _log.debug("\t%s.%s Fired:%s In:Y, Out:Y, Guard:%s" % (self.name, action_method.__name__, "Y" if guard_ok else "N", "Y" if guard_ok else "N"))
             if guard_ok:
                 retval = action_method(self, *args)
+            retval.guard_ok = guard_ok
             return retval
 
-        guard_wrapper._guard = True
         return guard_wrapper
     return wrap
 
@@ -250,6 +250,7 @@ class ActionResult(object):
         self.did_fire = did_fire
         self.input_ok = input_ok
         self.output_ok = output_ok
+        self.guard_ok = None
         self.tokens_consumed = 0
         self.tokens_produced = 0
         self.production = production
