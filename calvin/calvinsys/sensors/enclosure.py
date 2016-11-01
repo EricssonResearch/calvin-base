@@ -67,7 +67,7 @@ class Enclosure(object):
     def ack_fan_data(self):
         self.has_fan_data = False
         self._fan_data = None
-        self._fan_ctive = async.DelayedCall(self.INTERVAL, self.enclosure.get_fan_speed, self.fans, self._receive_fan_data)
+        self._fan_active = async.DelayedCall(self.INTERVAL, self.enclosure.get_fan_speed, self.fans, self._receive_fan_data)
         
     def ack_power_data(self):
         self.has_power_data = False
