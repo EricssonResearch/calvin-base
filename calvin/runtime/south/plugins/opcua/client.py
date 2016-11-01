@@ -24,44 +24,60 @@ from calvin.runtime.south.plugins.async import async
 
 _log = get_logger(__name__)
 
+
+def data_value_to_struct(data_value):
+    def dt_to_ts(dt):
+        import time
+        import datetime
+        if not dt:
+            dt = datetime.datetime.now()
+        try:
+            res = str(time.mktime(dt.timetuple()))[:-2] + str(dt.microsecond/1000000.0)[1:]
+        except Exception as e:
+            _log.warning("Could not convert dt to timestamp: %r" % (e,))
+            res = 0.0
+        return res
+
+    return {
+        "Type": data_value.Value.VariantType.name,
+        "Value": str(data_value.Value.Value),
+        "Status": { "Code": data_value.StatusCode.value, 
+                    "Name": data_value.StatusCode.name,
+                    "Doc": data_value.StatusCode.doc
+                },
+        "SourceTimestamp": str(data_value.SourceTimestamp),
+        "ServerTimestamp": str(data_value.ServerTimestamp)
+        }
+
+
+def get_node_name_and_id(node):
+    # these actually connect to the remote server to fetch the data
+    # so they need to run in a separate thread
+    node_id = node.nodeid.to_string()
+    try:
+        node_name = node.get_display_name().to_string()
+    except Exception:
+        # Not all nodes have a name, use node id
+        node_name = node_id
+    return node_id, node_name
+    
 class OPCUAClient(object):
     
     class SubscriptionHandler(object):
         def __init__(self, handler):
             super(OPCUAClient.SubscriptionHandler, self).__init__()
             self._handler = handler
-            
-        def _data_value_to_struct(self, data_value):
-            def dt_to_ts(dt):
-                import time
-                import datetime
-                if not dt:
-                    dt = datetime.datetime.now()
-                return str(time.mktime(dt.timetuple()))[:-2] + str(dt.microsecond/1000000.0)[1:]
 
-            return {
-                "Type": data_value.Value.VariantType.name,
-                "Value": str(data_value.Value.Value),
-                "Status": { "Code": data_value.StatusCode.value, 
-                            "Name": data_value.StatusCode.name,
-                            "Doc": data_value.StatusCode.doc
-                        },
-                "SourceTimestamp": dt_to_ts(data_value.SourceTimestamp),
-                "ServerTimestamp": dt_to_ts(data_value.ServerTimestamp)
-                }
-            
-            
         def notify_handler(self, node, variable):
-            # these actually connect to the remote server to fetch the data
-            # so they need to run in a separate thread
-            variable["Id"] = node.nodeid.to_string()
-            variable["Name"] = node.get_display_name().to_string()
+            node_id, node_name = get_node_name_and_id(node)
+            variable["Id"] = node_id
+            variable["Name"] = node_name 
             # hand the notification over to the scheduler
             self._handler(variable)
-            
+
         def datachange_notification(self, node, val, data):
-            async.call_in_thread(self.notify_handler, node, self._data_value_to_struct(data.monitored_item.Value))
-    
+            async.call_in_thread(self.notify_handler, node, data_value_to_struct(data.monitored_item.Value))
+
         def event_notification(self, event):
             _log.info("%r" % (event,))
             
@@ -103,6 +119,17 @@ class OPCUAClient(object):
         _log.info("returning from %s" % (node.get_display_name(),))
         return result
     
+    def get_value(self, nodeid, handler):
+        try:
+            n = self._client.get_node(nodeid)
+            s = data_value_to_struct(n.get_data_value())
+            node_id, node_name = get_node_name_and_id(n)
+            s["Id"] = node_id
+            s["Name"] = node_name
+            handler(s)
+        except Exception as e:
+            _log.error("get_value failed: '%s'" % (e,))
+            
     def _collect_all_variables(self, namespace):
         _log.info("Fetching object node")
         objects_node = self._client.get_objects_node()

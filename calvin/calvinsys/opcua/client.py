@@ -61,6 +61,10 @@ class OPCUAClient(object):
         self.endpoint = endpoint
         async.call_in_thread(self._connect)
     
+    @property
+    def connected(self):
+        return self.state == OPCUAClient.STATE["ready"]
+        
     def _disconnect(self):
         self._client.disconnect()
         self._client = None
@@ -69,13 +73,12 @@ class OPCUAClient(object):
     def disconnect(self):
         if self.state == OPCUAClient.STATE["ready"]:
             async.call_in_thread(self._disconnect)
-            
+
     def add_change(self, change):
         self._changed_variables.append(change)
         self.variable_changed = True
         self._trigger()
-        
-    
+
     def get_first_changed(self):
         variable = self._changed_variables.pop(0)
         if not self._changed_variables :
@@ -92,10 +95,7 @@ class OPCUAClient(object):
                 self._handles.append(self._client.subscribe_change(self._subscription, v))
             except Exception as e:
                 print e
-        
-        # self._handle = self._client.subscribe_change(self._subscription, variables)
         self._set_state(OPCUAClient.STATE["running"])
-
         
     def _stop(self):
         self._client.unsubscribe(self._subscription, self._handle)
@@ -122,6 +122,12 @@ class OPCUAClient(object):
             (self._connect, [], {}),
             (self._start, [nodeids], {})
         ])
+
+    def poll(self, nodeid):
+        if self.state != OPCUAClient.STATE["ready"]:
+            _log.warning("Cannot poll - no connection, or connection busy")
+            return
+        async.call_in_thread(self._client.get_value, str(nodeid), self.add_change)
         
 def register(node, actor):
     return OPCUAClient(node, actor)
