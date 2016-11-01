@@ -233,7 +233,8 @@ class AppManager(object):
             if 'replication_id' in value and check_replica:
                 application.replication_ids.append(value['replication_id'])
                 self.storage.get_replica(value['replication_id'],
-                    cb=CalvinCB(func=self._replicas_cb, application=application))
+                    cb=CalvinCB(func=self._replicas_cb, replication_id=value['replication_id'], master_id=key,
+                                application=application))
         else:
             if retries<10:
                 # FIXME add backoff time
@@ -247,11 +248,14 @@ class AppManager(object):
         if application.complete_node_info() and not application.replication_ids and not application.actor_replicas:
             self._destroy_final(application)
 
-    def _replicas_cb(self, key, value, application):
-        application.replication_ids.remove(key)
+    def _replicas_cb(self, key, value, replication_id, master_id, application):
+        application.replication_ids.remove(replication_id)
         if isinstance(value, (list, tuple, set)):
             application.actor_replicas.extend(value)
         for actor_id in application.actor_replicas[:]:
+            if actor_id == master_id:
+                application.actor_replicas.remove(actor_id)
+                continue
             application.actors[actor_id] = "noname"
             application.actor_replicas.remove(actor_id)
             if actor_id in self._node.am.list_actors():
