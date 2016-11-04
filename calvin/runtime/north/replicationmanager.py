@@ -15,11 +15,14 @@
 # limitations under the License.
 
 import copy
+import random
 
 from calvin.requests import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinuuid import uuid
 from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities import dynops
+from calvin.runtime.south.plugins.async import async
 from calvin.actor.actorstate import ActorState
 from calvin.actor.actorport import PortMeta
 from calvin.runtime.north.plugins.port import DISCONNECT
@@ -319,11 +322,68 @@ class ReplicationManager(object):
             if replicate_actor:
                  replicate.append(actor)
                  actor._replication_data.replication_pressure_counts = counts
-        # TODO Do the complete requirement matching replication instead of local
+        # TODO Do the complete requirement matching replication based what the requirements are besides the normal
+        # attribute matching
         for actor in replicate:
             _log.debug("Auto-replicate")
-            self.replicate(actor.id, self.node.id, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
+            #self.replicate(actor.id, self.node.id, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
+            self.replicate_by_requirements(actor, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
 
     def _replication_loop_log_cb(self, status, actor_id):
         _log.info("Auto-replicated %s: %s" % (actor_id, str(status)))
 
+    def replicate_by_requirements(self, actor, callback=None):
+        """ Update requirements and trigger a replication """
+        actor._collect_placement_counter = 0
+        actor._collect_placement_last_value = 0
+        actor._collect_placement_cb = None
+        node_iter = self.node.app_manager.actor_requirements(None, actor.id)
+        possible_placements = set([])
+        done = [False]
+        node_iter.set_cb(self._update_requirements_placements, node_iter, actor, possible_placements,
+                         cb=callback, done=done)
+        _log.analyze(self.node.id, "+ CALL CB", {'actor_id': actor.id, 'node_iter': str(node_iter)})
+        # Must call it since the triggers might already have released before cb set
+        self._update_requirements_placements(node_iter, actor, possible_placements, cb=callback, done=done)
+        _log.analyze(self.node.id, "+ END", {'actor_id': actor.id, 'node_iter': str(node_iter)})
+
+    def _update_requirements_placements(self, node_iter, actor, possible_placements, done, move=False,
+                                        authorization_check=False, cb=None):
+        _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
+        if actor._collect_placement_cb:
+            actor._collect_placement_cb.cancel()
+            actor._collect_placement_cb = None
+        if done[0]:
+            return
+        try:
+            while True:
+                _log.analyze(self.node.id, "+ ITER", {})
+                node_id = node_iter.next()
+                possible_placements.add(node_id)
+        except dynops.PauseIteration:
+            _log.analyze(self.node.id, "+ PAUSED",
+                    {'counter': actor._collect_placement_counter,
+                     'last_value': actor._collect_placement_last_value,
+                     'diff': actor._collect_placement_counter - actor._collect_placement_last_value})
+            # FIXME the dynops should be self triggering, but is not...
+            # This is a temporary fix by keep trying
+            delay = 0.0 if actor._collect_placement_counter > actor._collect_placement_last_value + 100 else 0.2
+            actor._collect_placement_counter += 1
+            actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements,
+                                                    node_iter, actor, possible_placements, done=done,
+                                                    cb=cb)
+            return
+        except StopIteration:
+            # All possible actor placements derived
+            _log.analyze(self.node.id, "+ ALL", {})
+            done[0] = True
+            if not possible_placements:
+                if cb:
+                    cb(status=calvinresponse.CalvinResponse(False))
+                return
+            print "PLACEMENTS", possible_placements
+            # TODO pick a runtime that is lightly loaded
+            self.replicate(actor.id, random.choice(list(possible_placements)), callback=cb)
+            _log.analyze(self.node.id, "+ END", {})
+        except:
+            _log.exception("actormanager:_update_requirements_placements")

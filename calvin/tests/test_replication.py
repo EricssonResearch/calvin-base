@@ -71,7 +71,7 @@ def setup_module(module):
     global test_type
 
     request_handler = RequestHandler()
-    test_type, runtimes = helpers.setup_test_type(request_handler, 3)
+    test_type, runtimes = helpers.setup_test_type(request_handler, 6)
     rt1, rt2, rt3 = runtimes[:3]
 
 def teardown_module(module):
@@ -1320,7 +1320,7 @@ class TestReplication(CalvinTestBase):
     def testManyHeavyAutoReplication(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src    : std.CountTimer(sleep=0.001)
+            src    : std.CountTimer(sleep=0.01)
             ident  : std.Burn()
             delay  : std.Identity()
             snk    : io.StandardOut(store_tokens=1, quiet=1)
@@ -1329,20 +1329,28 @@ class TestReplication(CalvinTestBase):
             src.integer > ident.token
             ident.token > delay.token
             delay.token > snk.token
+            
+            rule first: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "first"}])
+            rule rest: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}])
+            apply src, snk, delay: first 
+            apply ident: rest 
+            
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        d = deployer.Deployer(self.rt1, app_info)
-        d.deploy()
+        response = helpers.deploy_script(request_handler, "testScript", script, self.rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        ident = response['actor_map']['testScript:ident']
+        snk = response['actor_map']['testScript:snk']
 
         time.sleep(0.1)
 
-        src = d.actor_map['testScript:src']
-        ident = d.actor_map['testScript:ident']
-        snk = d.actor_map['testScript:snk']
+        # ident actor could be on any rest group runtime, need to know to ask it to auto-replicate
+        for rt in self.runtimes:
+            if ident in request_handler.get_actors(rt):
+                break
 
-        request_handler.migrate(self.rt1, ident, self.rt2.id)
-        result_rep = request_handler.replicate(self.rt2, ident, requirements={'performance_scaling':True})
+        result_rep = request_handler.replicate(rt, ident, requirements={'performance_scaling':True})
         print result_rep
         time.sleep(15)
         # Stop the flood of tokens, to make sure all are passed
@@ -1351,7 +1359,9 @@ class TestReplication(CalvinTestBase):
         time.sleep(1)
         actual = request_handler.report(self.rt1, snk)
         actors = request_handler.get_actors(self.rt1)
-        helpers.destroy_app(d)
+        for rt in self.runtimes:
+            print rt.id, request_handler.get_actors(rt)
+        helpers.delete_app(request_handler, self.rt1, response['application_id'])
         time.sleep(1)
         actors = request_handler.get_actors(self.rt1)
         assert ident not in actors
