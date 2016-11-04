@@ -211,7 +211,7 @@ def setup_distributed(control_uri, purpose, request_handler):
 
     return runtimes
     
-def setup_local(ip_addr, request_handler):  
+def setup_local(ip_addr, request_handler, nbr):  
     def check_storage(rt, n, index):
         index_string = format_index_string(index)
         retries = 0
@@ -232,7 +232,7 @@ def setup_local(ip_addr, request_handler):
         raise Exception("Storage check failed, could not find peers.")
 
     hosts = [
-        ("calvinip://%s:%d" % (ip_addr, d), "http://%s:%d" % (ip_addr, d+1)) for d in range(5200, 5206, 2)
+        ("calvinip://%s:%d" % (ip_addr, d), "http://%s:%d" % (ip_addr, d+1)) for d in range(5200, 5200 + 2 * nbr, 2)
     ]
 
     runtimes = []
@@ -256,7 +256,7 @@ def setup_local(ip_addr, request_handler):
         runtimes += [rt]
 
     for host in hosts:
-        check_storage(RT(host[1]), 3, attr['indexed_public'])
+        check_storage(RT(host[1]), nbr, attr['indexed_public'])
         
     for host in hosts:
         request_handler.peer_setup(RT(host[1]), [h[0] for h in hosts if h != host])
@@ -289,7 +289,7 @@ def setup_bluetooth(bt_master_controluri, request_handler):
                 runtimes.append(rt3)
     return [runtime] + runtimes
 
-def setup_test_type(request_handler):
+def setup_test_type(request_handler, nbr=3):
     control_uri = None
     ip_addr = None
     purpose = None
@@ -326,7 +326,7 @@ def setup_test_type(request_handler):
     elif test_type == "bluetooth":
         runtimes = setup_bluetooth(bt_master_controluri, request_handler)
     else:
-        runtimes = setup_local(ip_addr, request_handler)
+        runtimes = setup_local(ip_addr, request_handler, nbr)
 
     return test_type, runtimes
     
