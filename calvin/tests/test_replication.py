@@ -37,6 +37,7 @@ def absolute_filename(filename):
 rt1 = None
 rt2 = None
 rt3 = None
+runtimes = []
 test_type = None
 request_handler = None
 
@@ -59,27 +60,26 @@ def actual_tokens_multiple(rt, actor_ids, size=5, retries=20):
 
 def get_runtime(n=1):
     import random
-    runtimes = [rt1, rt2, rt3]
-    random.shuffle(runtimes)
-    return runtimes[:n]
+    r = runtimes[:]
+    random.shuffle(r)
+    return r[:n]
   
 def setup_module(module):
     global rt1, rt2, rt3
+    global runtimes
     global request_handler
     global test_type
 
     request_handler = RequestHandler()
-    test_type, [rt1, rt2, rt3] = helpers.setup_test_type(request_handler)
-
+    test_type, runtimes = helpers.setup_test_type(request_handler, 3)
+    rt1, rt2, rt3 = runtimes[:3]
 
 def teardown_module(module):
-    global rt1
-    global rt2
-    global rt3
+    global runtimes
     global test_type
     global request_handler
 
-    helpers.teardown_test_type(request_handler, [rt1, rt2, rt3], test_type)
+    helpers.teardown_test_type(request_handler, runtimes, test_type)
 
 
 class CalvinTestBase(unittest.TestCase):
@@ -88,6 +88,7 @@ class CalvinTestBase(unittest.TestCase):
         self.rt1 = rt1
         self.rt2 = rt2
         self.rt3 = rt3
+        self.runtimes = runtimes
 
     def assert_lists_equal(self, expected, actual, min_length=5):
         self.assertTrue(len(actual) >= min_length, "Received data too short (%d), need at least %d" % (len(actual), min_length))
@@ -1259,3 +1260,101 @@ class TestReplication(CalvinTestBase):
             for k, v in t.items():
                 a.setdefault(k,[]).append(v)
         print a
+        
+    def testManyHeavyReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.CountTimer(sleep=0.022)
+            ident  : std.Burn()
+            delay  : std.Identity()
+            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="balanced")
+            delay.token[in](routing="collect-tagged")
+            src.integer > ident.token
+            ident.token > delay.token
+            delay.token > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.1)
+
+        src = d.actor_map['testScript:src']
+        ident = d.actor_map['testScript:ident']
+        snk = d.actor_map['testScript:snk']
+
+        request_handler.migrate(self.rt1, ident, self.rt2.id)
+
+        ids = [r.id for r in runtimes][2:]
+        result_rep = []
+        for i in range(len(ids)):
+            print ">>>>>>>>>>>>>>replicate", i
+            result_rep.append(request_handler.replicate(self.rt2, ident, ids[i%len(ids)]))
+        result_derep = []
+        #for i in range(5):
+        #    t = time.time()
+        #    result_derep.append(request_handler.replicate(self.rt1, ident, dereplicate=True, exhaust=True, timeout=10))
+        #    print "dereplicate", i, time.time() - t, time.strftime("%H:%M:%S",time.localtime(t))
+        time.sleep(15)
+        # Stop the flood of tokens, to make sure all are passed
+        r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
+        print "STOPPED Counter", r
+        time.sleep(1)
+        actual = request_handler.report(self.rt1, snk)
+        actors = request_handler.get_actors(self.rt1)
+        #for r in result_rep[:5]:
+        #    assert r['actor_id'] in actors
+        #for r in result_derep:
+        #    assert r['actor_id'] not in actors
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert ident not in actors
+        assert src not in actors
+        assert snk not in actors
+        for r in result_rep:
+            assert r['actor_id'] not in actors
+
+    def testManyHeavyAutoReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src    : std.CountTimer(sleep=0.001)
+            ident  : std.Burn()
+            delay  : std.Identity()
+            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="balanced")
+            delay.token[in](routing="collect-tagged")
+            src.integer > ident.token
+            ident.token > delay.token
+            delay.token > snk.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        print errors
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+
+        time.sleep(0.1)
+
+        src = d.actor_map['testScript:src']
+        ident = d.actor_map['testScript:ident']
+        snk = d.actor_map['testScript:snk']
+
+        request_handler.migrate(self.rt1, ident, self.rt2.id)
+        result_rep = request_handler.replicate(self.rt2, ident, requirements={'performance_scaling':True})
+        print result_rep
+        time.sleep(15)
+        # Stop the flood of tokens, to make sure all are passed
+        r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
+        print "STOPPED Counter", r
+        time.sleep(1)
+        actual = request_handler.report(self.rt1, snk)
+        actors = request_handler.get_actors(self.rt1)
+        helpers.destroy_app(d)
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert ident not in actors
+        assert src not in actors
+        assert snk not in actors
+

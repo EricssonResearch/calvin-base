@@ -45,6 +45,7 @@ class Scheduler(object):
         self._heartbeat = 1
         self._maintenance_loop = None
         self._maintenance_delay = _conf.get(None, "maintenance_delay") or 300
+        self.actor_pressures = {}
 
     def run(self):
         async.run_ioloop()
@@ -86,6 +87,9 @@ class Scheduler(object):
                 self._heartbeat_loop.cancel()
             self._heartbeat_loop = async.DelayedCall(self._heartbeat, self.trigger_loop)
 
+        # Control replication
+        self.node.rm.replication_loop()
+
     def trigger_loop(self, delay=0, actor_ids=None):
         """ Trigger the loop_once potentially after waiting delay seconds """
         if delay > 0:
@@ -125,6 +129,11 @@ class Scheduler(object):
                 total.actor_ids.add(actor.id)
             except Exception as e:
                 self._log_exception_during_fire(e)
+            pressure = actor.get_pressure().values()
+            pressure_values = [p for _, _, p in pressure]
+            if self.actor_pressures.get(actor.id, False) != pressure_values:
+                self.actor_pressures[actor.id] = pressure_values
+                print actor.name, pressure
         self.idle = not total.did_fire
         return total
 

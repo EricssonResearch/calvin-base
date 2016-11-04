@@ -499,6 +499,16 @@ class Actor(object):
     def exhaust(self, callback):
         self._exhaust_cb = callback
 
+    def get_pressure(self):
+        pressure = {}
+        for port in self.inports.values():
+            for e in port.endpoints:
+                PRESSURE_LENGTH = len(e.pressure)
+                pressure[(port.id, e.peer_id)] = (
+                    e.pressure_last, e.pressure_count, [e.pressure[t % PRESSURE_LENGTH] for t in range(
+                                        max(0, e.pressure_count - PRESSURE_LENGTH), e.pressure_count)])
+        return pressure
+
     @verify_status([STATUS.ENABLED])
     def fire(self):
         start_time = time.time()

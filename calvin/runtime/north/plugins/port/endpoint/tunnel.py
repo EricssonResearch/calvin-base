@@ -27,6 +27,7 @@ _log = get_logger(__name__)
 # Remote tunnel endpoints
 #
 
+PRESSURE_LENGTH = 20
 
 class TunnelInEndpoint(Endpoint):
 
@@ -39,6 +40,9 @@ class TunnelInEndpoint(Endpoint):
         self.peer_node_id = peer_node_id
         self.peer_port_properties = peer_port_properties
         self.trigger_loop = trigger_loop
+        self.pressure_count = 0
+        self.pressure = [0] * PRESSURE_LENGTH
+        self.pressure_last = 0
 
     def __str__(self):
         str = super(TunnelInEndpoint, self).__str__()
@@ -77,6 +81,10 @@ class TunnelInEndpoint(Endpoint):
         except QueueFull:
             # Queue full just send NACK
             ok = False
+            if self.pressure[(self.pressure_count - 1) % PRESSURE_LENGTH] != payload['sequencenbr']:
+                self.pressure[self.pressure_count % PRESSURE_LENGTH] = payload['sequencenbr']
+                self.pressure_count += 1
+        self.pressure_last = payload['sequencenbr']
         reply = {
             'cmd': 'TOKEN_REPLY',
             'port_id': payload['port_id'],

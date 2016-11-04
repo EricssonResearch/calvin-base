@@ -1271,36 +1271,36 @@ class CalvinControl(object):
         self.send_response(handle, connection, None, status)
 
     def handle_actor_replicate(self, handle, connection, match, data, hdr):
-        try:
-            dereplicate = data['dereplicate']
-        except:
-            dereplicate = False
-        if dereplicate:
+        data = {} if data is None else data
+        # TODO When feature ready, only requirement based scaling should be accessable (if not also that removed)
+        # TODO Make replication requirements a part of deployment requirements
+        # Dereplication
+        if data.get('dereplicate', False):
             exhaust = data.get('exhaust', False)
             try:
                 self.node.rm.dereplicate(
                     match.group(1), CalvinCB(self.handle_actor_replicate_cb, handle, connection), exhaust)
             except:
                 _log.exception("Dereplication failed")
+                self.send_response(handle, connection, None, calvinresponse.INTERNAL_ERROR)
             return
         try:
-            # Ignore return status, we are not allowed to make superviser twice
-            status = self.node.rm.supervise_actor(match.group(1), {}).status
+            # Supervise with potential autoscaling in requirements
+            requirements = data.get('requirements', {})
+            status = self.node.rm.supervise_actor(match.group(1), requirements).status
             if status != calvinresponse.OK:
                 self.send_response(handle, connection, None, status)
                 return
-            try:
-                node_id = data['peer_node_id']
-            except:
-                node_id = self.node.id
-            self.node.rm.replicate(
-                match.group(1), node_id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
-            status = calvinresponse.OK
+            if not requirements:
+                # Direct replication only
+                node_id = data.get('peer_node_id', self.node.id)
+                self.node.rm.replicate(
+                    match.group(1), node_id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
+                status = calvinresponse.OK
+            self.send_response(handle, connection, None, calvinresponse.OK)
         except:
             _log.exception("Failed test replication")
-            status = calvinresponse.NOT_FOUND
-        if status != calvinresponse.OK:
-            self.send_response(handle, connection, None, status)
+            self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
 
     def handle_actor_replicate_cb(self, handle, connection, status):
         self.send_response(handle, connection, json.dumps(status.data), status=status.status)

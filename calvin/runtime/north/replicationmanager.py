@@ -26,6 +26,8 @@ from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = get_logger(__name__)
 
+FIRINGS_LENGTH = 20
+
 class ReplicationData(object):
     """An actors replication data"""
     def __init__(self, actor_id=None, master=None, requirements=None, initialize=True):
@@ -38,6 +40,7 @@ class ReplicationData(object):
         self.counter = 0
         # {<actor_id>: {'known_peer_ports': [peer-ports id list], <org-port-id: <replicated-port-id>, ...}, ...}
         self.remaped_ports = {}
+        self.replication_pressure_counts = {}
 
     def state(self, remap=None):
         state = {}
@@ -131,8 +134,11 @@ class ReplicationManager(object):
         return calvinresponse.CalvinResponse(True)
 
     def list_master_actors(self):
-        return [a_id for a_id, a in self.node.am.actors.items() if a._replication_data.master == a_id]
+        return [a for a_id, a in self.node.am.actors.items() if a._replication_data.master == a_id]
 
+    #
+    # Replicate
+    #
     def replicate(self, actor_id, dst_node_id, callback):
         try:
             actor = self.node.am.actors[actor_id]
@@ -233,6 +239,10 @@ class ReplicationManager(object):
             status=calvinresponse.CalvinResponse(True),
             actor_id=actor_id, port_id=port_id, peer_port_id=peer_port_id, peer_node_id=port_meta.node_id)
 
+    #
+    # Dereplication
+    #
+
     def dereplicate(self, actor_id, callback, exhaust=False):
         terminate = DISCONNECT.EXHAUST if exhaust else DISCONNECT.TERMINATE
         try:
@@ -285,3 +295,35 @@ class ReplicationManager(object):
         if cb:
             status.data = {'actor_id': last_replica_id}
             cb(status)
+
+    #
+    # Requirement controlled replication
+    #
+
+    def replication_loop(self):
+        replicate = []
+        for actor in self.list_master_actors():
+            replicate_actor = False
+            pressure = actor.get_pressure()
+            counts = {}
+            for port_pair, port_queues in pressure.items():
+                position, count, full_positions = port_queues
+                counts[port_pair] = count
+                if len(full_positions) < 2:
+                    continue
+                # Check if two new recent queue full events
+                if (actor._replication_data.replication_pressure_counts.get(port_pair, 0) < (count - 2) and
+                    full_positions[-1] > (position - 15) and
+                    full_positions[-2] > (position - 15)):
+                    replicate_actor = True
+            if replicate_actor:
+                 replicate.append(actor)
+                 actor._replication_data.replication_pressure_counts = counts
+        # TODO Do the complete requirement matching replication instead of local
+        for actor in replicate:
+            _log.debug("Auto-replicate")
+            self.replicate(actor.id, self.node.id, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
+
+    def _replication_loop_log_cb(self, status, actor_id):
+        _log.info("Auto-replicated %s: %s" % (actor_id, str(status)))
+

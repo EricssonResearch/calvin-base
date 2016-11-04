@@ -25,6 +25,8 @@ _log = get_logger(__name__)
 # Local endpoints
 #
 
+PRESSURE_LENGTH = 20
+
 class LocalInEndpoint(Endpoint):
 
     """docstring for LocalEndpoint"""
@@ -33,6 +35,9 @@ class LocalInEndpoint(Endpoint):
         super(LocalInEndpoint, self).__init__(port)
         self.peer_port = peer_port
         self.peer_id = peer_port.id
+        self.pressure_count = 0
+        self.pressure = [0] * PRESSURE_LENGTH
+        self.pressure_last = 0
 
     def is_connected(self):
         return True
@@ -63,6 +68,7 @@ class LocalOutEndpoint(Endpoint):
         super(LocalOutEndpoint, self).__init__(port)
         self.peer_port = peer_port
         self.peer_id = peer_port.id
+        self.peer_endpoint = None
 
     def is_connected(self):
         return True
@@ -92,7 +98,13 @@ class LocalOutEndpoint(Endpoint):
         return True
 
     def communicate(self, *args, **kwargs):
+        if self.peer_endpoint is None:
+            for e in self.peer_port.endpoints:
+                if e.peer_id == self.port.id:
+                    self.peer_endpoint = e
+                    break
         sent = False
+        nbr = None
         while True:
             try:
                 nbr, token = self.port.queue.com_peek(self.peer_id)
@@ -105,5 +117,11 @@ class LocalOutEndpoint(Endpoint):
             except QueueFull:
                 # Could not write, rollback read
                 self.port.queue.com_cancel(self.peer_id, nbr)
+                if (self.peer_endpoint and
+                        self.peer_endpoint.pressure[(self.pressure_count - 1) % PRESSURE_LENGTH] == nbr):
+                    self.peer_endpoint.pressure[self.pressure_count % PRESSURE_LENGTH] = nbr
+                    self.peer_endpoint.pressure_count += 1
                 break
+        if self.peer_endpoint and nbr is not None:
+            self.peer_endpoint.pressure_last = nbr
         return sent
