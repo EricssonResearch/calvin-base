@@ -93,7 +93,9 @@ class CountTimer(Actor):
         self.timer.cancel()
         return ActionResult()
 
-    def report(self):
+    def report(self, **kwargs):
+        if kwargs.get("stopped", False):
+            self.timer.cancel()
         return self.count - self.start
 
     action_priority = (step_no_periodic, step_periodic, stop)
