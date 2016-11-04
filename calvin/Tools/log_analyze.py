@@ -93,7 +93,11 @@ def main():
                                     'func': 'OTHER', 'param': line, 'node_id': None})
                     else:
                         if log:
-                            log[-1]['param'] += line
+                            try:
+                                log[-1]['param'] += line
+                            except:
+                                # Did not have a previous non ANALYZE log line for some reason, skip it
+                                pass
                     try:
                         pid = re.match(re_pid, line).group(1)
                         if pid:
