@@ -26,6 +26,10 @@ port_property_data = {
                 'doc': """Route each tokens to one peer in a random schedule""",
                 'direction': "out"
             },
+            'balanced': {
+                'doc': """Route each tokens to one peer based on queue length""",
+                'direction': "out"
+            },
             'collect-unordered': {
                 'doc': """
                     Collect tokens from multiple peers, actions see

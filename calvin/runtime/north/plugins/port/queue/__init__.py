@@ -17,6 +17,7 @@
 # Queues
 _MODULES = {'fanout_fifo': 'FanoutFIFO',
             'scheduled_fifo': 'ScheduledFIFO',
+            'balanced_queue': 'BalancedQueue',
             'collect_unordered': 'CollectUnordered',
             'collect_synced': 'CollectSynced',
             'collect_any': 'CollectAny'}
@@ -38,6 +39,8 @@ def get(port, peer_port=None, peer_port_meta=None):
             routing_prop = routing_prop[0]
         if 'round-robin' == routing_prop or 'random' == routing_prop:
             selected_queue = "scheduled_fifo"
+        elif 'balanced' == routing_prop:
+            selected_queue = "balanced_queue"
         elif routing_prop in ['collect-unordered', 'collect-tagged']:
             selected_queue = "collect_unordered"
         elif routing_prop == 'collect-all-tagged':
