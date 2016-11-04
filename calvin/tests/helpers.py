@@ -6,6 +6,7 @@ from calvin.requests.request_handler import RT
 import os
 import time
 import multiprocessing
+import copy
 
 
 _log = calvinlogger.get_logger(__name__)
@@ -239,6 +240,11 @@ def setup_local(ip_addr, request_handler, nbr):
 
     host = hosts[0]
     attr = {u'indexed_public': {u'node_name': {u'organization': u'com.ericsson', u'purpose': u'distributed-test'}}}
+    attr_first = copy.deepcopy(attr)
+    attr_first['indexed_public']['node_name']['group'] = u'first'
+    attr_first['indexed_public']['node_name']['name'] = u'runtime1'
+    attr_rest = copy.deepcopy(attr)
+    attr_rest['indexed_public']['node_name']['group'] = u'rest'
 
     _log.info("starting runtime %s" % (host[1],))
     rt, _ = dispatch_node([host[0]], host[1], attributes=attr)
@@ -247,10 +253,13 @@ def setup_local(ip_addr, request_handler, nbr):
 
     _log.info("started runtime %s" % (host[1],))
 
-    
+    count = 2
     for host in hosts[1:]:
         _log.info("starting runtime %s" % (host[1], ))
-        rt, _ = dispatch_node([host[0]], host[1], attributes=attr)
+        attr_rt = copy.deepcopy(attr_rest)
+        attr_rt['indexed_public']['node_name']['name'] = u'runtime' + str(count)
+        count += 1
+        rt, _ = dispatch_node([host[0]], host[1], attributes=attr_rt)
         check_storage(rt, len(runtimes)+1, attr['indexed_public'])
         _log.info("started runtime %s" % (host[1],))
         runtimes += [rt]
