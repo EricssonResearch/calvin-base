@@ -775,7 +775,7 @@ function getApplication(uri, id)
 }
 
 // Get actor with id "id"
-function getActor(id, show, replicas)
+function getActor(id, show, replicas, retries)
 {
     var url = connect_uri + '/actor/' + id;
     console.log("getActor - url: " + url)
@@ -838,6 +838,9 @@ function getActor(id, show, replicas)
         },
         error: function() {
             showError("Failed to get actor, url: " + url);
+            if (retries > 0) {
+                getActor(id, show, replicas, retries - 1)
+            }
         }
     });
 }
@@ -864,7 +867,7 @@ function getReplicas(id)
                 var index
                 for (index in data.result) {
                     var actor_id = data.result[index]
-                    getActor(actor_id, false, false)
+                    getActor(actor_id, false, false, 0)
                 }
             } else {
                 console.log("getReplicas - Empty response");
@@ -1234,7 +1237,7 @@ function showApplication()
 
         var index;
         for (index in application.actors) {
-            getActor(application.actors[index], false, true);
+            getActor(application.actors[index], false, true, 0);
         }
         startGraphEvents(application);
     }
@@ -1247,7 +1250,7 @@ function updateSelectedActor()
     var selectOptions = document.getElementById("actorSelector").options;
     var actorID = selectOptions[selectedIndex].id;
     if (actorID) {
-        getActor(actorID, true, false);
+        getActor(actorID, true, false, 0);
     }
 }
 
@@ -1425,7 +1428,7 @@ function migrate(actor_id)
                     type: 'POST',
                     data: data,
                     success: function() {
-                        getActor(actor_id, true, false);
+                        getActor(actor_id, true, false, 0);
                         showSuccess("Actor " + actor_id + " migrated");
                     },
                     error: function() {
@@ -1954,7 +1957,7 @@ function graphEventHandler(event)
             actor.master = true
             actor.replication_id = data.replication_id
         }
-        getActor(data.replica_actor_id, false, false);
+        getActor(data.replica_actor_id, false, false, 1);
     } else if(data.type == "actor_dereplicate") {
         var actor = popActor(data.replica_actor_id);
         console.log("Dereplicated - " + actor);
