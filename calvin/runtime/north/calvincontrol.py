@@ -1468,6 +1468,7 @@ class CalvinControl(object):
     def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
         _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})
         if status:
+            print "DEPLOY STATUS", str(status)
             self.send_response(handle, connection,
                                json.dumps({'application_id': deployer.app_id,
                                            'actor_map': deployer.actor_map,

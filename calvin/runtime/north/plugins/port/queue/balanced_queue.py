@@ -51,7 +51,6 @@ class BalancedQueue(ScheduledFIFO):
             raise QueueFull()
         # Write token in peer with most slots FIFO
         peer = max(slots)[1]
-        print "BALANCED", peer, [(k.split("-")[0], v) for v, k in slots]
         write_pos = self.write_pos[peer]
         self.fifo[peer][write_pos % self.N] = data
         self.write_pos[peer] = write_pos + 1

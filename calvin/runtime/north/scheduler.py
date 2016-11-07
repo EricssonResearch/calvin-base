@@ -133,7 +133,6 @@ class Scheduler(object):
             pressure_values = [p for _, _, p in pressure]
             if self.actor_pressures.get(actor.id, False) != pressure_values:
                 self.actor_pressures[actor.id] = pressure_values
-                print actor.name, pressure
         self.idle = not total.did_fire
         return total
 

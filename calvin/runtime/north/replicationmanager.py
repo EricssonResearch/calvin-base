@@ -434,10 +434,10 @@ class ReplicationManager(object):
             if actor._replicate_callback:
                 actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
-        print "PLACEMENTS", actor._possible_placements, actor._collect_current_placement
         # Select, always a list of node_ids, could be more than one
         req = actor._replication_data.requirements
         selected = req_operations[req['op']].select(self.node, actor, **req['kwargs'])
+        _log.analyze(self.node.id, "+", {'possible_placements': actor._possible_placements, 'current_placements': actor._collect_current_placement, 'selected': selected})
         if selected is None:
             # When None - selection will never succeed
             if actor._replicate_callback:
