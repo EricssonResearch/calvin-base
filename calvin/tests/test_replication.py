@@ -1350,7 +1350,7 @@ class TestReplication(CalvinTestBase):
             if ident in request_handler.get_actors(rt):
                 break
 
-        result_rep = request_handler.replicate(rt, ident, requirements={'op':"performance_scaling", 'kwargs':{'max': 5}})
+        result_rep = request_handler.replicate(rt, ident, requirements={'op':"performance_scaling", 'kwargs':{'max': 6, 'alone': True}})
         print result_rep
         time.sleep(15)
         for _ in range(10):
@@ -1362,7 +1362,7 @@ class TestReplication(CalvinTestBase):
         # Stop the flood of tokens, to make sure all are passed
         r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
         print "STOPPED Counter", r
-        time.sleep(1)
+        time.sleep(2)
         actual = request_handler.report(self.rt1, snk)
         actors = request_handler.get_actors(self.rt1)
         for rt in self.runtimes:

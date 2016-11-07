@@ -57,7 +57,10 @@ def select(node, actor, **kwargs):
     if not actor._possible_placements:
         return []
     prefered_placements = actor._possible_placements - set(actor._collect_current_placement + [node.id])
-    if not prefered_placements:
+    if not prefered_placements and not kwargs.get('alone', False):
         prefered_placements = actor._possible_placements
+    if not prefered_placements:
+        # When require being alone on runtime, we should fail here
+        return None
     # TODO pick a runtime that is lightly loaded
     return [random.choice(list(prefered_placements))]
