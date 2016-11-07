@@ -672,14 +672,29 @@ class Storage(object):
         """
         self.delete(prefix="port-", key=port_id, cb=cb)
 
-    def add_replica(self, replication_id, actor_id, app_id=None, cb=None):
+    def add_replica(self, replication_id, actor_id, node_id=None, cb=None):
         self.add_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
+        self.add_index(['replicas', 'nodes', replication_id], 
+                        self.node.id if node_id is None else node_id, root_prefix_level=3, cb=cb)
 
     def remove_replica(self, replication_id, actor_id, cb=None):
         self.remove_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
 
+    def remove_replica_node(self, replication_id, actor_id, cb=None):
+        # Only remove the node if we are last
+        replica_ids = self.node.rm.list_replication_actors(replication_id)
+        try:
+            replica_ids.remove(actor_id)
+        except:
+            pass
+        if not replica_ids:
+            self.remove_index(['replicas', 'nodes', replication_id], self.node.id, root_prefix_level=3, cb=cb)
+
     def get_replica(self, replication_id, cb=None):
         self.get_index(['replicas', 'actors', replication_id], cb=cb)
+
+    def get_replica_nodes(self, replication_id, cb=None):
+        self.get_index(['replicas', 'nodes', replication_id], cb=cb)
 
     def add_replication_cb(self, key, value, org_cb, id_, callback_ids):
         if value == False:
@@ -701,9 +716,6 @@ class Storage(object):
         callback_ids = instances + [data['id']]
         self.set(prefix="replication-", key=data['id'], value=data,
             cb=CalvinCB(self.add_replication_cb, org_cb=cb, id_=data['id'], callback_ids=callback_ids))
-        for a in instances:
-            self.add_replica(data['id'], a,
-                cb=CalvinCB(self.add_replication_cb, org_cb=cb, id_=a, callback_ids=callback_ids))
 
     def remove_replication_cb(self, key, value, org_cb, id_, callback_ids):
         if value == False:

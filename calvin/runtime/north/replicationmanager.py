@@ -24,6 +24,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import dynops
 from calvin.runtime.south.plugins.async import async
 from calvin.actor.actorstate import ActorState
+from calvin.runtime.north.plugins.requirements import req_operations
 from calvin.actor.actorport import PortMeta
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities.utils import enum
@@ -32,6 +33,8 @@ _log = get_logger(__name__)
 
 FIRINGS_LENGTH = 20
 REPLICATION_STATUS = enum('UNUSED', 'READY', 'REPLICATING', 'DEREPLICATING')
+PRE_CHECK = enum('NO_OPERATION', 'SCALE_OUT', 'SCALE_IN')
+
 
 class ReplicationData(object):
     """An actors replication data"""
@@ -130,7 +133,11 @@ class ReplicationManager(object):
             actor._replication_data = ReplicationData(
                 actor_id=actor_id, master=actor_id, requirements=requirements)
         elif actor._replication_data.is_master(actor_id):
-            # If we already is master that is OK
+            # If we already is master that is OK, update requirements
+            # FIXME should not update during a replication, fix when we get the 
+            # requirements from the deployment requirements
+            actor._replication_data.requirements = requirements
+            self.node.storage.add_replication(actor._replication_data, cb=None)
             return calvinresponse.CalvinResponse(True)
         else:
             return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
@@ -144,6 +151,9 @@ class ReplicationManager(object):
 
     def list_master_actors(self):
         return [a for a_id, a in self.node.am.actors.items() if a._replication_data.master == a_id]
+
+    def list_replication_actors(self, replication_id):
+        return [a_id for a_id, a in self.node.am.actors.items() if a._replication_data.id == replication_id]
 
     #
     # Replicate
@@ -204,7 +214,7 @@ class ReplicationManager(object):
         _log.analyze(self.node.id, "+", {'status': status, 'replication_id': replication_id, 'actor_id': actor_id})
         if status:
             # TODO add callback for storing
-            self.node.storage.add_replica(replication_id, actor_id)
+            self.node.storage.add_replica(replication_id, actor_id, dst_node_id)
             self.node.control.log_actor_replicate(
                 actor_id=master_id, replica_actor_id=actor_id,
                 replication_id=replication_id, dest_node_id=dst_node_id)
@@ -287,7 +297,7 @@ class ReplicationManager(object):
             self.node.am.destroy_with_disconnect(last_replica_id, terminate=terminate,
                 callback=CalvinCB(self._dereplicated, replication_data=replication_data,
                                     last_replica_id=last_replica_id, 
-                                    node_id=None, cb=cb_status))
+                                    node_id=self.node.id, cb=cb_status))
         else:
             self.node.storage.get_actor(last_replica_id,
                 CalvinCB(func=self._dereplicate_actor_cb,
@@ -301,7 +311,7 @@ class ReplicationManager(object):
             self.node.proto.app_destroy(value['node_id'],
                 CalvinCB(self._dereplicated, replication_data=replication_data, last_replica_id=key, 
                             node_id=value['node_id'], cb=cb),
-                None, [key], disconnect=terminate)
+                None, [key], disconnect=terminate, replication_id=replication_data.id)
         else:
             # FIXME Should do retries
             if cb:
@@ -311,6 +321,8 @@ class ReplicationManager(object):
         if status:
             # TODO add callback for storing
             self.node.storage.remove_replica(replication_data.id, last_replica_id)
+            if node_id == self.node.id:
+                self.node.storage.remove_replica_node(replication_data.id, last_replica_id)
             self.node.control.log_actor_dereplicate(
                 actor_id=replication_data.master, replica_actor_id=last_replica_id,
                 replication_id=replication_data.id)
@@ -329,63 +341,75 @@ class ReplicationManager(object):
 
     def replication_loop(self):
         replicate = []
+        dereplicate = []
         for actor in self.list_master_actors():
             if actor._replication_data.status != REPLICATION_STATUS.READY:
                 continue
-            replicate_actor = False
-            pressure = actor.get_pressure()
-            counts = {}
-            for port_pair, port_queues in pressure.items():
-                position, count, full_positions = port_queues
-                counts[port_pair] = count
-                if len(full_positions) < 2:
-                    continue
-                # Check if two new recent queue full events
-                if (actor._replication_data.replication_pressure_counts.get(port_pair, 0) < (count - 2) and
-                    full_positions[-1] > (position - 15) and
-                    full_positions[-2] > (position - 15)):
-                    replicate_actor = True
-            if replicate_actor:
+            pre_check = PRE_CHECK.NO_OPERATION
+            try:
+                # FIXME Why more than one replication requirements?
+                for req in actor._replication_data.requirements:
+                    r = req_operations[req['op']].pre_check(self.node, actor_id=actor.id,
+                                            component=actor.component_members(), **req['kwargs'])
+                    if r == PRE_CHECK.SCALE_OUT:
+                        pre_check = PRE_CHECK.SCALE_OUT
+                        break
+                    elif r == PRE_CHECK.SCALE_IN:
+                        pre_check = PRE_CHECK.SCALE_IN
+                        break
+            except:
+                _log.exception("Pre check exception")
+            if pre_check == PRE_CHECK.SCALE_OUT:
                  replicate.append(actor)
-                 actor._replication_data.replication_pressure_counts = counts
-        # TODO Do the complete requirement matching replication based what the requirements are besides the normal
-        # attribute matching
+            elif pre_check == PRE_CHECK.SCALE_IN:
+                 dereplicate.append(actor)
         for actor in replicate:
             _log.debug("Auto-replicate")
-            #self.replicate(actor.id, self.node.id, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
             self.replicate_by_requirements(actor, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
+        for actor in dereplicate:
+            _log.debug("Auto-dereplicate")
+            self.dereplicate(actor.id, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id), exhaust=True)
 
     def _replication_loop_log_cb(self, status, actor_id):
-        _log.info("Auto-replicated %s: %s" % (actor_id, str(status)))
+        _log.info("Auto-(de)replicated %s: %s" % (actor_id, str(status)))
 
     def replicate_by_requirements(self, actor, callback=None):
         """ Update requirements and trigger a replication """
         actor._collect_placement_counter = 0
         actor._collect_placement_last_value = 0
         actor._collect_placement_cb = None
+        actor._replicate_callback = callback
+        actor._collect_done = False
+        actor._possible_placements = set([])
+        actor._collect_current_placement = None
+        self.node.storage.get_replica_nodes(actor._replication_data.id, CalvinCB(self._current_placements_cb, actor=actor))
         node_iter = self.node.app_manager.actor_requirements(None, actor.id)
-        possible_placements = set([])
-        done = [False]
-        node_iter.set_cb(self._update_requirements_placements, node_iter, actor, possible_placements,
-                         cb=callback, done=done)
+        node_iter.set_cb(self._update_requirements_placements, node_iter, actor)
         _log.analyze(self.node.id, "+ CALL CB", {'actor_id': actor.id, 'node_iter': str(node_iter)})
         # Must call it since the triggers might already have released before cb set
-        self._update_requirements_placements(node_iter, actor, possible_placements, cb=callback, done=done)
+        self._update_requirements_placements(node_iter, actor)
         _log.analyze(self.node.id, "+ END", {'actor_id': actor.id, 'node_iter': str(node_iter)})
 
-    def _update_requirements_placements(self, node_iter, actor, possible_placements, done, move=False,
-                                        authorization_check=False, cb=None):
+    def _current_placements_cb(self, key, value, actor):
+        if value is None:
+            actor._collect_current_placement = []
+        else:
+            actor._collect_current_placement = value
+        self._replica_placement(actor)
+
+    def _update_requirements_placements(self, node_iter, actor, move=False,
+                                        authorization_check=False):
         _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
         if actor._collect_placement_cb:
             actor._collect_placement_cb.cancel()
             actor._collect_placement_cb = None
-        if done[0]:
+        if actor._collect_done:
             return
         try:
             while True:
                 _log.analyze(self.node.id, "+ ITER", {})
                 node_id = node_iter.next()
-                possible_placements.add(node_id)
+                actor._possible_placements.add(node_id)
         except dynops.PauseIteration:
             _log.analyze(self.node.id, "+ PAUSED",
                     {'counter': actor._collect_placement_counter,
@@ -396,20 +420,30 @@ class ReplicationManager(object):
             delay = 0.0 if actor._collect_placement_counter > actor._collect_placement_last_value + 100 else 0.2
             actor._collect_placement_counter += 1
             actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements,
-                                                    node_iter, actor, possible_placements, done=done,
-                                                    cb=cb)
+                                                    node_iter, actor)
             return
         except StopIteration:
             # All possible actor placements derived
             _log.analyze(self.node.id, "+ ALL", {})
-            done[0] = True
-            if not possible_placements:
-                if cb:
-                    cb(status=calvinresponse.CalvinResponse(False))
+            actor._collect_done = True
+            if actor._collect_current_placement is None:
                 return
-            print "PLACEMENTS", possible_placements
-            # TODO pick a runtime that is lightly loaded
-            self.replicate(actor.id, random.choice(list(possible_placements)), callback=cb)
+            self._replica_placement(actor)
             _log.analyze(self.node.id, "+ END", {})
         except:
             _log.exception("actormanager:_update_requirements_placements")
+
+    def _replica_placement(self, actor):
+        if actor._collect_done and not actor._possible_placements:
+            if actor._replicate_callback:
+                actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            return
+        if not actor._possible_placements:
+            return
+        print "PLACEMENTS", actor._possible_placements, actor._collect_current_placement
+        prefered_placements = actor._possible_placements - set(actor._collect_current_placement + [self.node.id])
+        if not prefered_placements:
+            prefered_placements = actor._possible_placements
+        # TODO pick a runtime that is lightly loaded
+        self.replicate(actor.id, random.choice(list(prefered_placements)), callback=actor._replicate_callback)
+        
