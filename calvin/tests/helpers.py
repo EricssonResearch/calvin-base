@@ -247,7 +247,7 @@ def setup_local(ip_addr, request_handler, nbr):
     attr_rest['indexed_public']['node_name']['group'] = u'rest'
 
     _log.info("starting runtime %s" % (host[1],))
-    rt, _ = dispatch_node([host[0]], host[1], attributes=attr)
+    rt, _ = dispatch_node([host[0]], host[1], attributes=attr_first)
     check_storage(rt, len(runtimes)+1, attr['indexed_public'])
     runtimes += [rt]
 
