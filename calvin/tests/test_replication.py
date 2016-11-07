@@ -1350,7 +1350,7 @@ class TestReplication(CalvinTestBase):
             if ident in request_handler.get_actors(rt):
                 break
 
-        result_rep = request_handler.replicate(rt, ident, requirements=[{'op':"performance_scaling", 'kwargs':{'max': 5}}])
+        result_rep = request_handler.replicate(rt, ident, requirements={'op':"performance_scaling", 'kwargs':{'max': 5}})
         print result_rep
         time.sleep(15)
         for _ in range(10):

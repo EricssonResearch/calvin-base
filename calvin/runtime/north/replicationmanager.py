@@ -345,20 +345,13 @@ class ReplicationManager(object):
         for actor in self.list_master_actors():
             if actor._replication_data.status != REPLICATION_STATUS.READY:
                 continue
-            pre_check = PRE_CHECK.NO_OPERATION
             try:
-                # FIXME Why more than one replication requirements?
-                for req in actor._replication_data.requirements:
-                    r = req_operations[req['op']].pre_check(self.node, actor_id=actor.id,
-                                            component=actor.component_members(), **req['kwargs'])
-                    if r == PRE_CHECK.SCALE_OUT:
-                        pre_check = PRE_CHECK.SCALE_OUT
-                        break
-                    elif r == PRE_CHECK.SCALE_IN:
-                        pre_check = PRE_CHECK.SCALE_IN
-                        break
+                req = actor._replication_data.requirements
+                pre_check = req_operations[req['op']].pre_check(self.node, actor_id=actor.id,
+                                        component=actor.component_members(), **req['kwargs'])
             except:
                 _log.exception("Pre check exception")
+                pre_check = PRE_CHECK.NO_OPERATION
             if pre_check == PRE_CHECK.SCALE_OUT:
                  replicate.append(actor)
             elif pre_check == PRE_CHECK.SCALE_IN:
@@ -382,6 +375,9 @@ class ReplicationManager(object):
         actor._collect_done = False
         actor._possible_placements = set([])
         actor._collect_current_placement = None
+        req = actor._replication_data.requirements
+        # Initiate any scaling specific actions
+        req_operations[req['op']].initiate(self.node, actor, **req['kwargs'])
         self.node.storage.get_replica_nodes(actor._replication_data.id, CalvinCB(self._current_placements_cb, actor=actor))
         node_iter = self.node.app_manager.actor_requirements(None, actor.id)
         node_iter.set_cb(self._update_requirements_placements, node_iter, actor)
@@ -438,12 +434,18 @@ class ReplicationManager(object):
             if actor._replicate_callback:
                 actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
-        if not actor._possible_placements:
-            return
         print "PLACEMENTS", actor._possible_placements, actor._collect_current_placement
-        prefered_placements = actor._possible_placements - set(actor._collect_current_placement + [self.node.id])
-        if not prefered_placements:
-            prefered_placements = actor._possible_placements
-        # TODO pick a runtime that is lightly loaded
-        self.replicate(actor.id, random.choice(list(prefered_placements)), callback=actor._replicate_callback)
+        # Select, always a list of node_ids, could be more than one
+        req = actor._replication_data.requirements
+        selected = req_operations[req['op']].select(self.node, actor, **req['kwargs'])
+        if selected is None:
+            # When None - selection will never succeed
+            if actor._replicate_callback:
+                actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            return
+        if not selected:
+            # When empty - wait for upcoming calls
+            return
+        # FIXME create as many replicas as nodes in list (would need to serialize)
+        self.replicate(actor.id, selected[0], callback=actor._replicate_callback)
         

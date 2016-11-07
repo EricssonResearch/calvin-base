@@ -14,9 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north.replicationmanager import PRE_CHECK
-
+import random
 
 def pre_check(node, **kwargs):
     """ Check if actor should scale out/in
@@ -50,3 +49,15 @@ def pre_check(node, **kwargs):
          return PRE_CHECK.SCALE_OUT
     else:
         return PRE_CHECK.NO_OPERATION
+
+def initiate(node, actor, **kwargs):
+    pass
+
+def select(node, actor, **kwargs):
+    if not actor._possible_placements:
+        return []
+    prefered_placements = actor._possible_placements - set(actor._collect_current_placement + [node.id])
+    if not prefered_placements:
+        prefered_placements = actor._possible_placements
+    # TODO pick a runtime that is lightly loaded
+    return [random.choice(list(prefered_placements))]
