@@ -26,10 +26,12 @@ from calvin.runtime.south.plugins.async import async
 from calvin.actor.actorstate import ActorState
 from calvin.actor.actorport import PortMeta
 from calvin.runtime.north.plugins.port import DISCONNECT
+from calvin.utilities.utils import enum
 
 _log = get_logger(__name__)
 
 FIRINGS_LENGTH = 20
+REPLICATION_STATUS = enum('UNUSED', 'READY', 'REPLICATING', 'DEREPLICATING')
 
 class ReplicationData(object):
     """An actors replication data"""
@@ -44,6 +46,7 @@ class ReplicationData(object):
         # {<actor_id>: {'known_peer_ports': [peer-ports id list], <org-port-id: <replicated-port-id>, ...}, ...}
         self.remaped_ports = {}
         self.replication_pressure_counts = {}
+        self.status = REPLICATION_STATUS.UNUSED
 
     def state(self, remap=None):
         state = {}
@@ -58,6 +61,7 @@ class ReplicationData(object):
                 state['instances'] = self.instances
                 state['requirements'] = self.requirements
                 state['remaped_ports'] = self.remaped_ports
+                state['status'] = self.status
         return state
 
     def set_state(self, state):
@@ -67,6 +71,7 @@ class ReplicationData(object):
         self.requirements = state.get('requirements', {})
         self.counter = state.get('counter', 0)
         self.remaped_ports = state.get('remaped_ports', {})
+        self.status = state.get('status', REPLICATION_STATUS.UNUSED)
 
     def add_replica(self, actor_id):
         if actor_id in self.instances:
@@ -129,6 +134,7 @@ class ReplicationManager(object):
             return calvinresponse.CalvinResponse(True)
         else:
             return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
+        actor._replication_data.status = REPLICATION_STATUS.READY
 
         # TODO add a callback to make sure storing worked
         self.node.storage.add_replication(actor._replication_data, cb=None)
@@ -154,7 +160,13 @@ class ReplicationManager(object):
             if callback:
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
+        if actor._replication_data.status != REPLICATION_STATUS.READY:
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
+            return
         _log.analyze(self.node.id, "+", actor._replication_data.state(None))
+        actor._replication_data.status = REPLICATION_STATUS.REPLICATING
+        cb_status = CalvinCB(self._replication_status_cb, replication_data=actor._replication_data, cb=callback)
         # TODO make name a property that combine name and counter in actor
         new_id = uuid("ACTOR")
         actor._replication_data.add_replica(new_id)
@@ -180,11 +192,11 @@ class ReplicationManager(object):
                 actor_type, state=state, prev_connections=ports, callback=CalvinCB(
                     self._replicated,
                     replication_id=actor._replication_data.id,
-                    actor_id=new_id, callback=callback, master_id=actor.id, dst_node_id=dst_node_id))
+                    actor_id=new_id, callback=cb_status, master_id=actor.id, dst_node_id=dst_node_id))
         else:
             self.node.proto.actor_new(
                 dst_node_id, CalvinCB(self._replicated, replication_id=actor._replication_data.id,
-                                         actor_id=new_id, callback=callback, master_id=actor.id,
+                                         actor_id=new_id, callback=cb_status, master_id=actor.id,
                                          dst_node_id=dst_node_id),
                 actor_type, state, ports)
 
@@ -259,20 +271,27 @@ class ReplicationManager(object):
             if callback:
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
+        if replication_data.status != REPLICATION_STATUS.READY:
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
+            return
+        replication_data.status = REPLICATION_STATUS.DEREPLICATING
         last_replica_id = replication_data.remove_replica()
         if last_replica_id is None:
+            replication_data.status = REPLICATION_STATUS.READY
             if callback:
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
+        cb_status = CalvinCB(self._replication_status_cb, replication_data=replication_data, cb=callback)
         if last_replica_id in self.node.am.actors:
             self.node.am.destroy_with_disconnect(last_replica_id, terminate=terminate,
                 callback=CalvinCB(self._dereplicated, replication_data=replication_data,
                                     last_replica_id=last_replica_id, 
-                                    node_id=None, cb=callback))
+                                    node_id=None, cb=cb_status))
         else:
             self.node.storage.get_actor(last_replica_id,
                 CalvinCB(func=self._dereplicate_actor_cb,
-                            replication_data=replication_data, terminate=terminate, cb=callback))
+                            replication_data=replication_data, terminate=terminate, cb=cb_status))
 
     def _dereplicate_actor_cb(self, key, value, replication_data, terminate, cb):
         """ Get actor callback """
@@ -299,6 +318,11 @@ class ReplicationManager(object):
             status.data = {'actor_id': last_replica_id}
             cb(status)
 
+    def _replication_status_cb(self, status, replication_data, cb):
+        replication_data.status = REPLICATION_STATUS.READY
+        if cb:
+            cb(status)
+
     #
     # Requirement controlled replication
     #
@@ -306,6 +330,8 @@ class ReplicationManager(object):
     def replication_loop(self):
         replicate = []
         for actor in self.list_master_actors():
+            if actor._replication_data.status != REPLICATION_STATUS.READY:
+                continue
             replicate_actor = False
             pressure = actor.get_pressure()
             counts = {}
