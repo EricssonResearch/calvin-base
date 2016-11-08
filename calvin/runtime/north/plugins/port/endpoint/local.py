@@ -118,8 +118,8 @@ class LocalOutEndpoint(Endpoint):
                 # Could not write, rollback read
                 self.port.queue.com_cancel(self.peer_id, nbr)
                 if (self.peer_endpoint and
-                        self.peer_endpoint.pressure[(self.pressure_count - 1) % PRESSURE_LENGTH] == nbr):
-                    self.peer_endpoint.pressure[self.pressure_count % PRESSURE_LENGTH] = nbr
+                        self.peer_endpoint.pressure[(self.peer_endpoint.pressure_count - 1) % PRESSURE_LENGTH] == nbr):
+                    self.peer_endpoint.pressure[self.peer_endpoint.pressure_count % PRESSURE_LENGTH] = nbr
                     self.peer_endpoint.pressure_count += 1
                 break
         if self.peer_endpoint and nbr is not None:

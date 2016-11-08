@@ -77,6 +77,7 @@ def test_did_disconnect(actor, inport_ret_val, outport_ret_val, expected):
         port.is_connected = Mock(return_value=outport_ret_val)
 
     actor.fsm = Mock()
+    actor.fsm.state = Mock(return_value=Actor.STATUS.READY)
     actor.did_disconnect(None)
     if expected:
         actor.fsm.transition_to.assert_called_with(Actor.STATUS.READY)
@@ -120,7 +121,7 @@ def test_state(actor):
     correct_state = {
         '_component_members': set([actor.id]),
         '_deployment_requirements': [],
-        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name', 'subject_attributes', 'migration_info', '_port_property_capabilities']),
+        '_managed': set(['dump', '_signature', 'id', '_deployment_requirements', 'name', 'subject_attributes', 'migration_info', '_port_property_capabilities', '_replication_data', 'last']),
         '_signature': None,
         'dump': False,
         'id': actor.id,
@@ -136,6 +137,7 @@ def test_state(actor):
                                                 {'data': 0, 'type': 'Token'}],
                                        'queuetype': 'fanout_fifo',
                                        'read_pos': {inport.id: 0},
+                                       'reader_offset': {inport.id: 0},
                                        'readers': [inport.id],
                                        'tentative_read_pos': {inport.id: 0},
                                        'write_pos': 0},
@@ -153,6 +155,7 @@ def test_state(actor):
                                                  {'data': 0, 'type': 'Token'}],
                                         'queuetype': 'fanout_fifo',
                                         'read_pos': {},
+                                        'reader_offset': {},
                                         'readers': [],
                                         'tentative_read_pos': {},
                                         'write_pos': 0},

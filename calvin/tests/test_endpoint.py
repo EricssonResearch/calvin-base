@@ -63,7 +63,7 @@ class TestLocalEndpoint(unittest.TestCase):
         for i in range(3):
             assert self.port.queue.peek(self.port.id) == i
         assert self.port.tokens_available(0, self.port.id)
-        self.port.queue.commit()
+        self.port.queue.commit(self.port.id)
         assert self.port.tokens_available(0, self.port.id)
 
     def test_get_peer(self):

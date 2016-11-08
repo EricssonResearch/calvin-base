@@ -53,7 +53,7 @@ def test_get_calvincontrol_returns_xxx():
     ("GET /actors HTTP/1", None, "handle_get_actors"),
     ("GET /actor/" + uuid + " HTTP/1", uuid, "handle_get_actor"),
     ("DELETE /actor/" + uuid + " HTTP/1", uuid, "handle_del_actor"),
-    ("GET /actor/" + uuid + "/report HTTP/1", uuid, "handle_get_actor_report"),
+    ("GET /actor/" + uuid + "/report HTTP/1", uuid, "handle_actor_report"),
     ("POST /actor/" + uuid + "/migrate HTTP/1", uuid, "handle_actor_migrate"),
     ("POST /actor/" + uuid + "/disable HTTP/1", uuid, "handle_actor_disable"),
     ("GET /actor/" + uuid + "/port/PORT_" + uuid + " HTTP/1", uuid, "handle_get_port"),

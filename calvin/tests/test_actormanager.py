@@ -31,6 +31,7 @@ class ActorManagerTests(unittest.TestCase):
         n = DummyNode()
         self.am = ActorManager(node=n)
         n.am = self.am
+        n.pm.remove_ports_of_actor = Mock(return_value = [])
 
     def tearDown(self):
         pass
@@ -89,7 +90,7 @@ class ActorManagerTests(unittest.TestCase):
 
         assert actor_id not in self.am.actors
         remove_actor_info.assert_called_with(actor_id)
-        self.am.node.storage.delete_actor.assert_called_with(actor_id)
+        assert self.am.node.storage.delete_actor.call_args[0][0] == actor_id
         self.am.node.control.log_actor_destroy.assert_called_with(actor_id)
 
     def test_enable_actor(self):
@@ -181,7 +182,7 @@ class ActorManagerTests(unittest.TestCase):
         self.assertEqual(self.am.connections(actor_id), expected)
 
     def test_missing_actor(self):
-        test_functions = [("report", ()), ("destroy", ()), ("enable", ()), ("disable", ()),
+        test_functions = [("report", ({},)), ("destroy", ()), ("enable", ()), ("disable", ()),
                           ("connect", ([], None)), ("connections", ()), ("dump", ()),
                           ("get_port_state", (None, ))]
         for func, args in test_functions:
