@@ -1387,3 +1387,55 @@ class TestReplication(CalvinTestBase):
         assert src not in actors
         assert snk not in actors
 
+    def testAutoDeviceReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        rt_map = {rt.id: rt for rt in self.runtimes}
+        script = """
+            src    : std.CountTimer(sleep=0.01)
+            ident  : std.Burn(duration=0.01)
+            delay  : std.Identity()
+            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            src.integer(routing="balanced")
+            delay.token[in](routing="collect-tagged")
+            src.integer > ident.token
+            ident.token > delay.token
+            delay.token > snk.token
+            
+            rule first: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "first"}])
+            rule rest: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}])
+            apply src, snk, delay: first 
+            apply ident: rest 
+            
+        """
+        response = helpers.deploy_script(request_handler, "testScript", script, self.rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        ident = response['actor_map']['testScript:ident']
+        snk = response['actor_map']['testScript:snk']
+
+        time.sleep(0.1)
+
+        # ident actor could be on any rest group runtime, need to know to ask it to auto-replicate
+        for rt in self.runtimes:
+            if ident in request_handler.get_actors(rt):
+                break
+
+        result_rep = request_handler.replicate(rt, ident, requirements={'op':"device_scaling", 'kwargs':{}})
+        print result_rep
+        time.sleep(30)
+        # Stop the flood of tokens, to make sure all are passed
+        r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
+        print "STOPPED Counter", r
+        time.sleep(2)
+        actual = request_handler.report(self.rt1, snk)
+        actors = request_handler.get_actors(self.rt1)
+        for rt in self.runtimes:
+            print rt.id, request_handler.get_actors(rt)
+        helpers.delete_app(request_handler, self.rt1, response['application_id'])
+        time.sleep(1)
+        actors = request_handler.get_actors(self.rt1)
+        assert ident not in actors
+        assert src not in actors
+        assert snk not in actors
+
