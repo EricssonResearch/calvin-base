@@ -17,6 +17,12 @@
 from calvin.runtime.north.replicationmanager import PRE_CHECK
 import random
 
+def init(replication_data):
+    replication_data.replication_pressure_counts = {}
+    replication_data.check_pressure_positions = {}
+    replication_data.dereplication_position = 0
+    replication_data.check_count = 0
+
 def pre_check(node, **kwargs):
     """ Check if actor should scale out/in
     """
@@ -24,19 +30,21 @@ def pre_check(node, **kwargs):
     actor_id = kwargs['actor_id']
     actor = node.am.actors[actor_id]
     # Check limits
-    if 'max' in kwargs and len(actor._replication_data.instances) == kwargs['max']:
-        return PRE_CHECK.NO_OPERATION
     if 'max' in kwargs and len(actor._replication_data.instances) > kwargs['max']:
         return PRE_CHECK.SCALE_IN
     if 'min' in kwargs and len(actor._replication_data.instances) < kwargs['min']:
         return PRE_CHECK.SCALE_OUT
     # Check performance
     replicate_actor = False
+    dereplicate_actor = False
+    same_count = True
     pressure = actor.get_pressure()
     counts = {}
+    positions = {}
     for port_pair, port_queues in pressure.items():
         position, count, full_positions = port_queues
         counts[port_pair] = count
+        positions[port_pair] = position
         if len(full_positions) < 2:
             continue
         # Check if two new recent queue full events
@@ -44,9 +52,37 @@ def pre_check(node, **kwargs):
             full_positions[-1] > (position - 15) and
             full_positions[-2] > (position - 15)):
             replicate_actor = True
+        # Check if long since a queue full event
+        if (actor._replication_data.dereplication_position < (position - 40) and
+            full_positions[-1] < (position - 40)):
+            dereplicate_actor = True
+        # Check if nothing has happened
+        if actor._replication_data.check_pressure_positions.get(port_pair, 0) != position:
+            same_count = False
+    if same_count:
+        actor._replication_data.check_count += 1
+    else:
+        actor._replication_data.check_count = 0
+        actor._replication_data.check_pressure_positions = positions
+    # Nothing has happend for a while, dereplicate
+    if actor._replication_data.check_count > 5:
+        dereplicate_actor = True
     if replicate_actor:
-         actor._replication_data.replication_pressure_counts = counts
-         return PRE_CHECK.SCALE_OUT
+        if 'max' in kwargs and len(actor._replication_data.instances) == kwargs['max']:
+            actor._replication_data.check_count = 0
+            return PRE_CHECK.NO_OPERATION
+        actor._replication_data.replication_pressure_counts = counts
+        actor._replication_data.dereplication_position = position
+        actor._replication_data.check_count = 0
+        return PRE_CHECK.SCALE_OUT
+    elif dereplicate_actor:
+        if len(actor._replication_data.instances) == kwargs.get('min', 1):
+            actor._replication_data.check_count = 0
+            return PRE_CHECK.NO_OPERATION
+        actor._replication_data.replication_pressure_counts = counts
+        actor._replication_data.dereplication_position = position
+        actor._replication_data.check_count = 0
+        return PRE_CHECK.SCALE_IN
     else:
         return PRE_CHECK.NO_OPERATION
 

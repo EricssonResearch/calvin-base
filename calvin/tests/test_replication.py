@@ -1319,6 +1319,7 @@ class TestReplication(CalvinTestBase):
 
     def testManyHeavyAutoReplication(self):
         _log.analyze("TESTRUN", "+", {})
+        rt_map = {rt.id: rt for rt in self.runtimes}
         script = """
             src    : std.CountTimer(sleep=0.01)
             ident  : std.Burn()
@@ -1352,13 +1353,25 @@ class TestReplication(CalvinTestBase):
 
         result_rep = request_handler.replicate(rt, ident, requirements={'op':"performance_scaling", 'kwargs':{'max': 6, 'alone': True}})
         print result_rep
-        time.sleep(15)
-        for _ in range(10):
+        time.sleep(30)
+        print "------------ Burn less ----------------"
+        actor_meta = request_handler.get_actor(self.rt1, ident)
+        r = request_handler.report(rt_map[actor_meta["node_id"]], ident, kwargs={'duration': 0.001})
+        replicas = request_handler.get_index(self.rt1, "replicas/actors/"+result_rep['replication_id'])['result']
+        for replica in replicas:
+            print "replica", replica
             try:
-                request_handler.replicate(rt, ident, dereplicate=True, exhaust=True)
-                break
+                actor_meta = request_handler.get_actor(self.rt1, replica)
+                r = request_handler.report(rt_map[actor_meta["node_id"]], replica, kwargs={'duration': 0.001})
             except Exception as e:
                 print e
+        #for _ in range(10):
+        #    try:
+        #        request_handler.replicate(rt, ident, dereplicate=True, exhaust=True)
+        #        break
+        #    except Exception as e:
+        #        print e
+        time.sleep(30)
         # Stop the flood of tokens, to make sure all are passed
         r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
         print "STOPPED Counter", r

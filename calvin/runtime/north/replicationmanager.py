@@ -48,7 +48,6 @@ class ReplicationData(object):
         self.counter = 0
         # {<actor_id>: {'known_peer_ports': [peer-ports id list], <org-port-id: <replicated-port-id>, ...}, ...}
         self.remaped_ports = {}
-        self.replication_pressure_counts = {}
         self.status = REPLICATION_STATUS.UNUSED
 
     def state(self, remap=None):
@@ -117,6 +116,15 @@ class ReplicationData(object):
             connects.append((aid, ports[port_id], peer_port_id))
         return connects
 
+    def init_requirements(self, requirements=None):
+        if requirements is not None:
+            self.requirements = requirements
+        try:
+            if not self.requirements:
+                return
+            req_operations[self.requirements['op']].init(self)
+        except:
+            _log.exception("init_requirements")
 
 class ReplicationManager(object):
     def __init__(self, node):
@@ -132,13 +140,14 @@ class ReplicationManager(object):
         if actor._replication_data.id is None:
             actor._replication_data = ReplicationData(
                 actor_id=actor_id, master=actor_id, requirements=requirements)
+            actor._replication_data.init_requirements()
         elif actor._replication_data.is_master(actor_id):
             # If we already is master that is OK, update requirements
             # FIXME should not update during a replication, fix when we get the 
             # requirements from the deployment requirements
-            actor._replication_data.requirements = requirements
+            actor._replication_data.init_requirements(requirements)
             self.node.storage.add_replication(actor._replication_data, cb=None)
-            return calvinresponse.CalvinResponse(True)
+            return calvinresponse.CalvinResponse(True, {'replication_id': actor._replication_data.id})
         else:
             return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
         actor._replication_data.status = REPLICATION_STATUS.READY
@@ -147,7 +156,7 @@ class ReplicationManager(object):
         self.node.storage.add_replication(actor._replication_data, cb=None)
         self.node.storage.add_actor(actor, self.node.id, cb=None)
         #TODO trigger replication loop
-        return calvinresponse.CalvinResponse(True)
+        return calvinresponse.CalvinResponse(True, {'replication_id': actor._replication_data.id})
 
     def list_master_actors(self):
         return [a for a_id, a in self.node.am.actors.items() if a._replication_data.master == a_id]
@@ -357,10 +366,10 @@ class ReplicationManager(object):
             elif pre_check == PRE_CHECK.SCALE_IN:
                  dereplicate.append(actor)
         for actor in replicate:
-            _log.debug("Auto-replicate")
+            _log.info("Auto-replicate")
             self.replicate_by_requirements(actor, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
         for actor in dereplicate:
-            _log.debug("Auto-dereplicate")
+            _log.info("Auto-dereplicate")
             self.dereplicate(actor.id, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id), exhaust=True)
 
     def _replication_loop_log_cb(self, status, actor_id):

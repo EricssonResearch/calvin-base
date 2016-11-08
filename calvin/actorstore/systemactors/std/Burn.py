@@ -45,7 +45,8 @@ class Burn(Actor):
             pass
         return ActionResult(production=(input, ))
 
-    def report(self):
+    def report(self, **kwargs):
+        self.duration = kwargs.get('duration', self.duration)
         return self.last
 
     action_priority = (donothing, )

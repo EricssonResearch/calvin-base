@@ -1287,9 +1287,9 @@ class CalvinControl(object):
         try:
             # Supervise with potential autoscaling in requirements
             requirements = data.get('requirements', {})
-            status = self.node.rm.supervise_actor(match.group(1), requirements).status
-            if status != calvinresponse.OK:
-                self.send_response(handle, connection, None, status)
+            status_supervise = self.node.rm.supervise_actor(match.group(1), requirements)
+            if status_supervise.status != calvinresponse.OK:
+                self.send_response(handle, connection, None, status_supervise.status)
                 return
             if not requirements:
                 # Direct replication only
@@ -1297,7 +1297,7 @@ class CalvinControl(object):
                 self.node.rm.replicate(
                     match.group(1), node_id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
                 status = calvinresponse.OK
-            self.send_response(handle, connection, None, calvinresponse.OK)
+            self.send_response(handle, connection, json.dumps(status_supervise.data), calvinresponse.OK)
         except:
             _log.exception("Failed test replication")
             self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
