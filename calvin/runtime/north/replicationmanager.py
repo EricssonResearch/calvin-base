@@ -32,7 +32,7 @@ from calvin.utilities.utils import enum
 _log = get_logger(__name__)
 
 FIRINGS_LENGTH = 20
-REPLICATION_STATUS = enum('UNUSED', 'READY', 'REPLICATING', 'DEREPLICATING')
+REPLICATION_STATUS = enum('UNUSED', 'READY', 'REPLICATING', 'DEREPLICATING', 'INHIBATED')
 PRE_CHECK = enum('NO_OPERATION', 'SCALE_OUT', 'SCALE_IN')
 
 
@@ -63,7 +63,9 @@ class ReplicationData(object):
                 state['instances'] = self.instances
                 state['requirements'] = self.requirements
                 state['remaped_ports'] = self.remaped_ports
-                state['status'] = self.status
+                # We might migrate at the same time as we (de)replicate
+                # To not lock the replication manager just change the migration state
+                state['status'] = REPLICATION_STATUS.READY if self.is_busy() else self.status 
                 try:
                     state['req_op'] = req_operations[self.requirements['op']].get_state(self)
                 except:
@@ -105,6 +107,18 @@ class ReplicationData(object):
 
     def is_master(self, actor_id):
         return self.id is not None and self.master == actor_id
+
+    def is_busy(self):
+        return self.status in [REPLICATION_STATUS.REPLICATING, REPLICATION_STATUS.DEREPLICATING]
+
+    def inhibate(self, actor_id, inhibate):
+        if inhibate:
+            if self.requirements:
+                self.status = REPLICATION_STATUS.INHIBATED
+        elif self.is_master(actor_id):
+            self.status = REPLICATION_STATUS.READY
+        else:
+            self.status = REPLICATION_STATUS.UNUSED
 
     def set_remaped_ports(self, actor_id, remap_ports, ports):
         self.remaped_ports[actor_id] = remap_ports
@@ -362,6 +376,8 @@ class ReplicationManager(object):
         for actor in self.list_master_actors():
             if actor._replication_data.status != REPLICATION_STATUS.READY:
                 continue
+            if actor._migrating_to is not None:
+                continue
             try:
                 req = actor._replication_data.requirements
                 pre_check = req_operations[req['op']].pre_check(self.node, actor_id=actor.id,
@@ -457,6 +473,11 @@ class ReplicationManager(object):
         _log.analyze(self.node.id, "+", {'possible_placements': actor._possible_placements, 'current_placements': actor._collect_current_placement, 'selected': selected})
         if selected is None:
             # When None - selection will never succeed
+            if actor._replicate_callback:
+                actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            return
+        if actor._migrating_to is not None:
+            # If actor started migration skip replication
             if actor._replicate_callback:
                 actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return

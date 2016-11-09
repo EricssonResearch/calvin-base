@@ -776,6 +776,8 @@ class Deployer(object):
                     actor_reqs.remove(reqs_replication[0])
                     # Replication requirements
                     self.node.rm.supervise_actor(actor_id, reqs_replication[0])
+                    if actor_reqs:
+                        self.node.am.actors[actor_id]._replication_data.inhibate(actor_id, True)
                 # Placement requirements
                 self.node.am.actors[actor_id].requirements_add(actor_reqs, extend=False)
             self.actor_map[actor_name] = actor_id

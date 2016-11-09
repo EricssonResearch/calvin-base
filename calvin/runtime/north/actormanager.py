@@ -301,6 +301,7 @@ class ActorManager(object):
                 callback(status=response.CalvinResponse(response.BAD_REQUEST))
             return
         actor = self.actors[actor_id]
+        actor._replication_data.inhibate(actor_id, True)
         actor._collect_placement_counter = 0
         actor._collect_placement_last_value = 0
         actor._collect_placement_cb = None
@@ -350,13 +351,16 @@ class ActorManager(object):
             if move and len(possible_placements)>1:
                 possible_placements.discard(self.node.id)
             if authorization_check:
+                actor._replication_data.inhibate(actor_id, False)
                 cb(possible_placements=list(possible_placements))
                 return
             if not possible_placements:
+                actor._replication_data.inhibate(actor_id, False)
                 if cb:
                     cb(status=response.CalvinResponse(False))
                 return
             if self.node.id in possible_placements:
+                actor._replication_data.inhibate(actor_id, False)
                 # Actor could stay, then do that
                 if cb:
                     cb(status=response.CalvinResponse(True))
@@ -375,13 +379,14 @@ class ActorManager(object):
             if callback:
                 callback(status=response.CalvinResponse(False))
             return
+        actor = self.actors[actor_id]
+        # No need to inhibate replication anymore (could still be locked out by _migrating_to set below)
+        actor._replication_data.inhibate(actor_id, False)
         if node_id == self.node.id:
             # No need to migrate to ourself
             if callback:
                 callback(status=response.CalvinResponse(True))
             return
-
-        actor = self.actors[actor_id]
         actor._migrating_to = node_id
         actor.will_migrate()
         actor_type = actor._type
