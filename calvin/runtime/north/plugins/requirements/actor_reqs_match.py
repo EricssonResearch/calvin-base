@@ -18,13 +18,14 @@ from calvin.utilities import dynops
 from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
+req_type = "placement"
 
 def req_op(node, requires, actor_id=None, component=None):
     """ Based on requires find any nodes with all those capabilities
     """
     if not requires:
         _log.analyze(node.id, "+ NO REQUIRES", {'actor_id': actor_id})
-        return dynops.Infinite(cb)
+        return dynops.Infinite()
 
     iters = []
     for r in requires:

@@ -16,6 +16,8 @@
 
 from calvin.utilities import dynops
 
+req_type = "placement"
+
 def req_op(node, port_property, actor_id=None, component=None):
     """ Lockup port_property returns a dynamic iterable which is a union of all possible runtimes 
         actor_id is the actor that this is requested for

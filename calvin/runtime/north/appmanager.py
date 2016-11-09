@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os
+import copy
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import dynops
 from calvin.utilities import calvinlogger
@@ -740,6 +741,12 @@ class Deployer(object):
             info['shadow_actor'] = True
             self.instantiate(actor_name, info, cb=cb)
 
+    def _requirement_type(self, req):
+        try:
+            return req_operations[req['op']].req_type
+        except:
+            return "unknown"
+
     def instantiate(self, actor_name, info, actor_def=None, access_decision=None, cb=None):
         """
         Instantiate an actor.
@@ -762,7 +769,15 @@ class Deployer(object):
                 raise Exception("Could not instantiate actor %s" % actor_name)
             deploy_req = self.get_req(actor_name)
             if deploy_req:
-                self.node.am.actors[actor_id].requirements_add(deploy_req, extend=False)
+                # Seperate replication and placement requirements
+                actor_reqs = copy.deepcopy(deploy_req)
+                reqs_replication = [r for r in actor_reqs if self._requirement_type(r) == "replication"]
+                if reqs_replication:
+                    actor_reqs.remove(reqs_replication[0])
+                    # Replication requirements
+                    self.node.rm.supervise_actor(actor_id, reqs_replication[0])
+                # Placement requirements
+                self.node.am.actors[actor_id].requirements_add(actor_reqs, extend=False)
             self.actor_map[actor_name] = actor_id
             self.node.app_manager.add(self.app_id, actor_id)
         except Exception as e:

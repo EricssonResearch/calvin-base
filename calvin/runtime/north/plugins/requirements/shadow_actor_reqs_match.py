@@ -19,6 +19,8 @@ from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
+req_type = "placement"
+
 def get_description(out_iter, kwargs, final, signature):
     _log.debug("shadow_match:get_description BEGIN")
     if final[0]:

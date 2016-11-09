@@ -17,11 +17,27 @@
 from calvin.runtime.north.replicationmanager import PRE_CHECK
 import random
 
+req_type = "replication"
+
 def init(replication_data):
     replication_data.replication_pressure_counts = {}
     replication_data.check_pressure_positions = {}
     replication_data.dereplication_position = 0
     replication_data.check_count = 0
+
+def set_state(replication_data, state):
+    replication_data.replication_pressure_counts = state.get('replication_pressure_counts', {})
+    replication_data.check_pressure_positions = state.get('check_pressure_positions', {})
+    replication_data.dereplication_position =  state.get('dereplication_position', 0)
+    replication_data.check_count =  state.get('check_count', 0)
+
+def get_state(replication_data):
+    state = {}
+    state['replication_pressure_counts'] = replication_data.replication_pressure_counts
+    state['check_pressure_positions'] = replication_data.check_pressure_positions
+    state['dereplication_position'] = replication_data.dereplication_position
+    state['check_count'] = replication_data.check_count
+    return state
 
 def pre_check(node, **kwargs):
     """ Check if actor should scale out/in

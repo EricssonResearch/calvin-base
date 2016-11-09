@@ -18,6 +18,8 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities import dynops
 
+req_type = "placement"
+
 def req_op(node, index, actor_id=None, component=None):
     """ Lockup index returns a dynamic iterable which 
         actor_id is the actor that this is requested for

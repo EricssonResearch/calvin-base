@@ -64,6 +64,10 @@ class ReplicationData(object):
                 state['requirements'] = self.requirements
                 state['remaped_ports'] = self.remaped_ports
                 state['status'] = self.status
+                try:
+                    state['req_op'] = req_operations[self.requirements['op']].get_state(self)
+                except:
+                    pass
         return state
 
     def set_state(self, state):
@@ -74,6 +78,10 @@ class ReplicationData(object):
         self.counter = state.get('counter', 0)
         self.remaped_ports = state.get('remaped_ports', {})
         self.status = state.get('status', REPLICATION_STATUS.UNUSED)
+        try:
+            req_operations[self.requirements['op']].set_state(self, state['req_op'])
+        except:
+            pass
 
     def add_replica(self, actor_id):
         if actor_id in self.instances:

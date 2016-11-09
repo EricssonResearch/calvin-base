@@ -16,6 +16,8 @@
 
 from calvin.utilities import dynops
 
+req_type = "placement"
+
 def req_op(node, actor_id=None, component=None):
     """ current node """
     it = dynops.List([node.id])

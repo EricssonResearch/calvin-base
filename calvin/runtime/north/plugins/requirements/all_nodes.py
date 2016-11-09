@@ -17,6 +17,8 @@
 from calvin.utilities import dynops
 from calvin.utilities.attribute_resolver import format_index_string
 
+req_type = "placement"
+
 def req_op(node, actor_id=None, component=None):
     """ Returns an infinite dynamic iterable """
     index_str = format_index_string(("node_name", {}))
