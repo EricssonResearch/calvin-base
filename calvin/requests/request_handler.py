@@ -81,6 +81,11 @@ class RequestHandler(object):
     def __init__(self,verify=None):
         self.future_responses = []
         self.verify=verify
+        self.credentials = None
+
+    def set_credentials(self, credentials):
+        self.credentials=credentials
+
 
     def check_response(self, response, success=range(200, 207), key=None):
         if isinstance(response, Response):
@@ -145,7 +150,7 @@ class RequestHandler(object):
 
         if not isinstance(peers[0], type("")):
             peers = peers[0]
-        data = {'peers': peers}
+            data = {'peers': peers, 'sec_credentials':self.credentials}
 
         r = self._post(rt, timeout, async, PEER_SETUP, data)
         return self.check_response(r)
@@ -154,6 +159,7 @@ class RequestHandler(object):
         data = {
             'actor_type': actor_type,
             'args': {'name': actor_name},
+            'sec_credentials':self.credentials,
             'deploy_args': {'credentials': credentials} if credentials else None
         }
 
@@ -169,6 +175,7 @@ class RequestHandler(object):
             data['args'] = kwargs
         else:
             data['args'] = args
+        data['sec_credentials'] = self.credentials,
 
         r = self._post(rt, timeout, async, ACTOR, data)
         return self.check_response(r, key='actor_id')
@@ -188,6 +195,7 @@ class RequestHandler(object):
     def connect(self, rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name, timeout=DEFAULT_TIMEOUT,
                 async=False):
         data = {
+            'sec_credentials':self.credentials,
             'actor_id': actor_id,
             'port_name': port_name,
             'port_dir': 'in',
@@ -202,6 +210,7 @@ class RequestHandler(object):
     def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, timeout=DEFAULT_TIMEOUT,
                    async=False):
         data = {
+            'sec_credentials':self.credentials,
             'actor_id': actor_id,
             'port_name': port_name,
             'port_dir': port_dir,
@@ -216,7 +225,7 @@ class RequestHandler(object):
         return self.check_response(r)
 
     def migrate(self, rt, actor_id, dst_id, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'peer_node_id': dst_id}
+        data = {'peer_node_id': dst_id, 'sec_credentials':self.credentials}
         path = ACTOR_MIGRATE.format(actor_id)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
@@ -239,14 +248,14 @@ class RequestHandler(object):
 
     def migrate_use_req(self, rt, actor_id, requirements, extend=False, move=False, timeout=DEFAULT_TIMEOUT,
                         async=False):
-        data = {'requirements': requirements, 'extend': extend, 'move': move}
+        data = {'requirements': requirements, 'extend': extend, 'move': move, 'sec_credentials':self.credentials}
         path = ACTOR_MIGRATE.format(actor_id)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
     def migrate_app_use_req(self, rt, application_id, deploy_info=None, move=False, timeout=DEFAULT_TIMEOUT,
                             async=False):
-        data = {'deploy_info': deploy_info, "move": move}
+        data = {'deploy_info': deploy_info, "move": move, 'sec_credentials':self.credentials}
         path = APPLICATION_MIGRATE.format(application_id)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
@@ -260,6 +269,7 @@ class RequestHandler(object):
                             port_properties=None, port_id=None,
                             timeout=DEFAULT_TIMEOUT, async=False):
         data = {
+            'sec_credentials':self.credentials,
             'actor_id': actor_id,
             'port_type': port_type,
             'port_name': port_name,
@@ -297,7 +307,7 @@ class RequestHandler(object):
         data = {
             "name": name,
             "script": script,
-            "sec_credentials": credentials,
+            "sec_credentials": self.credentials,
             "deploy_info": deploy_info,
             "check": check
         }
@@ -313,7 +323,7 @@ class RequestHandler(object):
         data = {
             "name": name,
             "app_info": app_info,
-            "sec_credentials": credentials,
+            "sec_credentials": self.credentials,
             "deploy_info": deploy_info,
             "check": check
         }
@@ -321,7 +331,7 @@ class RequestHandler(object):
         return self.check_response(r)
 
     def register_metering(self, rt, user_id=None, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'user_id': user_id} if user_id else None
+        data = {'user_id': user_id, 'sec_credentials':self.credentials} if user_id else None
         r = self._post(rt, timeout, async, METER, data=data)
         return self.check_response(r)
 
@@ -342,7 +352,7 @@ class RequestHandler(object):
         return self.check_response(r)
 
     def add_index(self, rt, index, value, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'value': value}
+        data = {'value': value, 'sec_credentials':self.credentials}
         path = INDEX_PATH.format(index)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
@@ -362,7 +372,7 @@ class RequestHandler(object):
         return self.check_response(r)
 
     def set_storage(self, rt, key, value, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'value': value}
+        data = {'value': value, 'sec_credentials':self.credentials}
         path = STORAGE_PATH.format(key)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)

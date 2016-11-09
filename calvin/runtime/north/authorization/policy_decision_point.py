@@ -210,6 +210,7 @@ class PolicyDecisionPoint(object):
                 policy = policies[policy_id]
                 # Check if policy target matches (policy without target matches everything).
                 if "target" not in policy or self.target_matches(policy["target"], request, pip):
+                    _log.debug("combined_policy_decision, target matches:\n---request={}\n---policy={}".format(request, policy))
                     # Get a policy decision if target matches.
                     decision, obligations = self.policy_decision(policy, request, pip)
                     if ((decision == "permit" and not obligations and self.config["policy_combining"] == "permit_overrides") or 
@@ -220,13 +221,17 @@ class PolicyDecisionPoint(object):
                     policy_decisions.append(decision)
                     policy_obligations += obligations
             if "indeterminate" in policy_decisions:
+                _log.debug("combined_policy_decision  Indeterminate in policy_decisions,  so let's deny")
                 return ("indeterminate", [])
             if not all(x == "not_applicable" for x in policy_decisions):
                 if self.config["policy_combining"] == "deny_overrides" or policy_obligations:
+                    _log.debug("combined_policy_decision At least one policy_decision not not_applicable, deny_overrides or policy_obligations, so let's permit")
                     return ("permit", policy_obligations)
                 else:
+                    _log.debug("combined_policy_decision  At least one policy_decision not not_applicable, permit_overrides or not policy_obligations, so let's deny:\n---policy_decisions={}".format(policy_decisions))
                     return ("deny", [])
             else:
+                _log.debug("combined_policy_decision  All policy_decision not_applicable,  so let's deny")
                 return ("not_applicable", [])
         except Exception as exc:
             _log.exception("Failed to get policies from PRP, exc={}".format(exc))
@@ -286,19 +291,25 @@ class PolicyDecisionPoint(object):
                   (decision == "deny" and policy["rule_combining"] == "deny_overrides")):
                     # Stop checking further rules.
                     # If "permit" with obligations, continue since "permit" without obligations may be found.
+                    _log.debug("policy_decision {} and {}".format(decision, policy["rule_combining"]))
                     return (decision, [])
                 rule_decisions.append(decision)
                 if decision == "permit" and obligations:
+                    _log.debug("policy_decision, rule says permit with obligations:\n  policy={},\n  request={}".format(policy, request))
                     # Obligations are only accepted if the decision is "permit".
                     rule_obligations += obligations
         if "indeterminate" in rule_decisions:
+            _log.debug("policy_decision, indeterminate in rule_decisions, policy={},  request={}".format(policy, request))
             return ("indeterminate", [])
         if not all(x == "not_applicable" for x in rule_decisions):
             if policy["rule_combining"] == "deny_overrides" or rule_obligations:
+                _log.debug("atleast on rule_decision not not_applicable, deny_overrides or rule_obligations, so let's permit\n---policy={}---request={}".format(policy, request))
                 return ("permit", rule_obligations)
             else:
+                _log.debug("Atleast on rule_decision not not_applicable, permit_overrides or not rule_obligations, so let's deny\n---policy={}---request={}".format(policy, request))
                 return ("deny", [])
         else:
+            _log.debug("All rule_decisions not_applicable, so let's deny\n---policy={}---request={}".format(policy, request))
             return ("not_applicable", [])
 
     def rule_decision(self, rule, request, pip):
@@ -315,14 +326,17 @@ class PolicyDecisionPoint(object):
                         args.append(attribute)
                 rule_satisfied = self.evaluate_function(rule["condition"]["function"], args, request, pip)
                 if rule_satisfied:
+                    _log.debug("rule_decision, rule satisfied, rule={},  request={}".format(rule, request))
                     return (rule["effect"], rule.get("obligations", []))
                 else:
+                    _log.debug("rule_decision, rule NOT satisfied, rule={},  request={}".format(rule, request))
                     return ("not_applicable", [])
             except Exception as exc:
                 _log.exception("Rule decision exception, exc={}".format(exc))
                 return ("indeterminate", [])
         else:
             # If no condition in the rule, return the rule effect directly.
+            _log.debug("rule_decision No condition in rule, return effect directly\n---rule effect={}\n---rule obligations={}".format(rule["effect"], rule.get("obligations", [])))
             return (rule["effect"], rule.get("obligations", []))
         
     def evaluate_function(self, func, args, request, pip):

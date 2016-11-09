@@ -31,6 +31,8 @@ from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities.utils import get_home
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities import calvinuuid
+from calvin.runtime.north.authentication.authentication_retrieval_point import FileAuthenticationRetrievalPoint
+
 import os
 import json
 import copy
@@ -46,6 +48,9 @@ runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
+identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
+policy_storage_path = os.path.join(security_testdir, "policies")
+store_path = os.path.join(security_testdir, "store")
 
 try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
@@ -82,6 +87,7 @@ class TestSecurity(unittest.TestCase):
             os.mkdir(credentials_testdir)
             os.mkdir(runtimesdir)
             os.mkdir(runtimes_truststore)
+            shutil.copytree(os.path.join(security_testdir,"identity_provider"),identity_provider_path)
         except Exception as err:
             print "Failed to create test folder structure, err={}".format(err)
             pass
@@ -131,11 +137,22 @@ class TestSecurity(unittest.TestCase):
         rt4_certpath, rt4_cert, rt4_certstr = runtimes[3].get_own_cert(security_dir=credentials_testdir)
         runtimes[1].store_others_cert(certpath=rt4_certpath)
         runtimes[3].store_others_cert(certpath=rt2_certpath)
+
+        #Let's hash passwords in users.json file (the runtimes will try to do this
+        # but they will all try to do it at the same time, so it will be overwritten
+        # multiple times and the first test will always fail)
+        self.arp = FileAuthenticationRetrievalPoint(identity_provider_path)
+        self.arp.check_stored_users_db_for_unhashed_passwords()
+
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
         #   The following is less than optimal if multiple CA certs exist
         ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
         request_handler = RequestHandler(verify=ca_cert_path)
+        #The policy allows access to control interface for everyone, for more advanced rules
+        # it might be appropriate to run set_credentials for request_handler, e.g.,
+        #  request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
+
         #Copy trusted code signer certificate into truststore
         shutil.copy(os.path.join(security_testdir, "runtimes","truststore_for_signing", "93d58fef.0"),
                     os.path.join(credentials_testdir,"runtimes","truststore_for_signing")) 
@@ -145,20 +162,19 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('security', 'control_interface_security', "tls")
         rt_conf.set('security', 'security_domain_name', domain_name)
         rt_conf.set('security', 'security_path', credentials_testdir)
-        rt_conf.set('global', 'actor_paths', [os.path.join(security_testdir, "store")])
+        rt_conf.set('global', 'actor_paths', [store_path])
         rt1_conf = copy.deepcopy(rt_conf)
         rt1_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "authentication": {
                             "procedure": "local",
-                            "identity_provider_path": os.path.join(security_testdir, "identity_provider")
+                            "identity_provider_path": identity_provider_path
                         },
                         "authorization": {
                             "procedure": "local",
-                            "policy_storage_path": os.path.join(security_testdir, "policies")
+                            "policy_storage_path": policy_storage_path
                         }
                     })
-        rt1_conf.set('global', 'actor_paths', [os.path.join(security_testdir, "store")])
         rt1_conf.save("/tmp/calvin5001.conf")
 
         try:
@@ -183,15 +199,14 @@ class TestSecurity(unittest.TestCase):
                         "comment": "Local authentication, local authorization",
                         "authentication": {
                             "procedure": "local",
-                            "identity_provider_path": os.path.join(security_testdir, "identity_provider")
+                            "identity_provider_path": identity_provider_path
                         },
                         "authorization": {
                             "procedure": "local",
-                            "policy_storage_path": os.path.join(security_testdir, "policies"),
+                            "policy_storage_path": policy_storage_path,
                             "accept_external_requests": True
                         }
                     })
-        rt2_conf.set('global', 'actor_paths', [os.path.join(security_testdir, "store")])
         rt2_conf.save("/tmp/calvin5002.conf")
 
         try:
@@ -219,10 +234,9 @@ class TestSecurity(unittest.TestCase):
                         },
                         "authorization": {
                             "procedure": "local",
-                            "policy_storage_path": os.path.join(security_testdir, "policies")
+                            "policy_storage_path": policy_storage_path
                         }
                     })
-        rt3_conf.set('global', 'actor_paths', [os.path.join(security_testdir, "store")])
         rt3_conf.save("/tmp/calvin5003.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5003"
@@ -241,20 +255,18 @@ class TestSecurity(unittest.TestCase):
         # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
         print "-------------------------------------"
         rt2_uuid = runtimes[1].node_id
-#        rt2_uuid = runtime.node_id
         rt4_conf = copy.deepcopy(rt_conf)
         rt4_conf.set("security", "security_conf", {
                         "comment": "Local authentication, external authorization",
                         "authentication": {
                             "procedure": "local",
-                            "identity_provider_path": os.path.join(security_testdir, "identity_provider")
+                            "identity_provider_path": identity_provider_path
                         },
                         "authorization": {
                             "procedure": "external",
                             "server_uuid": rt2_uuid
                         }
                     })
-        rt4_conf.set('global', 'actor_paths', [os.path.join(security_testdir, "store")])
         rt4_conf.save("/tmp/calvin5004.conf")
         try:
             logfile = _config_pytest.getoption("logfile")+"5004"
@@ -375,8 +387,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
-                    credentials={domain_name:{"user": "user1", "password": "pass1"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -410,8 +423,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_incorrectly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
             result = request_handler.deploy_application(rt1, "test_security1_incorrectly_signed", content['file'], 
-                    credentials={domain_name:{"user": "user1", "password": "pass1"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -435,8 +449,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
             result = request_handler.deploy_application(rt1, "test_security1_correctlySignedApp_incorrectlySignedActor", content['file'], 
-                    credentials={domain_name:{"user": "user1", "password": "pass1"}}, content=content, 
+                    credentials={domain_name:{"user": "user1", "password": "pass1"}}, content=content,
                         check=True)
         except Exception as e:
             _log.debug(str(e))
@@ -476,8 +491,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_unsignedApp_signedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
             result = request_handler.deploy_application(rt2, "test_security1_unsignedApp_signedActors", content['file'], 
-                        credentials={domain_name:{"user":"user2", "password":"pass2"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -511,8 +527,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_unsignedApp_unsignedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user3", "password": "pass3"}})
             result = request_handler.deploy_application(rt2, "test_security1_unsignedApp_unsignedActors", content['file'], 
-                        credentials={domain_name:{"user":"user3", "password":"pass3"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -546,8 +563,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
             result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
-                        credentials={domain_name:{"user":"user1", "password":"pass1"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             _log.debug(str(e))
@@ -582,8 +600,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_unsignedApp_signedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
             result = request_handler.deploy_application(rt4, "test_security1_unsignedApp_signedActors", content['file'], 
-                        credentials={domain_name:{"user":"user2","password":"pass2"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -618,8 +637,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user4", "password": "pass4"}})
             result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
-                        credentials={domain_name:{"user":"user4", "password":"pass4"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -639,6 +659,31 @@ class TestSecurity(unittest.TestCase):
 
         request_handler.delete_application(rt2, result['application_id'])
 
+    @pytest.mark.slow
+    def testSecurity_NEGATIVE_Control_Interface_Authorization(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt2
+        global request_handler
+        global security_testdir
+
+        self.verify_storage()
+
+        result = {}
+        try:
+            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user6", "password": "pass6"}})
+            result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'],
+                        content=content,
+                        check=True)
+        except Exception as e:
+            if e.message.startswith("401"):
+                # We were blocked, as we should
+                return
+            _log.exception("Test deploy failed for non security reasons")
+
+        raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")
 
 ###################################
 #   Authentication related tests
@@ -658,8 +703,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user_not_allowed", "password": "pass1"}})
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
-                        credentials={domain_name:{"user":"user_not_allowed", "password":"pass1"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -683,8 +729,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user1", "password": "incorrect_password"}})
             result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
-                        credentials={domain_name:{"user":"user1", "password":"incorrect_password"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
@@ -710,8 +757,9 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user5", "password": "pass5"}})
             result = request_handler.deploy_application(rt3, "test_security1_correctly_signed", content['file'], 
-                        credentials={domain_name:{"user":"user5", "password":"pass5"}}, content=content, 
+                        content=content,
                         check=True)
         except Exception as e:
             if isinstance(e, Timeout):

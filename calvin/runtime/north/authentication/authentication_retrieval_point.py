@@ -56,6 +56,7 @@ class FileAuthenticationRetrievalPoint(object):
 
     def __init__(self, path):
         # Replace ~ by the user's home directory.
+        _log.debug("FileAuthenticationRetrievalPoint::__init__")
         self.path = os.path.expanduser(path) 
         if not os.path.exists(self.path):
             try:
@@ -77,13 +78,17 @@ class FileAuthenticationRetrievalPoint(object):
         with open(os.path.join(self.path, "users.json"), "w") as file:
             json.dump(data, file)
 
-    def update_users_db(self, data):
+    def hash_passwords(self, data):
         """Change the content of the users database"""
         for user in data['users_db']:
-            #If the password is stored in clear, let's hash it with a salt and store that instead
+            #If the password is in clear, let's hash it with a salt and store that instead
             if not pbkdf2_sha256.identify(user['password']):
                hash = pbkdf2_sha256.encrypt(user['password'], rounds=200000, salt_size=16)
-               user['password']=hash    
+               user['password']=hash
+
+    def update_users_db(self, data):
+        """Change the content of the users database"""
+        self.hash_passwords(data)
         file_path = os.path.join(self.path, "users.json")
         if os.path.isfile(file_path):
             with open(file_path, "w") as file:
@@ -91,10 +96,34 @@ class FileAuthenticationRetrievalPoint(object):
         else:
             raise IOError  # Raise exception if policy named filename doesn't exist
 
+    def check_stored_users_db_for_unhashed_passwords(self):
+        """
+        Load the database from storage, check if there
+        are any passwords stored in clear, and if so, hash
+        the passwords and store the hashes instead
+        """
+        _log.debug("check_stored_users_db_for_unhashed_passwords")
+        file_path = os.path.join(self.path, "users.json")
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, "r+") as file:
+                    data = json.load(file)
+                    self.hash_passwords(data)
+                    file.seek(0)
+                    json.dump(data, file)
+                    file.truncate()
+            except Exception as exc:
+                _log.exception("Failed to open users.json, exc={}".format(exc))
+
+        else:
+            _log.error("No users.json file")
+            raise IOError  # Raise exception if policy named filename doesn't exist
+
+
     def delete_users_db(self):
         """Delete the policy named policy_id"""
         os.remove(os.path.join(self.path, "users.json"))
-        
+
     def get_groups_db(self):
         """Return the database of groups"""
         try:

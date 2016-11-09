@@ -127,9 +127,15 @@ class Security(object):
         """Authenticate subject using the authentication procedure specified in config."""
         _log.debug("Security: authenticate_subject")
         request = {}
-        if not security_enabled() or not credentials:
-            _log.debug("Security: no security needed or no credentials to authenticate (handle as guest)")
-            return True
+        if not security_enabled():
+            _log.debug("Security: no security enabled")
+            callback(authentication_decision=True)
+            return
+        elif not credentials:
+            _log.debug("Security: no credentials to authenticate (handle as guest)")
+            self.subject_attributes = {}
+            callback(authentication_decision=True)
+            return
         # Only attempt authentication if credentials for the domain are supplied.
         # If not, subject_attributes is empty, which may still grant access according to
         # the policy
@@ -253,19 +259,24 @@ class Security(object):
 #        else:
 #            callback(access_decision=True)
 
-    def check_security_policy(self, callback, element_type, actor_id=None, requires=None, signer=None, decision_from_migration=None):
+    def check_security_policy(self, callback, element_type, actor_id=None, requires=None, element_value=None, decision_from_migration=None):
         """Check if access is permitted by the security policy."""
         # Can't use id for application since it is not assigned when the policy is checked.
-        _log.debug("Security: check_security_policy")
+        _log.debug("check_security_policy, element_type={}".format(element_type))
+        element_dict={}
         if self.sec_conf:
-            signer = {element_type + "_signer": signer}
-            self.get_authorization_decision(callback, actor_id, requires, signer, decision_from_migration)
+            if element_type in ['application', 'actor']:
+                element_dict[element_type + "_signer"] = element_value
+            if element_type is 'control_interface':
+                element_dict['control_interface'] = element_value
+            self.get_authorization_decision(callback, actor_id, requires, element_dict, decision_from_migration)
             return
         # No security config, so access control is disabled.
         return callback(access_decision=True)
 
-    def get_authorization_decision(self, callback, actor_id=None, requires=None, signer=None, decision_from_migration=None):
+    def get_authorization_decision(self, callback, actor_id=None, requires=None, element_dict=None, decision_from_migration=None):
         """Get authorization decision using the authorization procedure specified in config."""
+        _log.debug("Security: get_authorization_decision")
         if decision_from_migration:
             try:
                 _log.info("Security: Authorization decision from migration")
@@ -284,8 +295,8 @@ class Security(object):
         else:
             request = {}
             request["subject"] = self.get_subject_attributes()
-            if signer is not None:
-                request["subject"].update(signer)
+            if element_dict is not None:
+                request["subject"].update(element_dict)
             request["resource"] = {"node_id": self.node.id}
             if requires is not None:
                 request["action"] = {"requires": requires}

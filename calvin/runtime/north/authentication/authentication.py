@@ -36,13 +36,17 @@ class Authentication(object):
     """Authentication helper functions"""
 
     def __init__(self, node):
+        _log.debug("Authentication::__init__")
         self.node = node
         try:
             if _sec_conf['authentication']['procedure'] == "local":
+                _log.debug("Authentication::__init__   local authentication procedure configured")
                 self.adp = AuthenticationDecisionPoint(self.node, _sec_conf['authentication'])
                 self.arp = FileAuthenticationRetrievalPoint(_sec_conf['authentication']['identity_provider_path'])
+                self.arp.check_stored_users_db_for_unhashed_passwords()
                 self.auth_server_id = self.node.id
             else:
+                _log.debug("Authentication::__init__   external authentication procedure configured")
                 self.auth_server_id = _sec_conf['authentication']['server_uuid']
         except Exception as e:
             _log.info("Missing or incomplete security config")

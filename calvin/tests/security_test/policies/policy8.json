@@ -1,0 +1,29 @@
+{
+	"id": "policy8",
+	"description": "Security policy for the control interface of all testNodes",
+	"rule_combining": "deny_overrides",
+	"target": {
+		"subject": {
+			"control_interface": ".*"
+		}
+	},
+	"rules": [
+		{
+			"id": "policy8_rule1",
+			"description": "Permit if policy target matches",
+			"effect": "permit"
+		},{
+			"id": "policy8_rule2",
+			"description": "Deny Berit access to control interface of testNode1",
+			"effect": "deny",
+			"target":{
+				"subject":{
+					"first_name":["Fredrik"]
+				},
+				"resource":{
+					"node_name.name":["testNode2"]
+				}
+			}
+		}
+	]
+}

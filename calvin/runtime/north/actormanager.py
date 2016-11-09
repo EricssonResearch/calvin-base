@@ -280,8 +280,10 @@ class ActorManager(object):
         if security_enabled():
             # Check if access is permitted for the actor by the security policy.
             # Will continue directly with callback if authorization is not enabled.
-            security.check_security_policy(callback, "actor", actor_id, ['runtime'] + requirements,
-                                           signer, decision_from_migration)
+            security.check_security_policy(callback, actor_id=actor_id, requires=['runtime'] + requirements,
+                                            element_type="actor",
+                                            element_value=signer, 
+                                            decision_from_migration=decision_from_migration)
         else:
             callback()
 
