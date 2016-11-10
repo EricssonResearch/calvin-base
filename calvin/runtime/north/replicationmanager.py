@@ -380,6 +380,8 @@ class ReplicationManager(object):
                 continue
             try:
                 req = actor._replication_data.requirements
+                if not req:
+                    continue
                 pre_check = req_operations[req['op']].pre_check(self.node, actor_id=actor.id,
                                         component=actor.component_members(), **req['kwargs'])
             except:

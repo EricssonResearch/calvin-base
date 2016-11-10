@@ -1466,8 +1466,6 @@ class TestReplication(CalvinTestBase):
         ident = response['actor_map']['testScript:ident']
         snk = response['actor_map']['testScript:snk']
 
-        time.sleep(0.1)
-
         time.sleep(30)
         print "------------ Burn less ----------------"
         actor_meta = request_handler.get_actor(self.rt1, ident)
