@@ -150,7 +150,7 @@ class RequestHandler(object):
 
         if not isinstance(peers[0], type("")):
             peers = peers[0]
-            data = {'peers': peers, 'sec_credentials':self.credentials}
+        data = {'peers': peers, 'sec_credentials':self.credentials}
 
         r = self._post(rt, timeout, async, PEER_SETUP, data)
         return self.check_response(r)

@@ -32,7 +32,6 @@ from calvin.utilities.security import Security, security_enabled
 from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
 from calvin.utilities.issuetracker import IssueTracker
-from twisted.internet.address import IPv4Address
 _log = get_logger(__name__)
 
 uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
@@ -970,6 +969,7 @@ class CalvinControl(object):
                     credentials = None
                     if data:
                         data = json.loads(data)
+                    _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
                     route[1](handle, connection, match, data, headers)
                     found = True
                     break
