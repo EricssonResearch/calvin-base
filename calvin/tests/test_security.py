@@ -127,9 +127,20 @@ class TestSecurity(unittest.TestCase):
             attributes=AttributeResolver(rt_attribute)
             node_name = attributes.get_node_name_as_str()
             nodeid = calvinuuid.uuid("")
-            runtime=runtime_credentials.RuntimeCredentials(node_name, domain_name, security_dir=credentials_testdir, nodeid=nodeid)
+            enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
+            runtime=runtime_credentials.RuntimeCredentials(node_name, domain_name,
+                                                           security_dir=credentials_testdir,
+                                                           nodeid=nodeid,
+                                                           enrollment_password=enrollment_password)
             runtimes.append(runtime)
+            ca_cert = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
             csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
+            #Encrypt CSR with CAs public key (to protect enrollment password)
+            rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert)
+            #Decrypt encrypted CSR with CAs private key
+            csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
+            csr_path = ca.store_csr_with_enrollment_password(csr)
+#            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
             cert_path = ca.sign_csr(csr_path)
             runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
         #Copy rt2 and rt2 certificates into each others others folders

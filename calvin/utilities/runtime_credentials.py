@@ -72,6 +72,7 @@ class RuntimeCredentials():
     """
     DEFAULT = {
            'req': {'distinguished_name': 'req_distinguished_name',
+#                   'attributes':'req_attributes',
                    'req_extensions': 'v3_req',
                    'prompt': 'no',
                    'default_keyfile': 'privkey.pem',
@@ -82,6 +83,7 @@ class RuntimeCredentials():
             'req_distinguished_name': {'0.organizationName': 'domain',
                                         'commonName': 'runtime',
                                         'dnQualifier': 'dnQualifier'},
+#            'req_attributes':{'challengePassword':'password'},
             'alt_names':{'IP.1':'x',
 #                        'URI.1':'https://elxahyc5lz1:5022',
                         'DNS.2':'elxahyc5lz1',
@@ -123,7 +125,7 @@ class RuntimeCredentials():
                             'commonName': 'supplied',
                             'dnQualifier': 'supplied',
                             'stateOrProvinceName': 'optional'}}
-    def __init__(self, name, domain=None, nodeid=None, security_dir=None, force=False, readonly=False):
+    def __init__(self, name, domain=None, nodeid=None, security_dir=None, enrollment_password=None, force=False, readonly=False):
         _log.debug("runtime::init name={} domain={}, nodeid={}".format(name, domain, nodeid))
         print "runtime::init name={} domain={}, nodeid={}".format(name, domain, nodeid)
 
@@ -156,6 +158,11 @@ class RuntimeCredentials():
                         value = self.node_name
                     elif option == 'dnQualifier':
                         value = self.node_id
+                    #The pythong cryptography and the pyOpensSSL packages does not support
+                    #parsing the Attributes extension in a CSR, so instead it is stored
+                    #outside of the CSR
+#                    elif option == 'challengePassword':
+#                        value = self.enrollment_password
                     else:
                         value = self.__class__.DEFAULT[section][option]
                     print "\t{}={}".format(option, value)
@@ -214,12 +221,7 @@ class RuntimeCredentials():
             _log.debug("new_runtime: %s" % self.runtime_dir)
             out = os.path.join(self.runtime_dir, "{}.csr".format(self.node_name))
             _log.debug("out dir: %s"% out)
-    #        organization = self.domain
-    #        commonname = self.node_name
-    #        print "node_id={}".format(self.node_id)
-    #        dnQualifier =  "any" if self.node_id is None else self.node_id
-    #        subject = "/O={}/CN={}/dnQualifier={}".format(organization, commonname, dnQualifier)
-            # Creates ECC-based certificate
+            # Create ECC-based certificate
             log = subprocess.Popen(["openssl", "ecparam", "-genkey",
                                     "-name", "prime256v1",
                                     "-out", private_key],
@@ -272,6 +274,7 @@ class RuntimeCredentials():
         os.umask(0077)
         self.domain = self.get_domain(domain=domain)
         self.subjectAltName="127.0.1.1"
+        self.enrollment_password=enrollment_password
         #Create generic runtimes folder and trust store folders
         self.security_dir=security_dir
         runtimes_dir = certificate.get_runtimes_credentials_path(security_dir=security_dir)
@@ -397,6 +400,7 @@ class RuntimeCredentials():
             return self.node_name
         else:
             raise Exception("Node name not set in runtime_credentials")
+
     def get_runtime_credentials(self, security_dir=None):
         _log.debug("get_runtime_credentials:: node_name={}".format(self.node_name))
         runtime_cert_chain = self.get_runtime_certificate_chain_as_string(security_dir=security_dir)
@@ -407,7 +411,7 @@ class RuntimeCredentials():
     def get_csr(self):
         """Return certificate with name cert_name from disk for runtime my_node_name"""
         # TODO: get certificate from DHT (alternative to getting from disk).
-        _log.debug("get_certificate: my_node_name={}, cert_name={}".format(self.node_name, cert_name))
+        _log.debug("get_csr: my_node_name={}, cert_name={}".format(self.node_name, cert_name))
         return os.path.join(self.runtime_dir, "{}.csr".format(self.node_name))
 
     def get_certificate(self, cert_name):
@@ -658,7 +662,37 @@ class RuntimeCredentials():
             return _conf_domain
         else:
             raise Exception("Domain not set anywhere")
-        
+
     def remove_runtime(self):
         shutil.rmtree(self.runtime_dir,ignore_errors=True)
+
+
+
+    def cert_enrollment_encrypt_csr(self, csr_path, cert):
+        import json
+        import base64
+        from cryptography.hazmat.primitives import padding
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+        from cryptography.hazmat.backends import default_backend
+        #Load CSR from file
+        try:
+            with open(csr_path, 'r') as csr_fd:
+                csr= csr_fd.read()
+        except Exception as err:
+            _log.exception("Failed to load unencrypted CSR, err={}".format(err))
+            raise
+
+#        encrypted_csr = certificate.wrap_object_with_symmetric_key(plaintext)
+        plaintext = {'csr':csr, 'challenge_password':self.enrollment_password}
+        encrypted_csr = certificate.encrypt_object_with_RSA(cert, json.dumps(plaintext))
+        try:
+            filename = "{}.csr".format(self.node_name)
+            encrypted_filepath = csr_path + ".encrypted"
+            with open(encrypted_filepath, 'w') as fd:
+                json.dump(encrypted_csr, fd)
+        except Exception as err:
+            _log.exception("Failed to write encrypted CSR to file, err={}".format(err))
+            raise
+        return encrypted_csr
+
 

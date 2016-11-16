@@ -691,7 +691,7 @@ def get_truststore_path(type, security_dir=None):
     if type not in [TRUSTSTORE_TRANSPORT, TRUSTSTORE_SIGN]:
        raise Exception("trust store type does not exist")
     return os.path.join(runtime_dir, type)
-   
+
 def export_cert(certpath, path):
     """
     Copy the certificate giving it the name that can be stored in
@@ -718,4 +718,109 @@ def export_cert(certpath, path):
             filename_exist=False
     shutil.copyfile(certpath, out_file)
     return out_file
+
+
+def wrap_object_with_symmetric_key(plaintext):
+    import json
+    import base64
+    from cryptography.hazmat.primitives import padding
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.backends import default_backend
+
+    #Pad data
+    padder = padding.PKCS7(128).padder()
+    padded_plaintext = padder.update(plaintext)
+    padded_plaintext += padder.finalize()
+    #Generate random symmetric key and intialization vector
+    key = os.urandom(32)
+    iv = os.urandom(16)
+    #Encrypt object
+    backend = default_backend()
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
+    wrapped_object= {'ciphertext': base64.b64encode(ciphertext), 'symmetric_key':base64.b64encode(key), 'iv':base64.b64encode(iv)}
+    return wrapped_object
+
+def unwrap_object_with_symmetric_key(wrapped_object):
+    import json
+    import base64
+    from cryptography.hazmat.primitives import padding
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.backends import default_backend
+
+    backend = default_backend()
+    #Decode base64
+    key = base64.b64decode(wrapped_object['symmetric_key'])
+    iv =  base64.b64decode(wrapped_object['iv'])
+    ciphertext =  base64.b64decode(wrapped_object['ciphertext'])
+    #Decrypt
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
+    decryptor = cipher.decryptor()
+    padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    #Remove padding
+    unpadder = padding.PKCS7(128).unpadder()
+    plaintext = unpadder.update(padded_plaintext)
+    return plaintext + unpadder.finalize()
+
+#TODO: Add integrity protection of object, i.e.,
+# implement proper RSA-KEM+DEM1 or RSA-REACT
+def encrypt_object_with_RSA(certificate, plaintext):
+    """
+    Encrypts an object using hybrid cryptography
+    """
+    import base64
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import padding,rsa
+    from cryptography.hazmat.primitives import hashes
+
+    #Wrap plaintext with a symmetric key
+    wrapped_object = wrap_object_with_symmetric_key(plaintext)
+    #Extract public key from certificate
+    cert = x509.load_pem_x509_certificate(certificate, default_backend())
+    message = wrapped_object['symmetric_key']
+    public_key = cert.public_key()
+    #Encrypt symmetric key with RSA public key
+    ciphertext = public_key.encrypt(
+         message,
+         padding.OAEP(
+             mgf=padding.MGF1(algorithm=hashes.SHA1()),
+             algorithm=hashes.SHA1(),
+             label=None
+         )
+     )
+    encrypted_object = {'encrypted_symmetric_key':base64.b64encode(ciphertext),
+                        'iv':wrapped_object['iv'],
+                        'ciphertext':wrapped_object['ciphertext']}
+    return encrypted_object
+
+
+def decrypt_object_with_RSA(private_key, password, encrypted_object):
+    import base64
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import padding,rsa
+    from cryptography.hazmat.primitives import hashes
+    #Decrypt private key
+    _private_key = serialization.load_pem_private_key(
+             private_key,
+             password=password,
+             backend=default_backend()
+         )
+    wrapped_object={}
+    wrapped_object['iv']=encrypted_object['iv']
+    wrapped_object['ciphertext']=encrypted_object['ciphertext']
+    #Decrypt symmetric key
+    wrapped_object['symmetric_key'] = _private_key.decrypt(
+        base64.b64decode(encrypted_object['encrypted_symmetric_key']),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                            algorithm=hashes.SHA1(),
+                            label=None
+            )
+        )
+    #Unwrap the plaintext using symmetric cryptography
+    plaintext = unwrap_object_with_symmetric_key(wrapped_object)
+    return plaintext
 
