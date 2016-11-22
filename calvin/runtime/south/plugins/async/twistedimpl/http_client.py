@@ -32,10 +32,10 @@ from twisted.internet.protocol import Protocol
 from StringIO import StringIO
 from urllib import urlencode
 
-# from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCBClass
 
-# _log = get_logger(__name__)
+from calvin.utilities.calvinlogger import get_logger
+_log = get_logger(__name__)
 
 
 class HTTPRequest(object):
@@ -136,6 +136,9 @@ class HTTPClient(CalvinCBClass):
         request.parse_body(response)
         self._callback_execute('receive-body', request)
 
+    def _log_error(self, reason):
+        _log.error(reason.getErrorMessage())
+
     def request(self, command, url, params, headers, data):
         url += encode_params(params)
         twisted_headers = encode_headers(headers)
@@ -143,4 +146,5 @@ class HTTPClient(CalvinCBClass):
         deferred = self._agent.request(command, url, headers=twisted_headers, bodyProducer=body)
         request = HTTPRequest()
         deferred.addCallback(self._receive_headers, request)
+        deferred.addErrback(self._log_error)
         return request
