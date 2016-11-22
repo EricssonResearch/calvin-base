@@ -193,7 +193,7 @@ control_api_doc += \
     DELETE /application/{application-id}
     Stop application (only applications launched from this node)
     Response status code: OK, NOT_FOUND, INTERNAL_ERROR
-    Response: [<actor_id>, ...] when error list of actors (replicas) in application not destroyed 
+    Response: [<actor_id>, ...] when error list of actors (replicas) in application not destroyed
 """
 re_del_application = re.compile(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
