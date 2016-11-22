@@ -26,6 +26,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.attribute_resolver import format_index_string
 from calvin.runtime.south.plugins.async import server_connection, async
+from calvin.runtime.south.plugins.async import http_client
 from urlparse import urlparse
 from calvin.requests import calvinresponse
 from calvin.utilities.security import Security, security_enabled
@@ -732,6 +733,26 @@ control_api_doc += \
 # re_options = re.compile(r"OPTIONS /[0-9a-z/-_.]*\sHTTP/1.1")
 re_options = re.compile(r"OPTIONS /[^\s]*\sHTTP/1.1")
 
+control_api_doc += \
+    """
+    PUT /capillary/{identity}
+    Add new capillary device
+    Body: device info in JSON format
+    Response status code: CREATED, OK or INTERNAL_ERROR
+    Response: none
+"""
+re_capillary_register = re.compile(r"PUT /capillary/(\S+)\sHTTP/1")
+
+control_api_doc += \
+    """
+    DELETE /capillary/{identity}
+    Remove capillary device
+    Response status code: OK, NO_CONTENT or INTERNAL_ERROR
+    Response: none
+"""
+re_capillary_unregister = re.compile(r"DELETE /capillary/(\S+)\sHTTP/1")
+
+
 _calvincontrol = None
 
 
@@ -840,7 +861,9 @@ class CalvinControl(object):
             (re_get_authorization_policy, self.handle_get_authorization_policy),
             (re_edit_authorization_policy, self.handle_edit_authorization_policy),
             (re_del_authorization_policy, self.handle_del_authorization_policy),
-            (re_options, self.handle_options)
+            (re_options, self.handle_options),
+            (re_capillary_register, self.handle_register_capillary_device),
+            (re_capillary_unregister, self.handle_unregister_capillary_device)
         ]
 
     def authentication_decorator(func):
@@ -2084,6 +2107,54 @@ class CalvinControl(object):
         else:
             connection.send(response)
 
+    def handle_register_capillary_device(self, handle, connection, match, data, hdr):
+        # FIXME:
+        # Get client_id from data
+        # Query LWM2M server for device capabilities /api/clients/<client_id>
+        # Create ProxyRT with correspinding capabilities
+        # def _headers(response):
+        #     print "HELLO RESPONSE", response.status(), response.headers()
+
+        def _body(response):
+            import subprocess
+            CALVIN_C = './calvin_c'
+            LWM2M_SERVER_IP = '127.0.0.1'
+            LWM2M_SERVER_PORT = 8080
+            status = response.status()
+            body = json.loads(response.body())
+            # print type(body), body, body['endpoint']
+            if status != 200:
+                _log.debug("Failed to access LWM2M server. Status: {}, Reason: {}".format(status, body))
+                return
+            # N.B. Capability information is available in the body
+            _log.info("FIXME: Register existence and capabilities of ProxyRT '{}'".format(body['endpoint']))
+            _log.info("Capabilities: {}".format(json.dumps(body, indent=2)))
+            cmd = [
+                CALVIN_C,
+                '--name', 'calvin-constrained-{}'.format(body['endpoint']),
+                '--vid', '1', '--pid', '1',
+                '--lwm2m_iface', LWM2M_SERVER_IP,
+                '--lwm2m_port', str(LWM2M_SERVER_PORT),
+                '--lwm2m_endpoint', body['endpoint']
+            ]
+            _log.info("Executing: {}'".format(" ".join(cmd)))
+            subprocess.Popen(cmd)
+
+        device_id = match.group(1)
+        _log.info("Registering device '{}': {}".format(device_id, data))
+        # Spawn a ProxyRT
+        url = "http://127.0.0.1:8080/api/clients/{}".format(device_id)
+        #'receive-headers': [CalvinCB(_headers)],
+        callbacks = {'receive-body': [CalvinCB(_body)]}
+        client = http_client.HTTPClient(callbacks)
+        client.request('GET', url, {}, {}, {})
+
+        self.send_response(handle, connection, None, status=201)
+
+    def handle_unregister_capillary_device(self, handle, connection, match, data, hdr):
+        device_id = match.group(1)
+        _log.info("FIXME: Unregister and stop ProxyRT '{}'".format(device_id))
+        self.send_response(handle, connection, None, status=200)
 
 class CalvinControlTunnelServer(object):
 
