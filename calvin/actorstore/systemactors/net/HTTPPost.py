@@ -52,6 +52,7 @@ class HTTPPost(Actor):
     @guard(lambda self, url, params, header, data: self.request is None)
     def new_request(self, url, params, header, data):
         url = url.encode('ascii', 'ignore')
+        data = data.encode('ascii', 'ignore')
         self.request = self['http'].post(url, params, header, data)
         return ActionResult()
 
