@@ -2132,10 +2132,9 @@ class CalvinControl(object):
             cmd = [
                 CALVIN_C,
                 '--name', 'calvin-constrained-{}'.format(body['endpoint']),
-                '--vid', '1', '--pid', '1',
                 '--lwm2m_iface', LWM2M_SERVER_IP,
                 '--lwm2m_port', str(LWM2M_SERVER_PORT),
-                '--lwm2m_endpoint', body['endpoint']
+                '--lwm2m_url', '/api/clients/{}/3303/0/5700'.format(body['endpoint']) # TODO: Handle other types (generate 3303/0/5700 from body['objectLinks'])
             ]
             _log.info("Executing: {}'".format(" ".join(cmd)))
             subprocess.Popen(cmd)
