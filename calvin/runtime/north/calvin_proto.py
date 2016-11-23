@@ -218,9 +218,9 @@ class CalvinProto(CalvinCBClass):
         """ Configure a node using this node as a proxyconfig
         """
         proxyconfig.set_proxy_config(payload['from_rt_uuid'],
-            hex(payload['vid']),
-            hex(payload['pid']),
             payload['name'],
+            payload['capabilities'],
+            payload['port_property_capability'],
             self.node.storage,
             CalvinCB(self.proxy_config_handler_cb, payload=payload))
 
