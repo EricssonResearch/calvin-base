@@ -2,26 +2,8 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
 from calvin.utilities.attribute_resolver import AttributeResolver
-from calvin.csparser.port_property_syntax import list_port_property_capabilities
 
 _log = get_logger(__name__)
-
-# {"VendorID": {"VendorName": <VendorName>, "products": {"<ProductID>": {"ProductName": "<ProductName>", "capabilities": [<capability>]}}}}
-proxy_devices = {
-    "0x1":
-    {
-        "VendorName": "Ericsson",
-        "products":
-        {
-            "0x1":
-            {
-                "ProductName": "uCalvin",
-                "capabilities": ["calvinsys.io.gpiohandler", "calvinsys.sensors.environmental"],
-                "port_property_capability": "runtime.constrained.1"
-            }
-        }
-    }
-}
 
 def set_proxy_config_cb(key, value, callback):
     if not value:
@@ -31,19 +13,16 @@ def set_proxy_config_cb(key, value, callback):
 
     callback(status=response.CalvinResponse(response.OK))
 
-def set_proxy_config(peer_id, vid, pid, name, storage, callback):
+def set_proxy_config(peer_id, name, capabilities, port_property_capability, storage, callback):
     """
-    Configure node in storage proxy_devices from vid and pid
-    TODO: Add command to remove config
+    Store node
     """
     try:
-        if vid in proxy_devices:
-            if pid in proxy_devices[vid]['products']:
-                for c in proxy_devices[vid]['products'][pid]['capabilities']:
-                    storage.add_index(['node', 'capabilities', c], peer_id, root_prefix_level=3)
-                ppc = proxy_devices[vid]['products'][pid]['port_property_capability']
-                for c in list_port_property_capabilities(which=ppc):
-                    storage.add_index(['node', 'capabilities', c], peer_id, root_prefix_level=3)
+        storage.add_index(['node', 'capabilities', port_property_capability], peer_id, root_prefix_level=3)
+        if '3303' in capabilities:
+            storage.add_index(['node', 'capabilities', "calvinsys.sensors.environmental"], peer_id, root_prefix_level=3)
+        if '3201' in capabilities or '3200' in capabilities:
+            storage.add_index(['node', 'capabilities', "calvinsys.io.gpiohandler"], peer_id, root_prefix_level=3)
     except:
         _log.error("Failed to set capabilities")
 
