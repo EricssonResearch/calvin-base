@@ -2,7 +2,6 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
 from calvin.utilities.attribute_resolver import AttributeResolver
-from calvin.csparser.port_property_syntax import list_port_property_capabilities
 
 _log = get_logger(__name__)
 
