@@ -2,6 +2,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
 from calvin.utilities.attribute_resolver import AttributeResolver
+from calvin.csparser.port_property_syntax import list_port_property_capabilities
 
 _log = get_logger(__name__)
 
@@ -18,7 +19,8 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, stor
     Store node
     """
     try:
-        storage.add_index(['node', 'capabilities', port_property_capability], peer_id, root_prefix_level=3)
+        for c in list_port_property_capabilities(which=port_property_capability):
+            storage.add_index(['node', 'capabilities', c], peer_id, root_prefix_level=3)
         if '3303' in capabilities:
             storage.add_index(['node', 'capabilities', "calvinsys.sensors.environmental"], peer_id, root_prefix_level=3)
         if '3201' in capabilities or '3200' in capabilities:
