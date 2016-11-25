@@ -144,11 +144,11 @@ class ActorManager(object):
         """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
-            subject_attributes = state.pop('subject_attributes', None)
-            migration_info = state.pop('migration_info', None)
+            subject_attributes = state.pop('_subject_attributes', None)
+            migration_info = state.pop('_migration_info', None)
             try:
-                state['_managed'].remove('subject_attributes')
-                state['_managed'].remove('migration_info')
+                state['_managed'].remove('_subject_attributes')
+                state['_managed'].remove('_migration_info')
             except:
                 pass
             if security_enabled():
@@ -158,7 +158,7 @@ class ActorManager(object):
                 security = None
             actor_def, signer = self.lookup_and_verify(actor_type, security)
             requirements = actor_def.requires if hasattr(actor_def, "requires") else []
-            self.check_requirements_and_sec_policy(requirements, security, state['id'],
+            self.check_requirements_and_sec_policy(requirements, security, state['_id'],
                                                    signer, migration_info,
                                                    CalvinCB(self.new, actor_type, None,
                                                             state, prev_connections,
@@ -173,7 +173,7 @@ class ActorManager(object):
                              access_decision=None, shadow_actor=False):
         """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type, actor_def, actor_id=state['id'], security=security,
+            a = self._new_actor(actor_type, actor_def, actor_id=state['_id'], security=security,
                                 access_decision=access_decision, shadow_actor=shadow_actor)
             if '_shadow_args' in state:
                 # We were a shadow, do a full init

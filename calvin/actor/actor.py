@@ -117,7 +117,7 @@ def condition(action_input=[], action_output=[]):
             )
 
             if not input_ok or not output_ok:
-                _log.debug("\t%s.%s Fired:N In:%s, Out:%s, Guard:X" % (self.name, action_method.__name__, "Y" if input_ok else "N", "Y" if output_ok else "N"))
+                _log.debug("\t%s.%s Fired:N In:%s, Out:%s, Guard:X" % (self._name, action_method.__name__, "Y" if input_ok else "N", "Y" if output_ok else "N"))
                 return ActionResult(did_fire=False, input_ok=input_ok, output_ok=output_ok)
             #
             # Build the arguments for the action from the input port(s)
@@ -147,7 +147,7 @@ def condition(action_input=[], action_output=[]):
                 action_result = action_method(self, *args)
                 guard_str = "X" if action_result.guard_ok is None else ("Y" if action_result.guard_ok else "N")
                 _log.debug("\t%s.%s Fired:%s In:Y, Out:Y, Guard:%s" % (
-                    self.name, action_method.__name__, "Y" if action_result.did_fire else "N", guard_str))
+                    self._name, action_method.__name__, "Y" if action_result.did_fire else "N", guard_str))
 
             valid_production = False
             if action_result.did_fire and (len(contract_output) == len(action_result.production)):
@@ -347,29 +347,45 @@ class Actor(object):
     test_args = ()
     test_kwargs = {}
 
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def migration_info(self):
+        return self._migration_info
+
     # What are the arguments, really?
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
                  disable_state_checks=False, actor_id=None, security=None):
         """Should _not_ be overridden in subclasses."""
         super(Actor, self).__init__()
         self._type = actor_type
-        self.name = name  # optional: human_readable_name
-        self.id = actor_id or calvinuuid.uuid("ACTOR")
-        _log.debug("New actor id: %s, supplied actor id %s" % (self.id, actor_id))
+        self._name = name  # optional: human_readable_name
+        self._id = actor_id or calvinuuid.uuid("ACTOR")
+        _log.debug("New actor id: %s, supplied actor id %s" % (self._id, actor_id))
         self._deployment_requirements = []
         self._port_property_capabilities = None
         self._signature = None
-        self._component_members = set([self.id])  # We are only part of component if this is extended
-        self._managed = set(('id', 'name', '_deployment_requirements', '_signature', 'subject_attributes', 'migration_info', "_port_property_capabilities", "_replication_data"))
+        self._component_members = set([self._id])  # We are only part of component if this is extended
+        self._managed = set(('_id', '_name', '_deployment_requirements', '_signature', '_subject_attributes', '_migration_info', "_port_property_capabilities", "_replication_data"))
         self._calvinsys = None
         self._using = {}
         self.control = calvincontrol.get_calvincontrol()
         self.metering = metering.get_metering()
-        self.migration_info = None
+        self._migration_info = None
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._last_time_warning = 0.0
         self.sec = security
-        self.subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
+        self._subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
         self.authorization_checks = None
         self._replication_data = ReplicationData(initialize=False)
         self._exhaust_cb = None
@@ -437,7 +453,7 @@ class Actor(object):
         for p in self.outports.values():
             op = op + str(p)
         s = "Actor: '%s' class '%s'\nstatus: %s\ninports: %s\noutports:%s" % (
-            self.name, self._type, self.fsm, ip, op)
+            self._name, self._type, self.fsm, ip, op)
         return s
 
     @verify_status([STATUS.READY, STATUS.PENDING, STATUS.ENABLED])
@@ -446,7 +462,7 @@ class Actor(object):
         if self.fsm.state() == Actor.STATUS.ENABLED:
             # We already was enabled thats fine now with dynamic port connections
             return
-        _log.debug("actor.did_connect BEGIN %s %s " % (self.name, self.id))
+        _log.debug("actor.did_connect BEGIN %s %s " % (self._name, self._id))
         # If we happen to be in READY, go to PENDING
         if self.fsm.state() == Actor.STATUS.READY:
             self.fsm.transition_to(Actor.STATUS.PENDING)
@@ -465,7 +481,7 @@ class Actor(object):
 
         # If we made it here, all ports are connected
         self.fsm.transition_to(Actor.STATUS.ENABLED)
-        _log.debug("actor.did_connect ENABLED %s %s " % (self.name, self.id))
+        _log.debug("actor.did_connect ENABLED %s %s " % (self._name, self._id))
 
         # Actor enabled, inform scheduler
         self._calvinsys.scheduler_wakeup()
@@ -474,7 +490,7 @@ class Actor(object):
     def did_disconnect(self, port):
         """Called when a port is disconnected, checks actor is fully disconnected."""
         # If the actor is MIGRATABLE, return since it will be migrated soon.
-        _log.debug("Actor %s did_disconnect %s" % (self.id, Actor.STATUS.reverse_mapping[self.fsm.state()]))
+        _log.debug("Actor %s did_disconnect %s" % (self._id, Actor.STATUS.reverse_mapping[self.fsm.state()]))
         if self.fsm.state() == Actor.STATUS.MIGRATABLE:
             return
         # If we happen to be in ENABLED/DENIED, go to PENDING
@@ -515,12 +531,12 @@ class Actor(object):
         total_result = ActionResult(did_fire=False)
         while True:
             if not self.check_authorization_decision():
-                _log.info("Access denied for actor %s(%s)" % ( self._type, self.id))
+                _log.info("Access denied for actor %s(%s)" % ( self._type, self._id))
                 # The authorization decision is not valid anymore.
                 # Change actor status to DENIED.
                 self.fsm.transition_to(Actor.STATUS.DENIED)
                 # Try to migrate actor.
-                self.sec.authorization_runtime_search(self.id, self._signature, callback=CalvinCB(self.set_migration_info))
+                self.sec.authorization_runtime_search(self._id, self._signature, callback=CalvinCB(self.set_migration_info))
                 return total_result
             # Re-try action in list order after EVERY firing
             for action_method in self.__class__.action_priority:
@@ -531,9 +547,9 @@ class Actor(object):
                 if action_result.did_fire:
                     # FIXME: Make this a hook for the runtime to use, don't
                     #        import and use calvin_control or metering in actor
-                    self.metering.fired(self.id, action_method.__name__)
+                    self.metering.fired(self._id, action_method.__name__)
                     self.control.log_actor_firing(
-                        self.id,
+                        self._id,
                         action_method.__name__,
                         action_result.tokens_produced,
                         action_result.tokens_consumed,
@@ -545,7 +561,7 @@ class Actor(object):
                 if diff > 0.2 and start_time - self._last_time_warning > 120.0:
                     # Every other minute warn if an actor runs for longer than 200 ms
                     self._last_time_warning = start_time
-                    _log.warning("%s (%s) actor blocked for %f sec" % (self.name, self._type, diff))
+                    _log.warning("%s (%s) actor blocked for %f sec" % (self._name, self._type, diff))
                 for port in action_result.exhausted_ports:
                     # Might result in actor changing to PENDING
                     try:
@@ -569,7 +585,7 @@ class Actor(object):
         # We want to run even if not fully connected during exhaustion
         r = self.fsm.state() == Actor.STATUS.ENABLED or self._exhaust_cb is not None
         if not r:
-            _log.debug("Actor %s %s not enabled" % (self.name, self.id))
+            _log.debug("Actor %s %s not enabled" % (self._name, self._id))
         return r
 
     def denied(self):
@@ -585,7 +601,7 @@ class Actor(object):
             self.fsm.transition_to(Actor.STATUS.ENABLED)
         else:
             # Try to migrate actor.
-            self.sec.authorization_runtime_search(self.id, self._signature, callback=CalvinCB(self.set_migration_info))
+            self.sec.authorization_runtime_search(self._id, self._signature, callback=CalvinCB(self.set_migration_info))
 
     # DEPRECATED: Only here for backwards compatibility
     @verify_status([STATUS.ENABLED])
@@ -653,7 +669,7 @@ class Actor(object):
     # TODO verify status should only allow reading connections when and after being fully connected (enabled)
     @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING, STATUS.MIGRATABLE])
     def connections(self, node_id):
-        c = {'actor_id': self.id, 'actor_name': self.name}
+        c = {'actor_id': self._id, 'actor_name': self._name}
         inports = {}
         for port in self.inports.values():
             peers = [
@@ -677,7 +693,7 @@ class Actor(object):
     def exception_handler(self, action, args, context):
         """Defult handler when encountering ExceptionTokens"""
         _log.error("ExceptionToken encountered\n  name: %s\n  type: %s\n  action: %s\n  args: %s\n  context: %s\n" %
-                   (self.name, self._type, action.__name__, args, context))
+                   (self._name, self._type, action.__name__, args, context))
         raise Exception("ExceptionToken NOT HANDLED")
 
     def events(self):
@@ -694,7 +710,7 @@ class Actor(object):
         self._component_members -= set(actor_ids)
 
     def part_of_component(self):
-        return len(self._component_members - set([self.id]))>0
+        return len(self._component_members - set([self._id]))>0
 
     def component_members(self):
         return self._component_members
@@ -752,20 +768,20 @@ class Actor(object):
     @verify_status([STATUS.DENIED])
     def set_migration_info(self, reply):
         if reply and reply.status == 200 and reply.data["node_id"]:
-            self.migration_info = reply.data
+            self._migration_info = reply.data
             self.fsm.transition_to(Actor.STATUS.MIGRATABLE)
-            _log.info("Migrate actor %s to node %s" % (self.name, self.migration_info["node_id"]))
+            _log.info("Migrate actor %s to node %s" % (self._name, self._migration_info["node_id"]))
             # Inform the scheduler that the actor is ready to migrate.
             self._calvinsys.scheduler_maintenance_wakeup()
         else:
-            _log.info("No possible migration destination found for actor %s" % self.name)
+            _log.info("No possible migration destination found for actor %s" % self._name)
             # Try to enable/migrate actor again after a delay.
             self._calvinsys.scheduler_maintenance_wakeup(delay=True)
 
     @verify_status([STATUS.MIGRATABLE, STATUS.READY])
     def remove_migration_info(self, status):
         if status.status != 200:
-            self.migration_info = None
+            self._migration_info = None
             # FIXME: destroy() in actormanager.py was called before trying to migrate. 
             #        Need to make the actor runnable again before transition to DENIED.
             #self.fsm.transition_to(Actor.STATUS.DENIED)
@@ -817,5 +833,5 @@ class ShadowActor(Actor):
                                                             'shadow_params': self._shadow_args.keys()},
                                                  'type': '+'}]
         else:
-            _log.error("Shadow actor %s - %s miss signature" % (self.name, self.id))
+            _log.error("Shadow actor %s - %s miss signature" % (self._name, self._id))
             return self._deployment_requirements
