@@ -1522,7 +1522,8 @@ class CalvinControl(object):
             )
             # TODO When deployscript codegen is less experimental do it as part of the cscompiler
             # Now just run it here seperate if script is supplied and no seperate deploy_info
-            if "script" in data and "deploy_info" in data and data["deploy_info"] is None:
+            deploy_info = data.get("deploy_info", None)
+            if "script" in data and deploy_info is None:
                 deploy_info, ds_issuestracker = calvin_dscodegen(data["script"], data["name"])
                 if ds_issuestracker.error_count:
                     _log.warning("Deployscript contained errors:")
@@ -1530,8 +1531,6 @@ class CalvinControl(object):
                     deploy_info = None
                 elif not deploy_info['requirements']:
                     deploy_info = None
-            else:
-                deploy_info = data["deploy_info"] if "deploy_info" in data else None
 
             d = Deployer(
                     deployable=app_info,
