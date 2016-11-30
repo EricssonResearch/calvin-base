@@ -212,7 +212,7 @@ def setup_distributed(control_uri, purpose, request_handler):
 
     return runtimes
     
-def setup_local(ip_addr, request_handler, nbr):  
+def setup_local(ip_addr, request_handler, nbr, proxy_storage):  
     def check_storage(rt, n, index):
         index_string = format_index_string(index)
         retries = 0
@@ -247,10 +247,17 @@ def setup_local(ip_addr, request_handler, nbr):
     attr_rest['indexed_public']['node_name']['group'] = u'rest'
 
     _log.info("starting runtime %s" % (host[1],))
+    
+    if proxy_storage:
+        import calvin.actorstore.store
+        calvin.actorstore.store._conf.set('global', 'storage_type', 'local')
     rt, _ = dispatch_node([host[0]], host[1], attributes=attr_first)
     check_storage(rt, len(runtimes)+1, attr['indexed_public'])
     runtimes += [rt]
-
+    if proxy_storage:
+        import calvin.actorstore.store
+        calvin.actorstore.store._conf.set('global', 'storage_type', 'proxy')
+        calvin.actorstore.store._conf.set('global', 'storage_proxy', host[0])
     _log.info("started runtime %s" % (host[1],))
 
     count = 2
@@ -298,7 +305,7 @@ def setup_bluetooth(bt_master_controluri, request_handler):
                 runtimes.append(rt3)
     return [runtime] + runtimes
 
-def setup_test_type(request_handler, nbr=3):
+def setup_test_type(request_handler, nbr=3, proxy_storage=False):
     control_uri = None
     ip_addr = None
     purpose = None
@@ -335,7 +342,7 @@ def setup_test_type(request_handler, nbr=3):
     elif test_type == "bluetooth":
         runtimes = setup_bluetooth(bt_master_controluri, request_handler)
     else:
-        runtimes = setup_local(ip_addr, request_handler, nbr)
+        runtimes = setup_local(ip_addr, request_handler, nbr, proxy_storage)
 
     return test_type, runtimes
     
