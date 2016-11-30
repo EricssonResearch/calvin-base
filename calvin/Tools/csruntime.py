@@ -68,7 +68,7 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('-w', '--wait', dest='wait', metavar='sec', default=2, type=int,
                            help='wait for sec seconds before quitting (0 means forever).')
 
-    argparser.add_argument('-x', '--external', metavar='<calvinip>', type=str,
+    argparser.add_argument('-x', '--external', metavar='<calvinip>', action='append', default=[],
                             help="exposed external calvin ip (e.g. outside of container)",
                             dest='ext')
 
