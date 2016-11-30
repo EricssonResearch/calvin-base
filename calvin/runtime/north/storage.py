@@ -115,6 +115,19 @@ class Storage(object):
         if kwargs["org_cb"]:
             async.DelayedCall(0, kwargs["org_cb"], args[0])
 
+    def dump(self):
+        "Dump the local storage to a temp file"
+        import tempfile
+        import json
+        with tempfile.NamedTemporaryFile(mode='w', prefix="storage", delete=False) as fp:
+            fp.write("[")
+            json.dump({k: json.loads(v) for k, v in self.localstore.items()}, fp)
+            fp.write(", ")
+            json.dump({k: list(v['+']) for k, v in self.localstore_sets.items()}, fp)
+            fp.write("]")
+            name = fp.name
+        return name
+
     def start(self, iface='', cb=None):
         """ Start storage
         """

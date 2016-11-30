@@ -608,6 +608,15 @@ re_get_storage = re.compile(r"GET /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
     """
+    GET /dumpstorage
+    Dump storage to temporary file in /tmp when available
+    Response status code: OK
+    Response: none
+"""
+re_dump_storage = re.compile(r"GET /dumpstorage\sHTTP/1")
+
+control_api_doc += \
+    """
     POST /storage/{prefix-key}
     Store value under prefix-key
     Body:
@@ -830,6 +839,7 @@ class CalvinControl(object):
             (re_delete_index, self.handle_delete_index),
             (re_get_index, self.handle_get_index),
             (re_get_storage, self.handle_get_storage),
+            (re_dump_storage, self.handle_dump_storage),
             (re_post_storage, self.handle_post_storage),
             (re_get_authentication_users_db, self.handle_get_authentication_users_db),
             (re_edit_authentication_users_db, self.handle_edit_authentication_users_db),
@@ -1706,6 +1716,13 @@ class CalvinControl(object):
         """ Get from storage
         """
         self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
+
+    @authentication_decorator
+    def handle_dump_storage(self, handle, connection, match, data, hdr):
+        """ Get from storage
+        """
+        name = self.node.storage.dump()
+        self.send_response(handle, connection, json.dumps(name), status=calvinresponse.OK)
 
     @authentication_decorator
     def handle_get_authentication_users_db(self, handle, connection, match, data, hdr):

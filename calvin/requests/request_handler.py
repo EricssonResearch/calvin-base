@@ -377,6 +377,10 @@ class RequestHandler(object):
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
+    def dump_storage(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
+        r = self._get(rt, timeout, async, "/dumpstorage")
+        return self.check_response(r)
+
     def async_response(self, response):
         try:
             self.future_responses.remove(response)
