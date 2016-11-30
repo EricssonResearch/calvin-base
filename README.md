@@ -149,7 +149,7 @@ CalvinScript is a scripting language designed to take the ugliness out of writin
 
 Save the file, and deploy and run the program (assuming you have a runtime running on localhost):
 
-    $ cscontrol http://localhost:5001 myfirst.calvin
+    $ cscontrol http://localhost:5001 deploy myfirst.calvin
 
 The application should produce "Hello, world" once every second.
 
