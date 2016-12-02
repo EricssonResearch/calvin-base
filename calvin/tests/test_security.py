@@ -56,7 +56,8 @@ try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
 except:
     import socket
-#    ip_addr = socket.gethostbyname(socket.gethostname())
+    # If this fails add hostname to the /etc/hosts file for 127.0.0.1
+    # ip_addr = socket.gethostbyname(socket.gethostname())
     hostname = socket.gethostname()
 
 

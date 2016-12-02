@@ -27,6 +27,7 @@ from calvin.utilities import calvinuuid
 from warnings import warn
 from calvin.utilities.attribute_resolver import format_index_string
 import socket
+# If this fails add hostname to the /etc/hosts file for 127.0.0.1
 ip_addr = socket.gethostbyname(socket.gethostname())
 request_handler = None
 

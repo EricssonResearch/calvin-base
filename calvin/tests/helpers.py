@@ -334,6 +334,7 @@ def setup_test_type(request_handler, nbr=3, proxy_storage=False):
             ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
         except Exception:
             import socket
+            # If this fails add hostname to the /etc/hosts file for 127.0.0.1
             ip_addr = socket.gethostbyname(socket.gethostname())
         test_type = "local"
 
