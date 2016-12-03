@@ -16,6 +16,7 @@
 
 import os
 import SimpleHTTPServer
+import BaseHTTPServer
 import SocketServer
 import argparse
 import socket
@@ -32,10 +33,16 @@ def parse_arguments():
                            help='address of tcp server', default="")
     return argparser.parse_args()
 
+
+class CORSRequestHandler (SimpleHTTPServer.SimpleHTTPRequestHandler):
+    def end_headers (self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        SimpleHTTPServer.SimpleHTTPRequestHandler.end_headers(self)
+
 def main():
     os.chdir(os.path.dirname(__file__))
     args = parse_arguments()
-    Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+    Handler = CORSRequestHandler
     SocketServer.TCPServer.allow_reuse_address = True
 
     try:
