@@ -101,6 +101,16 @@ function drawConnections()
     });
 };
 
+// Show dialog for setting requirements
+function showMessage(message)
+{
+    $("#show_message_body").html(message);
+    $("#messageDialog").modal({
+        modal: true,
+        show: true
+    });
+}
+
 function showAlert(message, type, delay)
 {
     var alert = $('<div class="alert alert-' + type + ' fade in">')
@@ -125,6 +135,11 @@ function showError(message)
 function showSuccess(message)
 {
     showAlert(message, "success", 5000);
+}
+
+function showInfo(message)
+{
+    showAlert(message, "info", 5000);
 }
 
 function addActorToGraph(actor)
@@ -260,6 +275,16 @@ function findRuntime(id)
     for (index in peers) {
         if (peers[index].id == id) {
             return peers[index];
+        }
+    }
+}
+
+function popRuntime(id)
+{
+    var index;
+    for (index in peers) {
+        if (peers[index].id == id) {
+            return peers.splice(index, 1)[0];
         }
     }
 }
@@ -667,7 +692,16 @@ function getPeer(id)
             }
         },
         error: function() {
-            showError("Failed to get peer, url: " + url);
+            // If we don't find the runtime in storage remove it
+            popRuntime(id)
+            var tableRef = document.getElementById('peersTable');
+            for (var x = 0; x < tableRef.rows.length; x++) {
+                if (tableRef.rows[x].cells[0].innerHTML == id) {
+                    tableRef.deleteRow(x);
+                    break;
+                }
+            }
+            showInfo("Ignore unfound peer, id: " + id);
         }
     });
 }
@@ -718,6 +752,8 @@ function getApplications()
                     }
                 },
                 error: function() {
+                    // Remove the peer that we failed to contact
+                    popRuntime(peers[index].id)
                     console.log("Failed to get applications, url: " + url);
                 }
             });
@@ -874,7 +910,7 @@ function getReplicas(id)
             }
         },
         error: function() {
-            showError("Failed to get replicas, url: " + url);
+            showInfo("Failed to get replicas, url: " + url);
         }
     });
 }
@@ -970,7 +1006,7 @@ function getPortState(port_id)
 }
 
 // Helper for adding a table row with elements
-function AddTableItem(tableRef, element1, element2, element3, element4, element5, element6, element7, element8)
+function AddTableItem(tableRef, element1, element2, element3, element4, element5, element6, element7, element8, element9)
 {
     var row = tableRef.insertRow();
     if (element1) {
@@ -1011,6 +1047,11 @@ function AddTableItem(tableRef, element1, element2, element3, element4, element5
     if (element8) {
         var cell = row.insertCell(7);
         cell.appendChild(element8);
+    }
+
+    if (element9) {
+        var cell = row.insertCell(8);
+        cell.appendChild(element9);
     }
 
     return row;
@@ -1692,7 +1733,7 @@ function startTrace() {
     for (var index in peers) {
         if (peers[index].control_uri) {
             if (peers[index].source) {
-                showError("Trace already started on runtime" + peers[index].id);
+                showInfo("Trace already started on runtime" + peers[index].id);
             } else {
                 var url = peers[index].control_uri + '/log';
                 var data = JSON.stringify({'actors': actors, 'events': events});
@@ -1720,7 +1761,7 @@ function startTrace() {
                         }
                     },
                     error: function() {
-                        showError("Failed to start log, url: " + url);
+                        showInfo("Failed to start log, url: " + url);
                     }
                 });
             }
@@ -1747,7 +1788,7 @@ function stopLog()
             success: function() {
             },
             error: function() {
-                showError("Failed to stop log, url: " + url);
+                showInfo("Failed to stop log, url: " + url);
             }
         });
         if (peers[index].source) {
@@ -1928,7 +1969,7 @@ function stopGraphEvents()
                 success: function() {
                 },
                 error: function() {
-                    showError("Failed to stop log, url: " + url);
+                    showInfo("Failed to stop log, url: " + url);
                 }
             });
 
@@ -1956,6 +1997,9 @@ function graphEventHandler(event)
         if (actor) {
             actor.master = true
             actor.replication_id = data.replication_id
+        }
+        if (!findRuntime(data.dest_node_id)) {
+            getPeer(data.dest_node_id);
         }
         getActor(data.replica_actor_id, false, false, 1);
     } else if(data.type == "actor_dereplicate") {
@@ -2033,10 +2077,21 @@ function deployApplication(uri, script, reqs, name, creds)
         success: function(data) {
             showSuccess("Application " + name + " deployed");
         },
-        error: function(err) {
-            var responseText = JSON.parse(err.responseText);
-            showError("Failed to deploy application, reason: " + responseText.errors[0].reason + " line: " + responseText.errors[0].line);
-            console.log(JSON.stringify(err));
+        error: function(data, status) {
+            data = JSON.parse(data.responseText)
+            var index;
+            var msg = "";
+            for (index in data.errors) {
+                msg = msg + "Error Line: " + data.errors[index].line + " Col: " + data.errors[index].col;
+                msg = msg + " " + data.errors[index].reason + "<br>";
+            }
+            for (index in data.warnings) {
+                msg = msg + "Warning Line: " + data.warnings[index].line + " Col: " + data.warnings[index].col;
+                msg = msg + " " + data.warnings[index].reason + "<br>";
+            }
+            showError("Failed to deploy application: " + name);
+            console.log(msg);
+            showMessage(msg);
         }
     });
 }
