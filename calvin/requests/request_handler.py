@@ -136,8 +136,11 @@ class RequestHandler(object):
         r = self._get(rt, timeout, async, NODE_PATH.format(node_id))
         return self.check_response(r)
 
-    def quit(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._delete(rt, timeout, async, NODE)
+    def quit(self, rt, method=None, timeout=DEFAULT_TIMEOUT, async=False):
+        if method is None:
+            r = self._delete(rt, timeout, async, NODE)
+        else:
+            r = self._delete(rt, timeout, async, NODE_PATH.format(method))
         return self.check_response(r)
 
     def get_nodes(self, rt, timeout=DEFAULT_TIMEOUT, async=False):

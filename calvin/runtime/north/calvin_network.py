@@ -512,9 +512,13 @@ class CalvinNetwork(object):
     def list_links(self):
         return list(self.links.keys())
 
+    def list_direct_links(self):
+        return [peer_id for peer_id, l in self.links.items() if isinstance(l, CalvinLink)]
+
     def forward_packet(self, payload):
         try:
             self.link_check(payload['to_rt_uuid'])
         except:
             raise Exception("ERROR_UNKNOWN_RUNTIME")
         self.links[payload['to_rt_uuid']].transport.send(payload)
+

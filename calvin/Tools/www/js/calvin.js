@@ -1203,6 +1203,13 @@ function showPeer(peer)
         btnDestroy.value = 'Destroy';
         btnDestroy.setAttribute("onclick", "destroyPeer(this.id)");
 
+        var btnAbolish = document.createElement('input');
+        btnAbolish.type = 'button';
+        btnAbolish.className = "btn btn-danger btn-xs";
+        btnAbolish.id = peer.id;
+        btnAbolish.value = 'Abolish';
+        btnAbolish.setAttribute("onclick", "destroyPeerByMethod(this.id, 'migrate')");
+
         var btnDeploy = document.createElement('input');
         btnDeploy.type = 'button';
         btnDeploy.className = "btn btn-primary btn-xs";
@@ -1218,6 +1225,7 @@ function showPeer(peer)
             document.createTextNode(peer.proxy),
             btnConfigure,
             btnDestroy,
+            btnAbolish,
             btnDeploy);
     } else {
         row = AddTableItem(tableRef,
@@ -1610,9 +1618,15 @@ function destroyApplication(application_id)
 // Destroy runtime with id "peer_id"
 function destroyPeer(peer_id)
 {
+    return destroyPeerByMethod(peer_id, "now");
+}
+
+// Destroy runtime with id "peer_id"
+function destroyPeerByMethod(peer_id, method)
+{
     var peer = findRuntime(peer_id);
     if (peer) {
-        var url = peer.control_uri + '/node';
+        var url = peer.control_uri + '/node/' + method;
         console.log("destroyPeer url: " + url);
 
         if (peer.source != null) {

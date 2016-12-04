@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 from calvin.actorstore.store import ActorStore
 from calvin.utilities import dynops
 from calvin.runtime.south.plugins.async import async
@@ -369,10 +370,51 @@ class ActorManager(object):
                 return
             # TODO do a better selection between possible nodes
             # TODO: should also ask authorization server before selecting node to migrate to.
-            self.migrate(actor_id, possible_placements.pop(), callback=cb)
+            # Try the possible placements in random order
+            pp = list(possible_placements)
+            random.shuffle(pp)
+            self.robust_migrate(actor_id, pp, callback=cb)
             _log.analyze(self.node.id, "+ END", {})
         except:
             _log.exception("actormanager:_update_requirements_placements")
+
+    def robust_migrate(self, actor_id, node_ids, callback, **kwargs):
+        """ Will try to migrate the actor to each of the suggested node_ids (which is modified),
+            Optionally kwargs can contain state, actor_type and ports
+            If all else fails the state, actor_type and ports will be returned in the callback.
+            These could be used by the callback to either try another list of node_ids,
+            recreate the actor locally or just ignore.
+        """
+        if kwargs.get('status', False):
+            # Success
+            if callback:
+                callback(status=kwargs['status'])
+            return
+        if node_ids:
+            node_id = node_ids.pop(0)
+        else:
+            if callback:
+                callback(
+                    status=kwargs.get('status', calvinresponse.CalvinResponse(False)),
+                    state=kwargs.get('state', None),
+                    actor_type=kwargs.get('actor_type', None),
+                    ports=kwargs.get('ports', None))
+            return
+        if 'state' in kwargs:
+            # Retry another node
+            self.node.proto.actor_new(
+                node_id, 
+                CalvinCB(self._robust_migrate_cb, actor_id=actor_id, node_ids=node_ids, callback=callback),
+                kwargs.get('actor_type', None), kwargs.get('state', None), kwargs.get('ports', None))
+        else:
+            # Start with standard migration
+            self.migrate(actor_id, node_id,
+                        CalvinCB(self._robust_migrate_cb, actor_id=actor_id, node_ids=node_ids, callback=callback))
+
+    def _robust_migrate_cb(self, status, actor_id, node_ids, callback, **kwargs):
+        # Just for moving status into kwargs, TODO the reply_handler should use kwarg
+        kwargs['status'] = status
+        self.robust_migrate(actor_id, node_ids, callback, **kwargs)
 
     def migrate(self, actor_id, node_id, callback=None):
         """ Migrate an actor actor_id to peer node node_id """
@@ -408,14 +450,14 @@ class ActorManager(object):
     def _migrate_disconnected(self, actor, actor_type, ports, node_id, status, callback = None, **state):
         """ Actor disconnected, continue migration """
         _log.analyze(self.node.id, "+ DISCONNECTED", {'actor_name': actor.name, 'actor_id': actor.id, 'status': status})
+        state = actor.state()
+        self.destroy(actor.id, temporary=True)
         if status:
-            state = actor.state()
-            self.destroy(actor.id, temporary=True)
+            callback = CalvinCB(callback, state=state, ports=ports, actor_type=actor_type)
             self.node.proto.actor_new(node_id, callback, actor_type, state, ports)
         else:
-            # FIXME handle errors!!!
             if callback:
-                callback(status=status)
+                callback(status=status, state=state, ports=ports, actor_type=actor_type)
 
     def peernew_to_local_cb(self, reply, **kwargs):
         if kwargs['actor_id'] == reply:

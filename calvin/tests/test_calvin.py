@@ -4036,8 +4036,8 @@ class TestDeployScript(CalvinTestBase):
         src = response['actor_map']['simple:src']
         snk = response['actor_map']['simple:snk']
 
-        rt_src = request_handler.get_node(rt, response['placement'][src])["control_uri"]
-        rt_snk = request_handler.get_node(rt, response['placement'][snk])["control_uri"]
+        rt_src = request_handler.get_node(rt, response['placement'][src][0])["control_uri"]
+        rt_snk = request_handler.get_node(rt, response['placement'][snk][0])["control_uri"]
 
         assert response["requirements_fulfilled"]
 

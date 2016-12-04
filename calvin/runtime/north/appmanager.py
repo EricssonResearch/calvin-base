@@ -546,12 +546,13 @@ class AppManager(object):
             # TODO should select from a resource sharing perspective also, instead of picking first max
             # TODO: should also ask authorization server before selecting node to migrate to.
             _log.analyze(self._node.id, "+ WEIGHTS", {'actor_id': actor_id, 'weights': weights})
-            weighted_actor_placement[actor_id] = node_ids[weights.index(max(weights))]
-
+            #weighted_actor_placement[actor_id] = node_ids[weights.index(max(weights))]
+            # Get a list of nodes in sorted weighted order
+            weighted_actor_placement[actor_id] = [n for (w, n) in sorted(zip(weights, node_ids), reverse=True)]
         for actor_id, node_id in weighted_actor_placement.iteritems():
-            # TODO could add callback to try another possible node if the migration fails
             _log.debug("Actor deployment %s \t-> %s" % (app.actors[actor_id], node_id))
-            self._node.am.migrate(actor_id, node_id)
+            # FIXME add callback that recreate the actor locally
+            self._node.am.robust_migrate(actor_id, node_id[:], None)
 
         app._org_cb(status=status, placement=weighted_actor_placement)
         del app._org_cb
@@ -629,7 +630,7 @@ class AppManager(object):
         self._node.proto.actor_migrate(value['node_id'], CalvinCB(self._migrated_cb, app=app, actor_id=actor_id, cb=cb),
                                      actor_id, req, False, move)
 
-    def _migrated_cb(self, status, app, actor_id, cb):
+    def _migrated_cb(self, status, app, actor_id, cb, **kwargs):
         app._migrated_actors[actor_id] = status
         _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'status': status, 'statuses': app._migrated_actors})
         if any([s is None for s in app._migrated_actors.values()]):

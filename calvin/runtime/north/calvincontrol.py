@@ -461,12 +461,14 @@ re_post_disconnect = re.compile(r"POST /disconnect\sHTTP/1")
 
 control_api_doc += \
     """
-    DELETE /node
+    DELETE /node{/now|/migrate}
     Stop (this) calvin node
+     now: stop the runtime without handling actors on the runtime [default]
+     migrate: migrate any actors before stopping the runtime
     Response status code: ACCEPTED
     Response: none
 """
-re_delete_node = re.compile(r"DELETE /node\sHTTP/1")
+re_delete_node = re.compile(r"DELETE /node(?:/(now|migrate))?\sHTTP/1")
 
 control_api_doc += \
     """
@@ -739,7 +741,7 @@ control_api_doc += \
     Response: Available communication options
 """
 # re_options = re.compile(r"OPTIONS /[0-9a-z/-_.]*\sHTTP/1.1")
-re_options = re.compile(r"OPTIONS /[^\s]*\sHTTP/1.1")
+re_options = re.compile(r"OPTIONS /[^\s]*\sHTTP/1")
 
 _calvincontrol = None
 
@@ -970,6 +972,11 @@ class CalvinControl(object):
                 self.route_request(handle, connection, command, headers, data)
 
     def route_request(self, handle, connection, command, headers, data):
+        if self.node.quitting:
+            # Answer internal error on all requests while quitting, assume client can handle that
+            # TODO: Answer permantely moved (301) instead with header Location: <another-calvin-runtime>???
+            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+            return
         try:
             issuetracker = IssueTracker()
             found = False
@@ -1595,8 +1602,12 @@ class CalvinControl(object):
 
     @authentication_decorator
     def handle_quit(self, handle, connection, match, data, hdr):
-        async.DelayedCall(.2, self.node.stop)
-        self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
+        if match.group(1) is None or match.group(1) == "now":
+            async.DelayedCall(.2, self.node.stop)
+            self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
+        elif match.group(1) == "migrate":
+            async.DelayedCall(.2, self.node.stop_with_migration)
+            self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
     @authentication_decorator
     def handle_disconnect(self, handle, connection, match, data, hdr):

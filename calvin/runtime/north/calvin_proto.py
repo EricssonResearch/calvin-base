@@ -112,7 +112,7 @@ class CalvinTunnel(object):
         try:
             self.links[self.peer_node_id].send(msg)
         except:
-            # FIXME we failed sending should resend after establishing the link if our node is not quiting
+            # FIXME we failed sending should resend after establishing the link if our node is not quitting
             # so far only seen during node quit
             _log.analyze(self.rt_id, "+ TUNNEL FAILED", payload, peer_node_id=self.peer_node_id)
 
@@ -191,6 +191,32 @@ class CalvinProto(CalvinCBClass):
         """ Map to specified link's reply_handler"""
         self.network.links[payload['from_rt_uuid']].reply_handler(payload)
 
+    def while_quitting(self, tp_link, payload):
+        """ A generic handling of responses while quitting the node
+        """
+        if not self.node.quitting:
+            return False
+        # If generic handling of command is not possible or the method 
+        # is accepted during quitting it is left out from dict.
+        resp = {
+            'PROXY_CONFIG': response.INTERNAL_ERROR,
+            'ACTOR_NEW': response.INTERNAL_ERROR,
+            'ACTOR_MIGRATE': response.NOT_FOUND,
+            'APP_DESTROY': response.NOT_FOUND,
+            'PORT_CONNECT': response.NOT_FOUND,
+            'PORT_REMOTE_CONNECT': response.NOT_FOUND,
+            'TUNNEL_NEW': response.INTERNAL_ERROR,
+            'AUTHENTICATION_DECISION': response.INTERNAL_ERROR,
+            'AUTHORIZATION_REGISTER': response.NOT_FOUND,
+            'AUTHORIZATION_DECISION': response.NOT_FOUND,
+            'AUTHORIZATION_SEARCH': response.INTERNAL_ERROR
+        }
+        if payload['cmd'] not in resp:
+            return False
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': response.CalvinResponse(resp[payload['cmd']]).encode()}
+        self.network.links[payload['from_rt_uuid']].send(msg)
+        return True
+
     def recv_handler(self, tp_link, payload):
         """ Called by transport when a full payload has been received
         """
@@ -203,6 +229,8 @@ class CalvinProto(CalvinCBClass):
         if payload['to_rt_uuid'] == self.rt_id:
             if not ('cmd' in payload and payload['cmd'] in self.callback_valid_names()):
                 raise Exception("ERROR_UNKOWN_COMMAND")
+            if self.while_quitting(tp_link, payload):
+                return
             # Call the proper handler for the command using CalvinCBClass
             self._callback_execute(payload['cmd'], payload)
         else:

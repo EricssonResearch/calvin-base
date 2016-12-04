@@ -65,6 +65,7 @@ class Node(object):
 
     def __init__(self, uri, control_uri, attributes=None):
         super(Node, self).__init__()
+        self.quitting = False
         self.uri = uri
         self.control_uri = control_uri
         self.external_uri = attributes.pop('external_uri', self.uri) \
@@ -224,6 +225,7 @@ class Node(object):
                 self.control.start(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
 
     def stop(self, callback=None):
+        self.quitting = True
         def stopped(*args):
             _log.analyze(self.id, "+", {'args': args})
             _log.debug(args)
@@ -238,6 +240,63 @@ class Node(object):
 
         _log.analyze(self.id, "+", {})
         self.storage.delete_node(self, cb=deleted_node)
+
+    def stop_with_migration(self, callback=None):
+        # Set timeout if we are still failing after 50 seconds
+        timeout_stop = async.DelayedCall(50, self.stop)
+        self.quitting = True
+        actors = []
+        already_migrating = []
+        if not self.am.actors:
+            return self.stop(callback)
+        for actor in self.am.actors.values():
+            if actor._migrating_to is None:
+                actors.append(actor)
+            else:
+                already_migrating.append(actor.id)
+
+        def poll_migrated():
+            # When already migrating, we can only poll, since we don't get the callback
+            if self.am.actors:
+                # Check again in a sec
+                async.DelayedCall(1, self.poll_migrated)
+                return
+            timeout_stop.cancel()
+            self.stop(callback)
+
+        def migrated(actor_id, **kwargs):
+            actor = self.am.actors.get(actor_id, None)
+            status = kwargs['status']
+            if not status and actor is not None:
+                # Failed to migrate according to requirements, try the current known peers
+                peer_ids = self.network.list_direct_links()
+                if peer_ids:
+                    # This will remove the actor from the list of actors
+                    self.am.robust_migrate(actor_id, peer_ids, callback=CalvinCB(migrated, actor_id=actor_id))
+                    return
+                else:
+                    # Ok, we have failed migrate actor according to requirements and to any known peer
+                    # FIXME find unknown peers and try migrate to them, now just destroy actor, so storage is cleaned
+                    _log.error("Failed to evict actor %s before quitting" % actor_id)
+                    self.node.am.destroy(actor_id)
+            if self.am.actors:
+                return
+            timeout_stop.cancel()
+            self.stop(callback)
+
+        if already_migrating:
+            async.DelayedCall(1, self.poll_migrated)
+            if not actors:
+                return
+        elif not actors:
+            # No actors
+            return self.stop(callback)
+
+        # Migrate the actors according to their requirements
+        # (even actors without explicit requirements will migrate based on e.g. requires and port property needs) 
+        for actor in actors:
+            self.am.update_requirements(actor.id, [], extend=True, move=True,
+                            authorization_check=False, callback=CalvinCB(migrated, actor_id=actor.id))
 
     def _storage_started_cb(self, *args, **kwargs):
         self.authorization.register_node()
