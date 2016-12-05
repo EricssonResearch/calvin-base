@@ -1,10 +1,7 @@
-mqtt1 : net.MQTTSubscriber(topics=["calvin/topic1/#"], host="iot.eclipse.org", port=1883)
-mqtt2 : net.MQTTSubscriber(topics=["calvin/topic2/#"], host="iot.eclipse.org", port=1883)
-col : std.Collect()
-formatter : text.Format(fmt="<msg> {topic}: {payload}")
+mqtt : net.MQTTSubscriber(topics=["testing/calvin/#"], host="iot.eclipse.org", port=1883, settings=null)
+# formatter : text.Format(fmt="{topic}: {payload}")
 out: io.Print()
 
-mqtt1.message > col.token
-mqtt2.message > col.token
-col.token > formatter.dict
-formatter.text > out.token
+mqtt.message > out.token
+#formatter.dict
+#formatter.text > out.token

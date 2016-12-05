@@ -14,25 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class BasePublisher(object):
-    """
-        Simple MQTT-publisher for rare or one-shot messages
-    """
-    def __init__(self, topic, host, port=1883):
-        self._topic = topic
-        self._host = host
-        self._port = port
-
-    def publish(self, payload):
-        raise NotImplemented
-
 class BaseClient(object):
     """
         More or less full-featured MQTT client. Handles subscribing and publishing.
     """
-    def __init__(self, host, port=1883):
+    def __init__(self, host, port):
+        super(BaseClient, self).__init__()
         self._host = host
         self._port = port
+
+    def host(self):
+        return self._host
+        
+    def port(self):
+        return self._port
 
     def start(self):
         raise NotImplemented

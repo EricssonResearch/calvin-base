@@ -23,17 +23,33 @@ _log = get_logger(__name__)
 
 class MQTTSubscriber(Actor):
     """
-    Subscribe to given topics (list of mqtt ), send incoming messages to on port
+    Subscribe to given topics (list of mqtt ), output messages on message-port
+    
+    Arguments:
+      host: <ip/name of mqtt broker>,
+      port: <port to use on mqtt broker>,
+      topics: <list of topics to subscribe to>
+    
+    settings is a dictionary with optional arguments :
+      "ca-cert-file": <ca certificate file>,
+      "verify-hostname": <False iff hostname in cert should not be verified>,
+      "client-cert-file" : <client certificate file>,
+      "client-key-file" : <client key file>,
+      "username": <self explanatory>,
+      "password": <self explanatory>,
+      "will-topic" : <topic of mqtt will>
+      "will-payload" : <payload of mqtt will>
 
     output:
       message : dictionary {"topic": <topic>, "payload": <payload>}
     """
 
-    @manage(['host', 'port', 'topics', 'message'])
-    def init(self, host, port, topics):
+    @manage(['host', 'port', 'topics', 'settings', 'message'])
+    def init(self, host, port, topics, settings):
         self.host = host
         self.port = port
         self.topics = topics
+        self.settings = settings if settings else {}
         self.message = None
         self.setup()
 
@@ -47,13 +63,14 @@ class MQTTSubscriber(Actor):
 
     def will_end(self):
         if self.subscriber:
+            for topic in self.topics:
+                self.subscriber.unsubscribe(topic)
             self.subscriber.stop()
-
 
     def setup(self):
         self.use('calvinsys.network.mqtthandler', shorthand='mqtt')
         self.subscriber = self['mqtt']
-        self.subscriber.start(self.host, self.port)
+        self.subscriber.start(self.host, self.port, self.settings)
         for topic in self.topics:
             self.subscriber.subscribe(topic)
 

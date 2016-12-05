@@ -51,9 +51,9 @@ class MQTTHandler(object):
         self._actor = actor
         self._messages = []
 
-    def start(self, host, port):
+    def start(self, host, port, settings):
         self._client = mqtt_clients.get(host, port)
-        self._client.start()
+        self._client.start(settings)
 
     def stop(self):
         mqtt_clients.drop(self._client)
@@ -62,7 +62,7 @@ class MQTTHandler(object):
         self._client.subscribe(self, topic)
 
     def unsubscribe(self, topic):
-        self._client.unsubscribe(topic)
+        self._client.unsubscribe(self, topic)
 
     def new_message(self, topic, message):
         self._messages.append((topic,message))
@@ -76,7 +76,8 @@ class MQTTHandler(object):
 
     def publish(self, topic, message):
         self._client.publish(topic, message)
-        
+
+
 def register(node, actor):
     """
         Fetch a new handler

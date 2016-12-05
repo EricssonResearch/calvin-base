@@ -1,5 +1,5 @@
-mqtt : net.MQTTPublisher(host="iot.eclipse.org", port=1883)
-counter : std.CountTimer(sleep=1.0)
+mqtt : net.MQTTPublisher(host="iot.eclipse.org", port=1883, settings=null)
+counter : std.CountTimer(sleep=2.0)
 
-"calvin/topic1/subtopic1/nontheless" > mqtt.topic
+"testing/calvin/topic1/subtopic1/nontheless" > mqtt.topic
 counter.integer > mqtt.payload
