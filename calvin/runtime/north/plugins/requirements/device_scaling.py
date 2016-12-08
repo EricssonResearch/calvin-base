@@ -23,6 +23,7 @@ def init(replication_data):
     replication_data.known_runtimes = [None, None]
     replication_data.check_count = 0
     replication_data.limit_count = 10
+    replication_data._terminate_with_node = True
 
 def set_state(replication_data, state):
     init(replication_data)

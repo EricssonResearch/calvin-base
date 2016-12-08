@@ -240,6 +240,8 @@ class Node(object):
 
         _log.analyze(self.id, "+", {})
         self.storage.delete_node(self, cb=deleted_node)
+        for link in self.network.list_direct_links():
+            self.network.links[link].close()
 
     def stop_with_migration(self, callback=None):
         # Set timeout if we are still failing after 50 seconds
@@ -295,7 +297,12 @@ class Node(object):
         # Migrate the actors according to their requirements
         # (even actors without explicit requirements will migrate based on e.g. requires and port property needs) 
         for actor in actors:
-            self.am.update_requirements(actor.id, [], extend=True, move=True,
+            if actor._replication_data.terminate_with_node(actor.id):
+                _log.info("TERMINATE REPLICA")
+                self.rm.terminate(actor.id, callback=CalvinCB(migrated, actor_id=actor.id))
+            else:
+                _log.info("TERMINATE MIGRATE ACTOR")
+                self.am.update_requirements(actor.id, [], extend=True, move=True,
                             authorization_check=False, callback=CalvinCB(migrated, actor_id=actor.id))
 
     def _storage_started_cb(self, *args, **kwargs):

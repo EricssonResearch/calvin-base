@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import copy
-import random
+import time
 
 from calvin.requests import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
@@ -49,6 +49,7 @@ class ReplicationData(object):
         # {<actor_id>: {'known_peer_ports': [peer-ports id list], <org-port-id: <replicated-port-id>, ...}, ...}
         self.remaped_ports = {}
         self.status = REPLICATION_STATUS.UNUSED
+        self._terminate_with_node = False
 
     def state(self, remap=None):
         state = {}
@@ -58,6 +59,7 @@ class ReplicationData(object):
             state['id'] = self.id
             state['master'] = self.master
             state['counter'] = self.counter
+            state['_terminate_with_node'] = self._terminate_with_node
             if remap is None:
                 # For normal migration include these
                 state['instances'] = self.instances
@@ -78,6 +80,7 @@ class ReplicationData(object):
         self.instances = state.get('instances', [])
         self.requirements = state.get('requirements', {})
         self.counter = state.get('counter', 0)
+        self._terminate_with_node = state.get('_terminate_with_node', False)
         self.remaped_ports = state.get('remaped_ports', {})
         self.status = state.get('status', REPLICATION_STATUS.UNUSED)
         try:
@@ -110,6 +113,9 @@ class ReplicationData(object):
 
     def is_busy(self):
         return self.status in [REPLICATION_STATUS.REPLICATING, REPLICATION_STATUS.DEREPLICATING]
+
+    def terminate_with_node(self, actor_id):
+        return self._terminate_with_node and not self.is_master(actor_id)
 
     def inhibate(self, actor_id, inhibate):
         if inhibate:
@@ -210,6 +216,7 @@ class ReplicationManager(object):
         cb_status = CalvinCB(self._replication_status_cb, replication_data=actor._replication_data, cb=callback)
         # TODO make name a property that combine name and counter in actor
         new_id = uuid("ACTOR")
+        actor._replication_data.check_instances = time.time()
         actor._replication_data.add_replica(new_id)
         new_name = actor.name + "/{}".format(actor._replication_data.counter)
         actor_type = actor._type
@@ -324,6 +331,7 @@ class ReplicationManager(object):
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
         cb_status = CalvinCB(self._replication_status_cb, replication_data=replication_data, cb=callback)
+        replication_data.check_instances = time.time()
         if last_replica_id in self.node.am.actors:
             self.node.am.destroy_with_disconnect(last_replica_id, terminate=terminate,
                 callback=CalvinCB(self._dereplicated, replication_data=replication_data,
@@ -367,16 +375,38 @@ class ReplicationManager(object):
             cb(status)
 
     #
+    # Terminate specific replica
+    #
+
+    def terminate(self, actor_id, callback):
+        try:
+            replication_data = self.node.am.actors[actor_id]._replication_data
+        except:
+            if callback:
+                callback(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+            return
+        self.node.storage.remove_replica(replication_data.id, actor_id)
+        self.node.storage.remove_replica_node(replication_data.id, actor_id)
+        self.node.control.log_actor_dereplicate(
+                actor_id=replication_data.master, replica_actor_id=actor_id,
+                replication_id=replication_data.id)
+        self.node.am.destroy_with_disconnect(actor_id, terminate=DISCONNECT.TERMINATE,
+            callback=callback)
+
+    #
     # Requirement controlled replication
     #
 
     def replication_loop(self):
         replicate = []
         dereplicate = []
+        no_op = []
         for actor in self.list_master_actors():
             if actor._replication_data.status != REPLICATION_STATUS.READY:
                 continue
             if actor._migrating_to is not None:
+                continue
+            if not actor.enabled():
                 continue
             try:
                 req = actor._replication_data.requirements
@@ -391,12 +421,29 @@ class ReplicationManager(object):
                  replicate.append(actor)
             elif pre_check == PRE_CHECK.SCALE_IN:
                  dereplicate.append(actor)
+            elif pre_check == PRE_CHECK.NO_OPERATION:
+                 no_op.append(actor)
         for actor in replicate:
             _log.info("Auto-replicate")
             self.replicate_by_requirements(actor, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
         for actor in dereplicate:
             _log.info("Auto-dereplicate")
             self.dereplicate(actor.id, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id), exhaust=True)
+        for actor in no_op:
+            if not hasattr(actor._replication_data, "check_instances"):
+                actor._replication_data.check_instances = time.time()
+            t = time.time()
+            if t > (actor._replication_data.check_instances + 2.0):
+                actor._replication_data.check_instances = t
+                self.node.storage.get_replica(actor._replication_data.id, CalvinCB(self._current_actors_cb, actor=actor))
+
+    def _current_actors_cb(self, key, value, actor):
+        collect_actors = [] if value is None else value
+            actor.id, set(actor._replication_data.instances + [actor.id]) - set(collect_actors),
+            set(collect_actors) - set(actor._replication_data.instances)))
+        missing = set(actor._replication_data.instances) - set(collect_actors + [actor.id])
+        for actor_id in missing:
+            actor._replication_data.instances.remove(actor_id)
 
     def _replication_loop_log_cb(self, status, actor_id):
         _log.info("Auto-(de)replicated %s: %s" % (actor_id, str(status)))
