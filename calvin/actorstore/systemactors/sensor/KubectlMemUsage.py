@@ -48,19 +48,16 @@ class KubectlMemUsage(Actor):
     @condition([], [])
     @guard(lambda self: self['kube'].has_metric("memory/usage"))
     def measure(self):
-        _log.info("measure")
         metrics = self['kube'].get_metric("memory/usage")
         self['kube'].ack_metric("memory/usage")
         self.data = [item for item in metrics["metrics"] if item["timestamp"] > self.last_timestamp ]
         for item in self.data:
             item["value"] /= 1024*1024
-        _log.info("Got measurement '%r'" % (self.data,))
         return ActionResult()
         
     @condition([], ['usage'])
     @guard(lambda self: self.data)
     def dispatch_single(self):
-        _log.info("dispatch_single")
         item = self.data.pop(0)
         payload = { "values" : item}
         # Node-red wants millisecs

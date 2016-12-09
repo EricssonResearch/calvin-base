@@ -22,6 +22,11 @@ import json
 _log = get_logger(__name__)
 
 
+def iso8601_to_timestamp(timestring):
+    import time
+    import datetime
+    return time.mktime(datetime.datetime.strptime(timestring, "%Y-%m-%dT%H:%M:%SZ").timetuple())
+    
 class KubeCtl(object):
 
     """
@@ -37,18 +42,18 @@ class KubeCtl(object):
         self._httpclient = http_client.HTTPClient({'receive_headers' : [CalvinCB(self._receive_headers)],
                                                    'receive-body': [CalvinCB(self._receive_body)]})
         self._requests = {}
-        _log.info("new kube created")
+        # _log.info("new kube created")
 
     def identity(self):
         raise NotImplemented
     
     def connect(self, connected_cb):
         # connectionless api, just call back
-        _log.info("connecting")
+        # _log.info("connecting")
         connected_cb()
 
     def get_metric(self, metric, result_cb):
-        _log.info("get_metric '%s'" % (metric,))
+        _log.debug("get_metric '%s'" % (metric,))
         try:
             request = self._httpclient.request("GET", url=self._api_base + "metrics/" + metric, params=None, headers={}, data=None)
             # _log.info("request\n'%s'" % (self._api_base + "/metrics/" + metric))
@@ -58,19 +63,19 @@ class KubeCtl(object):
         self._requests[request] = result_cb
     
     def _receive_headers(self, request):
-        _log.info("receive headers")
+        # _log.info("receive headers")
         if request.status() != 200:
             result_cb = self._request.pop(request)
             result_cb(request.status(), None, None)
 
     def _receive_body(self, request):
-        import time, datetime
-        _log.info("receive body")
+        # _log.info("receive body")
         result_cb = self._requests.pop(request)
         metric = json.loads(request.body())
         # convert time string to timestamps
         for item in metric["metrics"]:
-            item["timestamp"] = time.mktime(datetime.datetime.strptime(item["timestamp"], "%Y-%m-%dT%H:%M:%SZ").timetuple()) 
+            item["timestamp"] = iso8601_to_timestamp(item["timestamp"])
+            # item["timestamp"] = time.mktime(datetime.datetime.strptime(item["timestamp"], "%Y-%m-%dT%H:%M:%SZ").timetuple()) 
         result_cb(request.status(), request._metric_name, {"metrics": metric["metrics"]})
         del request
         
