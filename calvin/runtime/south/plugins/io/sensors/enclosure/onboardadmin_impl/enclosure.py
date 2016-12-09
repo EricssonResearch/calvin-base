@@ -93,9 +93,8 @@ class Enclosure(base_enclosure.BaseEnclosure):
                     data[current][key] = value
                 else:
                     pass  # junk or diagnostics data
-            
+
         return {key:value for key, value in data.items() if key in things}
-        
         
     def _get_fan_data(self, fans):
         return self._get_data(fans, "FANS", "Fan")
@@ -114,7 +113,7 @@ class Enclosure(base_enclosure.BaseEnclosure):
             percentage = data['Speed'].split(' ')[0]  # should be percentage of max speed
             percentage = int(percentage)/100.0
             maxrpm = int(data['Maximum speed'])
-            speeds[fan] = int(percentage*maxrpm)
+            speeds["Fan-%d" % (fan,)] = int(percentage*maxrpm)
         result_cb(speeds)
 
     def _get_fan_speed_percent(self, fans, result_cb):
@@ -130,7 +129,7 @@ class Enclosure(base_enclosure.BaseEnclosure):
         usage = {}
         for supply, data in result.items():
             output = data["Current Power Output"]
-            usage[supply] = int(re.findall(r'\d+', output)[0])
+            usage["PSU-%d" % (supply,)] = int(re.findall(r'\d+', output)[0])
         result_cb(usage)
 
     def get_fan_speed(self, fans, result_cb):
