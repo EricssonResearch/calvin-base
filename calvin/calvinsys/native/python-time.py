@@ -4,7 +4,7 @@ import datetime
 class Time(object):
 
     def timestamp(self):
-        return time.time()
+        return time.mktime(time.gmtime())
 
     def datetime(self):
         dt = datetime.datetime.now()
