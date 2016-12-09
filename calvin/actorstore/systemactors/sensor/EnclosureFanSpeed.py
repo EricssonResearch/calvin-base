@@ -48,8 +48,7 @@ class EnclosureFanSpeed(Actor):
     def measure(self):
         fandata = self['enclosure'].get_fan_data()
         self['enclosure'].ack_fan_data()
-        payload = { "values": fandata}
-        return ActionResult(production=(payload,))
+        return ActionResult(production=(fandata,))
 
     action_priority = (measure,)
     requires =  ['calvinsys.sensors.enclosure']
