@@ -30,7 +30,7 @@ class EnclosurePowerUsage(Actor):
         if isinstance(power_supplies, list):
             self.power_supplies = power_supplies
         else :
-            self.power_supploes = [power_supplies]
+            self.power_supplies = [power_supplies]
         self.setup()
 
     def setup(self):
