@@ -472,6 +472,10 @@ class Flatten(object):
 
         node.add_children(produced)
 
+        #
+        # Relink
+        #
+
         # Replace and delete links (manipulates children)
         iops = query(node, kind=ast.InternalOutPort, maxdepth=2)
         consumed = set()
@@ -487,7 +491,11 @@ class Flatten(object):
                 consumed.add(target.parent)
             iop.parent.delete()
 
+        for link in consumed:
+            link.delete()
+
         iips = query(node, kind=ast.InternalInPort, maxdepth=2)
+        consumed = set()
         for iip in iips:
             targets = query(node, kind=ast.OutPort, attributes={'actor':iip.actor, 'port':iip.port})
             if not targets:
