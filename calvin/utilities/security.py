@@ -279,7 +279,7 @@ class Security(object):
         _log.debug("Security: get_authorization_decision")
         if decision_from_migration:
             try:
-                _log.info("Security: Authorization decision from migration")
+                _log.debug("Authorization decision from migration")
                 # Decode JSON Web Token, which contains the authorization response.
                 decoded = decode_jwt(decision_from_migration["jwt"], decision_from_migration["cert_name"],
                                      self.node.node_name, self.node.id, actor_id)
@@ -317,7 +317,7 @@ class Security(object):
                                                           callback=callback))
 
     def _return_authorization_decision(self, decision, obligations, callback):
-        _log.info("Authorization response received: %s, obligations %s" % (decision, obligations))
+        _log.debug("Authorization response received: %s, obligations %s" % (decision, obligations))
         if decision == "permit":
             _log.debug("Security: access permitted to resources")
             if obligations:
@@ -341,8 +341,9 @@ class Security(object):
         The request is put in a JSON Web Token (JWT) that is signed
         and includes timestamps and information about sender and receiver.
         """
+#        _log.debug("Hakan derived={}, configured={}".format(self.node.authorization.authz_server_id,  self.sec_conf['authorization']['server_uuid']))
         try:
-            authz_server_id = self.sec_conf['authorization']['server_uuid']
+            authz_server_id = self.node.authorization.authz_server_id
             payload = {
                 "iss": self.node.id,
                 "aud": authz_server_id,
@@ -390,6 +391,7 @@ class Security(object):
 
     def authorization_runtime_search(self, actor_id, actorstore_signature, callback):
         """Search for runtime where the authorization decision for the actor is 'permit'."""
+        _log.debug("authorization_runtime_search")
         # extra_requirement is used to prevent InfiniteElement from being returned.
         extra_requirement = [{"op": "actor_reqs_match",
                               "kwargs": {"requires": ["calvinsys.native.python-json"]},
@@ -397,42 +399,36 @@ class Security(object):
                              {"op": "current_node",
                               "kwargs": {},
                               "type": "-"}]
+        #Search for runtimes supporting the actor with appropriate actorstore_signature
         self.node.am.update_requirements(actor_id, extra_requirement, True, authorization_check=True,
-                                         callback=CalvinCB(self._authorization_runtime_search_cont,
+                                         callback=CalvinCB(self._authorization_server_search,
                                                            actor_id=actor_id,
                                                            actorstore_signature=actorstore_signature,
                                                            callback=callback))
 
-    def _authorization_runtime_search_cont(self, actor_id, actorstore_signature, possible_placements, callback):
+    def _authorization_server_search(self, possible_placements, actor_id, actorstore_signature, callback):
+        _log.debug("_authorization_server_search, possible_placements{}".format(possible_placements))
         if not possible_placements:
+            callback(None)
+            return
+        #Search for available authorization servers in storage
+        self.node.storage.get_index(['authorization_server'],
+                                    cb=CalvinCB(self._send_authorization_runtime_search,
+                                                       counter=0, actor_id=actor_id,
+                                                       actorstore_signature=actorstore_signature,
+                                                       possible_placements=possible_placements,
+                                                       callback=callback))
+
+    def _send_authorization_runtime_search(self, key, value, counter, actor_id, actorstore_signature,
+                                           possible_placements, callback):
+        _log.debug("_send_authorization_runtime_search, \nkey={}\nvalue={}".format(key,value))
+        if not value:
             callback(None)
             return
         request = {}
         request["subject"] = self.get_subject_attributes()
         request["subject"]["actorstore_signature"] = actorstore_signature
-        self.node.storage.get_node(possible_placements[0],
-                                   cb=CalvinCB(self._send_authorization_runtime_search,
-                                               actor_id=actor_id, request=request,
-                                               possible_placements=possible_placements,
-                                               authz_server_blacklist=[],
-                                               callback=callback))
-
-    def _send_authorization_runtime_search(self, key, value, actor_id, request, possible_placements,
-                                           authz_server_blacklist, callback, counter=0):
-        authz_server_id = value["authz_server"]
-        if authz_server_id is None or authz_server_id in authz_server_blacklist:
-            counter += 1
-            if counter < len(possible_placements):
-                # Try with next runtime instead.
-                self.node.storage.get_node(possible_placements[counter],
-                                           cb=CalvinCB(self._send_authorization_runtime_search,
-                                                       actor_id=actor_id, request=request,
-                                                       possible_placements=possible_placements,
-                                                       authz_server_blacklist=authz_server_blacklist,
-                                                       callback=callback, counter=counter))
-            else:
-                callback(None)
-            return
+        authz_server_id = value[counter]
         try:
             payload = {
                 "iss": self.node.id,
@@ -444,31 +440,35 @@ class Security(object):
                 "whitelist": possible_placements
             }
             jwt_request = encode_jwt(payload, self.node.node_name)
-            # Add authz_server to blacklist to prevent sending more requests to the same server if search fails.
-            authz_server_blacklist.append(authz_server_id)
             # Send request to authorization server.
             self.node.proto.authorization_search(authz_server_id,
                                                  CalvinCB(self._handle_authorization_runtime_search_response,
-                                                          actor_id=actor_id, request=request,
-                                                          possible_placements=possible_placements,
-                                                          authz_server_blacklist=authz_server_blacklist,
-                                                          callback=callback, counter=counter), jwt_request)
+                                                        key=key, value=value,
+                                                        counter=counter,
+                                                        actor_id=actor_id,
+                                                        actorstore_signature=actorstore_signature,
+                                                        possible_placements=possible_placements,
+                                                        callback=callback), jwt_request)
         except Exception as e:
             _log.error("Security: authorization server error - %s" % str(e))
             callback(None)
 
-    def _handle_authorization_runtime_search_response(self, reply, actor_id, request, possible_placements,
-                                                      authz_server_blacklist, callback, counter):
+
+
+    def _handle_authorization_runtime_search_response(self, reply, key, value, counter, actor_id,
+                                                      actorstore_signature, possible_placements,
+                                                      callback):
+        _log.debug("_handle_authorization_runtime_search_response, replly={}\nkey={}\nvalue={}".format(reply,key,value))
         if reply.status != 200 or reply.data["node_id"] is None:
             counter += 1
             if counter < len(possible_placements):
                 # Continue searching
-                self.node.storage.get_node(possible_placements[counter],
-                                           cb=CalvinCB(self._send_authorization_runtime_search,
-                                                       actor_id=actor_id, request=request,
-                                                       possible_placements=possible_placements,
-                                                       authz_server_blacklist=authz_server_blacklist,
-                                                       callback=callback, counter=counter))
+                self._send_authorization_runtime_search(key=key, value=value,
+                                                        counter=counter,
+                                                        actor_id=actor_id,
+                                                        actorstore_signature=actorstore_signature,
+                                                        possible_placements=possible_placements,
+                                                        callback=callback)
                 return
         callback(reply)
 

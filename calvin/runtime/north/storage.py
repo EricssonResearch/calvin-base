@@ -521,6 +521,23 @@ class Storage(object):
         self._add_node_index(node)
         # Store all actors on this node in storage
         GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
+#        self.add_index(['external_authorization_server', 'nodes'], self.node.id, root_prefix_level=2, cb=cb)
+        _sec_conf = _conf.get('security', 'security_conf')
+        if ('authorization' in _sec_conf):
+            if ('accept_external_requests' in _sec_conf['authorization'] and
+                    _sec_conf['authorization']['accept_external_requests'] ):
+                _log.debug("Node is an authorization server accepting external requests, list it in storage")
+                #Add node to list of authorization servers accepting external clients
+                self.add_index(['external_authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
+                #Add node to list of authorization servers
+                self.add_index(['authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
+            elif ('procedure' in _sec_conf['authorization'] and
+                        _sec_conf['authorization']['procedure']=='local' ):
+                _log.debug("Node is a local authorization server NOT accepting external requests, list it in storage")
+                #Add node to list of authorization servers
+                self.add_index(['authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
+            else:
+                _log.debug("Node is NOT an authorization")
 
     def _add_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()
@@ -568,6 +585,18 @@ class Storage(object):
         self.delete(prefix="node-", key=node.id, cb=None if node.attributes.get_indexed_public() else cb)
         if node.attributes.get_indexed_public():
             self._delete_node_index(node, cb=cb)
+        _sec_conf = _conf.get('security', 'security_conf')
+        if ('authorization' in _sec_conf):
+            if ('accept_external_requests' in _sec_conf['authorization'] and
+                    _sec_conf['authorization']['accept_external_requests'] ):
+                #Remove node from list of authorization servers accepting external clients
+                self.remove_index(['external_authorization_server', 'nodes'], self.node.id, root_prefix_level=2, cb=cb)
+                #Remove node from list of authorization servers
+                self.add_index(['authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
+            elif ('procedure' in _sec_conf['authorization'] and
+                        _sec_conf['authorization']['procedure']=='local' ):
+                #Remove node from list of authorization servers
+                self.remove_index(['authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
 
     def _delete_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()

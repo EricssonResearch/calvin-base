@@ -265,7 +265,6 @@ class TestSecurity(unittest.TestCase):
 
         # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
         print "-------------------------------------"
-        rt2_uuid = runtimes[1].node_id
         rt4_conf = copy.deepcopy(rt_conf)
         rt4_conf.set("security", "security_conf", {
                         "comment": "Local authentication, external authorization",
@@ -274,8 +273,7 @@ class TestSecurity(unittest.TestCase):
                             "identity_provider_path": identity_provider_path
                         },
                         "authorization": {
-                            "procedure": "external",
-                            "server_uuid": rt2_uuid
+                            "procedure": "external"
                         }
                     })
         rt4_conf.save("/tmp/calvin5004.conf")

@@ -36,18 +36,22 @@ class Authorization(object):
     """Authorization helper functions"""
 
     def __init__(self, node):
+        self.authz_server_id = None
         self.node = node
         try:
-            if _sec_conf['authorization']['procedure'] == "local":
-                self.pdp = PolicyDecisionPoint(self.node, _sec_conf['authorization'] if _sec_conf else None)
-                try:
-                    self.prp = FilePolicyRetrievalPoint(_sec_conf['authorization']["policy_storage_path"])
-                except:
-                    self.prp = FilePolicyRetrievalPoint(os.path.join(os.path.expanduser("~"), 
-                                                                     ".calvin", "security", "policies"))
-                self.authz_server_id = self.node.id
+            if 'authorization' in _sec_conf and 'procedure' in _sec_conf['authorization']:
+                if _sec_conf['authorization']['procedure'] == "local":
+                    self.pdp = PolicyDecisionPoint(self.node, _sec_conf['authorization'] if _sec_conf else None)
+                    try:
+                        self.prp = FilePolicyRetrievalPoint(_sec_conf['authorization']["policy_storage_path"])
+                    except:
+                        self.prp = FilePolicyRetrievalPoint(os.path.join(os.path.expanduser("~"), 
+                                                                         ".calvin", "security", "policies"))
+                    self.authz_server_id = self.node.id
+                elif 'server_uuid' in _sec_conf['authorization']:
+                    self.authz_server_id = _sec_conf['authorization']['server_uuid']
             else:
-                self.authz_server_id = _sec_conf['authorization']['server_uuid']
+                self.authz_server_id = None
         except Exception:
             self.authz_server_id = None
 
@@ -71,6 +75,7 @@ class Authorization(object):
 
     def register_node(self):
         """Register node attributes for authorization."""
+        _log.debug("register_node")
         if _sec_conf and "authorization" in _sec_conf:
             # TODO: the node should contact the authz server regularly (once a day?), 
             #       otherwise it should be removed from the registered_nodes list on the authz server.
@@ -79,11 +84,33 @@ class Authorization(object):
                     if not HAS_JWT:
                         _log.error("Security: Install JWT to use external server as authorization method.")
                         return
-                    self.register_node_external()
+                    if self.authz_server_id:
+                        #Authorization server id configured in calvin config file, let's use it
+                        _log.debug("Authorization server id configured in calvin config file, let's use it. authz_server_id={}".format(self.authz_server_id))
+                        self.register_node_external()
+                    else:
+                        #No authorization servered configured, let's try to find one in storage
+                        _log.debug("No authorization server configured, let's try to find one in storage")
+                        self.node.storage.get_index(['external_authorization_server'],
+                                                    CalvinCB(self._register_node_cb))
                 else:
                     self.pdp.register_node(self.node.id, self.node.attributes.get_indexed_public_with_keys())
             except Exception as e:
                 _log.error("Node could not be registered for authorization - %s" % str(e))
+
+    def _register_node_cb(self, key, value):
+        import random
+        _log.debug("_register_node_cb, \nkey={}\nvalue={}".format(key,value))
+        if value:
+            nbr = len(value)
+            #For loadbalanding of authorization server, randomly select
+            # one of the found authorization servers
+            rand = random.randint(0, nbr-1)
+            self.authz_server_id = value[rand]
+            self.register_node_external()
+        else:
+            _log.error("No authorization server found")
+            raise Exception("No athorization server accepting external clients can be found")
 
     def register_node_external(self):
         """Register node attributes for external authorization"""
