@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import operator
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition
 from calvin.utilities.calvinlogger import get_actor_logger
 
 
@@ -35,8 +35,12 @@ class Compute(Actor):
     Outputs:
       result : result of 'a' OP 'b'
     """
-    @manage(['op'])
+    @manage(['op_string'])
     def init(self, op):
+        self.op_string = op
+        self.setup()
+        
+    def setup(self):
         try:
             self.op = {
                 '+': operator.add,
@@ -45,11 +49,14 @@ class Compute(Actor):
                 '/': operator.div,
                 'div': operator.floordiv,
                 'mod': operator.mod,
-            }[op]
+            }[self.op_string]
         except KeyError:
-            _log.warning('Invalid operator %s, will always produce NULL as result' % str(op))
+            _log.warning('Invalid operator %s, will always produce NULL as result' % str(self.op_string))
             self.op = None
-
+        
+    def did_migrate(self):
+        self.setup()
+        
     @condition(['a', 'b'], ['result'])
     def compute(self, a, b):
         res = self.op(a, b) if self.op else None
