@@ -1629,10 +1629,6 @@ function destroyPeerByMethod(peer_id, method)
         var url = peer.control_uri + '/node/' + method;
         console.log("destroyPeer url: " + url);
 
-        if (peer.source != null) {
-            peer.source.removeEventListener("message", eventHandler, false);
-        }
-
         $.ajax({
             timeout: 20000,
             beforeSend: function() {
@@ -1644,6 +1640,10 @@ function destroyPeerByMethod(peer_id, method)
             url: url,
             type: 'DELETE',
             success: function() {
+                if (peer.source != null) {
+                    peer.source.removeEventListener("message", eventHandler, false);
+                }
+                popRuntime(peer_id)
                 var tableRef = document.getElementById('peersTable');
                 for (var x = 0; x < tableRef.rows.length; x++) {
                     if (tableRef.rows[x].cells[0].innerHTML == peer_id) {
@@ -1654,6 +1654,9 @@ function destroyPeerByMethod(peer_id, method)
                 }
             },
             error: function() {
+                if (peer.source != null) {
+                    peer.source.removeEventListener("message", eventHandler, false);
+                }
                 showError("Failed to destroy runtime");
             }
         });
@@ -1741,6 +1744,9 @@ function startTrace() {
     }
     if (document.getElementById("chkTraceLinkDisconnected").checked) {
         events.push("link_disconnected");
+    }
+    if (document.getElementById("chkTraceLogMessage").checked) {
+        events.push("log_message");
     }
 
     $("#traceDialog").modal('hide');
@@ -1914,6 +1920,8 @@ function eventHandler(event)
         cell4.appendChild(document.createTextNode(data.uri));
     } else if(data.type == "link_disconnected") {
         cell3.appendChild(document.createTextNode(data.peer_id));
+    } else if(data.type == "log_message") {
+        cell3.appendChild(document.createTextNode(data.msg));
     } else {
         console.log("eventHandler - Unknown event type:" + data.type);
     }

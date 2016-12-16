@@ -787,6 +787,7 @@ class CalvinControl(object):
     LOG_LINK_DISCONNECTED = 8
     LOG_ACTOR_REPLICATE = 9
     LOG_ACTOR_DEREPLICATE = 10
+    LOG_LOG_MESSAGE = 11
 
     def __init__(self):
         self.node = None
@@ -1139,6 +1140,8 @@ class CalvinControl(object):
                         events.append(self.LOG_LINK_CONNECTED)
                     elif event == 'link_disconnected':
                         events.append(self.LOG_LINK_DISCONNECTED)
+                    elif event == 'log_message':
+                        events.append(self.LOG_LOG_MESSAGE)
                     else:
                         status = calvinresponse.BAD_REQUEST
                         break
@@ -2076,6 +2079,28 @@ class CalvinControl(object):
                 data['node_id'] = self.node.id
                 data['type'] = 'link_disconnected'
                 data['peer_id'] = peer_id
+                if logger.connection is not None:
+                    if not logger.connection.connection_lost:
+                        logger.connection.send("data: %s\n\n" % json.dumps(data))
+                    else:
+                        disconnected.append(user_id)
+                elif self.tunnel_client is not None and logger.handle is not None:
+                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
+                    self.tunnel_client.send(msg)
+        for user_id in disconnected:
+            del self.loggers[user_id]
+
+    def log_log_message(self, message):
+        """ Log message that is displayed at listener
+        """
+        disconnected = []
+        for user_id, logger in self.loggers.iteritems():
+            if not logger.events or self.LOG_LOG_MESSAGE in logger.events:
+                data = {}
+                data['timestamp'] = time.time()
+                data['node_id'] = self.node.id
+                data['type'] = 'log_message'
+                data['msg'] = message
                 if logger.connection is not None:
                     if not logger.connection.connection_lost:
                         logger.connection.send("data: %s\n\n" % json.dumps(data))
