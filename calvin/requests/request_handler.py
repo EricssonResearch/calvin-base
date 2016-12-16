@@ -61,7 +61,7 @@ METER_PATH = '/meter/{}'
 METER_PATH_TIMED = '/meter/{}/timed'
 METER_PATH_AGGREGATED = '/meter/{}/aggregated'
 METER_PATH_METAINFO = '/meter/{}/metainfo'
-
+CSR_REQUEST = '/certificate_authority/certificate_signing_request'
 
 def get_runtime(value):
     if isinstance(value, basestring):
@@ -409,3 +409,9 @@ class RequestHandler(object):
             return partial(getattr(self, func), async=True)
         else:
             raise AttributeError("Unknown request handler attribute %s" % name)
+
+    def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, async=False):
+        data = {'csr': csr}
+        r = self._post(rt, timeout, async, CSR_REQUEST, data=data)
+        return self.check_response(r)
+

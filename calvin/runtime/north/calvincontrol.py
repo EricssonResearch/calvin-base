@@ -632,6 +632,16 @@ re_post_storage = re.compile(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
     """
+    POST /certiticate_authority/certificate_signing_request
+    Send CSR to CA, that creates a x509 certificate and returns it
+    Response status code: OK or INTERNAL_ERROR
+    Response:
+    {"certificate":<value>}
+"""
+re_post_certificate_signing_request = re.compile(r"POST /certificate_authority/certificate_signing_request\sHTTP/1")
+
+control_api_doc += \
+    """
     GET /authentication/users_db
     Get user database on this runtime
     Response status code: OK or INTERNAL_ERROR
@@ -844,6 +854,7 @@ class CalvinControl(object):
             (re_get_storage, self.handle_get_storage),
             (re_dump_storage, self.handle_dump_storage),
             (re_post_storage, self.handle_post_storage),
+            (re_post_certificate_signing_request,self.handle_post_certificate_signing_request),
             (re_get_authentication_users_db, self.handle_get_authentication_users_db),
             (re_edit_authentication_users_db, self.handle_edit_authentication_users_db),
             (re_get_authentication_groups_db, self.handle_get_authentication_groups_db),
@@ -1176,7 +1187,8 @@ class CalvinControl(object):
         else:
             self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
 
-    @authentication_decorator
+    #Can't be access controlled, as it is needed to find authorization server
+#    @authentication_decorator
     def handle_get_node_id(self, handle, connection, match, data, hdr):
         """ Get node id from this node
         """
@@ -1694,7 +1706,8 @@ class CalvinControl(object):
         self.node.storage.remove_index(
             match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
 
-    @authentication_decorator
+    #Can't be access controlled, as it is needed to find authorization server
+#    @authentication_decorator
     def handle_get_index(self, handle, connection, match, data, hdr):
         """ Get from index
         """
@@ -1737,6 +1750,19 @@ class CalvinControl(object):
         """
         name = self.node.storage.dump()
         self.send_response(handle, connection, json.dumps(name), status=calvinresponse.OK)
+
+    # No authentication decorator, this is called by the runtimes when deployed
+    # without a certificate
+    def handle_post_certificate_signing_request(self, handle, connection, match, data, hdr):
+        """Post a CSR, if ok, CA creates and returns X509 certificate """
+        try:
+            cert = self.node.certificate_authority.sign_csr_request(data)
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_post_certificate_signing_request")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, json.dumps({"certificate": cert}) if status == calvinresponse.OK else None,
+                           status=status)
 
     @authentication_decorator
     def handle_get_authentication_users_db(self, handle, connection, match, data, hdr):

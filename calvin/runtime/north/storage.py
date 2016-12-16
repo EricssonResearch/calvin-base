@@ -515,22 +515,22 @@ class Storage(object):
         self.set(prefix="node-", key=node.id,
                   value={"uri": node.external_uri,
                          "control_uri": node.external_control_uri,
-                         "authz_server": node.authorization.authz_server_id,
                          "attributes": {'public': node.attributes.get_public(),
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
         self._add_node_index(node)
         # Store all actors on this node in storage
         GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
-#        self.add_index(['external_authorization_server', 'nodes'], self.node.id, root_prefix_level=2, cb=cb)
         _sec_conf = _conf.get('security', 'security_conf')
-        if ('authorization' in _sec_conf):
+        if _sec_conf and 'authorization' in _sec_conf:
             if ('accept_external_requests' in _sec_conf['authorization'] and
                     _sec_conf['authorization']['accept_external_requests'] ):
                 _log.debug("Node is an authorization server accepting external requests, list it in storage")
                 #Add node to list of authorization servers accepting external clients
-                self.add_index(['external_authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
+                self.add_index(['external_authorization_server'], self.node.id,
+                               root_prefix_level=1, cb=cb)
                 #Add node to list of authorization servers
-                self.add_index(['authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
+                self.add_index(['authorization_server'], self.node.id,
+                               root_prefix_level=1, cb=cb)
             elif ('procedure' in _sec_conf['authorization'] and
                         _sec_conf['authorization']['procedure']=='local' ):
                 _log.debug("Node is a local authorization server NOT accepting external requests, list it in storage")

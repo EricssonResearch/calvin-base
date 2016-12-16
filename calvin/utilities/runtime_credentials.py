@@ -580,7 +580,7 @@ class RuntimeCredentials():
         Store the signed runtime certificate
         in the "mine" folder
         """
-        _log.debug("store_own_cert")
+        _log.debug("store_own_cert:\n    certstring={}\n    certpath={}\n    security_dir={}".format(certstring, certpath, security_dir))
         path = self.store_cert("mine", certstring=certstring, certpath=certpath)
         #Let's update openssl.conf, but this entry should probably not
         #be trusted, it is likely that someone will copy certs into the folder 
@@ -643,8 +643,9 @@ class RuntimeCredentials():
         certificate strings, a list of OpenSSL objects and as a 
         OpenSSL truststore object
         """
-        return certificate.get_truststore(type, security_dir=self.configuration['RT_default']['security_dir'])
-
+        ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(type, security_dir=self.configuration['RT_default']['security_dir'])
+        return ca_cert_list_str, ca_cert_list_x509, truststore
+  
 
     def get_truststore_path(self, type):
         _log.debug("get_trust_store_path: type={}".format(type))
@@ -669,12 +670,18 @@ class RuntimeCredentials():
 
 
     def cert_enrollment_encrypt_csr(self, csr_path, cert):
+        """
+        csr_path: path to csr file
+        cert: CA certificate as a string
+        """
         import json
         import base64
         from cryptography.hazmat.primitives import padding
         from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
         from cryptography.hazmat.backends import default_backend
+        _log.debug("cert_enrollment_encrypt_csr")
         #Load CSR from file
+        #TODO: take csr as string instead of path
         try:
             with open(csr_path, 'r') as csr_fd:
                 csr= csr_fd.read()

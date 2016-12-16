@@ -194,6 +194,7 @@ class CA():
     # TODO Find out why the policy does not match equal org names.
 
     def __init__(self, domain, commonName=None, security_dir=None, force=False, readonly=False):
+        _log.debug("__init__")
         self.configfile = None
         self.commonName = commonName or 'runtime'
         self.config = ConfigParser.SafeConfigParser()
@@ -202,7 +203,7 @@ class CA():
         os.umask(0077)
         self.domain = domain
         _log.debug("CA init")
-        security_path = _conf.get("security", "security_path")
+        security_path = _conf.get("security", "security_dir")
         if security_dir:
             self.configfile = os.path.join(security_dir, domain, "openssl.conf")
         elif security_path:
@@ -598,7 +599,7 @@ class CA():
     def sign_csr(self, request):
         """
         Sign a certificate request.
-        Req is the name of a Certificate Signing Request in $new_certs_dir.
+        request: is the path to a Certificate Signing Request.
 
         Equivalent of:
         mkdir -p $certs
@@ -607,6 +608,7 @@ class CA():
                    -out $certs/runtime.pem
                    -passin file:$private_dir/ca_password
         """
+        _log.debug("sign_csr")
         try:
             self.validate_csr(request)
         except:
