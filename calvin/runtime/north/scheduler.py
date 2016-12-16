@@ -16,6 +16,7 @@
 
 import sys
 import time
+import random
 
 from calvin.actor.actor import ActionResult
 from calvin.runtime.south.plugins.async import async
@@ -73,7 +74,7 @@ class Scheduler(object):
         local_trigger_set = self._trigger_set
         self._trigger_set = set()
 
-        activity = total.did_fire or activity
+        activity = total.did_fire or activity or total.timeout
 
         #_log.debug("looped_once for %s at %s again in %s" %
         #           ("ALL" if all_ else local_trigger_set, time.time(), 0 if activity else self._heartbeat))
@@ -118,7 +119,13 @@ class Scheduler(object):
         total = ActionResult(did_fire=False)
         total.actor_ids = set()
 
-        for actor in self.actor_mgr.enabled_actors():
+        actors = self.actor_mgr.enabled_actors()
+        # Shuffle order since now we stop after executing actors for too long
+        random.shuffle(actors)
+
+        start_time = time.time()
+        timeout = False
+        for actor in actors:
             # if actor_ids is not None and actor.id not in actor_ids:
             #     _log.debug("ignoring actor %s(%s)" % (actor._type, actor.id))
             #     continue
@@ -133,7 +140,11 @@ class Scheduler(object):
             pressure_values = [p for _, _, p in pressure]
             if self.actor_pressures.get(actor.id, False) != pressure_values:
                 self.actor_pressures[actor.id] = pressure_values
-        self.idle = not total.did_fire
+            if time.time() - start_time > 0.100:
+                timeout = True
+                break
+        self.idle = False if timeout else not total.did_fire
+        total.timeout = timeout
         return total
 
     def maintenance_loop(self):

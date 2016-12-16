@@ -556,8 +556,12 @@ class Actor(object):
                         action_result.production)
                     break
 
+            curr_time = time.time()
+            if action_result.did_fire and curr_time - start_time > 0.020:
+                # We have run long enough, interrupt even though we could continue 
+                return total_result
             if not action_result.did_fire:
-                diff = time.time() - start_time
+                diff = curr_time - start_time
                 if diff > 0.2 and start_time - self._last_time_warning > 120.0:
                     # Every other minute warn if an actor runs for longer than 200 ms
                     self._last_time_warning = start_time
