@@ -741,7 +741,16 @@ class Actor(object):
             }]
         else:
             capability_require = []
-        return self._deployment_requirements + capability_require + capability_port
+        if self._replication_data.id is None:
+            replica_nodes = []
+        else:
+            # exclude node with replicas
+            replica_nodes = [{
+                'op': 'replica_nodes',
+                'kwargs': {},
+                'type': '-'
+            }]
+        return self._deployment_requirements + capability_require + capability_port + replica_nodes
 
     def _derive_port_property_capabilities(self):
         port_property_capabilities = set([])

@@ -50,6 +50,7 @@ class ReplicationData(object):
         self.remaped_ports = {}
         self.status = REPLICATION_STATUS.UNUSED
         self._terminate_with_node = False
+        self._one_per_runtime = False
 
     def state(self, remap=None):
         state = {}
@@ -60,6 +61,7 @@ class ReplicationData(object):
             state['master'] = self.master
             state['counter'] = self.counter
             state['_terminate_with_node'] = self._terminate_with_node
+            state['_one_per_runtime'] = self._one_per_runtime
             if remap is None:
                 # For normal migration include these
                 state['instances'] = self.instances
@@ -81,6 +83,7 @@ class ReplicationData(object):
         self.requirements = state.get('requirements', {})
         self.counter = state.get('counter', 0)
         self._terminate_with_node = state.get('_terminate_with_node', False)
+        self._one_per_runtime = state.get('_one_per_runtime', False)
         self.remaped_ports = state.get('remaped_ports', {})
         self.status = state.get('status', REPLICATION_STATUS.UNUSED)
         try:

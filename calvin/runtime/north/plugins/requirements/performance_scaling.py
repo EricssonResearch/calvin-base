@@ -48,6 +48,7 @@ def pre_check(node, **kwargs):
     # TODO check if scale in as well
     actor_id = kwargs['actor_id']
     actor = node.am.actors[actor_id]
+    actor._replication_data._one_per_runtime = kwargs.get('alone', False)
     # Check limits
     if 'max' in kwargs and len(actor._replication_data.instances) > kwargs['max']:
         return PRE_CHECK.SCALE_IN
