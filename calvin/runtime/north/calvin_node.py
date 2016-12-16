@@ -269,7 +269,7 @@ class Node(object):
         def migrated(actor_id, **kwargs):
             actor = self.am.actors.get(actor_id, None)
             status = kwargs['status']
-            if not status and actor is not None:
+            if actor is not None:
                 # Failed to migrate according to requirements, try the current known peers
                 peer_ids = self.network.list_direct_links()
                 if peer_ids:

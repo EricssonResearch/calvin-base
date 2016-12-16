@@ -395,7 +395,7 @@ class ActorManager(object):
         else:
             if callback:
                 callback(
-                    status=kwargs.get('status', calvinresponse.CalvinResponse(False)),
+                    status=kwargs.get('status', response.CalvinResponse(False)),
                     state=kwargs.get('state', None),
                     actor_type=kwargs.get('actor_type', None),
                     ports=kwargs.get('ports', None))

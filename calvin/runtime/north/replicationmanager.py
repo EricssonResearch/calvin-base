@@ -378,19 +378,20 @@ class ReplicationManager(object):
     # Terminate specific replica
     #
 
-    def terminate(self, actor_id, callback):
+    def terminate(self, actor_id, terminate=DISCONNECT.TERMINATE, callback=None):
         try:
             replication_data = self.node.am.actors[actor_id]._replication_data
         except:
             if callback:
                 callback(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
+        replication_data._is_terminating = True
         self.node.storage.remove_replica(replication_data.id, actor_id)
         self.node.storage.remove_replica_node(replication_data.id, actor_id)
         self.node.control.log_actor_dereplicate(
                 actor_id=replication_data.master, replica_actor_id=actor_id,
                 replication_id=replication_data.id)
-        self.node.am.destroy_with_disconnect(actor_id, terminate=DISCONNECT.TERMINATE,
+        self.node.am.destroy_with_disconnect(actor_id, terminate=terminate,
             callback=callback)
 
     #
@@ -398,6 +399,8 @@ class ReplicationManager(object):
     #
 
     def replication_loop(self):
+        if self.node.quitting:
+            return
         replicate = []
         dereplicate = []
         no_op = []

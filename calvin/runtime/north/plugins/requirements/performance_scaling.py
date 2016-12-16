@@ -16,19 +16,22 @@
 
 from calvin.runtime.north.replicationmanager import PRE_CHECK
 import random
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
 
 req_type = "replication"
 
 def init(replication_data):
     replication_data.replication_pressure_counts = {}
     replication_data.check_pressure_positions = {}
-    replication_data.dereplication_position = 0
+    replication_data.dereplication_position = {}
     replication_data.check_count = 0
 
 def set_state(replication_data, state):
     replication_data.replication_pressure_counts = state.get('replication_pressure_counts', {})
     replication_data.check_pressure_positions = state.get('check_pressure_positions', {})
-    replication_data.dereplication_position =  state.get('dereplication_position', 0)
+    replication_data.dereplication_position =  state.get('dereplication_position', {})
     replication_data.check_count =  state.get('check_count', 0)
 
 def get_state(replication_data):
@@ -55,26 +58,28 @@ def pre_check(node, **kwargs):
     dereplicate_actor = False
     same_count = True
     pressure = actor.get_pressure()
-    counts = {}
-    positions = {}
-    for port_pair, port_queues in pressure.items():
-        position, count, full_positions = port_queues
-        counts[port_pair] = count
-        positions[port_pair] = position
-        if len(full_positions) < 2:
-            continue
-        # Check if two new recent queue full events
-        if (actor._replication_data.replication_pressure_counts.get(port_pair, 0) < (count - 2) and
-            full_positions[-1] > (position - 15) and
-            full_positions[-2] > (position - 15)):
-            replicate_actor = True
-        # Check if long since a queue full event
-        if (actor._replication_data.dereplication_position < (position - 40) and
-            full_positions[-1] < (position - 40)):
-            dereplicate_actor = True
-        # Check if nothing has happened
-        if actor._replication_data.check_pressure_positions.get(port_pair, 0) != position:
-            same_count = False
+    counts = {pp: port_queues[1] for pp, port_queues in pressure.items()}
+    positions = {pp: port_queues[0] for pp, port_queues in pressure.items()}
+    full_positions = {pp: port_queues[2][-2:] for pp, port_queues in pressure.items() if len(port_queues[2]) >= 2}
+    replicate_actor_pp = [
+        actor._replication_data.replication_pressure_counts.get(pp, 0) < (counts[pp] - 2) and
+        fp[0] > (positions[pp] - 15) and fp[1] > (positions[pp] - 15)
+        for pp, fp in full_positions.items()]
+    limit = 60
+    dereplicate_actor_pp = [
+        actor._replication_data.dereplication_position.get(pp, positions[pp]) < (positions[pp] - limit) and
+        fp[1] < (positions[pp] - limit)
+        for pp, fp in full_positions.items()]
+    same_count_pp = [
+        actor._replication_data.check_pressure_positions.get(pp, 0) == positions[pp]
+        for pp in full_positions]
+    replicate_actor = any(replicate_actor_pp)
+    dereplicate_actor = all(dereplicate_actor_pp)
+    same_count = all(same_count_pp)
+    #_log.info("PERF %s %s %s" % (positions.values(), counts.values(), full_positions.values()))
+    #_log.info("REP %s" % ["Y" if r else "N" for r in replicate_actor_pp])
+    #_log.info("DER %s" % ["Y" if r else "N" for r in dereplicate_actor_pp])
+    #_log.info("SAM %s" % ["Y" if r else "N" for r in same_count_pp])
     if same_count:
         actor._replication_data.check_count += 1
     else:
@@ -88,7 +93,7 @@ def pre_check(node, **kwargs):
             actor._replication_data.check_count = 0
             return PRE_CHECK.NO_OPERATION
         actor._replication_data.replication_pressure_counts = counts
-        actor._replication_data.dereplication_position = position
+        actor._replication_data.dereplication_position = positions
         actor._replication_data.check_count = 0
         return PRE_CHECK.SCALE_OUT
     elif dereplicate_actor:
@@ -96,7 +101,7 @@ def pre_check(node, **kwargs):
             actor._replication_data.check_count = 0
             return PRE_CHECK.NO_OPERATION
         actor._replication_data.replication_pressure_counts = counts
-        actor._replication_data.dereplication_position = position
+        actor._replication_data.dereplication_position = positions
         actor._replication_data.check_count = 0
         return PRE_CHECK.SCALE_IN
     else:

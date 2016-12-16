@@ -28,7 +28,7 @@ _join_request = {'cmd': 'JOIN_REQUEST', 'id': None, 'sid': None, 'serializers': 
 class CalvinTransport(base_transport.BaseTransport):
     def __init__(self, rt_id, remote_uri, callbacks, transport, proto=None, node_name=None, server_node_name=None):
         """docstring for __init__"""
-        _log.info("rt_id={}, node_name={}, remote_uri={}, callbacks={}, transport={}, server_node_name={}".format(rt_id, node_name, remote_uri, callbacks, transport, server_node_name))
+        _log.debug("rt_id={}, node_name={}, remote_uri={}, callbacks={}, transport={}, server_node_name={}".format(rt_id, node_name, remote_uri, callbacks, transport, server_node_name))
         super(CalvinTransport, self).__init__(rt_id, remote_uri, callbacks=callbacks)
 
         self._rt_id = rt_id
