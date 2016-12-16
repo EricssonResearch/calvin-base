@@ -590,13 +590,13 @@ def store_others_cert(node_name, id, certstring=None, certpath=None):
 def get_security_credentials_path(security_dir=None):
     """Return the node's own certificate name without file extension"""
     _log.debug("get_security_credentials_path")
-    security_path = _conf.get("security", "security_path")
+    security_dir_in_conf = _conf.get("security", "security_dir")
     if security_dir:
-        _log.debug("security_dir supplied")
+        _log.debug("security_dir supplied, security_dir={}".format(security_dir))
         return security_dir
-    elif security_path:
-        _log.debug("security_path in calvin.conf:%s" % security_path)
-        return security_path
+    elif security_dir_in_conf:
+        _log.debug("security_path in calvin.conf:%s" % security_dir_in_conf)
+        return security_dir_in_conf
     else:
         _log.debug("use default path")
         homefolder = get_home()

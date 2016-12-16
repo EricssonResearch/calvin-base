@@ -60,6 +60,7 @@ except:
     hostname = socket.gethostname()
 
 
+rt0 = None
 rt1 = None
 rt2 = None
 rt3 = None
@@ -73,6 +74,7 @@ class TestSecurity(unittest.TestCase):
     def setup(self, request):
         from calvin.Tools.csruntime import csruntime
         from conftest import _config_pytest
+        global rt0
         global rt1
         global rt2
         global rt3
@@ -99,29 +101,39 @@ class TestSecurity(unittest.TestCase):
         print "Copy CA cert into truststore of runtimes folder"
         ca.export_ca_cert(runtimes_truststore)
         #Define the runtime attributes
+        rt0_attributes={'indexed_public':
+                  {'owner':{'organization': domain_name, 'personOrGroup': 'testOwner1'},
+                   'node_name': {'organization': 'org.testexample', 'name': 'CA'},
+                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}}
         rt1_attributes={'indexed_public':
-                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
+                  {'owner':{'organization': domain_name, 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode1'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}}
         rt2_attributes={'indexed_public':
-                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
+                  {'owner':{'organization': domain_name, 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode2'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'otherStreet', 'streetNumber': 1}}}
         rt3_attributes={'indexed_public':
-                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
+                  {'owner':{'organization': domain_name, 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode3'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}}
         rt4_attributes={'indexed_public':
-                  {'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'},
+                  {'owner':{'organization': domain_name, 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode4'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}}
-        authz_attributes=deepcopy(rt2_attributes)
         rt_attributes=[]
+        rt_attributes.append(deepcopy(rt0_attributes))
         rt_attributes.append(deepcopy(rt1_attributes))
         rt_attributes.append(deepcopy(rt2_attributes))
         rt_attributes.append(deepcopy(rt3_attributes))
         rt_attributes.append(deepcopy(rt4_attributes))
         runtimes=[]
+        #Initiate Requesthandler with trusted CA cert
+        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
+                                                         security_dir=credentials_testdir)
+        #   The following is less than optimal if multiple CA certs exist
+        ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
+        request_handler = RequestHandler(verify=ca_cert_path)
         #Generate credentials, create CSR, sign with CA and import cert for all runtimes
         for rt_attribute in rt_attributes:
             attributes=AttributeResolver(rt_attribute)
@@ -132,22 +144,7 @@ class TestSecurity(unittest.TestCase):
                                                            security_dir=credentials_testdir,
                                                            nodeid=nodeid,
                                                            enrollment_password=enrollment_password)
-            runtimes.append(runtime)
-            ca_cert = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
-            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            #Encrypt CSR with CAs public key (to protect enrollment password)
-            rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert)
-            #Decrypt encrypted CSR with CAs private key
-            csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
-            csr_path = ca.store_csr_with_enrollment_password(csr)
-#            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            cert_path = ca.sign_csr(csr_path)
-            runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
-        #Copy rt2 and rt2 certificates into each others others folders
-        rt2_certpath, rt2_cert, rt2_certstr = runtimes[1].get_own_cert(security_dir=credentials_testdir)
-        rt4_certpath, rt4_cert, rt4_certstr = runtimes[3].get_own_cert(security_dir=credentials_testdir)
-        runtimes[1].store_others_cert(certpath=rt4_certpath)
-        runtimes[3].store_others_cert(certpath=rt2_certpath)
+            runtimes.append({'runtime':runtime, 'enrollment_password':enrollment_password})
 
         #Let's hash passwords in users.json file (the runtimes will try to do this
         # but they will all try to do it at the same time, so it will be overwritten
@@ -155,11 +152,6 @@ class TestSecurity(unittest.TestCase):
         self.arp = FileAuthenticationRetrievalPoint(identity_provider_path)
         self.arp.check_stored_users_db_for_unhashed_passwords()
 
-        #Initiate Requesthandler with trusted CA cert
-        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
-        #   The following is less than optimal if multiple CA certs exist
-        ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
-        request_handler = RequestHandler(verify=ca_cert_path)
         #The policy allows access to control interface for everyone, for more advanced rules
         # it might be appropriate to run set_credentials for request_handler, e.g.,
         #  request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
@@ -167,14 +159,55 @@ class TestSecurity(unittest.TestCase):
         #Copy trusted code signer certificate into truststore
         shutil.copy(os.path.join(security_testdir, "runtimes","truststore_for_signing", "93d58fef.0"),
                     os.path.join(credentials_testdir,"runtimes","truststore_for_signing")) 
-        # Runtime 1: local authentication, signature verification, local authorization.
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
         rt_conf.set('security', 'control_interface_security', "tls")
+        rt_conf.set('security', 'domain_name', domain_name)
+        #TODO: remove use of "security_domain_name"
         rt_conf.set('security', 'security_domain_name', domain_name)
+        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
+        rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('security', 'security_path', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [store_path])
+
+        # Runtime 0: local authentication, signature verification, local authorization.
+        #Also acts as Certificate Authority for the domain
+        rt0_conf = copy.deepcopy(rt_conf)
+        rt0_conf.set('security','enrollment_password',runtimes[0]['enrollment_password'])
+        rt0_conf.set('security','certificate_authority','True')
+        rt0_conf.set("security", "security_conf", {
+                        "comment": "Certificate Authority",
+                        "authentication": {
+                            "procedure": "local",
+                            "identity_provider_path": identity_provider_path
+                        },
+                        "authorization": {
+                            "procedure": "local",
+                            "policy_storage_path": policy_storage_path
+                        }
+                    })
+        rt0_conf.save("/tmp/calvin5000.conf")
+
+        try:
+            logfile = _config_pytest.getoption("logfile")+"5000"
+            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+            if outfile == logfile:
+                outfile = None
+        except:
+            logfile = None
+            outfile = None
+        csruntime(hostname, port=5000, controlport=5020, attr=rt0_attributes,
+                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                   configfile="/tmp/calvin5000.conf")
+        rt0 = RT("https://%s:5020" % hostname)
+
+        #Wait for the CA runtime to start before sending CSR requests
+        time.sleep(5)
+
+        # Runtime 1: local authentication, signature verification, local authorization.
+        #Also acts as Certificate Authority for the domain
         rt1_conf = copy.deepcopy(rt_conf)
+        rt1_conf.set('security','enrollment_password',runtimes[1]['enrollment_password'])
         rt1_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "authentication": {
@@ -206,6 +239,7 @@ class TestSecurity(unittest.TestCase):
         # Can also act as authorization server for other runtimes.
         # Other street compared to the other runtimes
         rt2_conf = copy.deepcopy(rt_conf)
+        rt2_conf.set('security','enrollment_password',runtimes[2]['enrollment_password'])
         rt2_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "authentication": {
@@ -236,6 +270,7 @@ class TestSecurity(unittest.TestCase):
 
         # Runtime 3: external authentication (RADIUS), signature verification, local authorization.
         rt3_conf = copy.deepcopy(rt_conf)
+        rt3_conf.set('security','enrollment_password',runtimes[3]['enrollment_password'])
         rt3_conf.set("security", "security_conf", {
                         "comment": "RADIUS authentication, local authorization",
                         "authentication": {
@@ -262,10 +297,11 @@ class TestSecurity(unittest.TestCase):
                    configfile="/tmp/calvin5003.conf")
         rt3 = RT("https://%s:5023" % hostname)
 
-
         # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
         print "-------------------------------------"
         rt4_conf = copy.deepcopy(rt_conf)
+        rt4_conf.set('security','certificate_authority_control_uri','https://%s:5020'%hostname)
+        rt4_conf.set('security','enrollment_password',runtimes[4]['enrollment_password'])
         rt4_conf.set("security", "security_conf", {
                         "comment": "Local authentication, external authorization",
                         "authentication": {
@@ -291,14 +327,29 @@ class TestSecurity(unittest.TestCase):
                    configfile="/tmp/calvin5004.conf")
         rt4 = RT("https://%s:5024" % hostname)
 
+        #Copy rt2 and rt2 certificates into each others others folders
+        #Long term, runtimes should fetch them from storage instead
+        rt2_certpath, rt2_cert, rt2_certstr = runtimes[2]['runtime'].get_own_cert(security_dir=credentials_testdir)
+        while not rt2_certpath:
+            time.sleep(1)
+            rt2_certpath, rt2_cert, rt2_certstr = runtimes[2]['runtime'].get_own_cert(security_dir=credentials_testdir)
+        rt4_certpath, rt4_cert, rt4_certstr = runtimes[4]['runtime'].get_own_cert(security_dir=credentials_testdir)
+        while not rt4_certpath:
+            time.sleep(1)
+            rt4_certpath, rt4_cert, rt4_certstr = runtimes[4]['runtime'].get_own_cert(security_dir=credentials_testdir)
+        runtimes[2]['runtime'].store_others_cert(certpath=rt4_certpath)
+        runtimes[4]['runtime'].store_others_cert(certpath=rt2_certpath)
+
         request.addfinalizer(self.teardown)
 
     def teardown(self):
+        global rt0
         global rt1
         global rt2
         global rt3
         global rt4
         global request_handler
+        request_handler.quit(rt0)
         request_handler.quit(rt1)
         request_handler.quit(rt2)
         request_handler.quit(rt3)
@@ -307,6 +358,7 @@ class TestSecurity(unittest.TestCase):
         for p in multiprocessing.active_children():
             p.terminate()
         # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
+        os.system("pkill -9 -f 'csruntime -n %s -p 5000'" % (hostname,))
         os.system("pkill -9 -f 'csruntime -n %s -p 5001'" % (hostname,))
         os.system("pkill -9 -f 'csruntime -n %s -p 5002'" % (hostname,))
         os.system("pkill -9 -f 'csruntime -n %s -p 5003'" % (hostname,))
@@ -314,11 +366,13 @@ class TestSecurity(unittest.TestCase):
         time.sleep(0.2)
 
     def verify_storage(self):
+        global rt0
         global rt1
         global rt2
         global rt3
         global rt4
         global request_handler
+        rt0_id = None
         rt1_id = None
         rt2_id = None
         rt3_id = None
@@ -327,6 +381,7 @@ class TestSecurity(unittest.TestCase):
         # Try 30 times waiting for control API to be up and running
         for i in range(30):
             try:
+                rt0_id = rt0_id or request_handler.get_node_id(rt0)
                 rt1_id = rt1_id or request_handler.get_node_id(rt1)
                 rt2_id = rt2_id or request_handler.get_node_id(rt2)
                 rt3_id = rt3_id or request_handler.get_node_id(rt3)
@@ -336,30 +391,34 @@ class TestSecurity(unittest.TestCase):
             except:
                 time.sleep(0.1)
         assert not failed
+        assert rt0_id
         assert rt1_id
         assert rt2_id
         assert rt3_id
         assert rt4_id
-        print "RUNTIMES:", rt1_id, rt2_id, rt3_id, rt4_id
+        print "RUNTIMES:", rt0_id, rt1_id, rt2_id, rt3_id, rt4_id
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
         # Try 30 times waiting for storage to be connected
+        caps0 = []
         caps1 = []
         caps2 = []
         caps3 = []
         caps4 = []
-        rt_ids = set([rt1_id, rt2_id, rt3_id, rt4_id])
+        rt_ids = set([rt0_id, rt1_id, rt2_id, rt3_id, rt4_id])
         for i in range(30):
             try:
-                if not (rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1 and rt4_id in caps1):
+                if not (rt0_id in caps0 and rt1_id in caps0 and rt2_id in caps0 and rt3_id in caps0 and rt4_id in caps0):
+                    caps0 = request_handler.get_index(rt0, "node/capabilities/calvinsys.native.python-json")['result']
+                if not (rt0_id in caps1 and rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1 and rt4_id in caps1):
                     caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
-                if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2 and rt4_id in caps2):
+                if not (rt0_id in caps2 and rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2 and rt4_id in caps2):
                     caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
-                if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3 and rt4_id in caps3):
+                if not (rt0_id in caps3 and rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3 and rt4_id in caps3):
                     caps3 = request_handler.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
-                if not (rt1_id in caps4 and rt2_id in caps4 and rt3_id in caps4 and rt4_id in caps4):
+                if not (rt0_id in caps4 and rt1_id in caps4 and rt2_id in caps4 and rt3_id in caps4 and rt4_id in caps4):
                     caps4 = request_handler.get_index(rt4, "node/capabilities/calvinsys.native.python-json")['result']
-                if rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3) and rt_ids <= set(caps4):
+                if rt_ids <= set(caps0) and rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3) and rt_ids <= set(caps4):
                     failed = False
                     break
                 else:
@@ -368,6 +427,8 @@ class TestSecurity(unittest.TestCase):
                 time.sleep(0.1)
         assert not failed
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
+        assert request_handler.get_index(rt0, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'CA'}]))
+        _log.analyze("TESTRUN", "+ RT1 INDEX", {})
         assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
         _log.analyze("TESTRUN", "+ RT1 INDEX", {})
         assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
@@ -414,6 +475,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
 
         actual = request_handler.report(rt1, result['actor_map']['test_security1_correctly_signed:snk'])
+        print "actual=", actual
         assert len(actual) > 5
 
         request_handler.delete_application(rt1, result['application_id'])

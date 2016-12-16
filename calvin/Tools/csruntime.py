@@ -210,6 +210,85 @@ def set_config_from_args(args):
             _log.debug("Adding ARGUMENTS to config {}={}".format(arg, getattr(args, arg)))
             _conf.set("ARGUMENTS", arg, getattr(args, arg))
 
+def runtime_certificate(rt_attributes):
+    import copy
+    import requests
+    from calvin.requests.request_handler import RequestHandler
+    from calvin.utilities.attribute_resolver import AttributeResolver
+    from calvin.utilities import calvinconfig
+    from calvin.utilities import calvinuuid
+    from calvin.utilities import runtime_credentials
+    from calvin.utilities import certificate
+    from calvin.utilities import certificate_authority
+    global _conf
+    global _log
+    _conf = calvinconfig.get()
+    security_dir = _conf.get("security","security_dir")
+    ca_control_uri = _conf.get("security","ca_control_uri")
+    domain_name = _conf.get("security","domain_name")
+    enrollment_password = _conf.get("security","enrollment_password")
+    is_ca =_conf.get("security","certificate_authority")
+    if domain_name:
+        _log.debug("Runtime security enabled (i.e., domain is configured)")
+        #AttributeResolver tranforms the attributes, so make a deepcopy instead
+        rt_attributes_cpy = copy.deepcopy(rt_attributes)
+        attributes = AttributeResolver(rt_attributes_cpy)
+        node_name = attributes.get_node_name_as_str()
+        nodeid = calvinuuid.uuid("")
+        runtime = runtime_credentials.RuntimeCredentials(node_name, domain_name,
+                                                       security_dir=security_dir,
+                                                       nodeid=nodeid,
+                                                       enrollment_password=enrollment_password)
+        certpath, cert, certstr = runtime.get_own_cert()
+        if not cert:
+            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
+            if is_ca == "True":
+                _log.debug("No runtime certificate, but node is a CA, just sign csr, domain={}".format(domain_name))
+                ca = certificate_authority.CA(domain=domain_name,
+                                              security_dir=security_dir)
+                #Write challenge password to file, not very usefull for the CA runtime
+                #but currently the challenge verification is required for all runtimes
+                try:
+                    with open(csr_path +".challenge_password", 'w') as csr_fd:
+                        csr_fd.write(enrollment_password)
+                except Exception as err:
+                    _log.exception("Failed to write challenge password to file, err={}".format(err))
+                    raise
+                cert_path = ca.sign_csr(csr_path)
+                runtime.store_own_cert(certpath=cert_path, security_dir=security_dir)
+
+            else:
+                _log.debug("No runtime certicificate can be found, send CSR to CA")
+                ca_cert_str = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
+                #Encrypt CSR with CAs public key (to protect enrollment password)
+                rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert_str)
+                truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
+                                                                 security_dir=security_dir)
+                ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
+                request_handler = RequestHandler(verify=ca_cert_path)
+                ca_control_uri = _conf.get('security','certificate_authority_control_uri')
+                if ca_control_uri:
+                    _log.info("CA control_uri in config={}".format(ca_control_uri))
+                else:
+                    _log.error("TODO: implement finding CA via SSDP")
+                    raise
+                certstr=None
+                #Repeatedly send CSR to CA until a certificate is returned (this to reduce the need for a CA 
+                #node to be be the first node to start)
+                while not certstr:
+                    try:
+                        certstr = request_handler.sign_csr_request(ca_control_uri, rsa_encrypted_csr)['certificate']
+                    except requests.exceptions.RequestException as err:
+                        _log.debug("RequestException, CSR not accepted or CA not up and running yet, err={}".format(err))
+                        #TODO, figure out appropriate time to wait before next attempt
+                        time.sleep(60)
+                        pass
+                runtime.store_own_cert(certstring=certstr, security_dir=security_dir)
+        else:
+            _log.debug("Runtime certificate available")
+    else:
+        _log.debug("No runtime security enabled")
+
 
 def main():
     args = parse_arguments()
@@ -220,7 +299,6 @@ def main():
 
     # Need to be before other calvin calls to set the common log file
     set_loglevel(args.loglevel, args.logfile)
-
     set_config_from_args(args)
 
     app_info = None
@@ -284,6 +362,7 @@ def main():
     if app_info:
         dispatch_and_deploy(app_info, args.wait, uris, control_uri, runtime_attr, credentials_)
     else:
+        runtime_certificate(runtime_attr)
         if args.storage:
             storage_runtime(uris, control_uri, runtime_attr, dispatch=False)
         else:

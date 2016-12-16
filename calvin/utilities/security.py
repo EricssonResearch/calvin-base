@@ -84,6 +84,9 @@ def decode_jwt(token, sender_cert_name, node_name, node_id, actor_id=None):
     try:
         sender_certificate = certificate.get_certificate(node_name, sender_cert_name)
     except Exception:
+        #Look for certiticate in storage
+        _log.debug("Certificate of sender not found locally, search for it in storage")
+
         raise Exception("Certificate not found.")
     sender_public_key = certificate.get_public_key(sender_certificate)
     sender_node_id = sender_certificate.get_subject().dnQualifier
@@ -341,7 +344,6 @@ class Security(object):
         The request is put in a JSON Web Token (JWT) that is signed
         and includes timestamps and information about sender and receiver.
         """
-#        _log.debug("Hakan derived={}, configured={}".format(self.node.authorization.authz_server_id,  self.sec_conf['authorization']['server_uuid']))
         try:
             authz_server_id = self.node.authorization.authz_server_id
             payload = {
