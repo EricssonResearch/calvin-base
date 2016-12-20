@@ -27,6 +27,8 @@ def calvincontrol():
     control = CalvinControl()
     control.send_response = Mock()
     control.send_response = Mock()
+    control.node = Mock()
+    control.node.quitting = False
     return control
 
 uuid = calvinuuid.uuid("")
@@ -64,6 +66,8 @@ def test_get_calvincontrol_returns_xxx():
     ("POST /application/APP_" + uuid + "/migrate HTTP/1", "APP_" + uuid, "handle_post_application_migrate"),
     ("POST /disconnect HTTP/1", None, "handle_disconnect"),
     ("DELETE /node HTTP/1", None, "handle_quit"),
+    ("DELETE /node/migrate HTTP/1", "migrate", "handle_quit"),
+    ("DELETE /node/now HTTP/1", "now", "handle_quit"),
     ("POST /meter HTTP/1", None, "handle_post_meter"),
     ("DELETE /meter/METERING_" + uuid + " HTTP/1", "METERING_" + uuid, "handle_delete_meter"),
     ("GET /meter/METERING_" + uuid + "/timed HTTP/1", "METERING_" + uuid, "handle_get_timed_meter"),
@@ -74,7 +78,7 @@ def test_get_calvincontrol_returns_xxx():
     ("GET /index/abc123 HTTP/1", "abc123", "handle_get_index"),
     ("GET /storage/abc123 HTTP/1", "abc123", "handle_get_storage"),
     ("POST /storage/abc123 HTTP/1", "abc123", "handle_post_storage"),
-    ("OPTIONS /abc123 HTTP/1.1", None, "handle_options")
+    ("OPTIONS /abc123 HTTP/1", None, "handle_options")
 ])
 def test_routes_correctly(url, match, handler):
     with patch.object(CalvinControl, handler) as func:

@@ -445,8 +445,6 @@ class ReplicationManager(object):
 
     def _current_actors_cb(self, key, value, actor):
         collect_actors = [] if value is None else value
-            actor.id, set(actor._replication_data.instances + [actor.id]) - set(collect_actors),
-            set(collect_actors) - set(actor._replication_data.instances)))
         missing = set(actor._replication_data.instances) - set(collect_actors + [actor.id])
         for actor_id in missing:
             actor._replication_data.instances.remove(actor_id)
