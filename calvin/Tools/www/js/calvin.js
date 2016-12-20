@@ -2033,8 +2033,10 @@ function deployApplication(uri, script, reqs, name, creds)
         success: function(data) {
             showSuccess("Application " + name + " deployed");
         },
-        error: function() {
-            showError("Failed to deploy application, url: " + url + " data: " + data);
+        error: function(err) {
+            var responseText = JSON.parse(err.responseText);
+            showError("Failed to deploy application, reason: " + responseText.errors[0].reason + " line: " + responseText.errors[0].line);
+            console.log(JSON.stringify(err));
         }
     });
 }
