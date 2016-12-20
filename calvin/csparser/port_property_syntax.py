@@ -3,37 +3,39 @@ port_property_data = {
         'doc': """Calvin-base supported port properties""",
         'type': 'name',
         'capability_type': "name",
-        'value': "runtime.base.1"
+        'value': "runtime.base.1",
+        'user-level': False
     },
     'routing': {
-        'doc': """Routing decides how tokens are routed out or in of a port """,
+        'doc': """Routing decides how tokens are routed out or in of a port.""",
+        'user-level': True,
         'type': 'category',
         'capability_type': "category",
         'values': {
             'default': {
-                'doc': """The default routing of all tokens to all peers""",
+                'doc': """The default routing of all tokens to all peers.""",
                 'direction': "out"
             },
             'fanout': {
-                'doc': """The default routing of all tokens to all peers with specific name""",
+                'doc': """The default routing of all tokens to all peers with specific name.""",
                 'direction': "out"
             },
             'round-robin': {
-                'doc': """Route each tokens to one peer in a round-robin schedule""",
+                'doc': """Route each tokens to one peer in a round-robin schedule.""",
                 'direction': "out"
             },
             'random': {
-                'doc': """Route each tokens to one peer in a random schedule""",
+                'doc': """Route each tokens to one peer in a random schedule.""",
                 'direction': "out"
             },
             'balanced': {
-                'doc': """Route each tokens to one peer based on queue length""",
+                'doc': """Route each tokens to one peer based on queue length.""",
                 'direction': "out"
             },
             'collect-unordered': {
                 'doc': """
                     Collect tokens from multiple peers, actions see
-                    them individually in without order between peers
+                    them individually in without order between peers.
                     """,
                 'direction': "in",
                 'multipeer': True
@@ -70,6 +72,7 @@ port_property_data = {
     },
     'queue_length': {
         'doc': """Specifies the minimum number of tokens that the queue can hold.""",
+        'user-level': True,
         'type': 'scalar',
         'direction': 'inout',
         'capability_type': "ignore"
@@ -80,6 +83,7 @@ port_property_data = {
                 not using calvinscript needs to set it on ports with multiple
                 connections at least for inports.
                 """,
+        'user-level': False,
         'type': 'scalar',
         'direction': 'inout',
         'capability_type': "func",
@@ -87,7 +91,8 @@ port_property_data = {
         'capability_categories': ["one", "many"]  # This node support these
     },
     'tag': {
-        'doc': """Specifies a tag on e.g. an outport that can be retrived with certain inport routing properties""",
+        'doc': """Specifies a tag on e.g. an outport that can be retrived with certain inport routing properties.""",
+        'user-level': True,
         'type': 'string',
         'direction': 'inout',
         'capability_type': "propertyname"
@@ -96,6 +101,7 @@ port_property_data = {
         'doc': """
                 This is a property used only for tests, needed to pass syntax checking.
                 """,
+        'user-level': False,
         'type': 'category',
         'values': {
             'dummy': {
@@ -126,6 +132,7 @@ port_property_data = {
         'doc': """
                 This is a property used only for tests, needed to pass syntax checking.
                 """,
+        'user-level': False,
         'type': 'category',
         'values': {
             'dummy': {
@@ -160,10 +167,12 @@ constrained_port_property_data = {
         'doc': """Calvin-constrained supported port properties""",
         'type': 'name',
         'capability_type': "name",
-        'value': "runtime.constrained.1"
+        'value': "runtime.constrained.1",
+        'user-level': False
     },
     'routing': {
         'doc': """Routing decides how tokens are routed out or in of a port """,
+        'user-level': True,
         'type': 'category',
         'capability_type': "category",
         'values': {
@@ -179,6 +188,7 @@ constrained_port_property_data = {
     },
     'queue_length': {
         'doc': """Specifies the minimum number of tokens that the queue can hold.""",
+        'user-level': True,
         'type': 'scalar',
         'direction': 'inout',
         'capability_type': "ignore"
@@ -189,6 +199,7 @@ constrained_port_property_data = {
                 not using calvinscript needs to set it on ports with multiple
                 connections at least for inports.
                 """,
+        'user-level': False,
         'type': 'scalar',
         'direction': 'inout',
         'capability_type': "func",
@@ -256,3 +267,38 @@ def get_port_property_runtime(properties, prepend=True):
     if prepend:
         runtimes = ["portproperty." + rt for rt in runtimes]
     return runtimes
+
+def generate_port_dir_doc(type_, direction):
+    if direction == "in":
+        return "The " + type_ + " can be applied on in-ports.\n"
+    elif direction == "out":
+        return "The " + type_ + " can be applied on out-ports.\n"
+    elif direction == "inout":
+        return "The " + type_ + " can be applied on both in- and out-ports.\n"
+    else:
+        return "The direction of the port the " + type_ + " can be applied on is decided by the arguments.\n"
+
+def generate_doc():
+    p = "# Port Properties \n"
+    p += """This page list the port properties that can be specified in a Calvinscript.\n"""
+    s = ""
+    for pp, value in port_property_sets['all'].items():
+        if not value["user-level"]:
+            continue
+        p += "* `" + pp + "`\n"
+        s += "## " + pp + "\n"
+        s += value["doc"] + "\n"
+        direction = value.get("direction", "unknown")
+        s += generate_port_dir_doc("property", direction)
+        s += "Argument type is " + value.get("type", "unknown") + ".\n"
+        s += "\n    <actor-instance>.<port-name>[in/out](" + pp + "=<" + value.get("type", "unknown") + ">)\n"
+        s += "\n"
+        if value.get("type", "unknown") != "category":
+            continue
+        for name, data in value.get("values", {}).items():
+            s += "* `\"" + name + "\"`: " + data.get("doc", "") + " "
+            s += generate_port_dir_doc("argument", data.get("direction", "unknown")) + "\n"
+    return p + "\n" + s
+
+if __name__ == '__main__':
+    print generate_doc()
