@@ -24,6 +24,7 @@ _log = get_logger(__name__)
 class OPCUAPoller(Actor):
     """
     An OPCUA Client. Connects to given OPCUA server and polls given node id's at given interval
+    nodeids are of the form ns=<#>;s=<string>
     
     Output:
         variable : {
@@ -45,7 +46,7 @@ class OPCUAPoller(Actor):
     @manage(['endpoint', 'interval', 'nodeids']) 
     def init(self, endpoint, interval, nodeids):
         self.endpoint = endpoint
-        self.nodeids = nodeids
+        self.nodeids = [str(nodeid) for nodeid in nodeids]
         self.interval = interval
         self.setup()
 

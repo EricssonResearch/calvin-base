@@ -24,6 +24,7 @@ _log = get_logger(__name__)
 class OPCUASubscriber(Actor):
     """
     An OPCUA Client. Connects to given OPCUA server and sets up subscriptions for given node id's
+    nodeids are of the form ns=<#>;s=<string>
     
     Output:
         variable : {
@@ -45,7 +46,7 @@ class OPCUASubscriber(Actor):
     @manage(['endpoint', 'nodeids']) 
     def init(self, endpoint, nodeids):
         self.endpoint = endpoint
-        self.nodeids = nodeids
+        self.nodeids = [ str(nodeid) for nodeid in nodeids]
         self.setup()
 
     def did_migrate(self):

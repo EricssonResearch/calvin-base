@@ -99,25 +99,6 @@ class OPCUAClient(object):
             self._client.disconnect()
             self._variables = []
             self._client = None
-
-    def _collect_all_variables_recur(self, node):
-        _log.info("checking %s" % (node.get_display_name(),))
-        children = node.get_children()
-        if not children:
-            return []
-        variables = node.get_variables() # Not always supported
-        children = [ c for c in children if c not in variables]
-        result = variables
-        for c in children:
-            if hasattr(c, "get_children"):
-                # recurse
-                _log.info("Recurring for %s" % (self.get_browse_name(c),))
-                result += self._collect_all_variables_recur(c)
-            else:
-                # Should not happen
-                raise Exception("This should not happen")
-        _log.info("returning from %s" % (node.get_display_name(),))
-        return result
     
     def get_value(self, nodeid, handler):
         try:
@@ -129,30 +110,13 @@ class OPCUAClient(object):
             handler(s)
         except Exception as e:
             _log.error("get_value failed: '%s'" % (e,))
-            
-    def _collect_all_variables(self, namespace):
-        _log.info("Fetching object node")
-        objects_node = self._client.get_objects_node()
-        
-        # Skip server variables (for now) - unsure of generality of this
-        top_level = [ c for c in objects_node.get_children() if self.get_browse_name(c).startswith(namespace) and not self.get_browse_name(c) == "0:Server"]
-        result = []
-        for c in top_level:
-            _log.info("Collecting from %s" % (self.get_browse_name(c),))
-            result += self._collect_all_variables_recur(c)
-        self._variables = result
-        
-    def _collect_variables(self, namespace):
-        objects = self._client.get_objects_node()
-        folder = objects.get_child(namespace)
-        self._variables = self.get_variables(folder)
 
     def collect_variables(self, nodeids):
         vars = []
         for n in nodeids:
             var = None
             try:
-                var = self._client.get_node(str(n))
+                var = self._client.get_node(n)
             except Exception as e:
                 _log.warning("Failed to get node %s: %s" % (n,e))
             vars.append(var)
