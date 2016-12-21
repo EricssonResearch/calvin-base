@@ -15,7 +15,7 @@ variable : {
 */
 
 
-opcclient: misc.OPCUASubscriber(endpoint="opc.tcp://opcuaserver.com:26543", nodeids=["ns=1;s=FanSpeed", "ns=1;s=PumpSpeed", "ns=1;s=Pressure", "ns=1;s=TemperatureAnalogItem"])
+opcclient: net.OPCUASubscriber(endpoint="opc.tcp://opcuaserver.com:26543", nodeids=["ns=1;s=FanSpeed", "ns=1;s=PumpSpeed", "ns=1;s=Pressure", "ns=1;s=TemperatureAnalogItem"])
 
 format: text.Format(fmt="========\n"
     "Variable: {Name} ({Id})\nValue: {Value} ({Type}\n"

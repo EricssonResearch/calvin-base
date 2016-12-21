@@ -14,7 +14,7 @@ variable : {
             }
 */
 
-opcclient: misc.OPCUAPoller(endpoint="opc.tcp://opcuaserver.com:26543", interval=2.0, nodeids=["ns=1;s=FanSpeed", "ns=1;s=PumpSpeed", "ns=1;s=Pressure", "ns=1;s=TemperatureAnalogItem"])
+opcclient: net.OPCUAPoller(endpoint="opc.tcp://opcuaserver.com:26543", interval=2.0, nodeids=["ns=1;s=FanSpeed", "ns=1;s=PumpSpeed", "ns=1;s=Pressure", "ns=1;s=TemperatureAnalogItem"])
 
 format: text.Format(fmt="========\n"
     "Variable: {Name} ({Id})\nValue: {Value} \nType: {Type}\n"
