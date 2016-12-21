@@ -1,0 +1,98 @@
+# Kubernetes example scripts
+This assumes that you have a kubernetes cluster up and running, with a few available cores. Since kubernetes don't support multi-cast between containers on different nodes by default this setup uses a master runtime holding the storage for all the runtimes. We have only support for runtimes within the cluster in this setup. All the files have `user` and `USER` that can be search and replaced to allow several users experimenting on the same cluster without clashing. If you are alone you could leave it as is.
+
+## Creating the containers
+In the `extras/docker` directory you can create docker images that are needed for deploying in the kubernetes cluster.
+
+    make develop
+
+This will create a docker image based on the calvin-base develop branch on github. Take note of the docker image hash.
+If you want to make an image with local modifications your changes build on the develop image, you should also understand that any new files need to be in the git index, i.e. do `git add <file>` for new files before building as below:
+
+    make local
+
+Take note of the docker image hash. If you have docker locally you could inspect the image by for example
+
+    docker run -it erctcalvin/calvin:local "/bin/sh"
+
+Next you need to tag and push to your docker hub account or private repo:
+
+    docker tag <image-hash> <docker-hub-account>/calvin:latest
+    docker push <docker-hub-account>/calvin:latest
+
+In the `calvin-rt-{master|worker|device}.yaml` files you need to update the image name `calvinimage` with `<docker-hub-account>/calvin`.
+
+## Calvin control proxy
+To be able to run csweb and access the control REST API on the runtimes we set up a tiny-proxy to relay the control in and out of the cluster. 
+
+    kubectl create -f calvin-proxy.yaml
+
+Now the local container IP-addresses are reachable from the outside. You could test it after starting a runtime with for example:
+
+    http_proxy=<any-kube-node-ip>:<proxy-service-port> curl http://<master-runtime-ip>:5001/id
+
+You can also use the pac-file with modifications or set the proxy in preferences of the browser. Start `csweb` locally browse to `127.0.0.1:8000` and enter the master runtime control ip-address, e.g. `http://10.246.7.3:5001` to connect to the runtime in the cluster.
+
+## A master runtime
+We use a master runtime to hold the storage and have a stable runtime that is not scaling-in/out. 
+Create it by:
+
+    kubectl create -f calvin-rt-master.yaml
+
+Check if your new pod is up:
+
+    kubectl get pods
+
+Wait until `calvin-rt-master` has status `Running` or act on any error, e.g. problems finding image etc.
+Now try if the proxy solution works.
+How do you find the ip address of the master runtime? We have started a service for the master so the IP-address is available if you list the services
+
+    kubectl get services
+
+You can see the Cluster IP-address for `calvin-user-master-service`.
+
+If you want the ip-address of pods instead and have `jq` installed try:
+
+    kubectl get pods -o json | jq -r '.items[] | (.metadata.name + " " + (.status | .podIP + " " + .phase))'
+
+But this gives the current pods address and will change if you restart the pod. The cluster-ip-address need to be entered into the `calvin-rt-{worker|device}.yaml` files to select it as the proxy storage. See the setting of the environmental variable `CALVIN_GLOBAL_STORAGE_PROXY` in the files.
+
+## Worker runtimes
+This will use a horizontalpodautoscaler to scale the number of pods with Calvin runtimes. It requires that the Heapster etc is setup for pod scaling to work see Kubernetes documentation.
+
+    kubectl create -f calvin-rt-worker.yaml
+
+Check that the pods are up and running with 
+
+    kubectl get pods
+or
+
+    kubectl get pods -o json | jq -r '.items[] | select(.metadata.labels.app=="calvin-user-worker") | (.metadata.name + " " + (.status | .podIP + " " + .phase))'
+
+Now you could try to deploy an application using csweb, see other documentation. The more runtimes you use the more Kubernetes will scale out the number of pods, but Kubernetes scaling is slow, you typically need to wait several minutes between changes.
+
+## Device runtimes
+This will use a manual scaling of the number of pods with Calvin runtimes.
+
+    kubectl create -f calvin-rt-device.yaml
+
+Check that the pods are up and running with 
+
+    kubectl get pods
+
+Now you could try to deploy an application using csweb, see other documentation.
+
+To scale the number of pods use
+
+    kubectl scale --replicas=5 deployment/calvin-user-device
+
+You can scale both in and out, you don't have control over which runtime will be killed (when scaling in) but any actors will be migrated to another runtime when possible.
+
+## Delete
+To destroy all the containers with runtimes but maintain services use
+
+    kubectl delete pod calvin-user-master
+    kubectl delete deployment calvin-user-worker
+    kubectl delete deployment calvin-user-device
+
+Then you could make changes to docker images and restart without needing to modify the yaml-scripts. If you have hard to terminate pods you can use `--grace_period=0` when deleting. If you delete while you have an Calvin application running it will take time since all actors are trying to migrate towards the last remaining runtime, and the master runtime with the storage is terminated.

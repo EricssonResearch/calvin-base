@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Pod
+metadata:
+    name: calvin-user-master
+    labels:
+        app: calvin-user-master
+        role: runtime
+        tier: backend
+spec:
+    restartPolicy: Always
+    containers:
+    - name: calvin-user-master
+      # replace calvin image with yours at dockerhub or private repo
+      image: calvinimage
+      imagePullPolicy: Always
+      env:
+      - name: CALVIN_GLOBAL_STORAGE_TYPE
+        value: '"local"'
+      - name: CALVIN_ATTRIBUTES_MASTER
+        value: '"{\"indexed_public\":{\"node_name\":{\"organization\":\"com.ericsson\",\"purpose\":\"distributed-test\",\"group\":\"first\"}}}"'
+      command:
+        - /bin/sh
+        - -c
+        - csruntime --host $(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}') 
+          --name calvin-$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
+          --loglevel=INFO --attr $(CALVIN_ATTRIBUTES_MASTER)
+      resources:
+        requests:
+          # Change milli-cpu needed by your runtime but basically they should be alone on a core 
+          cpu: "910m"
+          # Master runtime uses a lot of memory and it tend to grow with time...
+          memory: "2Gi"
+      ports:
+      - containerPort: 5000
+        name: data
+        protocol: TCP
+      - containerPort: 5001
+        name: control-api
+        protocol: TCP
+      - containerPort: 1900
+        name: ssdp
+        protocol: UDP
+      - containerPort: 1901
+        name: dht
+        protocol: UDP
+      - containerPort: 1902
+        name: secure-dht
+        protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: calvin-user-master
+  name: calvin-user-master-service
+spec:
+  ports:
+  - name: calvin-data
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  - name: calvin-control
+    port: 5001
+    protocol: TCP
+    targetPort: 5001
+  - name: calvin-ssdp
+    port: 1900
+    protocol: UDP
+    targetPort: 1900
+  - name: calvin-ssdp2
+    port: 1901
+    protocol: UDP
+    targetPort: 1901
+  - name: calvin-ssdp3
+    port: 1902
+    protocol: UDP
+    targetPort: 1902
+  selector:
+        app: calvin-user-master
+        role: runtime
+        tier: backend
+  sessionAffinity: None
+  type: NodePort

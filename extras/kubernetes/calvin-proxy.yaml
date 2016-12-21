@@ -1,0 +1,67 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+ name: calvin-proxy-user
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: calvin-proxy-user
+        role: proxy
+        tier: frontend
+        track: stable 
+    spec:
+      containers:
+      - name: calvin-proxy-container
+        image: dannydirect/tinyproxy
+        env:
+        - name: LOG_LEVEL
+          value: "Info"
+        - name: CONNECT_PORT
+          value: "5001"
+        args:
+        - "ANY"
+        livenessProbe:
+          failureThreshold: 3
+          exec:
+            # Check that it works
+            command: ["/bin/sh", "-c", "curl -m 10 -x http://127.0.0.1:8888 www.google.com"]
+          initialDelaySeconds: 60
+          periodSeconds: 120
+          successThreshold: 1
+          timeoutSeconds: 10
+        readinessProbe:
+          failureThreshold: 1
+          exec:
+            # Check that is works
+            command: ["/bin/sh", "-c", "curl -m 10  -x http://127.0.0.1:8888 www.google.com"]
+          periodSeconds: 120
+          initialDelaySeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        ports:
+        - containerPort: 8888
+          name: proxy-port
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calvin-proxy-user
+  labels:
+    app: calvin-proxy-user
+    role: proxy
+    tier: frontend
+spec:
+  ports:
+  - name: proxy-port
+    port: 8888
+    protocol: TCP
+    targetPort: 8888
+  selector:
+    app: calvin-proxy-user
+    role: proxy
+    tier: frontend
+  sessionAffinity: None
+  type: NodePort
