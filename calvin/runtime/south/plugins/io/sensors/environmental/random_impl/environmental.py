@@ -18,20 +18,38 @@ from calvin.runtime.south.plugins.io.sensors.environmental import base_environme
 import random
 
 
-
+def change(old_value, delta, limits):
+    new_value = old_value
+    if not random.randint(0, 3):
+        if random.randint(0, 1):
+            new_value += delta
+        else :
+            new_value -= delta
+    if new_value > max(limits):
+        new_value = max(limits)
+    elif new_value < min(limits):
+        new_value = min(limits)
+    return new_value
 
 class Environmental(base_environmental.EnvironmentalBase):
 
     """
     Faked implementation of Environmental
     """
-
+    def __init__(self):
+        super(base_environmental.EnvironmentalBase, self).__init__()
+        self._temp = 21.5
+        self._humi = 62.5
+        self._pres = 1.015
 
     def get_temperature(self):
-        return int(random.uniform(21, 22)*10)/10.0
+        self._temp = change(self._temp, 0.1, [20, 25])
+        return self._temp
 
     def get_humidity(self):
-        return int(random.uniform(60, 65)*5)/5.0
+        self._humi = change(self._humi, 0.5, [60, 85])
+        return self._humi
 
     def get_pressure(self):
-        return int(random.uniform(1.01, 1.02)*100)/100.0
+        self._press = change(self._press, 0.01, [1.01, 1.02])
+        return self._press
