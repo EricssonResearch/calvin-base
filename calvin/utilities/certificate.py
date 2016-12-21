@@ -765,7 +765,7 @@ def unwrap_object_with_symmetric_key(wrapped_object):
 
 #TODO: Add integrity protection of object, i.e.,
 # implement proper RSA-KEM+DEM1 or RSA-REACT
-def encrypt_object_with_RSA(certificate, plaintext):
+def encrypt_object_with_RSA(certificate, plaintext, unencrypted_data=None):
     """
     Encrypts an object using hybrid cryptography
     """
@@ -792,7 +792,8 @@ def encrypt_object_with_RSA(certificate, plaintext):
      )
     encrypted_object = {'encrypted_symmetric_key':base64.b64encode(ciphertext),
                         'iv':wrapped_object['iv'],
-                        'ciphertext':wrapped_object['ciphertext']}
+                        'ciphertext':wrapped_object['ciphertext'],
+                        'unencrypted_data':unencrypted_data}
     return encrypted_object
 
 

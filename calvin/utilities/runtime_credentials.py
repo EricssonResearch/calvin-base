@@ -691,7 +691,7 @@ class RuntimeCredentials():
 
 #        encrypted_csr = certificate.wrap_object_with_symmetric_key(plaintext)
         plaintext = {'csr':csr, 'challenge_password':self.enrollment_password}
-        encrypted_csr = certificate.encrypt_object_with_RSA(cert, json.dumps(plaintext))
+        encrypted_csr = certificate.encrypt_object_with_RSA(cert, json.dumps(plaintext),unencrypted_data=self.node_name)
         try:
             filename = "{}.csr".format(self.node_name)
             encrypted_filepath = csr_path + ".encrypted"

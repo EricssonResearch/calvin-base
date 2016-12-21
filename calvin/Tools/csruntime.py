@@ -21,11 +21,12 @@ import json
 import traceback
 import logging
 import os
-
+import socket
 
 # Calvin related imports must be in functions, to be able to set logfile before imports
 _conf = None
 _log = None
+
 
 
 def parse_arguments():
@@ -210,9 +211,43 @@ def set_config_from_args(args):
             _log.debug("Adding ARGUMENTS to config {}={}".format(arg, getattr(args, arg)))
             _conf.set("ARGUMENTS", arg, getattr(args, arg))
 
+def discover(timeout=2, retries=5):
+    import struct
+    from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp import SSDPServiceDiscovery,\
+                                                                                            SERVICE_UUID,\
+                                                                                            CA_SERVICE_UUID,\
+                                                                                            SSDP_ADDR,\
+                                                                                            SSDP_PORT,\
+                                                                                            MS_CA
+    _log.info("discover")
+    message = MS_CA
+    socket.setdefaulttimeout(timeout)
+    responses = {}
+    attempt=0
+    while attempt in range(retries) and not bool(responses):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        ttl = struct.pack('b', 1)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        try:
+            sent = sock.sendto(message, (SSDP_ADDR,SSDP_PORT))
+            while True:
+                try:
+                    data, server = sock.recvfrom(1000)
+                except socket.timeout:
+                    time.sleep(5)
+                    break
+                else:
+                    responses[server] = data
+                    _log.debug("Received {} from {}".format(data, server))
+        finally:
+            _log.debug("Closing socket")
+            sock.close()
+    return responses.values()
+
 def runtime_certificate(rt_attributes):
     import copy
     import requests
+    import sys
     from calvin.requests.request_handler import RequestHandler
     from calvin.utilities.attribute_resolver import AttributeResolver
     from calvin.utilities import calvinconfig
@@ -220,6 +255,7 @@ def runtime_certificate(rt_attributes):
     from calvin.utilities import runtime_credentials
     from calvin.utilities import certificate
     from calvin.utilities import certificate_authority
+    from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp import parse_http_response
     global _conf
     global _log
     _conf = calvinconfig.get()
@@ -267,22 +303,45 @@ def runtime_certificate(rt_attributes):
                 ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
                 request_handler = RequestHandler(verify=ca_cert_path)
                 ca_control_uri = _conf.get('security','certificate_authority_control_uri')
+                ca_control_uris = []
                 if ca_control_uri:
                     _log.info("CA control_uri in config={}".format(ca_control_uri))
+                    ca_control_uris.append(ca_control_uri)
                 else:
-                    _log.error("TODO: implement finding CA via SSDP")
-                    raise
-                certstr=None
-                #Repeatedly send CSR to CA until a certificate is returned (this to reduce the need for a CA 
-                #node to be be the first node to start)
-                while not certstr:
-                    try:
-                        certstr = request_handler.sign_csr_request(ca_control_uri, rsa_encrypted_csr)['certificate']
-                    except requests.exceptions.RequestException as err:
-                        _log.debug("RequestException, CSR not accepted or CA not up and running yet, err={}".format(err))
-                        #TODO, figure out appropriate time to wait before next attempt
-                        time.sleep(60)
-                        pass
+                    _log.error("Find CA via SSDP")
+                    responses = discover()
+                    for response in responses:
+                        cmd, headers = parse_http_response(response)
+                        if 'location' in headers:
+                            ca_control_uri, ca_node_id = headers['location'].split('/node/')
+                            ca_control_uri = ca_control_uri.replace("http","https")
+                            ca_control_uris.append(ca_control_uri)
+                            _log.debug("CA control_uri={}, node_id={}".format(ca_control_uri, ca_node_id))
+
+                cert_available=False
+                # Loop through all CA:s that responded until hopefully one signs our CSR
+                # Potential improvement would  be to have domain name in response and only try
+                # appropriate CAs, alternatively, fetch certificate chain of node and use data from
+                # the chaing
+                i=0
+                while not cert_available and i<len(ca_control_uris):
+                    certstr=None
+                    #Repeatedly (maximum 5 attempts)send CSR to CA until a certificate is returned (this to remove the requirement of the CA 
+                    #node to be be the first node to start)
+                    j=0
+                    while not certstr and j<5:
+                        try:
+                            certstr = request_handler.sign_csr_request(ca_control_uris[i], rsa_encrypted_csr)['certificate']
+                        except requests.exceptions.RequestException as err:
+                            _log.debug("RequestException, CSR not accepted or CA not up and running yet, sleep 60 seconds and try again, err={}".format(err))
+                            time.sleep(10+j*30)
+                            j=j+1
+                            pass
+                        else:
+                            cert_available = True
+                    i = i+1
+                #TODO: check that everything is ok with signed cert, e.g., check that the CA domain
+                # matches the expected and that the CA cert is trusted
                 runtime.store_own_cert(certstring=certstr, security_dir=security_dir)
         else:
             _log.debug("Runtime certificate available")

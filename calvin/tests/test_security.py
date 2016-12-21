@@ -165,7 +165,7 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('security', 'domain_name', domain_name)
         #TODO: remove use of "security_domain_name"
         rt_conf.set('security', 'security_domain_name', domain_name)
-        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
+#        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('security', 'security_path', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [store_path])
@@ -300,7 +300,6 @@ class TestSecurity(unittest.TestCase):
         # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
         print "-------------------------------------"
         rt4_conf = copy.deepcopy(rt_conf)
-        rt4_conf.set('security','certificate_authority_control_uri','https://%s:5020'%hostname)
         rt4_conf.set('security','enrollment_password',runtimes[4]['enrollment_password'])
         rt4_conf.set("security", "security_conf", {
                         "comment": "Local authentication, external authorization",
@@ -321,7 +320,7 @@ class TestSecurity(unittest.TestCase):
         except:
             logfile = None
             outfile = None
-        time.sleep(1)  # Wait to be sure that runtime 2 has started
+        time.sleep(10)  # Wait to be sure that runtime 2 has started
         csruntime(hostname, port=5004, controlport=5024, attr=rt4_attributes,
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5004.conf")
