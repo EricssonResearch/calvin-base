@@ -55,7 +55,9 @@ def get_node_name_and_id(node):
     # so they need to run in a separate thread
     node_id = node.nodeid.to_string()
     try:
-        node_name = node.get_display_name().to_string()
+        path = node.get_path_as_string()
+        node_name = "/".join([ p.split(":")[1] for p in path ])
+        # node_name = node.get_display_name().to_string()
     except Exception:
         # Not all nodes have a name, use node id
         node_name = node_id
