@@ -905,8 +905,12 @@ class CalvinControl(object):
             _log.debug("authentication_decorator::inner, arguments were:·func={}\n handle={}\n connection={}\n match={}\n data={}\n hdr={}".format(func, handle, connection, match, data, hdr))
             issuetracker = IssueTracker()
             credentials = None
-            if data and 'sec_credentials' in data:
-                credentials = data['sec_credentials']
+            try:
+                if data and 'sec_credentials' in data:
+                    credentials = data['sec_credentials']
+            except TypeError:
+                # Data is not iterable
+                pass
             try:
                 self.security.authenticate_subject(
                     credentials,
