@@ -69,10 +69,10 @@ class FakeTransportFactory(base_transport.BaseTransportFactory):
 factories = {}
 
 
-def register(id, callbacks, schemas, formats):
+def register(_id, node_name, callbacks, schemas, formats):
     if 'fake_transport' in schemas:
         f = FakeTransportFactory(id, callbacks)
-        factories[id] = f
+        factories[_id] = f
         return {'fake_transport': f}
     else:
         return {}

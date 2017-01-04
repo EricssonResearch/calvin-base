@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinuuid
@@ -36,7 +38,7 @@ class CalvinTransport(base_transport.BaseTransport):
         self._remote_rt_id = None
         self._coder = None
         self._transport = transport(self._uri.hostname, self._uri.port, callbacks, proto=proto, node_name=self._node_name, server_node_name=server_node_name)
-        self._rtt = 2000  # Init rt in ms
+        self._rtt = None  # Init rtt in s
 
         if not client_validator:
             self._verify_client = lambda x: True
@@ -77,7 +79,7 @@ class CalvinTransport(base_transport.BaseTransport):
             # Send
             raw_payload = tcoder.encode(payload)
 
-#            _log.debug('raw_send_message %s => %s "%s"' % (self._rt_id, self._remote_rt_id, raw_payload))
+            # _log.debug('raw_send_message %s => %s "%s"' % (self._rt_id, self._remote_rt_id, raw_payload))
             self._callback_execute('raw_send_message', self, raw_payload)
             self._transport.send(raw_payload)
             # TODO: Set timeout of send
@@ -99,6 +101,7 @@ class CalvinTransport(base_transport.BaseTransport):
         msg['id'] = self._rt_id
         msg['sid'] = self._get_msg_uuid()
         msg['serializers'] = self.get_coders().keys()
+        self._join_start = time.time()
         self.send(msg, coder=self._get_join_coder())
 
     def _send_join_reply(self, _id, serializer, sid):
@@ -113,6 +116,7 @@ class CalvinTransport(base_transport.BaseTransport):
         coder_name = None
         rt_id = None
         valid = False
+
         try:
             data_obj = self._get_join_coder().decode(data)
             # Verify package
@@ -154,6 +158,7 @@ class CalvinTransport(base_transport.BaseTransport):
 
     def _handle_join_reply(self, data):
         valid = False
+        self._rtt = time.time() - self._join_start
         try:
             data_obj = self.get_coders()['json'].decode(data)
 

@@ -27,7 +27,10 @@ class URI(object):
         port_del = uri.rindex(":")
         self.scheme = uri[0:scheme_del]
         self.hostname = uri[scheme_del + 3:port_del]
-        self.port = int(uri[port_del + 1:len(uri)])
+        if scheme_del != port_del:
+            self.port = int(uri[port_del + 1:len(uri)])
+        else:
+            self.port = None
 
     def geturl(self):
         return self.uri
@@ -149,5 +152,5 @@ class BaseTransportFactory(CalvinCBClass):
         """
         raise NotImplemented()
 
-def register(_id, callbacks, schemas, formats):
+def register(_id, node_name, callbacks, schemas, formats):
     return {}

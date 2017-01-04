@@ -38,6 +38,7 @@ def cleanup(request):
         reactor.callFromThread(reactor.stop)
     request.addfinalizer(fin)
 
+@pytest.mark.essential
 class TestTransportServer(object):
 
     def test_start_stop(self, monkeypatch):
@@ -46,11 +47,8 @@ class TestTransportServer(object):
     def test_callbacks(self, monkeypatch):
         pass
 
-    def test_apa(self, monkeypatch):
-        pass
-
+@pytest.mark.essential
 class TestTransport(object):
-    test_nodes = 2
 
     def test_connect(self, monkeypatch):
         pass

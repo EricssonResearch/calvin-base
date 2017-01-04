@@ -57,14 +57,9 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
             raise
 
     def listen(self, uri):
-        if uri == "calvinip:default":
+        if uri == "calvinip://default":
             # Need to form a proper default uri
-            try:
-                portnbrs = [int(urit.split(':')[-1]) for urit in self._servers.keys()]
-                port = max(portnbrs) + 1 if portnbrs else 50000
-            except:
-                port = 50000
-            uri = "calvinip:0.0.0.0:" + str(port)
+            uri = "calvinip://0.0.0.0"
 
         schema, _peer_addr = uri.split(':', 1)
         if schema != 'calvinip':

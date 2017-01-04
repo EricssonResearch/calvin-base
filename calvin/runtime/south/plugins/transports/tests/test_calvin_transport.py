@@ -280,12 +280,14 @@ class ClientJoinFailed(Exception):
 # @pytest.mark.interactive
 class TestTransportServer(object):
 
+    @pytest.mark.essential
     def test_start_stop(self, monkeypatch):
         _mmanager = multiprocessing.Manager()
         shqs = [_mmanager.Queue(), _mmanager.Queue()]
         sh = TestServerHandler("calvinip://localhost", shqs[0], shqs[1])
 
-        ttf = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), sh.get_callbacks())
+        ttf_uuid = str(uuid.uuid4())
+        ttf = calvinip_transport.CalvinTransportFactory(ttf_uuid, ttf_uuid, sh.get_callbacks())
 
         sh.set_ttf(ttf)
         sh.start()
@@ -339,6 +341,7 @@ class TestTransportClient(object):
     test_nodes = 2
     #_mmanager = multiprocessing.Manager()
 
+    @pytest.mark.essential
     def test_connect(self, monkeypatch):
         queues = []
         _mmanager = multiprocessing.Manager()
@@ -347,8 +350,11 @@ class TestTransportClient(object):
         sh = TestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
         ch = TestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
 
-        ttfs = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), sh.get_callbacks())
-        ttfc = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), ch.get_callbacks())
+
+        ttfs_uuid = str(uuid.uuid4())
+        ttfs = calvinip_transport.CalvinTransportFactory(ttfs_uuid, ttfs_uuid, sh.get_callbacks())
+        ttfc_uuid = str(uuid.uuid4())
+        ttfc = calvinip_transport.CalvinTransportFactory(ttfc_uuid, ttfc_uuid, ch.get_callbacks())
 
         sh.set_ttf(ttfs)
         ch.set_ttf(ttfc)
@@ -422,8 +428,10 @@ class TestTransportClient(object):
         sh = TestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
         ch = TestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
 
-        ttfs = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), sh.get_callbacks())
-        ttfc = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), ch.get_callbacks())
+        ttfs_uuid = str(uuid.uuid4())
+        ttfs = calvinip_transport.CalvinTransportFactory(ttfs_uuid, ttfs_uuid, sh.get_callbacks())
+        ttfc_uuid = str(uuid.uuid4())
+        ttfc = calvinip_transport.CalvinTransportFactory(ttfc_uuid, ttfc_uuid, ch.get_callbacks())
 
         sh.set_ttf(ttfs)
         ch.set_ttf(ttfc)
@@ -503,8 +511,10 @@ class TestTransportClient(object):
         sh = TestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
         ch = TestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
 
-        ttfs = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), sh.get_callbacks())
-        ttfc = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), ch.get_callbacks())
+        ttfs_uuid = str(uuid.uuid4())
+        ttfs = calvinip_transport.CalvinTransportFactory(ttfs_uuid, ttfs_uuid, sh.get_callbacks())
+        ttfc_uuid = str(uuid.uuid4())
+        ttfc = calvinip_transport.CalvinTransportFactory(ttfc_uuid, ttfc_uuid, ch.get_callbacks())
 
         sh.set_ttf(ttfs)
         ch.set_ttf(ttfc)
@@ -584,8 +594,10 @@ class TestTransportClient(object):
         sh = TestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
         ch = TestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
 
-        ttfs = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), sh.get_callbacks())
-        ttfc = calvinip_transport.CalvinTransportFactory(str(uuid.uuid4()), ch.get_callbacks())
+        ttfs_uuid = str(uuid.uuid4())
+        ttfs = calvinip_transport.CalvinTransportFactory(ttfs_uuid, ttfs_uuid, sh.get_callbacks())
+        ttfc_uuid = str(uuid.uuid4())
+        ttfc = calvinip_transport.CalvinTransportFactory(ttfc_uuid, ttfc_uuid, ch.get_callbacks())
 
         sh.set_ttf(ttfs)
         ch.set_ttf(ttfc)
