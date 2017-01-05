@@ -17,6 +17,7 @@
 import random
 from calvin.actorstore.store import ActorStore
 from calvin.utilities import dynops
+from calvin.utilities.requirement_matching import ReqMatch
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
@@ -24,6 +25,7 @@ import calvin.requests.calvinresponse as response
 from calvin.utilities.security import Security, security_enabled
 from calvin.actor.actor import ShadowActor
 from calvin.runtime.north.plugins.port import DISCONNECT
+
 
 _log = get_logger(__name__)
 
@@ -305,78 +307,35 @@ class ActorManager(object):
             return
         actor = self.actors[actor_id]
         actor._replication_data.inhibate(actor_id, True)
-        actor._collect_placement_counter = 0
-        actor._collect_placement_last_value = 0
-        actor._collect_placement_cb = None
         actor.requirements_add(requirements, extend)
-        node_iter = self.node.app_manager.actor_requirements(None, actor_id)
-        possible_placements = set([])
-        done = [False]
-        node_iter.set_cb(self._update_requirements_placements, node_iter, actor_id, possible_placements,
-                         move=move, authorization_check=authorization_check, cb=callback, done=done)
-        _log.analyze(self.node.id, "+ CALL CB", {'actor_id': actor_id, 'node_iter': str(node_iter)})
-        # Must call it since the triggers might already have released before cb set
-        self._update_requirements_placements(node_iter, actor_id, possible_placements,
-                                 move=move, authorization_check=authorization_check, cb=callback, done=done)
-        _log.analyze(self.node.id, "+ END", {'actor_id': actor_id, 'node_iter': str(node_iter)})
+        r = ReqMatch(self.node,
+                     callback=CalvinCB(self._update_requirements_placements, actor_id=actor_id, move=move, cb=callback))
+        r.match_for_actor(actor_id)
+        _log.analyze(self.node.id, "+ END", {'actor_id': actor_id})
 
-    def _update_requirements_placements(self, node_iter, actor_id, possible_placements, done, move=False,
-                                        authorization_check=False, cb=None):
+    def _update_requirements_placements(self, actor_id, possible_placements, status=None, move=False, cb=None):
         _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
+        if move and len(possible_placements)>1:
+            possible_placements.discard(self.node.id)
         actor = self.actors[actor_id]
-        if actor._collect_placement_cb:
-            actor._collect_placement_cb.cancel()
-            actor._collect_placement_cb = None
-        if done[0]:
+        if not possible_placements:
+            actor._replication_data.inhibate(actor_id, False)
+            if cb:
+                cb(status=response.CalvinResponse(False))
             return
-        try:
-            while True:
-                _log.analyze(self.node.id, "+ ITER", {})
-                node_id = node_iter.next()
-                possible_placements.add(node_id)
-        except dynops.PauseIteration:
-            _log.analyze(self.node.id, "+ PAUSED",
-                    {'counter': actor._collect_placement_counter,
-                     'last_value': actor._collect_placement_last_value,
-                     'diff': actor._collect_placement_counter - actor._collect_placement_last_value})
-            # FIXME the dynops should be self triggering, but is not...
-            # This is a temporary fix by keep trying
-            delay = 0.0 if actor._collect_placement_counter > actor._collect_placement_last_value + 100 else 0.2
-            actor._collect_placement_counter += 1
-            actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements,
-                                                    node_iter, actor_id, possible_placements, done=done,
-                                                     move=move, cb=cb)
+        if self.node.id in possible_placements:
+            actor._replication_data.inhibate(actor_id, False)
+            # Actor could stay, then do that
+            if cb:
+                cb(status=response.CalvinResponse(True))
             return
-        except StopIteration:
-            # All possible actor placements derived
-            _log.analyze(self.node.id, "+ ALL", {})
-            done[0] = True
-            if move and len(possible_placements)>1:
-                possible_placements.discard(self.node.id)
-            if authorization_check:
-                actor._replication_data.inhibate(actor_id, False)
-                cb(possible_placements=list(possible_placements))
-                return
-            if not possible_placements:
-                actor._replication_data.inhibate(actor_id, False)
-                if cb:
-                    cb(status=response.CalvinResponse(False))
-                return
-            if self.node.id in possible_placements:
-                actor._replication_data.inhibate(actor_id, False)
-                # Actor could stay, then do that
-                if cb:
-                    cb(status=response.CalvinResponse(True))
-                return
-            # TODO do a better selection between possible nodes
-            # TODO: should also ask authorization server before selecting node to migrate to.
-            # Try the possible placements in random order
-            pp = list(possible_placements)
-            random.shuffle(pp)
-            self.robust_migrate(actor_id, pp, callback=cb)
-            _log.analyze(self.node.id, "+ END", {})
-        except:
-            _log.exception("actormanager:_update_requirements_placements")
+        # TODO do a better selection between possible nodes
+        # TODO: should also ask authorization server before selecting node to migrate to.
+        # Try the possible placements in random order
+        pp = list(possible_placements)
+        random.shuffle(pp)
+        self.robust_migrate(actor_id, pp, callback=cb)
+        _log.analyze(self.node.id, "+ END", {})
 
     def robust_migrate(self, actor_id, node_ids, callback, **kwargs):
         """ Will try to migrate the actor to each of the suggested node_ids (which is modified),

@@ -20,6 +20,7 @@ req_type = "placement"
 
 def req_op(node, actor_id=None, component=None):
     """ Returns any nodes that have replicas of actor """
+    #FIXME Need to handle when actor_id is not local actor!!!
     try:
         actor = node.am.actors[actor_id]
         replication_id = actor._replication_data.id

@@ -41,6 +41,7 @@ from calvin.utilities import calvinconfig
 from calvin.utilities.utils import get_home
 from calvin.utilities.runtime_credentials import RuntimeCredentials
 from calvin.utilities.calvin_callback import CalvinCB
+from calvin.utilities.requirement_matching import ReqMatch
 
 _conf = calvinconfig.get()
 _log = get_logger(__name__)
@@ -429,21 +430,15 @@ class Security(object):
     def authorization_runtime_search(self, actor_id, actorstore_signature, callback):
         """Search for runtime where the authorization decision for the actor is 'permit'."""
         _log.debug("authorization_runtime_search:\n\tactor_id={}\n\tactorstore_signature={}\n\tcallback={}".format(actor_id, actorstore_signature, callback))
-        # extra_requirement is used to prevent InfiniteElement from being returned.
-        extra_requirement = [{"op": "actor_reqs_match",
-                              "kwargs": {"requires": ["calvinsys.native.python-json"]},
-                              "type": "+"},
-                             {"op": "current_node",
-                              "kwargs": {},
-                              "type": "-"}]
         #Search for runtimes supporting the actor with appropriate actorstore_signature
-        self.node.am.update_requirements(actor_id, extra_requirement, True, authorization_check=True,
-                                         callback=CalvinCB(self._authorization_server_search,
-                                                           actor_id=actor_id,
-                                                           actorstore_signature=actorstore_signature,
-                                                           callback=callback))
+        r = ReqMatch(self.node,
+                     callback=CalvinCB(self._authorization_server_search,
+                                       actor_id=actor_id,
+                                       actorstore_signature=actorstore_signature,
+                                       callback=callback))
+        r.match_for_actor(actor_id)
 
-    def _authorization_server_search(self, possible_placements, actor_id, actorstore_signature, callback):
+    def _authorization_server_search(self, possible_placements, actor_id, actorstore_signature, callback, status=None):
         _log.debug("_authorization_server_search:\n\tpossible_placements={}\n\tactor_id={}\n\tactorstore_signature={}\n\tcallback={}".format(possible_placements, actor_id, actorstore_signature, callback))
         if not possible_placements:
             callback(None)
