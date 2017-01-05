@@ -18,9 +18,10 @@
 
 from calvin.actor.actor import Actor, ActionResult, manage, condition
 from calvin.runtime.north.calvin_token import ExceptionToken
+from calvin.actorstore.systemactors.json.SetDefault import SetDefault
 from copy import deepcopy
 
-class SetDefault(Actor):
+class SetDefaults(SetDefault):
 
     """
     Modify a dictionary part of container if key does not exist (key must be string)
@@ -33,78 +34,54 @@ class SetDefault(Actor):
 
     Inputs:
       container: a list or dictionary
-      key: key (string), or a (possibly mixed) list for nested containers
-      value: default value to set
+      keys: A list of keys (string), or a (possibly mixed) list for nested containers (must point to dictionary key)
+      values: A list of default values to set
     Outputs:
       container:  a modified container
     """
 
-    def exception_handler(self, action, args, context):
-        return ActionResult(production=(ExceptionToken(),))
-
-    @manage()
-    def init(self):
-        pass
-
-    def _check_type_mismatch(self, container, key):
-        t_cont = type(container)
-        t_key = type(key)
-        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
-        if mismatch:
-            raise Exception()
-
-    def _set_default(self, container, key, value):
-        keylist = key if type(key) is list else [key]
-        try:
-            res = container
-            for key in keylist[:-1]:
-                self._check_type_mismatch(res, key)
-                res = res[key]
-            self._check_type_mismatch(res, keylist[-1])
-            if not res.has_key(keylist[-1]):
-                res[keylist[-1]] = value
-        except:
-            container = ExceptionToken()
-        return container
-
-    @condition(['container', 'key', 'value'], ['container'])
-    def set_default(self, data, key, value):
-        container = self._set_default(deepcopy(data), key, value)
+    @condition(['container', 'keys', 'values'], ['container'])
+    def set_defaults(self, data, keys, values):
+        container = deepcopy(data)
+        for key, value in zip(keys, values):
+            if type(container) is ExceptionToken:
+                break
+            container = self._set_default(container, key, value)
         return ActionResult(production=(container, ))
 
-    action_priority = (set_default, )
+    action_priority = (set_defaults, )
 
     test_args = []
     test_kwargs = {}
 
     test_set = [
         {
-            'in': {'container': [{'a':1}], 'key':['a'], 'value':[42]},
+            'in': {'container': [{'a':1}], 'keys':[['a']], 'values':[[42]]},
             'out': {'container': [{'a':1}]},
         },
         {
-            'in': {'container': [{'a':2}], 'key':['c'], 'value':[42]},
+            'in': {'container': [{'a':2}], 'keys':[['c']], 'values':[[42]]},
             'out': {'container': [{'a':2, 'c': 42}]},
         },
         {
-            'in': {'container': [[1,{'a':3},3]], 'key':[[1, 'a']], 'value':[42]},
+            'in': {'container': [[1,{'a':3},3]], 'keys':[[[1, 'a']]], 'values':[[42]]},
             'out': {'container': [[1,{'a':3},3]]},
         },
         {
-            'in': {'container': [[1,{'c':4},3]], 'key':[[1, 'a']], 'value':[42]},
+            'in': {'container': [[1,{'c':4},3]], 'keys':[[[1, 'a']]], 'values':[[42]]},
             'out': {'container': [[1,{'a': 42, 'c':4},3]]},
         },
         # Error conditions
         {
-            'in': {'container': [[1,2,3]], 'key':[1], 'value':[42]},
+            'in': {'container': [[1,2,3]], 'keys':[[1]], 'values':[[42]]},
             'out': {'container': ['Exception']},
         },
         {
-            'in': {'container': [{'a':5}], 'key':[1], 'value':[42]},
+            'in': {'container': [{'a':5}], 'keys':[[1]], 'values':[[42]]},
             'out': {'container': ['Exception']},
         },
         {
-            'in': {'container': [{'a':6}], 'key':[1], 'value':[42]},
+            'in': {'container': [{'a':6}], 'keys':[[1]], 'values':[[42]]},
             'out': {'container': ['Exception']},
         }
     ]

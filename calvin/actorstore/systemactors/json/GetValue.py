@@ -44,22 +44,27 @@ class GetValue(Actor):
     def init(self):
         pass
 
-    def _type_mismatch(self, container, key):
+    def _check_type_mismatch(self, container, key):
         t_cont = type(container)
         t_key = type(key)
-        return (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
+        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
+        if mismatch:
+            raise Exception()
 
-    @condition(['container', 'key'], ['value'])
-    def get_value(self, data, key):
+    def _get_value(self, data, key):
         keylist = key if type(key) is list else [key]
         try:
             res = data
             for key in keylist:
-                if self._type_mismatch(res, key):
-                    raise Exception()
+                self._check_type_mismatch(res, key)
                 res = res[key]
         except Exception as e:
             res = ExceptionToken()
+        return res
+
+    @condition(['container', 'key'], ['value'])
+    def get_value(self, data, key):
+        res = self._get_value(data, key)
         return ActionResult(production=(res, ))
 
     action_priority = (get_value, )

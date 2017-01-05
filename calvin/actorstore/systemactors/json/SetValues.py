@@ -18,9 +18,10 @@
 
 from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
+from calvin.actorstore.systemactors.json.SetValue import SetValue
 from copy import deepcopy
 
-class SetValue(Actor):
+class SetValues(SetValue):
 
     """
     Modify a container (list or dictionary)
@@ -33,78 +34,56 @@ class SetValue(Actor):
 
     Inputs:
       container: a list or dictionary
-      key: index (integer), key (string), or a (possibly mixed) list for nested containers
-      value: value to set
+      keys: A list of indices (integer), keys (string), or a (possibly mixed) list for nested containers
+      values: A list of values to set for the corresponding keys
     Outputs:
       container:  a modified container
     """
 
-    def exception_handler(self, action, args, context):
-        return ActionResult(production=(ExceptionToken(),))
-
-    @manage()
-    def init(self):
-        pass
-
-    def _check_type_mismatch(self, container, key):
-        t_cont = type(container)
-        t_key = type(key)
-        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
-        if mismatch:
-            raise Exception()
-
-    def _set_value(self, container, key, value):
-        keylist = key if type(key) is list else [key]
-        try:
-            res = container
-            for key in keylist[:-1]:
-                self._check_type_mismatch(res, key)
-                res = res[key]
-            self._check_type_mismatch(res, keylist[-1])
-            res[keylist[-1]] = value
-        except:
-            container = ExceptionToken()
-        return container
 
 
-    @condition(['container', 'key', 'value'], ['container'])
-    def set_value(self, data, key, value):
-        container = self._set_value(deepcopy(data), key, value)
+    @condition(['container', 'keys', 'values'], ['container'])
+    def set_values(self, data, keys, values):
+        container = deepcopy(data)
+        for key, value in zip(keys, values):
+            if type(container) is ExceptionToken:
+                break
+            container = self._set_value(container, key, value)
         return ActionResult(production=(container, ))
 
-    action_priority = (set_value, )
+    action_priority = (set_values, )
 
     test_args = []
     test_kwargs = {}
 
     test_set = [
         {
-            'in': {'container': [{'a':1}], 'key':['a'], 'value':[42]},
+            'in': {'container': [{'a':1}], 'keys':[['a']], 'values':[[42]]},
             'out': {'container': [{'a':42}]},
         },
         {
-            'in': {'container': [[1,2,3]], 'key':[1], 'value':[42]},
+            'in': {'container': [[1,2,3]], 'keys':[[1]], 'values':[[42]]},
             'out': {'container': [[1,42,3]]},
         },
         {
-            'in': {'container': [[1,{'a':2},3]], 'key':[[1, 'a']], 'value':[42]},
-            'out': {'container': [[1,{'a':42},3]]},
+            'in': {'container': [[1,{'a':2},3]], 'keys':[[[1, 'a'], 2]], 'values':[[42, 43]]},
+            'out': {'container': [[1,{'a':42},43]]},
         },
         {
-            'in': {'container': [{'a':[1, 2, 3]}], 'key':[['a', 1]], 'value':[42]},
+            'in': {'container': [{'a':[1, 2, 3]}], 'keys':[[['a', 1]]], 'values':[[42]]},
             'out': {'container': [{'a':[1, 42, 3]}]},
         },
-        # Error conditions
+        # # Error conditions
         {
-            'in': {'container': [[1,2,3]], 'key':['a'], 'value':[42]},
+            'in': {'container': [[1,2,3]], 'keys':[['a']], 'values':[[42]]},
             'out': {'container': ['Exception']},
         },
         {
-            'in': {'container': [{'a':1}], 'key':[1], 'value':[42]},
+            'in': {'container': [{'a':1}], 'keys':[[1]], 'values':[[42]]},
             'out': {'container': ['Exception']},
         },
         {
-            'in': {'container': [[1,{'a':2},3]], 'key':[[1, 2]], 'value':[42]},
+            'in': {'container': [[1,{'a':2},3]], 'keys':[[0, [1, 2]]], 'values':[[42, 43]]},
             'out': {'container': ['Exception']},
         },
 
