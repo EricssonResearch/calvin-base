@@ -31,15 +31,22 @@ class SampleHold(Actor):
       out    : The currently held token, or the 'default' argument if not sampled yet.
     """
 
-    @manage(['held'])
+    @manage(['held', 'immutable'])
     def init(self, default=None):
-        self.held = default
+        self.set_current(default)
+
+    def current(self):
+        return self.held if self.immutable else copy(self.held)
+
+    def set_current(self, tok):
+        self.immutable = bool(type(tok) is list or type(tok))
+        self.held = tok if self.immutable else copy(tok)
 
     @condition(['sample', 'in'], ['out'])
     def action(self, sample, tok):
         if sample is True:
-            self.held = copy(tok)
-        return ActionResult(production=(self.held, ))
+            self.set_current(tok)
+        return ActionResult(production=(self.current(), ))
 
     action_priority = (action,)
 
