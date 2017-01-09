@@ -1405,6 +1405,7 @@ class CalvinControl(object):
             requirements = data.get('requirements', {})
             status_supervise = self.node.rm.supervise_actor(match.group(1), requirements)
             if status_supervise.status != calvinresponse.OK:
+                _log.debug("Replication supervised failed %s" % (match.group(1),))
                 self.send_response(handle, connection, None, status_supervise.status)
                 return
             if not requirements:
@@ -1412,7 +1413,7 @@ class CalvinControl(object):
                 node_id = data.get('peer_node_id', self.node.id)
                 self.node.rm.replicate(
                     match.group(1), node_id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
-                status = calvinresponse.OK
+                return
             self.send_response(handle, connection, json.dumps(status_supervise.data), calvinresponse.OK)
         except:
             _log.exception("Failed test replication")

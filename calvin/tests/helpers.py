@@ -262,6 +262,9 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
 
     count = 2
     for host in hosts[1:]:
+        if nbr > 3:
+            # Improve likelihood of success if runtimes started with a time interval
+            time.sleep(10.0)
         _log.info("starting runtime %s" % (host[1], ))
         attr_rt = copy.deepcopy(attr_rest)
         attr_rt['indexed_public']['node_name']['name'] = u'runtime' + str(count)

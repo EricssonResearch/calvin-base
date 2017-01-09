@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.north.replicationmanager import PRE_CHECK
+from calvin.utilities.replication_defs import PRE_CHECK
 import random
 
 req_type = "replication"
@@ -56,10 +56,10 @@ def pre_check(node, **kwargs):
 def initiate(node, actor, **kwargs):
     pass
 
-def select(node, actor, **kwargs):
-    if not actor._possible_placements:
+def select(node, actor, possible_placements, **kwargs):
+    if not possible_placements:
         return []
-    prefered_placements = actor._possible_placements - set(actor._collect_current_placement + [node.id])
+    prefered_placements = possible_placements - set([node.id])
     actor._replication_data.known_runtimes = prefered_placements
     if not prefered_placements:
         actor._replication_data.limit_count = min(actor._replication_data.limit_count + 10, 100)

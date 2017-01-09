@@ -22,6 +22,8 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinuuid import uuid
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import dynops
+from calvin.utilities.requirement_matching import ReqMatch
+from calvin.utilities.replication_defs import REPLICATION_STATUS, PRE_CHECK
 from calvin.runtime.south.plugins.async import async
 from calvin.actor.actorstate import ActorState
 from calvin.runtime.north.plugins.requirements import req_operations
@@ -30,10 +32,6 @@ from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities.utils import enum
 
 _log = get_logger(__name__)
-
-FIRINGS_LENGTH = 20
-REPLICATION_STATUS = enum('UNUSED', 'READY', 'REPLICATING', 'DEREPLICATING', 'INHIBATED')
-PRE_CHECK = enum('NO_OPERATION', 'SCALE_OUT', 'SCALE_IN')
 
 
 class ReplicationData(object):
@@ -454,76 +452,26 @@ class ReplicationManager(object):
 
     def replicate_by_requirements(self, actor, callback=None):
         """ Update requirements and trigger a replication """
-        actor._collect_placement_counter = 0
-        actor._collect_placement_last_value = 0
-        actor._collect_placement_cb = None
         actor._replicate_callback = callback
-        actor._collect_done = False
-        actor._possible_placements = set([])
-        actor._collect_current_placement = None
         req = actor._replication_data.requirements
         # Initiate any scaling specific actions
         req_operations[req['op']].initiate(self.node, actor, **req['kwargs'])
-        self.node.storage.get_replica_nodes(actor._replication_data.id, CalvinCB(self._current_placements_cb, actor=actor))
-        node_iter = self.node.app_manager.actor_requirements(None, actor.id)
-        node_iter.set_cb(self._update_requirements_placements, node_iter, actor)
-        _log.analyze(self.node.id, "+ CALL CB", {'actor_id': actor.id, 'node_iter': str(node_iter)})
-        # Must call it since the triggers might already have released before cb set
-        self._update_requirements_placements(node_iter, actor)
-        _log.analyze(self.node.id, "+ END", {'actor_id': actor.id, 'node_iter': str(node_iter)})
+        r = ReqMatch(self.node,
+                     callback=CalvinCB(self._update_requirements_placements, actor=actor))
+        r.match_for_actor(actor.id)
+        _log.analyze(self.node.id, "+ END", {'actor_id': actor.id})
 
-    def _current_placements_cb(self, key, value, actor):
-        if value is None:
-            actor._collect_current_placement = []
-        else:
-            actor._collect_current_placement = value
-        self._replica_placement(actor)
-
-    def _update_requirements_placements(self, node_iter, actor, move=False,
-                                        authorization_check=False):
+    def _update_requirements_placements(self, actor, possible_placements, status=None):
         _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
-        if actor._collect_placement_cb:
-            actor._collect_placement_cb.cancel()
-            actor._collect_placement_cb = None
-        if actor._collect_done:
-            return
-        try:
-            while True:
-                _log.analyze(self.node.id, "+ ITER", {})
-                node_id = node_iter.next()
-                actor._possible_placements.add(node_id)
-        except dynops.PauseIteration:
-            _log.analyze(self.node.id, "+ PAUSED",
-                    {'counter': actor._collect_placement_counter,
-                     'last_value': actor._collect_placement_last_value,
-                     'diff': actor._collect_placement_counter - actor._collect_placement_last_value})
-            # FIXME the dynops should be self triggering, but is not...
-            # This is a temporary fix by keep trying
-            delay = 0.0 if actor._collect_placement_counter > actor._collect_placement_last_value + 100 else 0.2
-            actor._collect_placement_counter += 1
-            actor._collect_placement_cb = async.DelayedCall(delay, self._update_requirements_placements,
-                                                    node_iter, actor)
-            return
-        except StopIteration:
-            # All possible actor placements derived
-            _log.analyze(self.node.id, "+ ALL", {})
-            actor._collect_done = True
-            if actor._collect_current_placement is None:
-                return
-            self._replica_placement(actor)
-            _log.analyze(self.node.id, "+ END", {})
-        except:
-            _log.exception("actormanager:_update_requirements_placements")
-
-    def _replica_placement(self, actor):
-        if actor._collect_done and not actor._possible_placements:
+        # All possible actor placements derived
+        if not possible_placements:
             if actor._replicate_callback:
                 actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
         # Select, always a list of node_ids, could be more than one
         req = actor._replication_data.requirements
-        selected = req_operations[req['op']].select(self.node, actor, **req['kwargs'])
-        _log.analyze(self.node.id, "+", {'possible_placements': actor._possible_placements, 'current_placements': actor._collect_current_placement, 'selected': selected})
+        selected = req_operations[req['op']].select(self.node, actor, possible_placements, **req['kwargs'])
+        _log.analyze(self.node.id, "+", {'possible_placements': possible_placements, 'selected': selected})
         if selected is None:
             # When None - selection will never succeed
             if actor._replicate_callback:
@@ -535,8 +483,8 @@ class ReplicationManager(object):
                 actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
         if not selected:
-            # When empty - wait for upcoming calls
+            if actor._replicate_callback:
+                actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
         # FIXME create as many replicas as nodes in list (would need to serialize)
         self.replicate(actor.id, selected[0], callback=actor._replicate_callback)
-        
