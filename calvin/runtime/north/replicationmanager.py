@@ -232,8 +232,8 @@ class ReplicationManager(object):
         ports['outports'] = {remap_ports[pid]: v for pid, v in ports['outports'].items()}
         _log.analyze(self.node.id, "+ GET STATE", remap_ports)
         state = actor.state(remap_ports)
-        state['name'] = new_name
-        state['id'] = new_id
+        state['_name'] = new_name
+        state['_id'] = new_id
         actor.will_replicate(ActorState(state, actor._replication_data))
         if dst_node_id == self.node.id:
             # Make copies to make sure no objects are shared between actors
