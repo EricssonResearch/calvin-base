@@ -135,17 +135,13 @@ class TestSecurity(unittest.TestCase):
         #   The following is less than optimal if multiple CA certs exist
         ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
         request_handler = RequestHandler(verify=ca_cert_path)
-        #Generate credentials, create CSR, sign with CA and import cert for all runtimes
+        #Generate enrollment passwords for all runtimes
+        enrollment_passwords=[]
         for rt_attribute in rt_attributes:
             attributes=AttributeResolver(rt_attribute)
             node_name = attributes.get_node_name_as_str()
             nodeid = calvinuuid.uuid("")
-            enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
-            runtime=runtime_credentials.RuntimeCredentials(node_name, domain_name,
-                                                           security_dir=credentials_testdir,
-                                                           nodeid=nodeid,
-                                                           enrollment_password=enrollment_password)
-            runtimes.append({'runtime':runtime, 'enrollment_password':enrollment_password})
+            enrollment_passwords.append(ca.cert_enrollment_add_new_runtime(node_name))
 
         #Let's hash passwords in users.json file (the runtimes will try to do this
         # but they will all try to do it at the same time, so it will be overwritten
@@ -158,6 +154,7 @@ class TestSecurity(unittest.TestCase):
         #  request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
 
         #Copy trusted code signer certificate into truststore
+        os.mkdir(os.path.join(credentials_testdir,"runtimes","truststore_for_signing"))
         shutil.copy(os.path.join(security_testdir, "runtimes","truststore_for_signing", "93d58fef.0"),
                     os.path.join(credentials_testdir,"runtimes","truststore_for_signing")) 
         rt_conf = copy.deepcopy(_conf)
@@ -172,9 +169,9 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('global', 'actor_paths', [store_path])
 
         # Runtime 0: local authentication, signature verification, local authorization.
-        #Also acts as Certificate Authority for the domain
+        # Primarily acts as Certificate Authority for the domain
         rt0_conf = copy.deepcopy(rt_conf)
-        rt0_conf.set('security','enrollment_password',runtimes[0]['enrollment_password'])
+        rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
         rt0_conf.set('security','certificate_authority','True')
         rt0_conf.set("security", "security_conf", {
                         "comment": "Certificate Authority",
@@ -203,12 +200,12 @@ class TestSecurity(unittest.TestCase):
         rt0 = RT("https://%s:5020" % hostname)
 
         #Wait for the CA runtime to start before sending CSR requests
+        #TODO: remove the need for this
         time.sleep(5)
 
         # Runtime 1: local authentication, signature verification, local authorization.
-        #Also acts as Certificate Authority for the domain
         rt1_conf = copy.deepcopy(rt_conf)
-        rt1_conf.set('security','enrollment_password',runtimes[1]['enrollment_password'])
+        rt1_conf.set('security','enrollment_password',enrollment_passwords[1])
         rt1_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "authentication": {
@@ -240,7 +237,7 @@ class TestSecurity(unittest.TestCase):
         # Can also act as authorization server for other runtimes.
         # Other street compared to the other runtimes
         rt2_conf = copy.deepcopy(rt_conf)
-        rt2_conf.set('security','enrollment_password',runtimes[2]['enrollment_password'])
+        rt2_conf.set('security','enrollment_password',enrollment_passwords[2])
         rt2_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "authentication": {
@@ -271,7 +268,7 @@ class TestSecurity(unittest.TestCase):
 
         # Runtime 3: external authentication (RADIUS), signature verification, local authorization.
         rt3_conf = copy.deepcopy(rt_conf)
-        rt3_conf.set('security','enrollment_password',runtimes[3]['enrollment_password'])
+        rt3_conf.set('security','enrollment_password',enrollment_passwords[3])
         rt3_conf.set("security", "security_conf", {
                         "comment": "RADIUS authentication, local authorization",
                         "authentication": {
@@ -299,9 +296,9 @@ class TestSecurity(unittest.TestCase):
         rt3 = RT("https://%s:5023" % hostname)
 
         # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
-        print "-------------------------------------"
+        time.sleep(2)
         rt4_conf = copy.deepcopy(rt_conf)
-        rt4_conf.set('security','enrollment_password',runtimes[4]['enrollment_password'])
+        rt4_conf.set('security','enrollment_password',enrollment_passwords[4])
         rt4_conf.set("security", "security_conf", {
                         "comment": "Local authentication, external authorization",
                         "authentication": {
@@ -321,24 +318,12 @@ class TestSecurity(unittest.TestCase):
         except:
             logfile = None
             outfile = None
-        time.sleep(10)  # Wait to be sure that runtime 2 has started
         csruntime(hostname, port=5004, controlport=5024, attr=rt4_attributes,
                    loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                    configfile="/tmp/calvin5004.conf")
         rt4 = RT("https://%s:5024" % hostname)
 
-        #Copy rt2 and rt2 certificates into each others others folders
-        #Long term, runtimes should fetch them from storage instead
-        rt2_certpath, rt2_cert, rt2_certstr = runtimes[2]['runtime'].get_own_cert(security_dir=credentials_testdir)
-        while not rt2_certpath:
-            time.sleep(1)
-            rt2_certpath, rt2_cert, rt2_certstr = runtimes[2]['runtime'].get_own_cert(security_dir=credentials_testdir)
-        rt4_certpath, rt4_cert, rt4_certstr = runtimes[4]['runtime'].get_own_cert(security_dir=credentials_testdir)
-        while not rt4_certpath:
-            time.sleep(1)
-            rt4_certpath, rt4_cert, rt4_certstr = runtimes[4]['runtime'].get_own_cert(security_dir=credentials_testdir)
-        runtimes[2]['runtime'].store_others_cert(certpath=rt4_certpath)
-        runtimes[4]['runtime'].store_others_cert(certpath=rt2_certpath)
+        time.sleep(10)  # Wait to be sure that all runtimes has started
 
         request.addfinalizer(self.teardown)
 

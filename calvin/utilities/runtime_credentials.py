@@ -35,6 +35,7 @@ from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import get_home
 from calvin.utilities import certificate
+from calvin.utilities.calvin_callback import CalvinCB
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
@@ -125,7 +126,7 @@ class RuntimeCredentials():
                             'commonName': 'supplied',
                             'dnQualifier': 'supplied',
                             'stateOrProvinceName': 'optional'}}
-    def __init__(self, name, domain=None, nodeid=None, security_dir=None, enrollment_password=None, force=False, readonly=False):
+    def __init__(self, name, node=None, domain=None, nodeid=None, security_dir=None, enrollment_password=None, force=False, readonly=False):
         _log.debug("runtime::init name={} domain={}, nodeid={}".format(name, domain, nodeid))
         print "runtime::init name={} domain={}, nodeid={}".format(name, domain, nodeid)
 
@@ -262,11 +263,13 @@ class RuntimeCredentials():
             # return out
 
 
+        self.node=node
         self.node_name=name
         self.node_id=nodeid
         self.runtime_dir=None
         self.private_key=None
         self.cert=None
+        self.cert_name=None
         self.configfile = None
         self.config=ConfigParser.SafeConfigParser()
         self.configuration=None
@@ -322,9 +325,6 @@ class RuntimeCredentials():
         #Create OpenSSL config file
         self.configfile = os.path.join(self.runtime_dir, "openssl.conf")
         exist = os.path.isfile(self.configfile)
-        print "exist=",repr(exist)
-        print "readonly=",repr(readonly)
-        print "force=",repr(force)
         if not exist and readonly:
             raise Exception("Configuration file does not exist, create runtime openssl.conf first")
         if exist and not force:
@@ -350,6 +350,7 @@ class RuntimeCredentials():
             except:
                 _log.error("creation of new runtime credentials failed")
                 raise
+        self.cert_name = self.get_own_cert_name()
 
 
     def update_opensslconf(self):
@@ -411,34 +412,69 @@ class RuntimeCredentials():
     def get_csr(self):
         """Return certificate with name cert_name from disk for runtime my_node_name"""
         # TODO: get certificate from DHT (alternative to getting from disk).
-        _log.debug("get_csr: my_node_name={}, cert_name={}".format(self.node_name, cert_name))
+        _log.debug("get_csr: my_node_name={}".format(self.node_name))
         return os.path.join(self.runtime_dir, "{}.csr".format(self.node_name))
 
-    def get_certificate(self, cert_name):
+    def get_certificate(self, cert_name, callback=None):
         """Return certificate with name cert_name from disk for runtime my_node_name"""
         # TODO: get certificate from DHT (alternative to getting from disk).
-        _log.debug("get_certificate: my_node_name={}, cert_name={}".format(self.node_name, cert_name))
+        _log.debug("get_certificate:\n\tmy_node_name={}\n\tcert_name={}\n\tcallback={}".format(self.node_name, cert_name, callback))
         try:
+            _log.debug("Look for certificate in others folder, cert_name={}".format(cert_name))
             # Check if the certificate is in the 'others' folder for runtime my_node_name.
             files = os.listdir(os.path.join(self.runtime_dir, "others"))
             matching = [s for s in files if cert_name in s]
-            with open(os.path.join(self.runtime_dir, "others", matching[0]), 'rb') as f:
-                certstr = f.read()
-                certificate.verify_certificate(TRUSTSTORE_TRANSPORT, certstr, 
-                                               security_dir=self.configuration['RT_default']['security_dir'])
-                certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstr)
-                return certificate
-        except Exception:
-            # Check if cert_name is the runtime's own certificate.
-            files = os.listdir(os.path.join(self.runtime_dir, "mine"))
-            matching = [s for s in files if cert_name in s]
-            with open(os.path.join(self.runtime_dir, "mine", matching[0]), 'rb') as f:
-                certstr = f.read()
-                certificate.verify_certificate(TRUSTSTORE_TRANSPORT, certstr, 
-                                               security_dir=self.configuration['RT_default']['security_dir'])
-                self.verify_certificate(TRUSTSTORE_TRANSPORT, certstr)
-                certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstr)
-                return certificate
+            certpath = os.path.join(self.runtime_dir, "others", matching[0])
+            certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath, security_dir=self.security_dir)
+            with open(certpath, 'rb') as fd:
+                certstr=fd.read()
+            if callback:
+                callback(certstring=certstr)
+            else:
+                return certstr
+        except Exception as err:
+            _log.debug("Certificate {} is not in {{others}} folder, continue looking in {{mine}} folder, err={}".format(cert_name, err))
+            try:
+                # Check if cert_name is the runtime's own certificate.
+                files = os.listdir(os.path.join(self.runtime_dir, "mine"))
+                matching = [s for s in files if cert_name in s]
+                certpath = os.path.join(self.runtime_dir, "mine", matching[0])
+                certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath, security_dir=self.security_dir)
+                with open(certpath, 'rb') as fd:
+                    certstr=fd.read()
+                if callback:
+                    callback(certstring=certstr)
+                else:
+                    return certstr
+            except Exception as err:
+                _log.debug("Certificate {} is not in {{others, mine}} folder, continue looking in storage, err={}".format(cert_name, err))
+                try:
+                    self.node.storage.get_index(['certificate',cert_name],
+                                                CalvinCB(self._get_certificate_from_storage_cb,
+                                                        callback=callback))
+                except Exception as err:
+                    _log.debug("Certificate could not be found in storage, err={}".format(err))
+                    raise
+
+    def _get_certificate_from_storage_cb(self, key, value, callback):
+        _log.debug("_get_certificate_from_storage_cb, \nkey={}\nvalue={}".format(key,value))
+        if value:
+            nbr = len(value)
+            try:
+                #Store certificate in others folder so we don't have to look it up again next time
+                certificate.verify_certificate(TRUSTSTORE_TRANSPORT, value[0], security_dir=self.security_dir)
+            except Exception as err:
+                _log.error("Verification of the received certificate failed, err={}".format(err))
+            else:
+                try:
+                    self.store_others_cert(value[0])
+                except Exception as err:
+                    _log.debug("Failed to write received certificate to others folder, err={}".format(err))
+                callback(certstring=value[0])
+        else:
+            _log.error("The certificate can not be found")
+            raise Exception("The certificate can not be found")
+
 
 
     def get_private_key(self, security_dir=None):
@@ -512,10 +548,14 @@ class RuntimeCredentials():
             _log.debug("No runtime certificate can be found")
             return None, None, None
 
-    def get_own_cert_name(self, security_dir=None):
+    def get_own_cert_name(self):
         """Return the node's own certificate name without file extension"""
         _log.debug("get_own_cert_name: node_name={}".format(self.node_name))
-        return os.path.splitext(os.listdir(os.path.join(self.runtime_dir, "mine"))[0])[0]
+        certs = os.listdir(os.path.join(self.runtime_dir, "mine"))
+        if certs:
+            return os.path.splitext(certs[0])[0]
+        else:
+            return None
 
     def get_public_key(self):
         """Return the public key from certificate"""
@@ -587,6 +627,7 @@ class RuntimeCredentials():
         #by other means
         self.configuration['RT_default']['certificate'] = path
         self.update_opensslconf()
+        self.cert_name = self.get_own_cert_name()
         return path
 
     def store_others_cert(self, certstring=None, certpath=None):
@@ -600,7 +641,6 @@ class RuntimeCredentials():
     def store_cert(self, type, certstring=None, certpath=None):
         """
         Store the signed runtime certificate
-        in the "mine" folder
         """
         _log.debug("store_cert")
         if certpath:
@@ -613,16 +653,8 @@ class RuntimeCredentials():
         elif not certstring:
             raise Exception("Neither certstring nor certpath supplied")
         commonName = certificate.cert_CN(certstring)
-        try:
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                  certstring)
-            fingerprint = cert.digest("sha256")
-            cert_id = fingerprint.replace(":", "")[-40:]
-        except Exception as exc:
-            _log.exception("Failed to create fingerprint of cert, exc={}".format(exc))
-            raise
-        filename = "{}.pem".format(cert_id)
-        print "filename={}".format(filename)
+        dnQualifier = certificate.cert_DN_Qualifier(certstring)
+        filename = "{}.pem".format(dnQualifier)
         if type not in ["mine","others"]:
             _log.error("type not supported")
             raise Exception("type not supported")

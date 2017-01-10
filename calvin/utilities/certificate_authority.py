@@ -595,6 +595,7 @@ class CA():
             # The openssl policy can also do this ...
         except (OpenSSL.crypto.Error), err:
             raise CsrDeniedConfiguration(err)
+        return csrx509
 
     def sign_csr(self, request):
         """
@@ -610,7 +611,7 @@ class CA():
         """
         _log.debug("sign_csr")
         try:
-            self.validate_csr(request)
+            csrx509 = self.validate_csr(request)
         except:
             raise
         private = self.configuration["CA_default"]["private_dir"]
@@ -671,8 +672,9 @@ class CA():
             except Exception as err:
                 _log.debug("Failed to append ca cert, err={}".format(err))
                 raise
-            fp = certificate.fingerprint(signed)
-            newcert = "{}.pem".format(fp.replace(":", "")[-40:])
+            subject = csrx509.get_subject()
+            dnQualifier = subject.dnQualifier
+            newcert = "{}.pem".format(dnQualifier)
         except:
             _log.exception("Sign request failed")
             newcert = None

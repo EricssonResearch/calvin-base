@@ -1239,7 +1239,7 @@ class CalvinControl(object):
         """
         try:
             if match.group(1) == self.node.id:
-                if self.node.domain is None:
+                if self.node.runtime_credentials is None or self.node.runtime_credentials.domain is None:
                     self.node.storage.remove_node_index(self.node)
                     self.node.attributes.set_indexed_public(data)
                     self.node_name = self.node.attributes.get_node_name_as_str()

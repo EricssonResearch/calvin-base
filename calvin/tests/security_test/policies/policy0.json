@@ -11,7 +11,12 @@
 		{
 			"id": "policy0_rule1",
 			"description": "Permit if policy target matches",
-			"effect": "permit"
+			"effect": "permit",
+			"target":{
+				"subject":{
+					"first_name":["Anders"]
+				}
+			}
 		}
 	]
 }

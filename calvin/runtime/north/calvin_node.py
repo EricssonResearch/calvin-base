@@ -40,6 +40,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.security import security_modules_check
+from calvin.utilities.runtime_credentials import RuntimeCredentials
 from calvin.utilities import calvinuuid
 from calvin.utilities import certificate
 from calvin.utilities.calvinlogger import get_logger
@@ -84,19 +85,18 @@ class Node(object):
         self.certificate_authority = certificate_authority.CertificateAuthority(self)
         self.authentication = authentication.Authentication(self)
         self.authorization = authorization.Authorization(self)
+        security_dir = _conf.get("security", "security_dir")
         try:
-            self.domain = _conf.get("security", "security_domain_name")
-            # cert_name is the node's certificate filename (without file extension)
-            self.cert_name = certificate.get_own_cert_name(self.node_name)
-        except:
-            self.domain = None
-            self.cert_name = None
+            self.runtime_credentials = RuntimeCredentials(self.node_name, node=self, security_dir=security_dir)
+        except Exception as err:
+            _log.debug("No runtime credentials, err={}".format(err))
+            self.runtime_credentials = None
         self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
         self.rm = replicationmanager.ReplicationManager(self)
         self.control = calvincontrol.get_calvincontrol()
-        
+
         _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         self.sched = _scheduler(self, self.am, self.monitor)
         self.async_msg_ids = {}

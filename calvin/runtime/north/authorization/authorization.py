@@ -32,6 +32,8 @@ _log = get_logger(__name__)
 _conf = calvinconfig.get()
 _sec_conf = _conf.get("security","security_conf")
 
+registration_attempt=0
+
 class Authorization(object):
     """Authorization helper functions"""
 
@@ -55,9 +57,16 @@ class Authorization(object):
         except Exception:
             self.authz_server_id = None
 
-    def decode_request(self, data):
+    def decode_request(self, data, callback):
         """Decode the JSON Web Token in the data."""
-        return decode_jwt(data["jwt"], data["cert_name"], self.node.node_name, self.node.id)
+        _log.debug("decode_request:\n\tdata={}\n\tcallback={}".format(data, callback))
+        decode_jwt(data["jwt"], data["cert_name"], self.node,
+                  callback=CalvinCB(self._decode_request_cb,
+                      callback=callback))
+
+    def _decode_request_cb(self, decoded, callback):
+        _log.debug("_decode_request_cb\n\tDecoded={}\n\tCallback={}".format(decoded, callback))
+        callback(decoded=decoded)
 
     def encode_response(self, request, response, audience=None):
         """Encode the response to the request as a JSON Web Token."""
@@ -71,7 +80,7 @@ class Authorization(object):
         if "sub" in request:
             jwt_payload["sub"] = request["sub"]
         # Create a JSON Web Token signed using the authorization server's private key.
-        return encode_jwt(jwt_payload, self.node.node_name)
+        return encode_jwt(jwt_payload, self.node)
 
     def register_node(self):
         """Register node attributes for authorization."""
@@ -100,7 +109,9 @@ class Authorization(object):
 
     def _register_node_cb(self, key, value):
         import random
-        _log.debug("_register_node_cb, \nkey={}\nvalue={}".format(key,value))
+        import time
+        global registration_attempt
+        _log.debug("_register_node_cb:\n\tkey={}\n\tvalue={}\n\tattempt={}".format(key,value, registration_attempt))
         if value:
             nbr = len(value)
             #For loadbalanding of authorization server, randomly select
@@ -108,8 +119,14 @@ class Authorization(object):
             rand = random.randint(0, nbr-1)
             self.authz_server_id = value[rand]
             self.register_node_external()
-        else:
-            _log.error("No authorization server found")
+        elif registration_attempt<10:
+            time_to_sleep = 1+registration_attempt*registration_attempt*registration_attempt
+            _log.error("No authorization server found, try again after sleeping {} seconds".format(time_to_sleep))
+            #Wait for a while and try again
+            time.sleep(time_to_sleep)
+            registration_attempt = registration_attempt+1
+            self.node.storage.get_index(['external_authorization_server'],
+                                        CalvinCB(self._register_node_cb))
             raise Exception("No athorization server accepting external clients can be found")
 
     def register_node_external(self):
@@ -123,7 +140,7 @@ class Authorization(object):
             "attributes": self.node.attributes.get_indexed_public_with_keys()
         }
         # Create a JSON Web Token signed using the node's Elliptic Curve private key.
-        jwt_request = encode_jwt(payload, self.node.node_name)
+        jwt_request = encode_jwt(payload, self.node)
         # Send registration request to authorization server.
         self.node.proto.authorization_register(self.node.authorization.authz_server_id, 
                                           CalvinCB(self._register_node_external_cb), 
@@ -132,3 +149,5 @@ class Authorization(object):
     def _register_node_external_cb(self, status):
         if not status or status.status != 200:
             _log.error("Node could not be registered for authorization")
+        else:
+            _log.debug("Successfully registered with authorization server")

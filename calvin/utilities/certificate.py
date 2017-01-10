@@ -249,12 +249,20 @@ def new_runtime(name, domain, nodeid=None, security_dir=None):
 
 
 
-def verify_certificate(type, certstring, domain=None):
+def verify_certificate_from_path(type, certpath, domain=None, security_dir=None):
+    try:
+        with open(certpath, 'rb') as fd:
+            certstring = fd.read()
+    except Exception as err:
+        _log.error("Failed to open certificate, err={}".format(err))
+    return verify_certificate(type, certstring, domain, security_dir)
+
+def verify_certificate(type, certstring, domain=None, security_dir=None):
     """Verify certificate using the CA certificate"""
     _log.debug("verify_certificate:: type={}, certstring={}".format(type, certstring))
     #TODO: support of multiple ca-certs
     try:
-        ca_cert_list_str, ca_cert_list_x509, trusted_certs = get_truststore(type, security_dir=None)
+        ca_cert_list_str, ca_cert_list_x509, trusted_certs = get_truststore(type, security_dir=security_dir)
     except Exception as e:
         _log.error("Failed to load trusted certificates: %s" % e)
         raise
@@ -324,7 +332,7 @@ def get_runtime_credentials(my_node_name, security_dir=None):
     private_key = get_private_key(my_node_name,security_dir=security_dir)
     return runtime_cert_chain + private_key
 
-        
+
 def get_certificate(my_node_name, cert_name):
     """Return certificate with name cert_name from disk for runtime my_node_name"""
     # TODO: get certificate from DHT (alternative to getting from disk).
@@ -340,14 +348,39 @@ def get_certificate(my_node_name, cert_name):
             certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstr)
             return certificate
     except Exception:
-        # Check if cert_name is the runtime's own certificate.
-        files = os.listdir(os.path.join(runtime_dir, "mine"))
-        matching = [s for s in files if cert_name in s]
-        with open(os.path.join(runtime_dir, "mine", matching[0]), 'rb') as f:
-            certstr = f.read()
-            verify_certificate(TRUSTSTORE_TRANSPORT, certstr)
-            certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstr)
-            return certificate
+        _log.debug("Certificate could not be found in others folder")
+        try:
+            _log.debug("Look for certificate in mine folder")
+            # Check if cert_name is the runtime's own certificate.
+            files = os.listdir(os.path.join(self.runtime_dir, "mine"))
+            matching = [s for s in files if cert_name in s]
+            with open(os.path.join(self.runtime_dir, "mine", matching[0]), 'rb') as f:
+                certstr = f.read()
+                certificate.verify_certificate(TRUSTSTORE_TRANSPORT, certstr,
+                                               security_dir=self.configuration['RT_default']['security_dir'])
+                self.verify_certificate(TRUSTSTORE_TRANSPORT, certstr)
+                certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstr)
+                return certificate
+        except Exception:
+            _log.debug("Certificate could not be found in mines folder")
+            try:
+                _log.debug("Look for certificate in storage")
+                # Look for certificate in storage
+                self.node.storage.get_index(['node','certificate',self.node_id],
+                                            CalvinCB(self._register_node_cb))
+
+            except Exception:
+                _log.debug("Certificate could not be found in storage")
+                raise
+
+def get_certificate_from_storage_cb(self, key, value):
+    _log.debug("get_certificate_from_storage_cb, \nkey={}\nvalue={}".format(key,value))
+    if value:
+        nbr = len(value)
+    else:
+        _log.error("The certificate can not be found")
+        raise Exception("The certificate can not be found")
+
 
 
 def get_private_key(node_name,security_dir=None):
@@ -425,8 +458,28 @@ def get_own_cert_name(node_name, security_dir=None):
     runtime_dir = get_own_credentials_path(node_name, security_dir=security_dir)
     return os.path.splitext(os.listdir(os.path.join(runtime_dir, "mine"))[0])[0]
 
+def get_public_key_from_certpath(certpath):
+    try:
+        with open(certpath, 'rb') as fd:
+            certstring = fd.read()
+    except Exception as err:
+        _log.debug("Certificate path {} cannot be opened, err={}".format(certpath, err))
+    try:
+        return get_public_key_from_certstr(certstring)
+    except Exception as err:
+        _log.debug("Error when trying to extract public key, err={}".format(err))
+
+def get_public_key_from_certstr(certstring):
+    certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstring)
+
+    return get_public_key(certificate)
+
 def get_public_key(certificate):
-    """Return the public key from certificate"""
+    """
+    Return the public key from certificate
+    certificate: certificate as a PEM formatted string
+    """
+    _log.info("get_public_key:\n\tcertificate={}".format(certificate))
     cert_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
     cert = load_pem_x509_certificate(cert_pem, default_backend())
     return cert.public_key()
@@ -506,40 +559,8 @@ def store_trusted_root_cert(cert_file, trusted_root, security_dir=None):
     return
 
 
-def store_cert(type, node_name, cert_id=None, certstring=None, certpath=None, security_dir=None):
-    """
-    Store the signed runtime certificate
-    in the "mine" folder
-    """
-    _log.debug("store_cert")
-    if certpath:
-        with open(certpath, 'r') as cert_fd:
-            certdata = cert_fd.read()
-    elif certstring:
-        certdata=certstring
-    commonName = cert_CN(certdata)
-    runtime_dir = get_own_credentials_path(node_name, security_dir=security_dir)
-    try:
-        certx509 = load_certdata(certdata)
-        subject = certx509.get_subject()
-        fingerprint = certx509.digest("sha256")
-        id = cert_id if not None else fingerprint.replace(":", "")[-40:]
-        filename = "{}.pem".format(id)
-        if type not in ["mine","others"]:
-            _log.error("type not supported")
-            raise Exception("type not supported")
-        storepath = os.path.join(runtime_dir, type, filename)
-        _log.debug("Store signed cert as %s" % storepath)
-        if certpath:
-            shutil.copy(certpath, storepath)
-        elif certstring:
-            with open(storepath, 'w') as cert_fd:
-                cert_fd.write(certdata)
-    except (Exception), err:
-        _log.exception("Storing signed cert failed")
-        raise Exception("Storing signed cert failed")
-    return storepath
 
+#TODO: to be deleted, dependencies in secure dht that should be removed
 def store_own_cert(certstring=None, certpath=None, security_dir=None):
     """
     Store the signed runtime certificate
@@ -572,19 +593,6 @@ def store_own_cert(certstring=None, certpath=None, security_dir=None):
         raise Exception("Storing signed cert failed")
     return
 
-def store_others_cert(node_name, id, certstring=None, certpath=None):
-    _log.debug("store_others_cert, node_name={}".format(node_name))
-    return store_cert("others", node_name, id, certstring=certstring, certpath=certpath)
-#    name_dir = get_own_credentials_path(node_name)
-#    _log.debug("name_dir:{}".format(name_dir))
-#    file_path = os.path.join(name_dir, "others", "{}.pem".format(id) )
-#    _log.debug("store others cert as:{}".format(file_path))
-#    if certstring:
-#        with open(file_path.format(id), 'w') as file:
-#            file.write(certString)
-#            file.close()
-#    elif certpath:
-#        os.util.copy(certpath, file_path)
 
 
 def get_security_credentials_path(security_dir=None):

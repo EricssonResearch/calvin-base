@@ -54,7 +54,7 @@ class Authentication(object):
 
     def decode_request(self, data):
         """Decode the JSON Web Token in the data."""
-        return decode_jwt(data["jwt"], data["cert_name"], self.node.node_name, self.node.id)
+        return decode_jwt(data["jwt"], data["cert_name"], self.node)
 
     def encode_response(self, request, response, audience=None):
         """Encode the response to the request as a JSON Web Token."""
@@ -68,6 +68,6 @@ class Authentication(object):
         if "sub" in request:
             jwt_payload["sub"] = request["sub"]
         # Create a JSON Web Token signed using the authentication server's private key.
-        return encode_jwt(jwt_payload, self.node.node_name)
+        return encode_jwt(jwt_payload, self.node)
 
 

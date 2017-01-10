@@ -1,6 +1,6 @@
 {
 	"id": "policy7",
-	"description": "Security policy for 'David' for all possible actor signers",
+	"description": "Security policy for 'David' for all possible actor signers for testNode4",
 	"rule_combining": "permit_overrides",
 	"target": {
 		"subject": {
@@ -19,8 +19,8 @@
 				}
 			},
 			"condition": {
-				"function": "not_equal",
-				"attributes": ["attr:resource:address.street", "otherStreet"]
+				"function": "equal",
+				"attributes": ["attr:resource:node_name.name", "testNode4"]
 			}
 		}
 	]

@@ -305,10 +305,10 @@ def runtime_certificate(rt_attributes):
                 ca_control_uri = _conf.get('security','certificate_authority_control_uri')
                 ca_control_uris = []
                 if ca_control_uri:
-                    _log.info("CA control_uri in config={}".format(ca_control_uri))
+                    _log.debug("CA control_uri in config={}".format(ca_control_uri))
                     ca_control_uris.append(ca_control_uri)
                 else:
-                    _log.error("Find CA via SSDP")
+                    _log.debug("Find CA via SSDP")
                     responses = discover()
                     for response in responses:
                         cmd, headers = parse_http_response(response)
@@ -326,15 +326,16 @@ def runtime_certificate(rt_attributes):
                 i=0
                 while not cert_available and i<len(ca_control_uris):
                     certstr=None
-                    #Repeatedly (maximum 5 attempts)send CSR to CA until a certificate is returned (this to remove the requirement of the CA 
+                    #Repeatedly (maximum 10 attempts) send CSR to CA until a certificate is returned (this to remove the requirement of the CA 
                     #node to be be the first node to start)
                     j=0
-                    while not certstr and j<5:
+                    while not certstr and j<10:
                         try:
                             certstr = request_handler.sign_csr_request(ca_control_uris[i], rsa_encrypted_csr)['certificate']
                         except requests.exceptions.RequestException as err:
-                            _log.debug("RequestException, CSR not accepted or CA not up and running yet, sleep 60 seconds and try again, err={}".format(err))
-                            time.sleep(10+j*30)
+                            time_to_sleep = 1 + j*j*j
+                            _log.debug("RequestException, CSR not accepted or CA not up and running yet, sleep {} seconds and try again, err={}".format(time_to_sleep, err))
+                            time.sleep(time_to_sleep)
                             j=j+1
                             pass
                         else:

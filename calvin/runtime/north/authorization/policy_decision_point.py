@@ -90,7 +90,7 @@ class PolicyDecisionPoint(object):
             ]
         }
         """
-        _log.info("Authorization request received: %s" % request)
+        _log.info("Authorization request received:\n\t request={}\n\tcallback={}".format(request, callback))
         # Create a new PolicyInformationPoint instance for every request.
         pip = PolicyInformationPoint(self.node, request)
         try:
@@ -102,6 +102,7 @@ class PolicyDecisionPoint(object):
         # Wait for PolicyInformationPoint to be ready, then continue with authorization.
 
     def _authorize_cont(self, request, pip, callback):
+        _log.debug("_authorize_cont: \n\trequest={}\n\tpip={}\n\tcallback={}".format(request, pip, callback))
         if "resource" in request and "node_id" in request["resource"]:
             try:
                 node_id = request["resource"]["node_id"]
@@ -210,7 +211,7 @@ class PolicyDecisionPoint(object):
                 policy = policies[policy_id]
                 # Check if policy target matches (policy without target matches everything).
                 if "target" not in policy or self.target_matches(policy["target"], request, pip):
-                    _log.debug("combined_policy_decision, target matches:\n---request={}\n---policy={}".format(request, policy))
+                    _log.debug("combined_policy_decision, target matches:\n\trequest={}\n\tpolicy={}".format(request, policy))
                     # Get a policy decision if target matches.
                     decision, obligations = self.policy_decision(policy, request, pip)
                     if ((decision == "permit" and not obligations and self.config["policy_combining"] == "permit_overrides") or 
@@ -228,7 +229,7 @@ class PolicyDecisionPoint(object):
                     _log.debug("combined_policy_decision At least one policy_decision not not_applicable, deny_overrides or policy_obligations, so let's permit")
                     return ("permit", policy_obligations)
                 else:
-                    _log.debug("combined_policy_decision  At least one policy_decision not not_applicable, permit_overrides or not policy_obligations, so let's deny:\n---policy_decisions={}".format(policy_decisions))
+                    _log.debug("combined_policy_decision  At least one policy_decision not not_applicable, permit_overrides or not policy_obligations, so let's deny:\n\tpolicy_decisions={}".format(policy_decisions))
                     return ("deny", [])
             else:
                 _log.debug("combined_policy_decision  All policy_decision not_applicable,  so let's deny")
@@ -256,7 +257,7 @@ class PolicyDecisionPoint(object):
                         # Try to fetch missing attribute from Policy Information Point (PIP).
                         request_value = pip.get_attribute_value(attribute_type, attribute)
                     except Exception:
-                        _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (attribute_type, attribute))
+                        _log.debug("Attribute not found: %s %s" % (attribute_type, attribute))
                         return False  # Or 'indeterminate' (if MustBePresent is True and none of the other targets return False)?
                 # Accept both single object and lists by turning single objects into a list.
                 if not isinstance(request_value, list):
@@ -269,11 +270,11 @@ class PolicyDecisionPoint(object):
                     # Regular expressions are allowed for strings in policies 
                     # (re.match checks for a match at the beginning of the string, $ marks the end of the string).
                     if not any([re.match(r+'$', x) for r in policy_value for x in request_value]):
-                        _log.debug("PolicyDecisionPoint: Not matching: %s %s %s" % (attribute_type, attribute, policy_value))
+                        _log.debug("Not matching: %s %s %s" % (attribute_type, attribute, policy_value))
                         return False
                 except TypeError:  # If the value is not a string
                     if set(request_value).isdisjoint(policy_value):
-                        _log.debug("PolicyDecisionPoint: Not matching: %s %s %s" % (attribute_type, attribute, policy_value))
+                        _log.debug("Not matching: %s %s %s" % (attribute_type, attribute, policy_value))
                         return False
         # True is returned if every attribute in the policy target matches the corresponding request attribute.
         return True
@@ -303,13 +304,13 @@ class PolicyDecisionPoint(object):
             return ("indeterminate", [])
         if not all(x == "not_applicable" for x in rule_decisions):
             if policy["rule_combining"] == "deny_overrides" or rule_obligations:
-                _log.debug("atleast on rule_decision not not_applicable, deny_overrides or rule_obligations, so let's permit\n---policy={}---request={}".format(policy, request))
+                _log.debug("At least on rule_decision not not_applicable, deny_overrides or rule_obligations, so let's permit\n\tpolicy={}\n\trequest={}".format(policy, request))
                 return ("permit", rule_obligations)
             else:
-                _log.debug("Atleast on rule_decision not not_applicable, permit_overrides or not rule_obligations, so let's deny\n---policy={}---request={}".format(policy, request))
+                _log.debug("At least on rule_decision not not_applicable, permit_overrides or not rule_obligations, so let's deny\n\tpolicy={}\n\trequest={}".format(policy, request))
                 return ("deny", [])
         else:
-            _log.debug("All rule_decisions not_applicable, so let's deny\n---policy={}---request={}".format(policy, request))
+            _log.debug("All rule_decisions not_applicable, so let's deny\n\tpolicy={}\n\trequest={}".format(policy, request))
             return ("not_applicable", [])
 
     def rule_decision(self, rule, request, pip):
@@ -336,9 +337,9 @@ class PolicyDecisionPoint(object):
                 return ("indeterminate", [])
         else:
             # If no condition in the rule, return the rule effect directly.
-            _log.debug("rule_decision No condition in rule, return effect directly\n---rule effect={}\n---rule obligations={}".format(rule["effect"], rule.get("obligations", [])))
+            _log.debug("rule_decision No condition in rule, return effect directly\n\trule id={}\n\trule effect={}\n\trule obligations={}".format(rule["id"],rule["effect"], rule.get("obligations", [])))
             return (rule["effect"], rule.get("obligations", []))
-        
+
     def evaluate_function(self, func, args, request, pip):
         """
         Return result of function func with arguments args.
@@ -361,7 +362,7 @@ class PolicyDecisionPoint(object):
                             # Try to fetch missing attribute from Policy Information Point (PIP).
                             args[index] = pip.get_attribute_value(path[1], path[2])
                         except Exception:
-                            _log.debug("PolicyDecisionPoint: Attribute not found: %s %s" % (path[1], path[2]))
+                            _log.debug("Attribute not found: %s %s" % (path[1], path[2]))
                             return False
             if func not in ["and", "or"]:
                 if isinstance(args[index], list):
@@ -413,6 +414,7 @@ class PolicyDecisionPoint(object):
         Response contains (node_id, authorization response) for the first match 
         or None if no runtime is found.
         """
+        _log.debug("runtime_search \n\trequest={}\n\truntime_whitelist={}\n\tcallback={}".format(request, runtime_whitelist, callback))
         # TODO: translate subject attributes when crossing domain.
         # Other runtime might have other actor_signer and other requires list.
         forbidden_keys = [("subject", "actor_signer"), ("action", "requires")]
@@ -428,6 +430,7 @@ class PolicyDecisionPoint(object):
         self._runtime_search_authorize(request, possible_nodes, callback)
 
     def _runtime_search_authorize(self, request, possible_nodes, callback, counter=0):
+        _log.debug("_runtime_search_authorize:\n\trequest={}\n\tpossible_nodes={}\n\tcallback={}\n\tcounter={}".format(request, possible_nodes, callback, counter))
         node_id = possible_nodes[counter]
         node_request = request.copy()
         node_request["resource"] = {
@@ -438,6 +441,7 @@ class PolicyDecisionPoint(object):
                                          request=request, possible_nodes=possible_nodes, counter=counter))
 
     def _runtime_search_cont(self, node_id, authz_response, callback, request, possible_nodes, counter):
+        _log.debug("_runtime_search_cont:\n\tnode_id={}\n\tauthz_response={}\n\tcallback={}\n\trequest={}\n\tpossible_nodes={}\n\tcounter={}".format(node_id, authz_response, callback, request, possible_nodes, counter))
         if authz_response["decision"] == "permit":
             valid = True
             if authz_response.get("obligations", []):
@@ -460,4 +464,5 @@ class PolicyDecisionPoint(object):
             self._runtime_search_authorize(request, possible_nodes, callback, counter)
             return
         else:
+            _log.info("Did not find any runtime where actor is allowed to execute")
             callback(search_result=None)
