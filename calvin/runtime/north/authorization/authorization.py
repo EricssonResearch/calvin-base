@@ -127,6 +127,7 @@ class Authorization(object):
             registration_attempt = registration_attempt+1
             self.node.storage.get_index(['external_authorization_server'],
                                         CalvinCB(self._register_node_cb))
+        else:
             raise Exception("No athorization server accepting external clients can be found")
 
     def register_node_external(self):

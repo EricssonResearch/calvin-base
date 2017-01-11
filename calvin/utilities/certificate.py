@@ -107,10 +107,9 @@ def get_cert_data(certstring=None, certpath=None):
         try:
             with open(certpath, 'r') as cert_fd:
                 certdata = cert_fd.read()
-        except:
-            errormsg = "Error opening " \
-                       "certificate file. {}".format(stderr)
-            raise IOError(errormsg)
+        except Exception as err:
+            _log.error("Error opening certificate file, err= {}".format(err))
+            raise IOError(err)
     elif certstring:
         certdata=certstring
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certdata)

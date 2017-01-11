@@ -232,7 +232,8 @@ class CA():
                                         force=False,
                                         readonly=False)
             except:
-                _log.error("creation of new CA credentials failed")
+                _log.error("Creation of new CA credentials failed")
+                raise
             print "Made new configuration at " \
                   "{}".format(self.configfile)
             self.cert_enrollment_update_db_file()
@@ -242,6 +243,7 @@ class CA():
         Generate keys, files and certificate
         for the new CA
         """
+        from os import urandom
         _log.debug("new_ca_credentials")
         outpath = self.configuration["CA_default"]["new_certs_dir"]
         private = self.configuration["CA_default"]["private_dir"]
@@ -271,20 +273,21 @@ class CA():
         serialfd = open(self.configuration["CA_default"]["serial"], 'w')
         serialfd.write("1000")
         serialfd.close()
-        _log.debug("new_ca_credentials")
 
         organization = self.domain
         commonname = self.commonName
         subject = "/O={}/CN={}".format(organization, commonname)
-
-        log = subprocess.Popen(["openssl", "rand",
-                                "-out", password_file, "20"],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-        stdout, stderr = log.communicate()
-        if log.returncode != 0:
-            raise IOError(stderr)
-
+        # Generate a password for protection of the private key,
+        # store it in the password file
+        password = self.generate_password(20)
+        _log.info("Hakan CA password={}".format(password))
+        try:
+            with open(password_file,'w') as fd:
+                fd.write(password)
+        except Exception as err:
+            _log.err("Failed to write CA password to file")
+            raise
+        # Generate keys and CA certificate
         log = subprocess.Popen(["openssl", "req",
                                 "-new",
                                 "-config", self.configfile,
@@ -467,8 +470,6 @@ class CA():
         #CSRs during enrollment, different key pairs should be
         #used
 
-        import json
-        import base64
         if not encrypted_enrollment_request and encrypted_enrollment_request_path:
             try:
                 with open(encrypted_enrollment_request_path, 'r') as fd:
@@ -757,21 +758,22 @@ class CA():
 
 
 
+    def generate_password(self, length):
+        from os import urandom
+        _log.debug("generate_password, length={}".format(length))
+        if not isinstance(length, int) or length < 8:
+            raise ValueError("Password must be longer")
+
+        chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!#%&/()=?[]{}"
+        return "".join(chars[ord(c) % len(chars)] for c in urandom(length))
 
 
     def cert_enrollment_add_new_runtime(self, node_name):
-        def generate_temp_password(length):
-            if not isinstance(length, int) or length < 8:
-                raise ValueError("temp password must have positive length")
-
-            chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-            from os import urandom
-            return "".join(chars[ord(c) % len(chars)] for c in urandom(length))
 
         _log.debug("add_new_runtime_enrollment_password for node_name={}".format(node_name))
         if not self.enrollment_challenge_db:
             self.cert_enrollment_load_db_file()
-        random_password = generate_temp_password(18)
+        random_password = self.generate_password(20)
         self.enrollment_challenge_db[node_name] = {'password':random_password}
         self.cert_enrollment_update_db_file()
         return random_password
