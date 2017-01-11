@@ -101,11 +101,8 @@ class ActorManager(object):
     def _new_actor(self, actor_type, class_=None, actor_id=None, security=None, access_decision=None, shadow_actor=False):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         if security_enabled() and not access_decision:
-            try:
-                _log.debug("Security policy check for actor failed")
-                raise Exception("Security policy check for actor failed")
-            except:
-                shadow_actor = True
+            _log.debug("Security policy check for actor failed")
+            shadow_actor = True
         if shadow_actor:
             class_ = ShadowActor
         if class_ is None:
