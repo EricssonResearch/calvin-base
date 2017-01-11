@@ -909,6 +909,28 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
 
     @pytest.mark.slow
+    def testDeployEmptySimple(self):
+        _log.analyze("TESTRUN", "+", {})
+        self.verify_storage()
+        
+        with open(test_script_dir+"test_deploy1.calvin", 'r') as app_file:
+            script = app_file.read()
+        result = {}
+        try:
+            # Empty requirements
+            result = request_handler.deploy_application(rt1, name="test_deploy1", script=script, deploy_info={'requirements': {}})
+        except:
+            _log.exception("Test deploy failed")
+            raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % "test_deploy1")
+        time.sleep(2)
+        actors = [request_handler.get_actors(rt1), request_handler.get_actors(rt2), request_handler.get_actors(rt3)]
+        # src -> rt2 or rt3, sum & snk -> rt1, rt2 or rt3
+        assert result['actor_map']['test_deploy1:src'] in (actors[1] + actors[2])
+        assert result['actor_map']['test_deploy1:sum'] in (actors[0] + actors[1] + actors[2])
+        assert result['actor_map']['test_deploy1:snk'] in (actors[0] + actors[1] + actors[2])
+        request_handler.delete_application(rt1, result['application_id'])
+
+    @pytest.mark.slow
     def testDeploy3NodesProxyStorageShadow(self):
         _log.analyze("TESTRUN", "+", {})
         global rt1

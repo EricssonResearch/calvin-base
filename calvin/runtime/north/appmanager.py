@@ -25,6 +25,7 @@ from calvin.utilities import calvinuuid
 from calvin.actorstore.store import ActorStore, GlobalStore
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.security import Security
+from calvin.utilities.requirement_matching import ReqMatch
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -375,41 +376,6 @@ class AppManager(object):
 
     ### DEPLOYMENT REQUIREMENTS ###
 
-    def collect_placement(self, it, app):
-        _log.analyze(self._node.id, "+ BEGIN", {}, tb=True)
-        if app._collect_placement_cb:
-            app._collect_placement_cb.cancel()
-            app._collect_placement_cb = None
-        try:
-            while True:
-                _log.analyze(self._node.id, "+ ITER", {})
-                actor_node_id = it.next()
-                app._collect_placement_last_value = app._collect_placement_counter
-                app.actor_placement.setdefault(actor_node_id[0], set([])).add(actor_node_id[1])
-        except dynops.PauseIteration:
-            _log.analyze(self._node.id, "+ PAUSED",
-                    {'counter': app._collect_placement_counter,
-                     'last_value': app._collect_placement_last_value,
-                     'diff': app._collect_placement_counter - app._collect_placement_last_value})
-            # FIXME the dynops should be self triggering, but is not...
-            # This is a temporary fix by keep trying
-            delay = 0.0 if app._collect_placement_counter > app._collect_placement_last_value + 100 else 0.2
-            app._collect_placement_counter += 1
-            app._collect_placement_cb = async.DelayedCall(delay, self.collect_placement, it=it,
-                                                                    app=app)
-            return
-        except StopIteration:
-            if not app.done_final:
-                app.done_final = True
-                # all possible actor placements derived
-                _log.analyze(self._node.id, "+ ALL", {})
-                self._app_requirements(app)
-                _log.analyze(self._node.id, "+ END", {})
-        except:
-            _log.exception("appmanager:collect_placement")
-
-    ### DEPLOYMENT ###
-
     def execute_requirements(self, application_id, cb):
         """ Build dynops iterator to collect all possible placements,
             then trigger migration.
@@ -425,93 +391,41 @@ class AppManager(object):
             return
         _log.debug("execute_requirements(app=%s)" % (self.applications[application_id],))
 
-        # TODO extract groups
-
         if hasattr(app, '_org_cb'):
             # application deployment requirements ongoing, abort
             cb(status=response.CalvinResponse(False))
             return
         app._org_cb = cb
-        app.done_final = False
-        app._collect_placement_counter = 0
-        app._collect_placement_last_value = 0
-        actor_placement_it = dynops.List()
         app.actor_placement = {}  # Clean placement slate
         _log.analyze(self._node.id, "+ APP REQ", {}, tb=True)
-        for actor_id in app.get_actors():
+        actor_ids = app.get_actors()
+        app.actor_placement_nbr = len(actor_ids)
+        for actor_id in actor_ids:
             if actor_id not in self._node.am.actors.keys():
                 _log.debug("Only apply requirements to local actors")
+                app.actor_placement[actor_id] = None
                 continue
             _log.analyze(self._node.id, "+ ACTOR REQ", {'actor_id': actor_id}, tb=True)
-            actor_req = self.actor_requirements(app, actor_id).set_name("Actor"+actor_id)
-            actor_placement_it.append((actor_id, actor_req), trigger_iter = actor_req)
+            r = ReqMatch(self._node,
+                         callback=CalvinCB(self.collect_placement, app=app, actor_id=actor_id))
+            r.match_for_actor(actor_id)
             _log.analyze(self._node.id, "+ ACTOR REQ DONE", {'actor_id': actor_id}, tb=True)
-        actor_placement_it.final()
-        collect_iter = dynops.Collect(actor_placement_it)
-        collect_iter.set_cb(self.collect_placement, collect_iter, app)
-        self.collect_placement(collect_iter, app)
         _log.analyze(self._node.id, "+ DONE", {'application_id': application_id}, tb=True)
 
-    def actor_requirements(self, app, actor_id):
-        if actor_id not in self._node.am.list_actors():
-            _log.error("Currently we ignore deployment requirements for actor not local to the node, %s" % actor_id)
+    def collect_placement(self, app, actor_id, possible_placements, status):
+        _log.analyze(self._node.id, "+ BEGIN", {}, tb=True)
+        # TODO look at status
+        app.actor_placement[actor_id] = possible_placements
+        if len(app.actor_placement) < app.actor_placement_nbr:
             return
-
-        actor = self._node.am.actors[actor_id]
-        _log.debug("actor_requirements(actor_id=%s), reqs=%s" % (actor_id, actor.requirements_get()))
-        intersection_iters = []
-        difference_iters = []
-        for req in actor.requirements_get():
-            if req['op']=='union_group':
-                # Special operation that first forms a union of a requirement's list response set
-                # To allow alternative requirements options
-                intersection_iters.append(self._union_requirements(req=req,
-                                                    app=app,
-                                                    actor_id=actor_id,
-                                                    component=actor.component_members()).set_name("SActor"+actor_id))
-            else:
-                try:
-                    _log.analyze(self._node.id, "+ REQ OP", {'op': req['op'], 'kwargs': req['kwargs']})
-                    it = req_operations[req['op']].req_op(self._node,
-                                            actor_id=actor_id,
-                                            component=actor.component_members(),
-                                            **req['kwargs']).set_name(req['op']+",SActor"+actor_id)
-                    if req['type']=='+':
-                        intersection_iters.append(it)
-                    elif req['type']=='-':
-                        difference_iters.append(it)
-                    else:
-                        _log.error("actor_requirements unknown req type %s for %s!!!" % (req['type'], actor_id),
-                                   exc_info=True)
-                except:
-                    _log.error("actor_requirements one req failed for %s!!!" % actor_id, exc_info=True)
-                    # FIXME how to handle failed requirements, now we drop it
-        return_iter = dynops.Intersection(*intersection_iters).set_name("SActor"+actor_id)
-        if difference_iters:
-            return_iter = dynops.Difference(return_iter, *difference_iters).set_name("SActor"+actor_id)
-        return return_iter
-
-    def _union_requirements(self, **state):
-        union_iters = []
-        for union_req in state['req']['requirements']:
-            try:
-                union_iters.append(req_operations[union_req['op']].req_op(self._node,
-                                        actor_id=state['actor_id'],
-                                        component=state['component'],
-                                        **union_req['kwargs']).set_name(union_req['op']+",UActor"+state['actor_id']))
-            except:
-                _log.error("union_requirements one req failed for %s!!!" % state['actor_id'], exc_info=True)
-        return dynops.Union(*union_iters)
-
-    def _app_requirements(self, app):
-        _log.debug("_app_requirements(app=%s)" % (app,))
+        # all possible actor placements derived
         _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': app.actor_placement}, tb=True)
         status = response.CalvinResponse(True)
-        if any([not n for n in app.actor_placement.values()]) or len(app.actors) > len(app.actor_placement):
+        if any([not n for n in app.actor_placement.values()]):
             # At least one actor have no required placement
             # Let them stay on this node
-            for actor_id in [a for a in app.actors if a not in app.actor_placement]:
-                app.actor_placement[actor_id] = set([self._node.id])
+            app.actor_placement = {actor_id: set([self._node.id]) if placement is None else placement
+                                     for actor_id, placement in app.actor_placement.items()}
             # Status will indicate success, but be different than the normal OK code
             status = response.CalvinResponse(response.CREATED)
             _log.analyze(self._node.id, "+ MISS PLACEMENT", {'app_id': app.id, 'placement': app.actor_placement}, tb=True)

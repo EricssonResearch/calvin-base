@@ -109,7 +109,7 @@ class ReqMatch(object):
 
     def _build_union_match(self, req):
         union_iters = []
-        for union_req in req:
+        for union_req in req['requirements']:
             try:
                 union_iters.append(req_operations[union_req['op']].req_op(self.node,
                                         actor_id=self.actor_id,
