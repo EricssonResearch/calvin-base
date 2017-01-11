@@ -64,9 +64,9 @@ class FanoutTaggedFIFO(object):
         if self.reader_turn is None:
             # Populate with alternating values up to N
             self.reader_turn = [p for n in range(self.N) for p in range(self.nbr_peers)][:self.N]
-        print "_set_turn(): "
-        print "    self._update_turn:", self._update_turn
-        print "    self.reader_turn:", self.reader_turn
+        # print "_set_turn(): "
+        # print "    self._update_turn:", self._update_turn
+        # print "    self.reader_turn:", self.reader_turn
 
     def _reset_turn(self):
         # Populate with alternating values up to N
@@ -79,14 +79,14 @@ class FanoutTaggedFIFO(object):
         prev = self.reader_turn[(self.turn_pos - 1) % self.N]
         self.reader_turn[self.turn_pos % self.N] = (prev + 1) % self.nbr_peers
         self.turn_pos += 1
-        print "_ordered():"
-        print "    reader:", reader
-        print "    self.reader_turn:", self.reader_turn
+        # print "_ordered():"
+        # print "    reader:", reader
+        # print "    self.reader_turn:", self.reader_turn
         return reader
 
     def __str__(self):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
-        return "Tokens: %s\nw:%s, r:%s, tr:%s" % (fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
+        return "Queue: %s\nTokens: %s\nw:%s, r:%s, tr:%s" % (self._type, fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
 
     def _state(self, remap=None):
         if remap is None:
@@ -131,9 +131,23 @@ class FanoutTaggedFIFO(object):
             self.nbr_peers = len(self.readers)
         self._set_turn()
 
+    def _set_port_order(self, order):
+        if not set(order) == set(self.readers):
+            # print order, self.readers
+            raise Exception("Illegal port order list")
+        self.readers = order
+
     @property
     def queue_type(self):
         return self._type
+
+    def set_config(self, config):
+        """
+        Set additional config information on the port.
+        The 'config' parameter is a dictionary with settings.
+        """
+        if 'port-order' in config:
+            self._set_port_order(config['port-order'])
 
     def add_writer(self, writer, properties):
         pass
@@ -144,9 +158,9 @@ class FanoutTaggedFIFO(object):
     def add_reader(self, reader, properties):
         if not isinstance(reader, basestring):
             raise Exception('Not a string: %s' % reader)
-        print "add_reader():"
-        print "    reader:", reader
-        print "    properties:", properties
+        # print "add_reader():"
+        # print "    reader:", reader
+        # print "    properties:", properties
 
         if reader not in self.readers:
             self.read_pos[reader] = 0
@@ -154,7 +168,7 @@ class FanoutTaggedFIFO(object):
             self.tentative_read_pos[reader] = 0
             self.fifo.setdefault(reader, [Token(0)] * self.N)
             self.readers.append(reader)
-            self.readers.sort()
+            # self.readers.sort()
         if len(self.readers) > self.nbr_peers:
             _log.debug("ADD_READER %s" % reader)
             self.nbr_peers = len(self.readers)
