@@ -39,6 +39,13 @@ port_property_data = {
                 'direction': "out",
                 'multipeer': True
             },
+            'dispatch-mapped': {
+                'doc': """
+                    Dispatch tokens to multiple peers (TESTING).
+                    """,
+                'direction': "out",
+                'multipeer': True
+            },
             'collect-unordered': {
                 'doc': """
                     Collect tokens from multiple peers, actions see
