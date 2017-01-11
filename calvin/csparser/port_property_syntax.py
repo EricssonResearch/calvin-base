@@ -32,7 +32,7 @@ port_property_data = {
                 'doc': """Route each tokens to one peer based on queue length.""",
                 'direction': "out"
             },
-            'dispatch-tagged': {
+            'dispatch-ordered': {
                 'doc': """
                     Dispatch tokens to multiple peers (TESTING).
                     """,

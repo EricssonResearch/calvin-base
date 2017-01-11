@@ -22,7 +22,7 @@ class DealternateN(Actor):
     Inputs:
       token: Any token
     Outputs:
-      token(routing="dispatch-tagged") : Dispatching tokens to connected ports in order
+      token(routing="dispatch-ordered") : Dispatching tokens to connected ports in order
     """
 
     @manage(['order', 'order_id', 'next'])

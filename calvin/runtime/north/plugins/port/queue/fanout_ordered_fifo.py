@@ -23,7 +23,7 @@ from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
 
-class FanoutTaggedFIFO(object):
+class FanoutOrderedFIFO(object):
 
     """
     A FIFO which route tokens based on a schedule to peers
@@ -33,7 +33,7 @@ class FanoutTaggedFIFO(object):
     """
 
     def __init__(self, port_properties, peer_port_properties):
-        super(FanoutTaggedFIFO, self).__init__()
+        super(FanoutOrderedFIFO, self).__init__()
         # Set default queue length to 4 if not specified
         length = port_properties.get('queue_length', 4)
         # Compensate length for FIFO having an unused slot
