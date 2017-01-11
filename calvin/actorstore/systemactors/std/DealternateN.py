@@ -25,27 +25,15 @@ class DealternateN(Actor):
       token(routing="dispatch-ordered") : Dispatching tokens to connected ports in order
     """
 
-    @manage(['order', 'order_id', 'next'])
+    @manage(['order'])
     def init(self, order):
         self.order = order
 
     def will_start(self):
         self.outports['token'].set_config({'port-order':self.order})
-        # port_to_id = {}
-        # endpoints = self.outports['token'].endpoints
-        # print "ZZZZZZZZ {}".format(self.outports['token'].queue)
-        # for ep in endpoints:
-        #     _, actor = ep.peer_port.owner._name.rsplit(':', 1)
-        #     print "XXXXXXXX {} {} {}".format(actor, ep.peer_port.name, ep.peer_port.id)
-        # #     port_to_id["{}.{}".format(actor, ep.peer_port.name)] = ep.peer_port.id
-        # # self.order_id = [port_to_id[p] for p in self.order]
-        # # self.order = None
 
     @condition(['token'], ['token'])
     def dispatch(self, tok):
-        # retval = collected[self.order_id[self.next]]
-        # self.next = (self.next + 1) % len(self.order_id)
-        # retval = tok
         return ActionResult(production=(tok, ))
 
     action_priority = (dispatch,)
