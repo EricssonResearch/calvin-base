@@ -21,7 +21,7 @@ _MODULES = {'fanout_fifo': 'FanoutFIFO',
             'collect_unordered': 'CollectUnordered',
             'collect_synced': 'CollectSynced',
             'collect_any': 'CollectAny',
-            'fanout_tagged_fifo': 'FanoutTaggedFIFO'}
+            'fanout_ordered_fifo': 'FanoutOrderedFIFO'}
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -41,8 +41,8 @@ def get(port, peer_port=None, peer_port_meta=None):
             routing_prop = routing_prop[0]
         if 'round-robin' == routing_prop or 'random' == routing_prop:
             selected_queue = "scheduled_fifo"
-        elif 'dispatch-tagged' == routing_prop:
-            selected_queue = 'fanout_tagged_fifo'
+        elif 'dispatch-ordered' == routing_prop:
+            selected_queue = 'fanout_ordered_fifo'
         elif 'balanced' == routing_prop:
             selected_queue = "balanced_queue"
         elif routing_prop in ['collect-unordered', 'collect-tagged']:
