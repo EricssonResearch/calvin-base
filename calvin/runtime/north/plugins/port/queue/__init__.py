@@ -20,7 +20,9 @@ _MODULES = {'fanout_fifo': 'FanoutFIFO',
             'balanced_queue': 'BalancedQueue',
             'collect_unordered': 'CollectUnordered',
             'collect_synced': 'CollectSynced',
-            'collect_any': 'CollectAny'}
+            'collect_any': 'CollectAny',
+            'fanout_tagged_fifo': 'FanoutTaggedFIFO'}
+
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -32,13 +34,15 @@ for module in _MODULES.keys():
 
 def get(port, peer_port=None, peer_port_meta=None):
     #TODO implement more logic based on port and peer port properties
-    
+
     if 'routing' in port.properties:
         routing_prop = port.properties['routing']
         if isinstance(routing_prop, (tuple, list)):
             routing_prop = routing_prop[0]
         if 'round-robin' == routing_prop or 'random' == routing_prop:
             selected_queue = "scheduled_fifo"
+        elif 'dispatch-tagged' == routing_prop:
+            selected_queue = 'fanout_tagged_fifo'
         elif 'balanced' == routing_prop:
             selected_queue = "balanced_queue"
         elif routing_prop in ['collect-unordered', 'collect-tagged']:
