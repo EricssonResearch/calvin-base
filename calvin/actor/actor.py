@@ -23,8 +23,8 @@ from calvin.actor import actorport
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
-from calvin.runtime.north import calvincontrol
-from calvin.runtime.north import metering
+# from calvin.runtime.north import calvincontrol
+# from calvin.runtime.north import metering
 from calvin.runtime.north.replicationmanager import ReplicationData
 import calvin.requests.calvinresponse as response
 from calvin.runtime.south.plugins.async import async
@@ -361,8 +361,8 @@ class Actor(object):
         self._managed = set(('_id', '_name', '_deployment_requirements', '_signature', '_subject_attributes', '_migration_info', "_port_property_capabilities", "_replication_data"))
         self._calvinsys = None
         self._using = {}
-        self.control = calvincontrol.get_calvincontrol()
-        self.metering = metering.get_metering()
+        # self.control = calvincontrol.get_calvincontrol()
+        # self.metering = metering.get_metering()
         self._migration_info = None
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._last_time_warning = 0.0
@@ -383,7 +383,7 @@ class Actor(object):
                              allow_invalid_transitions=allow_invalid_transitions,
                              disable_transition_checks=disable_transition_checks,
                              disable_state_checks=disable_state_checks)
-        self.metering.add_actor_info(self)
+        # self.metering.add_actor_info(self)
 
     def set_authorization_checks(self, authorization_checks):
         self.authorization_checks = authorization_checks
@@ -527,15 +527,15 @@ class Actor(object):
                 # Action firing should fire the first action that can fire,
                 # hence when fired start from the beginning
                 if action_result.did_fire:
-                    # FIXME: Make this a hook for the runtime to use, don't
-                    #        import and use calvin_control or metering in actor
-                    self.metering.fired(self._id, action_method.__name__)
-                    self.control.log_actor_firing(
-                        self._id,
-                        action_method.__name__,
-                        action_result.tokens_produced,
-                        action_result.tokens_consumed,
-                        action_result.production)
+                    # # FIXME: Make this a hook for the runtime to use, don't
+                    # #        import and use calvin_control or metering in actor
+                    # self.metering.fired(self._id, action_method.__name__)
+                    # self.control.log_actor_firing(
+                    #     self._id,
+                    #     action_method.__name__,
+                    #     action_result.tokens_produced,
+                    #     action_result.tokens_consumed,
+                    #     action_result.production)
                     break
 
             curr_time = time.time()
