@@ -79,8 +79,7 @@ def manage(include=None, exclude=None):
 def condition(action_input=[], action_output=[]):
     """
     Decorator condition specifies the required input data and output space.
-    Both parameters are lists of tuples: (port, #tokens consumed/produced)
-    Optionally, the port spec can be a port only, meaning #tokens is 1.
+    Both parameters are lists of port names
     Return value is an ActionResult object
 
     FIXME:
@@ -90,14 +89,15 @@ def condition(action_input=[], action_output=[]):
       The action fills in tokens_produced and the wrapper uses that info when writing to ports.
     - We can keep the @condition syntax by making the change in the normalize step below.
     """
+    # #
+    # # Normalize argument list (fill in a default repeat of 1 if not stated)
+    # #
     #
-    # Normalize argument list (fill in a default repeat of 1 if not stated)
-    #
-    action_input = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_input]
-    action_output = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_output]
-    contract_output = tuple(n for _, n in action_output)
-    tokens_produced = sum(contract_output)
-    tokens_consumed = sum([n for _, n in action_input])
+    # action_input = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_input]
+    # action_output = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_output]
+    # contract_output = tuple(n for _, n in action_output)
+    tokens_produced = len(action_output)
+    tokens_consumed = len(action_input)
 
     def wrap(action_method):
 
@@ -106,15 +106,11 @@ def condition(action_input=[], action_output=[]):
             #
             # Check if input ports have enough tokens. Note that all([]) evaluates to True
             #
-            input_ok = all(
-                [self.inports[portname].tokens_available(repeat) for (portname, repeat) in action_input]
-            )
+            input_ok = all([self.inports[portname].tokens_available(1) for portname in action_input])
             #
             # Check if output port have enough free token slots
             #
-            output_ok = all(
-                [self.outports[portname].tokens_available(repeat) for (portname, repeat) in action_output]
-            )
+            output_ok = all([self.outports[portname].tokens_available(1) for portname in action_output])
 
             if not input_ok or not output_ok:
                 _log.debug("\t%s.%s Fired:N In:%s, Out:%s, Guard:X" % (self._name, action_method.__name__, "Y" if input_ok else "N", "Y" if output_ok else "N"))
@@ -124,16 +120,13 @@ def condition(action_input=[], action_output=[]):
             #
             args = []
             ex = {}
-            for (portname, repeat) in action_input:
+            for portname in action_input:
                 port = self.inports[portname]
-                tokenlist = []
-                for i in range(repeat):
                     token = port.peek_token()
                     is_exception = isinstance(token, ExceptionToken)
                     if is_exception:
-                        ex.setdefault(portname, []).append(i)
-                    tokenlist.append(token if is_exception else token.value)
-                args.append(tokenlist if len(tokenlist) > 1 else tokenlist[0])
+                    ex.setdefault(portname, []).append(0)
+                args.append(token if is_exception else token.value)
 
             #
             # Check for exceptional conditions
@@ -149,19 +142,13 @@ def condition(action_input=[], action_output=[]):
                 # _log.debug("\t%s.%s Fired:%s In:Y, Out:Y, Guard:%s" % (
                 #     self._name, action_method.__name__, "Y" if action_result.did_fire else "N", guard_str))
 
-            valid_production = False
-            if action_result.did_fire and (len(contract_output) == len(action_result.production)):
-                valid_production = True
-                for repeat, prod in zip(contract_output, action_result.production):
-                    if repeat > 1 and len(prod) != repeat:
-                        valid_production = False
-                        break
+            valid_production = action_result.did_fire and (tokens_produced == len(action_result.production))
 
             if action_result.did_fire and valid_production:
                 #
                 # Commit to the read from the FIFOs
                 #
-                for (portname, _) in action_input:
+                for portname in action_input:
                     try:
                         exhausted = self.inports[portname].peek_commit()
                         if exhausted:
@@ -171,10 +158,9 @@ def condition(action_input=[], action_output=[]):
                 #
                 # Write the results from the action to the output port(s)
                 #
-                for (portname, repeat), retval in zip(action_output, action_result.production):
+                for portname, retval in zip(action_output, action_result.production):
                     port = self.outports[portname]
-                    for data in retval if repeat > 1 else [retval]:
-                        port.write_token(data if isinstance(data, Token) else Token(data))
+                    port.write_token(retval if isinstance(retval, Token) else Token(retval))
                 #
                 # Bookkeeping
                 #
@@ -184,7 +170,7 @@ def condition(action_input=[], action_output=[]):
                 #
                 # cancel the read from the FIFOs
                 #
-                for (portname, _) in action_input:
+                for portname in action_input:
                     self.inports[portname].peek_cancel()
 
             if action_result.did_fire and not valid_production:
