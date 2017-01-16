@@ -122,9 +122,9 @@ def condition(action_input=[], action_output=[]):
             ex = {}
             for portname in action_input:
                 port = self.inports[portname]
-                    token = port.peek_token()
-                    is_exception = isinstance(token, ExceptionToken)
-                    if is_exception:
+                token = port.peek_token()
+                is_exception = isinstance(token, ExceptionToken)
+                if is_exception:
                     ex.setdefault(portname, []).append(0)
                 args.append(token if is_exception else token.value)
 
