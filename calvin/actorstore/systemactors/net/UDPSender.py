@@ -61,8 +61,8 @@ class UDPSender(Actor):
         self.use('calvinsys.network.socketclienthandler', shorthand='socket')
         self.use('calvinsys.native.python-re', shorthand='regexp')
 
+    @guard(lambda self: self.sender)
     @condition(action_input=['data_in'])
-    @guard(lambda self, token: self.sender)
     def send(self, token):
         self.sender.send(token)
         return ActionResult(production=())
@@ -87,21 +87,21 @@ class UDPSender(Actor):
         return status
 
     @condition(action_input=['control_in'])
-    @guard(lambda self, control: control.get('command', '') == 'connect' and not self.sender)
-    def new_connection(self, control):
-        print control
+    def control(self, control):
+        if control.get('command', '') == 'connect' and not self.sender:
+            self._new_connection(control)
+        elif control.get('command', '') == 'disconnect' and self.sender:
+            self._close_connection()
+        return ActionResult()
+
+    def _new_connection(self, control):
         if self.parse_uri(control.get('uri', '')):
             self.connect()
 
-        return ActionResult(production=())
-
-    @condition(action_input=['control_in'])
-    @guard(lambda self, control: control.get('control', '') == 'disconnect' and self.sender)
-    def close_connection(self, control):
+    def _close_connection(self):
         self.sender.disconnect()
         del self.sender
         self.sender = None
-        return ActionResult(production=())
 
-    action_priority = (new_connection, close_connection, send)
+    action_priority = (control, send)
     requires = ['calvinsys.network.socketclienthandler', 'calvinsys.native.python-re', 'calvinsys.native.python-json']

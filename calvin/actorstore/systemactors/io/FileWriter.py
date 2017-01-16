@@ -75,15 +75,15 @@ class FileWriter(Actor):
         self.file = None
         return ActionResult(production=())
 
+    @guard(lambda self: not self.file)
     @condition(action_input=['data'])
-    @guard(lambda self, _: not self.file)
     def open(self, data):
         self.setup()
         self.file.write_line(data)
         return ActionResult(production=())
 
+    @guard(lambda self: self.file)
     @condition(action_input=['data'])
-    @guard(lambda self, _: self.file)
     def write(self, data):
         self.file.write_line(data)
         return ActionResult(production=())

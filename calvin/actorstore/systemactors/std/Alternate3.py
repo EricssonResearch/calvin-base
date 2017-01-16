@@ -32,20 +32,20 @@ class Alternate3(Actor):
     def init(self):
         self.next_port = 1
 
+    @guard(lambda self: self.next_port == 1)
     @condition(['token_1'], ['token'])
-    @guard(lambda self, _: self.next_port == 1)
     def port_1(self, data):
         self.next_port = 2
         return ActionResult(production=(data, ))
 
+    @guard(lambda self: self.next_port == 2)
     @condition(['token_2'], ['token'])
-    @guard(lambda self, _: self.next_port == 2)
     def port_2(self, data):
         self.next_port = 3
         return ActionResult(production=(data, ))
 
+    @guard(lambda self: self.next_port == 3)
     @condition(['token_3'], ['token'])
-    @guard(lambda self, _: self.next_port == 3)
     def port_3(self, data):
         self.next_port = 1
         return ActionResult(production=(data, ))

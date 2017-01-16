@@ -31,28 +31,33 @@ class Deselect(Actor):
     Outputs:
       data  : Token from 'case_true' or 'case_false' port
     """
-    @manage([])
+    @manage(['select'])
     def init(self):
-        pass
+        self.select = None
 
-    @condition(['select', 'case_false'], ['data'])
-    @guard(lambda self, select, data : select == False)
-    def false_action(self, select, data):
-        return ActionResult(production=(data, ))
 
-    @condition(['select', 'case_true'], ['data'])
-    @guard(lambda self, select, data : select == True)
-    def true_action(self, select, data):
-        return ActionResult(production=(data, ))
-
-    @condition(['select', 'case_false'], ['data'])
-    @guard(lambda self, select, data : select not in [True, False])
-    def invalid_select_action(self, select, data):
+    @guard(lambda self: self.select is None)
+    @condition(['select'], [])
+    def select_action(self, select):
+        self.select = select is True
         # Default to false if select value is not true or false
+        return ActionResult()
+
+
+    @guard(lambda self: self.select is False)
+    @condition(['case_false'], ['data'])
+    def false_action(self, data):
+        self.select = None
+        return ActionResult(production=(data, ))
+
+    @guard(lambda self : self.select is True)
+    @condition(['case_true'], ['data'])
+    def true_action(self, data):
+        self.select = None
         return ActionResult(production=(data, ))
 
 
-    action_priority = (false_action, true_action, invalid_select_action)
+    action_priority = (false_action, true_action, select_action)
 
     test_set = [
         {

@@ -74,15 +74,15 @@ class MQTTSubscriber(Actor):
         for topic in self.topics:
             self.subscriber.subscribe(topic)
 
-    @condition()
     @guard(lambda self: self.subscriber.has_message())
+    @condition()
     def consume_message(self):
         topic, msg = self.subscriber.get_message()
         self.message = {"topic": topic, "payload": msg}
         return ActionResult()
 
-    @condition(action_output=['message'])
     @guard(lambda self: self.message is not None)
+    @condition(action_output=['message'])
     def deliver_message(self):
         message = self.message
         self.message = None

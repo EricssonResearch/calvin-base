@@ -49,8 +49,8 @@ class WordCount(Actor):
         self.word_counts[word] = self.word_counts[word] + 1
         return ActionResult()
 
-    @condition(action_output=['out'])
     @guard(lambda self: self.finished is True)
+    @condition(action_output=['out'])
     def output_counts(self):
         self.finished = False
         return ActionResult(production=(self.word_counts,))

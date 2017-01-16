@@ -39,8 +39,8 @@ class Items(Actor):
         self.data = []
         self.has_data = False
 
+    @guard(lambda self: not self.has_data)
     @condition(['list'], [])
-    @guard(lambda self, data: not self.has_data)
     def consume_list(self, data):
         if type(data) is not list:
             self.data = [ExceptionToken()]
@@ -56,8 +56,8 @@ class Items(Actor):
             pass
         return ActionResult()
 
-    @condition([], ['item'])
     @guard(lambda self: self.has_data)
+    @condition([], ['item'])
     def produce_item(self):
         res = self.data.pop(0)
         if not self.data:

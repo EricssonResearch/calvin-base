@@ -38,16 +38,16 @@ class Sequencer(Actor):
         self.token = token
         return ActionResult()
 
-    @condition(action_output=['data_out'])
     @guard(lambda self: self.token is not None)
+    @condition(action_output=['data_out'])
     def send_token(self):
         token = self.token
         self.token = None
         self.eos = True
         return ActionResult(production=(token,))
 
-    @condition(action_output=['data_out'])
     @guard(lambda self: self.eos)
+    @condition(action_output=['data_out'])
     def send_eos(self):
         self.eos = False
         return ActionResult(production=(EOSToken(),))

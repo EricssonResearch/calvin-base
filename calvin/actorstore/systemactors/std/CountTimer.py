@@ -62,8 +62,8 @@ class CountTimer(Actor):
     # The counting action, first 3 use non periodic for testing purpose
     # need guard with triggered() since the actor might be fired for other
     # reasons
-    @condition(action_output=('integer',))
     @guard(timer_trigger_stepwise)
+    @condition(action_output=('integer',))
     def step_no_periodic(self):
         self.timer.ack()
         if self.count == 2:
@@ -77,8 +77,8 @@ class CountTimer(Actor):
     # The counting action, handle periodic timer events hence no need to setup repeatedly
     # need guard with triggered() since the actor might be fired for other
     # reasons
-    @condition(action_output=('integer',))
     @guard(timer_trigger_repeat)
+    @condition(action_output=('integer',))
     def step_periodic(self):
         self.timer.ack()
         self.count += 1
@@ -86,8 +86,8 @@ class CountTimer(Actor):
 
     # The stopping action, need guard with raised() since the actor might be
     # fired for other reasons
-    @condition()
     @guard(timer_trigger_stopped)
+    @condition()
     def stop(self):
         self.timer.ack()
         self.timer.cancel()

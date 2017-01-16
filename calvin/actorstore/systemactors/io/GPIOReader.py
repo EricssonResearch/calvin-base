@@ -48,8 +48,8 @@ class GPIOReader(Actor):
     def did_migrate(self):
         self.setup()
 
-    @condition(action_output=('state',))
     @guard(lambda self: self.gpio is not None and self.gpio.edge_detected())
+    @condition(action_output=('state',))
     def get_state(self):
         return ActionResult(production=(self.gpio.edge_value(), ))
 

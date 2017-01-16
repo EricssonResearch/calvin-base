@@ -45,15 +45,15 @@ class LineJoin(Actor):
         self.lines = []
         return ActionResult()
 
-    @condition([], ['text'])
     @guard(lambda self: self.text is not None)
+    @condition([], ['text'])
     def produce(self):
         text = self.text
         self.text = None
         return ActionResult(production=(text,))
 
+    @guard(lambda self: self.text is None)
     @condition(['line'], [])
-    @guard(lambda self, token: self.text is None)
     def append(self, token):
         self.lines.append(token)
         return ActionResult()

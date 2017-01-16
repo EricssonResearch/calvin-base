@@ -32,8 +32,8 @@ class Constant(Actor):
     def log(self, data):
         print "%s<%s>: %s" % (self.__class__.__name__, self.id, data)
 
-    @condition([], ['token'])
     @guard(lambda self: self.n > 0 or self.n == -1)
+    @condition([], ['token'])
     def send_it(self):
         if self.n > 0:
             self.n -= 1

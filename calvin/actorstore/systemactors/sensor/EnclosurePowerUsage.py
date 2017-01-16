@@ -43,8 +43,8 @@ class EnclosurePowerUsage(Actor):
     def did_migrate(self):
         self.setup()
     
-    @condition([], ['watts'])
     @guard(lambda self: self['enclosure'].has_power_data)
+    @condition([], ['watts'])
     def measure(self):
         data = self['enclosure'].get_power_data()
         self['enclosure'].ack_power_data()

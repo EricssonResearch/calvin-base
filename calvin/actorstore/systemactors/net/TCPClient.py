@@ -28,7 +28,7 @@ class TCPClient(Actor):
 
     Input:
       data_in : Each received token will be sent out through the TCP connection.
-      control_in : Each received token will be sent out through the TCP connection.
+      control_in : Each z<a token will be sent out through the TCP connection.
     Output:
       data_out : Data received on the TCP connection will be sent as tokens.
     """
@@ -62,8 +62,8 @@ class TCPClient(Actor):
         self.use('calvinsys.network.socketclienthandler', shorthand='socket')
         self.use('calvinsys.native.python-re', shorthand='regexp')
 
+    @guard(lambda self: self.cc and self.cc.is_connected())
     @condition(action_input=['data_in'])
-    @guard(lambda self, token: self.cc and self.cc.is_connected())
     def send(self, token):
         if isinstance(token, basestring):
             token = str(token)
@@ -73,8 +73,8 @@ class TCPClient(Actor):
 
         return ActionResult(production=())
 
-    @condition(action_output=['data_out'])
     @guard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
+    @condition(action_output=['data_out'])
     def receive(self):
         data = self.cc.get_data()
         return ActionResult(production=(data,))
@@ -83,8 +83,14 @@ class TCPClient(Actor):
     URI_REGEXP = r'([^:]+)://([^/:]*)(:[0-9]+)'
 
     @condition(action_input=['control_in'])
-    @guard(lambda self, control: control['control'] == 'connect' and not self.cc)
-    def new_connection(self, control):
+    def control(self, control):
+        if control['control'] == 'connect' and not self.cc:
+            self._new_connection(control)
+        elif control['control'] == 'disconnect' and self.cc:
+            self._close_connection()
+        return ActionResult()
+
+    def _new_connection(self, control):
         uri = self['regexp'].findall(self.URI_REGEXP, control['uri'])
         uri_parts = uri[0]
         protocol = uri_parts[0]
@@ -96,19 +102,14 @@ class TCPClient(Actor):
             self.port = int(uri_parts[2][1:])
             self.connect()
 
-        return ActionResult(production=())
-
-    @condition(action_input=['control_in'])
-    @guard(lambda self, control: control['control'] == 'disconnect' and self.cc)
-    def close_connection(self, control):
+    def _close_connection(self):
         self.cc.disconnect()
         self.cc = None
-        return ActionResult(production=())
 
     def exception_handler(self, action, args, context):
         """Handler ExceptionTokens"""
         self.EOST_token_received = True
         return ActionResult(production=())
 
-    action_priority = (new_connection, close_connection, receive, send)
+    action_priority = (control, receive, send)
     requires = ['calvinsys.network.socketclienthandler', 'calvinsys.native.python-re']

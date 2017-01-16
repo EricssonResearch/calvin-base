@@ -62,8 +62,8 @@ class RFIDReader(Actor):
     def will_migrate(self):
         self.timeout_timer.cancel()
         
-    @condition()
     @guard(lambda self: self._state == "idle" and self.timeout_timer.triggered)
+    @condition()
     def is_idle(self):
         _log.debug("is_idle")
         self.timeout_timer.ack()
@@ -82,8 +82,8 @@ class RFIDReader(Actor):
             self.timeout_timer = self['timer'].once(0.5)
         return ActionResult()
         
-    @condition()
     @guard(lambda self: self._state == "card present")
+    @condition()
     def card_present(self):
         _log.info("card_present")
         active_type = self.rfid.select_tag(self.active_uid)
@@ -98,8 +98,8 @@ class RFIDReader(Actor):
             self._state = "reset"
         return ActionResult()
 
-    @condition([], ["data"])
     @guard(lambda self: self._state == "card active")
+    @condition([], ["data"])
     def read_card(self):
         _log.info("read_card")
         result = {"status": False, "cardno": self.active_uid_string}
@@ -117,8 +117,8 @@ class RFIDReader(Actor):
             self._state = "reset"
         return ActionResult(production=(result,))
     
-    @condition()
     @guard(lambda self: self._state == "check card" and self.timeout_timer.triggered)
+    @condition()
     def check_card(self):
         _log.info("check_card")
         self.timeout_timer.ack()
@@ -127,8 +127,8 @@ class RFIDReader(Actor):
             self._state = "card gone"
         return ActionResult()
 
+    @guard(lambda self: self._state == "check card")
     @condition(["data"], [])
-    @guard(lambda self, _: self._state == "check card")
     def write_card(self, incoming):
         _log.info("write_card")
         data = incoming["data"]
@@ -140,16 +140,16 @@ class RFIDReader(Actor):
         return ActionResult()
         # Code goes here
         
-    @condition([], ["data"])
     @guard(lambda self: self._state == "card gone")
+    @condition([], ["data"])
     def card_gone(self):
         _log.info("card_gone")
         result = {"status": False, "data": None, "cardno": self.active_uid_string, "timestamp": str(now())}
         self._state = "reset"
         return ActionResult(production=(result,))
 
-    @condition()
     @guard(lambda self: self._state == "reset")
+    @condition()
     def reset(self):
         _log.info("reset")
         self.rfid.initialize()

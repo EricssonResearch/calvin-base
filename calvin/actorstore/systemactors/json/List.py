@@ -25,7 +25,7 @@ class List(Actor):
     Create a list.
 
     Consumes 'n' tokens  to produce a list, 'n' defaults to 1. If 'n' is zero or negative,
-    consumes tokens until EOS encountered (variable list length). 
+    consumes tokens until EOS encountered (variable list length).
     The optional arguments pre_list and post_list are used to prepend and extend the list before
     delivering the final list.
     Will produce an ExceptionToken if EOS is encountered when n > 0, or if an ExceptionToken is
@@ -52,22 +52,22 @@ class List(Actor):
         self.post_list = post_list
         self.done = False
 
+    @guard(lambda self: not self.n and not self.done)
     @condition(['item'], [])
-    @guard(lambda self, item: not self.n and not self.done)
     def add_item_EOS(self, item):
         self._list.append(item)
         return ActionResult()
 
+    @guard(lambda self: self.n and not self.done)
     @condition(['item'], [])
-    @guard(lambda self, item: self.n and not self.done)
     def add_item(self, item):
         self._list.append(item)
         if len(self._list) == self.n:
             self.done = True
         return ActionResult()
 
-    @condition([], ['list'])
     @guard(lambda self: self.done)
+    @condition([], ['list'])
     def produce_list(self):
         if isinstance(self._list, list):
             res = (self.pre_list if self.pre_list else []) + self._list +(self.post_list if self.post_list else [])

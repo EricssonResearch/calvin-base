@@ -52,21 +52,21 @@ class SerialPort(Actor):
             self.device = None
             self.not_found = True
 
-    @condition([], ['out'])
     @guard(lambda self: self.not_found)
+    @condition([], ['out'])
     def device_not_found(self):
         token = ExceptionToken(value="Device not found")
         self.not_found = False  # Only report once
         return ActionResult(production=(token, ))
 
-    @condition([], ['out'])
     @guard(lambda self: self.device and self.device.has_data())
+    @condition([], ['out'])
     def read(self):
         data = self.device.read()
         return ActionResult(production=(data, ))
 
+    @guard(lambda self: self.device)
     @condition(action_input=['in'])
-    @guard(lambda self, _: self.device)
     def write(self, data):
         self.device.write(str(data))
         return ActionResult(production=())

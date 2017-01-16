@@ -41,13 +41,13 @@ class RecTimer(Actor):
     def did_migrate(self):
         self.setup()
 
+    @guard(lambda self: self.timer and self.timer.triggered)
     @condition(['token'], ['token'])
-    @guard(lambda self, _: self.timer and self.timer.triggered)
     def flush(self, input):
         return ActionResult(production=(input, ))
 
-    @condition()
     @guard(lambda self: self.timer and self.timer.triggered)
+    @condition()
     def clear(self):
         self.timer.ack()
         return ActionResult()

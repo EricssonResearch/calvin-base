@@ -39,8 +39,8 @@ class EnclosureRoomTemperature(Actor):
     def did_migrate(self):
         self.setup()
     
-    @condition([], ['centigrade'])
     @guard(lambda self: self['enclosure'].has_ambient_temp)
+    @condition([], ['centigrade'])
     def measure(self):
         data = self['enclosure'].get_ambient_temp()
         self['enclosure'].ack_ambient_temp()

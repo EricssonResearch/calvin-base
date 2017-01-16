@@ -30,8 +30,8 @@ class StandardIn(Actor):
         self.use(requirement='calvinsys.io.filehandler', shorthand='file')
         self.file = self['file'].open_stdin()
 
-    @condition([], ['out'])
     @guard(lambda self: self.file and self.file.has_data())
+    @condition([], ['out'])
     def read(self):
         line = self.file.read_line()
         return ActionResult(production=(line, ))

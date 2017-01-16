@@ -33,8 +33,8 @@ class Void(Actor):
     def init(self):
         pass
 
-    @condition([], ['void'])
     @guard(lambda self: False)
+    @condition([], ['void'])
     def null(self):
         return ActionResult(production=(0, ))
 

@@ -65,16 +65,16 @@ class OPCUAPoller(Actor):
         self['opcua'].connect(self.endpoint)
         self.use("calvinsys.events.timer", shorthand="timer")
 
-    @condition()
     @guard(lambda self: not self.timers and self['opcua'].connected )
+    @condition()
     def connected(self):
         # Connected - setup polling timers
         for nodeid in self.nodeids:
             self.timers[nodeid] = self['timer'].once(0)
         return ActionResult()
     
-    @condition(action_output=['variable'])
     @guard(lambda self: self['opcua'].variable_changed)
+    @condition(action_output=['variable'])
     def changed(self):
         # fetch changed variable
         variable = self['opcua'].get_first_changed()
@@ -82,8 +82,8 @@ class OPCUAPoller(Actor):
         self.timers[variable['Id']] = self['timer'].once(self.interval)
         return ActionResult(production=(variable,))
 
-    @condition()
     @guard(lambda self: any([t.triggered for t in self.timers.values()]))
+    @condition()
     def poll(self):
         active_timers = filter(lambda (_, t): t.triggered, self.timers.items())
         for t in active_timers:

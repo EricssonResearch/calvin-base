@@ -29,8 +29,8 @@ class Counter(Actor):
         self.count = 0
         self.stopped = False
 
-    @condition(action_output=['integer'])
     @guard(lambda self: not self.stopped)
+    @condition(action_output=['integer'])
     def cnt(self):
         self.count += 1
         return ActionResult(production=(self.count, ))

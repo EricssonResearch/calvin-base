@@ -55,15 +55,15 @@ class TCPServer(Actor):
     def did_migrate(self):
         self.server = None
 
+    @guard(lambda self: not self.host and not self.port and not self.server)
     @condition(['host', 'port'], [])
-    @guard(lambda self, host, port: not self.host and not self.port and not self.server)
     def setup(self, host, port):
         self.host = host
         self.port = port
         return ActionResult()
 
-    @condition()
     @guard(lambda self: self.host and self.port and not self.server)
+    @condition()
     def start(self):
         try:
             self.server = self['server'].start(self.host, self.port, self.mode, self.delimiter, self.max_length)
@@ -71,23 +71,23 @@ class TCPServer(Actor):
             _log.exception(e)
         return ActionResult()
 
-    @condition()
     @guard(lambda self: self.server and self.server.connection_pending())
+    @condition()
     def accept(self):
         addr, conn = self.server.accept()
         self.connections[addr] = conn
         return ActionResult()
 
+    @guard(lambda self: self.connections)
     @condition(['handle', 'token'])
-    @guard(lambda self, handle, token: self.connections)
     def send(self, handle, token):
         for h, c in self.connections.items():
             if h == handle:
                 self.server.send(c, token.encode('utf-8'))
         return ActionResult(production=())
 
-    @condition([], ['handle', 'token'])
     @guard(lambda self: self.connections and any([c.data_available for c in self.connections.values()]))
+    @condition([], ['handle', 'token'])
     def receive(self):
         for h, c in self.connections.items():
             if c.data_available:
@@ -95,8 +95,8 @@ class TCPServer(Actor):
                 break
         return ActionResult(production=(h, data))
 
-    @condition()
     @guard(lambda self: self.connections and any([c.connection_lost for c in self.connections.values()]))
+    @condition()
     def close(self):
         for handle, connection in self.connections.items():
             if connection.connection_lost:

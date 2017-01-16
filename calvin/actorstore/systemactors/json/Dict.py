@@ -52,8 +52,8 @@ class Dict(Actor):
         self.done = True
         return ActionResult()
 
+    @guard(lambda self: not self.n and not self.done)
     @condition(['key', 'value'], [])
-    @guard(lambda self, key, value: not self.n and not self.done)
     def add_entry_EOS(self, key, value):
         if isinstance(key, basestring):
             self._dict[key] = value
@@ -61,8 +61,8 @@ class Dict(Actor):
             self._bail()
         return ActionResult()
 
+    @guard(lambda self: self.n and not self.done)
     @condition(['key', 'value'], [])
-    @guard(lambda self, key, value: self.n and not self.done)
     def add_entry(self, key, value):
         if isinstance(key, basestring):
             self._dict[key]=value
@@ -71,8 +71,8 @@ class Dict(Actor):
             self._bail()
         return ActionResult()
 
-    @condition([], ['dict'])
     @guard(lambda self: self.done)
+    @condition([], ['dict'])
     def produce_dict(self):
         res = self._dict
         self.done = False

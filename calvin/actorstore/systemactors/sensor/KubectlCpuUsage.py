@@ -45,16 +45,16 @@ class KubectlCpuUsage(Actor):
     def did_migrate(self):
         self.setup()
     
-    @condition([], [])
     @guard(lambda self: self['kube'].has_metric("cpu/usage_rate"))
+    @condition([], [])
     def measure(self):
         metrics = self['kube'].get_metric("cpu/usage_rate")
         self['kube'].ack_metric("cpu/usage_rate")
         self.data = [item for item in metrics["metrics"] if item["timestamp"] > self.last_timestamp ]
         return ActionResult()
         
-    @condition([], ['usage'])
     @guard(lambda self: self.data)
+    @condition([], ['usage'])
     def dispatch_single(self):
         item = self.data.pop(0)
         payload = { "values" : item }

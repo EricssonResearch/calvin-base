@@ -41,8 +41,8 @@ class Distance(Actor):
     def did_migrate(self):
         self.setup()
     
-    @condition([], ['meters'])
     @guard(lambda self: self['distance'].has_data())
+    @condition([], ['meters'])
     def measure(self):
         distance = self['distance'].read()
         return ActionResult(production=(distance,))

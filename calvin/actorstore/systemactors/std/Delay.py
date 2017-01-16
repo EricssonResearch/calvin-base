@@ -46,8 +46,8 @@ class Delay(Actor):
         self.timers.append({'token': input, 'timer': self['timer'].once(self.delay)})
         return ActionResult()
 
-    @condition([], ['token'])
     @guard(lambda self: len(self.timers) > 0 and self.timers[0]['timer'].triggered)
+    @condition([], ['token'])
     def timeout(self):
         o = self.timers.pop(0)
         o['timer'].ack()

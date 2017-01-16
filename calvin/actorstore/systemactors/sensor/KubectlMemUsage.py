@@ -45,8 +45,8 @@ class KubectlMemUsage(Actor):
     def did_migrate(self):
         self.setup()
     
-    @condition([], [])
     @guard(lambda self: self['kube'].has_metric("memory/usage"))
+    @condition([], [])
     def measure(self):
         metrics = self['kube'].get_metric("memory/usage")
         self['kube'].ack_metric("memory/usage")
@@ -55,8 +55,8 @@ class KubectlMemUsage(Actor):
             item["value"] /= 1024*1024
         return ActionResult()
         
-    @condition([], ['usage'])
     @guard(lambda self: self.data)
+    @condition([], ['usage'])
     def dispatch_single(self):
         item = self.data.pop(0)
         payload = { "values" : item}

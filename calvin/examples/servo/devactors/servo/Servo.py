@@ -11,11 +11,13 @@ class Servo(Actor):
     """
 
     def init(self):
+        self.trigger = False
         self.pos = 2.5
 
-    @condition(action_input=['trigger'], action_output=['dutycycle'])
-    @guard(lambda self, trigger: trigger)
+    @guard(lambda self: trigger is True)
+    @condition(action_output=['dutycycle'])
     def move(self, trigger):
+        self.trigger = None
         if self.pos == 2.5:
             # right
             self.pos = 12.5
@@ -24,8 +26,10 @@ class Servo(Actor):
             self.pos = 2.5
         return ActionResult(production=(self.pos, ))
 
+    @guard(lambda trigger: self.trigger is None)
     @condition(action_input=['trigger'])
     def empty(self, trigger):
+        self.trigger = True if bool(trigger) else None
         return ActionResult()
 
     action_priority = (move, empty)

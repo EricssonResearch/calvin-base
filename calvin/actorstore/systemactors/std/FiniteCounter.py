@@ -41,14 +41,14 @@ class FiniteCounter(Actor):
             m = 1
         state.count = self.start * m
 
-    @condition(action_output=['integer'])
     @guard(lambda self: self.count < self.ends)
+    @condition(action_output=['integer'])
     def cnt(self):
         self.count += 1
         return ActionResult(production=(self.count - 1, ))
 
-    @condition(action_output=['integer'])
     @guard(lambda self: self.count == self.ends)
+    @condition(action_output=['integer'])
     def the_end(self):
         self.count = self.restart
         return ActionResult(production=(EOSToken(), ))

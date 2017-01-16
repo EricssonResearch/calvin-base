@@ -43,8 +43,8 @@ class EnclosureFanSpeed(Actor):
     def did_migrate(self):
         self.setup()
     
-    @condition([], ['rpms'])
     @guard(lambda self: self['enclosure'].has_fan_data)
+    @condition([], ['rpms'])
     def measure(self):
         fandata = self['enclosure'].get_fan_data()
         self['enclosure'].ack_fan_data()

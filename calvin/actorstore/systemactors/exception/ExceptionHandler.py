@@ -51,8 +51,8 @@ class ExceptionHandler(Actor):
         self.status = None
         self.token = None
 
-    @condition([], ['token', 'status'])
     @guard(lambda self: self.token is not None and self.status)
+    @condition([], ['token', 'status'])
     def produce_with_exception(self):
         tok = self.replacement if self.replace else self.token
         status = self.status
@@ -60,15 +60,15 @@ class ExceptionHandler(Actor):
         self.status = None
         return ActionResult(production=(tok, status.value))
 
-    @condition([], ['token'])
     @guard(lambda self: self.token is not None and not self.status)
+    @condition([], ['token'])
     def produce(self):
         tok = self.token
         self.token = None
         return ActionResult(production=(tok,))
 
+    @guard(lambda self: not self.status and self.token is None)
     @condition(['token'])
-    @guard(lambda self, tok: not self.status and self.token is None)
     def consume(self, tok):
         self.token = tok
         self.status = None

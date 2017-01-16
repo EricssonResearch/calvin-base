@@ -31,21 +31,29 @@ class Select(Actor):
       case_false  : Token from input 'data' if select token is false
       case_true   : Token from input 'data' if select token is true
     """
-    @manage([])
+    @manage(['select'])
     def init(self):
-        pass
+        self.select = None
 
-    @condition(['select', 'data'], ['case_false'])
-    @guard(lambda self, select, data: select is not True)
-    def false_action(self, select, data):
+    @guard(lambda self: self.select is None)
+    @condition(['select'], [])
+    def select_action(self, select):
+        self.select = select is True
+        return ActionResult()
+
+    @guard(lambda self: self.select is False)
+    @condition(['data'], ['case_false'])
+    def false_action(self, data):
+        self.select = None
         return ActionResult(production=(data, ))
 
-    @condition(['select', 'data'], ['case_true'])
-    @guard(lambda self, select, data: select is True)
-    def true_action(self, select, data):
+    @guard(lambda self: self.select is True)
+    @condition(['data'], ['case_true'])
+    def true_action(self, data):
+        self.select = None
         return ActionResult(production=(data, ))
 
-    action_priority = (false_action, true_action)
+    action_priority = (select_action, false_action, true_action)
 
     test_set = [
         {

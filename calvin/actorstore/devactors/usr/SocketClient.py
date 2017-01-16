@@ -59,20 +59,20 @@ class SocketClient(Actor):
     def did_migrate(self):
         self.connect()
 
+    @guard(lambda self: self.cc and self.cc.is_connected())
     @condition(action_input=['inData'])
-    @guard(lambda self, token: self.cc and self.cc.is_connected())
     def send(self, token):
         self.cc.send(token)
         return ActionResult(production=())
 
-    @condition(action_output=['outData'])
     @guard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
+    @condition(action_output=['outData'])
     def receive(self):
         data = self.cc.get_data()
         return ActionResult(production=(data,))
 
+    @guard(lambda self: True)
     @condition(action_input=['inControl'])
-    @guard(lambda self, token: True)
     def receive_control(self, token):
         if token[0] == "connect":
             if not self.cc:
@@ -86,8 +86,8 @@ class SocketClient(Actor):
                 self.cc = None
         return ActionResult(production=())
 
-    @condition(action_output=['outControl'])
     @guard(lambda self: self.cc and self.cc.have_control())
+    @condition(action_output=['outControl'])
     def send_control(self):
         data = self.cc.get_control()
         return ActionResult(production=(data,))

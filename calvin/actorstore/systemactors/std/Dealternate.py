@@ -31,20 +31,20 @@ class Dealternate(Actor):
     def init(self):
         self.is_even_token = True
 
-    def is_even(self, tok):
+    def is_even(self):
         return self.is_even_token
 
-    def is_odd(self, tok):
+    def is_odd(self):
         return not self.is_even_token
 
-    @condition(['token'], ['token_1'])
     @guard(is_even)
+    @condition(['token'], ['token_1'])
     def port_one(self, tok):
         self.is_even_token = False
         return ActionResult(production=(tok, ))
 
-    @condition(['token'], ['token_2'])
     @guard(is_odd)
+    @condition(['token'], ['token_2'])
     def port_two(self, tok):
         self.is_even_token = True
         return ActionResult(production=(tok, ))

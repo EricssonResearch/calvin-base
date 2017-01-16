@@ -40,8 +40,8 @@ class EnclosureCPUTemperature(Actor):
     def did_migrate(self):
         self.setup()
     
-    @condition([], ['temperatures'])
     @guard(lambda self: self['enclosure'].has_cpu_temps)
+    @condition([], ['temperatures'])
     def measure(self):
         data = self['enclosure'].get_cpu_temps()
         self['enclosure'].ack_cpu_temps()

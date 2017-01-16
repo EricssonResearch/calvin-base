@@ -44,33 +44,21 @@ class Iterate(Actor):
         self.has_data = False
         self.index = 0
 
+    @guard(lambda self: not self.has_data)
     @condition(['token'], [])
-    @guard(lambda self, data: not self.has_data and (type(data) is list or type(data) is dict))
-    def consume_mutable(self, data):
+    def consume(self, data):
         if not data:
             # Empty list => null output
             self.data = None
         else:
-            self.data = copy(data)
+            mutable = bool(type(data) is list or type(data) is dict)
+            self.data = copy(data) if mutable else data
         self.has_data = True
         self.index = 0
         return ActionResult()
 
-    @condition(['token'], [])
-    @guard(lambda self, data: not self.has_data)
-    def consume_immutable(self, data):
-        if data == "":
-            # Empty string => null output
-            self.data = None
-        else:
-            self.data = data
-        self.has_data = True
-        self.index = 0
-        return ActionResult()
-
-
-    @condition([], ['item', 'index'])
     @guard(lambda self: self.has_data and type(self.data) is list)
+    @condition([], ['item', 'index'])
     def produce_listitem(self):
         res = self.data.pop(0)
         i = self.index
@@ -80,8 +68,8 @@ class Iterate(Actor):
             self.has_data = False
         return ActionResult(production=(res, i))
 
-    @condition([], ['item', 'index'])
     @guard(lambda self: self.has_data and type(self.data) is dict)
+    @condition([], ['item', 'index'])
     def produce_dictitem(self):
         k, v = self.data.popitem()
         if not self.data:
@@ -89,8 +77,8 @@ class Iterate(Actor):
             self.has_data = False
         return ActionResult(production=(v, k))
 
-    @condition([], ['item', 'index'])
     @guard(lambda self: self.has_data and isinstance(self.data, basestring))
+    @condition([], ['item', 'index'])
     def produce_stringitem(self):
         res = self.data[0]
         self.data = self.data[1:]
@@ -101,8 +89,8 @@ class Iterate(Actor):
             self.has_data = False
         return ActionResult(production=(res, i))
 
-    @condition([], ['item', 'index'])
     @guard(lambda self: self.has_data)
+    @condition([], ['item', 'index'])
     def produce_plainitem(self):
         res = self.data
         self.data = None
@@ -110,8 +98,7 @@ class Iterate(Actor):
         return ActionResult(production=(res, 0))
 
 
-
-    action_priority = (produce_listitem, produce_dictitem, produce_stringitem, produce_plainitem, consume_mutable, consume_immutable)
+    action_priority = (produce_listitem, produce_dictitem, produce_stringitem, produce_plainitem, consume)
 
     test_args = []
     test_kwargs = {}

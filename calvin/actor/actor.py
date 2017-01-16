@@ -145,9 +145,9 @@ def condition(action_input=[], action_output=[]):
                 # Perform the action (N.B. the method may be wrapped in a guard)
                 #
                 action_result = action_method(self, *args)
-                guard_str = "X" if action_result.guard_ok is None else ("Y" if action_result.guard_ok else "N")
-                _log.debug("\t%s.%s Fired:%s In:Y, Out:Y, Guard:%s" % (
-                    self._name, action_method.__name__, "Y" if action_result.did_fire else "N", guard_str))
+                # guard_str = "X" if action_result.guard_ok is None else ("Y" if action_result.guard_ok else "N")
+                # _log.debug("\t%s.%s Fired:%s In:Y, Out:Y, Guard:%s" % (
+                #     self._name, action_method.__name__, "Y" if action_result.did_fire else "N", guard_str))
 
             valid_production = False
             if action_result.did_fire and (len(contract_output) == len(action_result.production)):
@@ -210,11 +210,7 @@ def guard(action_guard):
 
         @functools.wraps(action_method)
         def guard_wrapper(self, *args):
-            retval = ActionResult(did_fire=False)
-            guard_ok = action_guard(self, *args)
-            if guard_ok:
-                retval = action_method(self, *args)
-            retval.guard_ok = guard_ok
+            retval = action_method(self, *args) if action_guard(self) else ActionResult(did_fire=False)
             return retval
 
         return guard_wrapper
@@ -250,7 +246,7 @@ class ActionResult(object):
         self.did_fire = did_fire
         self.input_ok = input_ok
         self.output_ok = output_ok
-        self.guard_ok = None
+        # self.guard_ok = None
         self.tokens_consumed = 0
         self.tokens_produced = 0
         self.production = production
@@ -558,7 +554,7 @@ class Actor(object):
 
             curr_time = time.time()
             if action_result.did_fire and curr_time - start_time > 0.020:
-                # We have run long enough, interrupt even though we could continue 
+                # We have run long enough, interrupt even though we could continue
                 return total_result
             if not action_result.did_fire:
                 diff = curr_time - start_time
@@ -795,7 +791,7 @@ class Actor(object):
     def remove_migration_info(self, status):
         if status.status != 200:
             self._migration_info = None
-            # FIXME: destroy() in actormanager.py was called before trying to migrate. 
+            # FIXME: destroy() in actormanager.py was called before trying to migrate.
             #        Need to make the actor runnable again before transition to DENIED.
             #self.fsm.transition_to(Actor.STATUS.DENIED)
 
@@ -808,7 +804,7 @@ class ShadowActor(Actor):
         self.outport_properties = {}
         super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions,
                                             disable_transition_checks=disable_transition_checks,
-                                            disable_state_checks=disable_state_checks, actor_id=actor_id, 
+                                            disable_state_checks=disable_state_checks, actor_id=actor_id,
                                             security=security)
 
     @manage(['_shadow_args'])

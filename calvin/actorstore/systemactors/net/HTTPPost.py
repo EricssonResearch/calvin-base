@@ -48,24 +48,24 @@ class HTTPPost(Actor):
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
         self.use('calvinsys.native.python-json', shorthand='json')
 
+    @guard(lambda self: self.request is None)
     @condition(action_input=['URL', 'params', 'header', 'data'])
-    @guard(lambda self, url, params, header, data: self.request is None)
     def new_request(self, url, params, header, data):
         url = url.encode('ascii', 'ignore')
         data = data.encode('ascii', 'ignore')
         self.request = self['http'].post(url, params, header, data)
         return ActionResult()
 
-    @condition(action_output=['status', 'header'])
     @guard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
+    @condition(action_output=['status', 'header'])
     def handle_headers(self):
         self.received_headers = True
         status = self['http'].status(self.request)
         headers = self['http'].headers(self.request)
         return ActionResult(production=(status, headers))
 
-    @condition(action_output=['data'])
     @guard(lambda self: self.received_headers and self['http'].received_body(self.request))
+    @condition(action_output=['data'])
     def handle_body(self):
         body = self['http'].body(self.request)
         self.received_headers = False

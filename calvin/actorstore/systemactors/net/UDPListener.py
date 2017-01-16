@@ -59,8 +59,8 @@ class UDPListener(Actor):
         self.use('calvinsys.network.serverhandler', shorthand='server')
         self.use('calvinsys.native.python-re', shorthand='regexp')
 
-    @condition(action_output=['data_out'])
     @guard(lambda self: self.listener and self.listener.have_data())
+    @condition(action_output=['data_out'])
     def receive(self):
         data = self.listener.data_get()
         return ActionResult(production=(data,))
@@ -85,19 +85,21 @@ class UDPListener(Actor):
         return status
 
     @condition(action_input=['control_in'])
-    @guard(lambda self, control: control.get('command', '') == 'listen' and not self.listener)
-    def new_port(self, control):
-        if self.parse_uri(control.get('uri', '')):
-            self.listen()
+    def control(self, control):
+        if control.get('command', '') == 'listen' and not self.listener:
+            self._new_port(control)
+        elif control.get('command', '') == 'stop' and self.listener:
+            self._close_port()
         return ActionResult()
 
-    @condition(action_input=['control_in'])
-    @guard(lambda self, control: control.get('command', '') == 'stop' and self.listener)
-    def close_port(self, control):
+    def _new_port(self, control):
+        if self.parse_uri(control.get('uri', '')):
+            self.listen()
+
+    def _close_port(self):
         self.listener.stop()
         del self.listener
         self.listener = None
-        return ActionResult(production=())
 
-    action_priority = (new_port, close_port, receive)
+    action_priority = (control, receive)
     requires = ['calvinsys.network.serverhandler', 'calvinsys.native.python-re']

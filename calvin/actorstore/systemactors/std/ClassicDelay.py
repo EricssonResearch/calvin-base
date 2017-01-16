@@ -49,14 +49,14 @@ class ClassicDelay(Actor):
         if self.started:
             self.start()
 
+    @guard(lambda self: not self.started)
     @condition(['token'], ['token'])
-    @guard(lambda self, _: not self.started)
     def start_timer(self, token):
         self.start()
         return ActionResult(production=(token, ))
 
+    @guard(lambda self: self.timer and self.timer.triggered)
     @condition(['token'], ['token'])
-    @guard(lambda self, _: self.timer and self.timer.triggered)
     def passthrough(self, token):
         self.timer.ack()
         return ActionResult(production=(token, ))

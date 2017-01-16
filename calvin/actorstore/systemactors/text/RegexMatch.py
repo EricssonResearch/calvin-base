@@ -48,21 +48,21 @@ class RegexMatch(Actor):
         self.did_match = m is not None
         self.result = m.groups()[0] if m and m.groups() else text
 
+    @guard(lambda self: self.result is None)
     @condition(['text'], [])
-    @guard(lambda self, text: self.result is None)
     def match(self, text):
         self.perform_match(str(text))
         return ActionResult()
 
-    @condition([], ['match'])
     @guard(lambda self: self.result is not None and self.did_match)
+    @condition([], ['match'])
     def output_match(self):
         result = self.result
         self.result = None
         return ActionResult(production=(result,))
 
-    @condition([], ['no_match'])
     @guard(lambda self: self.result is not None and not self.did_match)
+    @condition([], ['no_match'])
     def output_no_match(self):
         result = self.result
         self.result = None

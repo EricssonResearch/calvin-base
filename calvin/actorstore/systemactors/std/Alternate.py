@@ -31,20 +31,20 @@ class Alternate(Actor):
     def init(self):
         self.token_one = True
 
-    def is_even(self, input):
+    def is_even(self):
         return self.token_one
 
-    def is_odd(self, input):
-        return not self.is_even(input)
+    def is_odd(self):
+        return not self.is_even()
 
-    @condition(['token_1'], ['token'])
     @guard(is_even)
+    @condition(['token_1'], ['token'])
     def port_one(self, input):
         self.token_one = False
         return ActionResult(production=(input, ))
 
-    @condition(['token_2'], ['token'])
     @guard(is_odd)
+    @condition(['token_2'], ['token'])
     def port_two(self, input):
         self.token_one = True
         return ActionResult(production=(input, ))

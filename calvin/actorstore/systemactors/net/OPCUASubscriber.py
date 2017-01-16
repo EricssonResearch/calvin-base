@@ -62,8 +62,8 @@ class OPCUASubscriber(Actor):
         self.use('calvinsys.opcua.client', shorthand='opcua')
         self['opcua'].start_subscription(self.endpoint, self.nodeids)
 
-    @condition(action_output=['variable'])
     @guard(lambda self: self['opcua'].variable_changed)
+    @condition(action_output=['variable'])
     def changed(self):
         variable = self['opcua'].get_first_changed()
         return ActionResult(production=(variable,))

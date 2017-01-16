@@ -41,13 +41,13 @@ class RotaryEncoder(Actor):
     def did_migrate(self):
         self.setup()
     
-    @condition([], ['button'])
     @guard(lambda self: self['knob'].was_pressed())
+    @condition([], ['button'])
     def button(self):
         return ActionResult(production=(True,))
         
-    @condition([], ['direction'])
     @guard(lambda self: self['knob'].was_turned())
+    @condition([], ['direction'])
     def turn(self):
         direction = "clockwise" if self['knob'].read() == 1 else "anti-clockwise"
         return ActionResult(production=(direction,))

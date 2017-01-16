@@ -23,7 +23,7 @@ _log = get_logger(__name__)
 class OpenWeatherMap(Actor):
     """
     Fetch weather data for given city.
-    
+
     Input:
       city : city to get
     Output:
@@ -46,14 +46,14 @@ class OpenWeatherMap(Actor):
         self.use('calvinsys.attribute.private', shorthand="attr")
         # Requires an api key
         self.api_key = self['attr'].get("/web/openweathermap.com/appid")
-        
+
 
     def reset_request(self):
         self.received_status = False
         if self.request:
             self['http'].finalize(self.request)
             self.request = None
-        
+
 
     def filter_weather_data(self, data):
         result = {}
@@ -65,9 +65,9 @@ class OpenWeatherMap(Actor):
         temperature = int(10*temperature)/10.0 # One decimal
         result['temperature'] = temperature
         return result
-        
+
+    @guard(lambda self: self.api_key and self.request is None)
     @condition(action_input=['city'])
-    @guard(lambda self, _: self.api_key and self.request is None)
     def new_request(self, city):
         url = "http://api.openweathermap.org/data/2.5/weather"
         params = [("q", city), ("appid", self.api_key)]
@@ -75,15 +75,15 @@ class OpenWeatherMap(Actor):
         self.request = self['http'].get(url, params, header)
         return ActionResult()
 
-    @condition(action_output=['status'])
     @guard(lambda self: self.request and not self.received_status and self['http'].received_headers(self.request))
+    @condition(action_output=['status'])
     def handle_headers(self):
         status = self['http'].status(self.request)
         self.received_status = status
         return ActionResult(production=(status,))
 
-    @condition(action_output=['forecast'])
     @guard(lambda self: self.request and self.received_status == 200 and self['http'].received_body(self.request))
+    @condition(action_output=['forecast'])
     def handle_body(self):
         body = self['http'].body(self.request)
         forecast = self['json'].loads(body)
@@ -91,8 +91,8 @@ class OpenWeatherMap(Actor):
         self.reset_request()
         return ActionResult(production=(forecast,))
 
-    @condition()
     @guard(lambda self: self.request and self.received_status and self.received_status != 200)
+    @condition()
     def handle_empty_body(self):
         self.reset_request()
         return ActionResult()

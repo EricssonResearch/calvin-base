@@ -38,15 +38,15 @@ class IsEOS(Actor):
     def init(self):
         self.token = None
 
-    @condition([], ['status'])
     @guard(lambda self: self.token is not None)
+    @condition([], ['status'])
     def produce(self):
         tok = self.token
         self.token = None
         return ActionResult(production=(tok,))
 
+    @guard(lambda self: self.token is None)
     @condition(['token'])
-    @guard(lambda self, tok: self.token is None)
     def consume(self, tok):
         self.token = False
         return ActionResult()

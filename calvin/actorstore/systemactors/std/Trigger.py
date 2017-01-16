@@ -48,14 +48,14 @@ class Trigger(Actor):
         if self.started:
             self.start()
 
-    @condition([], ['data'])
     @guard(lambda self: not self.started)
+    @condition([], ['data'])
     def start_timer(self):
         self.start()
         return ActionResult(production=(self.data, ))
 
-    @condition([], ['data'])
     @guard(lambda self: self.timer and self.timer.triggered)
+    @condition([], ['data'])
     def trigger(self):
         self.timer.ack()
         return ActionResult(production=(self.data, ))

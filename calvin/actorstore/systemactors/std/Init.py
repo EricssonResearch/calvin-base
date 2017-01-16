@@ -34,14 +34,14 @@ class Init(Actor):
         self.done = False
         self.data = data
 
-    @condition([], ['out'])
     @guard(lambda self: not self.done)
+    @condition([], ['out'])
     def initial_action(self):
         self.done = True
         return ActionResult(production=(self.data,))
 
+    @guard(lambda self: self.done)
     @condition(['in'], ['out'])
-    @guard(lambda self, data: self.done)
     def passthrough(self, data):
         return ActionResult(production=(data,))
 

@@ -44,9 +44,14 @@ class HTTPResponseGenerator(Actor):
     def init(self):
         pass
 
+
     @condition(['status', 'body'], ['out'])
-    @guard(lambda self, status, body : status == 200)
-    def ok(self, status, body):
+    def response(self, status, body):
+        if status != 200:
+            body = self.ERROR_BODY.substitute(
+                status=status,
+                reason=self.STATUSMAP.get(status, "Unknown")
+            )
         header = self.HEADER_TEMPLATE.substitute(
             length=len(body)
         )
@@ -58,24 +63,5 @@ class HTTPResponseGenerator(Actor):
         )
         return ActionResult(production=(response, ))
 
-    @condition(['status', 'body'], ['out'])
-    @guard(lambda self, status, body : status != 200)
-    def error(self, status, body):
-
-        body = self.ERROR_BODY.substitute(
-            status=status,
-            reason=self.STATUSMAP.get(status, "Unknown")
-        )
-        header = self.HEADER_TEMPLATE.substitute(
-            length=len(body)
-        )
-        response = self.RESPONSE_TEMPLATE.substitute(
-            header=header,
-            status=status,
-            reason=self.STATUSMAP.get(status, "Unknown"),
-            body=body
-        )
-        return ActionResult(production=(response, ))
-
-    action_priority = (ok, error)
+    action_priority = (response,)
 
