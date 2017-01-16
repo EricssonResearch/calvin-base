@@ -45,15 +45,10 @@ class MediaPlayer(Actor):
         self.player.close()
 
     @condition(['play'], [])
-    @guard(lambda _, play: play)
     def play(self, play):
-        self.player.play(self.media_file)
-        return ActionResult(production=())
+        if play:
+            self.player.play(self.media_file)
+        return ActionResult()
 
-    @condition(['play'], [])
-    @guard(lambda _, play: not play)
-    def ignore(self, _):
-        return ActionResult(production=())
-
-    action_priority = (ignore, play, )
+    action_priority = (play, )
     requires =  ['calvinsys.media.mediaplayer']
