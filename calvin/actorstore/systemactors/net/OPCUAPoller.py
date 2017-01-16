@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -65,7 +65,7 @@ class OPCUAPoller(Actor):
         self['opcua'].connect(self.endpoint)
         self.use("calvinsys.events.timer", shorthand="timer")
 
-    @guard(lambda self: not self.timers and self['opcua'].connected )
+    @stateguard(lambda self: not self.timers and self['opcua'].connected )
     @condition()
     def connected(self):
         # Connected - setup polling timers
@@ -73,7 +73,7 @@ class OPCUAPoller(Actor):
             self.timers[nodeid] = self['timer'].once(0)
         return ActionResult()
     
-    @guard(lambda self: self['opcua'].variable_changed)
+    @stateguard(lambda self: self['opcua'].variable_changed)
     @condition(action_output=['variable'])
     def changed(self):
         # fetch changed variable
@@ -82,7 +82,7 @@ class OPCUAPoller(Actor):
         self.timers[variable['Id']] = self['timer'].once(self.interval)
         return ActionResult(production=(variable,))
 
-    @guard(lambda self: any([t.triggered for t in self.timers.values()]))
+    @stateguard(lambda self: any([t.triggered for t in self.timers.values()]))
     @condition()
     def poll(self):
         active_timers = filter(lambda (_, t): t.triggered, self.timers.items())

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class RecTimer(Actor):
@@ -41,12 +41,12 @@ class RecTimer(Actor):
     def did_migrate(self):
         self.setup()
 
-    @guard(lambda self: self.timer and self.timer.triggered)
+    @stateguard(lambda self: self.timer and self.timer.triggered)
     @condition(['token'], ['token'])
     def flush(self, input):
         return ActionResult(production=(input, ))
 
-    @guard(lambda self: self.timer and self.timer.triggered)
+    @stateguard(lambda self: self.timer and self.timer.triggered)
     @condition()
     def clear(self):
         self.timer.ack()

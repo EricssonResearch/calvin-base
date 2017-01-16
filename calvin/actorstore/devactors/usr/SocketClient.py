@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken
 
 from calvin.utilities.calvinlogger import get_logger
@@ -59,19 +59,19 @@ class SocketClient(Actor):
     def did_migrate(self):
         self.connect()
 
-    @guard(lambda self: self.cc and self.cc.is_connected())
+    @stateguard(lambda self: self.cc and self.cc.is_connected())
     @condition(action_input=['inData'])
     def send(self, token):
         self.cc.send(token)
         return ActionResult(production=())
 
-    @guard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
+    @stateguard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
     @condition(action_output=['outData'])
     def receive(self):
         data = self.cc.get_data()
         return ActionResult(production=(data,))
 
-    @guard(lambda self: True)
+    @stateguard(lambda self: True)
     @condition(action_input=['inControl'])
     def receive_control(self, token):
         if token[0] == "connect":
@@ -86,7 +86,7 @@ class SocketClient(Actor):
                 self.cc = None
         return ActionResult(production=())
 
-    @guard(lambda self: self.cc and self.cc.have_control())
+    @stateguard(lambda self: self.cc and self.cc.have_control())
     @condition(action_output=['outControl'])
     def send_control(self):
         data = self.cc.get_control()

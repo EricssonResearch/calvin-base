@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
@@ -45,14 +45,14 @@ class LineJoin(Actor):
         self.lines = []
         return ActionResult()
 
-    @guard(lambda self: self.text is not None)
+    @stateguard(lambda self: self.text is not None)
     @condition([], ['text'])
     def produce(self):
         text = self.text
         self.text = None
         return ActionResult(production=(text,))
 
-    @guard(lambda self: self.text is None)
+    @stateguard(lambda self: self.text is None)
     @condition(['line'], [])
     def append(self, token):
         self.lines.append(token)

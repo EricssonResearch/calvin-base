@@ -198,7 +198,7 @@ def condition(action_input=[], action_output=[]):
     return wrap
 
 
-def guard(action_guard):
+def stateguard(action_guard):
     """
     Decorator guard refines the criteria for picking an action to run by stating a function
     with THE SAME signature as the guarded action returning a boolean (True if action allowed).

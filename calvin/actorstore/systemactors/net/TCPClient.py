@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -62,7 +62,7 @@ class TCPClient(Actor):
         self.use('calvinsys.network.socketclienthandler', shorthand='socket')
         self.use('calvinsys.native.python-re', shorthand='regexp')
 
-    @guard(lambda self: self.cc and self.cc.is_connected())
+    @stateguard(lambda self: self.cc and self.cc.is_connected())
     @condition(action_input=['data_in'])
     def send(self, token):
         if isinstance(token, basestring):
@@ -73,7 +73,7 @@ class TCPClient(Actor):
 
         return ActionResult(production=())
 
-    @guard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
+    @stateguard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
     @condition(action_output=['data_out'])
     def receive(self):
         data = self.cc.get_data()

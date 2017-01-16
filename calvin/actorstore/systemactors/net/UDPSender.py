@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -61,7 +61,7 @@ class UDPSender(Actor):
         self.use('calvinsys.network.socketclienthandler', shorthand='socket')
         self.use('calvinsys.native.python-re', shorthand='regexp')
 
-    @guard(lambda self: self.sender)
+    @stateguard(lambda self: self.sender)
     @condition(action_input=['data_in'])
     def send(self, token):
         self.sender.send(token)

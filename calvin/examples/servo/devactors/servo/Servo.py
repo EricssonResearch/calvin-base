@@ -1,4 +1,4 @@
-from calvin.actor.actor import Actor, ActionResult, condition, guard
+from calvin.actor.actor import Actor, ActionResult, condition, stateguard
 
 
 class Servo(Actor):
@@ -14,7 +14,7 @@ class Servo(Actor):
         self.trigger = False
         self.pos = 2.5
 
-    @guard(lambda self: trigger is True)
+    @stateguard(lambda self: trigger is True)
     @condition(action_output=['dutycycle'])
     def move(self, trigger):
         self.trigger = None
@@ -26,7 +26,7 @@ class Servo(Actor):
             self.pos = 2.5
         return ActionResult(production=(self.pos, ))
 
-    @guard(lambda trigger: self.trigger is None)
+    @stateguard(lambda trigger: self.trigger is None)
     @condition(action_input=['trigger'])
     def empty(self, trigger):
         self.trigger = True if bool(trigger) else None

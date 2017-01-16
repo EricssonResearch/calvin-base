@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 from copy import copy
 
@@ -44,7 +44,7 @@ class Iterate(Actor):
         self.has_data = False
         self.index = 0
 
-    @guard(lambda self: not self.has_data)
+    @stateguard(lambda self: not self.has_data)
     @condition(['token'], [])
     def consume(self, data):
         if not data:
@@ -57,7 +57,7 @@ class Iterate(Actor):
         self.index = 0
         return ActionResult()
 
-    @guard(lambda self: self.has_data and type(self.data) is list)
+    @stateguard(lambda self: self.has_data and type(self.data) is list)
     @condition([], ['item', 'index'])
     def produce_listitem(self):
         res = self.data.pop(0)
@@ -68,7 +68,7 @@ class Iterate(Actor):
             self.has_data = False
         return ActionResult(production=(res, i))
 
-    @guard(lambda self: self.has_data and type(self.data) is dict)
+    @stateguard(lambda self: self.has_data and type(self.data) is dict)
     @condition([], ['item', 'index'])
     def produce_dictitem(self):
         k, v = self.data.popitem()
@@ -77,7 +77,7 @@ class Iterate(Actor):
             self.has_data = False
         return ActionResult(production=(v, k))
 
-    @guard(lambda self: self.has_data and isinstance(self.data, basestring))
+    @stateguard(lambda self: self.has_data and isinstance(self.data, basestring))
     @condition([], ['item', 'index'])
     def produce_stringitem(self):
         res = self.data[0]
@@ -89,7 +89,7 @@ class Iterate(Actor):
             self.has_data = False
         return ActionResult(production=(res, i))
 
-    @guard(lambda self: self.has_data)
+    @stateguard(lambda self: self.has_data)
     @condition([], ['item', 'index'])
     def produce_plainitem(self):
         res = self.data

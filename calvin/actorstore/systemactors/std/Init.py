@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 class Init(Actor):
 
@@ -34,13 +34,13 @@ class Init(Actor):
         self.done = False
         self.data = data
 
-    @guard(lambda self: not self.done)
+    @stateguard(lambda self: not self.done)
     @condition([], ['out'])
     def initial_action(self):
         self.done = True
         return ActionResult(production=(self.data,))
 
-    @guard(lambda self: self.done)
+    @stateguard(lambda self: self.done)
     @condition(['in'], ['out'])
     def passthrough(self, data):
         return ActionResult(production=(data,))

@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 class List(Actor):
@@ -52,13 +52,13 @@ class List(Actor):
         self.post_list = post_list
         self.done = False
 
-    @guard(lambda self: not self.n and not self.done)
+    @stateguard(lambda self: not self.n and not self.done)
     @condition(['item'], [])
     def add_item_EOS(self, item):
         self._list.append(item)
         return ActionResult()
 
-    @guard(lambda self: self.n and not self.done)
+    @stateguard(lambda self: self.n and not self.done)
     @condition(['item'], [])
     def add_item(self, item):
         self._list.append(item)
@@ -66,7 +66,7 @@ class List(Actor):
             self.done = True
         return ActionResult()
 
-    @guard(lambda self: self.done)
+    @stateguard(lambda self: self.done)
     @condition([], ['list'])
     def produce_list(self):
         if isinstance(self._list, list):

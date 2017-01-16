@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import sys
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 class CountTimerUnsigned(Actor):
 
@@ -61,7 +61,7 @@ class CountTimerUnsigned(Actor):
     # The counting action, first 3 use non periodic for testing purpose
     # need guard with triggered() since the actor might be fired for other
     # reasons
-    @guard(timer_trigger_stepwise)
+    @stateguard(timer_trigger_stepwise)
     @condition(action_output=('integer',))
     def step_no_periodic(self):
         self.timer.ack()
@@ -76,7 +76,7 @@ class CountTimerUnsigned(Actor):
     # The counting action, handle periodic timer events hence no need to setup repeatedly
     # need guard with triggered() since the actor might be fired for other
     # reasons
-    @guard(timer_trigger_repeat)
+    @stateguard(timer_trigger_repeat)
     @condition(action_output=('integer',))
     def step_periodic(self):
         self.timer.ack()
@@ -85,7 +85,7 @@ class CountTimerUnsigned(Actor):
 
     # The stopping action, need guard with raised() since the actor might be
     # fired for other reasons
-    @guard(timer_trigger_stopped)
+    @stateguard(timer_trigger_stopped)
     @condition()
     def stop(self):
         self.timer.ack()

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -62,7 +62,7 @@ class OPCUASubscriber(Actor):
         self.use('calvinsys.opcua.client', shorthand='opcua')
         self['opcua'].start_subscription(self.endpoint, self.nodeids)
 
-    @guard(lambda self: self['opcua'].variable_changed)
+    @stateguard(lambda self: self['opcua'].variable_changed)
     @condition(action_output=['variable'])
     def changed(self):
         variable = self['opcua'].get_first_changed()

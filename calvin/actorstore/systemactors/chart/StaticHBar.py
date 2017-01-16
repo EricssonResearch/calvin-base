@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.utilities.calvinlogger import get_actor_logger
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 _log = get_actor_logger(__name__)
 
@@ -57,7 +57,7 @@ class StaticHBar(Actor):
     def did_migrate(self):
         self.setup()
 
-    @guard(lambda self: self.req_in_progress and self.chart_api.image_available())
+    @stateguard(lambda self: self.req_in_progress and self.chart_api.image_available())
     @condition([], ['img'])
     def handle_response(self):
         handle = self.req_in_progress.pop(0)
@@ -67,7 +67,7 @@ class StaticHBar(Actor):
 
         return ActionResult(production=(result, ))
 
-    @guard(lambda self: len(self.req_in_progress) <= self.max_req_in_progress)
+    @stateguard(lambda self: len(self.req_in_progress) <= self.max_req_in_progress)
     @condition(['values', 'labels'], [])
     def send_request(self, values, labels):
         self.chart_api.set_chart_dataset(values)

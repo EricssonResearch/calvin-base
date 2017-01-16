@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, guard, manage
+from calvin.actor.actor import Actor, ActionResult, condition, stateguard, manage
 
 
 class Alternate(Actor):
@@ -37,13 +37,13 @@ class Alternate(Actor):
     def is_odd(self):
         return not self.is_even()
 
-    @guard(is_even)
+    @stateguard(is_even)
     @condition(['token_1'], ['token'])
     def port_one(self, input):
         self.token_one = False
         return ActionResult(production=(input, ))
 
-    @guard(is_odd)
+    @stateguard(is_odd)
     @condition(['token_2'], ['token'])
     def port_two(self, input):
         self.token_one = True

@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, guard, condition
+from calvin.actor.actor import Actor, ActionResult, stateguard, condition
 from calvin.utilities.calvinlogger import get_logger
 
 import datetime
@@ -62,7 +62,7 @@ class RFIDReader(Actor):
     def will_migrate(self):
         self.timeout_timer.cancel()
         
-    @guard(lambda self: self._state == "idle" and self.timeout_timer.triggered)
+    @stateguard(lambda self: self._state == "idle" and self.timeout_timer.triggered)
     @condition()
     def is_idle(self):
         _log.debug("is_idle")
@@ -82,7 +82,7 @@ class RFIDReader(Actor):
             self.timeout_timer = self['timer'].once(0.5)
         return ActionResult()
         
-    @guard(lambda self: self._state == "card present")
+    @stateguard(lambda self: self._state == "card present")
     @condition()
     def card_present(self):
         _log.info("card_present")
@@ -98,7 +98,7 @@ class RFIDReader(Actor):
             self._state = "reset"
         return ActionResult()
 
-    @guard(lambda self: self._state == "card active")
+    @stateguard(lambda self: self._state == "card active")
     @condition([], ["data"])
     def read_card(self):
         _log.info("read_card")
@@ -117,7 +117,7 @@ class RFIDReader(Actor):
             self._state = "reset"
         return ActionResult(production=(result,))
     
-    @guard(lambda self: self._state == "check card" and self.timeout_timer.triggered)
+    @stateguard(lambda self: self._state == "check card" and self.timeout_timer.triggered)
     @condition()
     def check_card(self):
         _log.info("check_card")
@@ -127,7 +127,7 @@ class RFIDReader(Actor):
             self._state = "card gone"
         return ActionResult()
 
-    @guard(lambda self: self._state == "check card")
+    @stateguard(lambda self: self._state == "check card")
     @condition(["data"], [])
     def write_card(self, incoming):
         _log.info("write_card")
@@ -140,7 +140,7 @@ class RFIDReader(Actor):
         return ActionResult()
         # Code goes here
         
-    @guard(lambda self: self._state == "card gone")
+    @stateguard(lambda self: self._state == "card gone")
     @condition([], ["data"])
     def card_gone(self):
         _log.info("card_gone")
@@ -148,7 +148,7 @@ class RFIDReader(Actor):
         self._state = "reset"
         return ActionResult(production=(result,))
 
-    @guard(lambda self: self._state == "reset")
+    @stateguard(lambda self: self._state == "reset")
     @condition()
     def reset(self):
         _log.info("reset")

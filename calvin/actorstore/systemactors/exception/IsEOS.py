@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
@@ -38,14 +38,14 @@ class IsEOS(Actor):
     def init(self):
         self.token = None
 
-    @guard(lambda self: self.token is not None)
+    @stateguard(lambda self: self.token is not None)
     @condition([], ['status'])
     def produce(self):
         tok = self.token
         self.token = None
         return ActionResult(production=(tok,))
 
-    @guard(lambda self: self.token is None)
+    @stateguard(lambda self: self.token is None)
     @condition(['token'])
     def consume(self, tok):
         self.token = False

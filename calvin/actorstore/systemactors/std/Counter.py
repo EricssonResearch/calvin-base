@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class Counter(Actor):
@@ -29,7 +29,7 @@ class Counter(Actor):
         self.count = 0
         self.stopped = False
 
-    @guard(lambda self: not self.stopped)
+    @stateguard(lambda self: not self.stopped)
     @condition(action_output=['integer'])
     def cnt(self):
         self.count += 1

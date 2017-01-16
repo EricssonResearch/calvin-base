@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class Void(Actor):
@@ -33,7 +33,7 @@ class Void(Actor):
     def init(self):
         pass
 
-    @guard(lambda self: False)
+    @stateguard(lambda self: False)
     @condition([], ['void'])
     def null(self):
         return ActionResult(production=(0, ))

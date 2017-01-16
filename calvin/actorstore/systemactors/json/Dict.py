@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 class Dict(Actor):
@@ -52,7 +52,7 @@ class Dict(Actor):
         self.done = True
         return ActionResult()
 
-    @guard(lambda self: not self.n and not self.done)
+    @stateguard(lambda self: not self.n and not self.done)
     @condition(['key', 'value'], [])
     def add_entry_EOS(self, key, value):
         if isinstance(key, basestring):
@@ -61,7 +61,7 @@ class Dict(Actor):
             self._bail()
         return ActionResult()
 
-    @guard(lambda self: self.n and not self.done)
+    @stateguard(lambda self: self.n and not self.done)
     @condition(['key', 'value'], [])
     def add_entry(self, key, value):
         if isinstance(key, basestring):
@@ -71,7 +71,7 @@ class Dict(Actor):
             self._bail()
         return ActionResult()
 
-    @guard(lambda self: self.done)
+    @stateguard(lambda self: self.done)
     @condition([], ['dict'])
     def produce_dict(self):
         res = self._dict

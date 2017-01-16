@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class EnclosureRoomTemperature(Actor):
@@ -39,7 +39,7 @@ class EnclosureRoomTemperature(Actor):
     def did_migrate(self):
         self.setup()
     
-    @guard(lambda self: self['enclosure'].has_ambient_temp)
+    @stateguard(lambda self: self['enclosure'].has_ambient_temp)
     @condition([], ['centigrade'])
     def measure(self):
         data = self['enclosure'].get_ambient_temp()

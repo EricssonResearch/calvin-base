@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class Distance(Actor):
@@ -41,7 +41,7 @@ class Distance(Actor):
     def did_migrate(self):
         self.setup()
     
-    @guard(lambda self: self['distance'].has_data())
+    @stateguard(lambda self: self['distance'].has_data())
     @condition([], ['meters'])
     def measure(self):
         distance = self['distance'].read()

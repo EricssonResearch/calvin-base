@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, guard, manage
+from calvin.actor.actor import Actor, ActionResult, condition, stateguard, manage
 
 
 class Dealternate(Actor):
@@ -37,13 +37,13 @@ class Dealternate(Actor):
     def is_odd(self):
         return not self.is_even_token
 
-    @guard(is_even)
+    @stateguard(is_even)
     @condition(['token'], ['token_1'])
     def port_one(self, tok):
         self.is_even_token = False
         return ActionResult(production=(tok, ))
 
-    @guard(is_odd)
+    @stateguard(is_odd)
     @condition(['token'], ['token_2'])
     def port_two(self, tok):
         self.is_even_token = True

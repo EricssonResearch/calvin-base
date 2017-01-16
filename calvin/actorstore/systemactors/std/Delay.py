@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class Delay(Actor):
@@ -46,7 +46,7 @@ class Delay(Actor):
         self.timers.append({'token': input, 'timer': self['timer'].once(self.delay)})
         return ActionResult()
 
-    @guard(lambda self: len(self.timers) > 0 and self.timers[0]['timer'].triggered)
+    @stateguard(lambda self: len(self.timers) > 0 and self.timers[0]['timer'].triggered)
     @condition([], ['token'])
     def timeout(self):
         o = self.timers.pop(0)

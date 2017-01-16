@@ -1,4 +1,4 @@
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 class Datetime(Actor):
     """

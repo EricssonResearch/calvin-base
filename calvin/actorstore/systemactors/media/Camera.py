@@ -1,4 +1,4 @@
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class Camera(Actor):
@@ -33,14 +33,14 @@ class Camera(Actor):
     def will_migrate(self):
         self.camera.close()
 
-    @guard(lambda self: self.trigger is True)
+    @stateguard(lambda self: self.trigger is True)
     @condition(action_output=['image'])
     def get_image(self, trigger):
         self.trigger = None
         image = self.camera.get_image()
         return ActionResult(production=(image, ))
 
-    @guard(lambda self: trigger is None)
+    @stateguard(lambda self: trigger is None)
     @condition(action_input=['trigger'])
     def trigger_action(self, trigger):
         self.trigger = True if trigger else None

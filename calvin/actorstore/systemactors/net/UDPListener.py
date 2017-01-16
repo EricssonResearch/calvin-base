@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -59,7 +59,7 @@ class UDPListener(Actor):
         self.use('calvinsys.network.serverhandler', shorthand='server')
         self.use('calvinsys.native.python-re', shorthand='regexp')
 
-    @guard(lambda self: self.listener and self.listener.have_data())
+    @stateguard(lambda self: self.listener and self.listener.have_data())
     @condition(action_output=['data_out'])
     def receive(self):
         data = self.listener.data_get()

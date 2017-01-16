@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class Constant(Actor):
@@ -32,7 +32,7 @@ class Constant(Actor):
     def log(self, data):
         print "%s<%s>: %s" % (self.__class__.__name__, self.id, data)
 
-    @guard(lambda self: self.n > 0 or self.n == -1)
+    @stateguard(lambda self: self.n > 0 or self.n == -1)
     @condition([], ['token'])
     def send_it(self):
         if self.n > 0:

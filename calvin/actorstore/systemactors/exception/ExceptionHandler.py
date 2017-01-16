@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
@@ -51,7 +51,7 @@ class ExceptionHandler(Actor):
         self.status = None
         self.token = None
 
-    @guard(lambda self: self.token is not None and self.status)
+    @stateguard(lambda self: self.token is not None and self.status)
     @condition([], ['token', 'status'])
     def produce_with_exception(self):
         tok = self.replacement if self.replace else self.token
@@ -60,14 +60,14 @@ class ExceptionHandler(Actor):
         self.status = None
         return ActionResult(production=(tok, status.value))
 
-    @guard(lambda self: self.token is not None and not self.status)
+    @stateguard(lambda self: self.token is not None and not self.status)
     @condition([], ['token'])
     def produce(self):
         tok = self.token
         self.token = None
         return ActionResult(production=(tok,))
 
-    @guard(lambda self: not self.status and self.token is None)
+    @stateguard(lambda self: not self.status and self.token is None)
     @condition(['token'])
     def consume(self, tok):
         self.token = tok

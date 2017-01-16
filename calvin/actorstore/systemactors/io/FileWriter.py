@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 from calvin.utilities.calvinlogger import get_logger
@@ -75,14 +75,14 @@ class FileWriter(Actor):
         self.file = None
         return ActionResult(production=())
 
-    @guard(lambda self: not self.file)
+    @stateguard(lambda self: not self.file)
     @condition(action_input=['data'])
     def open(self, data):
         self.setup()
         self.file.write_line(data)
         return ActionResult(production=())
 
-    @guard(lambda self: self.file)
+    @stateguard(lambda self: self.file)
     @condition(action_input=['data'])
     def write(self, data):
         self.file.write_line(data)

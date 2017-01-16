@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -74,14 +74,14 @@ class MQTTSubscriber(Actor):
         for topic in self.topics:
             self.subscriber.subscribe(topic)
 
-    @guard(lambda self: self.subscriber.has_message())
+    @stateguard(lambda self: self.subscriber.has_message())
     @condition()
     def consume_message(self):
         topic, msg = self.subscriber.get_message()
         self.message = {"topic": topic, "payload": msg}
         return ActionResult()
 
-    @guard(lambda self: self.message is not None)
+    @stateguard(lambda self: self.message is not None)
     @condition(action_output=['message'])
     def deliver_message(self):
         message = self.message

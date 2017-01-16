@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class EnclosurePowerUsage(Actor):
@@ -43,7 +43,7 @@ class EnclosurePowerUsage(Actor):
     def did_migrate(self):
         self.setup()
     
-    @guard(lambda self: self['enclosure'].has_power_data)
+    @stateguard(lambda self: self['enclosure'].has_power_data)
     @condition([], ['watts'])
     def measure(self):
         data = self['enclosure'].get_power_data()

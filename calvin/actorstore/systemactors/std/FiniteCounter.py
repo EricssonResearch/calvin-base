@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken
 import sys
 
@@ -41,13 +41,13 @@ class FiniteCounter(Actor):
             m = 1
         state.count = self.start * m
 
-    @guard(lambda self: self.count < self.ends)
+    @stateguard(lambda self: self.count < self.ends)
     @condition(action_output=['integer'])
     def cnt(self):
         self.count += 1
         return ActionResult(production=(self.count - 1, ))
 
-    @guard(lambda self: self.count == self.ends)
+    @stateguard(lambda self: self.count == self.ends)
     @condition(action_output=['integer'])
     def the_end(self):
         self.count = self.restart

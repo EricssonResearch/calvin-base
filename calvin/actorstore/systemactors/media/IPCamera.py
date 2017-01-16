@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -60,7 +60,7 @@ class IPCamera(Actor):
             self['http'].finalize(self.request)
             self.request = None
 
-    @guard(lambda self: self.ip and self.credentials and self.request is None)
+    @stateguard(lambda self: self.ip and self.credentials and self.request is None)
     @condition(action_input=['trigger'])
     def new_request(self, trigger):
         if trigger:
@@ -71,14 +71,14 @@ class IPCamera(Actor):
             self.request = self['http'].get(url, params, header)
         return ActionResult()
 
-    @guard(lambda self: self.request and not self.received_status and self['http'].received_headers(self.request))
+    @stateguard(lambda self: self.request and not self.received_status and self['http'].received_headers(self.request))
     @condition(action_output=['status'])
     def handle_headers(self):
         status = self['http'].status(self.request)
         self.received_status = status
         return ActionResult(production=(status,))
 
-    @guard(lambda self: self.request and self.received_status == 200 and self['http'].received_body(self.request))
+    @stateguard(lambda self: self.request and self.received_status == 200 and self['http'].received_body(self.request))
     @condition(action_output=['image'])
     def handle_body(self):
         body = self['http'].body(self.request)
@@ -86,7 +86,7 @@ class IPCamera(Actor):
         self.reset_request()
         return ActionResult(production=(image,))
 
-    @guard(lambda self: self.request and self.received_status and self.received_status != 200)
+    @stateguard(lambda self: self.request and self.received_status and self.received_status != 200)
     @condition()
     def handle_empty_body(self):
         self.reset_request()

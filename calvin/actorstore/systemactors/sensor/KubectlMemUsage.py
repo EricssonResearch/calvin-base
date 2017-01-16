@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.utilities.calvinlogger import get_actor_logger
 
 _log = get_actor_logger(__name__)
@@ -45,7 +45,7 @@ class KubectlMemUsage(Actor):
     def did_migrate(self):
         self.setup()
     
-    @guard(lambda self: self['kube'].has_metric("memory/usage"))
+    @stateguard(lambda self: self['kube'].has_metric("memory/usage"))
     @condition([], [])
     def measure(self):
         metrics = self['kube'].get_metric("memory/usage")
@@ -55,7 +55,7 @@ class KubectlMemUsage(Actor):
             item["value"] /= 1024*1024
         return ActionResult()
         
-    @guard(lambda self: self.data)
+    @stateguard(lambda self: self.data)
     @condition([], ['usage'])
     def dispatch_single(self):
         item = self.data.pop(0)

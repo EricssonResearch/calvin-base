@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, guard, manage
+from calvin.actor.actor import Actor, ActionResult, condition, stateguard, manage
 
 
 class Alternate3(Actor):
@@ -32,19 +32,19 @@ class Alternate3(Actor):
     def init(self):
         self.next_port = 1
 
-    @guard(lambda self: self.next_port == 1)
+    @stateguard(lambda self: self.next_port == 1)
     @condition(['token_1'], ['token'])
     def port_1(self, data):
         self.next_port = 2
         return ActionResult(production=(data, ))
 
-    @guard(lambda self: self.next_port == 2)
+    @stateguard(lambda self: self.next_port == 2)
     @condition(['token_2'], ['token'])
     def port_2(self, data):
         self.next_port = 3
         return ActionResult(production=(data, ))
 
-    @guard(lambda self: self.next_port == 3)
+    @stateguard(lambda self: self.next_port == 3)
     @condition(['token_3'], ['token'])
     def port_3(self, data):
         self.next_port = 1

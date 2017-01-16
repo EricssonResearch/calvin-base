@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -54,14 +54,14 @@ class HTTPPut(Actor):
             self.request = None
         self.received_headers = False
 
-    @guard(lambda self: self.request is None)
+    @stateguard(lambda self: self.request is None)
     @condition(action_input=['URL', 'params', 'header', 'data'])
     def new_request(self, url, params, header, data):
         url = url.encode('ascii', 'ignore')
         self.request = self['http'].put(url, params, header, data)
         return ActionResult()
 
-    @guard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
+    @stateguard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     @condition(action_output=['status', 'header'])
     def handle_headers(self):
         self.received_headers = True
@@ -69,14 +69,14 @@ class HTTPPut(Actor):
         headers = self['http'].headers(self.request)
         return ActionResult(production=(status, headers))
 
-    @guard(lambda self: self.received_headers and self['http'].received_body(self.request))
+    @stateguard(lambda self: self.received_headers and self['http'].received_body(self.request))
     @condition(action_output=['data'])
     def handle_body(self):
         body = self['http'].body(self.request)
         self.reset_request()
         return ActionResult(production=(body,))
 
-    @guard(lambda self: self.received_headers and self['http'].received_empty_body(self.request))
+    @stateguard(lambda self: self.received_headers and self['http'].received_empty_body(self.request))
     @condition()
     def handle_empty_body(self):
         self.reset_request()

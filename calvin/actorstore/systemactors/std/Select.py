@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class Select(Actor):
@@ -35,19 +35,19 @@ class Select(Actor):
     def init(self):
         self.select = None
 
-    @guard(lambda self: self.select is None)
+    @stateguard(lambda self: self.select is None)
     @condition(['select'], [])
     def select_action(self, select):
         self.select = select is True
         return ActionResult()
 
-    @guard(lambda self: self.select is False)
+    @stateguard(lambda self: self.select is False)
     @condition(['data'], ['case_false'])
     def false_action(self, data):
         self.select = None
         return ActionResult(production=(data, ))
 
-    @guard(lambda self: self.select is True)
+    @stateguard(lambda self: self.select is True)
     @condition(['data'], ['case_true'])
     def true_action(self, data):
         self.select = None

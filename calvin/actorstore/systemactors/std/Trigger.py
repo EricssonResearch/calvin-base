@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class Trigger(Actor):
@@ -48,13 +48,13 @@ class Trigger(Actor):
         if self.started:
             self.start()
 
-    @guard(lambda self: not self.started)
+    @stateguard(lambda self: not self.started)
     @condition([], ['data'])
     def start_timer(self):
         self.start()
         return ActionResult(production=(self.data, ))
 
-    @guard(lambda self: self.timer and self.timer.triggered)
+    @stateguard(lambda self: self.timer and self.timer.triggered)
     @condition([], ['data'])
     def trigger(self):
         self.timer.ack()

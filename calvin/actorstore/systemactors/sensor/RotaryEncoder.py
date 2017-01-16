@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class RotaryEncoder(Actor):
@@ -41,12 +41,12 @@ class RotaryEncoder(Actor):
     def did_migrate(self):
         self.setup()
     
-    @guard(lambda self: self['knob'].was_pressed())
+    @stateguard(lambda self: self['knob'].was_pressed())
     @condition([], ['button'])
     def button(self):
         return ActionResult(production=(True,))
         
-    @guard(lambda self: self['knob'].was_turned())
+    @stateguard(lambda self: self['knob'].was_turned())
     @condition([], ['direction'])
     def turn(self):
         direction = "clockwise" if self['knob'].read() == 1 else "anti-clockwise"

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 
 
 class StandardIn(Actor):
@@ -30,7 +30,7 @@ class StandardIn(Actor):
         self.use(requirement='calvinsys.io.filehandler', shorthand='file')
         self.file = self['file'].open_stdin()
 
-    @guard(lambda self: self.file and self.file.has_data())
+    @stateguard(lambda self: self.file and self.file.has_data())
     @condition([], ['out'])
     def read(self):
         line = self.file.read_line()

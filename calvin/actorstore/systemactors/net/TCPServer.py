@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
 # from calvin.runtime.north.calvin_token import EOSToken
 
 from calvin.utilities.calvinlogger import get_logger
@@ -55,14 +55,14 @@ class TCPServer(Actor):
     def did_migrate(self):
         self.server = None
 
-    @guard(lambda self: not self.host and not self.port and not self.server)
+    @stateguard(lambda self: not self.host and not self.port and not self.server)
     @condition(['host', 'port'], [])
     def setup(self, host, port):
         self.host = host
         self.port = port
         return ActionResult()
 
-    @guard(lambda self: self.host and self.port and not self.server)
+    @stateguard(lambda self: self.host and self.port and not self.server)
     @condition()
     def start(self):
         try:
@@ -71,14 +71,14 @@ class TCPServer(Actor):
             _log.exception(e)
         return ActionResult()
 
-    @guard(lambda self: self.server and self.server.connection_pending())
+    @stateguard(lambda self: self.server and self.server.connection_pending())
     @condition()
     def accept(self):
         addr, conn = self.server.accept()
         self.connections[addr] = conn
         return ActionResult()
 
-    @guard(lambda self: self.connections)
+    @stateguard(lambda self: self.connections)
     @condition(['handle', 'token'])
     def send(self, handle, token):
         for h, c in self.connections.items():
@@ -86,7 +86,7 @@ class TCPServer(Actor):
                 self.server.send(c, token.encode('utf-8'))
         return ActionResult(production=())
 
-    @guard(lambda self: self.connections and any([c.data_available for c in self.connections.values()]))
+    @stateguard(lambda self: self.connections and any([c.data_available for c in self.connections.values()]))
     @condition([], ['handle', 'token'])
     def receive(self):
         for h, c in self.connections.items():
@@ -95,7 +95,7 @@ class TCPServer(Actor):
                 break
         return ActionResult(production=(h, data))
 
-    @guard(lambda self: self.connections and any([c.connection_lost for c in self.connections.values()]))
+    @stateguard(lambda self: self.connections and any([c.connection_lost for c in self.connections.values()]))
     @condition()
     def close(self):
         for handle, connection in self.connections.items():
