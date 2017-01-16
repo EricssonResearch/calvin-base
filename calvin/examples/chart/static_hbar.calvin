@@ -12,15 +12,15 @@ define CHART_PARAMETERS = {"chart_title": "A Horizontal Bar Chart",
 /////////////////////////////////////////////////
 //              Actor definitions              //
 /////////////////////////////////////////////////
-bar_chart : chart.StaticHBar(chart_param=CHART_PARAMETERS)
+chart : chart.StaticHBar(chart_param=CHART_PARAMETERS)
 screen : media.ImageRenderer(width=600, height=450)
 
 
 /////////////////////////////////////////////////
 //                  Main script                //
 /////////////////////////////////////////////////
-[10, 20, 30, 40, 50, 60, 70, 80] > bar_chart.values
-["a", "b", "c", "d", "e", "f", "g", "h"] > bar_chart.labels
+[10, 20, 30, 40, 50, 60, 70, 80] > chart.values
+["a", "b", "c", "d", "e", "f", "g", "h"] > chart.labels
 
-bar_chart.img > screen.image
+chart.img > screen.image
 

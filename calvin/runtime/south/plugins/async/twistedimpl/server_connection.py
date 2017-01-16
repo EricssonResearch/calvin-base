@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2017 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ from twisted.internet.protocol import Protocol
 from twisted.internet.protocol import Factory
 from twisted.internet.protocol import DatagramProtocol
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import reactor
 from twisted.internet import error
 from calvin.utilities import certificate
 from calvin.utilities import runtime_credentials
@@ -29,6 +28,34 @@ _log = get_logger(__name__)
 
 from calvin.utilities import calvinconfig
 _conf = calvinconfig.get()
+
+
+def reactor_listen(node_name, factory, host, port):
+    listener = None
+
+    control_interface_security = _conf.get("security", "control_interface_security")
+    if control_interface_security == "tls":
+        _log.debug("ServerProtocolFactory with TLS enabled chosen")
+        try:
+            # TODO: figure out how to set more than one root cert in twisted truststore
+            runtime_cred = runtime_credentials.RuntimeCredentials(node_name)
+            server_credentials_data = runtime_cred.get_runtime_credentials()
+            server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
+        except Exception as err:
+            _log.error("Failed to fetch server credentials, err={}".format(err))
+            raise
+        try:
+            listener = reactor.listenSSL(port, factory, server_credentials.options(), interface=host)
+        except Exception as err:
+            _log.error("Server failed listenSSL, err={}".format(err))
+    else:
+        listener = reactor.listenTCP(port, factory, interface=host)
+        # @tif, check with Harald how to verify that workaround is still ok.
+        # WORKAROUND This is here due to an obscure error in twisted trying to write to a listening port
+        # on some architectures/OSes. The default is to raise a RuntimeError.
+        listener.doWrite = lambda: None
+
+    return listener
 
 
 class UDPServerProtocol(DatagramProtocol):
@@ -218,7 +245,7 @@ class HTTPProtocol(LineReceiver):
 
 class ServerProtocolFactory(Factory):
     def __init__(self, trigger, mode='line', delimiter='\r\n', max_length=8192, actor_id=None, node_name=None):
-        self._trigger             = trigger
+        self._trigger            = trigger
         self.mode                = mode
         self.delimiter           = delimiter
         self.MAX_LENGTH          = max_length
@@ -244,27 +271,7 @@ class ServerProtocolFactory(Factory):
         return connection
 
     def start(self, host, port):
-        control_interface_security = _conf.get("security","control_interface_security")
-        if control_interface_security=="tls":
-            _log.debug("ServerProtocolFactory with TLS enabled chosen")
-            try:
-                #TODO: figure out how to set more than one root cert in twisted truststore
-                runtime_cred = runtime_credentials.RuntimeCredentials(self._node_name)
-                server_credentials_data = runtime_cred.get_runtime_credentials()
-                server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
-            except Exception as err:
-                _log.error("Failed to fetch server credentials, err={}".format(err))
-                raise
-            try:
-                self._tls_server = reactor.listenSSL(port, self, server_credentials.options(), interface=host)
-            except Exception as err:
-                _log.error("Server failed listenSSL, err={}".format(err))
-            self._port = self._tls_server.getHost().port
-        else:
-            self._port = reactor.listenTCP(port, self, interface=host)
-            # WORKAROUND This is here due to an obscure error in twisted trying to write to a listening port
-            # on some architectures/OSes. The default is to raise a RuntimeError.
-            self._port.doWrite = lambda : None
+        self._port = reactor_listen(self._node_name, self, host, port)
 
     def stop(self):
         self._port.stopListening()
@@ -276,4 +283,3 @@ class ServerProtocolFactory(Factory):
         if not self.pending_connections:
             self.connection_pending = False
         return addr, conn
-

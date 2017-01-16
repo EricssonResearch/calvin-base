@@ -12,7 +12,7 @@ define CHART_PARAMETERS = {"chart_title": "A Horizontal Bar Chart",
 /////////////////////////////////////////////////
 //              Actor definitions              //
 /////////////////////////////////////////////////
-bar_chart : chart.DynamicHBar(chart_param=CHART_PARAMETERS)
+chart : chart.DynamicHBar(chart_param=CHART_PARAMETERS)
 screen : media.ImageRenderer(width=600, height=450)
 counter : std.CountTimer(sleep=1)
 random : math.Random(lower=1, upper=101)
@@ -21,9 +21,9 @@ random : math.Random(lower=1, upper=101)
 /////////////////////////////////////////////////
 //                  Main script                //
 /////////////////////////////////////////////////
-counter.integer > bar_chart.label
+counter.integer > chart.label
 
 counter.integer > random.trigger
-random.integer > bar_chart.value
+random.integer > chart.value
 
-bar_chart.img > screen.image
+chart.img > screen.image
