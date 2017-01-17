@@ -448,7 +448,7 @@ class Security(object):
                                     cb=CalvinCB(self._send_authorization_runtime_search,
                                                        counter=0, actor_id=actor_id,
                                                        actorstore_signature=actorstore_signature,
-                                                       possible_placements=possible_placements,
+                                                       possible_placements=list(possible_placements),
                                                        callback=callback))
 
     def _send_authorization_runtime_search(self, key, value, counter, actor_id, actorstore_signature,
