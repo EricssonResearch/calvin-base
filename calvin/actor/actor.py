@@ -504,15 +504,15 @@ class Actor(object):
     def fire(self):
         start_time = time.time()
         total_result = ActionResult(did_fire=False)
+        if not self.check_authorization_decision():
+            _log.info("Access denied for actor %s(%s)" % ( self._type, self._id))
+            # The authorization decision is not valid anymore.
+            # Change actor status to DENIED.
+            self.fsm.transition_to(Actor.STATUS.DENIED)
+            # Try to migrate actor.
+            self.sec.authorization_runtime_search(self._id, self._signature, callback=CalvinCB(self.set_migration_info))
+            return total_result
         while True:
-            if not self.check_authorization_decision():
-                _log.info("Access denied for actor %s(%s)" % ( self._type, self._id))
-                # The authorization decision is not valid anymore.
-                # Change actor status to DENIED.
-                self.fsm.transition_to(Actor.STATUS.DENIED)
-                # Try to migrate actor.
-                self.sec.authorization_runtime_search(self._id, self._signature, callback=CalvinCB(self.set_migration_info))
-                return total_result
             # Re-try action in list order after EVERY firing
             for action_method in self.__class__.action_priority:
                 action_result = action_method(self)
