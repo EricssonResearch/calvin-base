@@ -81,21 +81,8 @@ def condition(action_input=[], action_output=[]):
     Decorator condition specifies the required input data and output space.
     Both parameters are lists of port names
     Return value is an ActionResult object
-
-    FIXME:
-    - Modify ActionResult to specify how many tokens were read/written from/to each port
-      E.g. ActionResult.tokens_consumed/produced are dicts: {'port1':4, 'port2':1, ...}
-      Since reading is done in the wrapper, tokens_consumed is fixed and given by action_input.
-      The action fills in tokens_produced and the wrapper uses that info when writing to ports.
-    - We can keep the @condition syntax by making the change in the normalize step below.
     """
-    # #
-    # # Normalize argument list (fill in a default repeat of 1 if not stated)
-    # #
-    #
-    # action_input = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_input]
-    # action_output = [p if isinstance(p, (list, tuple)) else (p, 1) for p in action_output]
-    # contract_output = tuple(n for _, n in action_output)
+
     tokens_produced = len(action_output)
     tokens_consumed = len(action_input)
 
@@ -113,7 +100,6 @@ def condition(action_input=[], action_output=[]):
             output_ok = all([self.outports[portname].tokens_available(1) for portname in action_output])
 
             if not input_ok or not output_ok:
-                _log.debug("\t%s.%s Fired:N In:%s, Out:%s, Guard:X" % (self._name, action_method.__name__, "Y" if input_ok else "N", "Y" if output_ok else "N"))
                 return ActionResult(did_fire=False, input_ok=input_ok, output_ok=output_ok)
             #
             # Build the arguments for the action from the input port(s)
@@ -132,21 +118,32 @@ def condition(action_input=[], action_output=[]):
             # Check for exceptional conditions
             #
             if ex:
+                # FIXME: Simplify exception handling
                 action_result = self.exception_handler(action_method, args, {'exceptions': ex})
             else:
                 #
-                # Perform the action (N.B. the method may be wrapped in a guard)
+                # Perform the action (N.B. the method may be wrapped in a decorator)
                 #
                 action_result = action_method(self, *args)
-                # guard_str = "X" if action_result.guard_ok is None else ("Y" if action_result.guard_ok else "N")
-                # _log.debug("\t%s.%s Fired:%s In:Y, Out:Y, Guard:%s" % (
-                #     self._name, action_method.__name__, "Y" if action_result.did_fire else "N", guard_str))
 
             valid_production = action_result.did_fire and (tokens_produced == len(action_result.production))
 
-            if action_result.did_fire and valid_production:
+            if action_result.did_fire and not valid_production:
                 #
-                # Commit to the read from the FIFOs
+                # Error condition
+                #
+                action = "%s.%s" % (self._type, action_method.__name__)
+                raise Exception("%s invalid production %s, expected %s" % (action, str(action_result.production), str(tuple(action_output))))
+
+            if not action_result.did_fire:
+                #
+                # No action performed => cancel the tentative read from the FIFOs
+                #
+                for portname in action_input:
+                    self.inports[portname].peek_cancel()
+            else:
+                #
+                # Action performed => commit to the read from the FIFOs
                 #
                 for portname in action_input:
                     try:
@@ -164,22 +161,18 @@ def condition(action_input=[], action_output=[]):
                 #
                 # Bookkeeping
                 #
-                action_result.tokens_consumed = tokens_consumed
-                action_result.tokens_produced = tokens_produced
-            else:
-                #
-                # cancel the read from the FIFOs
-                #
-                for portname in action_input:
-                    self.inports[portname].peek_cancel()
-
-            if action_result.did_fire and not valid_production:
-                action = "%s.%s" % (self._type, action_method.__name__)
-                raise Exception("%s invalid production %s, expected %s" % (action, str(action_result.production), str(tuple(action_output))))
+                # FIXME: Remove, see comment below about minimizing the tracked info for metering
+                # action_result.tokens_consumed = tokens_consumed
+                # action_result.tokens_produced = tokens_produced
 
             return action_result
-        condition_wrapper.action_input = action_input
-        condition_wrapper.action_output = action_output
+
+        # FIXME: AFAICT the following is only used in metering.
+        # I think we should minimize the amount of info tracked for metering, and
+        # look up as much as possible off-line when analyzing it.
+        # condition_wrapper.action_input = action_input
+        # condition_wrapper.action_output = action_output
+
         return condition_wrapper
     return wrap
 
