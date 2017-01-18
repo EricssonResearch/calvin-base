@@ -131,44 +131,47 @@ def condition(action_input=[], action_output=[]):
             #
             action_result = action_result or ActionResult.empty_production()
 
-            valid_production = action_result.did_fire and (tokens_produced == len(action_result.production))
+            valid_production = (tokens_produced == len(action_result.production))
 
-            if action_result.did_fire and not valid_production:
+            if not valid_production:
                 #
                 # Error condition
                 #
                 action = "%s.%s" % (self._type, action_method.__name__)
                 raise Exception("%s invalid production %s, expected %s" % (action, str(action_result.production), str(tuple(action_output))))
 
-            if not action_result.did_fire:
-                #
-                # No action performed => cancel the tentative read from the FIFOs
-                #
-                for portname in action_input:
-                    self.inports[portname].peek_cancel()
-            else:
-                #
-                # Action performed => commit to the read from the FIFOs
-                #
-                for portname in action_input:
-                    try:
-                        exhausted = self.inports[portname].peek_commit()
-                        if exhausted:
-                            action_result.exhausted_ports.add(self.inports[portname])
-                    except:
-                        _log.exception("PORTCOMMIT EXCEPTION")
-                #
-                # Write the results from the action to the output port(s)
-                #
-                for portname, retval in zip(action_output, action_result.production):
-                    port = self.outports[portname]
-                    port.write_token(retval if isinstance(retval, Token) else Token(retval))
-                #
-                # Bookkeeping
-                #
-                # FIXME: Remove, see comment below about minimizing the tracked info for metering
-                # action_result.tokens_consumed = tokens_consumed
-                # action_result.tokens_produced = tokens_produced
+            # if not action_result.did_fire:
+            #     # We really shouldn't get here, ever.
+            #     raise Exception("DID NOT FIRE")
+            #     #
+            #     # No action performed => cancel the tentative read from the FIFOs
+            #     #
+            #     for portname in action_input:
+            #         self.inports[portname].peek_cancel()
+            # else:
+
+            #
+            # Action performed => commit to the read from the FIFOs
+            #
+            for portname in action_input:
+                try:
+                    exhausted = self.inports[portname].peek_commit()
+                    if exhausted:
+                        action_result.exhausted_ports.add(self.inports[portname])
+                except:
+                    _log.exception("PORTCOMMIT EXCEPTION")
+            #
+            # Write the results from the action to the output port(s)
+            #
+            for portname, retval in zip(action_output, action_result.production):
+                port = self.outports[portname]
+                port.write_token(retval if isinstance(retval, Token) else Token(retval))
+            #
+            # Bookkeeping
+            #
+            # FIXME: Remove, see comment below about minimizing the tracked info for metering
+            # action_result.tokens_consumed = tokens_consumed
+            # action_result.tokens_produced = tokens_produced
 
             return action_result
 
