@@ -100,7 +100,7 @@ def condition(action_input=[], action_output=[]):
             output_ok = all(self.outports[portname].tokens_available(1) for portname in action_output)
 
             if not input_ok or not output_ok:
-                return ActionResult(did_fire=False, input_ok=input_ok, output_ok=output_ok)
+                return ActionResult(did_fire=False, output_ok=output_ok)
             #
             # Build the arguments for the action from the input port(s)
             #
@@ -229,14 +229,14 @@ class ActionResult(object):
     _did_not_fire = None
     _empty_production = None
 
-    def __init__(self, did_fire=True, production=(), input_ok=True, output_ok=True):
+    def __init__(self, did_fire=True, production=(), output_ok=True):
         super(ActionResult, self).__init__()
         self.did_fire = did_fire
-        self.input_ok = input_ok
+        # self.input_ok = input_ok
         self.output_ok = output_ok
         # self.guard_ok = None
-        self.tokens_consumed = 0
-        self.tokens_produced = 0
+        # self.tokens_consumed = 0
+        # self.tokens_produced = 0
         self.production = production
         self.exhausted_ports = set([])
 
@@ -264,10 +264,10 @@ class ActionResult(object):
              production will be DISCARDED
         """
         self.did_fire |= other_result.did_fire
-        self.input_ok &= other_result.input_ok
+        # self.input_ok &= other_result.input_ok
         self.output_ok &= other_result.output_ok
-        self.tokens_consumed += other_result.tokens_consumed
-        self.tokens_produced += other_result.tokens_produced
+        # self.tokens_consumed += other_result.tokens_consumed
+        # self.tokens_produced += other_result.tokens_produced
         self.exhausted_ports |= other_result.exhausted_ports
 
 
