@@ -517,28 +517,20 @@ class Actor(object):
                     # self.metering.fired(self._id, action_method.__name__)
                     # self.control.log_actor_firing( ... )
                     break
-
             #
             # We end up here when an action fired or when all actions have failed to fire
             #
-            time_spent = time.time() - start_time
-
             if did_fire:
                 #
                 # Limit time given to actors even if it could continue a new round of firing
                 #
+                # FIXME: IMHO this decision should be made in the scheduler. No timing here.
+                time_spent = time.time() - start_time
                 done = time_spent > 0.020
             else:
                 #
                 # We reached the end of the list without ANY firing during this round
-                # => clean up and return
-                #
-                # Warn for long running actions
-                # FIXME: I fail to see how the following could be triggered
-                if time_spent > 0.2:
-                    self._warn_slow_actor(time_spent, start_time)
-                #
-                # Exhaustion
+                # => handle exhaustion and return
                 #
                 self._handle_exhaustion(exhausted, output_ok)
                 done = True
