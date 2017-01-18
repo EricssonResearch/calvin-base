@@ -100,7 +100,6 @@ def condition(action_input=[], action_output=[]):
             output_ok = all(self.outports[portname].tokens_available(1) for portname in action_output)
 
             if not input_ok or not output_ok:
-                # return ActionResult(did_fire=False, output_ok=output_ok)
                 return (False, output_ok, ())
             #
             # Build the arguments for the action from the input port(s)
@@ -125,11 +124,10 @@ def condition(action_input=[], action_output=[]):
                 #
                 # Perform the action (N.B. the method may be wrapped in a decorator)
                 # Action methods not returning a production (i.e. no output ports) returns None
+                # => replace with empty_production constant
                 #
                 production = action_method(self, *args) or ()
-            #
-            # Action methods that don't produce output will return None => replace with empty_production constant
-            #
+
             valid_production = (tokens_produced == len(production))
 
             if not valid_production:
@@ -158,21 +156,8 @@ def condition(action_input=[], action_output=[]):
             for portname, retval in zip(action_output, production):
                 port = self.outports[portname]
                 port.write_token(retval if isinstance(retval, Token) else Token(retval))
-            #
-            # Bookkeeping
-            #
-            # FIXME: Remove, see comment below about minimizing the tracked info for metering
-            # action_result.tokens_consumed = tokens_consumed
-            # action_result.tokens_produced = tokens_produced
 
-            # return ActionResult(exhausted=exhausted_ports)
             return (True, True, exhausted_ports)
-
-        # FIXME: AFAICT the following is only used in metering.
-        # I think we should minimize the amount of info tracked for metering, and
-        # look up as much as possible off-line when analyzing it.
-        # condition_wrapper.action_input = action_input
-        # condition_wrapper.action_output = action_output
 
         return condition_wrapper
     return wrap
@@ -191,7 +176,6 @@ def stateguard(action_guard):
         @functools.wraps(action_method)
         def guard_wrapper(self, *args):
             if not action_guard(self):
-                # return ActionResult.did_not_fire()
                 return (False, True, ())
             return action_method(self, *args)
 
@@ -217,55 +201,6 @@ def verify_status(valid_status_list, raise_=False):
         x = wrapped(*args, **kwargs)
         return x
     return wrapper
-
-
-class ActionResult(object):
-
-    """Return type from action and @guard"""
-
-    _did_not_fire = None
-    _empty_production = None
-
-    def __init__(self, did_fire=True, output_ok=True, exhausted=None):
-        super(ActionResult, self).__init__()
-        self.did_fire = did_fire
-        # self.input_ok = input_ok
-        self.output_ok = output_ok
-        # self.guard_ok = None
-        # self.tokens_consumed = 0
-        # self.tokens_produced = 0
-        # self.production = production
-        self.exhausted_ports = exhausted or set()
-
-    @classmethod
-    def did_not_fire(cls):
-        if cls._did_not_fire is None:
-            cls._did_not_fire = ActionResult(did_fire=False)
-        return cls._did_not_fire
-    @classmethod
-    def empty_production(cls):
-        if cls._empty_production is None:
-            cls._empty_production = ActionResult()
-        return cls._empty_production
-
-    def __str__(self):
-        fmtstr = "%s - did_fire:%s"
-        return fmtstr % (self.__class__.__name__, str(self.did_fire))
-
-    def merge(self, other_result):
-        """
-        Update this ActionResult by mergin data from other_result:
-             did_fire will be OR:ed together
-             any tokens_consumed will be ADDED
-             any tokens_produced will be ADDED
-             production will be DISCARDED
-        """
-        self.did_fire |= other_result.did_fire
-        # self.input_ok &= other_result.input_ok
-        self.output_ok &= other_result.output_ok
-        # self.tokens_consumed += other_result.tokens_consumed
-        # self.tokens_produced += other_result.tokens_produced
-        self.exhausted_ports |= other_result.exhausted_ports
 
 
 def _implements_state(obj):
@@ -517,64 +452,94 @@ class Actor(object):
                                         max(0, e.pressure_count - PRESSURE_LENGTH), e.pressure_count)])
         return pressure
 
-    @verify_status([STATUS.ENABLED])
-    def fire(self):
-        start_time = time.time()
-        total_result = ActionResult(did_fire=False)
-        if not self.check_authorization_decision():
+    #
+    # FIXME: The following methods (_authorized, _warn_slow_actor, _handle_exhaustion) were
+    #        extracted from fire() to make the logic easier to follow
+    #
+    def _authorized(self):
+        authorized = self.check_authorization_decision()
+        if not authorized:
             _log.info("Access denied for actor %s(%s)" % ( self._type, self._id))
             # The authorization decision is not valid anymore.
             # Change actor status to DENIED.
             self.fsm.transition_to(Actor.STATUS.DENIED)
             # Try to migrate actor.
             self.sec.authorization_runtime_search(self._id, self._signature, callback=CalvinCB(self.set_migration_info))
-            return total_result
+        return authorized
+
+    def _warn_slow_actor(self, time_spent, start_time):
+        time_since_warning = start_time - self._last_time_warning
+        if time_since_warning < 120.0:
+            return
+        self._last_time_warning = start_time
+        _log.warning("%s (%s) actor blocked for %f sec" % (self._name, self._type, time_spent))
+
+    def _handle_exhaustion(self, exhausted_ports, output_ok):
+        for port in exhausted_ports:
+            # Might result in actor changing to PENDING
+            try:
+                port.finished_exhaustion()
+            except:
+                _log.exception("FINSIHED EXHAUSTION FAILED")
+        if output_ok and self._exhaust_cb is not None:
+            # We are in exhaustion and stopped firing while token slots available, i.e. exhausted inputs or deadlock
+            # FIXME handle exhaustion deadlock
+            async.DelayedCall(0, self._exhaust_cb, status=response.CalvinResponse(True))
+            self._exhaust_cb = None
+
+    @verify_status([STATUS.ENABLED])
+    def fire(self):
+        """
+        Fire an actor.
+        Returns True if any action fired
+        """
+        start_time = time.time()
+        actor_did_fire = False
+        #
+        # First make sure we are allowed to run
+        #
+        if not self._authorized():
+            return actor_did_fire
+        #
+        # Repeatedly go over the action priority list
+        #
+        # FIXME: Make logic of this loop easier to follow
         while True:
-            # Re-try action in list order after EVERY firing
             for action_method in self.__class__.action_priority:
                 did_fire, output_ok, exhausted = action_method(self)
-                action_result = ActionResult(did_fire, output_ok, exhausted)
-                total_result.merge(action_result)
+                actor_did_fire |= did_fire
                 # Action firing should fire the first action that can fire,
-                # hence when fired start from the beginning
-                if action_result.did_fire:
-                    # # FIXME: Make this a hook for the runtime to use, don't
-                    # #        import and use calvin_control or metering in actor
+                # hence when fired start from the beginning priority list
+                if did_fire:
+                    # # FIXME: Add hooks for metering and probing
                     # self.metering.fired(self._id, action_method.__name__)
-                    # self.control.log_actor_firing(
-                    #     self._id,
-                    #     action_method.__name__,
-                    #     action_result.tokens_produced,
-                    #     action_result.tokens_consumed,
-                    #     action_result.production)
+                    # self.control.log_actor_firing( ... )
                     break
 
-            curr_time = time.time()
-            if action_result.did_fire and curr_time - start_time > 0.020:
-                # We have run long enough, interrupt even though we could continue
-                return total_result
-            if not action_result.did_fire:
-                diff = curr_time - start_time
-                if diff > 0.2 and start_time - self._last_time_warning > 120.0:
-                    # Every other minute warn if an actor runs for longer than 200 ms
-                    self._last_time_warning = start_time
-                    _log.warning("%s (%s) actor blocked for %f sec" % (self._name, self._type, diff))
-                for port in action_result.exhausted_ports:
-                    # Might result in actor changing to PENDING
-                    try:
-                        port.finished_exhaustion()
-                    except:
-                        _log.exception("FINSIHED EXHAUSTION FAILED")
-                if self._exhaust_cb is not None:
-                    _log.debug("EXHAUSTINGCB %s" % action_result.output_ok)
-                if action_result.output_ok and self._exhaust_cb is not None:
-                    # We are in exhaustion and stopped firing while token slots available, i.e. exhausted inputs or deadlock
-                    # FIXME handle exhaustion deadlock
-                    # After fire loop call callback
-                    async.DelayedCall(0, self._exhaust_cb, status=response.CalvinResponse(True))
-                    self._exhaust_cb = None
-                # We reached the end of the list without ANY firing => return
-                return total_result
+            time_spent = time.time() - start_time
+            #
+            # Limit time given to actors even if it could continue firing
+            #
+            max_time_reached = did_fire and time_spent > 0.020
+            if max_time_reached:
+                return actor_did_fire
+
+            if not did_fire:
+                #
+                # We reached the end of the list without ANY firing during this round
+                # => clean up and return
+                #
+                # Warn for long running actions
+                #
+                if time_spent > 0.2:
+                    self._warn_slow_actor(time_spent, start_time)
+                #
+                # Exhaustion
+                #
+                self._handle_exhaustion(exhausted, output_ok)
+
+                return actor_did_fire
+
         # Redundant as of now, kept as reminder for when rewriting exception handling.
         raise Exception('Exit from fire should ALWAYS be from previous line.')
 
