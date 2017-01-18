@@ -493,18 +493,20 @@ class Actor(object):
         Fire an actor.
         Returns True if any action fired
         """
-        start_time = time.time()
-        actor_did_fire = False
         #
         # First make sure we are allowed to run
         #
         if not self._authorized():
-            return actor_did_fire
+            return False
+
+        start_time = time.time()
+        actor_did_fire = False
         #
         # Repeatedly go over the action priority list
         #
         # FIXME: Make logic of this loop easier to follow
-        while True:
+        done = False
+        while not done:
             for action_method in self.__class__.action_priority:
                 did_fire, output_ok, exhausted = action_method(self)
                 actor_did_fire |= did_fire
@@ -516,32 +518,33 @@ class Actor(object):
                     # self.control.log_actor_firing( ... )
                     break
 
+            #
+            # We end up here when an action fired or when all actions have failed to fire
+            #
             time_spent = time.time() - start_time
-            #
-            # Limit time given to actors even if it could continue firing
-            #
-            max_time_reached = did_fire and time_spent > 0.020
-            if max_time_reached:
-                return actor_did_fire
 
-            if not did_fire:
+            if did_fire:
+                #
+                # Limit time given to actors even if it could continue a new round of firing
+                #
+                done = time_spent > 0.020
+            else:
                 #
                 # We reached the end of the list without ANY firing during this round
                 # => clean up and return
                 #
                 # Warn for long running actions
-                #
+                # FIXME: I fail to see how the following could be triggered
                 if time_spent > 0.2:
                     self._warn_slow_actor(time_spent, start_time)
                 #
                 # Exhaustion
                 #
                 self._handle_exhaustion(exhausted, output_ok)
+                done = True
 
-                return actor_did_fire
+        return actor_did_fire
 
-        # Redundant as of now, kept as reminder for when rewriting exception handling.
-        raise Exception('Exit from fire should ALWAYS be from previous line.')
 
     def enabled(self):
         # We want to run even if not fully connected during exhaustion
