@@ -24,12 +24,12 @@ _log = get_logger(__name__)
 class MQTTSubscriber(Actor):
     """
     Subscribe to given topics (list of mqtt ), output messages on message-port
-    
+
     Arguments:
       host: <ip/name of mqtt broker>,
       port: <port to use on mqtt broker>,
       topics: <list of topics to subscribe to>
-    
+
     settings is a dictionary with optional arguments :
       "ca-cert-file": <ca certificate file>,
       "verify-hostname": <False iff hostname in cert should not be verified>,
@@ -55,7 +55,7 @@ class MQTTSubscriber(Actor):
 
     def did_migrate(self):
         self.setup()
-        
+
     def will_migrate(self):
         if self.subscriber:
             self.subscriber.stop()
@@ -79,15 +79,15 @@ class MQTTSubscriber(Actor):
     def consume_message(self):
         topic, msg = self.subscriber.get_message()
         self.message = {"topic": topic, "payload": msg}
-        
+
 
     @stateguard(lambda self: self.message is not None)
     @condition(action_output=['message'])
     def deliver_message(self):
         message = self.message
         self.message = None
-        return ActionResult(production=(message,),)
+        return (message,)
 
- 
+
     action_priority = (deliver_message, consume_message, )
     requires = ['calvinsys.network.mqtthandler']
