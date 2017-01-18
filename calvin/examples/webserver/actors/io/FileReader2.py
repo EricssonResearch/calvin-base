@@ -66,20 +66,20 @@ class FileReader2(Actor):
     @condition([], ['out', 'ses'])
     def file_not_found(self):
         self.file_not_found = False  # Only report once
-        return ActionResult(production=(EOSToken(), self.status_ERR))
+        return (EOSToken(), self.status_ERR)
 
     @stateguard(lambda self: self.file and not self.file.eof() and self.file.has_data())
     @condition([], ['out'])
     def readline(self):
         line = self.file.read_line()
-        return ActionResult(production=(line, ))
+        return (line, )
 
     @stateguard(lambda self: self.file and self.file.eof())
     @condition([], ['out', 'ses'])
     def eof(self):
         self['file'].close(self.file)
         self.file = None
-        return ActionResult(production=(EOSToken(), self.status_OK))
+        return (EOSToken(), self.status_OK)
 
     action_priority = (readline, eof, open_file, file_not_found)
     requires = ['calvinsys.io.filehandler']

@@ -33,7 +33,7 @@ class Counter(Actor):
     @condition(action_output=['integer'])
     def cnt(self):
         self.count += 1
-        return ActionResult(production=(self.count, ))
+        return (self.count, )
 
     action_priority = (cnt,)
 

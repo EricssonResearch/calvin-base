@@ -36,7 +36,7 @@ class Void(Actor):
     @stateguard(lambda self: False)
     @condition([], ['void'])
     def null(self):
-        return ActionResult(production=(0, ))
+        return (0, )
 
     action_priority = (null, )
 

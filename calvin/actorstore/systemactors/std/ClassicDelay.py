@@ -53,13 +53,13 @@ class ClassicDelay(Actor):
     @condition(['token'], ['token'])
     def start_timer(self, token):
         self.start()
-        return ActionResult(production=(token, ))
+        return (token, )
 
     @stateguard(lambda self: self.timer and self.timer.triggered)
     @condition(['token'], ['token'])
     def passthrough(self, token):
         self.timer.ack()
-        return ActionResult(production=(token, ))
+        return (token, )
 
     action_priority = (start_timer, passthrough)
     requires = ['calvinsys.events.timer']

@@ -68,7 +68,7 @@ class SocketClient(Actor):
     @condition(action_output=['outData'])
     def receive(self):
         data = self.cc.get_data()
-        return ActionResult(production=(data,))
+        return (data,)
 
     @stateguard(lambda self: True)
     @condition(action_input=['inControl'])
@@ -88,12 +88,11 @@ class SocketClient(Actor):
     @condition(action_output=['outControl'])
     def send_control(self):
         data = self.cc.get_control()
-        return ActionResult(production=(data,))
+        return (data,)
 
     def exception_handler(self, action, args, context):
         """Handler ExceptionTokens"""
         self.EOST_token_received = True
-        return ActionResult(production=())
 
     action_priority = (receive_control, receive, send, send_control)
     requires = ['calvinsys.io.socketclienthandler']

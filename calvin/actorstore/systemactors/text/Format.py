@@ -60,7 +60,7 @@ class Format(Actor):
             retval = retval.replace('{' + key + '}', str(value))
         retval = retval.replace(r"\{", "{").replace(r"\}", "}")
 
-        return ActionResult(production=(retval, ))
+        return (retval, )
 
     action_priority = (action, )
     requires = ['calvinsys.native.python-re']

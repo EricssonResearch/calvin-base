@@ -60,7 +60,7 @@ class Compute(Actor):
     @condition(['a', 'b'], ['result'])
     def compute(self, a, b):
         res = self.op(a, b) if self.op else None
-        return ActionResult(production=(res, ))
+        return (res, )
 
 
     action_priority = ( compute, )

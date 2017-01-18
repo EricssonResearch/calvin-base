@@ -33,7 +33,7 @@ class Length(Actor):
 
     @condition(['string'], ['length'])
     def action(self, token):
-        return ActionResult(production=(len(token),))
+        return (len(token),)
 
     action_priority = (action, )
 

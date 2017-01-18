@@ -65,7 +65,7 @@ class StaticHBar(Actor):
         img_str = self['image'].to_string(image, "PNG")
         result = self['base64'].b64encode(img_str)
 
-        return ActionResult(production=(result, ))
+        return (result, )
 
     @stateguard(lambda self: len(self.req_in_progress) <= self.max_req_in_progress)
     @condition(['values', 'labels'], [])

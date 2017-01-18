@@ -34,6 +34,6 @@ class Split(Actor):
     @condition(['text'], ['lines'])
     def action(self, token):
         res = token.split(self.delim)
-        return ActionResult(production=(res,))
+        return (res,)
 
     action_priority = (action, )

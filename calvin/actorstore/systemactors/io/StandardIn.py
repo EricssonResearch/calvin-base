@@ -34,7 +34,7 @@ class StandardIn(Actor):
     @condition([], ['out'])
     def read(self):
         line = self.file.read_line()
-        return ActionResult(production=(line, ))
+        return (line, )
 
     action_priority = (read, )
     requires =  ['calvinsys.io.filehandler']

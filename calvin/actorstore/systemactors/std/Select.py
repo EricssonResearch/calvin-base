@@ -45,13 +45,13 @@ class Select(Actor):
     @condition(['data'], ['case_false'])
     def false_action(self, data):
         self.select = None
-        return ActionResult(production=(data, ))
+        return (data, )
 
     @stateguard(lambda self: self.select is True)
     @condition(['data'], ['case_true'])
     def true_action(self, data):
         self.select = None
-        return ActionResult(production=(data, ))
+        return (data, )
 
     action_priority = (select_action, false_action, true_action)
 

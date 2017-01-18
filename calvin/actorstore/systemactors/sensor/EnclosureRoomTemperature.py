@@ -44,7 +44,7 @@ class EnclosureRoomTemperature(Actor):
     def measure(self):
         data = self['enclosure'].get_ambient_temp()
         self['enclosure'].ack_ambient_temp()
-        return ActionResult(production=(data,))
+        return (data,)
 
     action_priority = (measure,)
     requires =  ['calvinsys.sensors.enclosure']

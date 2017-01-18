@@ -41,13 +41,13 @@ class Alternate(Actor):
     @condition(['token_1'], ['token'])
     def port_one(self, input):
         self.token_one = False
-        return ActionResult(production=(input, ))
+        return (input, )
 
     @stateguard(is_odd)
     @condition(['token_2'], ['token'])
     def port_two(self, input):
         self.token_one = True
-        return ActionResult(production=(input, ))
+        return (input, )
 
     action_priority = (port_one, port_two)
 

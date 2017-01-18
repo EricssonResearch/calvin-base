@@ -38,7 +38,7 @@ class Identity(Actor):
         if self.dump:
             self.log(input)
         self.last = input
-        return ActionResult(production=(input, ))
+        return (input, )
 
     def report(self):
         return self.last

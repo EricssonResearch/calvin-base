@@ -66,7 +66,7 @@ class Iterate(Actor):
         if not self.data:
             self.data = None
             self.has_data = False
-        return ActionResult(production=(res, i))
+        return (res, i)
 
     @stateguard(lambda self: self.has_data and type(self.data) is dict)
     @condition([], ['item', 'index'])
@@ -75,7 +75,7 @@ class Iterate(Actor):
         if not self.data:
             self.data = None
             self.has_data = False
-        return ActionResult(production=(v, k))
+        return (v, k)
 
     @stateguard(lambda self: self.has_data and isinstance(self.data, basestring))
     @condition([], ['item', 'index'])
@@ -87,7 +87,7 @@ class Iterate(Actor):
         if not self.data:
             self.data = None
             self.has_data = False
-        return ActionResult(production=(res, i))
+        return (res, i)
 
     @stateguard(lambda self: self.has_data)
     @condition([], ['item', 'index'])
@@ -95,7 +95,7 @@ class Iterate(Actor):
         res = self.data
         self.data = None
         self.has_data = False
-        return ActionResult(production=(res, 0))
+        return (res, 0)
 
 
     action_priority = (produce_listitem, produce_dictitem, produce_stringitem, produce_plainitem, consume)

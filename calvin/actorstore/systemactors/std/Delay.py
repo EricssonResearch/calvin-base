@@ -51,7 +51,7 @@ class Delay(Actor):
     def timeout(self):
         o = self.timers.pop(0)
         o['timer'].ack()
-        return ActionResult(production=(o['token'], ))
+        return (o['token'], )
 
     action_priority = (timeout, tokenAvailable)
     requires = ['calvinsys.events.timer']

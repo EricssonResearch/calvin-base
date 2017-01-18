@@ -77,7 +77,7 @@ class Dict(Actor):
         res = self._dict
         self.done = False
         self._dict = {}
-        return ActionResult(production=(res, ))
+        return (res, )
 
     action_priority = (produce_dict, add_entry, add_entry_EOS)
 

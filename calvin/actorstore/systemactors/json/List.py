@@ -75,7 +75,7 @@ class List(Actor):
             res = self._list
         self.done = False
         self._list = []
-        return ActionResult(production=(res, ))
+        return (res, )
 
     action_priority = (produce_list, add_item, add_item_EOS)
 

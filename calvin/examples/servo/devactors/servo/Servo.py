@@ -24,7 +24,7 @@ class Servo(Actor):
         else:
             # left
             self.pos = 2.5
-        return ActionResult(production=(self.pos, ))
+        return (self.pos, )
 
     @stateguard(lambda trigger: self.trigger is None)
     @condition(action_input=['trigger'])

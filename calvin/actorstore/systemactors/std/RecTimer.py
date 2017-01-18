@@ -44,7 +44,7 @@ class RecTimer(Actor):
     @stateguard(lambda self: self.timer and self.timer.triggered)
     @condition(['token'], ['token'])
     def flush(self, input):
-        return ActionResult(production=(input, ))
+        return (input, )
 
     @stateguard(lambda self: self.timer and self.timer.triggered)
     @condition()

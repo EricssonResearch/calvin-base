@@ -62,7 +62,7 @@ class HTTPPost(Actor):
         self.received_headers = True
         status = self['http'].status(self.request)
         headers = self['http'].headers(self.request)
-        return ActionResult(production=(status, headers))
+        return (status, headers)
 
     @stateguard(lambda self: self.received_headers and self['http'].received_body(self.request))
     @condition(action_output=['data'])
@@ -71,7 +71,7 @@ class HTTPPost(Actor):
         self.received_headers = False
         self['http'].finalize(self.request)
         self.request = None
-        return ActionResult(production=(body,))
+        return (body,)
 
     action_priority = (handle_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-json']

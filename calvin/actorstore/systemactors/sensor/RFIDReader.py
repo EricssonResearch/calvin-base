@@ -115,7 +115,7 @@ class RFIDReader(Actor):
         else :
             _log.info("could not read card %r" % (self.active_uid,))
             self._state = "reset"
-        return ActionResult(production=(result,))
+        return (result,)
     
     @stateguard(lambda self: self._state == "check card" and self.timeout_timer.triggered)
     @condition()
@@ -146,7 +146,7 @@ class RFIDReader(Actor):
         _log.info("card_gone")
         result = {"status": False, "data": None, "cardno": self.active_uid_string, "timestamp": str(now())}
         self._state = "reset"
-        return ActionResult(production=(result,))
+        return (result,)
 
     @stateguard(lambda self: self._state == "reset")
     @condition()

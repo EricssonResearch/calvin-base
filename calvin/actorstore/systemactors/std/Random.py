@@ -46,7 +46,7 @@ class Random(Actor):
     @condition(action_input=['trigger'], action_output=['integer'])
     def action(self, trigger):
         result = self['random'].randint(self.min, self.max)
-        return ActionResult(production=(result, ))
+        return (result, )
 
     action_priority = (action, )
 

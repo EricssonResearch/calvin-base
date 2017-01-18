@@ -40,7 +40,7 @@ class SetValue(Actor):
     """
 
     def exception_handler(self, action, args, context):
-        return ActionResult(production=(ExceptionToken(),))
+        return (ExceptionToken(),)
 
     @manage()
     def init(self):
@@ -70,7 +70,7 @@ class SetValue(Actor):
     @condition(['container', 'key', 'value'], ['container'])
     def set_value(self, data, key, value):
         container = self._set_value(deepcopy(data), key, value)
-        return ActionResult(production=(container, ))
+        return (container, )
 
     action_priority = (set_value, )
 

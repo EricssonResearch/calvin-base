@@ -43,7 +43,7 @@ class IsEOS(Actor):
     def produce(self):
         tok = self.token
         self.token = None
-        return ActionResult(production=(tok,))
+        return (tok,)
 
     @stateguard(lambda self: self.token is None)
     @condition(['token'])

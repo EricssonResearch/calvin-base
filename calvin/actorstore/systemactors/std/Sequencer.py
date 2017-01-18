@@ -44,12 +44,12 @@ class Sequencer(Actor):
         token = self.token
         self.token = None
         self.eos = True
-        return ActionResult(production=(token,))
+        return (token,)
 
     @stateguard(lambda self: self.eos)
     @condition(action_output=['data_out'])
     def send_eos(self):
         self.eos = False
-        return ActionResult(production=(EOSToken(),))
+        return (EOSToken(),)
 
     action_priority = (incoming, send_token, send_eos)

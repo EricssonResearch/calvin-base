@@ -59,14 +59,14 @@ class RegexMatch(Actor):
     def output_match(self):
         result = self.result
         self.result = None
-        return ActionResult(production=(result,))
+        return (result,)
 
     @stateguard(lambda self: self.result is not None and not self.did_match)
     @condition([], ['no_match'])
     def output_no_match(self):
         result = self.result
         self.result = None
-        return ActionResult(production=(result,))
+        return (result,)
 
     action_priority = (match, output_match, output_no_match)
     requires = ['calvinsys.native.python-re']

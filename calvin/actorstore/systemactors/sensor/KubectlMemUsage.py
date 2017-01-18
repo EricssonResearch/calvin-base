@@ -64,7 +64,7 @@ class KubectlMemUsage(Actor):
         self.last_timestamp = item["timestamp"]
         payload["timestamp"] = 1000 * item["timestamp"]
         del item["timestamp"]
-        return ActionResult(production=(payload,))
+        return (payload,)
 
     action_priority = (dispatch_single, measure,)
     requires =  ['calvinsys.sensors.kubectl']

@@ -38,7 +38,7 @@ class Camera(Actor):
     def get_image(self, trigger):
         self.trigger = None
         image = self.camera.get_image()
-        return ActionResult(production=(image, ))
+        return (image, )
 
     @stateguard(lambda self: trigger is None)
     @condition(action_input=['trigger'])

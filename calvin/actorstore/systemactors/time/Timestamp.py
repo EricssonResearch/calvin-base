@@ -25,7 +25,7 @@ class Timestamp(Actor):
 
     @condition(['trigger'], ['timestamp'])
     def action(self, consume_trigger):
-        return ActionResult(production=(self['time'].timestamp(),))
+        return (self['time'].timestamp(),)
 
     action_priority = (action,)
     requires = ['calvinsys.native.python-time']

@@ -36,19 +36,19 @@ class Alternate3(Actor):
     @condition(['token_1'], ['token'])
     def port_1(self, data):
         self.next_port = 2
-        return ActionResult(production=(data, ))
+        return (data, )
 
     @stateguard(lambda self: self.next_port == 2)
     @condition(['token_2'], ['token'])
     def port_2(self, data):
         self.next_port = 3
-        return ActionResult(production=(data, ))
+        return (data, )
 
     @stateguard(lambda self: self.next_port == 3)
     @condition(['token_3'], ['token'])
     def port_3(self, data):
         self.next_port = 1
-        return ActionResult(production=(data, ))
+        return (data, )
 
     action_priority = (port_1, port_2, port_3)
 

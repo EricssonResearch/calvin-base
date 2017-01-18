@@ -60,7 +60,7 @@ class Compare(Actor):
     @condition(['a', 'b'], ['result'])
     def test(self, a, b):
         res = bool(self.op(a, b)) if self.op else False
-        return ActionResult(production=(res, ))
+        return (res, )
 
 
     action_priority = ( test, )

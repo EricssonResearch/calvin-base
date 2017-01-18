@@ -48,7 +48,7 @@ class EnclosurePowerUsage(Actor):
     def measure(self):
         data = self['enclosure'].get_power_data()
         self['enclosure'].ack_power_data()
-        return ActionResult(production=(data,))
+        return (data,)
 
     action_priority = (measure,)
     requires =  ['calvinsys.sensors.enclosure']

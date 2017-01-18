@@ -44,13 +44,13 @@ class RotaryEncoder(Actor):
     @stateguard(lambda self: self['knob'].was_pressed())
     @condition([], ['button'])
     def button(self):
-        return ActionResult(production=(True,))
+        return (True,)
         
     @stateguard(lambda self: self['knob'].was_turned())
     @condition([], ['direction'])
     def turn(self):
         direction = "clockwise" if self['knob'].read() == 1 else "anti-clockwise"
-        return ActionResult(production=(direction,))
+        return (direction,)
 
     action_priority = (turn, button,)
     requires =  ['calvinsys.sensors.rotary_encoder']

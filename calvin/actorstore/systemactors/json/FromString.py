@@ -35,7 +35,7 @@ class FromString(Actor):
     """
 
     def exception_handler(self, action, args, context):
-        return ActionResult(production=(self.default,))
+        return (self.default,)
 
     @manage(['exception_output'])
     def init(self, exception_output=None):
@@ -55,7 +55,7 @@ class FromString(Actor):
             res = self['json'].loads(string)
         except:
             res = self.default
-        return ActionResult(production=(res,))
+        return (res,)
 
     action_priority = (load,)
     require = ['calvinsys.native.python-json']

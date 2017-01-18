@@ -49,7 +49,7 @@ class SetValues(SetValue):
             if type(container) is ExceptionToken:
                 break
             container = self._set_value(container, key, value)
-        return ActionResult(production=(container, ))
+        return (container, )
 
     action_priority = (set_values, )
 

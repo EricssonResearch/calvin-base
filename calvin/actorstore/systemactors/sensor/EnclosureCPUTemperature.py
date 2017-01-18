@@ -45,7 +45,7 @@ class EnclosureCPUTemperature(Actor):
     def measure(self):
         data = self['enclosure'].get_cpu_temps()
         self['enclosure'].ack_cpu_temps()
-        return ActionResult(production=(data,))
+        return (data,)
 
     action_priority = (measure,)
     requires =  ['calvinsys.sensors.enclosure']

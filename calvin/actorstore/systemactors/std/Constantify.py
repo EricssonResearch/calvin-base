@@ -32,7 +32,7 @@ class Constantify(Actor):
 
     @condition(['in'], ['out'])
     def constantify(self, input):
-        return ActionResult(production=(self.constant, ))
+        return (self.constant, )
 
     action_priority = (constantify, )
 

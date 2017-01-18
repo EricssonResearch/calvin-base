@@ -41,13 +41,13 @@ class Dealternate(Actor):
     @condition(['token'], ['token_1'])
     def port_one(self, tok):
         self.is_even_token = False
-        return ActionResult(production=(tok, ))
+        return (tok, )
 
     @stateguard(is_odd)
     @condition(['token'], ['token_2'])
     def port_two(self, tok):
         self.is_even_token = True
-        return ActionResult(production=(tok, ))
+        return (tok, )
 
     action_priority = (port_one, port_two)
 

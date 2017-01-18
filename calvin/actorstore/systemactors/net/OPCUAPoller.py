@@ -80,7 +80,7 @@ class OPCUAPoller(Actor):
         variable = self['opcua'].get_first_changed()
         # set up new timer for next poll
         self.timers[variable['Id']] = self['timer'].once(self.interval)
-        return ActionResult(production=(variable,))
+        return (variable,)
 
     @stateguard(lambda self: any([t.triggered for t in self.timers.values()]))
     @condition()

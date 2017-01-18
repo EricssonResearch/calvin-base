@@ -47,7 +47,7 @@ class SetDefaults(SetDefault):
             if type(container) is ExceptionToken:
                 break
             container = self._set_default(container, key, value)
-        return ActionResult(production=(container, ))
+        return (container, )
 
     action_priority = (set_defaults, )
 

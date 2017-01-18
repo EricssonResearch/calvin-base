@@ -38,7 +38,7 @@ class GetValue(Actor):
     """
 
     def exception_handler(self, action, args, context):
-        return ActionResult(production=(ExceptionToken(),))
+        return (ExceptionToken(),)
 
     @manage()
     def init(self):
@@ -65,7 +65,7 @@ class GetValue(Actor):
     @condition(['container', 'key'], ['value'])
     def get_value(self, data, key):
         res = self._get_value(data, key)
-        return ActionResult(production=(res, ))
+        return (res, )
 
     action_priority = (get_value, )
 

@@ -52,7 +52,7 @@ class WordCount(Actor):
     @condition(action_output=['out'])
     def output_counts(self):
         self.finished = False
-        return ActionResult(production=(self.word_counts,))
+        return (self.word_counts,)
 
     action_priority = (count_word, output_counts)
 

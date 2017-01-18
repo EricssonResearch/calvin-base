@@ -50,7 +50,7 @@ class LineJoin(Actor):
     def produce(self):
         text = self.text
         self.text = None
-        return ActionResult(production=(text,))
+        return (text,)
 
     @stateguard(lambda self: self.text is None)
     @condition(['line'], [])

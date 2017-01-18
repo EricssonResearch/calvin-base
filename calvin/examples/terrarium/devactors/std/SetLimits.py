@@ -35,6 +35,6 @@ class SetLimits(Actor):
     def set_limits(self, container):
         container["upper"] = self.upper
         container["lower"] = self.lower
-        return ActionResult(production=(container,))
+        return (container,)
 
     action_priority = (set_limits, )

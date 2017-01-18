@@ -45,13 +45,13 @@ class FiniteCounter(Actor):
     @condition(action_output=['integer'])
     def cnt(self):
         self.count += 1
-        return ActionResult(production=(self.count - 1, ))
+        return (self.count - 1, )
 
     @stateguard(lambda self: self.count == self.ends)
     @condition(action_output=['integer'])
     def the_end(self):
         self.count = self.restart
-        return ActionResult(production=(EOSToken(), ))
+        return (EOSToken(), )
 
     action_priority = (cnt, the_end)
 

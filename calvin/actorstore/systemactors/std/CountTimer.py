@@ -72,7 +72,7 @@ class CountTimer(Actor):
         else:
             self.timer = self['timer'].once(self.sleep)
         self.count += 1
-        return ActionResult(production=(self.count - 1, ))
+        return (self.count - 1, )
 
     # The counting action, handle periodic timer events hence no need to setup repeatedly
     # need guard with triggered() since the actor might be fired for other
@@ -82,7 +82,7 @@ class CountTimer(Actor):
     def step_periodic(self):
         self.timer.ack()
         self.count += 1
-        return ActionResult(production=(self.count - 1, ))
+        return (self.count - 1, )
 
     # The stopping action, need guard with raised() since the actor might be
     # fired for other reasons

@@ -51,7 +51,7 @@ class GPIOReader(Actor):
     @stateguard(lambda self: self.gpio is not None and self.gpio.edge_detected())
     @condition(action_output=('state',))
     def get_state(self):
-        return ActionResult(production=(self.gpio.edge_value(), ))
+        return (self.gpio.edge_value(), )
 
     action_priority = (get_state, )
     requires = ['calvinsys.io.gpiohandler']

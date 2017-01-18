@@ -34,7 +34,7 @@ class ToString(Actor):
     """
 
     def exception_handler(self, action, args, context):
-        return ActionResult(production=(self['json'].dumps(self.default),))
+        return (self['json'].dumps(self.default),)
 
     @manage(['default'])
     def init(self, exception_output=None):
@@ -49,7 +49,7 @@ class ToString(Actor):
 
     @condition(['data'], ['string'])
     def dump(self, value):
-        return ActionResult(production=(self['json'].dumps(value),))
+        return (self['json'].dumps(value),)
 
     action_priority = (dump,)
     requires = ['calvinsys.native.python-json']

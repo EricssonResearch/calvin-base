@@ -46,7 +46,7 @@ class Mustache(Actor):
     @condition(['dict'], ['text'])
     def action(self, d):
         text = self['pystache'].render(self.fmt, d)
-        return ActionResult(production=(text, ))
+        return (text, )
 
     action_priority = (action, )
     requires = ["calvinsys.native.python-mustache"]

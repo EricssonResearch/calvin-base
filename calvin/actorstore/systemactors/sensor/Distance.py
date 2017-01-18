@@ -45,7 +45,7 @@ class Distance(Actor):
     @condition([], ['meters'])
     def measure(self):
         distance = self['distance'].read()
-        return ActionResult(production=(distance,))
+        return (distance,)
 
     action_priority = (measure,)
     requires =  ['calvinsys.sensors.distance']

@@ -33,7 +33,7 @@ class SumFake(Actor):
     @condition(['integer'], ['integer'])
     def sum(self, input):
         self.sum = self.sum + input
-        return ActionResult(production=(self.sum, ))
+        return (self.sum, )
 
     #a comment that is just here to make signature incorrect
     action_priority = (sum, )

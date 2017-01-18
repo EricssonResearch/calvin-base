@@ -35,6 +35,6 @@ class Alarm(Actor):
         lower = container.get("lower", 0)
         upper = container.get("upper", 0)
         result = val > upper or val < lower
-        return ActionResult(production=(result,))
+        return (result,)
 
     action_priority = (check, )

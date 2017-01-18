@@ -63,7 +63,7 @@ class UDPListener(Actor):
     @condition(action_output=['data_out'])
     def receive(self):
         data = self.listener.data_get()
-        return ActionResult(production=(data,))
+        return (data,)
 
     # URI parsing - 0: protocol, 1: host, 2: port
     URI_REGEXP = r'([^:]+)://([^/:]*):([0-9]+)'

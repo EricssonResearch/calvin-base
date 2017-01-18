@@ -44,7 +44,7 @@ class Humidity(Actor):
         result['value'] = int(result['value'])
         result['unit'] = "%"
         
-        return ActionResult(production=(result, ))
+        return (result, )
 
     action_priority = (get_humidity, )
     requires = ["calvinsys.sensors.environmental"]

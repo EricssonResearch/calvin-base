@@ -66,7 +66,7 @@ class OPCUASubscriber(Actor):
     @condition(action_output=['variable'])
     def changed(self):
         variable = self['opcua'].get_first_changed()
-        return ActionResult(production=(variable,))
+        return (variable,)
 
     action_priority = (changed,)
     requires = ['calvinsys.opcua.client']

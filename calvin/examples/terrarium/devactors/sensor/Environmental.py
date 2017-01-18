@@ -42,7 +42,7 @@ class Environmental(Actor):
         data = "T:%s H:%s P:%s" % (int(self.sensor.get_temperature()),
                                    int(self.sensor.get_humidity()),
                                    int(self.sensor.get_pressure()))
-        return ActionResult(production=(data, ))
+        return (data, )
 
     action_priority = (get_data, )
     requires = ["calvinsys.sensors.environmental"]

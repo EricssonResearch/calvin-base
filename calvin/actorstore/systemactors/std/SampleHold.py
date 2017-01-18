@@ -46,7 +46,7 @@ class SampleHold(Actor):
     def action(self, sample, tok):
         if sample is True:
             self.set_current(tok)
-        return ActionResult(production=(self.current(), ))
+        return (self.current(), )
 
     action_priority = (action,)
 

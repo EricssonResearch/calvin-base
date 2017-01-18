@@ -40,7 +40,7 @@ class Switch(Actor):
         # Default to false if select value is not true or false
         if switch is True:
             a, b = b, a
-        return ActionResult(production=(a, b ))
+        return (a, b )
 
     action_priority = (action,)
 

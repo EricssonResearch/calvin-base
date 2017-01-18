@@ -43,7 +43,7 @@ class Temperature(Actor):
         result = {}
         result['value'] = int(self.sensor.get_temperature())
         result['unit'] = "C"
-        return ActionResult(production=(result, ))
+        return (result, )
 
     action_priority = (get_temperature, )
     requires = ["calvinsys.sensors.environmental"]

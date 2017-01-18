@@ -44,11 +44,11 @@ class Stringify(Actor):
             else:
                 new_token = unicode(input)
 
-            return ActionResult(production=(new_token, ))
+            return (new_token, )
         except Exception as exc:
             _log.error("Error %s, cant decode token '%s'", str(exc), repr(input))
 
-        return ActionResult(production=(ExceptionToken("Decode error"),))
+        return (ExceptionToken("Decode error"),)
 
     action_priority = (stringify, )
 

@@ -36,7 +36,7 @@ class Identity(Actor):
     def donothing(self, input):
         if self.dump:
             self.log(input)
-        return ActionResult(production=(input, ))
+        return (input, )
 
     action_priority = (donothing, )
 

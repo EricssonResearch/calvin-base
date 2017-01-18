@@ -52,13 +52,13 @@ class Trigger(Actor):
     @condition([], ['data'])
     def start_timer(self):
         self.start()
-        return ActionResult(production=(self.data, ))
+        return (self.data, )
 
     @stateguard(lambda self: self.timer and self.timer.triggered)
     @condition([], ['data'])
     def trigger(self):
         self.timer.ack()
-        return ActionResult(production=(self.data, ))
+        return (self.data, )
 
     action_priority = (start_timer, trigger)
     requires = ['calvinsys.events.timer']

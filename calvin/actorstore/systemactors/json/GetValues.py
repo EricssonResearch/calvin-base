@@ -41,7 +41,7 @@ class GetValues(GetValue):
     @condition(['container', 'keys'], ['values'])
     def get_values(self, data, keys):
         retval = [self._get_value(data, key) for key in keys]
-        return ActionResult(production=(retval, ))
+        return (retval, )
 
     action_priority = (get_values, )
 

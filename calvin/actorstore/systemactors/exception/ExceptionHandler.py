@@ -57,14 +57,14 @@ class ExceptionHandler(Actor):
         status = self.status
         self.token = None
         self.status = None
-        return ActionResult(production=(tok, status.value))
+        return (tok, status.value)
 
     @stateguard(lambda self: self.token is not None and not self.status)
     @condition([], ['token'])
     def produce(self):
         tok = self.token
         self.token = None
-        return ActionResult(production=(tok,))
+        return (tok,)
 
     @stateguard(lambda self: not self.status and self.token is None)
     @condition(['token'])

@@ -63,7 +63,7 @@ class KubectlCpuUsage(Actor):
         payload["timestamp"] = item["timestamp"] * 1000
         del item["timestamp"]
 
-        return ActionResult(production=(payload,))
+        return (payload,)
 
     action_priority = (dispatch_single, measure,)
     requires =  ['calvinsys.sensors.kubectl']

@@ -80,7 +80,7 @@ class OpenWeatherMap(Actor):
     def handle_headers(self):
         status = self['http'].status(self.request)
         self.received_status = status
-        return ActionResult(production=(status,))
+        return (status,)
 
     @stateguard(lambda self: self.request and self.received_status == 200 and self['http'].received_body(self.request))
     @condition(action_output=['forecast'])
@@ -89,7 +89,7 @@ class OpenWeatherMap(Actor):
         forecast = self['json'].loads(body)
         forecast = self.filter_weather_data(forecast)
         self.reset_request()
-        return ActionResult(production=(forecast,))
+        return (forecast,)
 
     @stateguard(lambda self: self.request and self.received_status and self.received_status != 200)
     @condition()

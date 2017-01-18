@@ -27,7 +27,7 @@ class StrfTime(Actor):
 
     @condition(['trigger'], ['timestamp'])
     def action(self, consume_trigger):
-        return ActionResult(production=(self['time'].strftime(self.formating),))
+        return (self['time'].strftime(self.formating),)
 
     action_priority = (action,)
     requires = ['calvinsys.native.python-time']

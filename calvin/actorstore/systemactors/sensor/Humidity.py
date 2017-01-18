@@ -44,7 +44,7 @@ class Humidity(Actor):
     @condition(['measure'], ['percent'])
     def measure(self, _):
         humidity = self['humid'].get_humidity()
-        return ActionResult(production=(humidity,))
+        return (humidity,)
 
     action_priority = (measure,)
     requires =  ['calvinsys.sensors.environmental']

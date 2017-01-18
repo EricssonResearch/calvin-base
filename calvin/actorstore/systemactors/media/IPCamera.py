@@ -76,7 +76,7 @@ class IPCamera(Actor):
     def handle_headers(self):
         status = self['http'].status(self.request)
         self.received_status = status
-        return ActionResult(production=(status,))
+        return (status,)
 
     @stateguard(lambda self: self.request and self.received_status == 200 and self['http'].received_body(self.request))
     @condition(action_output=['image'])
@@ -84,7 +84,7 @@ class IPCamera(Actor):
         body = self['http'].body(self.request)
         image = self['base64'].b64encode(body)
         self.reset_request()
-        return ActionResult(production=(image,))
+        return (image,)
 
     @stateguard(lambda self: self.request and self.received_status and self.received_status != 200)
     @condition()

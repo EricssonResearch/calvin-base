@@ -33,7 +33,7 @@ class Sum(Actor):
     @condition(['integer'], ['integer'])
     def sum(self, input):
         self.sum = self.sum + input
-        return ActionResult(production=(self.sum, ))
+        return (self.sum, )
 
     def report(self):
         return self.sum

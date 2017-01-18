@@ -31,7 +31,7 @@ class Collect(Actor):
 
     @condition(['token'], ['token'])
     def collect(self, input):
-        return ActionResult(production=(input, ))
+        return (input, )
 
     action_priority = (collect,)
 

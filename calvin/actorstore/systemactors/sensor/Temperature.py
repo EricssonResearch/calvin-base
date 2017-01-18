@@ -44,7 +44,7 @@ class Temperature(Actor):
     @condition(['measure'], ['centigrade'])
     def measure(self, _):
         temperature = self['temp'].get_temperature()
-        return ActionResult(production=(temperature,))
+        return (temperature,)
 
     action_priority = (measure,)
     requires =  ['calvinsys.sensors.environmental']

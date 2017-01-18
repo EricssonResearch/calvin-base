@@ -62,7 +62,7 @@ class Items(Actor):
         if not self.data:
             self.data = []
             self.has_data = False
-        return ActionResult(production=(res, ))
+        return (res, )
 
 
     action_priority = (produce_item, consume_list)

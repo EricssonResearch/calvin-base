@@ -61,7 +61,7 @@ class HTTPResponseGenerator(Actor):
             reason=self.STATUSMAP.get(status, "Unknown"),
             body=body
         )
-        return ActionResult(production=(response, ))
+        return (response, )
 
     action_priority = (response,)
 

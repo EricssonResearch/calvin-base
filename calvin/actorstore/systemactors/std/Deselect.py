@@ -48,13 +48,13 @@ class Deselect(Actor):
     @condition(['case_false'], ['data'])
     def false_action(self, data):
         self.select = None
-        return ActionResult(production=(data, ))
+        return (data, )
 
     @stateguard(lambda self : self.select is True)
     @condition(['case_true'], ['data'])
     def true_action(self, data):
         self.select = None
-        return ActionResult(production=(data, ))
+        return (data, )
 
 
     action_priority = (false_action, true_action, select_action)

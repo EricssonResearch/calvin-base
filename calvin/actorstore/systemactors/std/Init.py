@@ -38,12 +38,12 @@ class Init(Actor):
     @condition([], ['out'])
     def initial_action(self):
         self.done = True
-        return ActionResult(production=(self.data,))
+        return (self.data,)
 
     @stateguard(lambda self: self.done)
     @condition(['in'], ['out'])
     def passthrough(self, data):
-        return ActionResult(production=(data,))
+        return (data,)
 
     action_priority = (passthrough, initial_action)
 

@@ -75,7 +75,7 @@ class TCPClient(Actor):
     @condition(action_output=['data_out'])
     def receive(self):
         data = self.cc.get_data()
-        return ActionResult(production=(data,))
+        return (data,)
 
     # URI parsing - 0: protocol, 1: address, 2: :port
     URI_REGEXP = r'([^:]+)://([^/:]*)(:[0-9]+)'

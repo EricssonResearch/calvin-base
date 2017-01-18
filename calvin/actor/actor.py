@@ -119,51 +119,42 @@ def condition(action_input=[], action_output=[]):
             #
             if ex:
                 # FIXME: Simplify exception handling
-                action_result = self.exception_handler(action_method, args, {'exceptions': ex})
+                production = self.exception_handler(action_method, args, {'exceptions': ex}) or ()
             else:
                 #
                 # Perform the action (N.B. the method may be wrapped in a decorator)
                 # Action methods not returning a production (i.e. no output ports) returns None
                 #
-                action_result = action_method(self, *args)
+                production = action_method(self, *args) or ()
             #
             # Action methods that don't produce output will return None => replace with empty_production constant
             #
-            action_result = action_result or ActionResult.empty_production()
-
-            valid_production = (tokens_produced == len(action_result.production))
+            valid_production = (tokens_produced == len(production))
 
             if not valid_production:
                 #
                 # Error condition
                 #
                 action = "%s.%s" % (self._type, action_method.__name__)
-                raise Exception("%s invalid production %s, expected %s" % (action, str(action_result.production), str(tuple(action_output))))
-
-            # if not action_result.did_fire:
-            #     # We really shouldn't get here, ever.
-            #     raise Exception("DID NOT FIRE")
-            #     #
-            #     # No action performed => cancel the tentative read from the FIFOs
-            #     #
-            #     for portname in action_input:
-            #         self.inports[portname].peek_cancel()
-            # else:
+                raise Exception("%s invalid production %s, expected %s" % (action, str(production), str(tuple(action_output))))
 
             #
             # Action performed => commit to the read from the FIFOs
             #
+            # FIXME: Make this a list of booleans indicating exhaustion
+            exhausted_ports = set()
             for portname in action_input:
                 try:
-                    exhausted = self.inports[portname].peek_commit()
+                    port = self.inports[portname]
+                    exhausted = port.peek_commit()
                     if exhausted:
-                        action_result.exhausted_ports.add(self.inports[portname])
+                        exhausted_ports.add(port)
                 except:
                     _log.exception("PORTCOMMIT EXCEPTION")
             #
             # Write the results from the action to the output port(s)
             #
-            for portname, retval in zip(action_output, action_result.production):
+            for portname, retval in zip(action_output, production):
                 port = self.outports[portname]
                 port.write_token(retval if isinstance(retval, Token) else Token(retval))
             #
@@ -173,7 +164,7 @@ def condition(action_input=[], action_output=[]):
             # action_result.tokens_consumed = tokens_consumed
             # action_result.tokens_produced = tokens_produced
 
-            return action_result
+            return ActionResult(exhausted=exhausted_ports)
 
         # FIXME: AFAICT the following is only used in metering.
         # I think we should minimize the amount of info tracked for metering, and
@@ -232,7 +223,7 @@ class ActionResult(object):
     _did_not_fire = None
     _empty_production = None
 
-    def __init__(self, did_fire=True, production=(), output_ok=True):
+    def __init__(self, did_fire=True, output_ok=True, exhausted=None):
         super(ActionResult, self).__init__()
         self.did_fire = did_fire
         # self.input_ok = input_ok
@@ -240,8 +231,8 @@ class ActionResult(object):
         # self.guard_ok = None
         # self.tokens_consumed = 0
         # self.tokens_produced = 0
-        self.production = production
-        self.exhausted_ports = set([])
+        # self.production = production
+        self.exhausted_ports = exhausted or set()
 
     @classmethod
     def did_not_fire(cls):
@@ -255,8 +246,8 @@ class ActionResult(object):
         return cls._empty_production
 
     def __str__(self):
-        fmtstr = "%s - did_fire:%s, consumed:%d, produced:%d"
-        return fmtstr % (self.__class__.__name__, str(self.did_fire), self.tokens_consumed, self.tokens_produced)
+        fmtstr = "%s - did_fire:%s"
+        return fmtstr % (self.__class__.__name__, str(self.did_fire))
 
     def merge(self, other_result):
         """

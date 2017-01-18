@@ -43,7 +43,7 @@ class Burn(Actor):
         t = time.time()
         while time.time() - t < self.duration:
             pass
-        return ActionResult(production=(input, ))
+        return (input, )
 
     def report(self, **kwargs):
         self.duration = kwargs.get('duration', self.duration)

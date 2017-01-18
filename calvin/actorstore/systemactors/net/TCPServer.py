@@ -92,7 +92,7 @@ class TCPServer(Actor):
             if c.data_available:
                 data = self.server.receive(c)
                 break
-        return ActionResult(production=(h, data))
+        return (h, data)
 
     @stateguard(lambda self: self.connections and any([c.connection_lost for c in self.connections.values()]))
     @condition()
