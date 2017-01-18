@@ -58,7 +58,7 @@ class Log(Actor):
     @condition(action_input=['data'])
     def log(self, data):
         self._logger("{}".format(data))
-        return ActionResult()
+        
 
     action_priority = (log, )
 

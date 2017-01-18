@@ -53,7 +53,7 @@ class KubectlMemUsage(Actor):
         self.data = [item for item in metrics["metrics"] if item["timestamp"] > self.last_timestamp ]
         for item in self.data:
             item["value"] /= 1024*1024
-        return ActionResult()
+        
         
     @stateguard(lambda self: self.data)
     @condition([], ['usage'])

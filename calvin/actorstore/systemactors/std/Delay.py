@@ -44,7 +44,7 @@ class Delay(Actor):
     @condition(['token'])
     def tokenAvailable(self, input):
         self.timers.append({'token': input, 'timer': self['timer'].once(self.delay)})
-        return ActionResult()
+        
 
     @stateguard(lambda self: len(self.timers) > 0 and self.timers[0]['timer'].triggered)
     @condition([], ['token'])

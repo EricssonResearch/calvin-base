@@ -73,7 +73,7 @@ class MQTTPublisher(Actor):
     @condition(action_input=['topic', 'payload'])
     def send_message(self, topic, payload):
         self.publisher.publish(topic, payload)
-        return ActionResult()
+        
 
  
     action_priority = (send_message, )

@@ -45,16 +45,15 @@ class Items(Actor):
         if type(data) is not list:
             self.data = [ExceptionToken()]
             self.has_data = True
-            return ActionResult()
+            return
         if not data:
             # Empty list => no output
-            return ActionResult()
+            return
         try:
             self.data = copy(data)
             self.has_data = True
         except:
             pass
-        return ActionResult()
 
     @stateguard(lambda self: self.has_data)
     @condition([], ['item'])

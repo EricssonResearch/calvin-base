@@ -41,7 +41,7 @@ class Deselect(Actor):
     def select_action(self, select):
         self.select = select is True
         # Default to false if select value is not true or false
-        return ActionResult()
+        
 
 
     @stateguard(lambda self: self.select is False)

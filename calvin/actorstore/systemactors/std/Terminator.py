@@ -35,7 +35,8 @@ class Terminator(Actor):
 
     @condition(['void'], [])
     def null(self, input):
-        return ActionResult()
+        pass
+
 
     action_priority = (null, )
 

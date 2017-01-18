@@ -69,6 +69,5 @@ class SerialPort(Actor):
     @condition(action_input=['in'])
     def write(self, data):
         self.device.write(str(data))
-        return ActionResult(production=())
 
     action_priority = (device_not_found, read, write)

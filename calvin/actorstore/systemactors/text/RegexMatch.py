@@ -52,7 +52,7 @@ class RegexMatch(Actor):
     @condition(['text'], [])
     def match(self, text):
         self.perform_match(str(text))
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.result is not None and self.did_match)
     @condition([], ['match'])

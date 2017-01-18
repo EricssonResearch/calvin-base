@@ -65,7 +65,6 @@ class UDPSender(Actor):
     @condition(action_input=['data_in'])
     def send(self, token):
         self.sender.send(token)
-        return ActionResult(production=())
 
     # URI parsing - 0: protocol, 1: host, 2: port
     URI_REGEXP = r'([^:]+)://([^/:]*):([0-9]+)'
@@ -92,7 +91,7 @@ class UDPSender(Actor):
             self._new_connection(control)
         elif control.get('command', '') == 'disconnect' and self.sender:
             self._close_connection()
-        return ActionResult()
+
 
     def _new_connection(self, control):
         if self.parse_uri(control.get('uri', '')):

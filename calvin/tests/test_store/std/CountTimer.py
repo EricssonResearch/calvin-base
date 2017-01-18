@@ -90,7 +90,7 @@ class CountTimer(Actor):
     def stop(self):
         self.timer.ack()
         self.timer.cancel()
-        return ActionResult()
+
 
     def report(self):
         return self.count

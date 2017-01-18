@@ -50,7 +50,7 @@ class RecTimer(Actor):
     @condition()
     def clear(self):
         self.timer.ack()
-        return ActionResult()
+        
 
     action_priority = (flush, clear)
     requires = ['calvinsys.events.timer']

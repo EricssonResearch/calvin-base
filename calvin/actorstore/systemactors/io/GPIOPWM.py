@@ -52,12 +52,12 @@ class GPIOPWM(Actor):
     @condition(action_input=("dutycycle",))
     def set_dutycycle(self, dutycycle):
         self.gpio.pwm_set_dutycycle(dutycycle)
-        return ActionResult()
+        
 
     @condition(action_input=("frequency",))
     def set_frequency(self, frequency):
         self.gpio.pwm_set_frequency(frequency)
-        return ActionResult()
+        
 
     action_priority = (set_dutycycle, set_frequency)
     requires = ["calvinsys.io.gpiohandler"]

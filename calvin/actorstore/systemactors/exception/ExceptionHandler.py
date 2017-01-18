@@ -42,7 +42,6 @@ class ExceptionHandler(Actor):
             e = ExceptionToken()
         self.status = e
         self.token = EOSToken()
-        return ActionResult()
 
     @manage(['status', 'token', 'replace', 'replacement'])
     def init(self, replace=False, replacement=None):
@@ -72,7 +71,7 @@ class ExceptionHandler(Actor):
     def consume(self, tok):
         self.token = tok
         self.status = None
-        return ActionResult()
+
 
     action_priority = (produce_with_exception, produce, consume)
 

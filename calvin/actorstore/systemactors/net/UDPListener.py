@@ -90,7 +90,7 @@ class UDPListener(Actor):
             self._new_port(control)
         elif control.get('command', '') == 'stop' and self.listener:
             self._close_port()
-        return ActionResult()
+        
 
     def _new_port(self, control):
         if self.parse_uri(control.get('uri', '')):

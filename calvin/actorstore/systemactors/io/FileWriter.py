@@ -73,22 +73,19 @@ class FileWriter(Actor):
     def exception_handler(self, action, args, exceptions):
         self['file'].close(self.file)
         self.file = None
-        return ActionResult(production=())
 
     @stateguard(lambda self: not self.file)
     @condition(action_input=['data'])
-    def open(self, data):
+    def openf(self, data):
         self.setup()
         self.file.write_line(data)
-        return ActionResult(production=())
 
     @stateguard(lambda self: self.file)
     @condition(action_input=['data'])
-    def write(self, data):
+    def writef(self, data):
         self.file.write_line(data)
-        return ActionResult(production=())
 
-    action_priority = (write, open)
+    action_priority = (writef, openf)
     requires = ['calvinsys.io.filehandler']
 
     test_args = [absolute_basename('test_file'), 'testing']

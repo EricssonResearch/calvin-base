@@ -71,7 +71,7 @@ class OPCUAPoller(Actor):
         # Connected - setup polling timers
         for nodeid in self.nodeids:
             self.timers[nodeid] = self['timer'].once(0)
-        return ActionResult()
+        
     
     @stateguard(lambda self: self['opcua'].variable_changed)
     @condition(action_output=['variable'])
@@ -89,7 +89,7 @@ class OPCUAPoller(Actor):
         for t in active_timers:
             t[1].ack()
             self['opcua'].poll(t[0])
-        return ActionResult()
+        
         
     action_priority = (changed, poll, connected)
     requires = ['calvinsys.opcua.client', 'calvinsys.events.timer']

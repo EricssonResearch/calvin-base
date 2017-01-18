@@ -123,8 +123,13 @@ def condition(action_input=[], action_output=[]):
             else:
                 #
                 # Perform the action (N.B. the method may be wrapped in a decorator)
+                # Action methods not returning a production (i.e. no output ports) returns None
                 #
                 action_result = action_method(self, *args)
+            #
+            # Action methods that don't produce output will return None => replace with empty_production constant
+            #
+            action_result = action_result or ActionResult.empty_production()
 
             valid_production = action_result.did_fire and (tokens_produced == len(action_result.production))
 
@@ -189,8 +194,9 @@ def stateguard(action_guard):
 
         @functools.wraps(action_method)
         def guard_wrapper(self, *args):
-            retval = action_method(self, *args) if action_guard(self) else ActionResult(did_fire=False)
-            return retval
+            if not action_guard(self):
+                return ActionResult.did_not_fire()
+            return action_method(self, *args)
 
         return guard_wrapper
     return wrap
@@ -220,6 +226,9 @@ class ActionResult(object):
 
     """Return type from action and @guard"""
 
+    _did_not_fire = None
+    _empty_production = None
+
     def __init__(self, did_fire=True, production=(), input_ok=True, output_ok=True):
         super(ActionResult, self).__init__()
         self.did_fire = did_fire
@@ -230,6 +239,17 @@ class ActionResult(object):
         self.tokens_produced = 0
         self.production = production
         self.exhausted_ports = set([])
+
+    @classmethod
+    def did_not_fire(cls):
+        if cls._did_not_fire is None:
+            cls._did_not_fire = ActionResult(did_fire=False)
+        return cls._did_not_fire
+    @classmethod
+    def empty_production(cls):
+        if cls._empty_production is None:
+            cls._empty_production = ActionResult()
+        return cls._empty_production
 
     def __str__(self):
         fmtstr = "%s - did_fire:%s, consumed:%d, produced:%d"

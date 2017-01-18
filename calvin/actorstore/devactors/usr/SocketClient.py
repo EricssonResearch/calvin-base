@@ -63,7 +63,6 @@ class SocketClient(Actor):
     @condition(action_input=['inData'])
     def send(self, token):
         self.cc.send(token)
-        return ActionResult(production=())
 
     @stateguard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
     @condition(action_output=['outData'])
@@ -84,7 +83,6 @@ class SocketClient(Actor):
             if self.cc:
                 self.cc.disconnect()
                 self.cc = None
-        return ActionResult(production=())
 
     @stateguard(lambda self: self.cc and self.cc.have_control())
     @condition(action_output=['outControl'])

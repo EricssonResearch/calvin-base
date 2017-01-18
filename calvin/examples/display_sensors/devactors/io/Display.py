@@ -41,7 +41,7 @@ class Display(Actor):
     @condition(action_input=["text"])
     def show_text(self, text):
         self.display.show_text(str(text))
-        return ActionResult()
+        
 
     action_priority = (show_text, )
     requires = ["calvinsys.io.display"]

@@ -44,7 +44,7 @@ class Camera(Actor):
     @condition(action_input=['trigger'])
     def trigger_action(self, trigger):
         self.trigger = True if trigger else None
-        return ActionResult()
+        
 
     action_priority = (get_image, trigger_action)
     requires =  ['calvinsys.media.camerahandler']

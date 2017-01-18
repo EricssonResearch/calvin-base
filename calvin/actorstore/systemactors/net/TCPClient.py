@@ -71,8 +71,6 @@ class TCPClient(Actor):
         else:
             _log.error("Error token must be string or unicode, token is %s", repr(token))
 
-        return ActionResult(production=())
-
     @stateguard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
     @condition(action_output=['data_out'])
     def receive(self):
@@ -88,7 +86,7 @@ class TCPClient(Actor):
             self._new_connection(control)
         elif control['control'] == 'disconnect' and self.cc:
             self._close_connection()
-        return ActionResult()
+
 
     def _new_connection(self, control):
         uri = self['regexp'].findall(self.URI_REGEXP, control['uri'])
@@ -109,7 +107,6 @@ class TCPClient(Actor):
     def exception_handler(self, action, args, context):
         """Handler ExceptionTokens"""
         self.EOST_token_received = True
-        return ActionResult(production=())
 
     action_priority = (control, receive, send)
     requires = ['calvinsys.network.socketclienthandler', 'calvinsys.native.python-re']

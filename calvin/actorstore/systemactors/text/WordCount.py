@@ -42,12 +42,11 @@ class WordCount(Actor):
 
     def exception_handler(self, action, args, exceptions):
         self.finished = True
-        return ActionResult()
 
     @condition(['in'], [])
     def count_word(self, word):
         self.word_counts[word] = self.word_counts[word] + 1
-        return ActionResult()
+
 
     @stateguard(lambda self: self.finished is True)
     @condition(action_output=['out'])

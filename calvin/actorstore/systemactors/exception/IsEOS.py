@@ -32,7 +32,7 @@ class IsEOS(Actor):
 
     def exception_handler(self, action, args, context):
         self.token = type(args[0]) is EOSToken
-        return ActionResult()
+        
 
     @manage([])
     def init(self):
@@ -49,7 +49,7 @@ class IsEOS(Actor):
     @condition(['token'])
     def consume(self, tok):
         self.token = False
-        return ActionResult()
+        
 
     action_priority = (produce, consume)
 

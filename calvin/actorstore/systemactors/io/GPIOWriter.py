@@ -46,7 +46,7 @@ class GPIOWriter(Actor):
     @condition(action_input=("state",))
     def set_state(self, state):
         self.gpio.set_state(state)
-        return ActionResult()
+        
 
     action_priority = (set_state, )
     requires = ["calvinsys.io.gpiohandler"]

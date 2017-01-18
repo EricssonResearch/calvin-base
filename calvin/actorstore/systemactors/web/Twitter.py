@@ -42,7 +42,7 @@ class Twitter(Actor):
     @condition(action_input=['status'])
     def post_update(self, status):
         self['twitter'].post_update(status)
-        return ActionResult()
+        
 
     action_priority = (post_update,)
     requires = ['calvinsys.web.twitter']

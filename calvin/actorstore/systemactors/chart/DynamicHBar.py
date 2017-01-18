@@ -89,7 +89,7 @@ class DynamicHBar(Actor):
 
         handle = self.chart_api.request_image()
         self.req_in_progress.append(handle)
-        return ActionResult()
+        
 
     action_priority = (handle_response, send_request, )
 

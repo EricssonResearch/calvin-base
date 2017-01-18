@@ -51,7 +51,7 @@ class KubectlCpuUsage(Actor):
         metrics = self['kube'].get_metric("cpu/usage_rate")
         self['kube'].ack_metric("cpu/usage_rate")
         self.data = [item for item in metrics["metrics"] if item["timestamp"] > self.last_timestamp ]
-        return ActionResult()
+        
         
     @stateguard(lambda self: self.data)
     @condition([], ['usage'])

@@ -79,7 +79,7 @@ class MQTTSubscriber(Actor):
     def consume_message(self):
         topic, msg = self.subscriber.get_message()
         self.message = {"topic": topic, "payload": msg}
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.message is not None)
     @condition(action_output=['message'])

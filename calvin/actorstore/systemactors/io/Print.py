@@ -46,7 +46,7 @@ class Print(Actor):
     @condition(action_input=['token'])
     def write(self, data):
         self.stdout.writeln(str(data))
-        return ActionResult()
+        
 
     action_priority = (write, )
     

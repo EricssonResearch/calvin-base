@@ -36,7 +36,7 @@ class Sequencer(Actor):
     @condition(action_input=['data_in'])
     def incoming(self, token):
         self.token = token
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.token is not None)
     @condition(action_output=['data_out'])

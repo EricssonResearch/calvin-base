@@ -69,7 +69,7 @@ class IPCamera(Actor):
             header = {'Authorization': auth}
             params = {}
             self.request = self['http'].get(url, params, header)
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.request and not self.received_status and self['http'].received_headers(self.request))
     @condition(action_output=['status'])
@@ -90,7 +90,7 @@ class IPCamera(Actor):
     @condition()
     def handle_empty_body(self):
         self.reset_request()
-        return ActionResult()
+        
 
     action_priority = (handle_body, handle_empty_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-base64', "calvinsys.attribute.private"]

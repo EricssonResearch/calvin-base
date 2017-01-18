@@ -53,7 +53,6 @@ class ImageRenderer(Actor):
     def render_image(self, image):
         if image is not None:
             self.image.show_image(self['base64'].b64decode(image), self.width, self.height)
-        return ActionResult(production=())
 
     action_priority = (render_image, )
     requires =  ['calvinsys.media.image', 'calvinsys.native.python-base64']

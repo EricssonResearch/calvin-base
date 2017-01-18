@@ -43,7 +43,7 @@ class LineJoin(Actor):
         #        Similarly, if self.text is not None => raise
         self.text = self.delim.join(self.lines)
         self.lines = []
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.text is not None)
     @condition([], ['text'])
@@ -56,7 +56,7 @@ class LineJoin(Actor):
     @condition(['line'], [])
     def append(self, token):
         self.lines.append(token)
-        return ActionResult()
+        
 
     action_priority = (produce, append, )
 

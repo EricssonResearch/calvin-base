@@ -91,7 +91,7 @@ class CountTimer(Actor):
     def stop(self):
         self.timer.ack()
         self.timer.cancel()
-        return ActionResult()
+        
 
     def report(self, **kwargs):
         if kwargs.get("stopped", False):

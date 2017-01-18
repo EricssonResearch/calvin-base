@@ -54,7 +54,7 @@ class HTTPPost(Actor):
         url = url.encode('ascii', 'ignore')
         data = data.encode('ascii', 'ignore')
         self.request = self['http'].post(url, params, header, data)
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     @condition(action_output=['status', 'header'])

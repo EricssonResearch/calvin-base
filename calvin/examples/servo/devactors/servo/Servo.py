@@ -30,6 +30,6 @@ class Servo(Actor):
     @condition(action_input=['trigger'])
     def empty(self, trigger):
         self.trigger = True if bool(trigger) else None
-        return ActionResult()
+        
 
     action_priority = (move, empty)

@@ -46,8 +46,6 @@ class SimpleUDP(Actor):
     @condition(action_input=['data'])
     def send(self, token):
         self.sender.send(token)
-        return ActionResult(production=(),)
 
- 
     action_priority = (send, )
     requires = ['calvinsys.network.socketclienthandler']

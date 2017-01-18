@@ -55,7 +55,7 @@ class Iterate(Actor):
             self.data = copy(data) if mutable else data
         self.has_data = True
         self.index = 0
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.has_data and type(self.data) is list)
     @condition([], ['item', 'index'])

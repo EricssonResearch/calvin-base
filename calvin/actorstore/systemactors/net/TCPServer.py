@@ -60,7 +60,7 @@ class TCPServer(Actor):
     def setup(self, host, port):
         self.host = host
         self.port = port
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.host and self.port and not self.server)
     @condition()
@@ -69,14 +69,14 @@ class TCPServer(Actor):
             self.server = self['server'].start(self.host, self.port, self.mode, self.delimiter, self.max_length)
         except Exception as e:
             _log.exception(e)
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.server and self.server.connection_pending())
     @condition()
     def accept(self):
         addr, conn = self.server.accept()
         self.connections[addr] = conn
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.connections)
     @condition(['handle', 'token'])
@@ -84,7 +84,6 @@ class TCPServer(Actor):
         for h, c in self.connections.items():
             if h == handle:
                 self.server.send(c, token.encode('utf-8'))
-        return ActionResult(production=())
 
     @stateguard(lambda self: self.connections and any([c.data_available for c in self.connections.values()]))
     @condition([], ['handle', 'token'])
@@ -103,7 +102,7 @@ class TCPServer(Actor):
                 connection.connection_lost = False
                 del self.connections[handle]
                 break
-        return ActionResult()
+        
 
     action_priority = (accept, receive, send, close, setup, start)
     requires = ['calvinsys.network.serverhandler']

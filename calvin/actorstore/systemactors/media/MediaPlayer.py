@@ -48,7 +48,7 @@ class MediaPlayer(Actor):
     def play(self, play):
         if play:
             self.player.play(self.media_file)
-        return ActionResult()
+        
 
     action_priority = (play, )
     requires =  ['calvinsys.media.mediaplayer']

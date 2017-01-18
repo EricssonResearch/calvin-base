@@ -80,7 +80,7 @@ class RFIDReader(Actor):
                 self._state = "reset"
         else :
             self.timeout_timer = self['timer'].once(0.5)
-        return ActionResult()
+        
         
     @stateguard(lambda self: self._state == "card present")
     @condition()
@@ -96,7 +96,7 @@ class RFIDReader(Actor):
                 self._state = "card active"
         else :
             self._state = "reset"
-        return ActionResult()
+        
 
     @stateguard(lambda self: self._state == "card active")
     @condition([], ["data"])
@@ -125,7 +125,7 @@ class RFIDReader(Actor):
         if self.rfid.read_value(self.active_type) is None:
             self.timeout_timer.cancel()
             self._state = "card gone"
-        return ActionResult()
+        
 
     @stateguard(lambda self: self._state == "check card")
     @condition(["data"], [])
@@ -137,7 +137,7 @@ class RFIDReader(Actor):
             self._state = "card gone"
         else :
             _log.info("write successful")
-        return ActionResult()
+        
         # Code goes here
         
     @stateguard(lambda self: self._state == "card gone")
@@ -155,7 +155,7 @@ class RFIDReader(Actor):
         self.rfid.initialize()
         self._state = "idle"
         self.timeout_timer = self['timer'].once(self.timeout)
-        return ActionResult()
+        
         
     action_priority = (reset, write_card, read_card, card_present, check_card, card_gone, is_idle, )
     requires = ["calvinsys.sensors.rfid", "calvinsys.events.timer"]

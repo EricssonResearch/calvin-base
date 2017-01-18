@@ -60,7 +60,7 @@ class FileReader2(Actor):
         except:
             self.file = None
             self.file_not_found = True
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.file_not_found)
     @condition([], ['out', 'ses'])

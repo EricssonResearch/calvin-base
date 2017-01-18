@@ -42,7 +42,7 @@ class List(Actor):
         if self.n or type(exception) is not EOSToken:
             self._list = ExceptionToken()
         self.done = True
-        return ActionResult()
+        
 
     @manage(['n', '_list', 'done'])
     def init(self, n=1, pre_list=None, post_list=None):
@@ -56,7 +56,7 @@ class List(Actor):
     @condition(['item'], [])
     def add_item_EOS(self, item):
         self._list.append(item)
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.n and not self.done)
     @condition(['item'], [])
@@ -64,7 +64,7 @@ class List(Actor):
         self._list.append(item)
         if len(self._list) == self.n:
             self.done = True
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.done)
     @condition([], ['list'])

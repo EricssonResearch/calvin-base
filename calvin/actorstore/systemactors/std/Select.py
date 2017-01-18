@@ -39,7 +39,7 @@ class Select(Actor):
     @condition(['select'], [])
     def select_action(self, select):
         self.select = select is True
-        return ActionResult()
+        
 
     @stateguard(lambda self: self.select is False)
     @condition(['data'], ['case_false'])
