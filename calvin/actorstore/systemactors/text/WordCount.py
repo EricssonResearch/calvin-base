@@ -17,7 +17,7 @@
 
 from collections import defaultdict
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken
 
 from calvin.utilities.calvinlogger import get_logger

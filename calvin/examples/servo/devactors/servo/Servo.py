@@ -1,4 +1,4 @@
-from calvin.actor.actor import Actor, ActionResult, condition, stateguard
+from calvin.actor.actor import Actor, condition, stateguard
 
 
 class Servo(Actor):

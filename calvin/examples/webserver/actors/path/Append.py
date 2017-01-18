@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # import os
-from calvin.actor.actor import Actor, ActionResult, manage, condition
+from calvin.actor.actor import Actor, manage, condition
 
 
 def test_helper_join(*args):
@@ -66,8 +66,8 @@ class Append(Actor):
 
     @condition(['base', 'append'], ['path', 'error'])
     def path(self, base, append):
-        prod = self.gen_path(base, append)
-        return ActionResult(production=prod)
+        p, err_p = self.gen_path(base, append)
+        return (p, err_p)
 
     action_priority = (path, )
     require = ['calvinsys.native.python-os-path']

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)

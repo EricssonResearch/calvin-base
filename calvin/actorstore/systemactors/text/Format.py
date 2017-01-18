@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, ActionResult
+from calvin.actor.actor import Actor, manage, condition
 
 
 def value_for_key(d, keypath):

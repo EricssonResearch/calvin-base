@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, stateguard, manage
+from calvin.actor.actor import Actor, condition, stateguard, manage
 
 
 class Alternate(Actor):

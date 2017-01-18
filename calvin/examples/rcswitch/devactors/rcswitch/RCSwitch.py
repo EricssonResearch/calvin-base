@@ -1,4 +1,4 @@
-from calvin.actor.actor import Actor, ActionResult, condition, manage
+from calvin.actor.actor import Actor, condition, manage
 
 
 class RCSwitch(Actor):

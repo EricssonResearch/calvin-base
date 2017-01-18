@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import operator
-from calvin.actor.actor import Actor, ActionResult, manage, condition
+from calvin.actor.actor import Actor, manage, condition
 from calvin.utilities.calvinlogger import get_actor_logger
 
 

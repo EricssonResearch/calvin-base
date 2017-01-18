@@ -80,7 +80,7 @@ def condition(action_input=[], action_output=[]):
     """
     Decorator condition specifies the required input data and output space.
     Both parameters are lists of port names
-    Return value is an ActionResult object
+    Return value is a tuple (did_fire, output_available, exhaust_list)
     """
 
     tokens_produced = len(action_output)
@@ -100,7 +100,8 @@ def condition(action_input=[], action_output=[]):
             output_ok = all(self.outports[portname].tokens_available(1) for portname in action_output)
 
             if not input_ok or not output_ok:
-                return ActionResult(did_fire=False, output_ok=output_ok)
+                # return ActionResult(did_fire=False, output_ok=output_ok)
+                return (False, output_ok, ())
             #
             # Build the arguments for the action from the input port(s)
             #
@@ -143,14 +144,14 @@ def condition(action_input=[], action_output=[]):
             #
             # FIXME: Make this a list of booleans indicating exhaustion
             exhausted_ports = set()
-            for portname in action_input:
-                try:
+            try:
+                for portname in action_input:
                     port = self.inports[portname]
                     exhausted = port.peek_commit()
                     if exhausted:
                         exhausted_ports.add(port)
-                except:
-                    _log.exception("PORTCOMMIT EXCEPTION")
+            except:
+                _log.exception("PORTCOMMIT EXCEPTION")
             #
             # Write the results from the action to the output port(s)
             #
@@ -164,7 +165,8 @@ def condition(action_input=[], action_output=[]):
             # action_result.tokens_consumed = tokens_consumed
             # action_result.tokens_produced = tokens_produced
 
-            return ActionResult(exhausted=exhausted_ports)
+            # return ActionResult(exhausted=exhausted_ports)
+            return (True, True, exhausted_ports)
 
         # FIXME: AFAICT the following is only used in metering.
         # I think we should minimize the amount of info tracked for metering, and
@@ -189,7 +191,8 @@ def stateguard(action_guard):
         @functools.wraps(action_method)
         def guard_wrapper(self, *args):
             if not action_guard(self):
-                return ActionResult.did_not_fire()
+                # return ActionResult.did_not_fire()
+                return (False, True, ())
             return action_method(self, *args)
 
         return guard_wrapper
@@ -529,7 +532,8 @@ class Actor(object):
         while True:
             # Re-try action in list order after EVERY firing
             for action_method in self.__class__.action_priority:
-                action_result = action_method(self)
+                did_fire, output_ok, exhausted = action_method(self)
+                action_result = ActionResult(did_fire, output_ok, exhausted)
                 total_result.merge(action_result)
                 # Action firing should fire the first action that can fire,
                 # hence when fired start from the beginning

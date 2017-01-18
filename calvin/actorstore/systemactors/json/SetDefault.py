@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition
+from calvin.actor.actor import Actor, manage, condition
 from calvin.runtime.north.calvin_token import ExceptionToken
 from copy import deepcopy
 

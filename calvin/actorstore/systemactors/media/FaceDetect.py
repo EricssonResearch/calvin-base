@@ -1,4 +1,4 @@
-from calvin.actor.actor import Actor, ActionResult, condition
+from calvin.actor.actor import Actor, condition
 
 
 class FaceDetect(Actor) :
