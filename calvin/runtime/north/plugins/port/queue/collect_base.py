@@ -116,6 +116,8 @@ class CollectBase(object):
         del self.read_pos[writer]
         del self.tentative_read_pos[writer]
         del self.write_pos[writer]
+        del self.fifo[writer]
+        del self.tags[writer]
         self.writers.remove(writer)
         self.nbr_peers -= 1
 
