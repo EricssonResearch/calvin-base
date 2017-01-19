@@ -57,6 +57,11 @@ def actual_tokens(rt, actor_id, size=5, retries=20):
 def actual_tokens_multiple(rt, actor_ids, size=5, retries=20):
     return helpers.actual_tokens_multiple(request_handler, rt, actor_ids, size, retries)
 
+def assert_lists_equal(expected, actual, min_length=5):
+    assert len(actual) >= min_length
+    assert actual
+    assert reduce(lambda a, b: a and b[0] == b[1], zip(expected, actual), True)
+
 def get_runtime(n=1):
     import random
     runtimes = [rt1, rt2, rt3]
@@ -140,6 +145,242 @@ class TestNodeSetup(CalvinTestBase):
 
         assert request_handler.get_node(self.rt1, self.rt1.id)['uri'] == self.rt1.uri
 
+
+@pytest.fixture(params=[("rt1", "rt2"), ("rt1", "rt1")])
+def rt_order(request):
+    return [globals()[p] for p in request.param]
+
+@pytest.mark.essential
+@pytest.mark.slow
+class TestAdvancedConnectDisconnect(object):
+
+    """Testing advanced connect/disconnect """
+    # Can't use the unittest.TestCase class since uses parameterization
+
+    def testAdvancedSourceDisconnectTerminate(self, rt_order):
+        rt1 = rt_order[0]
+        rt2 = rt_order[1]
+
+        # Setup
+        src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt2, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        request_handler.set_port_property(rt2, snk, 'in', 'token',
+                                            port_properties={'routing': 'collect-unordered'})
+        request_handler.connect(rt2, snk, 'token', rt1.id, src, 'integer')
+
+        # Wait for some tokens to arrive
+        wait_for_tokens(rt2, snk)
+
+        src_meta = request_handler.get_actor(rt1, src)
+        src_port = src_meta['outports'][0]['id']
+        src_port_meta = request_handler.get_port(rt1, src, src_port)
+        snk_meta = request_handler.get_actor(rt2, snk)
+        snk_port = snk_meta['inports'][0]['id']
+        snk_port_meta = request_handler.get_port(rt2, snk, snk_port)
+
+        # Check what was sent
+        expected = expected_tokens(rt1, src, 'seq')
+
+        request_handler.disconnect(rt1, src, terminate="TERMINATE")
+
+        for i in range(10):
+            src_port_meta_dc = request_handler.get_port(rt1, src, src_port)
+            snk_port_meta_dc = request_handler.get_port(rt2, snk, snk_port)
+            if not src_port_meta_dc['peers'] and not snk_port_meta_dc['peers']:
+                break
+            time.sleep(0.5)
+
+        #print src_port_meta, snk_port_meta
+        #print src_port_meta_dc, snk_port_meta_dc
+
+        assert not src_port_meta_dc['peers']
+        assert not snk_port_meta_dc['peers']
+
+        # Wait for it to arrive
+        #actual = actual_tokens(rt, snk, len(expected))
+        #print actual
+
+        # Assert the sent and arrived are identical
+        #assert_lists_equal(expected, actual)
+
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt2, snk)
+
+    def testAdvancedSinkDisconnectTerminate(self, rt_order):
+        rt1 = rt_order[0]
+        rt2 = rt_order[1]
+
+        # Setup
+        src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt2, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        request_handler.set_port_property(rt2, snk, 'in', 'token',
+                                            port_properties={'routing': 'collect-unordered'})
+        request_handler.connect(rt2, snk, 'token', rt1.id, src, 'integer')
+
+        # Wait for some tokens to arrive
+        wait_for_tokens(rt2, snk)
+
+        src_meta = request_handler.get_actor(rt1, src)
+        src_port = src_meta['outports'][0]['id']
+        src_port_meta = request_handler.get_port(rt1, src, src_port)
+        snk_meta = request_handler.get_actor(rt2, snk)
+        snk_port = snk_meta['inports'][0]['id']
+        snk_port_meta = request_handler.get_port(rt2, snk, snk_port)
+
+        # Check what was sent
+        expected = expected_tokens(rt1, src, 'seq')
+
+        request_handler.disconnect(rt2, snk, terminate="TERMINATE")
+
+        for i in range(10):
+            src_port_meta_dc = request_handler.get_port(rt1, src, src_port)
+            snk_port_meta_dc = request_handler.get_port(rt2, snk, snk_port)
+            if not src_port_meta_dc['peers'] and not snk_port_meta_dc['peers']:
+                break
+            time.sleep(0.5)
+
+        #print src_port_meta, snk_port_meta
+        #print src_port_meta_dc, snk_port_meta_dc
+
+        assert not src_port_meta_dc['peers']
+        assert not snk_port_meta_dc['peers']
+
+        # Wait for it to arrive
+        #actual = actual_tokens(rt, snk, len(expected))
+        #print actual
+
+        # Assert the sent and arrived are identical
+        #assert_lists_equal(expected, actual)
+
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt2, snk)
+
+    def testAdvancedSinkDisconnectExhaust(self, rt_order):
+        rt1 = rt_order[0]
+        rt2 = rt_order[1]
+
+        # Setup
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        snk = request_handler.new_actor_wargs(rt2, 'io.TestSink', 'snk', store_tokens=1, quiet=1, active=False)
+        request_handler.set_port_property(rt2, snk, 'in', 'token',
+                                            port_properties={'routing': 'collect-unordered'})
+        request_handler.connect(rt2, snk, 'token', rt1.id, src, 'integer')
+
+        src_meta = request_handler.get_actor(rt1, src)
+        src_port = src_meta['outports'][0]['id']
+        src_port_meta = request_handler.get_port(rt1, src, src_port)
+        snk_meta = request_handler.get_actor(rt2, snk)
+        snk_port = snk_meta['inports'][0]['id']
+        snk_port_meta = request_handler.get_port(rt2, snk, snk_port)
+
+        # Check what was sent
+        for i in range(10):
+            time.sleep(0.1)
+            expected = expected_tokens(rt1, src, 'seq')
+            if len(expected) >= 8:
+                break
+        assert len(expected) >= 8
+
+        # Sink is paused, hence 4 + 4 tokens in out and in queues.
+        # Disconnect exhaust will move the tokens to in queue
+        request_handler.disconnect(rt2, snk, terminate="EXHAUST")
+
+        for i in range(10):
+            src_port_meta_dc = request_handler.get_port(rt1, src, src_port)
+            snk_port_meta_dc = request_handler.get_port(rt2, snk, snk_port)
+            if not src_port_meta_dc['peers'] and not snk_port_meta_dc['peers']:
+                break
+            time.sleep(0.5)
+
+        print src_port_meta, snk_port_meta
+        print src_port_meta_dc, snk_port_meta_dc
+
+        assert not src_port_meta_dc['peers']
+        assert not snk_port_meta_dc['peers']
+
+        # Wait for tokens to arrive
+        request_handler.report(rt2, snk, kwargs={'active': True})
+        # Wait for it to arrive
+        actual = actual_tokens(rt2, snk, len(expected))
+        print actual
+
+        port_state_dc = request_handler.report(rt2, snk, kwargs={'port': None})
+
+        # Assert the sent and arrived are identical
+        assert_lists_equal(expected, actual)
+        assert not port_state_dc['queue']['writers']
+
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt2, snk)
+
+    def testAdvancedSourceDisconnectExhaust(self, rt_order):
+        rt1 = rt_order[0]
+        rt2 = rt_order[1]
+
+        # Setup
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        snk = request_handler.new_actor_wargs(rt2, 'io.TestSink', 'snk', store_tokens=1, quiet=1, active=False)
+        request_handler.set_port_property(rt2, snk, 'in', 'token',
+                                            port_properties={'routing': 'collect-unordered'})
+        request_handler.connect(rt2, snk, 'token', rt1.id, src, 'integer')
+
+        src_meta = request_handler.get_actor(rt1, src)
+        src_port = src_meta['outports'][0]['id']
+        src_port_meta = request_handler.get_port(rt1, src, src_port)
+        snk_meta = request_handler.get_actor(rt2, snk)
+        snk_port = snk_meta['inports'][0]['id']
+        snk_port_meta = request_handler.get_port(rt2, snk, snk_port)
+        port_state = request_handler.report(rt2, snk, kwargs={'port': None})
+
+        # Check what was sent
+        for i in range(10):
+            time.sleep(0.1)
+            expected = expected_tokens(rt1, src, 'seq')
+            if len(expected) >= 8:
+                break
+        assert len(expected) >= 8
+
+        # Sink is paused, hence 4 + 4 tokens in out- and in-queues.
+        # Disconnect exhaust will move the tokens to in queue
+        request_handler.disconnect(rt1, src, terminate="EXHAUST")
+
+        for i in range(10):
+            src_port_meta_dc = request_handler.get_port(rt1, src, src_port)
+            if not src_port_meta_dc['peers']:
+                break
+            time.sleep(0.5)
+
+        print src_port_meta
+        print src_port_meta_dc
+
+        assert not src_port_meta_dc['peers']
+
+        # Accept tokens and wait for tokens to arrive
+        request_handler.report(rt2, snk, kwargs={'active': True})
+        actual = actual_tokens(rt2, snk, len(expected))
+        print actual
+
+        for i in range(10):
+            snk_port_meta_dc = request_handler.get_port(rt2, snk, snk_port)
+            if not snk_port_meta_dc['peers']:
+                break
+            time.sleep(0.5)
+
+        port_state_dc = request_handler.report(rt2, snk, kwargs={'port': None})
+
+        print port_state
+        print port_state_dc
+        print snk_port_meta
+        print snk_port_meta_dc
+
+        assert not port_state_dc['queue']['writers']
+        assert not snk_port_meta_dc['peers']
+
+        # Assert the sent and arrived are identical
+        assert_lists_equal(expected, actual)
+
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt2, snk)
 
 @pytest.mark.essential
 @pytest.mark.slow
