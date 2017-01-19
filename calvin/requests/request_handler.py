@@ -210,14 +210,15 @@ class RequestHandler(object):
         r = self._post(rt, timeout, async, CONNECT, data)
         return self.check_response(r)
 
-    def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, timeout=DEFAULT_TIMEOUT,
-                   async=False):
+    def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=None, 
+                   timeout=DEFAULT_TIMEOUT, async=False):
         data = {
             'sec_credentials':self.credentials,
             'actor_id': actor_id,
             'port_name': port_name,
             'port_dir': port_dir,
-            'port_id': port_id
+            'port_id': port_id,
+            'terminate': terminate
         }
         r = self._post(rt, timeout, async, DISCONNECT, data)
         return self.check_response(r)

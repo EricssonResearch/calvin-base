@@ -26,6 +26,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.attribute_resolver import format_index_string
 from calvin.runtime.south.plugins.async import server_connection, async
+from calvin.runtime.north.plugins.port import DISCONNECT
 from urlparse import urlparse
 from calvin.requests import calvinresponse
 from calvin.utilities.security import Security, security_enabled
@@ -1627,9 +1628,24 @@ class CalvinControl(object):
 
     @authentication_decorator
     def handle_disconnect(self, handle, connection, match, data, hdr):
-        self.node.disconnect(
-            data['actor_id'], data['port_name'], data['port_dir'], data['port_id'],
-            cb=CalvinCB(self.handle_disconnect_cb, handle, connection))
+        actor_id = data.get('actor_id', None)
+        port_name = data.get('port_name', None)
+        port_dir = data.get('port_dir', None)
+        port_id = data.get('port_id', None)
+        # Convert type of disconnect as string to enum value
+        # Allowed values TEMPORARY, TERMINATE, EXHAUST
+        terminate = data.get('terminate', "TEMPORARY")
+        try:
+            terminate = DISCONNECT.__getattribute__(DISCONNECT, terminate)
+        except:
+            terminate = DISCONNECT.TEMPORARY
+
+        _log.debug("disconnect(actor_id=%s, port_name=%s, port_dir=%s, port_id=%s)" %
+                   (actor_id if actor_id else "", port_name if port_name else "",
+                    port_dir if port_dir else "", port_id if port_id else ""))
+        self.node.pm.disconnect(actor_id=actor_id, port_name=port_name,
+                           port_dir=port_dir, port_id=port_id, terminate=terminate,
+                           callback=CalvinCB(self.handle_disconnect_cb, handle, connection))
 
     def handle_disconnect_cb(self, handle, connection, **kwargs):
         status = kwargs.get('status', None)
