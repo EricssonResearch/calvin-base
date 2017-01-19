@@ -70,7 +70,7 @@ class FileWriter(Actor):
         self.counter += 1
         self.file = self['file'].open(fname, "w")
 
-    def exception_handler(self, action, args, exceptions):
+    def exception_handler(self, action, args):
         self['file'].close(self.file)
         self.file = None
 

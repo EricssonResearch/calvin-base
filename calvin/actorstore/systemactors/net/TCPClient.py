@@ -104,7 +104,7 @@ class TCPClient(Actor):
         self.cc.disconnect()
         self.cc = None
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         """Handler ExceptionTokens"""
         self.EOST_token_received = True
 

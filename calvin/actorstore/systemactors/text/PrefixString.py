@@ -31,7 +31,7 @@ class PrefixString(Actor):
     def init(self, prefix='-'):
         self.prefix = str(prefix)
 
-    def exception_handler(self, action, args, exceptions):
+    def exception_handler(self, action, args):
         return (EOSToken(), )
 
     @condition(['in'], ['out'])

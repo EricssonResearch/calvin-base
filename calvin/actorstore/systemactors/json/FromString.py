@@ -34,7 +34,7 @@ class FromString(Actor):
       data   : data read from input string
     """
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         return (self.default,)
 
     @manage(['exception_output'])

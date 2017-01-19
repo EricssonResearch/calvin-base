@@ -30,9 +30,9 @@ class IsEOS(Actor):
       status : 'true' if input token is EOS-token, false otherwise
     """
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         self.token = type(args[0]) is EOSToken
-        
+
 
     @manage([])
     def init(self):
@@ -49,7 +49,7 @@ class IsEOS(Actor):
     @condition(['token'])
     def consume(self, tok):
         self.token = False
-        
+
 
     action_priority = (produce, consume)
 

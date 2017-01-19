@@ -37,12 +37,11 @@ class List(Actor):
       list: a list of consumed items
     """
 
-    def exception_handler(self, action, args, context):
-        exception = args[context['exceptions']['item'][0]]
-        if self.n or type(exception) is not EOSToken:
+    def exception_handler(self, action, args):
+        if self.n or type(args[0]) is not EOSToken:
             self._list = ExceptionToken()
         self.done = True
-        
+
 
     @manage(['n', '_list', 'done'])
     def init(self, n=1, pre_list=None, post_list=None):
@@ -56,7 +55,7 @@ class List(Actor):
     @condition(['item'], [])
     def add_item_EOS(self, item):
         self._list.append(item)
-        
+
 
     @stateguard(lambda self: self.n and not self.done)
     @condition(['item'], [])
@@ -64,7 +63,7 @@ class List(Actor):
         self._list.append(item)
         if len(self._list) == self.n:
             self.done = True
-        
+
 
     @stateguard(lambda self: self.done)
     @condition([], ['list'])

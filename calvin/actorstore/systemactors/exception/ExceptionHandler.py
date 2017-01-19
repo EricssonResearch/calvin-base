@@ -35,9 +35,9 @@ class ExceptionHandler(Actor):
       status : reason for any exception tokens encountered (including EOS)
     """
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         try:
-            e = args[context['exceptions']['token'][0]]
+            e = args[0]
         except:
             e = ExceptionToken()
         self.status = e

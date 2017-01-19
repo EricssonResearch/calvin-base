@@ -27,7 +27,7 @@ class StandardOut(Actor):
       token : Any token
     """
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         # Check args to verify that it is EOSToken
         return action(self, *args)
 

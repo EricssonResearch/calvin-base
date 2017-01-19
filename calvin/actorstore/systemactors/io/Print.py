@@ -24,7 +24,7 @@ class Print(Actor):
       token : data to write
     """
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         # Check args to verify that it is EOSToken
         return action(self, *args)
 

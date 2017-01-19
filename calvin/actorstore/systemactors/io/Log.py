@@ -28,7 +28,7 @@ class Log(Actor):
       data : data to be logger
     """
 
-    def exception_handler(self, action_function, args, context):
+    def exception_handler(self, action_function, args):
         # The action 'log' takes a single token
         exception_token = args[0]
         return action_function(self, "Exception '%s'" % (exception_token,))

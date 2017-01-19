@@ -39,7 +39,7 @@ class SetDefault(Actor):
       container:  a modified container
     """
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         return (ExceptionToken(),)
 
     @manage()

@@ -37,7 +37,7 @@ class LineJoin(Actor):
         self.lines = []
         self.text = None
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         # FIXME: Check that action is append and args is EOSToken
         #        if not, call super's exception_handler
         #        Similarly, if self.text is not None => raise

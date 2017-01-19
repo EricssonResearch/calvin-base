@@ -40,7 +40,7 @@ class WordCount(Actor):
         self.word_counts = defaultdict(int)
         self.finished = False
 
-    def exception_handler(self, action, args, exceptions):
+    def exception_handler(self, action, args):
         self.finished = True
 
     @condition(['in'], [])

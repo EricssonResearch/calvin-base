@@ -37,7 +37,7 @@ class GetValue(Actor):
       value: value for the key/index/list
     """
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         return (ExceptionToken(),)
 
     @manage()

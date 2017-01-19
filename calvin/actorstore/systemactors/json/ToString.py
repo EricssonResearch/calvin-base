@@ -33,7 +33,7 @@ class ToString(Actor):
       string : JSON-formatted string
     """
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         return (self['json'].dumps(self.default),)
 
     @manage(['default'])

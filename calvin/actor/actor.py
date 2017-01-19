@@ -105,21 +105,19 @@ def condition(action_input=[], action_output=[]):
             # Build the arguments for the action from the input port(s)
             #
             args = []
-            ex = {}
+            exception = False
             for portname in action_input:
-                port = self.inports[portname]
-                token = port.peek_token()
+                token = self.inports[portname].peek_token()
                 is_exception = isinstance(token, ExceptionToken)
-                if is_exception:
-                    ex.setdefault(portname, []).append(0)
-                args.append(token if is_exception else token.value)
-
+                exception |= is_exception
+                arg = token if is_exception else token.value
+                args.append(arg)
             #
             # Check for exceptional conditions
             #
-            if ex:
+            if exception:
                 # FIXME: Simplify exception handling
-                production = self.exception_handler(action_method, args, {'exceptions': ex}) or ()
+                production = self.exception_handler(action_method, args) or ()
             else:
                 #
                 # Perform the action (N.B. the method may be wrapped in a decorator)
@@ -647,10 +645,10 @@ class Actor(object):
     def deserialize(self, data):
         self._set_state(data)
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         """Defult handler when encountering ExceptionTokens"""
-        _log.error("ExceptionToken encountered\n  name: %s\n  type: %s\n  action: %s\n  args: %s\n  context: %s\n" %
-                   (self._name, self._type, action.__name__, args, context))
+        _log.error("ExceptionToken encountered\n  name: %s\n  type: %s\n  action: %s\n  args: %s\n" %
+                   (self._name, self._type, action.__name__, args))
         raise Exception("ExceptionToken NOT HANDLED")
 
     def events(self):

@@ -46,11 +46,11 @@ class Dict(Actor):
         self._dict = ExceptionToken()
         self.done = True
 
-    def exception_handler(self, action, args, context):
-        if self.n or not ('key' in context['exceptions'] and 'value' in context['exceptions']):
+    def exception_handler(self, action, args):
+        if self.n or not (isinstance(args[0], EOSToken) and isinstance(args[1], EOSToken)):
             self._bail()
         self.done = True
-        
+
 
     @stateguard(lambda self: not self.n and not self.done)
     @condition(['key', 'value'], [])
@@ -59,7 +59,7 @@ class Dict(Actor):
             self._dict[key] = value
         else:
             self._bail()
-        
+
 
     @stateguard(lambda self: self.n and not self.done)
     @condition(['key', 'value'], [])
@@ -69,7 +69,7 @@ class Dict(Actor):
             self.done = bool(len(self._dict) == self.n)
         else:
             self._bail()
-        
+
 
     @stateguard(lambda self: self.done)
     @condition([], ['dict'])
