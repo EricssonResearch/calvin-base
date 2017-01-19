@@ -704,7 +704,7 @@ class Storage(object):
         _log.debug("Delete actor id %s" % (actor_id))
         self.delete(prefix="actor-", key=actor_id, cb=cb)
 
-    def add_port(self, port, node_id, actor_id=None, cb=None):
+    def add_port(self, port, node_id, actor_id=None, exhausting_peers=None, cb=None):
         """
         Add port to storage
         """
@@ -714,7 +714,9 @@ class Storage(object):
         data = {"name": port.name, "connected": port.is_connected(),
                 "node_id": node_id, "actor_id": actor_id, "properties": port.properties}
         if port.is_connected():
-            data["peers"] = port.get_peers()
+            if exhausting_peers is None:
+                exhausting_peers = []
+            data["peers"] = [peer for peer in port.get_peers() if peer[1] not in exhausting_peers]
         self.set(prefix="port-", key=port.id, value=data, cb=cb)
 
     def get_port(self, port_id, cb=None):

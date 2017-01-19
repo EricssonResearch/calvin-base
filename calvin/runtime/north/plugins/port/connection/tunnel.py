@@ -279,14 +279,14 @@ class TunnelConnection(BaseConnection):
 
         terminate_peer = DISCONNECT.EXHAUST_PEER if terminate == DISCONNECT.EXHAUST else terminate
         # Inform peer port of disconnection
-        self.node.proto.port_disconnect(callback=CalvinCB(self._disconnected_peer),
+        self.node.proto.port_disconnect(callback=CalvinCB(self._disconnected_peer, terminate=terminate),
                                     port_id=self.port.id,
                                     peer_node_id=self.peer_port_meta.node_id,
                                     peer_port_id=self.peer_port_meta.port_id,
                                     terminate=terminate_peer,
                                     remaining_tokens=remaining_tokens)
 
-    def _disconnected_peer(self, reply):
+    def _disconnected_peer(self, reply, terminate=DISCONNECT.TEMPORARY):
         """ Get called for each peer port when diconnecting but callback should only be called once"""
         try:
             # Remove this peer from the list of peer connections
@@ -307,8 +307,9 @@ class TunnelConnection(BaseConnection):
             _log.exception("Did not have remaining_tokens")
             remaining_tokens = {}
         self.port.exhausted_tokens(remaining_tokens)
-        #if terminate:
-        #    self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+        if terminate:
+            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
+                                        exhausting_peers=remaining_tokens.keys())
         if not getattr(self, 'sent_callback', False) and not self._parallel_connections:
             # Last peer connection we should send OK
             if self.callback:
@@ -331,7 +332,8 @@ class TunnelConnection(BaseConnection):
         self._deserialize_remaining_tokens(peer_remaining_tokens)
         self.port.exhausted_tokens(peer_remaining_tokens)
         if terminate:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
+                                        exhausting_peers=peer_remaining_tokens.keys())
         self._serialize_remaining_tokens(remaining_tokens)
         return response.CalvinResponse(True, {'remaining_tokens': remaining_tokens})
 
