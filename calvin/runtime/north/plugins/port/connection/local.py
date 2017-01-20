@@ -115,8 +115,10 @@ class LocalConnection(BaseConnection):
 
         # Update storage, the ports are disconnected even if an inport during exhaustion still delivers tokens
         if terminate:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
-            self.node.storage.add_port(self.peer_port_meta.port, self.node.id, self.peer_port_meta.port.owner.id)
+            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
+                                        exhausting_peers=peer_remaining_tokens.keys())
+            self.node.storage.add_port(self.peer_port_meta.port, self.node.id, self.peer_port_meta.port.owner.id,
+                                        exhausting_peers=remaining_tokens.keys())
 
         try:
             # Remove this peer from the list of peer connections
