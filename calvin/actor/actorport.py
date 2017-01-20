@@ -217,6 +217,19 @@ class InPort(Port):
         # The return has information on if the queue exhausted the remaining tokens
         return self.queue.commit(metadata)
 
+    def read(self, metadata=None):
+        """
+        Used by actor (owner) to read a token from the port.
+        Returns tuple (token, exhaust) where exhaust is port (exhausted) or None (not exhausted)
+        """
+        # FIXME: We no longer need the peek/commit/cancel functionality.
+        #        Queues should be changed accordingly, and this method should use queue.read()
+        if metadata is None:
+            metadata = self.id
+        token = self.peek_token(metadata)
+        exhausted = self.peek_commit(metadata)
+        return (token, exhausted)
+
     def tokens_available(self, length, metadata=None):
         """Used by actor (owner) to check number of tokens on the port."""
         if metadata is None:

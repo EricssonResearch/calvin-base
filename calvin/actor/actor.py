@@ -104,14 +104,17 @@ def condition(action_input=[], action_output=[]):
             #
             # Build the arguments for the action from the input port(s)
             #
-            args = []
+            exhausted_ports = set()
             exception = False
+            args = []
             for portname in action_input:
-                token = self.inports[portname].peek_token()
-                is_exception = isinstance(token, ExceptionToken)
-                exception |= is_exception
-                arg = token if is_exception else token.value
-                args.append(arg)
+                port = self.inports[portname]
+                token, exhaust = port.read()
+                is_exception_token = isinstance(token, ExceptionToken)
+                exception = exception or is_exception_token
+                args.append(token if is_exception_token else token.value )
+                if exhaust:
+                   exhausted_ports.add(port)
             #
             # Check for exceptional conditions
             #
@@ -134,20 +137,6 @@ def condition(action_input=[], action_output=[]):
                 #
                 action = "%s.%s" % (self._type, action_method.__name__)
                 raise Exception("%s invalid production %s, expected %s" % (action, str(production), str(tuple(action_output))))
-
-            #
-            # Action performed => commit to the read from the FIFOs
-            #
-            # FIXME: Make this a list of booleans indicating exhaustion
-            exhausted_ports = set()
-            try:
-                for portname in action_input:
-                    port = self.inports[portname]
-                    exhausted = port.peek_commit()
-                    if exhausted:
-                        exhausted_ports.add(port)
-            except:
-                _log.exception("PORTCOMMIT EXCEPTION")
             #
             # Write the results from the action to the output port(s)
             #
@@ -491,6 +480,7 @@ class Actor(object):
         Fire an actor.
         Returns True if any action fired
         """
+        # FIXME: Move authorization decision to scheduler
         #
         # First make sure we are allowed to run
         #
@@ -502,7 +492,6 @@ class Actor(object):
         #
         # Repeatedly go over the action priority list
         #
-        # FIXME: Make logic of this loop easier to follow
         done = False
         while not done:
             for action_method in self.__class__.action_priority:
@@ -515,6 +504,7 @@ class Actor(object):
                     # self.metering.fired(self._id, action_method.__name__)
                     # self.control.log_actor_firing( ... )
                     break
+
             #
             # We end up here when an action fired or when all actions have failed to fire
             #
@@ -530,6 +520,7 @@ class Actor(object):
                 # We reached the end of the list without ANY firing during this round
                 # => handle exhaustion and return
                 #
+                # FIXME: Move exhaust handling to scheduler
                 self._handle_exhaustion(exhausted, output_ok)
                 done = True
 
