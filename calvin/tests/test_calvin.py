@@ -542,6 +542,11 @@ class TestRemoteConnection(CalvinTestBase):
 
     def testRemoteOneActor(self):
         """Testing remote port"""
+        from twisted.python import log
+        from twisted.internet import defer
+        import sys
+        defer.setDebugging(True)
+        log.startLogging(sys.stdout)
 
         rt = self.rt1
         peer = self.rt2
@@ -1449,7 +1454,7 @@ class TestStateMigration(CalvinTestBase):
         tokens = len(wait_for_tokens(self.rt1, snk))
         self.migrate(self.rt1, self.rt2, csum)
 
-        actual = request_handler.report(self.rt1, snk, timeout=tokens+5)
+        actual = actual_tokens(self.rt1, snk, tokens+5)
         expected = expected_tokens(self.rt1, src, 'sum')
 
         self.assert_lists_equal(expected, actual)

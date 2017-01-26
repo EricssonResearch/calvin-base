@@ -82,12 +82,19 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
         return self._port
 
     def stop(self):
+        _log.debug("Stopping server %s", self._tcp_server)
         def fire_callback(args):
+            _log.debug("Server stopped %s", self._tcp_server)
             self._callback_execute('server_stopped')
+        def fire_errback(args):
+            _log.warning("Server did not stop as excpected %s", args)
+            self._callback_execute('server_stopped')
+
         if self._tcp_server:
             d = self._tcp_server.stopListening()
             self._tcp_server = None
             d.addCallback(fire_callback)
+            d.addErrback(fire_errback)
 
     def is_listening(self):
         return self._tcp_server is not None

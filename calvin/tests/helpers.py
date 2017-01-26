@@ -225,9 +225,9 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
                 retries += 39  # A timeout counts more we don't want to wait 60*100 seconds
                 continue
             if len(peers['result']) >= n:
-                _log.info("Found %d peers (%r)" % (len(peers['result']), peers['result']))
+                _log.info("Found %d peers (%r)", len(peers['result']), peers['result'])
                 return
-            _log.info("Only %d peers found (%r)" % (len(peers['result']), peers['result']))
+            _log.info("Only %d peers found (%r)", len(peers['result']), peers['result'])
             time.sleep(1)
         # No more retrying
         raise Exception("Storage check failed, could not find peers.")

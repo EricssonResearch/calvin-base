@@ -1469,6 +1469,7 @@ class CalvinControl(object):
         peer_port_id = kwargs.get('peer_port_id', None)
         self.send_response(handle, connection, json.dumps({'peer_port_id': peer_port_id}) if status else None,
                            status=status.status)
+        _log.debug("Handle connect finnished")
 
     @authentication_decorator
     def handle_set_port_property(self, handle, connection, match, data, hdr):

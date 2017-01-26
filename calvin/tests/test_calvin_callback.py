@@ -84,7 +84,7 @@ def test_calvin_cb_class():
     cb.callback_register('f2', cb2)
     assert 'f2' in cb.callback_valid_names()
 
-    cb.callback_unregister(cb2.id)
+    cb.callback_unregister(cb2._id)
     assert 'f2' not in cb.callback_valid_names()
 
     cb._callback_execute('f', 1, 2, a=3)

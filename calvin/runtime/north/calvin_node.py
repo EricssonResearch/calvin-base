@@ -17,6 +17,7 @@
 from multiprocessing import Process
 # For trace
 import sys
+import os
 import trace
 import logging
 
@@ -43,7 +44,7 @@ from calvin.utilities.security import security_modules_check
 from calvin.utilities.runtime_credentials import RuntimeCredentials
 from calvin.utilities import calvinuuid
 from calvin.utilities import certificate
-from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities.calvinlogger import get_logger, set_file
 from calvin.utilities import calvinconfig
 
 _log = get_logger(__name__)
@@ -289,7 +290,7 @@ class Node(object):
             return self.stop(callback)
 
         # Migrate the actors according to their requirements
-        # (even actors without explicit requirements will migrate based on e.g. requires and port property needs) 
+        # (even actors without explicit requirements will migrate based on e.g. requires and port property needs)
         for actor in actors:
             if actor._replication_data.terminate_with_node(actor.id):
                 _log.info("TERMINATE REPLICA")
@@ -302,18 +303,55 @@ class Node(object):
     def _storage_started_cb(self, *args, **kwargs):
         self.authorization.register_node()
 
+def setup_logging(filename):
+
+    #from twisted.python import log
+    #from twisted.internet import defer
+    #import sys
+    #defer.setDebugging(True)
+    #log.startLogging(sys.stdout)
+
+    levels = os.getenv('CALVIN_TESTS_LOG_LEVELS', "").split(':')
+
+    set_file(filename)
+
+    if not levels:
+        get_logger().setLevel(logging.INFO)
+        return
+
+    for level in levels:
+        module = None
+        if ":" in level:
+            module, level = level.split(":")
+        if level == "CRITICAL":
+            get_logger(module).setLevel(logging.CRITICAL)
+        elif level == "ERROR":
+            get_logger(module).setLevel(logging.ERROR)
+        elif level == "WARNING":
+            get_logger(module).setLevel(logging.WARNING)
+        elif level == "INFO":
+            get_logger(module).setLevel(logging.INFO)
+        elif level == "DEBUG":
+            get_logger(module).setLevel(logging.DEBUG)
+        elif level == "ANALYZE":
+            get_logger(module).setLevel(5)
+
 
 def create_node(uri, control_uri, attributes=None):
+    logfile = os.getenv('CALVIN_TEST_LOG_FILE', None)
+    setup_logging(logfile)
     n = Node(uri, control_uri, attributes)
     n.run()
     _log.info('Quitting node "%s"' % n.uri)
 
 
-def create_tracing_node(uri, control_uri, attributes=None):
+def create_tracing_node(uri, control_uri, attributes=None, logfile=None):
     """
     Same as create_node, but will trace every line of execution.
     Creates trace dump in output file '<host>_<port>.trace'
     """
+    logfile = os.getenv('CALVIN_TEST_LOG_FILE', None)
+    setup_logging(logfile)
     n = Node(uri, control_uri, attributes)
     _, host = uri.split('://')
     with open("%s.trace" % (host, ), "w") as f:
@@ -327,7 +365,9 @@ def create_tracing_node(uri, control_uri, attributes=None):
             'fnmatch', 'urlparse', 're', 'stat', 'six'
         ]
         with f as sys.stdout:
-            tracer = trace.Trace(trace=1, count=0, ignoremods=ignore)
+            paths = sys.path
+            #tracer = trace.Trace(trace=1, count=0, ignoremods=ignore)
+            tracer = trace.Trace(trace=1, count=0, ignoredir=paths)
             tracer.runfunc(n.run)
         sys.stdout = tmp
     _log.info('Quitting node "%s"' % n.uri)

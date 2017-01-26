@@ -94,7 +94,7 @@ class RequestHandler(object):
                     r = json.loads(response.text)
                     return r if key is None else r[key]
                 except:
-                    _log.debug("Failed to parse response '{}' as json".format(response.text))
+                    _log.error("Failed to parse response '{}' as json".format(response.text))
                     return None
             # When failed raise exception
             raise Exception("%d%s" % (response.status_code, ("\n" + response.text) if response.text else ""))
@@ -388,7 +388,9 @@ class RequestHandler(object):
     def async_response(self, response):
         try:
             self.future_responses.remove(response)
-        except:
+        except Exception as e:
+            _log.warning("Async responce exception %s", e)
+            _log.debug("Async responce exception %s", e, exc_info=True)
             pass
         r = response.result()
         return self.check_response(r, response._calvin_success, response._calvin_key)

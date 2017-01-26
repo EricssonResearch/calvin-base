@@ -30,7 +30,7 @@ class CalvinCB(object):
     """
     def __init__(self, func, *args, **kwargs):
         super(CalvinCB, self).__init__()
-        self.id = calvinuuid.uuid("CB")
+        self._id = calvinuuid.uuid("CB")
         self.func = func
         self.args = list(args)
         self.kwargs = kwargs
@@ -73,7 +73,7 @@ class CalvinCBGroup(object):
     """
     def __init__(self, funcs=None):
         super(CalvinCBGroup, self).__init__()
-        self.id = calvinuuid.uuid("CBG")
+        self._id = calvinuuid.uuid("CBG")
         self.funcs = funcs if funcs else []
 
     def func_append(self, func):
@@ -89,7 +89,7 @@ class CalvinCBGroup(object):
         """
         reply = {}
         for f in self.funcs:
-            reply[f.id] = f(*args, **kwargs)
+            reply[f._id] = f(*args, **kwargs)
         return reply
 
 
@@ -116,7 +116,11 @@ class CalvinCBClass(object):
             return
         for name, cbs in callbacks.iteritems():
             if self.__callback_valid_names is None or name in self.__callback_valid_names:
-                self.__callbacks[name] = dict([(cb.id, cb) for cb in cbs])
+                self.__callbacks[name] = dict()
+                for cb in cbs:
+                    if not isinstance(cb, CalvinCB):
+                        raise Exception("One callback of name %s is not a CalvinCB object %s, %s", name, type(cb), repr(cb))
+                    self.__callbacks[name][cb._id] = cb
 
     def callback_valid_names(self):
         """ Returns list of valid or current names that callbacks can be registered on."""
@@ -130,7 +134,7 @@ class CalvinCBClass(object):
         if self.__callback_valid_names is None or name in self.__callback_valid_names:
             if name not in self.__callbacks:
                 self.__callbacks[name] = {}
-            self.__callbacks[name][cb.id] = cb
+            self.__callbacks[name][cb._id] = cb
 
     def callback_unregister(self, _id):
         """ Unregisters a callback
@@ -165,7 +169,7 @@ class CalvinCBClass(object):
         local_copy = self.__callbacks[name].copy()
         for cb in local_copy.itervalues():
             try:
-                reply[cb.id] = cb(*args, **kwargs)
+                reply[cb._id] = cb(*args, **kwargs)
             except:
                 _log.exception("Callback '%s' failed on %s(%s, %s)" % (name, cb, args, kwargs))
         return reply
@@ -214,6 +218,6 @@ if __name__ == '__main__':
 
     t = TestingCB(1, callbacks={'test1': [a], 'test2': [b]})
     t.callback_register('test1', CalvinCB(fname2))
-    t.callback_unregister(a.id)
+    t.callback_unregister(a._id)
     print t.callback_valid_names()
     t.internal()

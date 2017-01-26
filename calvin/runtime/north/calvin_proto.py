@@ -175,7 +175,7 @@ class CalvinProto(CalvinCBClass):
         self.node = node
         self.network = network
         # Register the function that receives all incoming messages
-        self.network.register_recv(CalvinCB(self.recv_handler))
+        self.network.register_recv(self.recv_handler)
         # tunnel_handlers is a dict with key: tunnel_type string e.g. 'token', value: function that get request
         self.tunnel_handlers = tunnel_handlers if isinstance(tunnel_handlers, dict) else {}
         self.tunnels = {}  # key: peer node id, value: dict with key: tunnel_id, value: tunnel obj

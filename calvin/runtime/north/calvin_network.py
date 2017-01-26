@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os
+import time
 import glob
 import importlib
 
@@ -39,6 +40,7 @@ class CalvinBaseLink(object):
     def __init__(self, peer_id):
         super(CalvinBaseLink, self).__init__()
         self.peer_id = peer_id
+        self._rtt = None
 
     def reply_handler(self, payload):
         raise NotImplementedError()
@@ -52,6 +54,8 @@ class CalvinBaseLink(object):
     def close(self, dest_peer_id=None):
         raise NotImplemented()
 
+    def get_rtt(self):
+        return self._rtt
 
 class CalvinLink(CalvinBaseLink):
     """ CalvinLink class manage one RT to RT link between
@@ -62,6 +66,9 @@ class CalvinLink(CalvinBaseLink):
 
     def __init__(self, rt_id, peer_id, transport, server_node_name=None, old_link=None):
         super(CalvinLink, self).__init__(peer_id)
+        self._rtt = transport.get_rtt()
+        if self._rtt is None:
+            self._rtt = 0.2
         self.rt_id = rt_id
         self.transport = transport
         self.routes = old_link.routes if old_link else []
@@ -80,14 +87,23 @@ class CalvinLink(CalvinBaseLink):
         try:
             # Cancel timeout
             self.replies_timeout.pop(payload['msg_uuid']).cancel()
-        except:
+        except KeyError:
+            _log.warning("Tried to handle reply for unknown message msgid %s", payload['msg_uuid'])
             # We ignore any errors in cancelling timeout
             pass
 
         try:
             # Call the registered callback,for the reply message id, with the reply data as argument
-            self.replies.pop(payload['msg_uuid'])(response.CalvinResponse(encoded=payload['value']))
-        except:
+            reply = self.replies.pop(payload['msg_uuid'])
+
+            # RTT here also inlcudes delay(actors running...) times in remote runtime
+            self._rtt = (self._rtt*2 + (time.time() - reply['send_time']))/3
+
+            reply['callback'](response.CalvinResponse(encoded=payload['value']))
+        except KeyError:
+            _log.warning("Tried to handle reply for unknown message msgid %s", payload['msg_uuid'])
+        except: # Dangerous but needed
+            _log.exception("Unknown exception in response handler")
             # We ignore unknown replies
             return
 
@@ -96,20 +112,25 @@ class CalvinLink(CalvinBaseLink):
         try:
             # remove timeout
             self.replies_timeout.pop(msg_id)
-        except:
+        except KeyError:
+            _log.warning("Tried to handle reply for unknown message msgid %s", payload['msg_uuid'])
+            # We ignore any errors in cancelling timeout
             pass
+
         try:
-            self.replies.pop(msg_id)(response.CalvinResponse(response.GATEWAY_TIMEOUT))
-        except:
-            # We ignore errors
-            return
+            self.replies.pop(msg_id)['callback'](response.CalvinResponse(response.GATEWAY_TIMEOUT))
+        except KeyError:
+            _log.warning("Tried to handle reply for unknown message msgid %s", payload['msg_uuid'])
+        except: # Dangerous but needed
+            _log.exception("Unknown exception in response handler")
+            # We ignore unknown replies
 
     def send_with_reply(self, callback, msg, dest_peer_id=None):
         """ Adds a message id to the message and send it,
             also registers the callback for the reply.
         """
         msg_id = calvinuuid.uuid("MSGID")
-        self.replies[msg_id] = callback
+        self.replies[msg_id] = {'callback': callback, 'send_time': time.time()}
         self.replies_timeout[msg_id] = async.DelayedCall(10.0, CalvinCB(self.reply_timeout, msg_id))
         msg['msg_uuid'] = msg_id
         self.send(msg, dest_peer_id)
@@ -183,14 +204,19 @@ class CalvinNetwork(object):
         self.transport_modules = {}  # key module namespace string, value: imported module (must have register function)
         self.transports = {}  # key: URI schema, value: transport factory that handle URI
         self.links = {}  # key peer node id, value: CalvinLink obj
-        self.recv_handler = None
+        self._recv_handler = self.__recv_handler
         self.pending_joins = {}  # key: uri, value: list of callbacks or None
         self.pending_joins_by_id = {}  # key: peer id, value: uri
         self.control = self.node.control
 
+    def __recv_handler(self, tp_link, payload):
+        _log.debug("Dummy recv handler")
+        pass
+
     def register_recv(self, recv_handler):
         """ Register THE function that will receive all incomming messages on all links """
-        self.recv_handler = recv_handler
+        _log.debug("Register recv handler %s over old handler %s", recv_handler, self._recv_handler)
+        self._recv_handler = recv_handler
 
     def register(self, schemas, formats):
         """ Load and registers all transport plug-in modules matching the list of schemas.
@@ -215,34 +241,59 @@ class CalvinNetwork(object):
             try:
                 self.transport_modules[m] = importlib.import_module(TRANSPORT_PLUGIN_NS + "." + m)
                 # Get a dictionary of schemas -> transport factory
-                schema_objects = self.transport_modules[m].register(self.node.id,
-                                                                    self.node.node_name,
-                                                                    {'join_finished': [CalvinCB(self.join_finished)],
-                                                                     'join_failed': [CalvinCB(self._join_failed)],
-                                                                     'data_received': [self.recv_handler],
-                                                                     'connection_failed': [CalvinCB(self._connection_failed)],
-                                                                     'peer_disconnected': [CalvinCB(self.peer_disconnected)]},
-                                                                    schemas, formats)
+                if hasattr(self.transport_modules[m], 'register') and callable(self.transport_modules[m].register):
+                    schema_objects = self.transport_modules[m].register(self.node.id,
+                                                                        self.node.node_name,
+                                                                        {'join_finished': [CalvinCB(self._join_finished)],
+                                                                         'join_failed': [CalvinCB(self._join_failed)],
+                                                                         'server_started': [CalvinCB(self._server_started)],
+                                                                         'server_stopped': [CalvinCB(self._server_stopped)],
+                                                                         'data_received': [CalvinCB(self._recv_handler)],
+                                                                         'peer_connection_failed': [CalvinCB(self._peer_connection_failed)],
+                                                                         'peer_disconnected': [CalvinCB(self._peer_disconnected)]},
+                                                                        schemas, formats)
+                else:
+                    del self.transport_modules[m]
+                    continue
             except:
-                _log.debug("Could not register transport plugin %s" % (m,))
+                _log.warning("Could not register transport plugin %s.%s", TRANSPORT_PLUGIN_NS, m, exc_info=True)
                 continue
             if schema_objects:
-                _log.debug("Register transport plugin %s" % (m,))
+                _log.debug("Register transport plugin %s.%s", TRANSPORT_PLUGIN_NS, m,)
                 # Add them to the list - currently only one module can handle one schema
                 self.transports.update(schema_objects)
 
-    def start_listeners(self, uris=None):
+    def _server_started(self, *args):
+        _log.debug("Server started %s", args)
+
+    def _server_stopped(self, *args):
+        _log.debug("Server stopped %s", args)
+
+    def start_listeners(self, uris=None, stop_callback=None):
         """ Start the transport listening on the uris
             uris: optional list of uri strings. When not provided all schemas will be started.
                   a '<schema>:default' uri can be used to indicate that the transport should
                   use a default configuration, e.g. choose port number.
         """
         if not uris:
-            uris = [schema + ":default" for schema in self.transports.keys()]
+            uris = [schema + "://default" for schema in self.transports.keys()]
 
         for uri in uris:
             schema, addr = uri.split(':', 1)
             self.transports[schema].listen(uri)
+
+    def stop_listeners(self, uris=None, start_callback=None):
+        """ Start the transport listening on the uris
+            uris: optional list of uri strings. When not provided all schemas will be started.
+                  a '<schema>:default' uri can be used to indicate that the transport should
+                  use a default configuration, e.g. choose port number.
+        """
+        if not uris:
+            uris = [schema + "://default" for schema in self.transports.keys()]
+
+        for uri in uris:
+            schema, addr = uri.split(':', 1)
+            self.transports[schema].stop_listening(uri)
 
     def join(self, uris, callback=None, corresponding_peer_ids=None, corresponding_server_node_names=None):
         """ Join the peers accessable from list of URIs
@@ -298,7 +349,7 @@ class CalvinNetwork(object):
                     else:
                         self.pending_joins[uri] = [callback]
 
-    def join_finished(self, tp_link, peer_id, uri, is_orginator):
+    def _join_finished(self, tp_link, peer_id, uri, is_orginator):
         """ Peer join is (not) accepted, called by transport plugin.
             This may be initiated by us (is_orginator=True) or by the peer,
             i.e. both nodes get called.
@@ -370,6 +421,10 @@ class CalvinNetwork(object):
         return
 
     def _join_failed(self, tp_link, peer_id, uri, is_orginator, reason):
+        cbs = self.pending_joins.pop(uri)
+        if cbs:
+            for cb in cbs:
+                cb(status=response.CalvinResponse(False), uri=uri, peer_node_id=None)
         _log.warning("Join failed on uri %s, reason %s(%s)", uri, reason['reason'], reason['info'])
 
     def link_get(self, peer_id):
@@ -485,10 +540,17 @@ class CalvinNetwork(object):
                     return uri
         return None
 
-    def _connection_failed(self, tp_link, uri, reason):
-        _log.warning("Connection failed on uri %s, reason %s(%s)", uri, reason['reason'], reason['info'])
+    def _peer_connection_failed(self, tp_link, uri, status):
+        cbs = self.pending_joins.pop(uri)
+        if cbs:
+            for cb in cbs:
+                cb(status=response.CalvinResponse(False), uri=uri, peer_node_id=None)
 
-    def peer_disconnected(self, link, rt_id, reason):
+        _log.warning("Connection failed on uri %s, status %s", uri, status)
+
+    def _peer_disconnected(self, link, rt_id, reason):
+        if reason == "ERROR": _log.warning("Peer disconnected %s with reason %s", rt_id, reason)
+        else: _log.debug("Peer disconnected %s with reason %s", rt_id, reason)
         _log.analyze(self.node.id, "+", {'reason': reason,
                                          'links_equal': link == self.links[rt_id].transport if rt_id in self.links else "Gone"},
                                          peer_node_id=rt_id)

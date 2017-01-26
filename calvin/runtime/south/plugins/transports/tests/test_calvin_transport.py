@@ -24,7 +24,7 @@ import uuid
 import Queue
 import multiprocessing
 import traceback
-#
+
 from mock import Mock
 from twisted.internet import reactor
 
@@ -318,6 +318,8 @@ class TestTransportServer(object):
                             print "%s = %s" % (k, repr(v))
                         raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             error = e
 
         shqs[1].put(['stop', [], {}])

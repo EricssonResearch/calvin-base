@@ -150,7 +150,13 @@ class BaseTransportFactory(CalvinCBClass):
         """
 
         """
-        raise NotImplemented()
+        raise NotImplementedError()
+
+    def stop_listening(self, uri):
+        """
+
+        """
+        raise NotImplementedError()
 
 def register(_id, node_name, callbacks, schemas, formats):
     return {}
