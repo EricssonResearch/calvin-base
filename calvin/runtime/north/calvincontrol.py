@@ -120,6 +120,16 @@ re_get_node_id = re.compile(r"GET /id\sHTTP/1")
 
 control_api_doc += \
     """
+    GET /capabilities
+    Get capabilities of this calvin node
+    Response status code: OK
+    Response: list of capabilities
+"""
+re_get_node_capabilities = re.compile(r"GET /capabilities\sHTTP/1")
+
+
+control_api_doc += \
+    """
     GET /nodes
     List nodes in network (excluding self) known to self
     Response status code: OK
@@ -193,7 +203,7 @@ control_api_doc += \
     DELETE /application/{application-id}
     Stop application (only applications launched from this node)
     Response status code: OK, NOT_FOUND, INTERNAL_ERROR
-    Response: [<actor_id>, ...] when error list of actors (replicas) in application not destroyed 
+    Response: [<actor_id>, ...] when error list of actors (replicas) in application not destroyed
 """
 re_del_application = re.compile(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
@@ -821,6 +831,7 @@ class CalvinControl(object):
             (re_delete_log, self.handle_delete_log),
             (re_get_log, self.handle_get_log),
             (re_get_node_id, self.handle_get_node_id),
+            (re_get_node_capabilities, self.handle_get_node_capabilities),
             (re_get_nodes, self.handle_get_nodes),
             (re_get_node, self.handle_get_node),
             (re_post_node_attribute_indexed_public, self.handle_post_node_attribute_indexed_public),
@@ -1198,6 +1209,11 @@ class CalvinControl(object):
         """ Get node id from this node
         """
         self.send_response(handle, connection, json.dumps({'id': self.node.id}))
+
+    def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
+        """ Get capabilities from this node
+        """
+        self.send_response(handle, connection, json.dumps(self.node._calvinsys.list_capabilities()))
 
     def handle_peer_setup(self, handle, connection, match, data, hdr):
         _log.analyze(self.node.id, "+", data)
