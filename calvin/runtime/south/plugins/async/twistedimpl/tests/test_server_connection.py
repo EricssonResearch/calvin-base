@@ -71,14 +71,14 @@ def print_header(string):
 
 # Stub
 class Scheduler_stub(object):
-    def trigger_loop(self):
+    def trigger_loop(self, actor_ids=None):
         """ Trigger the loop_once """
         async.DelayedCall(0, self.trigger_loop)
         return
 
-@pytest.mark.essential
 class TestServer(object):
 
+    @pytest.mark.essential
     @pytest.inlineCallbacks
     def test_default_line_mode(self):
         print_header("TEST_DEFAULT_LINE_MODE")
@@ -115,6 +115,7 @@ class TestServer(object):
         self.factory.stop()
         yield threads.defer_to_thread(no_more_connections, self.factory)
 
+    @pytest.mark.essential
     @pytest.inlineCallbacks
     def test_args_in_line_mode(self):
         print_header("TEST_ARGS_IN_LINE_MODE")
@@ -149,6 +150,7 @@ class TestServer(object):
         self.factory.stop()
         yield threads.defer_to_thread(no_more_connections, self.factory)
 
+    @pytest.mark.essential
     @pytest.inlineCallbacks
     def test_raw_mode(self):
         print_header("TEST_RAW_MODE")
@@ -184,6 +186,7 @@ class TestServer(object):
         self.factory.stop()
         yield threads.defer_to_thread(no_more_connections, self.factory)
 
+    @pytest.mark.slow
     @pytest.inlineCallbacks
     def test_many_clients(self):
         print_header("TEST_MANY_CLIENTS")

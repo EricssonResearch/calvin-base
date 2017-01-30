@@ -601,7 +601,7 @@ class Storage(object):
         if node.attributes.get_indexed_public():
             self._delete_node_index(node, cb=cb)
         _sec_conf = _conf.get('security', 'security_conf')
-        if ('authorization' in _sec_conf):
+        if _sec_conf and ('authorization' in _sec_conf):
             if ('accept_external_requests' in _sec_conf['authorization'] and
                     _sec_conf['authorization']['accept_external_requests'] ):
                 #Remove node from list of authorization servers accepting external clients

@@ -53,12 +53,16 @@ def slay(plist):
             if p.is_alive():
                 print "Warning: process %s still alive slay!!" % p._name
                 os.kill(p.pid, signal.SIGKILL)
-    if multiprocessing.active_children() > 1:
+    time.sleep(.1)
+    if len(multiprocessing.active_children()) > 1:
         print "Error: children is still alive", multiprocessing.active_children()
+        for a in multiprocessing.active_children():
+            a.terminate()
 
 class BaseTHandler(multiprocessing.Process):
-    def __init__(self, uri, outqueue, inqueue):
+    def __init__(self, uri, outqueue, inqueue, timeout=5):
         multiprocessing.Process.__init__(self)
+        self._timeout = timeout
         self._item = None
         self._uri = uri
         self._outqueue = outqueue
@@ -75,7 +79,9 @@ class BaseTHandler(multiprocessing.Process):
             stack = []
         self._outqueue.put([test, stack, variables])
 
-    def _stop_reactor(self):
+    def _stop_reactor(self, timeout=False):
+        if timeout:
+            self.__timeout()
         if self._item:
             # Server not stopped fail
             self._return(False, {'self._item': repr(self._item)})
@@ -97,22 +103,27 @@ class BaseTHandler(multiprocessing.Process):
             reactor.callFromThread(func, *cmd[1], **cmd[2])
         print("%s - Read thread died" % self._name)
 
-    def start(self, timeout=10):
-        self._timeout = timeout
+    def start(self):
         self._running = True
         self.daemon = True
         multiprocessing.Process.start(self)
 
+    def __timeout(self, command=None, *args):
+        print("Timeout in", self)
+        self._return("timeout", {command: args})
+
     def _base_run(self):
-        reactor.callLater(self._timeout, self._stop_reactor)
+        # make it work with twisted py.test plugin also
+        reactor._started = False
+        print "timeout %s", self._timeout
+        reactor.callLater(self._timeout, self._stop_reactor, timeout=True)
         reactor.callInThread(self._read_thread)
-        if not reactor.running:
-            reactor.run()
+        reactor.run()
 
     def run(self):
         self._base_run()
 
-class TestServerHandler(BaseTHandler):
+class TransportTestServerHandler(BaseTHandler):
     def __init__(self, *args, **kwargs):
         self._name = "TestServerHandler"
         BaseTHandler.__init__(self, *args, **kwargs)
@@ -165,7 +176,7 @@ class TestServerHandler(BaseTHandler):
             self._stop_server()
 
         # Timeout
-        reactor.callLater(3, self._stop_reactor)
+        reactor.callLater(1, self._stop_reactor)
 
     def _server_started(self, server, port):
         print("Server started", server, port)
@@ -188,10 +199,7 @@ class TestServerHandler(BaseTHandler):
         comand(args)
         reactor.callLater(0, self.start_server)
 
-    def _timeout(self, command, *args):
-        self._return(["timeout", comand, args])
-
-class TestClientHandler(BaseTHandler):
+class TransportTestClientHandler(BaseTHandler):
     def __init__(self, *args, **kwargs):
         self._name = "TestClientHandler"
         self._port = None
@@ -284,7 +292,7 @@ class TestTransportServer(object):
     def test_start_stop(self, monkeypatch):
         _mmanager = multiprocessing.Manager()
         shqs = [_mmanager.Queue(), _mmanager.Queue()]
-        sh = TestServerHandler("calvinip://localhost", shqs[0], shqs[1])
+        sh = TransportTestServerHandler("calvinip://localhost", shqs[0], shqs[1], timeout=2)
 
         ttf_uuid = str(uuid.uuid4())
         ttf = calvinip_transport.CalvinTransportFactory(ttf_uuid, ttf_uuid, sh.get_callbacks())
@@ -306,6 +314,7 @@ class TestTransportServer(object):
                     print(mess[1])
                     raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                 elif mess[0] == 'server_started':
+                    pass
                     shqs[1].put(['stop', [], {}])
                 elif mess[0] == 'server_stopped':
                     break
@@ -341,7 +350,6 @@ class TestTransportServer(object):
 @pytest.mark.slow
 class TestTransportClient(object):
     test_nodes = 2
-    #_mmanager = multiprocessing.Manager()
 
     @pytest.mark.essential
     def test_connect(self, monkeypatch):
@@ -349,8 +357,8 @@ class TestTransportClient(object):
         _mmanager = multiprocessing.Manager()
         shqs = [_mmanager.Queue(), _mmanager.Queue()]
         chqs = [_mmanager.Queue(), _mmanager.Queue()]
-        sh = TestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
-        ch = TestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
+        sh = TransportTestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1], timeout=2)
+        ch = TransportTestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1], timeout=2)
 
 
         ttfs_uuid = str(uuid.uuid4())
@@ -417,6 +425,8 @@ class TestTransportClient(object):
             print(repr(tq))
             tq[1].put(['stop', [], {}])
 
+        time.sleep(.2)
+
         slay([sh, ch])
 
         if error:
@@ -427,8 +437,8 @@ class TestTransportClient(object):
         queues = []
         shqs = [_mmanager.Queue(), _mmanager.Queue()]
         chqs = [_mmanager.Queue(), _mmanager.Queue()]
-        sh = TestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
-        ch = TestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
+        sh = TransportTestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
+        ch = TransportTestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
 
         ttfs_uuid = str(uuid.uuid4())
         ttfs = calvinip_transport.CalvinTransportFactory(ttfs_uuid, ttfs_uuid, sh.get_callbacks())
@@ -510,8 +520,8 @@ class TestTransportClient(object):
         queues = []
         shqs = [_mmanager.Queue(), _mmanager.Queue()]
         chqs = [_mmanager.Queue(), _mmanager.Queue()]
-        sh = TestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
-        ch = TestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
+        sh = TransportTestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
+        ch = TransportTestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
 
         ttfs_uuid = str(uuid.uuid4())
         ttfs = calvinip_transport.CalvinTransportFactory(ttfs_uuid, ttfs_uuid, sh.get_callbacks())
@@ -593,8 +603,8 @@ class TestTransportClient(object):
         queues = []
         shqs = [_mmanager.Queue(), _mmanager.Queue()]
         chqs = [_mmanager.Queue(), _mmanager.Queue()]
-        sh = TestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
-        ch = TestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
+        sh = TransportTestServerHandler("calvinip://127.0.0.1", shqs[0], shqs[1])
+        ch = TransportTestClientHandler("calvinip://127.0.0.1", chqs[0], chqs[1])
 
         ttfs_uuid = str(uuid.uuid4())
         ttfs = calvinip_transport.CalvinTransportFactory(ttfs_uuid, ttfs_uuid, sh.get_callbacks())
@@ -655,9 +665,10 @@ class TestTransportClient(object):
             error = e
 
         for tq in queues:
-            print(repr(tq))
+            print "hej", repr(tq)
             tq[1].put(['stop', [], {}])
 
+        print sh, ch
         slay([sh, ch])
 
         if error:

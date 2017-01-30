@@ -4,27 +4,51 @@ from mock import Mock
 from calvin.runtime.north import metering
 from calvin.utilities import calvinuuid
 from calvin.runtime.north.plugins.port.queue.fanout_fifo import FanoutFIFO
+from calvin.utilities import attribute_resolver
 
+class SerMock(Mock):
+    def _todict(self):
+        pass
+    def todict(self):
+        pass
+
+    def str(self):
+        return self.__dict__
 
 class DummyNode:
 
     def __init__(self):
-        self.id = id(self)
+        self.id = calvinuuid.uuid("NODE")
+        self.control_uri = "http://localhost:5001"
         self.pm = Mock()
         self.storage = Mock()
         self.control = Mock()
         self.metering = metering.set_metering(metering.Metering(self))
+        self.attributes = attribute_resolver.AttributeResolver({})
 
     def calvinsys(self):
         return None
 
+class _DummyRepSet:
+    def __init__(self):
+        self.id = calvinuuid.uuid("")
+        self.master = None
+
+    def store(self):
+        pass
 
 class TestNode:
 
     def __init__(self, uri):
         self.id = calvinuuid.uuid("NODE")
         self.uri = uri
-
+        self.external_uri = uri
+        self.external_control_uri = uri
+        self.pm = Mock()
+        self.storage = Mock()
+        self.control = Mock()
+        self.metering = metering.set_metering(metering.Metering(self))
+        self.attributes = attribute_resolver.AttributeResolver({})
 
 class TestActor:
 
@@ -34,7 +58,7 @@ class TestActor:
         self._type = type
         self.inports = inports
         self.outports = outports
-
+        self._replication_data = _DummyRepSet()
 
 class TestPort:
 
