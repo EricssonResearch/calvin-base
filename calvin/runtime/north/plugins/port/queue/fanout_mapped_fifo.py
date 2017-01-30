@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port import DISCONNECT
@@ -81,7 +80,7 @@ class FanoutMappedFIFO(object):
                 'write_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.write_pos.keys()},
                 'read_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.read_pos.keys()},
                 'tentative_read_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.tentative_read_pos.keys()},
-                'mapping': {k : remap.get(pid, pid) for k, pid in mapping.iteritems()}
+                'mapping': {k : remap.get(pid, pid) for k, pid in self.mapping.iteritems()}
             }
         return state
 
