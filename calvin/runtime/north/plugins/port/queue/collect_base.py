@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.runtime.north.calvin_token import Token
-from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
+from calvin.runtime.north.plugins.port.queue.common import QueueFull, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities import calvinlogger
 
