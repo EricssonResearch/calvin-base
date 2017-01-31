@@ -79,11 +79,19 @@ class ScheduledFIFO(object):
         routing = self._type.split(':',1)[1]
         if routing == "round-robin":
             # Populate with alternating values up to N
-            pos = self.reader_turn[self.turn_pos % self.N]
-            self.reader_turn = [p for n in range(self.N) for p in range(self.nbr_peers)][pos:self.N+pos]
+            try:
+                pos = self.reader_turn[self.turn_pos % self.N]
+                self.reader_turn = [p for n in range(self.N) for p in range(self.nbr_peers)][pos:self.N+pos]
+            except:
+                # No readers
+                self.reader_turn = []
         elif routing == "random":
             # Populate with random values up to N
-            self.reader_turn = [random.randrange(self.nbr_peers) for n in range(self.N)]
+            try:
+                self.reader_turn = [random.randrange(self.nbr_peers) for n in range(self.N)]
+            except:
+                # No readers
+                self.reader_turn = []
         self.turn_pos = 0
 
     def _round_robin(self):

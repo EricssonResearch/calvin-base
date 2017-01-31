@@ -110,7 +110,7 @@ class Port(object):
 
 class InPort(Port):
 
-    """An inport can have only one endpoint."""
+    """An inport can have many endpoints."""
 
     def __init__(self, name, owner, properties=None):
         super(InPort, self).__init__(name, owner, properties)
@@ -173,22 +173,30 @@ class InPort(Port):
             endpoints = self.endpoints
         else:
             endpoints = [e for e in self.endpoints if e.get_peer()[1] in peer_ids]
-        _log.debug("actorinport.disconnect   remove: %s current: %s %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints], DISCONNECT.reverse_mapping[terminate]))
+        _log.debug("actorinport.disconnect %s remove: %s current: %s %s" % (self.id, peer_ids, [e.get_peer()[1] for e in self.endpoints], DISCONNECT.reverse_mapping[terminate]))
         # Remove all endpoints corresponding to the peer ids
         self.endpoints = [e for e in self.endpoints if e not in endpoints]
         for e in endpoints:
             e.detached(terminate=terminate)
         if terminate >= DISCONNECT.TERMINATE:
             self.properties['nbr_peers'] -= len(endpoints)
-        exhausting = any([self.queue.is_exhausting(e.peer_id) for e in endpoints])
+        exhausting = self.queue.is_exhausting()
         if len(self.endpoints) == 0 and not exhausting:
             self.owner.did_disconnect(self)
-        _log.debug("actorinport.disconnected remove: %s current: %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints]))
+        _log.debug("actorinport.disconnected %s removed: %s current: %s" % (self.id, peer_ids, [e.get_peer()[1] for e in self.endpoints]))
         return endpoints
 
+    def any_outstanding_exhaustion_tokens(self):
+        try:
+            return self.queue.any_outstanding_exhaustion_tokens()
+        except AttributeError:
+            # When not implemented by queue assume it's not needed
+            return False
+
     def exhausted_tokens(self, tokens):
+        _log.debug("actorinport.exhausted_tokens %s %s" % (self.owner._id, self.id))
         self.queue.set_exhausted_tokens(tokens)
-        exhausting = any([self.queue.is_exhausting(peer_id) for peer_id in tokens.keys()])
+        exhausting = self.queue.is_exhausting()
         if len(self.endpoints) == 0 and not exhausting:
             self.owner.did_disconnect(self)
             _log.debug("actorinport.exhausted_tokens did_disconnect")
@@ -196,7 +204,7 @@ class InPort(Port):
     def finished_exhaustion(self):
         if len(self.endpoints) == 0 and not self.queue.is_exhausting():
             self.owner.did_disconnect(self)
-            _log.debug("actorinport.finished_exhaustion did_disconnect")
+            _log.debug("actorinport.finished_exhaustion did_disconnect %s" % self.id)
 
     def peek_token(self, metadata=None):
         """Used by actor (owner) to peek a token from the port. Following peeks will get next token. Reset with peek_cancel."""
@@ -327,6 +335,7 @@ class OutPort(Port):
         return endpoints
 
     def exhausted_tokens(self, tokens):
+        _log.debug("actoroutport.exhausted_tokens %s %s" % (self.owner._id, self.id))
         self.queue.set_exhausted_tokens(tokens)
 
     def write_token(self, data):

@@ -462,15 +462,20 @@ class Actor(object):
         _log.warning("%s (%s) actor blocked for %f sec" % (self._name, self._type, time_spent))
 
     def _handle_exhaustion(self, exhausted_ports, output_ok):
+        _log.debug("actor_fire %s test exhaust %s, %s, %s" % (self._id, self._exhaust_cb is not None, exhausted_ports, output_ok))
         for port in exhausted_ports:
             # Might result in actor changing to PENDING
             try:
                 port.finished_exhaustion()
             except:
                 _log.exception("FINSIHED EXHAUSTION FAILED")
-        if output_ok and self._exhaust_cb is not None:
-            # We are in exhaustion and stopped firing while token slots available, i.e. exhausted inputs or deadlock
+        if (output_ok and self._exhaust_cb is not None and
+            not any([p.any_outstanding_exhaustion_tokens() for p in self.inports.values()])):
+            _log.debug("actor %s exhausted" % self._id)
+            # We are in exhaustion, got all exhaustion tokens from peer ports
+            # but stopped firing while outport token slots available, i.e. exhausted inports or deadlock
             # FIXME handle exhaustion deadlock
+            # Initiate disconnect of outports and destroy the actor
             async.DelayedCall(0, self._exhaust_cb, status=response.CalvinResponse(True))
             self._exhaust_cb = None
 

@@ -742,11 +742,13 @@ class Storage(object):
     def remove_replica_node(self, replication_id, actor_id, cb=None):
         # Only remove the node if we are last
         replica_ids = self.node.rm.list_replication_actors(replication_id)
+        _log.debug("remove_replica_node %s %s" % (actor_id, replica_ids))
         try:
             replica_ids.remove(actor_id)
         except:
             pass
         if not replica_ids:
+            _log.debug("remove_replica_node remove %s %s" % (self.node.id, actor_id))
             self.remove_index(['replicas', 'nodes', replication_id], self.node.id, root_prefix_level=3, cb=cb)
 
     def get_replica(self, replication_id, cb=None):

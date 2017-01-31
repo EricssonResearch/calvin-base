@@ -48,7 +48,7 @@ class CollectBase(object):
         self.tentative_read_pos = {}
         self.tags = {}
         self.exhausted_tokens = {}
-        self.termination = {}
+        self.termination = {}  # dictionary of tuples (termination type, got exhaust tokens bool)
 
     def __str__(self):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
@@ -113,6 +113,7 @@ class CollectBase(object):
     def remove_writer(self, writer):
         if not isinstance(writer, basestring):
             raise Exception('Not a string: %s' % writer)
+        _log.debug("remove_writer %s %s" % (self.reader if hasattr(self, 'reader') else "--", writer))
         del self.read_pos[writer]
         del self.tentative_read_pos[writer]
         del self.write_pos[writer]
@@ -122,7 +123,8 @@ class CollectBase(object):
         self.nbr_peers -= 1
 
     def add_reader(self, reader, properties):
-        pass
+        # Only used for logging
+        self.reader = reader
 
     def remove_reader(self, reader):
         pass
@@ -135,13 +137,24 @@ class CollectBase(object):
 
     def exhaust(self, peer_id, terminate):
         # We can't do anything until we consumed the last token
-        self.termination[peer_id] = terminate
+        self.termination[peer_id] = (terminate, False)
         _log.debug("exhaust %s %s %s" % (self._type, peer_id, DISCONNECT.reverse_mapping[terminate]))
         return []
 
+    def any_outstanding_exhaustion_tokens(self):
+        # Between having asked actor to exhaust and receiving exhaustion tokens we don't want to assume that
+        # the exhaustion is done.
+        return any([not t[1] for t in self.termination.values()])
+
     def set_exhausted_tokens(self, tokens):
-        _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
-        self.exhausted_tokens.update(tokens)
+        _log.debug("set_exhausted_tokens %s %s new:%s existing:%s writers:%s" % (
+            self.reader if hasattr(self, 'reader') else "--", self._type, tokens, 
+            self.exhausted_tokens, self.writers))
+        # Extend lists of current exhaust tokens, not replace (with likely empty list).
+        # This is useful when a disconnect happens from both directions or other reasons
+        self.exhausted_tokens.update({k: self.exhausted_tokens.get(k, []) + v   for k, v in tokens.items()})
+        for peer_id in tokens.keys():
+            self.termination[peer_id] = (self.termination[peer_id][0], True)
         remove = []
         for peer_id, exhausted_tokens in self.exhausted_tokens.items():
             if peer_id not in self.writers:
@@ -151,15 +164,20 @@ class CollectBase(object):
             if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
                 remove.append(peer_id)
         for peer_id in remove:
+            _log.debug("set_exhausted_tokens remove %s %s" % (peer_id, self.exhausted_tokens[peer_id]))
             del self.exhausted_tokens[peer_id]
         # Remove any terminated queues if empty
         for peer_id in tokens.keys():
             if peer_id not in self.writers:
                 continue
             if (self.write_pos[peer_id] == self.read_pos[peer_id] and
-                self.termination[peer_id] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT]):
+                self.termination[peer_id][0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT]):
                 self.remove_writer(peer_id)
                 del self.termination[peer_id]
+        #fifos={w: [f[i%self.N] for i in range(self.tentative_read_pos[w], self.write_pos[w])] 
+        #        for w, f in self.fifo.items()}
+        #_log.debug("set_exhausted_tokens2 %s %s left:%s queue: %s" %
+        #           (self.reader if hasattr(self, 'reader') else "--", self._type, self.exhausted_tokens, fifos))
         return self.nbr_peers
 
     def _transfer_exhaust_tokens(self, peer_id, exhausted_tokens):
@@ -168,8 +186,8 @@ class CollectBase(object):
             if not self.slots_available(1, peer_id):
                 break
             r = self.com_write(token, peer_id, pos)
-            _log.debug("exhausted_tokens on %s: (%d, %s) %s" % (
-                peer_id, pos, str(token), COMMIT_RESPONSE.reverse_mapping[r]))
+            _log.debug("write exhausted tokens on %s, %s: (%d, %s) %s" % (
+                peer_id, self.reader if hasattr(self, 'reader') else "--", pos, str(token), COMMIT_RESPONSE.reverse_mapping[r]))
             # This is a token that now is in the queue, was in the queue or is invalid, for all cases remove it
             exhausted_tokens.pop(0)
         return not bool(exhausted_tokens)
@@ -207,7 +225,7 @@ class CollectBase(object):
             self.read_pos[writer] = self.tentative_read_pos[writer]
         # Transfer in exhausted tokens when possible
         remove = []
-        _log.debug("commit collect exhausted_tokens %s" % self.exhausted_tokens)
+        #_log.debug("commit collect exhausted_tokens %s" % self.exhausted_tokens)
         for peer_id, exhausted_tokens in self.exhausted_tokens.items():
             if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
                 remove.append(peer_id)
@@ -217,9 +235,11 @@ class CollectBase(object):
         remove = []
         for peer_id, termination in self.termination.items():
             if (self.write_pos[peer_id] == self.read_pos[peer_id] and
-                termination in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT]):
+                termination[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
+                termination[1]):
                 remove.append(peer_id)
         for peer_id in remove:
+            #_log.debug("commit remove")
             self.remove_writer(peer_id)
             del self.termination[peer_id]
         return bool(remove)
