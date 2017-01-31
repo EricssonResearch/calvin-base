@@ -56,11 +56,20 @@ def analyze(self, node_id, func, param, peer_node_id=None, tb=False, mute=False,
             stack = traceback.extract_stack()
         else:
             stack = None
-        self._log(5, "[[ANALYZE]]" + json.dumps({'node_id': node_id,
+        try:
+            json_str = json.dumps({'node_id': node_id,
                                                  'peer_node_id': peer_node_id,
                                                  'func': func,
                                                  'param': param,
-                                                 'stack': stack}, cls=JSONEncoderIters), args, **kws)
+                                                 'stack': stack}, 
+                                                 skipkeys=True, cls=JSONEncoderIters)
+        except:
+            json_str = json.dumps({'node_id': node_id,
+                                                 'peer_node_id': peer_node_id,
+                                                 'func': func,
+                                                 'param': "JSON conversion error",
+                                                 'stack': stack}, cls=JSONEncoderIters)
+        self._log(5, "[[ANALYZE]]" + json_str, args, **kws)
 
 
 logging.Logger.analyze = analyze
