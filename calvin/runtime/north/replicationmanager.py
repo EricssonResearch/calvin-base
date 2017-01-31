@@ -212,7 +212,7 @@ class ReplicationManager(object):
             if callback:
                 callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
             return
-        _log.analyze(self.node.id, "+", actor._replication_data.state(None))
+        _log.analyze(self.node.id, "+", {'actor_id': actor_id, 'dst_node_id': dst_node_id})
         actor._replication_data.status = REPLICATION_STATUS.REPLICATING
         cb_status = CalvinCB(self._replication_status_cb, replication_data=actor._replication_data, cb=callback)
         # TODO make name a property that combine name and counter in actor
@@ -232,10 +232,11 @@ class ReplicationManager(object):
         state = actor.state(remap_ports)
         state['_name'] = new_name
         state['_id'] = new_id
+        # Make copy to make sure no objects are shared between actors or master actor state is changed 
+        state = copy.deepcopy(state)
         actor.will_replicate(ActorState(state, actor._replication_data))
         if dst_node_id == self.node.id:
-            # Make copies to make sure no objects are shared between actors
-            state = copy.deepcopy(state)
+            # Make copy to make sure no objects are shared between actors
             ports = copy.deepcopy(ports)
             self.node.am.new_from_migration(
                 actor_type, state=state, prev_connections=ports, callback=CalvinCB(
@@ -308,6 +309,7 @@ class ReplicationManager(object):
     #
 
     def dereplicate(self, actor_id, callback, exhaust=False):
+        _log.analyze(self.node.id, "+", {'actor_id': actor_id, 'exhaust': exhaust})
         terminate = DISCONNECT.EXHAUST if exhaust else DISCONNECT.TERMINATE
         try:
             replication_data = self.node.am.actors[actor_id]._replication_data
