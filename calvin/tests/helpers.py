@@ -37,7 +37,10 @@ def retry(retries, function, criterion, error_msg):
             _log.info("Encountered exception when retrying '%s'" % (e,))
         delay = min(2, delay * 1.5); retry += 1
         time.sleep(delay)
-        r = result if isinstance(result, numbers.Number) else len(result)
+        try:
+            r = result if isinstance(result, (numbers.Number, type(None))) else len(result)
+        except:
+            r = None
         _log.info("Criterion still not satisfied after %d retries, result (length) %s" % (retry, r))
     _log.info("Criterion %s(%s) never satisfied, last full result %s" % (str(criterion), str(function), str(result)))
     raise Exception(error_msg)
@@ -82,7 +85,7 @@ def destroy_app(deployer, retries=10):
     """
     Tries to destroy the app connected with deployer. 
     """
-    return delete_app(deployer.request_handler, deployer.runtime, deployer.app_id, retries)
+    return delete_app(deployer.request_handler, deployer.runtime, deployer.app_id, retries=retries)
 
 
 def deploy_app(request_handler, deployer, runtimes, retries=10):
@@ -105,15 +108,24 @@ def deploy_app(request_handler, deployer, runtimes, retries=10):
     return retry(retries, check_application, lambda r: r, "Application not found on all peers")
     
 
-def delete_app(request_handler, runtime, app_id, retries=10):
+def delete_app(request_handler, runtime, app_id, check_actor_ids=None, retries=10):
     """
     Deletes an app and then tries to verify it is actually gone.
     """
     from functools import partial
 
-    def verify_gone(request_handler, runtime, app_id):
+    def verify_app_gone(request_handler, runtime, app_id):
         try:
             request_handler.get_application(runtime, app_id)
+            return False
+        except:
+            return True
+
+    def verify_actors_gone(request_handler, runtime, actor_ids):
+        for actor_id in actor_ids:
+            request_handler.async_get_actor(runtime, actor_id)
+        try:
+            request_handler.async_barrier()  # make sure all responses are back
             return False
         except:
             return True
@@ -129,8 +141,11 @@ def delete_app(request_handler, runtime, app_id, retries=10):
         else:
             _log.error("Delete App got unknown error %s" % str(msg))
 
-    retry(retries, partial(verify_gone, request_handler, runtime, app_id), lambda r: r, "Application not deleted")
-    
+    retry(retries, partial(verify_app_gone, request_handler, runtime, app_id), lambda r: r, "Application not deleted")
+    if check_actor_ids:
+        retry(retries, partial(verify_actors_gone, request_handler, runtime, check_actor_ids), 
+              lambda r: r, "Application actors not deleted")
+
 
 def deploy_script(request_handler, name, script, runtime, retries=10):
     """

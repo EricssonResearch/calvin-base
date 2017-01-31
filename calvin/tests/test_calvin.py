@@ -4404,7 +4404,8 @@ class TestReplication(object):
         print dist2
         assert all([dist[k] < dist2[k] for k in dist.keys()])
 
-        helpers.delete_app(request_handler, rt1, response['application_id'])
+        helpers.delete_app(request_handler, rt1, response['application_id'],
+                           check_actor_ids=response['actor_map'].values()+ proc_rep)
         # Check all actors and replicas deleted
         actors = set(request_handler.get_actors(rt1) + request_handler.get_actors(rt2) + request_handler.get_actors(rt3))
         assert src not in actors
@@ -4483,7 +4484,8 @@ class TestReplication(object):
 
         #print request_handler.report(rt2, proc, kwargs={'cmd_str': "self.state()"})
 
-        helpers.delete_app(request_handler, rt1, response['application_id'])
+        helpers.delete_app(request_handler, rt1, response['application_id'],
+                           check_actor_ids=response['actor_map'].values()+ proc_rep)
         # Check all actors and replicas deleted
         actors = set(request_handler.get_actors(rt1) + request_handler.get_actors(rt2) + request_handler.get_actors(rt3))
         assert src not in actors
@@ -4593,7 +4595,8 @@ class TestReplication(object):
         assert all([dist.values() > 10])
         assert len(dist) == (nbr_replicas + 1)
 
-        helpers.delete_app(request_handler, rt1, response['application_id'])
+        helpers.delete_app(request_handler, rt1, response['application_id'],
+                           check_actor_ids=response['actor_map'].values()+ proc_rep + src_rep)
         # Check all actors and replicas deleted
         actors = set(request_handler.get_actors(rt1) + request_handler.get_actors(rt2) + request_handler.get_actors(rt3))
         assert src not in actors
