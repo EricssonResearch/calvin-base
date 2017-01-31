@@ -349,6 +349,7 @@ def setup_test_type(request_handler, nbr=3, proxy_storage=False):
     elif test_type == "bluetooth":
         runtimes = setup_bluetooth(bt_master_controluri, request_handler)
     else:
+        proxy_storage = bool(os.environ.get("CALVIN_TESTING_PROXY_STORAGE", proxy_storage))
         runtimes = setup_local(ip_addr, request_handler, nbr, proxy_storage)
 
     return test_type, runtimes
