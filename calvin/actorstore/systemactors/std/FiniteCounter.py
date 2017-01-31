@@ -17,6 +17,9 @@
 from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken
 import sys
+from calvin.utilities.calvinlogger import get_actor_logger
+
+_log = get_actor_logger(__name__)
 
 class FiniteCounter(Actor):
     """
@@ -26,13 +29,14 @@ class FiniteCounter(Actor):
       integer : Integer
     """
 
-    @manage(['count', 'ends', 'restart', 'start', 'replicate_mult'])
-    def init(self, start=0, steps=sys.maxint, repeat=False, replicate_mult=False):
+    @manage(['count', 'ends', 'restart', 'start', 'replicate_mult', 'stopped'])
+    def init(self, start=0, steps=sys.maxint, repeat=False, replicate_mult=False, stopped=False):
         self.count = start
         self.ends = start + steps
         self.restart = start if repeat else self.ends + 1
         self.start = start
         self.replicate_mult = replicate_mult
+        self.stopped = stopped
 
     def will_replicate(self, state):
         if state.replication_count > 0 and self.replicate_mult:
@@ -41,13 +45,14 @@ class FiniteCounter(Actor):
             m = 1
         state.count = self.start * m
 
-    @stateguard(lambda self: self.count < self.ends)
+    @stateguard(lambda self: not self.stopped and self.count < self.ends)
     @condition(action_output=['integer'])
     def cnt(self):
+        #_log.info("FinitCounter (%s, %s, %s) count:%s" % (self._name, self._id, self.outports['integer'].id, self.count))
         self.count += 1
         return (self.count - 1, )
 
-    @stateguard(lambda self: self.count == self.ends)
+    @stateguard(lambda self: not self.stopped and self.count == self.ends)
     @condition(action_output=['integer'])
     def the_end(self):
         self.count = self.restart
@@ -55,7 +60,8 @@ class FiniteCounter(Actor):
 
     action_priority = (cnt, the_end)
 
-    def report(self):
+    def report(self, **kwargs):
+        self.stopped = kwargs.get("stopped", self.stopped)
         return self.count
 
     test_args = []

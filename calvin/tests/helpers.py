@@ -7,7 +7,7 @@ import os
 import time
 import multiprocessing
 import copy
-
+import numbers
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
@@ -20,6 +20,7 @@ def retry(retries, function, criterion, error_msg):
     """
     delay = 0.1
     retry = 0
+    result = None
     while retry < retries:
         try:
             result = function()
@@ -36,9 +37,11 @@ def retry(retries, function, criterion, error_msg):
             _log.info("Encountered exception when retrying '%s'" % (e,))
         delay = min(2, delay * 1.5); retry += 1
         time.sleep(delay)
-        _log.info("Criterion still not satisfied after %d retries" % (retry,))
+        r = result if isinstance(result, numbers.Number) else len(result)
+        _log.info("Criterion still not satisfied after %d retries, result (length) %s" % (retry, r))
+    _log.info("Criterion %s(%s) never satisfied, last full result %s" % (str(criterion), str(function), str(result)))
     raise Exception(error_msg)
-            
+
 def wait_for_tokens(request_handler, rt, actor_id, size=5, retries=10):
     """An alias for 'actual_tokens'"""
     return actual_tokens(request_handler, rt, actor_id, size, retries)
