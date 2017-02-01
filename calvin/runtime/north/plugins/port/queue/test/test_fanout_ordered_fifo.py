@@ -1,8 +1,11 @@
+import pytest
 import unittest
 
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty
+
+pytest_unittest = pytest.mark.unittest
 
 class DummyPort(object):
     pass
@@ -13,7 +16,7 @@ def create_port():
     port.properties = {'routing': "dispatch-ordered", "direction": "out"}
     return queue.get(port)
 
-
+@pytest_unittest
 class TestFanoutOrderedFIFO(unittest.TestCase):
     
     def setUp(self):
@@ -118,8 +121,9 @@ class TestFanoutOrderedFIFO(unittest.TestCase):
         
     def testSlotsAvailable_Normal(self):
         self.setup_readers(5)
-        for r in self.outport.readers:
-            self.assertTrue(self.outport.slots_available(self.outport.N-1, None))
+        
+        self.assertTrue(self.outport.slots_available(self.outport.N-1, None))
+        
         for i in range(3):
             self.outport.write("data", None)
         for r in self.outport.readers:
@@ -127,6 +131,9 @@ class TestFanoutOrderedFIFO(unittest.TestCase):
                 self.assertTrue(self.outport.slots_available(self.outport.N-2, None))
             else:
                 self.assertTrue(self.outport.slots_available(self.outport.N-1, None))
+
+    def testSlotsAvailable_Failure(self):
+        pass
 
     def testPeek_Normal(self):
         self.setup_readers(3)
@@ -162,7 +169,6 @@ class TestFanoutOrderedFIFO(unittest.TestCase):
         self.outport.commit("reader-2")
         self.outport.cancel("reader-2")
         self.assertEqual(self.outport.peek("reader-2"), "data-5")
-        
         
     def testSetConfig_Failure(self):
         with self.assertRaises(Exception):

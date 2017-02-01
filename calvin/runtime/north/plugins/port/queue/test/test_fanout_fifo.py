@@ -1,4 +1,7 @@
 import unittest
+import pytest
+
+pytest_unittest = pytest.mark.unittest
 
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port import queue
@@ -11,7 +14,8 @@ def create_port():
     port = DummyPort()
     port.properties = {'routing': "fanout_fifo", "direction": "out"}
     return queue.get(port)
-    
+
+@pytest_unittest    
 class TestFanoutFIFO(unittest.TestCase):
     
     def setUp(self):
