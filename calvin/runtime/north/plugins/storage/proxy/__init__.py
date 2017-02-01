@@ -27,11 +27,11 @@ _log = calvinlogger.get_logger(__name__)
 class StorageProxy(StorageBase):
     """ Implements a storage that asks a master node, this is the client class"""
     def __init__(self, node):
-        self.master_uri = _conf.get(None, 'storage_proxy')
+        self.master_uri = _conf.get('global', 'storage_proxy')
         self.node = node
         self.tunnel = None
         self.replies = {}
-        _log.debug("PROXY init for %s", self.master_uri)
+        _log.info("PROXY init for %s", self.master_uri)
         super(StorageProxy, self).__init__()
 
     def start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
@@ -39,7 +39,7 @@ class StorageProxy(StorageBase):
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished
         """
-        _log.debug("PROXY start")
+        _log.info("PROXY start")
         self.node.network.join([self.master_uri], CalvinCB(self._start_link_cb, org_cb=cb))
 
     def _start_link_cb(self, status, uri, peer_node_id, org_cb):
@@ -57,6 +57,7 @@ class StorageProxy(StorageBase):
 
     def tunnel_down(self, org_cb):
         """ Callback that the tunnel is not accepted or is going down """
+        _log.info("storage proxy down")
         if not self.tunnel:
             return True
         _log.analyze(self.node.id, "+ CLIENT", {'tunnel_id': self.tunnel.id})
@@ -70,6 +71,7 @@ class StorageProxy(StorageBase):
 
     def tunnel_up(self, org_cb):
         """ Callback that the tunnel is working """
+        _log.info("storage proxy up")
         if not self.tunnel:
             return True
         _log.analyze(self.node.id, "+ CLIENT", {'tunnel_id': self.tunnel.id})

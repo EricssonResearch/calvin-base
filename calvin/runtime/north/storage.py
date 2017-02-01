@@ -43,8 +43,9 @@ class Storage(object):
         self.localstore_sets = {}
         self.started = False
         self.node = node
-        storage_type = _conf.get(None, 'storage_type')
-        self.proxy = _conf.get(None, 'storage_proxy') if storage_type == 'proxy' else None
+        storage_type = _conf.get('global', 'storage_type')
+        print "#### STORAGE TYPE ####", storage_type
+        self.proxy = _conf.get('global', 'storage_proxy') if storage_type == 'proxy' else None
         _log.analyze(self.node.id, "+", {'proxy': self.proxy})
         self.tunnel = {}
         self.starting = storage_type != 'local'

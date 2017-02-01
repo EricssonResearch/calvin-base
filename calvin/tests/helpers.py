@@ -269,7 +269,7 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
     attr_rest = copy.deepcopy(attr)
     attr_rest['indexed_public']['node_name']['group'] = u'rest'
 
-    _log.info("starting runtime %s" % (host[1],))
+    _log.info("starting runtime %s %s" % host)
     
     if proxy_storage:
         import calvin.runtime.north.storage
@@ -281,20 +281,20 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
         import calvin.runtime.north.storage
         calvin.runtime.north.storage._conf.set('global', 'storage_type', 'proxy')
         calvin.runtime.north.storage._conf.set('global', 'storage_proxy', host[0])
-    _log.info("started runtime %s" % (host[1],))
+    _log.info("started runtime %s %s" % host)
 
     count = 2
     for host in hosts[1:]:
         if nbr > 3:
             # Improve likelihood of success if runtimes started with a time interval
             time.sleep(10.0)
-        _log.info("starting runtime %s" % (host[1], ))
+        _log.info("starting runtime %s %s" % host)
         attr_rt = copy.deepcopy(attr_rest)
         attr_rt['indexed_public']['node_name']['name'] = u'runtime' + str(count)
         count += 1
         rt, _ = dispatch_node([host[0]], host[1], attributes=attr_rt)
         check_storage(rt, len(runtimes)+1, attr['indexed_public'])
-        _log.info("started runtime %s" % (host[1],))
+        _log.info("started runtime %s %s" % host)
         runtimes += [rt]
 
     for host in hosts:
