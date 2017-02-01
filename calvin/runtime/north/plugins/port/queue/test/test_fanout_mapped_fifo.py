@@ -1,8 +1,11 @@
 import unittest
+import pytest
 
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty
+
+pytest_unittest = pytest.mark.unittest
 
 class DummyPort(object):
     pass
@@ -14,7 +17,10 @@ def create_port():
     port = DummyPort()
     port.properties = {'routing': "dispatch-mapped", "direction": "out"}
     return queue.get(port)
-            
+
+
+
+@pytest_unittest
 class TestFanoutMappedFIFO(unittest.TestCase):
     
     def setUp(self):
@@ -116,7 +122,7 @@ class TestFanoutMappedFIFO(unittest.TestCase):
         with self.assertRaises(Exception):
             self.outport.tokens_available(1, "no such reader")
         
-    def testSlotsAvailable_Normal(self):
+    def testSlotsAvailable_Specific(self):
         self.setup_readers(5)
         for r in self.outport.readers:
             self.assertTrue(self.outport.slots_available(self.outport.N-1, r))
@@ -129,6 +135,20 @@ class TestFanoutMappedFIFO(unittest.TestCase):
                 self.assertTrue(self.outport.slots_available(self.outport.N-2, r))
             else:
                 self.assertTrue(self.outport.slots_available(self.outport.N-1, r))
+
+    def testSlotsAvailable_All(self):
+        self.setup_readers(3)
+        for r in self.outport.readers:
+            self.assertTrue(self.outport.slots_available(self.outport.N-1, r))
+            
+        for i in [1,2,3]:
+            self.outport.write(wrap("data", "%d" % i), None)
+        
+        # all ports have N-2 slots available
+        self.assertTrue(self.outport.slots_available(self.outport.N-2, None))
+        self.outport.write(wrap("data", "1"), None)
+        # but not anymore
+        self.assertFalse(self.outport.slots_available(self.outport.N-2, None))
 
     def testPeek_Normal(self):
         self.setup_readers(3)
