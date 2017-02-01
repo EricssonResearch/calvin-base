@@ -1,28 +1,38 @@
 import unittest
 
+from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty
 
 class DummyPort(object):
     pass
 
+def create_port():
+    port = DummyPort()
+    port.properties = {'routing': "fanout_fifo", "direction": "out"}
+    return queue.get(port)
+    
 class TestFanoutFIFO(unittest.TestCase):
     
     def setUp(self):
-        port = DummyPort()
-        port.properties = {'routing': "fanout_fifo", "direction": "out"}
-        self.outport = queue.get(port)
+        self.outport = create_port()
     
     def tearDown(self):
         pass
-        
+
+
     def testInit(self):
         assert self.outport
         
     def testType(self):
         queue_type = self.outport.queue_type
         assert queue_type == "fanout_fifo"
-        
+    
+    def testGetPeers(self):
+        for i in [1,2,3]:
+            self.outport.add_reader("reader-%d" % i, {})
+        self.assertEqual(set(self.outport.get_peers()), set(["reader-%d" % i for i in [1,2,3]]))
+    
     def testAddWriter(self):
         self.outport.add_writer("writer", {})
         assert self.outport.writer == "writer"
@@ -136,4 +146,45 @@ class TestFanoutFIFO(unittest.TestCase):
         d_2 = self.outport.peek("reader-2")
         self.outport.commit("reader-2")
         self.assertEqual(d_1, d_2)
-        
+
+    def testSerialize(self):
+        self.outport.add_reader("reader-1", {})
+        self.outport.add_reader("reader-2", {})
+        self.outport.add_reader("reader-3", {})
+        # write some tokens
+        for i in [1,2,3,4]:
+                self.outport.write(Token("data-%d" % i), None)
+        # peek at the tokens (will consume 1 token)
+        for i in [1,2,3]:
+            self.outport.peek("reader-%d" % i)
+        # save state
+        state = self.outport._state()
+        # recreate port
+        port = create_port()
+        port._set_state(state)
+        # check that 1 token has been consumed
+        for i in [1,2,3]:
+            self.assertEqual(port.peek("reader-%d" % i).value, "data-%d" % 2)
+    
+    def testSerialize_remap(self):
+        self.outport.add_reader("reader-1", {})
+        self.outport.add_reader("reader-2", {})
+        self.outport.add_reader("reader-3", {})
+        # write some tokens
+        for i in [1,2,3,4]:
+                self.outport.write(Token("data-%d" % i), None)
+        # peek at the tokens (will consume 1 token)
+        for i in [1,2,3]:
+            self.outport.peek("reader-%d" % i)
+        # save state
+        remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
+        state = self.outport._state(remap)
+        # recreate port
+        port = create_port()
+        port._set_state(state)
+        # check that no tokens available
+        for i in [1,2,3]:
+            self.assertTrue(port.tokens_available(0, "xreader-%d" % i))
+        # check that no old ports remain
+        for i in [1,2,3]:
+            self.assertFalse("reader-%d" % i in port.readers)

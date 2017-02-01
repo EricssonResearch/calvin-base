@@ -10,16 +10,16 @@ class DummyPort(object):
 def wrap(data, destination):
     return Token({destination:data})
 
+def create_port():
+    port = DummyPort()
+    port.properties = {'routing': "dispatch-mapped", "direction": "out"}
+    return queue.get(port)
+            
 class TestFanoutMappedFIFO(unittest.TestCase):
     
     def setUp(self):
-        self.outport = self.create_port()
+        self.outport = create_port()
             
-    def create_port(self):
-        port = DummyPort()
-        port.properties = {'routing': "dispatch-mapped", "direction": "out"}
-        return queue.get(port)
-        
     def setup_readers(self, n):
         reader_map = {"%d" % i:"reader-%d" % i for i in range(1, n+1)}
         for reader in reader_map.values():
@@ -35,6 +35,10 @@ class TestFanoutMappedFIFO(unittest.TestCase):
     def testType(self):
         queue_type = self.outport.queue_type
         self.assertEqual(queue_type, "scheduled_fifo:dispatch-mapped")
+    
+    def testGetPeers(self):
+        self.setup_readers(3)
+        self.assertEqual(set(self.outport.get_peers()), set(["reader-%d" % i for i in [1,2,3]]))
         
     def testAddWriter(self):
         # Not implemented
@@ -182,8 +186,27 @@ class TestFanoutMappedFIFO(unittest.TestCase):
         for i in [1,2,3]:
             self.outport.peek("reader-%d" % i)
         state = self.outport._state()
-        port = self.create_port()
+        port = create_port()
         port._set_state(state)
         for i in [1,2,3]:
-            self.assertEqual(self.outport.peek("reader-%d" % i).value, "data-%d" % (i+3))
-        
+            self.assertEqual(port.peek("reader-%d" % i).value, "data-%d" % (i+3))
+    
+    def testSerialize_remap(self):
+        self.setup_readers(3)
+        for i in [1,2,3]:
+            for j in [0,3]:
+                self.outport.write(wrap("data-%d" % (i+j), "%d" % i), None)
+        for i in [1,2,3]:
+            self.outport.peek("reader-%d" % i)
+        # save state
+        remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
+        state = self.outport._state(remap)
+        # recreate port
+        port = create_port()
+        port._set_state(state)
+        # check that no tokens available
+        for i in [1,2,3]:
+            self.assertTrue(port.tokens_available(0, "xreader-%d" % i))
+        # check that no old ports remain
+        for i in [1,2,3]:
+            self.assertFalse("reader-%d" % i in port.readers)
