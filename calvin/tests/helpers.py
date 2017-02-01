@@ -122,13 +122,18 @@ def delete_app(request_handler, runtime, app_id, check_actor_ids=None, retries=1
             return True
 
     def verify_actors_gone(request_handler, runtime, actor_ids):
+        responses = []
         for actor_id in actor_ids:
-            request_handler.async_get_actor(runtime, actor_id)
-        try:
-            request_handler.async_barrier()  # make sure all responses are back
-            return False
-        except:
-            return True
+            responses.append(request_handler.async_get_actor(runtime, actor_id))
+        gone = True
+        for r in responses:
+            try:
+                response = request_handler.async_response(r)
+                if response is not None:
+                    gone = False
+            except:
+                pass
+        return gone
 
     try:
         request_handler.delete_application(runtime, app_id)
