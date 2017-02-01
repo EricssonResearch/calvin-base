@@ -101,6 +101,27 @@ def fingerprint(filename):
 
     return fingerprint
 
+def id_from_cert_string(cert_str):
+    fingerprint = fingerprint_from_cert_string(cert_str)
+    return fingerprint.replace(":","")[-40:]
+    
+
+
+
+def fingerprint_from_cert_string(cert_str):
+    """
+    Return the sha256 fingerprint of a certificate `filename`.
+    Can only be run on trusted/signed certificates.
+    Equivalent to:
+    openssl x509 -sha256 -in ./runtime.csr -noout -fingerprint
+    """
+    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                      cert_str)
+    fingerprint = cert.digest("sha256")
+#    id = fingerprint.replace(":","")[-40:]
+
+    return fingerprint
+
 def get_cert_data(certstring=None, certpath=None):
     """Return the hash of the certificate subject"""
     if certpath:
@@ -258,7 +279,7 @@ def verify_certificate_from_path(type, certpath, domain=None, security_dir=None)
 
 def verify_certificate(type, certstring, domain=None, security_dir=None):
     """Verify certificate using the CA certificate"""
-    _log.debug("verify_certificate:: type={}, certstring={}".format(type, certstring))
+    _log.debug("verify_certificate: \n\ttype={}\n\tcertstring={}\n\tsecurity_dir={}".format(type, certstring, security_dir))
     #TODO: support of multiple ca-certs
     try:
         ca_cert_list_str, ca_cert_list_x509, trusted_certs = get_truststore(type, security_dir=security_dir)
@@ -274,13 +295,16 @@ def verify_certificate(type, certstring, domain=None, security_dir=None):
     subject = certx509.get_subject()
     serial = certx509.get_serial_number()
     if certx509.has_expired():
+        _log.error("Certificate has expired")
         raise CertificateInvalid("Certificate has expired.")
     if serial < 0:
+        _log.error("Serial number was negative")
         raise CertificateDeniedMalformed("Serial number was negative.")
     try:
         verify_certstr_with_policy(certstring)
         certx509.get_signature_algorithm()  # TODO: Check sig alg strength
-    except ValueError:
+    except ValueError as err:
+        _log.error("Unknown signature algorithm, err={}".format(err))
         raise CertificateDeniedMalformed("Unknown signature algorithm.")
 #    if domain:
 #        if subject.organization is not domain:
@@ -295,7 +319,7 @@ def verify_certificate(type, certstring, domain=None, security_dir=None):
         store_ctx.verify_certificate()
     except Exception as e:
         _log.error("Failed to verify certificate: %s" % e)
-
+    return certx509
 
 def verify_cert_with_policy(certpath):
     """
@@ -496,7 +520,7 @@ def obtain_cert_node_info(name, security_dir=None):
         Return dict with domain, node name and node id
     """
     _log.debug("obtain_cert_node_info: node_name={}".format(name))
-    domain = _conf.get("security", "security_domain_name")
+    domain = _conf.get("security", "domain_name")
     if domain is None or name is None:
         # No security or name specified just use standard node UUID
         _log.debug("OBTAINING no security domain={}, name={}".format(domain, name))
@@ -596,13 +620,13 @@ def store_own_cert(certstring=None, certpath=None, security_dir=None):
 
 def get_security_credentials_path(security_dir=None):
     """Return the node's own certificate name without file extension"""
-    _log.debug("get_security_credentials_path")
+    _log.debug("get_security_credentials_path, security_dir={}".format(security_dir))
     security_dir_in_conf = _conf.get("security", "security_dir")
     if security_dir:
-        _log.debug("security_dir supplied, security_dir={}".format(security_dir))
+        _log.debug("get_security_credentials_path: security_dir supplied, security_dir={}".format(security_dir))
         return security_dir
     elif security_dir_in_conf:
-        _log.debug("security_path in calvin.conf:%s" % security_dir_in_conf)
+        _log.debug("get_security_credentials_path: security_path in calvin.conf:%s" % security_dir_in_conf)
         return security_dir_in_conf
     else:
         _log.debug("use default path")

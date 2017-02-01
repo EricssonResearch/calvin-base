@@ -21,11 +21,13 @@ import traceback
 import hashlib
 import twisted
 import shutil
+from calvin.utilities import certificate
 import json
 
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
 from calvin.utilities.utils import get_home
+from calvin.utilities import runtime_credentials
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.append_server import *
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.dht_server import *
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht.service_discovery_ssdp import *
@@ -35,6 +37,8 @@ from kademlia.utils import deferredDict, digest
 
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities import calvinconfig
+import socket
+ip_addr = socket.gethostbyname(socket.gethostname())
 
 _log = calvinlogger.get_logger(__name__)
 name = "node4:"
@@ -94,7 +98,11 @@ class TestDHT(object):
             servers = []
             callbacks = []
             for servno in range(0, amount_of_servers):
-                a = AutoDHTServer()
+                uri="http://{}:500{}".format(ip_addr, servno)
+                control_uri="http://{}:502{}".format(ip_addr, servno)
+                rt_cred = runtime_credentials.RuntimeCredentials(name=name+str(servno), domain=domain,security_dir=testdir)
+                node_id = rt_cred.node_id
+                a = AutoDHTServer(node_id, control_uri, rt_cred)
                 servers.append(a)
                 callback = CalvinCB(server_started, str(servno))
                 servers[servno].start(iface, network="Niklas", cb=callback, name=name + "{}".format(servno))
@@ -168,7 +176,7 @@ class TestDHT(object):
                 print("Node with port {} has {} certificates in store".format(servers[i].dht_server.port.getHost().port, len(filenames)))
 
         except AssertionError as e:
-            print("Node with port {} got wrong value: {}, should have been {}".format(servers[0].dht_server.port.getHost().port, get_value, value))
+            print("Node with port {} got wrong value: {}, should have been {}, e={}".format(servers[0].dht_server.port.getHost().port, get_value, value, e))
             pytest.fail(traceback.format_exc())
         except Exception as e:
             traceback.print_exc()

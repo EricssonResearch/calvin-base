@@ -315,7 +315,6 @@ class CA():
 
         for section in self.__class__.DEFAULT.keys():
             self.config.add_section(section)
-            print "[{}]".format(section)
             for option in self.__class__.DEFAULT[section]:
                 if option == "0.organizationName":
                     value = self.domain
@@ -326,7 +325,6 @@ class CA():
                 else:
                     value = self.__class__.DEFAULT[section][option]
                 self.config.set(section, option, value)
-                print "\t{}={}".format(option, value)
 
         try:
             os.makedirs(directory, 0700)
@@ -691,8 +689,6 @@ class CA():
             raise IOError("Could not sign certificate")
 
         newkeyname = os.path.join(new_certs_dir, newcert)
-        print(signed)
-        print(newkeyname)
         os.rename(signed, newkeyname)
         return newkeyname
 

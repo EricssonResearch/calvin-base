@@ -14,14 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import calvinlogger
 import logging
 import uuid as sys_uuid
+import calvinlogger
+_log = calvinlogger.get_logger(__name__)
 
 
 def uuid(prefix):
-    u = str(sys_uuid.uuid4())
-    if calvinlogger.get_logger(__name__).getEffectiveLevel() == logging.DEBUG:
-        return prefix + "_" + u
-    else:
-        return u
+    return str(sys_uuid.uuid4())

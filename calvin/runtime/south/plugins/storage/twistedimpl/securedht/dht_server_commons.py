@@ -22,13 +22,13 @@ try:
 except:
     pydot = None
 import hashlib
-import OpenSSL.crypto
 
 from calvin.utilities import calvinlogger
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht import append_server
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht import dht_server
 from calvin.runtime.south.plugins.storage.twistedimpl.securedht import service_discovery_ssdp
 from calvin.utilities import certificate
+from calvin.utilities import runtime_credentials
 
 from kademlia.node import Node
 from kademlia.utils import deferredDict, digest
@@ -45,25 +45,27 @@ def generate_challenge():
 
 class evilAutoDHTServer(dht_server.AutoDHTServer):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, node_id, control_uri, runtime_credentials):
         self._name = None
-        super(evilAutoDHTServer, self).__init__(*args, **kwargs)
+        self._runtime_credentials = runtime_credentials
+        super(evilAutoDHTServer, self).__init__(node_id, control_uri, runtime_credentials)
 
     def start(self, iface='', network=None, bootstrap=None, cb=None, type=None, name=None, nodeid=None):
         self._name = name
         if bootstrap is None:
             bootstrap = []
-        cert, certstr = certificate.get_own_cert(self._name)
+        certpath, cert, certstr = self._runtime_credentials.get_own_cert()
         key = cert.digest("sha256")
         newkey = key.replace(":", "")
         bytekey = newkey.decode("hex")
 
         if network is None:
             network = _conf.get_in_order("dht_network_filter", "ALL")
+        certpath, cert, certstr = self._runtime_credentials.get_own_cert()
+        if not certstr:
+            raise("No runtime certificate available, please restart runtime")
 
-        if network is None:
-            network = _conf.get_in_order("dht_network_filter", "ALL")
-        self.dht_server = dht_server.ServerApp(evilAppendServer, bytekey[-20:], node_name=name)
+        self.dht_server = dht_server.ServerApp(evilAppendServer, bytekey[-20:], node_name=name, runtime_credentials=self._runtime_credentials)
         ip, port = self.dht_server.start(iface=iface)
 
 
@@ -114,7 +116,6 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
         self.dht_server.kserver.name = name
         self.dht_server.kserver.protocol.name = name
         self.dht_server.kserver.protocol.storeOwnCert(certstr)
-        self.dht_server.kserver.protocol.setPrivateKey()
 
 
 class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
@@ -126,12 +127,7 @@ class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
         try:
-            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
-                                                    self.priv_key,
-                                                    '')
-            signature = OpenSSL.crypto.sign(private,
-                                           challenge,
-                                           "sha256")
+            signature = self.runtime_credentials.sign_data(challenge)
         except:
             "Signing ping failed"
         if id:
@@ -295,12 +291,7 @@ class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         mergedlist.extend(neighbourList)
         mergedlist.extend(self.false_neighbour_list)
         try:
-            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
-                                                  self.priv_key,
-                                                  '')
-            signature = OpenSSL.crypto.sign(private,
-                                           challenge,
-                                           "sha256")
+            signature = self.runtime_credentials.sign_data(challenge)
         except:
             _log.debug("signing poison find node failed")
         return { 'bucket' : mergedlist , 'signature' : signature }
@@ -315,12 +306,7 @@ class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
                    "forged value".format(self.router.node.port))
             value = "apelsin"
         try:
-            private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
-                                                  self.priv_key,
-                                                  '')
-            signature = OpenSSL.crypto.sign(private,
-                                           challenge,
-                                           "sha256")
+            signature = self.runtime_credentials.sign_data(challenge)
         except:
             _log.debug("signing poison find value failed")
         return { 'value': value, 'signature': signature }
@@ -342,8 +328,9 @@ class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
 
 
 class evilAppendServer(append_server.AppendServer):
-    def __init__(self, ksize=20, alpha=3, id=None, storage=None, node_name=None):
+    def __init__(self, ksize=20, alpha=3, id=None, storage=None, node_name=None, runtime_credentials=None):
         self.node_name=node_name
+        self.runtime_credentials=runtime_credentials
         storage = storage or append_server.ForgetfulStorageFix()
         append_server.Server.__init__(self,
                                      ksize,
@@ -388,10 +375,11 @@ class evilAppendServer(append_server.AppendServer):
                     else:
                         cert_stored = self.protocol.searchForCertificate(resultIdHex)
                         try:
-                            OpenSSL.crypto.verify(cert_stored,
-                                                 resultSign,
-                                                 challenge,
-                                                 "sha256")
+                            self.runtime_credentials.verify_signed_data_from_certstring(
+                                                                        cert_stored,
+                                                                        resultSign,
+                                                                        challenge,
+                                                                        certificate.TRUSTSTORE_TRANSPORT)
                         except:
                             traceback.print_exc()
                         nodes.append(Node(resultId, ip, port))
@@ -408,17 +396,10 @@ class evilAppendServer(append_server.AppendServer):
         if addrs:
             data = addrs[0]
             addr = (data[0], data[1])
+            cert = data[2]
             try:
-                cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                      data[2])
-                fingerprint = cert.digest("sha256")
-                id = fingerprint.replace(":", "")[-40:]
-                private = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
-                                                      self.protocol.priv_key,
-                                                      '')
-                signature = OpenSSL.crypto.sign(private,
-                                                "{}{}".format(id, challenge),
-                                                "sha256")
+                id = certificate.id_from_cert_string(cert)
+                signature = self.runtime_credentials.sign_data("{}{}".format(id, challenge))
                 ds[addr] = self.protocol.ping(addr,
                                              self.node.id,
                                              challenge,
