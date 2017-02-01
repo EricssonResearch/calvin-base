@@ -272,15 +272,15 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
     _log.info("starting runtime %s" % (host[1],))
     
     if proxy_storage:
-        import calvin.actorstore.store
-        calvin.actorstore.store._conf.set('global', 'storage_type', 'local')
+        import calvin.runtime.north.storage
+        calvin.runtime.north.storage._conf.set('global', 'storage_type', 'local')
     rt, _ = dispatch_node([host[0]], host[1], attributes=attr_first)
     check_storage(rt, len(runtimes)+1, attr['indexed_public'])
     runtimes += [rt]
     if proxy_storage:
-        import calvin.actorstore.store
-        calvin.actorstore.store._conf.set('global', 'storage_type', 'proxy')
-        calvin.actorstore.store._conf.set('global', 'storage_proxy', host[0])
+        import calvin.runtime.north.storage
+        calvin.runtime.north.storage._conf.set('global', 'storage_type', 'proxy')
+        calvin.runtime.north.storage._conf.set('global', 'storage_proxy', host[0])
     _log.info("started runtime %s" % (host[1],))
 
     count = 2
@@ -369,7 +369,7 @@ def setup_test_type(request_handler, nbr=3, proxy_storage=False):
     elif test_type == "bluetooth":
         runtimes = setup_bluetooth(bt_master_controluri, request_handler)
     else:
-        proxy_storage = bool(os.environ.get("CALVIN_TESTING_PROXY_STORAGE", proxy_storage))
+        proxy_storage = bool(int(os.environ.get("CALVIN_TESTING_PROXY_STORAGE", proxy_storage)))
         runtimes = setup_local(ip_addr, request_handler, nbr, proxy_storage)
 
     return test_type, runtimes
