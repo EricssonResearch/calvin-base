@@ -262,7 +262,9 @@ class ServerProtocolFactory(Factory):
             self._port = self._tls_server.getHost().port
         else:
             self._port = reactor.listenTCP(port, self, interface=host)
-
+            # WORKAROUND This is here due to an obscure error in twisted trying to write to a listening port
+            # on some architectures/OSes. The default is to raise a RuntimeError.
+            self._port.doWrite = lambda : None
 
     def stop(self):
         self._port.stopListening()
