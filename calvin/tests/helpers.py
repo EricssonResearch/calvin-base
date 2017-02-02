@@ -243,10 +243,17 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
             try:
                 retries += 1
                 peers = request_handler.get_index(rt, index_string, timeout=60)
-            except:
-                _log.info("Timed out when finding peers retrying")
-                retries += 39  # A timeout counts more we don't want to wait 60*100 seconds
-                continue
+            except Exception as e:
+                try:
+                    notfound = e.message.startswith("404")
+                except:
+                    notfound = False
+                if notfound:
+                    peers={'result':[]}
+                else:
+                    _log.info("Timed out when finding peers retrying")
+                    retries += 39  # A timeout counts more we don't want to wait 60*100 seconds
+                    continue
             if len(peers['result']) >= n:
                 _log.info("Found %d peers (%r)", len(peers['result']), peers['result'])
                 return
