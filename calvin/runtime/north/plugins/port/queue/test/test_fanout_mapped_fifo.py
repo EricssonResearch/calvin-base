@@ -226,7 +226,7 @@ class TestFanoutMappedFIFO(unittest.TestCase):
         port._set_state(state)
         # check that no tokens available
         for i in [1,2,3]:
-            self.assertTrue(port.tokens_available(0, "xreader-%d" % i))
+            self.assertFalse(port.tokens_available(1, "xreader-%d" % i))
         # check that no old ports remain
         for i in [1,2,3]:
             self.assertFalse("reader-%d" % i in port.readers)
