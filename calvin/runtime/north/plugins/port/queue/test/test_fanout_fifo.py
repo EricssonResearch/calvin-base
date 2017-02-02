@@ -4,33 +4,38 @@ import pytest
 pytest_unittest = pytest.mark.unittest
 
 from calvin.runtime.north.calvin_token import Token
-from calvin.runtime.north.plugins.port import queue
+from calvin.runtime.north.plugins.port import queue, DISCONNECT
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty
 
 class DummyPort(object):
     pass
 
-def create_port():
-    port = DummyPort()
-    port.properties = {'routing': "fanout_fifo", "direction": "out"}
-    return queue.get(port)
-
 @pytest_unittest    
 class TestFanoutFIFO(unittest.TestCase):
     
-    def setUp(self):
-        self.outport = create_port()
+    routing = "fanout_fifo"
+    queue_type = "fanout_fifo"
+    direction = "out"
+    num_peers = 3
     
+    def create_port(self):
+        port = DummyPort()
+        port.properties = {'routing': self.routing, "direction": self.direction,
+                            'nbr_peers': self.num_peers}
+        return queue.get(port)
+        
+    
+    def setUp(self):
+        self.outport = self.create_port()
+
     def tearDown(self):
         pass
-
 
     def testInit(self):
         assert self.outport
         
     def testType(self):
-        queue_type = self.outport.queue_type
-        assert queue_type == "fanout_fifo"
+        self.assertEqual(self.queue_type, self.outport.queue_type)
     
     def testGetPeers(self):
         for i in [1,2,3]:
@@ -124,9 +129,8 @@ class TestFanoutFIFO(unittest.TestCase):
     def testPeek_Failure(self):
         # no data
         self.outport.add_reader("reader", {})
-        with self.assertRaises(QueueEmpty) as context:
+        with self.assertRaises(QueueEmpty):
             self.outport.peek("reader")
-            print context
         # unknown reader
         self.outport.write("data", None)
         with self.assertRaises(Exception):
@@ -164,7 +168,7 @@ class TestFanoutFIFO(unittest.TestCase):
         # save state
         state = self.outport._state()
         # recreate port
-        port = create_port()
+        port = self.create_port()
         port._set_state(state)
         # check that 1 token has been consumed
         for i in [1,2,3]:
@@ -184,7 +188,7 @@ class TestFanoutFIFO(unittest.TestCase):
         remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
         state = self.outport._state(remap)
         # recreate port
-        port = create_port()
+        port = self.create_port()
         port._set_state(state)
         # check that no tokens available
         for i in [1,2,3]:
@@ -192,3 +196,50 @@ class TestFanoutFIFO(unittest.TestCase):
         # check that no old ports remain
         for i in [1,2,3]:
             self.assertFalse("reader-%d" % i in port.readers)
+
+    def testExhaust_Normal(self):
+        for i in [1,2,3]:
+            self.outport.add_reader("reader-%d" % i, {})
+        
+        port = self.create_port()
+        
+        for i in [1,2,3]:
+            self.outport.write("data-%d" % i, None)
+        exhausted_tokens = {}
+        exhausted_tokens["reader-2"] = self.outport.exhaust("reader-2", DISCONNECT.EXHAUST_OUTPORT)
+        # should remove "reader-2"
+        self.assertFalse("reader-2" in self.outport.readers)
+        self.assertEqual(exhausted_tokens["reader-2"], [[i-1, "data-%d" % i] for i in [1,2,3]])
+        # tokens should still be available in original fifo(s)
+        tokens_1 = [self.outport.peek("reader-1") for i in [1,2,3]]
+        tokens_3 = [self.outport.peek("reader-3") for i in [1,2,3]]
+        self.assertEquals(tokens_1, ["data-%d" % i for i in [1,2,3]])
+        self.assertEquals(tokens_3, ["data-%d" % i for i in [1,2,3]])
+        self.outport.cancel("reader-1")
+        self.outport.cancel("reader-3")
+        
+        port.set_exhausted_tokens(exhausted_tokens)
+        # tokens should now be in new fifo
+        port.add_reader("new-reader", {} )
+        tokens = [ port.peek("new-reader") for i in [1,2,3]]
+        port.cancel("new-reader")
+        self.assertEquals(tokens, ["data-%d" % i for i in [1,2,3]])
+        
+        # setting again changes nothing
+        port.set_exhausted_tokens(exhausted_tokens)
+        tokens = [ port.peek("new-reader") for i in [1,2,3]]
+        port.cancel("new-reader")
+        self.assertEquals(tokens, ["data-%d" % i for i in [1,2,3]])
+
+    def testExhaust_Empty(self):
+        
+        self.outport.add_reader("reader-%d" % 1, {})
+        
+        # unknown reader
+        exhausted_tokens = self.outport.exhaust("no such reader", DISCONNECT.EXHAUST_OUTPORT)
+        self.assertEqual(exhausted_tokens, [])
+        
+        # terminate reason not applicable
+        exhausted_tokens = self.outport.exhaust("reader-1", DISCONNECT.EXHAUST_INPORT)
+        self.assertEqual(exhausted_tokens, [])
+                
