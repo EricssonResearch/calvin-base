@@ -10,12 +10,6 @@ from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty
 class DummyPort(object):
     pass
 
-def create_port(num_peers, routing):
-    port = DummyPort()
-    port.properties = {'routing': routing, "direction": "out",
-                        'nbr_peers': num_peers}
-    return queue.get(port)
-
 def find_data(data, port):
     for r in port.readers:
         if data in port.fifo[r]:
@@ -27,10 +21,16 @@ class TestScheduledFIFO(unittest.TestCase):
 
     routing = "round-robin"
     queue_type = "scheduled_fifo:round-robin"
-    peers = 3
+    num_peers = 3
     
+    def create_port(self):
+        port = DummyPort()
+        port.properties = {'routing': self.routing, "direction": "out",
+                            'nbr_peers': self.num_peers}
+        return queue.get(port)
+        
     def setUp(self):
-        self.outport = create_port(routing=self.routing, num_peers=self.peers)
+        self.outport = self.create_port()
         self.setup_readers()
     
     def setup_readers(self):
@@ -162,7 +162,7 @@ class TestScheduledFIFO(unittest.TestCase):
         # save state
         state = self.outport._state()
         # recreate port
-        port = create_port(routing=self.routing, num_peers=self.outport.nbr_peers)
+        port = self.create_port()
         port._set_state(state)
         # check that 1 token has been consumed
         for i in [1,2,3]:
@@ -179,7 +179,7 @@ class TestScheduledFIFO(unittest.TestCase):
         remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
         state = self.outport._state(remap)
         # recreate port
-        port = create_port(routing=self.routing, num_peers=self.outport.nbr_peers)
+        port = self.create_port()
         port._set_state(state)
         # check that no tokens available
         for i in [1,2,3]:
@@ -188,12 +188,13 @@ class TestScheduledFIFO(unittest.TestCase):
         for i in [1,2,3]:
             self.assertFalse("reader-%d" % i in port.readers)
 
+
 @pytest_unittest    
 class TestScheduledFIFORandom(TestScheduledFIFO):
 
     routing = "random"
     queue_type = "scheduled_fifo:random"
-    peers = 3
+    num_peers = 3
 
     def testWrite_Normal(self):
         # self.outport.add_reader("reader", {})
@@ -264,7 +265,7 @@ class TestScheduledFIFORandom(TestScheduledFIFO):
         # save state
         state = self.outport._state()
         # recreate port
-        port = create_port(routing=self.routing, num_peers=self.outport.nbr_peers)
+        port = self.create_port()
         port._set_state(state)
         # check that 1 token has been consumed
         # check that there are 6-consumed tokens total:
@@ -283,7 +284,7 @@ class TestScheduledFIFORandom(TestScheduledFIFO):
         remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
         state = self.outport._state(remap)
         # recreate port
-        port = create_port(routing=self.routing, num_peers=self.outport.nbr_peers)
+        port = self.create_port()
         port._set_state(state)
         # check that no tokens available
         for i in [1,2,3]:
@@ -296,7 +297,7 @@ class TestBalancedFIFO(TestScheduledFIFO):
     
     routing = "balanced"
     queue_type = "scheduled_fifo:balanced"
-    peers = 3
+    num_peers = 3
     
     def testWrite_Normal(self):
         for i in [1,2,3]:
@@ -378,7 +379,7 @@ class TestBalancedFIFO(TestScheduledFIFO):
         # save state
         state = self.outport._state()
         # recreate port
-        port = create_port(routing=self.routing, num_peers=self.outport.nbr_peers)
+        port = self.create_port()
         port._set_state(state)
         # check that 1 token has been consumed
         for i in [1,2,3]:
