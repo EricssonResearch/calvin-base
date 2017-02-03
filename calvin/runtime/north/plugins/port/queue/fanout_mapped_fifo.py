@@ -147,7 +147,6 @@ class FanoutMappedFIFO(object):
         del self.fifo[reader]
         self.readers.remove(reader)
         self.nbr_peers -= 1
-        self._reset_turn()
 
     def is_exhausting(self, peer_id=None):
         return False
