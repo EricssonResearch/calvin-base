@@ -43,7 +43,7 @@ class CollectSynced(CollectBase):
             if self.write_pos[metadata] - self.tentative_read_pos[metadata] < length:
                 return False
         return True
-
+        
     def peek(self, metadata):
         if not self.tokens_available(1, metadata):
             raise QueueEmpty(reader=metadata)
@@ -67,3 +67,17 @@ class CollectSynced(CollectBase):
             self.tentative_read_pos[writer] = read_pos + 1
             value[self.tags[writer]] = data.value
         return Token(value)
+
+    def _set_port_mapping(self, mapping):
+        if not set(mapping.values()) == set(self.writers):
+            print mapping, self.readers
+            raise Exception("Illegal port mapping dictionary")
+        self.tags = { v: k for k,v in mapping.items() }
+
+    def set_config(self, config):
+        """
+        Set additional config information on the port.
+        The 'config' parameter is a dictionary with settings.
+        """
+        if 'port-mapping' in config:
+            self._set_port_mapping(config['port-mapping'])
