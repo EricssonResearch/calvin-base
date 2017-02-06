@@ -1,0 +1,19 @@
+
+dd : json.DispatchDict(mapping={"t1": "tag_1.in", "t2": "tag_2.in", "t3": "tag_3.in"})
+tag_1: text.PrefixString(prefix="tag-1:")
+tag_2: text.PrefixString(prefix="tag-2:")
+tag_3: text.PrefixString(prefix="tag-3:")
+coll : std.Collect()
+out : io.Print()
+
+{"t1": 1, "t2": 2, "t3": 3} > dd.dict
+dd.token > tag_1.in
+dd.token > tag_2.in
+dd.token > tag_3.in
+dd.default > coll.token
+
+tag_1.out > coll.token
+tag_2.out > coll.token
+tag_3.out > coll.token
+
+coll.token > out.token

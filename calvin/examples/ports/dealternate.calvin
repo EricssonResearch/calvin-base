@@ -1,0 +1,20 @@
+switch: std.DealternateN(order=["out3.in", "out1.in", "out2.in"])
+input: std.CountTimer(sleep=0.5)
+
+out1 : text.PrefixString(prefix="tag-1:")
+out2 : text.PrefixString(prefix="tag-2:")
+out3 : text.PrefixString(prefix="tag-3:")
+
+collect : std.Collect()
+print : io.Print()
+
+input.integer > switch.token
+switch.token > out1.in
+switch.token > out2.in
+switch.token > out3.in
+
+out1.out > collect.token
+out2.out > collect.token
+out3.out > collect.token
+
+collect.token > print.token
