@@ -19,6 +19,7 @@ import time
 import shutil
 import multiprocessing
 import pytest
+import os
 from copy import deepcopy
 from requests.exceptions import Timeout
 from calvin.requests.request_handler import RequestHandler, RT
@@ -26,6 +27,7 @@ from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
 from calvin.utilities.security import Security
 from calvin.utilities import certificate
 from calvin.utilities import certificate_authority
+from calvin.utilities import code_signer
 from calvin.utilities import runtime_credentials
 from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities.utils import get_home
@@ -46,11 +48,19 @@ homefolder = get_home()
 credentials_testdir = os.path.join(homefolder, ".calvin","test_security_credentials_dir")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
+runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
+code_signer_name="test_signer"
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
-store_path = os.path.join(security_testdir, "store")
+#actor_store_path = os.path.join(security_testdir, "store")
+orig_actor_store_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'actorstore','systemactors'))
+actor_store_path = os.path.join(credentials_testdir, "store")
+orig_application_store_path = os.path.join(security_testdir, "scripts")
+#application_store_path = os.path.join(credentials_testdir, "scripts")
+application_store_path = orig_application_store_path
+
 
 try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
@@ -68,6 +78,19 @@ rt3 = None
 rt4 = None
 request_handler=None
 
+def replace_text_in_file(file_path, text_to_be_replaced, text_to_insert):
+    # Read in the file
+    filedata = None
+    with open(file_path, 'r') as file :
+          filedata = file.read()
+
+    # Replace the target string
+    filedata = filedata.replace(text_to_be_replaced, text_to_insert)
+
+    # Write the file out again
+    with open(file_path, 'w') as file:
+        file.write(filedata)
+
 @pytest.mark.slow
 class TestSecurity(unittest.TestCase):
 
@@ -75,6 +98,7 @@ class TestSecurity(unittest.TestCase):
     def setup(self, request):
         from calvin.Tools.csruntime import csruntime
         from conftest import _config_pytest
+        import fileinput
         global rt0
         global rt1
         global rt2
@@ -90,15 +114,80 @@ class TestSecurity(unittest.TestCase):
             os.mkdir(credentials_testdir)
             os.mkdir(runtimesdir)
             os.mkdir(runtimes_truststore)
+            os.mkdir(runtimes_truststore_signing_path)
+            os.mkdir(actor_store_path)
+            os.mkdir(os.path.join(actor_store_path,"io"))
+            shutil.copy(os.path.join(orig_actor_store_path,"io","__init__.py"), os.path.join(actor_store_path,"io","__init__.py"))
+            os.mkdir(os.path.join(actor_store_path,"std"))
+            shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
+
+#            shutil.copytree(orig_application_store_path, application_store_path)
             shutil.copytree(os.path.join(security_testdir,"identity_provider"),identity_provider_path)
         except Exception as err:
             print "Failed to create test folder structure, err={}".format(err)
             pass
 
+        print "Trying to create a new test application/actor signer."
+#        cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
+        cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=security_testdir)
+
+        #Create signed version of CountTimer actor
+        orig_actor_CountTimer_path = os.path.join(orig_actor_store_path,"std","CountTimer.py")
+        actor_CountTimer_path = os.path.join(actor_store_path,"std","CountTimer.py")
+        shutil.copy(orig_actor_CountTimer_path, actor_CountTimer_path)
+        cs.sign_file(actor_CountTimer_path)
+
+        #Create unsigned version of CountTimer actor
+        actor_CountTimerUnsigned_path = actor_CountTimer_path.replace(".py", "Unsigned.py") 
+        shutil.copy(actor_CountTimer_path, actor_CountTimerUnsigned_path)
+        replace_text_in_file(actor_CountTimerUnsigned_path, "CountTimer", "CountTimerUnsigned")
+
+        #Create signed version of Sum actor
+        orig_actor_Sum_path = os.path.join(orig_actor_store_path,"std","Sum.py")
+        actor_Sum_path = os.path.join(actor_store_path,"std","Sum.py")
+        shutil.copy(orig_actor_Sum_path, actor_Sum_path)
+        cs.sign_file(actor_Sum_path)
+
+        #Create unsigned version of Sum actor
+        actor_SumUnsigned_path = actor_Sum_path.replace(".py", "Unsigned.py") 
+        shutil.copy(actor_Sum_path, actor_SumUnsigned_path)
+        replace_text_in_file(actor_SumUnsigned_path, "Sum", "SumUnsigned")
+
+        #Create incorrectly signed version of Sum actor
+        actor_SumFake_path = actor_Sum_path.replace(".py", "Fake.py") 
+        shutil.copy(actor_Sum_path, actor_SumFake_path)
+        #Change the class name to SumFake
+        replace_text_in_file(actor_SumFake_path, "Sum", "SumFake")
+        cs.sign_file(actor_SumFake_path)
+        #Now append to the signed file so the signature verification fails
+        with open(actor_SumFake_path, "a") as fd:
+                fd.write(" ")
+
+        #Create signed version of StandardOut actor
+        orig_actor_StandardOut_path = os.path.join(orig_actor_store_path,"io","StandardOut.py")
+        actor_StandardOut_path = os.path.join(actor_store_path,"io","StandardOut.py")
+        shutil.copy(orig_actor_StandardOut_path, actor_StandardOut_path)
+        cs.sign_file(actor_StandardOut_path)
+
+        #Create unsigned version of StandardOut actor
+        actor_StandardOutUnsigned_path = actor_StandardOut_path.replace(".py", "Unsigned.py") 
+        shutil.copy(actor_StandardOut_path, actor_StandardOutUnsigned_path)
+        replace_text_in_file(actor_StandardOutUnsigned_path, "StandardOut", "StandardOutUnsigned")
+
+#        #Sign applications
+#        cs.sign_file(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+#        cs.sign_file(os.path.join(application_store_path, "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
+#        cs.sign_file(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"))
+#        #Now append to the signed file so the signature verification fails
+#        with open(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"), "a") as fd:
+#                fd.write(" ")
+
+        print "Export Code Signers certificate to the truststore for code signing"
+        out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
+
         print "Trying to create a new test domain configuration."
         ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
-        print "Reading configuration successfull."
-
+#
         print "Copy CA cert into truststore of runtimes folder"
         ca.export_ca_cert(runtimes_truststore)
         #Define the runtime attributes
@@ -154,24 +243,25 @@ class TestSecurity(unittest.TestCase):
         #  request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
 
         #Copy trusted code signer certificate into truststore
-        os.mkdir(os.path.join(credentials_testdir,"runtimes","truststore_for_signing"))
-        shutil.copy(os.path.join(security_testdir, "runtimes","truststore_for_signing", "93d58fef.0"),
-                    os.path.join(credentials_testdir,"runtimes","truststore_for_signing")) 
+#        os.mkdir(os.path.join(credentials_testdir,"runtimes","truststore_for_signing"))
+#        shutil.copy(os.path.join(security_testdir, "runtimes","truststore_for_signing", "93d58fef.0"),
+#                    os.path.join(credentials_testdir,"runtimes","truststore_for_signing")) 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
         rt_conf.set('security', 'control_interface_security', "tls")
         rt_conf.set('security', 'domain_name', domain_name)
         #TODO: remove use of "security_domain_name"
         rt_conf.set('security', 'security_domain_name', domain_name)
-#        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
+        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('security', 'security_path', credentials_testdir)
-        rt_conf.set('global', 'actor_paths', [store_path])
+        rt_conf.set('global', 'actor_paths', [actor_store_path])
 
         # Runtime 0: local authentication, signature verification, local authorization.
         # Primarily acts as Certificate Authority for the domain
         rt0_conf = copy.deepcopy(rt_conf)
         rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
+        rt0_conf.set('security', 'control_interface_security', "tls")
         rt0_conf.set('security','certificate_authority','True')
         rt0_conf.set("security", "security_conf", {
                         "comment": "Certificate Authority",

@@ -524,15 +524,16 @@ class Security(object):
             try:
                 with open(sign_filename, 'rt') as f:
                     sign_content[cert_hash] = f.read()
-                    _log.debug("Security: found signature for %s" % cert_hash)
+                    _log.debug("Found signature for %s" % cert_hash)
             except:
+                _log.error("Signature file {} is missing".format(sign_filename))
                 pass
         if not skip_file:
             try:
                 with open(filename, 'rt') as f:
                     file_content = f.read()
             except:
-                _log.debug("verify_signature_get_files: file can't be opened, filename={}".format(filename))
+                _log.error("verify_signature_get_files: file can't be opened, filename={}".format(filename))
                 return None
         return {'sign': sign_content, 'file': file_content}
 
@@ -547,6 +548,7 @@ class Security(object):
         if content:
             return self.verify_signature_content(content, flag)
         else:
+            _log.error("verify_signature: no content, signature verification fails")
             return (False, None)
 
     def verify_signature_content(self, content, flag):
@@ -557,7 +559,7 @@ class Security(object):
         """
         _log.debug("verify_signature_content: flag={} , content={}".format(flag, content))
         if not self.sec_conf:
-            _log.debug("Security: no signature verification required: %s" % content['file'])
+            _log.debug("verify_signature_content: no signature verification required: %s" % content['file'])
             return (True, None)
 
         if flag not in ["application", "actor"]:
@@ -567,13 +569,12 @@ class Security(object):
         signer = None
 
         if content is None or not content['sign']:
-            _log.debug("Security: signature information missing, content={}".format(content))
+            _log.debug("verify_signature_content: signature information missing, content={}".format(content))
             signer = ["__unsigned__"]
             return (True, signer)  # True is returned to allow authorization request with the signer attribute '__unsigned__'.
 
         if not HAS_OPENSSL:
-            _log.error("Security: install OpenSSL to allow verification of signatures and certificates")
-            _log.error("Security: verification of %s signature failed" % flag)
+            _log.error("verify_signature_content: install OpenSSL to allow verification of signatures and certificates, verification of %s signature failed" % flag)
             return (False, None)
 
         # If any of the signatures is verified correctly, True is returned.
@@ -588,13 +589,13 @@ class Security(object):
                         signer = [trusted_cert.get_issuer().CN]  # The Common Name field for the issuer
                         # Verify signature
                         OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
-                        _log.debug("Security: signature correct")
+                        _log.debug("verify_signature_content: signature correct")
                         return (True, signer)
                     except Exception as e:
-                        _log.debug("Security: OpenSSL verification error", exc_info=True)
+                        _log.error("OpenSSL verification error", exc_info=True)
                         continue
             except Exception as e:
-                _log.debug("Security: error opening one of the needed certificates", exc_info=True)
+                _log.debug("Error opening one of the needed certificates", exc_info=True)
                 continue
         _log.error("Security: verification of %s signature failed" % flag)
         return (False, signer)
