@@ -69,3 +69,18 @@ class CollectAny(CollectBase):
             return Token(value)
         else:
             raise QueueEmpty(reader=metadata)
+            
+
+    def _set_port_mapping(self, mapping):
+        if not set(mapping.values()) == set(self.writers):
+            print mapping, self.readers
+            raise Exception("Illegal port mapping dictionary")
+        self.tags = { v: k for k,v in mapping.items() }
+
+    def set_config(self, config):
+        """
+        Set additional config information on the port.
+        The 'config' parameter is a dictionary with settings.
+        """
+        if 'port-mapping' in config:
+            self._set_port_mapping(config['port-mapping'])
