@@ -14,37 +14,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, manage
+from calvin.actor.actor import Actor, ActionResult, condition, manage, guard
 
 class AlternateN(Actor):
     """
     Fetch tokens from the fan-in port in the order given by the argument 'order'
     Inputs:
-      token(routing="collect-ordered"): incoming tokens from connected ports in order
+      token(routing="collect-all-tagged"): incoming tokens from connected ports in order
     Outputs:
       token : tokens collected from ports as given by order
     """
 
-    @manage(['order'])
+    @manage(['order', 'incoming'])
     def init(self, order):
         self.order = order
+        self.incoming = []
 
     def will_start(self):
         self.inports['token'].set_config({'port-order':self.order})
 
-    @condition(['token'], ['token'])
-    def dispatch(self, tok):
-        return ActionResult(production=(tok, ))
+    @guard(lambda self: len(self.incoming) > 0)
+    @condition([], ['token'])
+    def dispatch(self):
+        next = self.incoming.pop(0)
+        return ActionResult(production=(next, ))
 
-    action_priority = (dispatch,)
 
-    test_args = []
-    test_kwargs = {'order':[]}
-
-    test_set = [
-        {
-            'in': {'token': [1]},
-            'out': {'token': [1]},
-        },
-    ]
-
+    @condition(['token'], [])
+    def collect(self, tok):
+        self.incoming += tok
+        return ActionResult()
+        
+    action_priority = (dispatch, collect)
