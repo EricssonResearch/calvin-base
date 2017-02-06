@@ -52,14 +52,14 @@ class CS():
 
     def __init__(self, organization, commonName, security_dir=None, force=False, readonly=False):
         self.cs_dir = self.get_cs_credentials_path(organization, security_dir)
-        self.outpath = os.path.join(self.cs_dir, "new_signed_code_dir")
-        self.private = os.path.join(self.cs_dir, "private_dir")
+        self.outpath = os.path.join(self.cs_dir, "new_signed_code")
+        self.private = os.path.join(self.cs_dir, "private")
         self.private_key = os.path.join(self.private, "cs.key")
         self.out = os.path.join(self.cs_dir, "cs.pem")
         self.password_file = os.path.join(self.private, "cs_password")
         self.certificate = os.path.join(self.cs_dir, "cscert.pem")
 
-        _log.debu("CS init, organization={}, commonName={}".format(organization, commonName))
+        _log.debug("CS init, organization={}, commonName={}".format(organization, commonName))
         print"CS init, organization="+ organization+", commonName="+commonName
         exist = os.path.isdir(self.cs_dir)
         if not exist and readonly:

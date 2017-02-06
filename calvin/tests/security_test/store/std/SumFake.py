@@ -35,7 +35,9 @@ class SumFake(Actor):
         self.sum = self.sum + input
         return (self.sum, )
 
-    #a comment that is just here to make signature incorrect
+    def report(self):
+        return self.sum
+
     action_priority = (sum, )
 
     test_set = [
@@ -50,3 +52,5 @@ class SumFake(Actor):
             'postcond': [lambda self: self.sum == 11]
         }
     ]
+
+

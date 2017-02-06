@@ -35,6 +35,9 @@ class Sum(Actor):
         self.sum = self.sum + input
         return (self.sum, )
 
+    def report(self):
+        return self.sum
+
     action_priority = (sum, )
 
     test_set = [
