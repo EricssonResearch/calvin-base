@@ -592,10 +592,10 @@ class Security(object):
                         _log.debug("verify_signature_content: signature correct")
                         return (True, signer)
                     except Exception as e:
-                        _log.error("OpenSSL verification error", exc_info=True)
+                        _log.error("OpenSSL verification error, err={}".format(e), exc_info=True)
                         continue
             except Exception as e:
-                _log.debug("Error opening one of the needed certificates", exc_info=True)
+                _log.error("Error opening one of the needed certificates, err={}".format(e), exc_info=True)
                 continue
         _log.error("Security: verification of %s signature failed" % flag)
         return (False, signer)

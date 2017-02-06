@@ -280,7 +280,6 @@ class CA():
         # Generate a password for protection of the private key,
         # store it in the password file
         password = self.generate_password(20)
-        _log.info("Hakan CA password={}".format(password))
         try:
             with open(password_file,'w') as fd:
                 fd.write(password)
@@ -435,6 +434,7 @@ class CA():
                     -passin file:$private_dir/ca_password
                      "$file"
         """
+        _log.debug("sign_file: file={}".format(file))
         private = self.configuration["CA_default"]["private_dir"]
         cert_file = self.configuration["CA_default"]["certificate"]
         private_key = self.configuration["CA_default"]["private_key"]

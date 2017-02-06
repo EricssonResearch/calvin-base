@@ -54,12 +54,10 @@ domain_name="test_security_domain"
 code_signer_name="test_signer"
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
-#actor_store_path = os.path.join(security_testdir, "store")
 orig_actor_store_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'actorstore','systemactors'))
 actor_store_path = os.path.join(credentials_testdir, "store")
 orig_application_store_path = os.path.join(security_testdir, "scripts")
-#application_store_path = os.path.join(credentials_testdir, "scripts")
-application_store_path = orig_application_store_path
+application_store_path = os.path.join(credentials_testdir, "scripts")
 
 
 try:
@@ -120,16 +118,18 @@ class TestSecurity(unittest.TestCase):
             shutil.copy(os.path.join(orig_actor_store_path,"io","__init__.py"), os.path.join(actor_store_path,"io","__init__.py"))
             os.mkdir(os.path.join(actor_store_path,"std"))
             shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
-
-#            shutil.copytree(orig_application_store_path, application_store_path)
+            shutil.copytree(orig_application_store_path, application_store_path)
+            filelist = [ f for f in os.listdir(application_store_path) if f.endswith(".sign.93d58fef") ]
+            for f in filelist:
+                    os.remove(os.path.join(application_store_path,f))
             shutil.copytree(os.path.join(security_testdir,"identity_provider"),identity_provider_path)
         except Exception as err:
+            _log.error("Failed to create test folder structure, err={}".format(err))
             print "Failed to create test folder structure, err={}".format(err)
-            pass
+            raise
 
         print "Trying to create a new test application/actor signer."
-#        cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
-        cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=security_testdir)
+        cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
 
         #Create signed version of CountTimer actor
         orig_actor_CountTimer_path = os.path.join(orig_actor_store_path,"std","CountTimer.py")
@@ -174,13 +174,13 @@ class TestSecurity(unittest.TestCase):
         shutil.copy(actor_StandardOut_path, actor_StandardOutUnsigned_path)
         replace_text_in_file(actor_StandardOutUnsigned_path, "StandardOut", "StandardOutUnsigned")
 
-#        #Sign applications
-#        cs.sign_file(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
-#        cs.sign_file(os.path.join(application_store_path, "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
-#        cs.sign_file(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"))
-#        #Now append to the signed file so the signature verification fails
-#        with open(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"), "a") as fd:
-#                fd.write(" ")
+        #Sign applications
+        cs.sign_file(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+        cs.sign_file(os.path.join(application_store_path, "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
+        cs.sign_file(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"))
+        #Now append to the signed file so the signature verification fails
+        with open(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"), "a") as fd:
+                fd.write(" ")
 
         print "Export Code Signers certificate to the truststore for code signing"
         out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
@@ -242,10 +242,6 @@ class TestSecurity(unittest.TestCase):
         # it might be appropriate to run set_credentials for request_handler, e.g.,
         #  request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
 
-        #Copy trusted code signer certificate into truststore
-#        os.mkdir(os.path.join(credentials_testdir,"runtimes","truststore_for_signing"))
-#        shutil.copy(os.path.join(security_testdir, "runtimes","truststore_for_signing", "93d58fef.0"),
-#                    os.path.join(credentials_testdir,"runtimes","truststore_for_signing")) 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
         rt_conf.set('security', 'control_interface_security', "tls")
@@ -529,7 +525,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
@@ -566,7 +562,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_incorrectly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
@@ -592,7 +588,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
@@ -634,7 +630,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_unsignedApp_signedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_signedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
@@ -670,7 +666,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_unsignedApp_unsignedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_unsignedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user3", "password": "pass3"}})
@@ -706,7 +702,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
@@ -743,7 +739,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_unsignedApp_signedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_signedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
@@ -780,7 +776,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user4", "password": "pass4"}})
@@ -816,7 +812,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user6", "password": "pass6"}})
@@ -846,7 +842,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user_not_allowed", "password": "pass1"}})
@@ -872,7 +868,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "incorrect_password"}})
@@ -900,7 +896,7 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(security_testdir, "scripts", "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user5", "password": "pass5"}})

@@ -37,9 +37,6 @@ from calvin.utilities.utils import get_home
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
-BEGIN_LINE = "-----BEGIN CERTIFICATE-----"
-BEGIN_CSR_LINE = "-----BEGIN CERTIFICATE REQUEST-----"
-
 
 class CS():
     """
@@ -111,14 +108,15 @@ class CS():
 
         subject = "/O={}/CN={}".format(organization, commonName)
 
-        log = subprocess.Popen(["openssl", "rand",
-                                "-out", self.password_file, "20"],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-        stdout, stderr = log.communicate()
-        if log.returncode != 0:
-            raise IOError(stderr)
-        
+        # Generate a password for protection of the private key,
+        # store it in the password file
+        password = self.generate_password(20)
+        try:
+            with open(self.password_file,'w') as fd:
+                fd.write(password)
+        except Exception as err:
+            _log.err("Failed to write CS password to file, err={}".format(err))
+            raise
         out = os.path.join(self.outpath, "{}.csr".format(organization))
         log = subprocess.Popen(["openssl", "req",
                                 "-new",
@@ -139,6 +137,14 @@ class CS():
             raise IOError(stderr)
         return
 
+    def generate_password(self, length):
+        from os import urandom
+        _log.debug("generate_password, length={}".format(length))
+        if not isinstance(length, int) or length < 8:
+            raise ValueError("Password must be longer")
+
+        chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!#%&/()=?[]{}"
+        return "".join(chars[ord(c) % len(chars)] for c in urandom(length))
 
     def remove_cs(self, cs_name, security_dir=None):
         """
@@ -180,6 +186,7 @@ class CS():
                     -passin file:$private_dir/ca_password
                      "$file"
         """
+        _log.debug("sign_file: file={}".format(file))
         try:
             certificate_hash = certificate.cert_hash(certpath=self.certificate)
         except:
@@ -201,6 +208,18 @@ class CS():
         stdout, stderr = log.communicate()
         if log.returncode != 0:
             raise IOError(stderr)
+        with open(sign_file, 'rt') as f:
+            signature = f.read()
+        with open(file, 'rt') as f:
+            content= f.read()
+        with open(self.certificate, 'rt') as f:
+            trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
+            try:
+                # Verify signature
+                OpenSSL.crypto.verify(trusted_cert, signature, content, 'sha256')
+                _log.debug("verify_signature_content: signature correct")
+            except Exception as e:
+                _log.error("OpenSSL verification error", exc_info=True)
         return sign_file
 
 
