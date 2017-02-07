@@ -19,6 +19,7 @@ import unittest
 import time
 import pytest
 
+from calvin.utilities import calvinconfig
 from calvin.csparser import cscompile as compiler
 from calvin.Tools import deployer
 from calvin.utilities import calvinlogger
@@ -130,10 +131,12 @@ class CalvinTestBase(unittest.TestCase):
         self.wait_for_migration(dest, [actor])
 
 
+@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow
 class TestReplication(CalvinTestBase):
 
     def testSimpleReplication(self):
+        assert False
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.Counter()

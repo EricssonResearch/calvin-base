@@ -21,6 +21,7 @@ import pytest
 import numbers
 from collections import Counter
 
+from calvin.utilities import calvinconfig
 from calvin.csparser import cscompile as compiler
 from calvin.Tools import cscompiler as compile_tool
 from calvin.Tools import deployer
@@ -4344,16 +4345,17 @@ def nbr_replicas(request):
     return request.param
 
 
+@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.essential
 @pytest.mark.slow
 class TestReplication(object):
-
     def testSimpleReplication(self, rt_order3, nbr_replicas):
         _log.analyze("TESTRUN", "+", {})
         script = r"""
             src   : std.Counter()
             proc  : test.TestProcess(eval_str="data + kwargs[\"base\"]",
-                        replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count", kwargs={"base": 0})
+                        replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count",
+                        kwargs={"base": 0}, dump=false)
             snk   : io.StandardOut(store_tokens=1, quiet=1)
             src.integer(routing="random")
             snk.token(routing="collect-unordered")
@@ -4419,7 +4421,8 @@ class TestReplication(object):
         script = r"""
             src   : std.Counter()
             proc  : test.TestProcess(eval_str="data + kwargs[\"base\"]",
-                        replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count", kwargs={"base": 0})
+                        replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count",
+                        kwargs={"base": 0}, dump=false)
             snk   : io.TestSink(store_tokens=1, quiet=1, active=true)
             src.integer(routing="random")
             snk.token(routing="collect-unordered")
@@ -4500,7 +4503,7 @@ class TestReplication(object):
             src   : std.FiniteCounter(start=1)
             proc  : test.TestProcess(eval_str="{data.keys()[0]: data.values()[0] + kwargs[\"base\"]}",
                         replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count",
-                        kwargs={"base": 0}, dump=true)
+                        kwargs={"base": 0}, dump=false)
             snk   : io.TestSink(store_tokens=1, quiet=1, active=true)
             src.integer(routing="random")
             proc.data(routing="collect-tagged")
