@@ -21,10 +21,8 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, stor
     try:
         for c in list_port_property_capabilities(which=port_property_capability):
             storage.add_index(['node', 'capabilities', c], peer_id, root_prefix_level=3)
-        if '3303' in capabilities:
-            storage.add_index(['node', 'capabilities', "calvinsys.sensors.environmental"], peer_id, root_prefix_level=3)
-        if '3201' in capabilities or '3200' in capabilities:
-            storage.add_index(['node', 'capabilities', "calvinsys.io.gpiohandler"], peer_id, root_prefix_level=3)
+        for c in capabilities:
+            storage.add_index(['node', 'capabilities', c], peer_id, root_prefix_level=3)
     except:
         _log.error("Failed to set capabilities")
 
