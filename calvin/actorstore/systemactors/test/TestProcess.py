@@ -14,9 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
 from calvin.actor.actor import Actor, manage, condition
-from calvin.runtime.north.calvin_token import Token, ExceptionToken
+from calvin.runtime.north.calvin_token import ExceptionToken
 from calvin.utilities.calvinlogger import get_actor_logger
 
 
@@ -43,10 +42,10 @@ class TestProcess(Actor):
 
     @condition(['data'], ['result'])
     def process(self, data):
-        kwargs = self.kwargs
         try:
-            res = eval(self.eval_str)
-            _log.info("TestProcessing (%s, %s, %s) data:%s, result:%s" % (self._name, self._id, self.inports['data'].id, str(data), str(res)))
+            res = eval(self.eval_str, {}, {"kwargs": self.kwargs, "data": data})
+            if self.dump:
+                _log.info("TestProcessing (%s, %s, %s) data:%s, result:%s" % (self._name, self._id, self.inports['data'].id, str(data), str(res)))
         except Exception as e:
             _log.exception("Test processing failed %s" % self.eval_str)
             res = ExceptionToken(value=str(e))
@@ -58,7 +57,7 @@ class TestProcess(Actor):
             return
         try:
             exec(self.replicate_str)
-        except Exception as e:
+        except Exception:
             _log.exception("Test processing will_replicate failed %s" % self.replicate_str)
 
     def report(self, **kwargs):
