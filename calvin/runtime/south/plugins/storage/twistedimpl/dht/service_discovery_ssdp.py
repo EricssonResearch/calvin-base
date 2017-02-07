@@ -94,14 +94,14 @@ def parse_http_response(data):
 
 
 class ServerBase(DatagramProtocol):
-    def __init__(self, node, ips, cert=None, d=None):
+    def __init__(self, node_id, control_uri, ips, d=None):
         self._services = {}
         self._dstarted = d
         self.ignore_list = []
         self.ips = ips
-        self.cert = cert
         self._msearches_resp = {sid: {} for sid in MS.keys()}
-        self.node = node
+        self._node_id = node_id
+        self._control_uri = control_uri
 
     def startProtocol(self):
         if self._dstarted:
@@ -126,26 +126,16 @@ class ServerBase(DatagramProtocol):
                                 continue
 
                             response = MS_RESP[SERVICE_UUID] % ('%s:%d' % addr, str(time.time()),
-                                                  k, self.node.control_uri + "/node/" + self.node.id, datetimeToString())
-                            if self.cert != None:
-                                response = "{}CERTIFICATE: ".format(response)
-                                response = "{}{}".format(response, self.cert)
-                            response = "{}\r\n\r\n".format(response)
-
+                                                                k, self._control_uri + "/node/" + self._node_id, datetimeToString())
+                            if "cert" in self._msearches_resp[SERVICE_UUID].keys():
+                                response += "CERTIFICATE: {}\r\n\r\n".format(self._msearches_resp[SERVICE_UUID]["cert"])
                             _log.debug("ServerBase::Sending response: %s" % repr(response))
                             delay = random.randint(0, min(5, int(headers['mx'])))
                             reactor.callLater(delay, self.send_it,
                                                   response, address)
                 elif CA_SERVICE_UUID in headers['st'] and address not in self.ignore_list\
                     and self._msearches_resp[CA_SERVICE_UUID]["sign"]:
-                    _log.debug("CA, reply")
-                    response = MS_RESP[CA_SERVICE_UUID] % ('%s:%d' % address, str(time.time()),
-                                                            self.node.control_uri + "/node/" + self.node.id,
-                                                            datetimeToString())
-                    _log.debug("Sending response: %s" % repr(response))
-                    delay = random.randint(0, min(5, int(headers['mx'])))
-                    reactor.callLater(delay, self.send_it,
-                                          response, address)
+                    _log.error("CA signing via SSDP no longer supported")
         except:
             _log.exception("Error datagram received")
 
@@ -241,7 +231,7 @@ class ClientBase(DatagramProtocol):
 
 
 class SSDPServiceDiscovery(ServiceDiscoveryBase):
-    def __init__(self, node, iface='', cert=None, ignore_self=True):
+    def __init__(self, node_id, control_uri, iface='', ignore_self=True):
         super(SSDPServiceDiscovery, self).__init__()
 
         self.ignore_self = ignore_self
@@ -250,8 +240,8 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         self.port = None
         self._backoff = .2
         self.iface_send_list = []
-        self.cert = cert
-        self.node = node
+        self._node_id = node_id
+        self._control_uri = control_uri
 
         if self.iface in ["0.0.0.0", ""]:
             for a in netifaces.interfaces():
@@ -267,8 +257,12 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         dserver = defer.Deferred()
         dclient = defer.Deferred()
         try:
-            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.node, self.iface_send_list,
-                                                cert=self.cert, d=dserver), listenMultiple=True)
+            self.ssdp = reactor.listenMulticast(SSDP_PORT,
+                                                ServerBase(self._node_id,
+                                                           self._control_uri,
+                                                           self.iface_send_list,
+                                                           d=dserver),
+                                                listenMultiple=True)
             self.ssdp.setTTL(5)
             for iface_ in self.iface_send_list:
                 d = self.ssdp.joinGroup(SSDP_ADDR, interface=iface_)

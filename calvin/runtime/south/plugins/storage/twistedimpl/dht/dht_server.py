@@ -130,12 +130,13 @@ class TwistedWaitObject(object):
 
 
 class AutoDHTServer(StorageBase):
-    def __init__(self, node):
+    def __init__(self, node_id, control_uri):
         super(AutoDHTServer, self).__init__()
         self.dht_server = None
         self._ssdps = None
         self._started = False
-        self._node = node
+        self._node_id = node_id
+        self._control_uri = control_uri
 
     def start(self, iface='', network=None, bootstrap=None, cb=None, name=None, nodeid=None):
         if bootstrap is None:
@@ -150,7 +151,7 @@ class AutoDHTServer(StorageBase):
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = SSDPServiceDiscovery(self._node, iface)
+        self._ssdps = SSDPServiceDiscovery(self._node_id, self._control_uri, iface)
         dlist += self._ssdps.start()
 
         domain = _conf.get("security", "domain_name")

@@ -18,12 +18,14 @@
 # Parsers
 from calvin.runtime.south.plugins.storage import dht, securedht
 from calvin.runtime.north.plugins.storage.proxy import StorageProxy
+from calvin.utilities import calvinlogger
+_log = calvinlogger.get_logger(__name__)
 
 def get(type_, node=None):
     if type_ == "dht":
-        return dht.AutoDHTServer(node)
+        return dht.AutoDHTServer(node.id, node.control_uri)
     elif type_ == "securedht":
-        return securedht.AutoDHTServer(node)
+        return securedht.AutoDHTServer(node.id, node.control_uri, node.runtime_credentials)
     elif type_ == "proxy":
         return StorageProxy(node)
     elif type_ == "local":

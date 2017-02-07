@@ -252,6 +252,7 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('security', 'security_path', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
+        rt_conf.set('global', 'storage_type', "securedht")
 
         # Runtime 0: local authentication, signature verification, local authorization.
         # Primarily acts as Certificate Authority for the domain

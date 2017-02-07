@@ -173,7 +173,7 @@ class AutoDHTServer(StorageBase):
         self._name = name
 
         self._dlist = []
-        self._ssdps = SSDPServiceDiscovery(iface)
+        self._ssdps = SSDPServiceDiscovery(self._node_id, self._control_uri, iface)
         self._dlist += self._ssdps.start()
         domain = _conf.get("security", "security_domain_name")
         is_ca=False

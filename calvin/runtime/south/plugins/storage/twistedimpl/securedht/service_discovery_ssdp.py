@@ -49,26 +49,32 @@ MS_BOOTSTRAP =    ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r
          'MX: 2\r\nST: uuid:%s\r\n\r\n') %\
         (SSDP_ADDR, SSDP_PORT, SERVICE_UUID)
 
-MS_CSR = ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r\n' +
-         'MX: 2\r\nST: uuid:%s\r\nCALVIN_CSR: {csr}\r\n\r\n') %\
+MS_CA = ('M-SEARCH * HTTP/1.1\r\nHOST: %s:%d\r\nMAN: "ssdp:discover"\r\n' +
+         'MX: 2\r\nST: uuid:%s\r\n\r\n') %\
         (SSDP_ADDR, SSDP_PORT, CA_SERVICE_UUID)
 
-MS = {SERVICE_UUID: MS_BOOTSTRAP, CA_SERVICE_UUID: MS_CSR}
+MS = {SERVICE_UUID: MS_BOOTSTRAP, CA_SERVICE_UUID: MS_CA}
 
-MS_BOOTSTRAP_RESP =   'HTTP/1.1 200 OK\r\n' + \
+MS_BOOTSTRAP_RESP = 'HTTP/1.1 200 OK\r\n' + \
             'USN: %s::upnp:rootdevice\r\n' % SERVICE_UUID + \
-            'SERVER: %s\r\nlast-seen: %s\r\nEXT: \r\nSERVICE: %s\r\n' + \
-            'LOCATION: http://calvin@github.se/%s/description-0.0.1.xml\r\n' % SERVICE_UUID + \
-            'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % SERVICE_UUID + \
+            'SERVER: %s\r\n' + \
+            'last-seen: %s\r\n' + \
+            'EXT: \r\n' + \
+            'SERVICE: %s\r\n' + \
+            'LOCATION: %s\r\n' + \
+            'CACHE-CONTROL: max-age=1800\r\n' + \
+            'ST: uuid:%s\r\n' % SERVICE_UUID + \
             'DATE: %s\r\n'
 
 MS_CA_RESP = 'HTTP/1.1 200 OK\r\n' + \
             'USN: %s::upnp:rootdevice\r\n' % CA_SERVICE_UUID + \
-            'SERVER: %s\r\nlast-seen: %s\r\nEXT: \r\n' + \
-            'LOCATION: http://calvin@github.se/%s/description-0.0.1.xml\r\n' % CA_SERVICE_UUID + \
-            'CACHE-CONTROL: max-age=1800\r\nST: uuid:%s\r\n' % CA_SERVICE_UUID + \
-            'DATE: %s\r\n' + \
-            'CERTIFICATE: %s\r\n\r\n'
+            'SERVER: %s\r\n' + \
+            'last-seen: %s\r\n' + \
+            'EXT: \r\n' + \
+            'LOCATION: %s\r\n' + \
+            'CACHE-CONTROL: max-age=1800\r\n' + \
+            'ST: uuid:%s\r\n' % CA_SERVICE_UUID + \
+            'DATE: %s\r\n'
 
 MS_RESP = {SERVICE_UUID: MS_BOOTSTRAP_RESP, CA_SERVICE_UUID: MS_CA_RESP}
 
@@ -89,12 +95,15 @@ def parse_http_response(data):
 
 
 class ServerBase(DatagramProtocol):
-    def __init__(self, ips, dserver=None):
+    def __init__(self, node_id, control_uri, ips, d=None):
+        _log.info("Serverbase::_init_: \n\tnode_id={}\n\tcontrol_uri={}\n\tips={}\n\tdserver={}".format(node_id, control_uri, ips, d))
         self._services = {}
-        self._dstarted = dserver
+        self._dstarted = d
         self.ignore_list = []
         self.ips = ips
         self._msearches_resp = {sid: {} for sid in MS.keys()}
+        self._node_id = node_id
+        self._control_uri = control_uri
 
     def startProtocol(self):
         if self._dstarted:
@@ -104,7 +113,7 @@ class ServerBase(DatagramProtocol):
         # Broadcast
         try:
             cmd, headers = parse_http_response(datagram)
-            _log.debug("Received %s, %s from %r" % (cmd, headers, address, ))
+            _log.debug("ServerBase::Received %s, %s from %r" % (cmd, headers, address, ))
 
             if cmd[0] == 'M-SEARCH' and cmd[1] == '*':
 
@@ -117,30 +126,19 @@ class ServerBase(DatagramProtocol):
                             # Only tell local about local
                             if addr[0] == "127.0.0.1" and address[0] != "127.0.0.1":
                                 continue
-
                             response = MS_RESP[SERVICE_UUID] % ('%s:%d' % addr, str(time.time()),
-                                                  k, datetimeToString())
+                                                                k, self._control_uri + "/node/" + self._node_id, datetimeToString())
                             if "cert" in self._msearches_resp[SERVICE_UUID].keys():
                                 response += "CERTIFICATE: {}\r\n\r\n".format(self._msearches_resp[SERVICE_UUID]["cert"])
-                            _log.debug("Sending response: %s" % repr(response))
+                            _log.debug("ServerBase::Sending response: %s" % repr(response))
                             delay = random.randint(0, min(5, int(headers['mx'])))
                             reactor.callLater(delay, self.send_it,
                                                   response, address)
                 elif CA_SERVICE_UUID in headers['st'] and address not in self.ignore_list\
                     and self._msearches_resp[CA_SERVICE_UUID]["sign"]:
-                    _log.debug("CA try to sign")
-#                    # Raises exception if CA don't sign the CSR
-#                    ca = Ca(self._msearches_resp[CA_SERVICE_UUID]["name"], headers["calvin_csr"])
-#                    _log.debug("CA signed %s" % ca.signed_cert)
-#                    if ca.signed_cert:
-#                        response = MS_RESP[CA_SERVICE_UUID] % ('%s:%d' % address, str(time.time()),
-#                                              datetimeToString(), ca.signed_cert)
-#                        _log.debug("Sending response: %s" % repr(response))
-#                        delay = random.randint(0, min(5, int(headers['mx'])))
-#                        reactor.callLater(delay, self.send_it,
-#                                              response, address)
-        except:
-            _log.exception("SSDP search received, but failed handling")
+                    _log.error("CA signing via SSDP no longer supported")
+        except Exception as err:
+            _log.exception("SSDP search received, but failed handling, err={}".format(err))
 
     def update_params(self, service_uuid, **kwargs):
         self._msearches_resp[service_uuid].update(kwargs)
@@ -189,8 +187,7 @@ class ClientBase(DatagramProtocol):
     def datagramReceived(self, datagram, address):
         # Broadcast
         cmd, headers = parse_http_response(datagram)
-        _log.debug("Received %s, %s from %r" % (cmd, headers, address, ))
-        
+        _log.debug("ClientBase::Received %s, %s from %r" % (cmd, headers, address, ))
         if cmd[0].startswith('HTTP/1.') and cmd[1] == '200':
             if SERVICE_UUID in headers['st']:
                 c_address = headers['server'].split(':')
@@ -203,7 +200,7 @@ class ClientBase(DatagramProtocol):
                 # Filter on service calvin networks
                 if self._service is None or self._service == headers['service']:
 
-                    _log.debug("Received service %s from %s" %
+                    _log.debug("ClientBase::Received service %s from %s" %
                                (headers['service'], c_address, ))
 
                     if c_address:
@@ -213,21 +210,22 @@ class ClientBase(DatagramProtocol):
                             self.stop(SERVICE_UUID)
 
             elif CA_SERVICE_UUID in headers['st']:
-                c_address = headers['server'].split(':')
-                c_address[1] = int(c_address[1])
-                try:
-                    cert = headers['certificate']
-                    c_address.append(cert)
-                except KeyError:
-                    pass
-                # FIXME do we need service filtering for signed certificates
-                if c_address and not self.is_stopped(CA_SERVICE_UUID):
-                    _log.debug("Signed Cert %s" % c_address)
-                    _log.debug("CA search data: %s" % self._msearches[CA_SERVICE_UUID])
-                    if self._msearches[CA_SERVICE_UUID]['cb']:
-                        self._msearches[CA_SERVICE_UUID]['cb'](tuple(c_address))
-                    if self._msearches[CA_SERVICE_UUID]['stop']:
-                        self.stop(CA_SERVICE_UUID)
+                _log.error("Deprecated")
+#                c_address = headers['server'].split(':')
+#                c_address[1] = int(c_address[1])
+#                try:
+#                    cert = headers['certificate']
+#                    c_address.append(cert)
+#                except KeyError:
+#                    pass
+#                # FIXME do we need service filtering for signed certificates
+#                if c_address and not self.is_stopped(CA_SERVICE_UUID):
+#                    _log.debug("Signed Cert %s" % c_address)
+#                    _log.debug("CA search data: %s" % self._msearches[CA_SERVICE_UUID])
+#                    if self._msearches[CA_SERVICE_UUID]['cb']:
+#                        self._msearches[CA_SERVICE_UUID]['cb'](tuple(c_address))
+#                    if self._msearches[CA_SERVICE_UUID]['stop']:
+#                        self.stop(CA_SERVICE_UUID)
 
     def set_callback(self, service_uuid, callback):
         self._msearches[service_uuid]['cb'] = callback
@@ -246,7 +244,7 @@ class ClientBase(DatagramProtocol):
 
 
 class SSDPServiceDiscovery(ServiceDiscoveryBase):
-    def __init__(self, iface='', ignore_self=True):
+    def __init__(self, node_id, control_uri, iface='', ignore_self=True):
         super(SSDPServiceDiscovery, self).__init__()
 
         self.ignore_self = ignore_self
@@ -255,6 +253,8 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         self.port = None
         self.searches = {}
         self.iface_send_list = []
+        self._node_id = node_id
+        self._control_uri = control_uri
 
         if self.iface in ["0.0.0.0", ""]:
             for a in netifaces.interfaces():
@@ -270,8 +270,13 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         dserver = defer.Deferred()
         dclient = defer.Deferred()
         try:
-            self.ssdp = reactor.listenMulticast(SSDP_PORT, ServerBase(self.iface_send_list,
-                                                dserver=dserver), listenMultiple=True)
+            self.ssdp = reactor.listenMulticast(SSDP_PORT,
+                                                ServerBase(self._node_id,
+                                                           self._control_uri,
+                                                           self.iface_send_list,
+                                                           d=dserver
+                                                          ),
+                                                listenMultiple=True)
             self.ssdp.setTTL(5)
             for iface_ in self.iface_send_list:
                 d = self.ssdp.joinGroup(SSDP_ADDR, interface=iface_)
