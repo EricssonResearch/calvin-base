@@ -1,0 +1,8 @@
+{"requirements":{"dd":[{"op":"node_attr_match","kwargs":{"index":["node_name",{"name":"runtime-1"}]},"type":"+"}],
+                 "trigger":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "tag_1":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "tag_2":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "tag_3":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "coll":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "out":[{"op":"all_nodes","kwargs":{},"type":"+"}]
+                 }}
