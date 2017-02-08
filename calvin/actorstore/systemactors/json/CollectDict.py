@@ -39,10 +39,6 @@ class CollectDict(Actor):
 
     @condition(['token'], ['dict'])
     def collect_tokens(self, token):
-        _log.info("token: %r" % (token,))
         return ActionResult(production=(token,))
 
     action_priority = (collect_tokens, )
-
-    test_args = []
-    test_kwargs = {'select':{}}
