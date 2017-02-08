@@ -294,6 +294,7 @@ class TransformedPort(Node):
         self.children = None
         self.port = kwargs.get('port')
         self.value = kwargs.get('value')
+        self.label = kwargs.get('label')
 
 
 # FIXME: Abstract
@@ -332,6 +333,7 @@ class ImplicitPort(Node):
     def __init__(self, **kwargs):
         super(ImplicitPort, self).__init__(**kwargs)
         self.add_child(kwargs.get('arg'))
+        self.add_child(kwargs.get('label'))
 
     @property
     def arg(self):
@@ -342,6 +344,10 @@ class ImplicitPort(Node):
         value.parent = self
         self.arg.parent = None
         self.children[0] = value
+
+    @property
+    def label(self):
+        return self.children[1]
 
 
 class InternalInPort(InPort):
