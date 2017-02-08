@@ -113,7 +113,8 @@ class CollectBase(object):
             _log.debug("ADD_WRITER %s" % writer)
             self.nbr_peers = len(self.writers)
 
-        self.tags[writer] = properties.get("tag", writer)
+        if not self.tags.get(writer):
+            self.tags[writer] = properties.get("tag", writer)
 
     def remove_writer(self, writer):
         if not isinstance(writer, basestring):
