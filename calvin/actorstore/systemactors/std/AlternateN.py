@@ -39,7 +39,6 @@ class AlternateN(Actor):
         next = self.incoming.pop(0)
         return ActionResult(production=(next, ))
 
-
     @condition(['token'], [])
     def collect(self, tok):
         self.incoming += tok
