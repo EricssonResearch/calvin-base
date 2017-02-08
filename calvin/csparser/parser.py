@@ -240,6 +240,12 @@ class CalvinParser(object):
         if len(p) == 1:
             p[0] = None
         else:
+            if p[2] not in ['in', 'out']:
+                info = {
+                    'line': p.lineno(2),
+                    'col': self._find_column(p.lexpos(2))
+                }
+                self.issuetracker.add_error('Invalid direction ({}).'.format(p[2]), info)
             p[0] = p[2]
 
 
@@ -385,8 +391,29 @@ class CalvinParser(object):
                  | bool
                  | null
                  | NUMBER
-                 | string"""
+                 | string
+                 | portref"""
         p[0] = ast.Value(value=p[1], debug_info=self.debug_info(p, 1))
+
+
+    def p_portref(self, p):
+        """portref : AND IDENTIFIER DOT IDENTIFIER opt_direction
+                   | AND DOT IDENTIFIER opt_direction """
+        if len(p) == 6:
+            _, _, actor, _, port, direction = p[:]
+            ref = {
+                'in':ast.InPort,
+                'out':ast.OutPort
+            }.get(direction, ast.Port)(actor=actor, port=port, debug_info=self.debug_info(p, 1))
+        else:
+            _, _, _, port, direction = p[:]
+            ref = {
+                'in':ast.InternalInPort,
+                'out':ast.InternalOutPort
+            }.get(direction, ast.InternalPort)(port=port, debug_info=self.debug_info(p, 1))
+        # FIXME: Use actual port type in code gen portref phase, name for now
+        # p[0] = ref
+        p[0] = ref.name
 
 
     def p_bool(self, p):

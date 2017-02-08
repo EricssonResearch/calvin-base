@@ -306,6 +306,10 @@ class Port(Node):
         self.actor = kwargs.get('actor')
         self.port = kwargs.get('port')
 
+    @property
+    def name(self):
+        return "{}.{}".format(self.actor, self.port)
+
     def __str__(self):
         if self._verbose_desc:
             return "{} {}.{} {} {}".format(self.__class__.__name__, str(self.actor), self.port,
@@ -349,6 +353,10 @@ class ImplicitPort(Node):
     def label(self):
         return self.children[1]
 
+class InternalPort(Port):
+    """docstring for InternalPortNode"""
+    def __init__(self, **kwargs):
+        super(InternalPort, self).__init__(actor='', **kwargs)
 
 class InternalInPort(InPort):
     """docstring for InternalPortNode"""
