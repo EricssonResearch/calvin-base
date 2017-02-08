@@ -290,7 +290,8 @@ class Actor(object):
         self._port_property_capabilities = None
         self._signature = None
         self._component_members = set([self._id])  # We are only part of component if this is extended
-        self._managed = set(('_id', '_name', '_deployment_requirements', '_signature', '_subject_attributes', '_migration_info', "_port_property_capabilities", "_replication_data"))
+        self._managed = set(('_id', '_name', '_has_started', '_deployment_requirements', '_signature', '_subject_attributes', '_migration_info', "_port_property_capabilities", "_replication_data"))
+        self._has_started = False
         self._calvinsys = None
         self._using = {}
         # self.control = calvincontrol.get_calvincontrol()
@@ -308,7 +309,7 @@ class Actor(object):
         self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.items()}
 
         hooks = {
-            (Actor.STATUS.PENDING, Actor.STATUS.ENABLED): self.will_start,
+            (Actor.STATUS.PENDING, Actor.STATUS.ENABLED): self._will_start,
             (Actor.STATUS.ENABLED, Actor.STATUS.PENDING): self.will_stop,
         }
         self.fsm = Actor.FSM(Actor.STATUS, Actor.STATUS.LOADED, Actor.VALID_TRANSITIONS, hooks,
@@ -327,6 +328,12 @@ class Actor(object):
     def init(self):
         raise Exception("Implementing 'init()' is mandatory.")
 
+    def _will_start(self):
+        """Ensure will_start() is only called once"""
+        if not self._has_started:
+            self.will_start()
+            self._has_started = True
+        
     def will_start(self):
         """Override in actor subclass if actions need to be taken before starting."""
         pass
