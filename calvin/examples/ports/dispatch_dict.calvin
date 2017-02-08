@@ -1,12 +1,13 @@
 
 dd : json.DispatchDict(mapping={"t1": "tag_1.in", "t2": "tag_2.in", "t3": "tag_3.in"})
+trigger: std.Trigger(tick=0.5, data={"t1": 1, "t2": 2, "t3": 3}, )
 tag_1: text.PrefixString(prefix="tag-1:")
 tag_2: text.PrefixString(prefix="tag-2:")
 tag_3: text.PrefixString(prefix="tag-3:")
 coll : std.Collect()
 out : io.Print()
 
-{"t1": 1, "t2": 2, "t3": 3} > dd.dict
+trigger.data > dd.dict
 dd.token > tag_1.in
 dd.token > tag_2.in
 dd.token > tag_3.in
