@@ -886,36 +886,50 @@ class CalvinControl(object):
             issue_tracker.add_error("UNAUTHORIZED", info={'status':401})
             return
 
-        def _handle_authentication_decision(authentication_decision, security=None, command=None, org_cb=None, issue_tracker=None):
+        def _handle_authentication_decision(authentication_decision, arguments=None, security=None, org_cb=None, issue_tracker=None):
             _log.debug("CalvinControl::_handle_authentication_decision, authentication_decision={}".format(authentication_decision))
             if not authentication_decision:
                 _log.error("Authentication failed")
                 # This error reason is detected in calvin control and gives proper REST response
+                # Authentication failure currently results in no subject attrbutes, which might still give access to the resource
+                # , an alternative approach is to always deny access for authentication failure. Not sure what is best.
                 _exit_with_error(issue_tracker)
-                return
             try:
                 security.check_security_policy(
-                    CalvinCB(_handle_policy_decision, command=command, org_cb=org_cb, issue_tracker=issue_tracker),
+                    CalvinCB(_handle_policy_decision,
+                             arguments=arguments,
+                             org_cb=org_cb,
+                             issue_tracker=issue_tracker),
                     element_type="control_interface",
-                    element_value=command
+                    element_value=arguments['func'].func_name
                 )
             except Exception as exc:
                 _log.exception("Failed to check security policy, exc={}".format(exc))
-                _exit_with_error(issue_tracker)
-                return
+                return _handle_policy_decision(access_decision=False, arguments=arguments, org_cb=org_cb, issue_tracker=issue_tracker) 
 
-        def _handle_policy_decision(access_decision, command=None, org_cb=None, issue_tracker=None):
-            _log.debug("CalvinControl::_handle_policy_decision, authorization_decision={} command={}".format(access_decision, command))
+        def _handle_policy_decision(access_decision, arguments=None, org_cb=None, issue_tracker=None):
+            _log.debug("CalvinControl::_handle_policy_decision:\n\tauthorization_decision={}\n\targuments={}\n\ttorg_cb={}".format(access_decision, arguments, org_cb))
             if not access_decision:
                 _log.error("Access denied")
                 # This error reason is detected in calvin control and gives proper REST response
                 _exit_with_error(issue_tracker)
-                return
+            if issue_tracker.error_count:
+                four_oh_ones = [e for e in issue_tracker.errors(sort_key='reason')]
+                errors = issue_tracker.errors(sort_key='reason')
+                for e in errors:
+                    if 'status' in e and e['status'] == 401:
+                        _log.error("Security verification of script failed")
+                        status = calvinresponse.UNAUTHORIZED
+                        body = None
+                        arguments['self'].send_response(arguments['handle'], arguments['connection'], body, status=status)
+                        return
+            return arguments['func'](arguments['self'], arguments['handle'], arguments['connection'], arguments['match'], arguments['data'], arguments['hdr'])
 
         def inner(self, handle, connection, match, data, hdr):
-            _log.debug("authentication_decorator::inner, arguments were:·func={}\n handle={}\n connection={}\n match={}\n data={}\n hdr={}".format(func, handle, connection, match, data, hdr))
-            issuetracker = IssueTracker()
+            _log.debug("authentication_decorator::inner, arguments were:\n\tfunc={}\n handle={}\n connection={}\n match={}\n data={}\n hdr={}".format(func, handle, connection, match, data, hdr))
+            issue_tracker = IssueTracker()
             credentials = None
+            arguments={'func':func, 'self':self, 'handle':handle, 'connection':connection, 'match':match, 'data':data, 'hdr':hdr}
             try:
                 if data and 'sec_credentials' in data:
                     credentials = data['sec_credentials']
@@ -925,24 +939,12 @@ class CalvinControl(object):
             try:
                 self.security.authenticate_subject(
                     credentials,
-                    callback=CalvinCB(_handle_authentication_decision, security=self.security, command=command, org_cb=None, issue_tracker=issuetracker)
+                    callback=CalvinCB(_handle_authentication_decision, arguments=arguments, security=self.security, org_cb=None, issue_tracker=issue_tracker)
                 )
             except Exception as exc:
                 _log.exception("Failed to authenticate the subject, exc={}".format(exc))
-                _exit_with_error(issuetracker)
-            if issuetracker.error_count:
-                four_oh_ones = [e for e in issuetracker.errors(sort_key='reason')]
-                errors = issuetracker.errors(sort_key='reason')
-                for e in errors:
-                    if 'status' in e and e['status'] == 401:
-                        _log.error("Security verification of script failed")
-                        status = calvinresponse.UNAUTHORIZED
-                        body = None
-                        self.send_response(handle, connection, body, status=status)
-                        return
-            return func(self, handle, connection, match, data, hdr)
+                _exit_with_error(issue_tracker)
 
-        command = func.func_name
         return inner
 
     def start(self, node, uri, tunnel=False, external_uri=None):

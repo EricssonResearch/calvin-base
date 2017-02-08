@@ -69,6 +69,7 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
             except Exception as err:
                 _log.exception("Server failed listenSSL, err={}".format(err))
         else:
+            _log.debug("TwistedCalvinServer without TLS chosen")
             try:
                 self._tcp_server = reactor.listenTCP(self._port, tcp_f, interface=self._iface)
             except error.CannotListenError:

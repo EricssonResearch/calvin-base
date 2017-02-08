@@ -75,7 +75,7 @@ class AuthenticationDecisionPoint(object):
             ]
         }
         """
-        _log.debug("authenticate::request received: %s" % request)
+        _log.debug("authenticate: request = %s" % request)
         if "resource" in request and "node_id" in request["resource"]:
             try:
                 node_id = request["resource"]["node_id"]
@@ -102,7 +102,7 @@ class AuthenticationDecisionPoint(object):
         return response
 
     def authentication_decision(self, request):
-        _log.debug("authentication_decision::request%s" % request)
+        _log.debug("authentication_decision: request = %s" % request)
         try:
             users_db = self.node.authentication.arp.get_users_db()
             groups_db = self.node.authentication.arp.get_groups_db()
@@ -135,6 +135,7 @@ class AuthenticationDecisionPoint(object):
                         decision = False
                         return (decision, None)
             return (decision, None)
-        except Exception:
+        except Exception as err:
+            _log.error("authentication_decision: Authentication failed, err={}".format(err))
             return (False, None)
  

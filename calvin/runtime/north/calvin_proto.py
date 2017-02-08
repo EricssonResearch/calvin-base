@@ -658,7 +658,7 @@ class CalvinProto(CalvinCBClass):
         callback: called when finished with the authentication decision
         jwt: signed JSON Web Token (JWT) containing the authentication request
         """
-        _log.debug("authentication_decision:\n\tauth_server_uuid={}\n\tcallback={}\n\tjwt={}".format(auth_server_uuid, callback, jw))
+        _log.debug("authentication_decision:\n\tauth_server_uuid={}\n\tcallback={}\n\tjwt={}".format(auth_server_uuid, callback, jwt))
         if self.node.network.link_request(auth_server_uuid,
                                           CalvinCB(self._authentication_decision,
                                                    auth_server_uuid=auth_server_uuid,
@@ -685,25 +685,28 @@ class CalvinProto(CalvinCBClass):
         A Policy Decision Point (PDP) is used to determine if access is permitted.
         """
         _log.debug("authentication_decision_handler:\n\tpayload={}".format(payload))
-        if not _sec_conf['authentication']['accept_external_requests']:
-            reply = response.CalvinResponse(response.NOT_FOUND)
-            # Send reply
-            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-            self.network.links[payload['from_rt_uuid']].send(msg)
-        else:
+        if ('authentication' in _sec_conf) and 'accept_external_requests' in _sec_conf['authentication']:
             try:
                 self.node.authentication.decode_request(payload,
-                        CalvinCB(self._authentication_decision_handler_jwt_decoded_cb
-                                                                ))
-            except Exception:
+                                                        CalvinCB(self._authentication_decision_handler_jwt_decoded_cb,
+                                                                payload=payload)
+                                                        )
+            except Exception as err:
+                _log.error("authentication_decision_handler: Failed to decode authentication request, err={}")
                 reply = response.CalvinResponse(response.INTERNAL_ERROR)
                 # Send reply
                 msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
                 self.network.links[payload['from_rt_uuid']].send(msg)
+        else:
+            reply = response.CalvinResponse(response.NOT_FOUND)
+            # Send reply
+            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+            self.network.links[payload['from_rt_uuid']].send(msg)
+
 
     def _authentication_decision_handler_jwt_decoded_cb(self, decoded, payload):
         """The JWT is now decoded, let's try to authenticate the content"""
-        _log.debug("authentication_decision_handler_jwt_decoded_cb:\n\tdecoded={}\n\tpayload={}".format(decoded,payload))
+        _log.debug("authentication_decision_handler_jwt_decoded_cb:\n\tdecoded={}\n\tpayload={}".format(decoded, payload))
         self.node.authentication.adp.authenticate(decoded["request"],
                             callback=CalvinCB(self._authentication_decision_handler, payload, decoded,
                                              ))

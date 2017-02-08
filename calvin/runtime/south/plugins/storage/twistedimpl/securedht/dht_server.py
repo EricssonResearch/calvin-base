@@ -175,7 +175,7 @@ class AutoDHTServer(StorageBase):
         self._dlist = []
         self._ssdps = SSDPServiceDiscovery(self._node_id, self._control_uri, iface)
         self._dlist += self._ssdps.start()
-        domain = _conf.get("security", "security_domain_name")
+        domain = _conf.get("security", "domain_name")
         is_ca=False
         self._ssdps.update_server_params(CA_SERVICE_UUID, sign=is_ca, name=name)
         dht_id = dhtid_from_nodeid(self._node_id)

@@ -50,19 +50,19 @@ _log = get_logger(__name__)
 TIMEOUT=5
 
 try:
-    _domain = _conf.get("security", "security_domain_name")
+    _domain = _conf.get("security", "domain_name")
 except:
     domain = None
 
 def security_modules_check():
     if _conf.get("security","security_conf"):
+        _sec_conf =_conf.get("security","security_conf") 
         # Want security
         if not HAS_OPENSSL:
             # Miss OpenSSL
             _log.error("Security: Install openssl to allow verification of signatures and certificates")
             return False
-            _conf.get("security","security_conf")['authentication']
-        if _conf.get("security","security_conf")['authentication']['procedure'] == "radius" and not HAS_PYRAD:
+        if ('authetication' in _sec_conf) and ('procedure' in _sec_conf['authentication']) and (_conf.get("security","security_conf")['authentication']['procedure'] == "radius") and not HAS_PYRAD:
             _log.error("Security: Install pyrad to use radius server as authentication method.")
             return False
     return True
@@ -86,7 +86,7 @@ def encode_jwt(payload, node):
 
 def decode_jwt(token, sender_cert_name, node, actor_id=None, callback=None):
     """Decode JSON Web Token"""
-    _log.debug("decode_jwt\n\tsender_cert_name={}\n\tnode={}\n\tactor_id={}\n\tcallback={}".format(sender_cert_name, node, actor_id, callback))
+    _log.debug("decode_jwt:\n\ttoken={}\n\tsender_cert_name={}\n\tnode={}\n\tactor_id={}\n\tcallback={}".format(token, sender_cert_name, node, actor_id, callback))
     # Get authorization server certificate from disk.
     try:
         node.runtime_credentials.get_certificate(cert_name=sender_cert_name,
@@ -100,7 +100,7 @@ def decode_jwt(token, sender_cert_name, node, actor_id=None, callback=None):
         _log.debug("Certificate of sender not found, err={}".format(err))
         raise Exception("Certificate not found.")
 
-def _decode_jwt_cb(certstring, token, node, actor_id, callback):
+def _decode_jwt_cb(certstring, token, node, actor_id=None, callback=None):
     """Decode JSON Web Token"""
     _log.debug("_decode_jwt_cb\n\tsender certstring={}\n\ttoken={}\n\tnode={}\n\tactor_id={}\n\tcallback={}".format(certstring, token, node, actor_id, callback))
     sender_public_key = certificate.get_public_key_from_certstr(certstring)
@@ -109,8 +109,7 @@ def _decode_jwt_cb(certstring, token, node, actor_id, callback):
     # Exception raised if signature verification fails or if issuer and/or audience are incorrect.
     decoded = jwt.decode(token, sender_public_key, algorithms=['ES256'],
                          issuer=sender_node_id, audience=node.id)
-
-    if actor_id and decoded["sub"] != actor_id:
+    if actor_id and ('sub' in decoded) and (decoded["sub"] != actor_id):
         raise  # Exception raised if subject (actor_id) is incorrect.
     if callback:
         callback(decoded=decoded)
@@ -134,18 +133,20 @@ class Security(object):
 
     def set_subject_attributes(self, subject_attributes):
         """Set subject attributes."""
-        _log.debug("Security: set_subject %s" % subject_attributes)
+        _log.debug("set_subject_attributes: subject_attributes = %s" % subject_attributes)
         if not isinstance(subject_attributes, dict):
+            _log.error("set_subject_attributes: subject_attributest should be dictionary")
             return False
         self.subject_attributes = subject_attributes
 
     def get_subject_attributes(self):
         """Return a dictionary with all authenticated subject attributes."""
+        _log.debug("get_subject_attributes, self.subject_attributes={}".format(self.subject_attributes))
         return self.subject_attributes.copy()
 
     def authenticate_subject(self, credentials, callback=None):
         """Authenticate subject using the authentication procedure specified in config."""
-        _log.debug("Security: authenticate_subject")
+        _log.debug("Security: authenticate_subject: \n\tcredentials={}".format(credentials))
         request = {}
         if not security_enabled():
             _log.debug("Security: no security enabled")
@@ -162,26 +163,28 @@ class Security(object):
 #        if self.node.domain in credentials:
         if self.node.runtime_credentials.domain in credentials:
             request['subject'] = credentials[self.node.runtime_credentials.domain]
-            if self.sec_conf['authentication']['procedure'] == "external":
-                if not HAS_JWT:
-                    _log.error("Security: Install JWT to use external server as authentication method.\n" +
-                                   "Note: NO authentication USED")
-                    return False
-                _log.debug("Security: external authentication method chosen")
-                self.authenticate_using_external_server(request, callback)
-            elif self.sec_conf['authentication']['procedure'] == "local":
-                _log.debug("local authentication method chosen")
-                # Authenticate access using a local Authentication Decision Point (ADP).
-                self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response,
-                                                          callback=callback))
-                return True
-            elif self.sec_conf['authentication']['procedure'] == "radius":
-                if not HAS_PYRAD:
-                    _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
-                                "Note! NO AUTHENTICATION USED")
-                    return False
-                _log.debug("Security: Radius authentication method chosen")
-                return self.authenticate_using_radius_server(request, callback)
+            if ('authentication' in self.sec_conf) and ('procedure' in self.sec_conf['authentication']): 
+                if self.sec_conf['authentication']['procedure'] == "external":
+                    if not HAS_JWT:
+                        _log.error("Security: Install JWT to use external server as authentication method.\n" +
+                                       "Note: NO authentication USED")
+                        return False
+                    _log.debug("Security: external authentication method chosen")
+                    self.authenticate_using_external_server(request, callback)
+                    return True
+                elif self.sec_conf['authentication']['procedure'] == "local":
+                    _log.debug("local authentication method chosen")
+                    # Authenticate access using a local Authentication Decision Point (ADP).
+                    self.node.authentication.adp.authenticate(request, CalvinCB(self._handle_local_authentication_response,
+                                                              callback=callback))
+                    return True
+                elif self.sec_conf['authentication']['procedure'] == "radius":
+                    if not HAS_PYRAD:
+                        _log.error("Security: Install pyrad to use radius server as authentication method.\n" +
+                                    "Note! NO AUTHENTICATION USED")
+                        return False
+                    _log.debug("Security: Radius authentication method chosen")
+                    return self.authenticate_using_radius_server(request, callback)
         _log.debug("Security: No security config, so authentication disabled")
         return True
 
@@ -207,7 +210,8 @@ class Security(object):
                 return
             _log.debug("Security: access denied")
             self._return_authentication_decision(False, [], callback)
-        except Exception:
+        except Exception as err:
+            _log.error("Failed RADIUS authentication, err={}".format(err))
             self._return_authentication_decision(False, [], callback)
 
 
@@ -230,37 +234,46 @@ class Security(object):
             # TODO: encrypt the JWT
             # Create a JSON Web Token signed using the node's Elliptic Curve private key.
             jwt_request = encode_jwt(payload, self.node)
+        except Exception as e:
+            _log.error("authenticate_using_external_server, failed to encode jwt - %s" % str(e))
+            self._return_authentication_decision(False, [], callback)
+        try:
             # Send request to authentication server.
             self.node.proto.authentication_decision(auth_server_id,
                                                    CalvinCB(self._handle_authentication_response,
-                                                            callback=callback, actor_id=actor_id),
+                                                            callback=callback),
                                                    jwt_request)
         except Exception as e:
-            _log.error("Security: authentication error - %s" % str(e))
+            _log.error("authenticate_using_external_server: authentication error - %s" % str(e))
             self._return_authentication_decision(False, [], callback)
 
-    def _handle_authentication_response(self, reply, callback, actor_id=None):
+    def _handle_authentication_response(self, reply, callback):
         if reply.status != 200:
             _log.error("Security: authentication server error - %s" % reply)
             self._return_authentication_decision(False, [], callback)
             return
         try:
             # Decode JSON Web Token, which contains the authentication response.
-            decode_jwt(reply.data["jwt"], reply.data["cert_name"],
-                                 self.node, actor_id,
-                                 CalvinCB(self._handle_authentication_response_jwt_decoded_cb,
-                                    callback=callback))
+            decode_jwt(reply.data["jwt"],
+                       reply.data["cert_name"],
+                       self.node, 
+                       callback=CalvinCB(self._handle_authentication_response_jwt_decoded_cb,
+                                        callback=callback)
+                      )
         except Exception as e:
             _log.error("Security: JWT decoding error - %s" % str(e))
             self._return_authentication_decision(False, [], callback)
 
     def _handle_authentication_response_jwt_decoded_cb(self, decoded, callback):
+        _log.debug("_handle_authentication_jwt_decoded_cb:\n\tdecoded={}\n\tcallback={}".format(decoded, callback))
         authentication_response = decoded['response']
-        self._return_authentication_decision(authentication_response['subject_attributes'],
-                                             callback,
-                                             authentication_response.get("obligations", []))
+        self._return_authentication_decision(authentication_response['decision'],
+                                            authentication_response['subject_attributes'],
+                                            callback,
+                                            authentication_response.get("obligations", []))
 
     def _handle_local_authentication_response(self, auth_response, callback):
+        _log.debug("_handle_local_authentication_response:\n\tauth_response={}\n\tcallback={}".format(auth_response, callback))
         try:
             self._return_authentication_decision(auth_response['decision'],
                                                  auth_response['subject_attributes'],
@@ -271,13 +284,13 @@ class Security(object):
             self._return_authentication_decision(False, [], callback)
 
     def _return_authentication_decision(self, decision, subject_attributes, callback, obligations=None):
-        _log.debug("Authentication response received: decision:%s, attributes:%s, obligations %s" % (decision, subject_attributes, obligations))
+        _log.debug("_return_authentication_decision: \n\tdecision={}\n\tsubject_attributes={}\n\tcallback={}\n\tobligations={}".format(decision, subject_attributes, callback, obligations))
         if decision:
-            _log.debug("authentication successful")
+            _log.debug("Authentication successful")
             self.set_subject_attributes(subject_attributes)
             callback(authentication_decision=True)
         else:
-            _log.debug("authentication failed")
+            _log.debug("Authentication failed")
             callback(authentication_decision=False)
 #        if obligations:
 #            callback(access_decision=(True, obligations))
@@ -289,7 +302,7 @@ class Security(object):
         # Can't use id for application since it is not assigned when the policy is checked.
         _log.debug("check_security_policy, element_type={}".format(element_type))
         element_dict={}
-        if self.sec_conf:
+        if self.sec_conf and 'authorization' in self.sec_conf and 'procedure' in self.sec_conf['authorization']:
             if element_type in ['application', 'actor']:
                 element_dict[element_type + "_signer"] = element_value
             if element_type is 'control_interface':
@@ -301,7 +314,7 @@ class Security(object):
 
     def get_authorization_decision(self, callback, actor_id=None, requires=None, element_dict=None, decision_from_migration=None):
         """Get authorization decision using the authorization procedure specified in config."""
-        _log.debug("Security: get_authorization_decision")
+        _log.debug("Security: get_authorization_decision:\n\tcallback={}\n\tactor_id={}\n\trequires={}\n\telement_dict={}\n\tdecision_from_migration={}".format(callback, actor_id, requires, element_dict, decision_from_migration))
         if decision_from_migration:
             try:
                 _log.debug("Authorization decision from migration")
@@ -326,18 +339,22 @@ class Security(object):
             _log.debug("Security: authorization request: %s" % request)
 
             # Check if the authorization server is local (the runtime itself) or external.
-            if self.sec_conf['authorization']['procedure'] == "external":
-                if not HAS_JWT:
-                    _log.error("Security: Install JWT to use external server as authorization method.\n" +
-                               "Note: NO AUTHORIZATION USED")
-                    return False
-                _log.debug("Security: external authorization method chosen")
-                self.authorize_using_external_server(request, callback, actor_id)
+            if 'authorization' in self.sec_conf and 'procedure' in self.sec_conf['authorization']:
+                if self.sec_conf['authorization']['procedure'] == "external":
+                    if not HAS_JWT:
+                        _log.error("Security: Install JWT to use external server as authorization method.\n" +
+                                   "Note: NO AUTHORIZATION USED")
+                        return False
+                    _log.debug("Security: external authorization method chosen")
+                    self.authorize_using_external_server(request, callback, actor_id)
+                else:
+                    _log.debug("Security: local authorization method chosen")
+                    # Authorize access using a local Policy Decision Point (PDP).
+                    self.node.authorization.pdp.authorize(request, CalvinCB(self._handle_local_authorization_response,
+                                                              callback=callback))
             else:
-                _log.debug("Security: local authorization method chosen")
-                # Authorize access using a local Policy Decision Point (PDP).
-                self.node.authorization.pdp.authorize(request, CalvinCB(self._handle_local_authorization_response,
-                                                          callback=callback))
+                _log.error("This should have already been caught, raise exception")
+                raise("No authorization procedure configured")
 
     def _get_authorization_decision_jwt_decoded_cb(self, decoded, callback):
         """Get authorization decision using the authorization procedure specified in config."""
@@ -501,6 +518,7 @@ class Security(object):
         if reply.status != 200 or reply.data["node_id"] is None:
             counter += 1
             if counter < len(possible_placements):
+                _log.debug("_handle_authorization_runtime_search_response: No target from {}, continue with {}".format(value[counter-1],value[counter]))
                 # Continue searching
                 self._send_authorization_runtime_search(key=key, value=value,
                                                         counter=counter,
@@ -509,6 +527,9 @@ class Security(object):
                                                         possible_placements=possible_placements,
                                                         callback=callback)
                 return
+        else:
+                _log.debug("_handle_authorization_runtime_search_response: No target from {}, this was the last authorization server".format(value[counter-1]))
+
         callback(reply)
 
     @staticmethod

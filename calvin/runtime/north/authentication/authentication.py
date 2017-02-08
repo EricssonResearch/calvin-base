@@ -52,9 +52,13 @@ class Authentication(object):
             _log.info("Missing or incomplete security config")
             self.auth_server_id = None
 
-    def decode_request(self, data):
+    def decode_request(self, data, callback):
         """Decode the JSON Web Token in the data."""
-        return decode_jwt(data["jwt"], data["cert_name"], self.node)
+        _log.debug("decode_request, \n\tdata={}\n\tcallback={}".format(data, callback))
+        return decode_jwt(data["jwt"],
+                          data["cert_name"],
+                          self.node,
+                          callback=callback)
 
     def encode_response(self, request, response, audience=None):
         """Encode the response to the request as a JSON Web Token."""

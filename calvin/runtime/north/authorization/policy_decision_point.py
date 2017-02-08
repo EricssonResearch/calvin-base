@@ -51,7 +51,7 @@ class PolicyDecisionPoint(object):
             "address.country": "SE"
         }
         """
-        _log.info("Register node %s: %s" % (node_id, node_attributes))
+        _log.debug("Register node:\n\tnode_id={}\n\tnode_attributes={}".format(node_id, node_attributes))
         self.registered_nodes[node_id] = node_attributes
 
     def authorize(self, request, callback):
@@ -89,38 +89,54 @@ class PolicyDecisionPoint(object):
                 }
             ]
         }
+        alternatevly for control interface:
+        {
+            "subject": {
+                "first_name": "Tomas",
+                "last_name": "Nilsson",
+                "control_interface": "handle_deploy"
+            },
+            "resource": {
+                "node_id": "a77c0687-dce8-496f-8d81-571333be6116"
+            }
+        }
+
         """
-        _log.info("Authorization request received:\n\t request={}\n\tcallback={}".format(request, callback))
+        _log.debug("Authorization request received:\n\t request={}\n\tcallback={}".format(request, callback))
         # Create a new PolicyInformationPoint instance for every request.
         pip = PolicyInformationPoint(self.node, request)
-        try:
-            # Get actor_desc from storage if actorstore_signature is included in request.
-            pip.actor_desc_lookup(request["subject"]["actorstore_signature"], 
-                                  callback=CalvinCB(self._authorize_cont, request, callback=callback))
-        except Exception:
+        if ("subject" in request) and ("actorstore_signature" in request["subject"]):
+            try:
+                # Get actor_desc from storage if actorstore_signature is included in request.
+                pip.actor_desc_lookup(request["subject"]["actorstore_signature"], 
+                                      callback=CalvinCB(self._authorize_cont, request, callback=callback))
+            except Exception as err:
+                _log.error("authorize, failed to lookup actor_desc, err={}".format(err))
+                self._authorize_cont(request, pip, callback)
+        else:
             self._authorize_cont(request, pip, callback)
-        # Wait for PolicyInformationPoint to be ready, then continue with authorization.
+            # Wait for PolicyInformationPoint to be ready, then continue with authorization.
 
     def _authorize_cont(self, request, pip, callback):
         _log.debug("_authorize_cont: \n\trequest={}\n\tpip={}\n\tcallback={}".format(request, pip, callback))
-        if "resource" in request and "node_id" in request["resource"]:
-            try:
-                node_id = request["resource"]["node_id"]
-                request["resource"] = self.registered_nodes[node_id]
-                request["resource"]["node_id"] = node_id
-            except Exception as exc:
-                _log.exception("_authorize_cont, exc={}".format(exc))
-                pass
         try:
+            node_id = request["resource"]["node_id"]
+            request["resource"] = self.registered_nodes[node_id]
+            request["resource"]["node_id"] = node_id
+        except Exception as err:
+            _log.debug("_authorize_cont: node_id is not registered at this authorization server\n\tregistered_nodes={}\n\tnode_id={}\n\terr={}".format(self.registered_nodes, node_id, err))
+            pass
+        if ("action" in request) and ("requires" in request["action"]):
             requires = request["action"]["requires"]
-        except KeyError:
+        else:
             try:
                 # Try to fetch missing attribute from Policy Information Point (PIP).
                 requires = pip.get_attribute_value("action", "requires")
                 request["action"] = {
                     "requires": requires
                 }
-            except Exception:
+            except Exception as err:
+                _log.debug("_authorize_cont, failed to fetch missing attribute from PIP, err={}".format(err))
                 requires = None
         if requires is not None and len(requires) > 1:
             decisions = []
@@ -234,8 +250,8 @@ class PolicyDecisionPoint(object):
             else:
                 _log.debug("combined_policy_decision  All policy_decision not_applicable,  so let's deny")
                 return ("not_applicable", [])
-        except Exception as exc:
-            _log.exception("Failed to get policies from PRP, exc={}".format(exc))
+        except Exception as err:
+            _log.error("Failed to get policies from PRP, exc={}".format(err))
             return ("indeterminate", [])
 
     def create_response(self, decision, obligations):
@@ -248,6 +264,7 @@ class PolicyDecisionPoint(object):
 
     def target_matches(self, target, request, pip):
         """Return True if policy target matches request, else False."""
+        _log.debug("target_matches: \n\ttarget={}\n\trequest={}".format(target, request))
         for attribute_type in target:
             for attribute in target[attribute_type]:
                 try:
@@ -256,8 +273,8 @@ class PolicyDecisionPoint(object):
                     try:
                         # Try to fetch missing attribute from Policy Information Point (PIP).
                         request_value = pip.get_attribute_value(attribute_type, attribute)
-                    except Exception:
-                        _log.debug("Attribute not found: %s %s" % (attribute_type, attribute))
+                    except Exception as err:
+                        _log.debug("target_matches: Attribute not found: %s %s, err=%s" % (attribute_type, attribute, err))
                         return False  # Or 'indeterminate' (if MustBePresent is True and none of the other targets return False)?
                 # Accept both single object and lists by turning single objects into a list.
                 if not isinstance(request_value, list):
@@ -332,8 +349,8 @@ class PolicyDecisionPoint(object):
                 else:
                     _log.debug("rule_decision, rule NOT satisfied, rule={},  request={}".format(rule, request))
                     return ("not_applicable", [])
-            except Exception as exc:
-                _log.exception("Rule decision exception, exc={}".format(exc))
+            except Exception as err:
+                _log.exception("Rule decision exception, exc={}".format(err))
                 return ("indeterminate", [])
         else:
             # If no condition in the rule, return the rule effect directly.
@@ -361,8 +378,8 @@ class PolicyDecisionPoint(object):
                         try:
                             # Try to fetch missing attribute from Policy Information Point (PIP).
                             args[index] = pip.get_attribute_value(path[1], path[2])
-                        except Exception:
-                            _log.debug("Attribute not found: %s %s" % (path[1], path[2]))
+                        except Exception as err:
+                            _log.debug("evaluate_function: Attribute not found: %s %s, err=%s" % (path[1], path[2], err))
                             return False
             if func not in ["and", "or"]:
                 if isinstance(args[index], list):
@@ -421,7 +438,8 @@ class PolicyDecisionPoint(object):
         for key in forbidden_keys:
             try:
                 del request[key[0]][key[1]]
-            except Exception:
+            except Exception as err:
+                _log.debug("runtime_search: could not delete key from request (hopefully because it was not in the request):\n\trequest={}\n\tkey={}\n\terr={}".format(request,key, err))
                 pass
         if not runtime_whitelist:
             # Use all registered nodes as possible nodes when no whitelist is provided.
