@@ -1,0 +1,7 @@
+{"requirements":{"alt":[{"op":"node_attr_match","kwargs":{"index":["node_name",{"name":"runtime-1"}]},"type":"+"}],
+                 "input":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "print":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "out1": [{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "out2": [{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "out3": [{"op":"all_nodes","kwargs":{},"type":"+"}]
+                 }}
