@@ -95,6 +95,7 @@ class FanoutMappedFIFO(object):
         if len(self.readers) > self.nbr_peers:
             # If the peer has been replicated just set it to nbr connected
             self.nbr_peers = len(self.readers)
+        self.mapping = state['mapping']
 
     def _set_port_mapping(self, mapping):
         if not set(mapping.values()) == set(self.readers):
