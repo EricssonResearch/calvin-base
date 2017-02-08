@@ -784,7 +784,7 @@ class Deployer(object):
             self.actor_map[actor_name] = actor_id
             self.node.app_manager.add(self.app_id, actor_id)
         except Exception as e:
-            _log.exception("INSTANCIATE FAILED")
+            _log.exception("INSTANTIATE FAILED")
             # FIXME: what should happen here?
             raise e
         finally:
