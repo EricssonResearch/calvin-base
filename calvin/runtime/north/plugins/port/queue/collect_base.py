@@ -47,8 +47,10 @@ class CollectBase(object):
         self.read_pos = {}
         self.tentative_read_pos = {}
         self.tags = {}
+        self.tags_are_ordering = False
         self.exhausted_tokens = {}
         self.termination = {}
+
 
     def __str__(self):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
@@ -64,7 +66,8 @@ class CollectBase(object):
                 'write_pos': self.write_pos,
                 'read_pos': self.read_pos,
                 'tentative_read_pos': self.tentative_read_pos,
-                'tags': self.tags
+                'tags': self.tags,
+                'tags-are-ordering': self.tags_are_ordering
             }
         else:
             state = {
@@ -76,7 +79,8 @@ class CollectBase(object):
                 'read_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.read_pos.keys()},
                 'tentative_read_pos': {remap[pid] if pid in remap else pid: 0 for pid in self.tentative_read_pos.keys()},
                 # TODO Need unique tags, how should these be created
-                'tags': {remap[pid] if pid in remap else pid: tag for pid, tag in self.tags.items()}
+                'tags': {remap[pid] if pid in remap else pid: tag for pid, tag in self.tags.items()},
+                'tags-are-ordering': self.tags_are_ordering
             }
         return state
 
@@ -89,6 +93,7 @@ class CollectBase(object):
         self.read_pos = state['read_pos']
         self.tentative_read_pos = state['tentative_read_pos']
         self.tags = state.get("tags", {})
+        self.tags_are_ordering = state.get("tags-are-ordering", False)
 
     @property
     def queue_type(self):

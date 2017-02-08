@@ -34,7 +34,6 @@ class CollectSynced(CollectBase):
     def __init__(self, port_properties, peer_port_properties):
         super(CollectSynced, self).__init__(port_properties, peer_port_properties)
         self._type = "collect:all-tagged"
-        self._order_only = False
 
     def tokens_available(self, length, metadata):
         if length >= self.N:
@@ -67,7 +66,7 @@ class CollectSynced(CollectBase):
                 return data
             self.tentative_read_pos[writer] = read_pos + 1
             value[self.tags[writer]] = data.value
-        if self._order_only:
+        if self.tags_are_ordering:
             # ensure values sorted on index in original ordering
             value = [x for (y,x) in sorted(zip(value.keys(), value.values()))]
         return Token(value)
@@ -82,7 +81,7 @@ class CollectSynced(CollectBase):
         if not set(order) == set(self.writers):
             print order, self.writers
             raise Exception("Illegal port ordering")
-        self._order_only = True
+        self.tags_are_ordering = True
         self.tags = { v: order.index(v) for v in order }
         
     def set_config(self, config):
