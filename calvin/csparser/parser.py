@@ -313,20 +313,12 @@ class CalvinParser(object):
         p[0]=p[1]
 
     def p_transformed_inport(self, p):
-        """transformed_inport : SLASH argument SLASH port
-                              | SLASH COLON identifier argument SLASH port"""
-        if len(p) > 5:
-            p[0] = ast.TransformedPort(port=p[6], value=p[4], label=p[3], debug_info=self.debug_info(p, 4))
-        else:
-            p[0] = ast.TransformedPort(port=p[4], value=p[2], debug_info=self.debug_info(p, 4))
+        """transformed_inport : SLASH argument SLASH port"""
+        p[0] = ast.TransformedPort(port=p[4], value=p[2], debug_info=self.debug_info(p, 4))
 
     def p_implicit_port(self, p):
-        """implicit_port : argument
-                         | COLON identifier argument"""
-        if len(p) > 2:
-            p[0] = ast.ImplicitPort(arg=p[3], label=p[2], debug_info=self.debug_info(p, 1))
-        else:
-            p[0] = ast.ImplicitPort(arg=p[1], debug_info=self.debug_info(p, 1))
+        """implicit_port : argument"""
+        p[0] = ast.ImplicitPort(arg=p[1], debug_info=self.debug_info(p, 1))
 
 
     def p_inport(self, p):
@@ -547,7 +539,7 @@ component Foo(arg) in -> out {
 
 src : Foo(arg=ARG)
 delay : std.ClassicDelay()
-        print : io.Print()
+print : io.Print()
 
 src.out > print.token
 src.out > delay.token

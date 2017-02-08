@@ -202,12 +202,8 @@ class ImplicitPortRewrite(object):
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
         args = [ ast.NamedArg(ident=ast.Id(ident='data'), arg=node.arg),  ast.NamedArg(ident=ast.Id(ident='n'), arg=ast.Value(value=-1))]
-        if node.label:
-            const_name = node.label.ident
-        else:
-            # Create a unique name if not given by label
-            self.counter += 1
-            const_name = '_literal_const_'+str(self.counter)
+        self.counter += 1
+        const_name = '_literal_const_'+str(self.counter)
         const_actor = ast.Assignment(ident=const_name, actor_type='std.Constant', args=args)
         const_actor.debug_info = node.arg.debug_info
         const_actor_port = ast.OutPort(actor=const_name, port='token')
@@ -220,12 +216,8 @@ class ImplicitPortRewrite(object):
     def visit(self, node):
         # std.Constantify(constant) ports: in/out
         args = [ast.NamedArg(ident=ast.Id(ident='constant'), arg=node.value)]
-        if node.label:
-            transform_name = node.label.ident
-        else:
-            # Create a unique name if not given by label
-            self.counter += 1
-            transform_name = '_transform_'+str(self.counter)
+        self.counter += 1
+        transform_name = '_transform_'+str(self.counter)
         transform_actor = ast.Assignment(ident=transform_name, actor_type='std.Constantify', args=args)
         transform_actor.debug_info = node.value.debug_info
         transform_actor_outport = ast.OutPort(actor=transform_name, port='out')
