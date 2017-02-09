@@ -495,16 +495,11 @@ class CalvinParser(object):
             self.issuetracker.add_error('Unexpected end of file.', info)
             return
 
-        # FIXME: Better recovery
-        # FIXME: [PP] This originated as an exception in the lexer,
-        #             there is more info to extract.
         info = {
             'line': token.lineno,
             'col': self._find_column(token.lexpos)
         }
         self.issuetracker.add_error('Syntax error.', info)
-        # print self.parser.statestack
-        # print self.parser.symstack
 
         # Trying to recover from here...
 
@@ -527,13 +522,15 @@ class CalvinParser(object):
         # return ir (AST) and issuetracker
         self.issuetracker = IssueTracker()
         self.source_text = source_text
+        root = None
+
         try:
             root = self.parser.parse(source_text)
-            ir, deploy_ir = root.children
         except SyntaxError as e:
             self.issuetracker.add_error(e.text, {'line':e.lineno, 'col':e.offset})
-            ir = ast.Node()
-            deploy_ir = ast.Node()
+        finally:
+            ir, deploy_ir = root.children if root else (ast.Node(), ast.Node())
+
         return ir, deploy_ir, self.issuetracker
 
 
