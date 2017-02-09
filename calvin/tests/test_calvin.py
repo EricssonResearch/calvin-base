@@ -617,7 +617,7 @@ class TestRemoteConnection(CalvinTestBase):
         peer = self.rt2
 
         snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
-        alt = request_handler.new_actor(peer, 'std.Alternate', 'alt')
+        alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
 
@@ -649,7 +649,7 @@ class TestRemoteConnection(CalvinTestBase):
 
         snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
         snk2 = request_handler.new_actor_wargs(peer, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
-        alt = request_handler.new_actor(peer, 'std.Alternate', 'alt')
+        alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
 
@@ -764,7 +764,7 @@ class TestActorMigration(CalvinTestBase):
 
         snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
         snk2 = request_handler.new_actor_wargs(peer, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
-        alt = request_handler.new_actor(peer, 'std.Alternate', 'alt')
+        alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=0.1, steps=100)
 
