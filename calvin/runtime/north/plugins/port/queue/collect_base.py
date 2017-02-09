@@ -52,6 +52,7 @@ class CollectBase(object):
         self.termination = {}  # dictionary of tuples (termination type, got exhaust tokens bool)
 
 
+
     def __str__(self):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
         return "Tokens: %s\nw:%s, r:%s, tr:%s" % (fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
