@@ -699,6 +699,66 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
+    def testLabelConstant(self):
+        script = r"""
+        print1 : io.Print()
+        print2 : io.Print()
+        :foo 1 > print1.token
+        foo.token > print2.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
 
+    def testLabelConstantify(self):
+        script = r"""
+        print1 : io.Print()
+        print2 : io.Print()
+        1 > /:foo 2/ print1.token
+        foo.out > print2.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testPortRef(self):
+        script = r"""
+        print1 : io.Print()
+        &print1.token >  print1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testPortRefBadSpecifier(self):
+        script = r"""
+        print1 : io.Print()
+        &print1.token[inn] >  print1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+
+    @pytest.mark.xfail()
+    def testPortRefMissingSyntaxCheck(self):
+        # FIXME: io.Print has no outport
+        script = r"""
+        print1 : io.Print()
+        &print1.token[out] >  print1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+
+    def testPortRefAsValue(self):
+        script = r"""
+        print1 : io.Print()
+        {"myport":&print1.token[in]} >  print1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testPortRefAsKey(self):
+        script = r"""
+        print1 : io.Print()
+        {&print1.token[in]:"Comment"} >  print1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertTrue(len(errors) > 0)
 
 
