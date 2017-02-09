@@ -120,8 +120,9 @@ def test_state(actor):
     outport = actor.outports['token']
     correct_state = {
         '_component_members': set([actor.id]),
+        '_has_started': False,
         '_deployment_requirements': [],
-        '_managed': set(['dump', '_signature', '_id', '_deployment_requirements', '_name', '_subject_attributes', '_migration_info', '_port_property_capabilities', '_replication_data', 'last']),
+        '_managed': set(['dump', '_has_started', '_signature', '_id', '_deployment_requirements', '_name', '_subject_attributes', '_migration_info', '_port_property_capabilities', '_replication_data', 'last']),
         '_signature': None,
         'dump': False,
         '_id': actor.id,
