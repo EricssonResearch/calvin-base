@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, guard, manage
+from calvin.actor.actor import Actor, condition, stateguard, manage
 
 class DispatchDict(Actor):
     """
@@ -38,29 +38,29 @@ class DispatchDict(Actor):
     def will_start(self):
         self.outports['token'].set_config({'port-mapping':self.mapping})
 
+    @stateguard(lambda self: not self.mapped_out and not self.unmapped_out)
     @condition(['dict'], [])
-    @guard(lambda self, _: not self.mapped_out and not self.unmapped_out)
     def get_dict(self, dictionary):
         for key, value in dictionary.iteritems():
             if key in self.mapping :
                 self.mapped_out[key] = value
             else :
                 self.unmapped_out[key] = value
-        return ActionResult()
+        return ()
 
+    @stateguard(lambda self: self.mapped_out)
     @condition([], ['token'])
-    @guard(lambda self: self.mapped_out)
     def dispatch_token(self):
         key = self.mapped_out.keys()[0]
         val = self.mapped_out.pop(key)
-        return ActionResult(production=({key:val}, ))
+        return ({key:val},)
 
+    @stateguard(lambda self: self.unmapped_out)
     @condition([], ['default'])
-    @guard(lambda self: self.unmapped_out)
     def dispatch_default(self):
         key = self.unmapped_out.keys()[0]
         val = self.unmapped_out.pop(key)
-        return ActionResult(production=(val, ))
+        return (val,)
 
 
     action_priority = (dispatch_token, dispatch_default, get_dict)

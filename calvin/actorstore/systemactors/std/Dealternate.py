@@ -14,46 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, condition, stateguard, manage
-
+from calvin.actor.actor import Actor, condition, manage
 
 class Dealternate(Actor):
     """
-    Split token stream into two streams of tokens (odd and even tokens)
+    Route tokens to the ports connected to the fan-out port token in the order given by the argument 'order'
     Inputs:
-      token : incoming token stream
+      token: Any token
     Outputs:
-      token_1 : first token stream
-      token_2 : second token stream
+      token(routing="dispatch-ordered") : Dispatching tokens to connected ports in order
     """
 
-    @manage(['is_even_token'])
-    def init(self):
-        self.is_even_token = True
+    @manage(['order'])
+    def init(self, order):
+        self.order = order
 
-    def is_even(self):
-        return self.is_even_token
+    def will_start(self):
+        self.outports['token'].set_config({'port-order':self.order})
 
-    def is_odd(self):
-        return not self.is_even_token
+    @condition(['token'], ['token'])
+    def dispatch(self, tok):
+        return (tok,)
 
-    @stateguard(is_even)
-    @condition(['token'], ['token_1'])
-    def port_one(self, tok):
-        self.is_even_token = False
-        return (tok, )
+    action_priority = (dispatch,)
 
-    @stateguard(is_odd)
-    @condition(['token'], ['token_2'])
-    def port_two(self, tok):
-        self.is_even_token = True
-        return (tok, )
 
-    action_priority = (port_one, port_two)
-
-    test_set = [
-        {
-            'in': {'token': [1, 'a', 2, 'b']},
-            'out': {'token_1': [1, 2], 'token_2': ['a', 'b']}
-        },
-    ]

@@ -1,19 +1,20 @@
-mux: std.Mux(mapping={"one":&out1.in, "two": &out2.in, "three": &out3.in})
+mux: std.Mux(mapping={"one": "out1.out", "two":"out2.out", "three":"out3.out"})
 input: std.CountTimer(sleep=0.5)
-sel: std.AlternateN(order=[&c1.token, &c2.token, &c3.token])
+sel: std.Alternate(order=[&c1.token, &c2.token, &c3.token])
 
 out1 : text.PrefixString(prefix="tag-1:")
 out2 : text.PrefixString(prefix="tag-2:")
 out3 : text.PrefixString(prefix="tag-3:")
 
 print : io.Print()
-coll : std.Collect()
 
-input.integer > mux.token
+input.integer > out1.in
+input.integer > out2.in
+input.integer > out3.in
 
-mux.token > out1.in
-mux.token > out2.in
-mux.token > out3.in
+out1.out > mux.token
+out2.out > mux.token
+out3.out > mux.token
 
 
 :c1 "one" > sel.token
@@ -22,8 +23,4 @@ mux.token > out3.in
 
 sel.token > mux.select
 
-out1.out > coll.token
-out2.out > coll.token
-out3.out > coll.token
-
-coll.token > print.token
+mux.token > print.token

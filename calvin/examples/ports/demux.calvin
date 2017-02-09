@@ -1,20 +1,19 @@
-dem: std.Demux(mapping={"one": "out1.out", "two":"out2.out", "three":"out3.out"})
+dem: std.Demux(select={"one":&out1.in, "two": &out2.in, "three": &out3.in})
 input: std.CountTimer(sleep=0.5)
-sel: std.AlternateN(order=[&c1.token, &c2.token, &c3.token])
+sel: std.Alternate(order=[&c1.token, &c2.token, &c3.token])
 
 out1 : text.PrefixString(prefix="tag-1:")
 out2 : text.PrefixString(prefix="tag-2:")
 out3 : text.PrefixString(prefix="tag-3:")
 
 print : io.Print()
+coll : std.Collect()
 
-input.integer > out1.in
-input.integer > out2.in
-input.integer > out3.in
+input.integer > dem.token
 
-out1.out > dem.token
-out2.out > dem.token
-out3.out > dem.token
+dem.token > out1.in
+dem.token > out2.in
+dem.token > out3.in
 
 
 :c1 "one" > sel.token
@@ -22,5 +21,10 @@ out3.out > dem.token
 :c3 "three" > sel.token
 
 sel.token > dem.select
+dem.default > voidport
 
-dem.token > print.token
+out1.out > coll.token
+out2.out > coll.token
+out3.out > coll.token
+
+coll.token > print.token

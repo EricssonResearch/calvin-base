@@ -1,4 +1,4 @@
-switch: std.DealternateN(order=[&out3.in, &out1.in, &out2.in])
+switch: std.Dealternate(order=[&out3.in, &out1.in, &out2.in])
 input: std.CountTimer(sleep=0.5)
 
 out1 : text.PrefixString(prefix="tag-1:")

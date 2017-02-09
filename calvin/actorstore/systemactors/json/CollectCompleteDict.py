@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, manage
+from calvin.actor.actor import Actor, condition, manage
 
 from calvin.utilities.calvinlogger import get_actor_logger
 _log = get_actor_logger(__name__)
@@ -39,8 +39,7 @@ class CollectCompleteDict(Actor):
 
     @condition(['token'], ['dict'])
     def collect_tokens(self, token):
-        _log.info("token: %r" % (token,))
-        return ActionResult(production=(token,))
+        return (token,)
 
     action_priority = (collect_tokens, )
 

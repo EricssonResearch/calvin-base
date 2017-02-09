@@ -14,16 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition, manage
+from calvin.actor.actor import Actor, condition, manage
 
 class Mux(Actor):
     """
-    Send token to fan-out port corresponding to value at 'select'
-    input:
-      token : incoming token
-      select: where to send incoming token
+    Fetch tokens from the fan-in port corresponding to value at 'select'
+    Inputs:
+      token(routing="collect-all-tagged"): incoming tokens from connected ports to select from
+      select: key to select among incoming values
     Outputs:
-      token(routing="dispatch-mapped") : outgoing tokens
+      token : token selected as given by select
     """
 
     @manage(['mapping'])
@@ -31,10 +31,10 @@ class Mux(Actor):
         self.mapping = mapping
 
     def will_start(self):
-        self.outports['token'].set_config({'port-mapping': self.mapping})
+        self.inports['token'].set_config({'port-mapping':self.mapping})
 
     @condition(['token', 'select'], ['token'])
     def dispatch(self, tok, sel):
-        return ActionResult(production=({sel:tok}, ))
+        return (tok[sel],)
 
     action_priority = (dispatch,)

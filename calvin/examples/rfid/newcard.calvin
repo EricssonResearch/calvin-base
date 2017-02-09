@@ -4,15 +4,15 @@ component ComingOrGoing() container, key, empty_value -> value {
   get_key : json.GetValue()
   switch : std.Switch()
   terminate : std.Terminator()
-  
+
   dbg: io.Print()
-  
+
   "status" > get_status.key
   .container > get_status.container
-  
+
   .key > get_key.key
   .container > get_key.container
-  
+
   get_key.value > dbg.token
   get_key.value > switch.a
   .empty_value > switch.b
@@ -26,7 +26,7 @@ reader : sensor.RFIDReader()
 server: misc.OPCServer()
 get_uid : ComingOrGoing()
 get_value : ComingOrGoing()
-switch : std.Alternate()
+switch : std.Alternate2()
 set_current_uid : json.SetValue()
 set_current_value: json.SetValue()
 out: io.Print()

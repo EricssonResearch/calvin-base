@@ -59,7 +59,7 @@ component FlashStopLight(address, username, lightno, interval) -> {
     light : StopLight(address=address, username=username, lightno=lightno)
     on : std.Trigger(tick=0.0, data=true)
     off: std.Trigger(tick=0.0, data=false)
-    alternate : std.Alternate()
+    alternate : std.Alternate2()
     pacer : std.ClassicDelay(delay=interval)
 
     on.data > alternate.token_1

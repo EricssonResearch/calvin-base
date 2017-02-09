@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2017 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,50 +14,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, condition, stateguard, manage
-
+from calvin.actor.actor import Actor, condition, manage, stateguard
 
 class Alternate(Actor):
     """
-    Alternating between two streams of tokens
+    Fetch tokens from the fan-in port in the order given by the argument 'order'
     Inputs:
-      token_1 : first token stream
-      token_2 : second token stream
+      token(routing="collect-all-tagged"): incoming tokens from connected ports in order
     Outputs:
-        token : resulting token stream
+      token : tokens collected from ports as given by order
     """
 
-    @manage(['token_one'])
-    def init(self):
-        self.token_one = True
+    @manage(['order', 'incoming'])
+    def init(self, order):
+        self.order = order
+        self.incoming = []
 
-    def is_even(self):
-        return self.token_one
+    def will_start(self):
+        self.inports['token'].set_config({'port-order':self.order})
 
-    def is_odd(self):
-        return not self.is_even()
+    @stateguard(lambda self: len(self.incoming) > 0)
+    @condition([], ['token'])
+    def dispatch(self):
+        next = self.incoming.pop(0)
+        return (next,)
 
-    @stateguard(is_even)
-    @condition(['token_1'], ['token'])
-    def port_one(self, input):
-        self.token_one = False
-        return (input, )
-
-    @stateguard(is_odd)
-    @condition(['token_2'], ['token'])
-    def port_two(self, input):
-        self.token_one = True
-        return (input, )
-
-    action_priority = (port_one, port_two)
-
-    test_set = [
-        {
-            'in': {'token_1': [1, 2], 'token_2': ['a', 'b']},
-            'out': {'token': [1, 'a', 2, 'b']}
-        },
-        {
-            'in': {'token_1': [1]},
-            'out': {'token': [1]}
-        }
-    ]
+    @condition(['token'], [])
+    def collect(self, tok):
+        self.incoming += tok
+        return (None)
+        
+    action_priority = (dispatch, collect)
