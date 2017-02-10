@@ -1,4 +1,4 @@
-mux: std.Mux(mapping={"one": "out1.out", "two":"out2.out", "three":"out3.out"})
+mux: std.Mux(mapping={"one": &out1.out, "two":&out2.out, "three":&out3.out})
 input: std.CountTimer(sleep=0.5)
 sel: std.Alternate(order=[&c1.token, &c2.token, &c3.token])
 
