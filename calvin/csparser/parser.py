@@ -236,7 +236,7 @@ class CalvinParser(object):
 
     def p_opt_direction(self, p):
         """opt_direction :
-                       | LBRACK IDENTIFIER RBRACK"""
+                         | LBRACK IDENTIFIER RBRACK"""
         if len(p) == 1:
             p[0] = None
         else:
@@ -501,7 +501,6 @@ class CalvinParser(object):
         }
         self.issuetracker.add_error('Syntax error.', info)
 
-        # Trying to recover from here...
 
     def _find_column(self, lexpos):
         last_cr = self.source_text.rfind('\n', 0, lexpos)
@@ -518,14 +517,15 @@ class CalvinParser(object):
         }
         return info
 
-    def parse(self, source_text):
+
+    def parse(self, source_text, logger=None):
         # return ir (AST) and issuetracker
         self.issuetracker = IssueTracker()
         self.source_text = source_text
         root = None
 
         try:
-            root = self.parser.parse(source_text)
+            root = self.parser.parse(source_text, debug=logger)
         except SyntaxError as e:
             self.issuetracker.add_error(e.text, {'line':e.lineno, 'col':e.offset})
         finally:
@@ -542,12 +542,21 @@ def calvin_parse(source_text):
 
 
 if __name__ == '__main__':
+    import os
     import sys
     import json
     import astprint
+    import logging
 
+    logging.basicConfig(
+        level = logging.DEBUG,
+        filename = "{}/parselog.txt".format(os.path.dirname(os.path.realpath(__file__))),
+        filemode = "w",
+        format = "%(filename)10s:%(lineno)4d:%(message)s"
+    )
 
     if len(sys.argv) < 2:
+        log = logging.getLogger()
         script = 'inline'
         source_text = \
 '''
@@ -584,7 +593,7 @@ delay.token[in](routing="round-robin")
 rule src_rule: node_attr(node_spec=NODE1)
 
 rule dst_rule: node_attr(node_spec=NODE1) | node_attr(node_spec={"name": "testNode2"})
-rule src_rule: node_attr(node_spec=NODE1) | node_attr(node_spec=NODE2) ~ current()
+rule src_rule: node_attr(node_spec=NODE1) | node_attr(node_spec=NODE2) &~ current()
 rule combined_rule: dst_rule & src_rule | current()
 
 # define a group
@@ -593,7 +602,7 @@ group group_name: actor, some_group
 # apply rules, '*' indicates optional rule
 apply actor: some_rule
 apply* actor, actor: some_rule
-apply actor, actor: some_rule | node_attr(node_spec=NODE1) ~ current()
+apply actor, actor: some_rule | node_attr(node_spec=NODE1) &~ current()
 
 '''
     else:
@@ -606,7 +615,8 @@ apply actor, actor: some_rule | node_attr(node_spec=NODE1) ~ current()
             print "Error: Could not read file: '%s'" % script
             sys.exit(1)
 
-    ir, deploy_ir, it = calvin_parse(source_text)
+    parser = CalvinParser()
+    ir, deploy_ir, it = parser.parse(source_text, logger=log)
     if it.issue_count == 0:
         print "No issues"
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
