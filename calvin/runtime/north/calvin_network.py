@@ -565,14 +565,14 @@ class CalvinNetwork(object):
         """ Removes a link to peer id """
         _log.analyze(self.node.id, "+", {}, peer_node_id=peer_id)
         try:
-            link = self.links['peer_id']
+            link = self.links[peer_id]
             if isinstance(link, CalvinRoutingLink):
                 link.link.routes.remove(peer_id)
                 self.links.pop(peer_id)
             else:
                 self.links.pop(peer_id)
         except:
-            pass
+            _log.error("Unknown runtime %s" % peer_id)
 
     def link_check(self, rt_uuid):
         """ Check if we have the link otherwise raise exception """
@@ -591,4 +591,3 @@ class CalvinNetwork(object):
         except:
             raise Exception("ERROR_UNKNOWN_RUNTIME")
         self.links[payload['to_rt_uuid']].transport.send(payload)
-
