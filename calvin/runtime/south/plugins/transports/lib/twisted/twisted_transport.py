@@ -207,7 +207,8 @@ class CalvinTransport(base_transport.BaseTransport):
         status = "ERROR"
         if reason.getErrorMessage() == "Connection was closed cleanly.":
             status = "OK"
-        self._callback_execute('peer_disconnected', self, self._remote_rt_id, status)
+            _log.info("disconnecting ok")
+        self._callback_execute('peer_disconnected', self, self._remote_rt_id, status) # transport, .. "ok"
 
     def _connection_failed(self, reason):
         status = "ERROR"
@@ -242,7 +243,6 @@ class CalvinServer(base_transport.BaseServer):
         super(CalvinServer, self).__init__(rt_id, listen_uri, callbacks=callbacks)
         self._rt_id = rt_id
         self._node_name = node_name
-
         self._port = None
         self._peers = {}
         self._callbacks = callbacks
@@ -251,7 +251,7 @@ class CalvinServer(base_transport.BaseServer):
         # TODO: Get iface from addr and lookup host
         iface = '::'
 
-        self._transport = server_transport(iface=iface, node_name=self._node_name, port=self._listen_uri.port or 0)
+        self._transport = server_transport(iface=iface, node_name=self._node_name, port=self._listen_uri.port or 0, uri=listen_uri)
         self._client_transport = client_transport
 
     def _started(self, port):
@@ -269,7 +269,23 @@ class CalvinServer(base_transport.BaseServer):
             Callback when the client connects still needs a join to be finnshed
             before we can callback upper layers
         """
+        _log.info("Client connected")
         import socket
+        
+        if uri in self._peers:
+            _log.info("Peer %s already connected" % uri)
+            # Disconnect client localy and remove callbacks
+            
+            class ErrorMessage:
+                def __init__(self, str):
+                    self._str = str
+
+                def getErrorMessage(self):
+                    return self._str
+            #self._peers[uri]._transport._disconnected(ErrorMessage("Connection was closed cleanly."))
+            self._peers[uri]._transport._proto.connectionLost(ErrorMessage("Connection was closed cleanly."))
+            _log.info("creating new peer")
+        
         from calvin.utilities import calvinconfig
         _conf = calvinconfig.get()
         runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
@@ -288,7 +304,7 @@ class CalvinServer(base_transport.BaseServer):
                 raise
         else:
             fqdn=None
-
+        
         tp = CalvinTransport(self._rt_id, uri, self._callbacks,
                              self._client_transport, proto=protocol,
                              node_name=self._node_name,

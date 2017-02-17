@@ -14,7 +14,7 @@ def set_proxy_config_cb(key, value, will_sleep, link, callback):
     if will_sleep:
         link.set_peer_insleep()
 
-def set_proxy_config(peer_id, name, capabilities, port_property_capability, will_sleep, link, storage, callback):
+def set_proxy_config(peer_id, name, capabilities, port_property_capability, storage, callback, attributes, redeploy):
     """
     Store node
     """
@@ -25,8 +25,11 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, will
             storage.add_index(['node', 'capabilities', c], peer_id, root_prefix_level=3)
     except:
         _log.error("Failed to set capabilities")
-
-    attributes = AttributeResolver({"indexed_public": {"node_name": {"name": name}}})
+    
+    if not attributes:
+        attributes = AttributeResolver({"indexed_public": {"node_name": {"name": name}}})
+    else:
+        attributes = AttributeResolver(attributes)
     indexes = attributes.get_indexed_public()
     try:
         for index in indexes:
@@ -43,3 +46,5 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, will
                 "attributes": {'public': attributes.get_public(),
                 'indexed_public': attributes.get_indexed_public(as_list=False)}},
                 cb=CalvinCB(set_proxy_config_cb, will_sleep=will_sleep, link=link, callback=callback))
+    
+    #TODO: If redeploy is true, trigger a redeployment of the application

@@ -14,20 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import umsgpack
-from message_coder import MessageCoderBase
-import json
+import traceback
 
-umsgpack.compatibility = True
+factories = {}
 
-# set of functions to encode/decode data tokens to/from a json description
-class MessageCoder(MessageCoderBase):
+def register(_id, node_name, callbacks, schemas, formats):
+    ret = {}
+    if 'calvinfcm' in schemas:
+        try:
+            import calvinfcm_transport
+            f = calvinfcm_transport.CalvinTransportFactory(_id, node_name, callbacks)
+            factories[_id] = f
+            ret['calvinfcm'] = f
+        except ImportError:
+            traceback.print_exc()
+        except Exception:
+            traceback.print_exc()
+    return ret
 
-    def encode(self, data):
-        print "Encode: %s" % json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
-        return umsgpack.packb(data)
-
-    def decode(self, data):
-        data = umsgpack.unpackb(data)
-        print "Decode: %s" % json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
-        return data

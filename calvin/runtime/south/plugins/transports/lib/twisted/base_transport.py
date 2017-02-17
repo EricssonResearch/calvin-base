@@ -37,7 +37,7 @@ class CalvinServerBase(CalvinCBClass):
 
     """
 
-    def __init__(self, iface='', port=0, callbacks=None, *args, **kwargs):
+    def __init__(self, iface='', port=0, callbacks=None, uri=None, *args, **kwargs):
         """
         iface   The interface to listen on defaults to all
         port    The port to listen on defaults to system generated
