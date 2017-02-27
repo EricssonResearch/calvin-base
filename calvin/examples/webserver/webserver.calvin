@@ -172,7 +172,7 @@ daisy_resource : DaisyAdapter(status_OK=OK)
 check_GET : HTTPGETRequestCheck()
 resource_path : HTTPResourceLocator(base_path="html")
 resource_reader : HTTPFileReader()
-resp: http.HTTPResponseGenerator()
+resp: HTTPResponseGenerator()
 const_OK : std.Constantify(constant=OK)
 
 HOST > tcp_server.host
