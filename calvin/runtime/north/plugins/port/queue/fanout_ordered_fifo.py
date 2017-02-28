@@ -14,9 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.north.calvin_token import Token
-from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
-from calvin.runtime.north.plugins.port import DISCONNECT
+from calvin.runtime.north.plugins.port.queue.common import QueueFull
 from calvin.runtime.north.plugins.port.queue.fanout_base import FanoutBase
 
 from calvin.utilities import calvinlogger
@@ -78,8 +76,8 @@ class FanoutOrderedFIFO(FanoutBase):
 
     def _set_state(self, state):
         super(FanoutOrderedFIFO, self)._set_state(state)
-        self.reader_turn = ['reader_turn']
-        self.turn_pos = ['turn_pos']
+        self.reader_turn = state['reader_turn']
+        self.turn_pos = state['turn_pos']
         self._set_turn()
 
     def _set_port_order(self, order):
