@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.runtime.north.calvin_token import Token
-from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
+from calvin.runtime.north.plugins.port.queue.common import QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities import calvinlogger
 
@@ -89,10 +89,10 @@ class FanoutBase(object):
         return self._type
 
     def _set_port_mapping(self, mapping):
-        raise NotImplemented
+        raise NotImplementedError
         
     def _set_port_order(self, ordering):
-        raise NotImplemented
+        raise NotImplementedError
         
     def set_config(self, config):
         """
