@@ -114,7 +114,7 @@ class CollectBase(object):
             _log.debug("ADD_WRITER %s" % writer)
             self.nbr_peers = len(self.writers)
 
-        if not self.tags.get(writer):
+        if self.tags.get(writer, None) is None:
             self.tags[writer] = properties.get("tag", writer)
 
     def remove_writer(self, writer):
