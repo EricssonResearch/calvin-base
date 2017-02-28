@@ -84,12 +84,3 @@ class CollectSynced(CollectBase):
         self.tags_are_ordering = True
         self.tags = { v: order.index(v) for v in order }
         
-    def set_config(self, config):
-        """
-        Set additional config information on the port.
-        The 'config' parameter is a dictionary with settings.
-        """
-        if 'port-mapping' in config:
-            self._set_port_mapping(config['port-mapping'])
-        elif 'port-order' in config:
-            self._set_port_order(config['port-order'])

@@ -77,10 +77,4 @@ class CollectAny(CollectBase):
             raise Exception("Illegal port mapping dictionary")
         self.tags = { v: k for k,v in mapping.items() }
 
-    def set_config(self, config):
-        """
-        Set additional config information on the port.
-        The 'config' parameter is a dictionary with settings.
-        """
-        if 'port-mapping' in config:
-            self._set_port_mapping(config['port-mapping'])
+

@@ -136,6 +136,22 @@ class CollectBase(object):
     def remove_reader(self, reader):
         pass
 
+    def _set_port_mapping(mapping):
+        raise NotImplementedError
+        
+    def _set_port_order(ordering):
+        raise NotImplementedError
+        
+    def set_config(self, config):
+        """
+        Set additional config information on the port.
+        The 'config' parameter is a dictionary with settings.
+        """
+        if 'port-mapping' in config:
+            self._set_port_mapping(config['port-mapping'])
+        elif 'port-order' in config:
+            self._set_port_order(config['port-order'])
+            
     def is_exhausting(self, peer_id=None):
         if peer_id is None:
             return bool(self.termination)
