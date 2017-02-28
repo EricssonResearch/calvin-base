@@ -37,7 +37,6 @@ def cleanup(request):
         reactor.callFromThread(reactor.stop)
     request.addfinalizer(fin)
 
-@pytest.mark.interactive
 @pytest.mark.slow
 class TestDHT(object):
     test_nodes = 2

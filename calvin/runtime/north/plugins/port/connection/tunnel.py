@@ -298,7 +298,9 @@ class TunnelConnection(BaseConnection):
             # parallel connections that we have sent the callback
             self.parallel_set('sent_callback', True)
             if self.callback:
-                self.callback(status=response.CalvinResponse(False), port_id=self.port.id)
+                _log.warning("Disconnect peer tunnel failed %s", str(reply))
+                self.callback(status=reply, port_id=self.port.id)
+                #self.callback(status=response.CalvinResponse(False), port_id=self.port.id)
             return
         try:
             remaining_tokens = reply.data['remaining_tokens']

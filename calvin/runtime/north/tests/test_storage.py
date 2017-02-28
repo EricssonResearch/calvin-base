@@ -100,7 +100,7 @@ class TestStorageStarted(object):
         def cb(key, value):
             self.q.put({"key": key, "value": value})
 
-        node = calvin.tests.TestNode("127.0.0.1:5000")
+        node = calvin.tests.TestNode(["127.0.0.1:5000"])
         self.storage.add_node(node, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
@@ -109,7 +109,7 @@ class TestStorageStarted(object):
         self.storage.get_node(node.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] == {u'attributes': {u'indexed_public': [], u'public': {}}, u'control_uri': u'127.0.0.1:5000', u'uri': u'127.0.0.1:5000'}
+        assert value["value"] == {u'attributes': {u'indexed_public': [], u'public': {}}, u'control_uris': [u'127.0.0.1:5000'], u'uris': [u'127.0.0.1:5000']}
 
         self.storage.delete_node(node, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
@@ -208,13 +208,13 @@ class TestStorageNotStarted(object):
         def cb(key, value):
             self.q.put({"key": key, "value": value})
 
-        node = calvin.tests.TestNode("127.0.0.1:5000")
+        node = calvin.tests.TestNode(["127.0.0.1:5000"])
         self.storage.add_node(node)
         self.storage.get_node(node_id=node.id, cb=CalvinCB(func=cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
         assert value["key"] == node.id and value["value"] == {u'attributes': {u'indexed_public': [], u'public': {}},
-                                                              u'control_uri': u'127.0.0.1:5000', 'uri': node.uri}
+                                                              u'control_uris': [u'127.0.0.1:5000'], 'uris': node.uris}
 
         self.storage.delete_node(node, cb=CalvinCB(func=cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())

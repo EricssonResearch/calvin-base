@@ -1034,6 +1034,10 @@ class CalvinControl(object):
         content_type = content_type or "Content-Type: application/json"
         content_type += "\n"
 
+        # No data return 204 no content
+        if data is None and status in range(200, 207):
+            status = 204
+
         header = "HTTP/1.0 " + \
             str(status) + " " + calvinresponse.RESPONSE_CODES[status] + \
             "\n" + ("" if data is None else content_type ) + \
@@ -1687,7 +1691,7 @@ class CalvinControl(object):
         self.send_response(handle, connection, json.dumps({ 'user_id': user_id,
                                                             'timeout': timeout,
                                                             'epoch_year': time.gmtime(0).tm_year})
-                                                if status == calvinresponse.OK else None, status=status)
+                            if status == calvinresponse.OK else None, status=status)
 
     @authentication_decorator
     def handle_delete_meter(self, handle, connection, match, data, hdr):

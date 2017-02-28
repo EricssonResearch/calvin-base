@@ -179,8 +179,13 @@ class TestNodeSetup(CalvinTestBase):
 
     def testStartNode(self):
         """Testing starting node"""
+        #import sys
+        #from twisted.python import log
+        #from twisted.internet import defer
+        #log.startLogging(sys.stdout)
+        #defer.setDebugging(True)
 
-        assert request_handler.get_node(self.rt1, self.rt1.id)['uri'] == self.rt1.uri
+        assert request_handler.get_node(self.rt1, self.rt1.id)['uris'] == self.rt1.uris
 
 
 @pytest.fixture(params=[("rt1", "rt2"), ("rt1", "rt1")])
@@ -4321,15 +4326,15 @@ class TestDeployScript(CalvinTestBase):
         src = response['actor_map']['simple:src']
         snk = response['actor_map']['simple:snk']
 
-        rt_src = request_handler.get_node(rt, response['placement'][src][0])["control_uri"]
-        rt_snk = request_handler.get_node(rt, response['placement'][snk][0])["control_uri"]
+        rt_src = request_handler.get_node(rt, response['placement'][src][0])["control_uris"]
+        rt_snk = request_handler.get_node(rt, response['placement'][snk][0])["control_uris"]
 
         assert response["requirements_fulfilled"]
 
-        wait_for_tokens(rt_src, snk)
-        expected = expected_tokens(rt_src, src, 'seq')
-        actual = actual_tokens(rt_snk, snk, len(expected))
-        request_handler.disconnect(rt_src, src)
+        wait_for_tokens(rt_src[0], snk)
+        expected = expected_tokens(rt_src[0], src, 'seq')
+        actual = actual_tokens(rt_snk[0], snk, len(expected))
+        request_handler.disconnect(rt_src[0], src)
 
         self.assert_lists_equal(expected, actual)
         helpers.delete_app(request_handler, rt, response['application_id'])
