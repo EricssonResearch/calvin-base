@@ -13,8 +13,12 @@ echo $! >> runtime.pids
 
 sleep 2
 
-cscontrol http://localhost:5001 deploy $TEST.calvin --reqs $TEST.deployjson
+cscontrol http://localhost:5001 deploy $TEST.calvin # --reqs $TEST.deployjson
+sleep 3
+app_id=$(cscontrol http://localhost:5001 applications list | head -2 | tail -1 | tr -d '"')
+echo application: $app_id
 
+cscontrol http://localhost:5001 applications migrate $app_id --reqs $TEST.deployjson
 
 sleep 5
 for pid in $(cat runtime.pids); do
