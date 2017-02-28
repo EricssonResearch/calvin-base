@@ -184,10 +184,10 @@ class QueueTests(unittest.TestCase):
         self.assertFalse(f.slots_available(1, None))
         self.assertRaises(queue.common.QueueFull, f.write, Token('b'), None)
 
-    def test_scheduled_queue_1(self):
+    def test_round_robin_queue_1(self):
         """Round-Robin scheduled queue test"""
 
-        f = queue.scheduled_fifo.ScheduledFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
+        f = queue.fanout_round_robin_fifo.FanoutRoundRobinFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
         f.add_reader("r1", {})
         f.add_reader("r2", {})
 
@@ -253,10 +253,10 @@ class QueueTests(unittest.TestCase):
         self.assertRaises(queue.common.QueueEmpty, f.peek, "r1")
         self.assertRaises(queue.common.QueueEmpty, f.peek, "r2")
 
-    def test_scheduled_queue_2(self):
+    def test_round_robin_queue_2(self):
         """Round-Robin scheduled queue test"""
 
-        f = queue.scheduled_fifo.ScheduledFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
+        f = queue.fanout_round_robin_fifo.FanoutRoundRobinFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
         f.add_reader("r1", {})
         f.add_reader("r2", {})
 
@@ -313,7 +313,7 @@ class QueueTests(unittest.TestCase):
     def test_scheduled_queue_3(self):
         """Round-Robin scheduled queue test"""
 
-        f = queue.scheduled_fifo.ScheduledFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
+        f = queue.fanout_round_robin_fifo.FanoutRoundRobinFIFO({'routing': 'round-robin', 'nbr_peers': 2}, {})
         f.add_reader("r1", {})
         f.add_reader("r2", {})
 
@@ -348,10 +348,11 @@ class QueueTests(unittest.TestCase):
         assert sorted(values['r1']) == values['r1']
         assert sorted(values['r2']) == values['r2']
 
-    def test_scheduled_queue_4(self):
+    def test_random_queue_4(self):
         """Random scheduled queue test"""
 
-        f = queue.scheduled_fifo.ScheduledFIFO({'routing': 'random', 'nbr_peers': 2}, {})
+        f = queue.fanout_random_fifo.FanoutRandomFIFO({'routing': 'random', 'nbr_peers': 2}, {})
+        
         f.add_reader("r1", {})
         f.add_reader("r2", {})
 
