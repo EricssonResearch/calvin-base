@@ -30,7 +30,18 @@ _join_request = {'cmd': 'JOIN_REQUEST', 'id': None, 'sid': None, 'serializers': 
 class CalvinTransport(base_transport.BaseTransport):
     def __init__(self, rt_id, remote_uri, callbacks, transport, proto=None, node_name=None, server_node_name=None, client_validator=None):
         """docstring for __init__"""
-        _log.debug("rt_id={}, node_name={}, remote_uri={}, callbacks={}, transport={}, server_node_name={}".format(rt_id, node_name, remote_uri, callbacks, transport, server_node_name))
+        _log.debug("CalvinTransport::__init__: "
+                   "\n\trt_id={}"
+                   "\n\tnode_name={}"
+                   "\n\tremote_uri={}"
+                   "\n\tcallbacks={}"
+                   "\n\ttransport={}"
+                   "\n\tserver_node_name={}".format(rt_id,
+                                                    node_name,
+                                                    remote_uri,
+                                                    callbacks,
+                                                    transport,
+                                                    server_node_name))
         super(CalvinTransport, self).__init__(rt_id, remote_uri, callbacks=callbacks)
 
         self._rt_id = rt_id
@@ -258,10 +269,23 @@ class CalvinServer(base_transport.BaseServer):
             Callback when the client connects still needs a join to be finnshed
             before we can callback upper layers
         """
+        import socket
+        try:
+            junk, ipv6 = uri.split("//")
+            ipv6_addr_list = ipv6.split(":")[:-1]
+            ipv6_addr = ":".join(ipv6_addr_list)
+            hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ipv6_addr)
+            fqdn = socket.getfqdn(hostname)
+        except Exception as err:
+            _log.error("Could not resolve ip address to hostname"
+                            "\n\terr={}"
+                            "\n\turi={}".format(err, uri))
+
         tp = CalvinTransport(self._rt_id, uri, self._callbacks,
                              self._client_transport, proto=protocol,
                              node_name=self._node_name,
-							 client_validator=self._client_validator)
+                             server_node_name=fqdn,
+                             client_validator=self._client_validator)
 
         self._callback_execute('peer_connected', tp, tp.get_uri())
 

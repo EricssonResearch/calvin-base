@@ -87,6 +87,7 @@ class RuntimeCredentials():
 #            'req_attributes':{'challengePassword':'password'},
             'alt_names':{'IP.1':'x',
 #                        'URI.1':'https://elxahyc5lz1:5022',
+                        'DNS.3':'elxahyc5lz1.localdomain',
                         'DNS.2':'elxahyc5lz1',
                         'DNS.1':'runtime'},
             'ca': {'default_ca': 'RT_default'},
@@ -139,16 +140,23 @@ class RuntimeCredentials():
             """
             Create new openssl.conf configuration file.
             """
+            import socket
 #            print "new_opensslconf"
             _log.debug("__init__::new_opensslconf")
             for section in self.__class__.DEFAULT.keys():
                 self.config.add_section(section)
 #                print "[{}]".format(section)
+                hostname = socket.gethostname()
                 for option in self.__class__.DEFAULT[section]:
                     if option == "0.organizationName":
                         value = self.domain
                     elif option == "DNS.1":
                         value = self.node_name
+                    elif option == "DNS.2":
+                        value = hostname
+                    elif option == "DNS.3":
+                        fqdn = socket.getfqdn(hostname)
+                        value = fqdn
                     elif option == "IP.1":
                         value = self.subjectAltName
                     elif option == "dir":
@@ -357,6 +365,7 @@ class RuntimeCredentials():
         """
         Update openssl.conf configuration file.
         """
+        import socket
 #        print "update_opensslconf"
         _log.debug("update_opensslconf")
         self.config=ConfigParser.SafeConfigParser()
@@ -364,11 +373,17 @@ class RuntimeCredentials():
         for section in self.__class__.DEFAULT.keys():
             self.config.add_section(section)
 #            print "[{}]".format(section)
+            hostname = socket.gethostname()
             for option in self.__class__.DEFAULT[section]:
                 if option == "0.organizationName":
                     value = self.domain
                 elif option == "DNS.1":
                     value = self.node_name
+                elif option == "DNS.2":
+                    value = hostname
+                elif option == "DNS.3":
+                    fqdn = socket.getfqdn(hostname)
+                    value = fqdn
                 elif option == "IP.1":
                     value = self.subjectAltName
                 elif option == "dir":

@@ -527,7 +527,8 @@ class CalvinNetwork(object):
             if not self._peer_cache[peer_id]['callbacks'] and callback:
                 self._peer_cache[peer_id]['callbacks'] = [callback]
             _log.debug("First call or force")
-            self.join([self._peer_cache[peer_id]['uris'][0]], CalvinCB(self._link_request_finished, peer_id=peer_id))
+            self.join([self._peer_cache[peer_id]['uris'][0]], CalvinCB(self._link_request_finished, peer_id=peer_id),
+                      corresponding_server_node_names=[self._peer_cache[peer_id]['server_name']])
         elif callback:
             _log.debug("Trying to join already ongoing join, just adding callback %s", callback)
             self._peer_cache[peer_id]['callbacks'].append(callback)
@@ -556,6 +557,7 @@ class CalvinNetwork(object):
         # Set values from storage
         self._peer_cache[key]['uris'] = value['uris']
         self._peer_cache[key]['timestamp'] = time.time()
+        self._peer_cache[key]['server_name'] = server_node_name_as_str
 
         if 'proxy' not in value:
             # join the peer node
