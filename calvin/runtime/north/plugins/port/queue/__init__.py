@@ -16,12 +16,13 @@
 
 # Queues
 _MODULES = {'fanout_fifo': 'FanoutFIFO',
-            'scheduled_fifo': 'ScheduledFIFO',
-            'balanced_queue': 'BalancedQueue',
             'collect_unordered': 'CollectUnordered',
             'collect_synced': 'CollectSynced',
             'collect_any': 'CollectAny',
             'fanout_ordered_fifo': 'FanoutOrderedFIFO',
+            'fanout_round_robin_fifo': "FanoutRoundRobinFIFO",
+            'fanout_random_fifo': "FanoutRandomFIFO",
+            'fanout_balanced_fifo': "FanoutBalancedFIFO",
             'fanout_mapped_fifo': 'FanoutMappedFIFO'}
 
 from calvin.utilities.calvinlogger import get_logger
@@ -40,14 +41,16 @@ def get(port, peer_port=None, peer_port_meta=None):
         routing_prop = port.properties['routing']
         if isinstance(routing_prop, (tuple, list)):
             routing_prop = routing_prop[0]
-        if 'round-robin' == routing_prop or 'random' == routing_prop:
-            selected_queue = "scheduled_fifo"
+        if 'round-robin' == routing_prop:
+            selected_queue = "fanout_round_robin_fifo"
+        elif 'random' == routing_prop:
+            selected_queue = "fanout_random_fifo"
         elif 'dispatch-ordered' == routing_prop:
             selected_queue = 'fanout_ordered_fifo'
         elif 'dispatch-mapped' == routing_prop:
             selected_queue = 'fanout_mapped_fifo'
         elif 'balanced' == routing_prop:
-            selected_queue = "balanced_queue"
+            selected_queue = "fanout_balanced_fifo"
         elif routing_prop in ['collect-unordered', 'collect-tagged']:
             selected_queue = "collect_unordered"
         elif routing_prop == 'collect-all-tagged':

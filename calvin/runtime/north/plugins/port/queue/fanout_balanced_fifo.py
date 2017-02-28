@@ -16,12 +16,12 @@
 
 from calvin.runtime.north.plugins.port.queue.common import QueueFull
 from calvin.utilities import calvinlogger
-from calvin.runtime.north.plugins.port.queue.scheduled_fifo import ScheduledFIFO
+from calvin.runtime.north.plugins.port.queue.fanout_ordered_fifo import FanoutOrderedFIFO
 
 _log = calvinlogger.get_logger(__name__)
 
 
-class BalancedQueue(ScheduledFIFO):
+class FanoutBalancedFIFO(FanoutOrderedFIFO):
 
     """
     A queue which route tokens trying to keep to peers equally busy
@@ -31,7 +31,7 @@ class BalancedQueue(ScheduledFIFO):
     """
 
     def __init__(self, port_properties, peer_port_properties):
-        super(BalancedQueue, self).__init__(port_properties, peer_port_properties)
+        super(FanoutBalancedFIFO, self).__init__(port_properties, peer_port_properties)
 
     def _set_turn(self):
         self._update_turn = lambda self: True
