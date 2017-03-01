@@ -38,11 +38,8 @@ class FanoutBase(object):
         self.write_pos = {}
         self.read_pos = {}
         self.tentative_read_pos = {}
-        if isinstance(port_properties['routing'], (tuple, list)):
-            routing = port_properties['routing'][0]
-        else:
-            routing = port_properties['routing']
-        self._type = "scheduled_fifo:" + routing
+        # No type in base class
+        self._type = None
         
     def __str__(self):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
