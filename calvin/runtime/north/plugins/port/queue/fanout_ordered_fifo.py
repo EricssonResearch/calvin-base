@@ -85,6 +85,10 @@ class FanoutOrderedFIFO(FanoutBase):
             raise Exception("Illegal port order list")
         self.readers = order
 
+    def add_reader(self, reader, properties):
+        super(FanoutOrderedFIFO, self).add_reader(reader, properties)
+        self.readers.sort()
+    
     def remove_reader(self, reader):
         removed = super(FanoutOrderedFIFO, self).remove_reader(reader)
         if removed:
