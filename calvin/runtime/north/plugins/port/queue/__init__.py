@@ -17,6 +17,7 @@
 # Queues
 _MODULES = {'fanout_fifo': 'FanoutFIFO',
             'collect_unordered': 'CollectUnordered',
+            'collect_tagged': "CollectTagged",
             'collect_synced': 'CollectSynced',
             'collect_any': 'CollectAny',
             'fanout_ordered_fifo': 'FanoutOrderedFIFO',
@@ -41,6 +42,7 @@ def get(port, peer_port=None, peer_port_meta=None):
         routing_prop = port.properties['routing']
         if isinstance(routing_prop, (tuple, list)):
             routing_prop = routing_prop[0]
+        
         if 'round-robin' == routing_prop:
             selected_queue = "fanout_round_robin_fifo"
         elif 'random' == routing_prop:
@@ -51,8 +53,10 @@ def get(port, peer_port=None, peer_port_meta=None):
             selected_queue = 'fanout_mapped_fifo'
         elif 'balanced' == routing_prop:
             selected_queue = "fanout_balanced_fifo"
-        elif routing_prop in ['collect-unordered', 'collect-tagged']:
+        elif routing_prop == 'collect-unordered':
             selected_queue = "collect_unordered"
+        elif routing_prop == 'collect-tagged':
+            selected_queue = 'collect_tagged' 
         elif routing_prop == 'collect-all-tagged':
             selected_queue = "collect_synced"
         elif routing_prop == 'collect-any-tagged':

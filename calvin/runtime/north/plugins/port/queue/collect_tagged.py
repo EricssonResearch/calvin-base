@@ -15,44 +15,25 @@
 # limitations under the License.
 
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
-from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
+from calvin.runtime.north.plugins.port.queue.collect_unordered import CollectUnordered
 from calvin.utilities import calvinlogger
+import copy
 
 _log = calvinlogger.get_logger(__name__)
 
 
-class CollectUnordered(CollectBase):
+class CollectTagged(CollectUnordered):
+
     """
-   Collect tokens from multiple peers, actions see them individually in without order between peers.
+    Collect tokens from multiple peers, actions see
+    them individually as {<tag>: token}. Use property tag on
+    a connected outport otherwise tag defaults to port id.
+
     """
 
     def __init__(self, port_properties, peer_port_properties):
-        super(CollectUnordered, self).__init__(port_properties, peer_port_properties)
-        self.turn_pos = 0
-        self._type = "collect:unordered"
-        self.peek_turn_pos = -1
-
-    def _state(self, remap=None):
-        state = super(CollectUnordered, self)._state(remap)
-        if remap is None:
-            state['turn_pos'] = self.turn_pos
-        else:
-            state['turn_pos'] = 0
-        return state
-
-    def _set_state(self, state):
-        super(CollectUnordered, self)._set_state(state)
-        self.turn_pos = state["turn_pos"]
-
-    def tokens_available(self, length, metadata):
-        if length >= self.N:
-            return False
-        available = 0
-        for metadata in self.writers:
-            available += self.write_pos[metadata] - self.tentative_read_pos[metadata]
-            if available >= length:
-                return True
-        return False
+        super(CollectTagged, self).__init__(port_properties, peer_port_properties)
+        self._type = "collect:tagged"
 
     def peek(self, metadata):
         for i in xrange(self.turn_pos, self.turn_pos + len(self.writers)):
@@ -64,14 +45,10 @@ class CollectUnordered(CollectBase):
                 if self.peek_turn_pos == -1:
                     self.peek_turn_pos = self.turn_pos
                 self.turn_pos = (i + 1)  % len(self.writers)
+                # Modify token to tagged value
+                # Make copy so that repeated peeks are not repeatedly tagging
+                # Also copy to preserv Token class, potential exception token.
+                data = copy.deepcopy(data)
+                data.value = {self.tags[writer]: data.value}
                 return data
         raise QueueEmpty(reader=metadata)
-
-    def commit(self, metadata):
-        self.peek_turn_pos = -1
-        return super(CollectUnordered, self).commit(metadata)
-
-    def cancel(self, metadata):
-        self.turn_pos = self.peek_turn_pos
-        self.peek_turn_pos = -1
-        super(CollectUnordered, self).cancel(metadata)
