@@ -37,7 +37,7 @@ class TestFanoutOrderedFIFO(unittest.TestCase):
         
     def testType(self):
         queue_type = self.outport.queue_type
-        self.assertEqual(queue_type, "scheduled_fifo:dispatch-ordered")
+        self.assertEqual(queue_type, "dispatch:ordered")
     
     def testGetPeers(self):
         self.setup_readers(3)

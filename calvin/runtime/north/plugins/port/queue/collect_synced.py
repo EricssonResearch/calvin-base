@@ -27,8 +27,10 @@ _log = calvinlogger.get_logger(__name__)
 class CollectSynced(CollectBase):
 
     """
-    A queue with fanin support, does not handle token order between connections
-    only within a connection.
+    Collect tokens from multiple peers, actions see
+    them all as one token {<tag1>: <token1>, ... <tagN>: <tokenN>}.
+    Use property tag on a connected outport otherwise tag defaults to port id.
+    
     """
 
     def __init__(self, port_properties, peer_port_properties):

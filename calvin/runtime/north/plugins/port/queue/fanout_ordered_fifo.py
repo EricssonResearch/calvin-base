@@ -25,10 +25,8 @@ _log = calvinlogger.get_logger(__name__)
 class FanoutOrderedFIFO(FanoutBase):
 
     """
-    A FIFO which route tokens based on a schedule to peers
-    Parameters:
-        port_properties: dictionary must contain key 'routing' with
-                         value 'round-robin' or 'random'
+    A FIFO which route tokens based on an ordering to peers
+
     """
 
     def __init__(self, port_properties, peer_port_properties):
@@ -36,6 +34,7 @@ class FanoutOrderedFIFO(FanoutBase):
         self.reader_turn = None
         self.turn_pos = 0
         self._set_turn()
+        self._type = "dispatch:ordered"
 
     def _set_turn(self):
         # Get routing schedule based on info after ':' in type

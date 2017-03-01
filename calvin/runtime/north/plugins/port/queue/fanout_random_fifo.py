@@ -28,15 +28,14 @@ _log = calvinlogger.get_logger(__name__)
 class FanoutRandomFIFO(FanoutOrderedFIFO):
 
     """
-    A FIFO which route tokens based on a schedule to peers
-    Parameters:
-        port_properties: dictionary must contain key 'routing' with
-                         value 'round-robin' or 'random'
+    A FIFO which route tokens randomly to peers
+
     """
 
     def __init__(self, port_properties, peer_port_properties):
         super(FanoutRandomFIFO, self).__init__(port_properties, peer_port_properties)
-
+        self._type = "dispatch:random"
+        
     def _set_turn(self):
         self._update_turn = self._random
         if self.reader_turn is None:

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.runtime.north.calvin_token import Token
-from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
+from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
 from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
 from calvin.utilities import calvinlogger
 from calvin.runtime.north.calvin_token import ExceptionToken
@@ -27,8 +27,10 @@ _log = calvinlogger.get_logger(__name__)
 class CollectAny(CollectBase):
 
     """
-    A queue with fanin support, does not handle token order between connections
-    only within a connection.
+    Collect tokens from multiple peers, actions see
+    them as one token {<tag1>: <token1>, ... <tagN>: <tokenN>}. The collected
+    token is available when any of the peers have delivered tokens.
+    Use property tag on a connected outport otherwise tag defaults to port id.
     """
 
     def __init__(self, port_properties, peer_port_properties):

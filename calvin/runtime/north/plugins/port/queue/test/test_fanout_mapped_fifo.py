@@ -40,7 +40,7 @@ class TestFanoutMappedFIFO(unittest.TestCase):
         
     def testType(self):
         queue_type = self.outport.queue_type
-        self.assertEqual(queue_type, "scheduled_fifo:dispatch-mapped")
+        self.assertEqual(queue_type, "dispatch:mapped")
     
     def testGetPeers(self):
         self.setup_readers(3)
