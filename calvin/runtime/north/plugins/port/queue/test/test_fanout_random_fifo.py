@@ -19,7 +19,7 @@ def find_data(data, port):
 class TestFanoutRandomFIFO(TestFanoutRoundRobinFIFO):
 
     routing = "random"
-    queue_type = "scheduled_fifo:random"
+    queue_type = "dispatch:random"
     num_peers = 3
 
     def testWrite_Normal(self):

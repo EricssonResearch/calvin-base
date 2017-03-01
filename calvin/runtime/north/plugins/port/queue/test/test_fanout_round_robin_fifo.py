@@ -20,7 +20,7 @@ def find_data(data, port):
 class TestFanoutRoundRobinFIFO(unittest.TestCase):
 
     routing = "round-robin"
-    queue_type = "scheduled_fifo:round-robin"
+    queue_type = "dispatch:round-robin"
     num_peers = 3
     
     def create_port(self):

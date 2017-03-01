@@ -24,14 +24,12 @@ _log = calvinlogger.get_logger(__name__)
 class FanoutBalancedFIFO(FanoutOrderedFIFO):
 
     """
-    A queue which route tokens trying to keep to peers equally busy
-    Parameters:
-        port_properties: dictionary must contain key 'routing' with
-                         value 'balanced'
+    A queue which routes tokens trying to keep to peers equally busy
     """
 
     def __init__(self, port_properties, peer_port_properties):
         super(FanoutBalancedFIFO, self).__init__(port_properties, peer_port_properties)
+        self._type = "dispatch:balanced"
 
     def _set_turn(self):
         self._update_turn = lambda self: True

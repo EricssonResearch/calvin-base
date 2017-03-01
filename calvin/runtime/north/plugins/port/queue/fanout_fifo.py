@@ -24,10 +24,7 @@ _log = calvinlogger.get_logger(__name__)
 class FanoutFIFO(object):
 
     """
-    A FIFO with fanout support
-    Parameters:
-        length is the number of entries in the FIFO
-        readers is a set of peer port ids reading from the FIFO
+    Default FIFO, all tokens to all peers
     """
 
     def __init__(self, port_properties, peer_port_properties):
