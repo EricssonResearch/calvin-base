@@ -66,15 +66,27 @@ class Node(object):
        such as name of node
     """
 
-    def __init__(self, uri, control_uri, attributes=None):
+    def __init__(self, uris, control_uri, attributes=None):
         super(Node, self).__init__()
         self.quitting = False
-        self.uri = uri
+
+        # Warn if its not a uri
+        if not isinstance(uris, list):
+            _log.error("Calvin uris must be a list %s" % uris)
+            raise TypeError("Calvin uris must be a list!")
+
+        # Uris
+        self.uris = uris
+        if attributes:
+            ext_uris = attributes.pop('external_uri', None)
+        if ext_uris is not None:
+            self.uris += ext_uris
+
+        # Control uri
         self.control_uri = control_uri
-        self.external_uri = attributes.pop('external_uri', self.uri) \
-            if attributes else self.uri
         self.external_control_uri = attributes.pop('external_control_uri', self.control_uri) \
             if attributes else self.control_uri
+
         try:
             self.attributes = AttributeResolver(attributes)
         except:
@@ -205,7 +217,7 @@ class Node(object):
         """ Run once when main loop is started """
         interfaces = _conf.get(None, 'transports')
         self.network.register(interfaces, ['json'])
-        self.network.start_listeners(self.uri)
+        self.network.start_listeners(self.uris)
         # Start storage after network, proto etc since storage proxy expects them
         self.storage.start(cb=CalvinCB(self._storage_started_cb))
         self.storage.add_node(self)
@@ -342,7 +354,7 @@ def create_node(uri, control_uri, attributes=None):
     setup_logging(logfile)
     n = Node(uri, control_uri, attributes)
     n.run()
-    _log.info('Quitting node "%s"' % n.uri)
+    _log.info('Quitting node "%s"' % n.uris)
 
 
 def create_tracing_node(uri, control_uri, attributes=None, logfile=None):
@@ -370,7 +382,7 @@ def create_tracing_node(uri, control_uri, attributes=None, logfile=None):
             tracer = trace.Trace(trace=1, count=0, ignoredir=paths)
             tracer.runfunc(n.run)
         sys.stdout = tmp
-    _log.info('Quitting node "%s"' % n.uri)
+    _log.info('Quitting node "%s"' % n.uris)
 
 
 def start_node(uri, control_uri, trace_exec=False, attributes=None):

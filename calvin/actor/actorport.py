@@ -409,7 +409,7 @@ class PortMeta(object):
         if self.node_id is None:
             try:
                 self.retrieve(callback=None, local_only=True)
-            except:
+            except response.CalvinResponseException:
                 return False
         return self.node_id == self.pm.node.id
 
@@ -441,10 +441,10 @@ class PortMeta(object):
             Node id is always retrieved.
             local_only means only looks locally for the port.
         """
-        try:
+        direction = None
+        if self.properties and 'direction' in self.properties:
             direction = self.properties['direction']
-        except:
-            direction = None
+
         try:
             self._port = self.pm._get_local_port(self.actor_id, self.port_name, direction, self.port_id)
             # Found locally
@@ -457,15 +457,15 @@ class PortMeta(object):
             if callback:
                 callback(status=status, port_meta=self)
             return status
-        except:
+        except KeyError as e:
             # not local
             if local_only:
                 if self.port_id:
                     status = response.CalvinResponse(response.BAD_REQUEST,
-                                                    "Port %s must be local" % (self.port_id))
+                                                    "Port %s must be local" % (self.port_id)) # For other side
                 else:
                     status = response.CalvinResponse(response.BAD_REQUEST,
-                                                    "Port %s on actor %s must be local" %
+                                                    "Port %s on actor %s must be local" % # For other side
                                                     (self.port_name, self.actor_id))
                 raise response.CalvinResponseException(status)
 

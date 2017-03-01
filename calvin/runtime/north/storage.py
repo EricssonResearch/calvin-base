@@ -38,18 +38,21 @@ class Storage(object):
     All functions in this class should be async and never block.
     """
 
-    def __init__(self, node):
+    def __init__(self, node, override_storage=None):
         self.localstore = {}
         self.localstore_sets = {}
         self.started = False
         self.node = node
         storage_type = _conf.get('global', 'storage_type')
-        print "#### STORAGE TYPE ####", storage_type
+        _log.info("#### STORAGE TYPE %s ####", storage_type)
         self.proxy = _conf.get('global', 'storage_proxy') if storage_type == 'proxy' else None
         _log.analyze(self.node.id, "+", {'proxy': self.proxy})
         self.tunnel = {}
         self.starting = storage_type != 'local'
-        self.storage = storage_factory.get(storage_type, node)
+        if override_storage:
+            self.storage = override_storage
+        else:
+            self.storage = storage_factory.get(storage_type, node)
         self.coder = message_coder_factory.get("json")  # TODO: always json? append/remove requires json at the moment
         self.flush_delayedcall = None
         self.reset_flush_timeout()
@@ -209,7 +212,6 @@ class Storage(object):
 
         # Always save locally
         self.localstore[prefix + key] = value
-
         if self.started:
             self.storage.set(key=prefix + key, value=value, cb=CalvinCB(func=self.set_cb, org_key=key, org_value=value, org_cb=cb))
         elif cb:
@@ -514,8 +516,8 @@ class Storage(object):
         Add node to storage
         """
         self.set(prefix="node-", key=node.id,
-                  value={"uri": node.external_uri,
-                         "control_uri": node.external_control_uri,
+                  value={"uris": node.uris,
+                         "control_uris": [node.external_control_uri],
                          "attributes": {'public': node.attributes.get_public(),
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
         self._add_node_index(node)
@@ -734,7 +736,7 @@ class Storage(object):
 
     def add_replica(self, replication_id, actor_id, node_id=None, cb=None):
         self.add_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
-        self.add_index(['replicas', 'nodes', replication_id], 
+        self.add_index(['replicas', 'nodes', replication_id],
                         self.node.id if node_id is None else node_id, root_prefix_level=3, cb=cb)
 
     def remove_replica(self, replication_id, actor_id, cb=None):

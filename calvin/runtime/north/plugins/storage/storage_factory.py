@@ -18,8 +18,7 @@
 # Parsers
 from calvin.runtime.south.plugins.storage import dht, securedht
 from calvin.runtime.north.plugins.storage.proxy import StorageProxy
-from calvin.utilities import calvinlogger
-_log = calvinlogger.get_logger(__name__)
+from calvin.runtime.north.plugins.storage.storage_dict_local import StorageLocal
 
 def get(type_, node=None):
     if type_ == "dht":
@@ -30,5 +29,7 @@ def get(type_, node=None):
         return StorageProxy(node)
     elif type_ == "local":
         return None
+    elif type_ == "local_dict":
+        return StorageLocal(node)
 
     raise Exception("Parser {} requested is not supported".format(type_))

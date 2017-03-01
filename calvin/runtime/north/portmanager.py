@@ -274,7 +274,9 @@ class PortManager(object):
         if not status and port_ids:
             if _callback:
                 del port_ids[:]
-                _callback(status=response.CalvinResponse(False), actor_id=actor_id)
+                _callback(status=status, actor_id=actor_id, port_id=port_id)
+            return
+
         if port_id in port_ids:
             # Remove this port from list
             port_ids.remove(port_id)
@@ -358,5 +360,5 @@ class PortManager(object):
             for port in self.ports.itervalues():
                 if port.name == port_name and port.owner and port.owner.id == actor_id:
                     return port
-        raise Exception("Port '%s' not found locally" % (port_id if port_id else str(actor_id) +
+        raise KeyError("Port '%s' not found locally" % (port_id if port_id else str(actor_id) +
                                                         "/" + str(port_name) + ":" + str(port_dir)))

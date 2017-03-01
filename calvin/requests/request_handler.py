@@ -86,18 +86,23 @@ class RequestHandler(object):
     def set_credentials(self, credentials):
         self.credentials=credentials
 
-
     def check_response(self, response, success=range(200, 207), key=None):
         if isinstance(response, Response):
             if response.status_code in success:
-                try:
-                    r = json.loads(response.text)
-                    return r if key is None else r[key]
-                except:
-                    _log.error("Failed to parse response '{}' as json".format(response.text))
-                    return None
+                if response.status_code == "204":
+                    return
+                if response.headers.get("content-type") == "application/json":
+                    try:
+                        r = json.loads(response.text)
+                        return r if key is None else r[key]
+                    except ValueError:
+                        _log.error("Content-Type is %s, but failed to decode '{}' as json", response.text)
+                        return None
+                else:
+                    # No content type return the text
+                    return response.text
             # When failed raise exception
-            raise Exception("%d%s" % (response.status_code, ("\n" + response.text) if response.text else ""))
+            raise Exception("%d%s" % (response.status_code, ("\n" + repr(response.text)) if response.text else ""))
         else:
             # We have a async Future just return it
             response._calvin_key = key
@@ -107,6 +112,7 @@ class RequestHandler(object):
 
     def _send(self, rt, timeout, send_func, path, data=None):
         rt = get_runtime(rt)
+        _log.debug("Sending request %s, %s, %s", send_func, rt.control_uri + path, json.dumps(data))
         if self.verify and data is not None:
             return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data), verify=self.verify)
         elif self.verify and data is None:
@@ -116,7 +122,7 @@ class RequestHandler(object):
         else:
             return send_func(rt.control_uri + path, timeout=timeout)
 
-    def _get(self, rt, timeout, async, path):
+    def _get(self, rt, timeout, async, path, headers=""):
         req = session if async else requests
         return self._send(rt, timeout, req.get, path)
 

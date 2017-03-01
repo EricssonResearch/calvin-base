@@ -533,7 +533,7 @@ class CA():
                 csr_fd.write(csr)
             with open(filepath +".challenge_password", 'w') as csr_fd:
                 csr_fd.write(challenge_password)
-        except EnviromentError as err:
+        except EnvironmentError as err:
             raise StoreFailed(err)
         return filepath
 
@@ -708,7 +708,7 @@ class CA():
         is_ca = _conf.get("security","certificate_authority")
         if is_ca=="True":
             security_dir = _conf.get("security", "security_path")
-            domain_name = _conf.get("security", "security_domain_name")
+            domain_name = _conf.get("security", "domain_name")
             if security_dir:
                 cert_conf_file = os.path.join(security_dir,domain_name,"openssl.conf")
             else:

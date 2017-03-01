@@ -39,11 +39,11 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
         _log.debug("calvinip join %s", uri)
         try:
             tp = twisted_transport.CalvinTransport(self._rt_id,
-                                                   uri, self._callbacks,
-                                                   TwistedCalvinTransport,
-												   node_name=self._node_name,
-												   client_validator=self._client_validator,
-                                                   server_node_name=server_node_name)
+                                                    uri, self._callbacks,
+                                                    TwistedCalvinTransport,
+                                                    node_name=self._node_name,
+                                                    client_validator=self._client_validator,
+                                                    server_node_name=server_node_name)
             self._peers[peer_addr] = tp
             tp.connect()
             return tp

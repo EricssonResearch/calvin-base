@@ -49,9 +49,8 @@ runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
 
 _conf = calvinconfig.get()
 _conf.add_section("security")
-_conf.set("security", "security_domain_name", "test")
 _conf.set('security', "runtimes_path", runtimesdir)
-_conf.set('security', "security_domain_name", domain)
+_conf.set('security', "domain_name", domain)
 _conf.set('security', "security_path",testdir)
 
 @pytest.fixture(scope="session", autouse=True)
@@ -62,7 +61,6 @@ def cleanup(request):
         reactor.callFromThread(reactor.stop)
     request.addfinalizer(fin)
 
-@pytest.mark.interactive
 @pytest.mark.slow
 class TestDHT(object):
     test_nodes = 2

@@ -65,16 +65,12 @@ try:
 except:
     import socket
     # If this fails add hostname to the /etc/hosts file for 127.0.0.1
-    # ip_addr = socket.gethostbyname(socket.gethostname())
+    ip_addr = socket.gethostbyname(socket.gethostname())
     hostname = socket.gethostname()
 
-
-rt0 = None
-rt1 = None
-rt2 = None
-rt3 = None
-rt4 = None
+rt=[]
 request_handler=None
+storage_verified=False
 
 def replace_text_in_file(file_path, text_to_be_replaced, text_to_insert):
     # Read in the file
@@ -89,6 +85,15 @@ def replace_text_in_file(file_path, text_to_be_replaced, text_to_insert):
     with open(file_path, 'w') as file:
         file.write(filedata)
 
+def fetch_and_log_runtime_actors():
+    global rt
+    # Verify that actors exist like this
+    actors=[]
+    for runtime in rt:
+        actors.append(request_handler.get_actors(runtime))
+    _log.info("\n\trt0 actors={}\n\trt1 actors={}\n\trt2 actors={}\n\trt3 actors={}\n\trt4 actors={}\n\trt5 actors={}".format(actors[0], actors[1], actors[2], actors[3], actors[4], actors[5]))
+    return actors
+
 @pytest.mark.slow
 class TestSecurity(unittest.TestCase):
 
@@ -97,11 +102,7 @@ class TestSecurity(unittest.TestCase):
         from calvin.Tools.csruntime import csruntime
         from conftest import _config_pytest
         import fileinput
-        global rt0
-        global rt1
-        global rt2
-        global rt3
-        global rt4
+        global rt
         global request_handler
         try:
             shutil.rmtree(credentials_testdir)
@@ -211,12 +212,18 @@ class TestSecurity(unittest.TestCase):
                   {'owner':{'organization': domain_name, 'personOrGroup': 'testOwner1'},
                    'node_name': {'organization': 'org.testexample', 'name': 'testNode4'},
                    'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}}
+        rt5_attributes={'indexed_public':
+                  {'owner':{'organization': domain_name, 'personOrGroup': 'testOwner1'},
+                   'node_name': {'organization': 'org.testexample', 'name': 'testNode5'},
+                   'address': {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}}}
         rt_attributes=[]
         rt_attributes.append(deepcopy(rt0_attributes))
         rt_attributes.append(deepcopy(rt1_attributes))
         rt_attributes.append(deepcopy(rt2_attributes))
         rt_attributes.append(deepcopy(rt3_attributes))
         rt_attributes.append(deepcopy(rt4_attributes))
+        rt_attributes.append(deepcopy(rt5_attributes))
+        rt_attributes_cpy = deepcopy(rt_attributes)
         runtimes=[]
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
@@ -224,14 +231,30 @@ class TestSecurity(unittest.TestCase):
         #   The following is less than optimal if multiple CA certs exist
         ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
         request_handler = RequestHandler(verify=ca_cert_path)
-        #Generate enrollment passwords for all runtimes
+
+        #Generate credentials, create CSR, sign with CA and import cert for all runtimes
         enrollment_passwords=[]
         for rt_attribute in rt_attributes:
             attributes=AttributeResolver(rt_attribute)
             node_name = attributes.get_node_name_as_str()
             nodeid = calvinuuid.uuid("")
-            enrollment_passwords.append(ca.cert_enrollment_add_new_runtime(node_name))
-
+            enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
+            enrollment_passwords.append(enrollment_password)
+            runtime=runtime_credentials.RuntimeCredentials(node_name,
+                                                           domain=domain_name,
+                                                           security_dir=credentials_testdir,
+                                                           nodeid=nodeid,
+                                                           enrollment_password=enrollment_password)
+            runtimes.append(runtime)
+            ca_cert = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
+            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
+            #Encrypt CSR with CAs public key (to protect enrollment password)
+            rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert)
+            #Decrypt encrypted CSR with CAs private key
+            csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
+            csr_path = ca.store_csr_with_enrollment_password(csr)
+            cert_path = ca.sign_csr(csr_path)
+            runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
         #Let's hash passwords in users.json file (the runtimes will try to do this
         # but they will all try to do it at the same time, so it will be overwritten
         # multiple times and the first test will always fail)
@@ -243,23 +266,21 @@ class TestSecurity(unittest.TestCase):
         #  request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
 
         rt_conf = copy.deepcopy(_conf)
-        rt_conf.set('security', 'runtime_to_runtime_security', "tls")
-        rt_conf.set('security', 'control_interface_security', "tls")
+#        rt_conf.set('security', 'runtime_to_runtime_security', "tls")
+#        rt_conf.set('security', 'control_interface_security', "tls")
         rt_conf.set('security', 'domain_name', domain_name)
-        #TODO: remove use of "security_domain_name"
-        rt_conf.set('security', 'security_domain_name', domain_name)
-        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
+#        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
         rt_conf.set('security', 'security_dir', credentials_testdir)
-        rt_conf.set('security', 'security_path', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
-        rt_conf.set('global', 'storage_type', "securedht")
+#        rt_conf.set('global', 'storage_type', "securedht")
 
         # Runtime 0: local authentication, signature verification, local authorization.
         # Primarily acts as Certificate Authority for the domain
         rt0_conf = copy.deepcopy(rt_conf)
+        rt0_conf.set('global','storage_type','local')
         rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
-        rt0_conf.set('security', 'control_interface_security', "tls")
-        rt0_conf.set('security','certificate_authority','True')
+#        rt0_conf.set('security', 'control_interface_security', "tls")
+#        rt0_conf.set('security','certificate_authority','True')
         rt0_conf.set("security", "security_conf", {
                         "comment": "Certificate Authority",
                         "authentication": {
@@ -273,31 +294,17 @@ class TestSecurity(unittest.TestCase):
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
 
-        try:
-            logfile = _config_pytest.getoption("logfile")+"5000"
-            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-            if outfile == logfile:
-                outfile = None
-        except:
-            logfile = None
-            outfile = None
-        csruntime(hostname, port=5000, controlport=5020, attr=rt0_attributes,
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5000.conf")
-        rt0 = RT("https://%s:5020" % hostname)
-
-        #Wait for the CA runtime to start before sending CSR requests
-        #TODO: remove the need for this
-        time.sleep(5)
-
         # Runtime 1: local authentication, signature verification, local authorization.
         rt1_conf = copy.deepcopy(rt_conf)
+        rt1_conf.set('global','storage_type','proxy')
+        rt1_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
         rt1_conf.set('security','enrollment_password',enrollment_passwords[1])
         rt1_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
                         "authentication": {
                             "procedure": "local",
-                            "identity_provider_path": identity_provider_path
+                            "identity_provider_path": identity_provider_path,
+                            "accept_external_requests": True
                         },
                         "authorization": {
                             "procedure": "local",
@@ -306,24 +313,12 @@ class TestSecurity(unittest.TestCase):
                     })
         rt1_conf.save("/tmp/calvin5001.conf")
 
-        try:
-            logfile = _config_pytest.getoption("logfile")+"5001"
-            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-            if outfile == logfile:
-                outfile = None
-        except:
-            logfile = None
-            outfile = None
-        csruntime(hostname, port=5001, controlport=5021, attr=rt1_attributes,
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5001.conf")
-        rt1 = RT("https://%s:5021" % hostname)
-
-
         # Runtime 2: local authentication, signature verification, local authorization.
         # Can also act as authorization server for other runtimes.
         # Other street compared to the other runtimes
         rt2_conf = copy.deepcopy(rt_conf)
+        rt2_conf.set('global','storage_type','proxy')
+        rt2_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
         rt2_conf.set('security','enrollment_password',enrollment_passwords[2])
         rt2_conf.set("security", "security_conf", {
                         "comment": "Local authentication, local authorization",
@@ -339,28 +334,16 @@ class TestSecurity(unittest.TestCase):
                     })
         rt2_conf.save("/tmp/calvin5002.conf")
 
-        try:
-            logfile = _config_pytest.getoption("logfile")+"5002"
-            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-            if outfile == logfile:
-                outfile = None
-        except:
-            logfile = None
-            outfile = None
-        csruntime(hostname, port=5002, controlport=5022, attr=rt2_attributes,
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5002.conf")
-        rt2 = RT("https://%s:5022" % hostname)
-
-
         # Runtime 3: external authentication (RADIUS), signature verification, local authorization.
         rt3_conf = copy.deepcopy(rt_conf)
+        rt3_conf.set('global','storage_type','proxy')
+        rt3_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
         rt3_conf.set('security','enrollment_password',enrollment_passwords[3])
         rt3_conf.set("security", "security_conf", {
                         "comment": "RADIUS authentication, local authorization",
                         "authentication": {
-                            "procedure": "radius", 
-                            "server_ip": "localhost", 
+                            "procedure": "radius",
+                            "server_ip": "localhost",
                             "secret": "elxghyc5lz1_passwd"
                         },
                         "authorization": {
@@ -369,22 +352,11 @@ class TestSecurity(unittest.TestCase):
                         }
                     })
         rt3_conf.save("/tmp/calvin5003.conf")
-        try:
-            logfile = _config_pytest.getoption("logfile")+"5003"
-            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-            if outfile == logfile:
-                outfile = None
-        except:
-            logfile = None
-            outfile = None
-        csruntime(hostname, port=5003, controlport=5023, attr=rt3_attributes,
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5003.conf")
-        rt3 = RT("https://%s:5023" % hostname)
 
         # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
-        time.sleep(2)
         rt4_conf = copy.deepcopy(rt_conf)
+        rt4_conf.set('global','storage_type','proxy')
+        rt4_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
         rt4_conf.set('security','enrollment_password',enrollment_passwords[4])
         rt4_conf.set("security", "security_conf", {
                         "comment": "Local authentication, external authorization",
@@ -393,39 +365,59 @@ class TestSecurity(unittest.TestCase):
                             "identity_provider_path": identity_provider_path
                         },
                         "authorization": {
-                            "procedure": "external"
+#                            "procedure": "external"
+                            "procedure": "external",
+                            "server_uuid": runtimes[2].node_id
                         }
                     })
         rt4_conf.save("/tmp/calvin5004.conf")
-        try:
-            logfile = _config_pytest.getoption("logfile")+"5004"
-            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-            if outfile == logfile:
-                outfile = None
-        except:
-            logfile = None
-            outfile = None
-        csruntime(hostname, port=5004, controlport=5024, attr=rt4_attributes,
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5004.conf")
-        rt4 = RT("https://%s:5024" % hostname)
 
-        time.sleep(10)  # Wait to be sure that all runtimes has started
+        # Runtime 5: external authentication (runtime 1), signature verification, local authorization.
+        rt5_conf = copy.deepcopy(rt_conf)
+        rt5_conf.set('global','storage_type','proxy')
+        rt5_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
+        rt5_conf.set('security','enrollment_password',enrollment_passwords[5])
+        rt5_conf.set("security", "security_conf", {
+                        "comment": "Local authentication, external authorization",
+                        "authentication": {
+                            "procedure": "external",
+                            "server_uuid": runtimes[1].node_id
+                        },
+                        "authorization": {
+                            "procedure": "local",
+                            "policy_storage_path": policy_storage_path
+                        }
+                    })
+        rt5_conf.save("/tmp/calvin5005.conf")
+
+        #Start all runtimes
+        for i in range(len(rt_attributes_cpy)):
+            _log.info("Starting runtime {}".format(i))
+            try:
+                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
+                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+                if outfile == logfile:
+                    outfile = None
+            except:
+                logfile = None
+                outfile = None
+            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes_cpy[i],
+                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                       configfile="/tmp/calvin500{}.conf".format(i))
+#            rt.append(RT("https://{}:502{}".format(hostname, i)))
+            rt.append(RT("http://{}:502{}".format(hostname,i)))
+            # Wait to be sure that all runtimes has started
+            time.sleep(5)
+        time.sleep(15)
 
         request.addfinalizer(self.teardown)
 
+
     def teardown(self):
-        global rt0
-        global rt1
-        global rt2
-        global rt3
-        global rt4
+        global rt
         global request_handler
-        request_handler.quit(rt0)
-        request_handler.quit(rt1)
-        request_handler.quit(rt2)
-        request_handler.quit(rt3)
-        request_handler.quit(rt4)
+        for runtime in rt:
+            request_handler.quit(runtime)
         time.sleep(0.2)
         for p in multiprocessing.active_children():
             p.terminate()
@@ -435,81 +427,75 @@ class TestSecurity(unittest.TestCase):
         os.system("pkill -9 -f 'csruntime -n %s -p 5002'" % (hostname,))
         os.system("pkill -9 -f 'csruntime -n %s -p 5003'" % (hostname,))
         os.system("pkill -9 -f 'csruntime -n %s -p 5004'" % (hostname,))
+        os.system("pkill -9 -f 'csruntime -n %s -p 5005'" % (hostname,))
         time.sleep(0.2)
 
     def verify_storage(self):
-        global rt0
-        global rt1
-        global rt2
-        global rt3
-        global rt4
+        global rt
         global request_handler
-        rt0_id = None
-        rt1_id = None
-        rt2_id = None
-        rt3_id = None
-        rt4_id = None
-        failed = True
-        # Try 30 times waiting for control API to be up and running
-        for i in range(30):
-            try:
-                rt0_id = rt0_id or request_handler.get_node_id(rt0)
-                rt1_id = rt1_id or request_handler.get_node_id(rt1)
-                rt2_id = rt2_id or request_handler.get_node_id(rt2)
-                rt3_id = rt3_id or request_handler.get_node_id(rt3)
-                rt4_id = rt4_id or request_handler.get_node_id(rt4)
-                failed = False
-                break
-            except:
-                time.sleep(0.1)
-        assert not failed
-        assert rt0_id
-        assert rt1_id
-        assert rt2_id
-        assert rt3_id
-        assert rt4_id
-        print "RUNTIMES:", rt0_id, rt1_id, rt2_id, rt3_id, rt4_id
-        _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
-        failed = True
-        # Try 30 times waiting for storage to be connected
-        caps0 = []
-        caps1 = []
-        caps2 = []
-        caps3 = []
-        caps4 = []
-        rt_ids = set([rt0_id, rt1_id, rt2_id, rt3_id, rt4_id])
-        for i in range(30):
-            try:
-                if not (rt0_id in caps0 and rt1_id in caps0 and rt2_id in caps0 and rt3_id in caps0 and rt4_id in caps0):
-                    caps0 = request_handler.get_index(rt0, "node/capabilities/calvinsys.native.python-json")['result']
-                if not (rt0_id in caps1 and rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1 and rt4_id in caps1):
-                    caps1 = request_handler.get_index(rt1, "node/capabilities/calvinsys.native.python-json")['result']
-                if not (rt0_id in caps2 and rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2 and rt4_id in caps2):
-                    caps2 = request_handler.get_index(rt2, "node/capabilities/calvinsys.native.python-json")['result']
-                if not (rt0_id in caps3 and rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3 and rt4_id in caps3):
-                    caps3 = request_handler.get_index(rt3, "node/capabilities/calvinsys.native.python-json")['result']
-                if not (rt0_id in caps4 and rt1_id in caps4 and rt2_id in caps4 and rt3_id in caps4 and rt4_id in caps4):
-                    caps4 = request_handler.get_index(rt4, "node/capabilities/calvinsys.native.python-json")['result']
-                if rt_ids <= set(caps0) and rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3) and rt_ids <= set(caps4):
+        global storage_verified
+        _log.info("storage_verified={}".format(storage_verified))
+        if not storage_verified:
+            _log.info("Let's verify storage, rt={}".format(rt))
+            rt_id=[None]*len(rt)
+            failed = True
+            # Try 30 times waiting for control API to be up and running
+            for i in range(30):
+                try:
+                    for j in range(len(rt)):
+                        rt_id[j] = rt_id[j] or request_handler.get_node_id(rt[j])
                     failed = False
                     break
-                else:
+                except Exception as err:
+                    _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(j, err))
                     time.sleep(0.1)
-            except:
-                time.sleep(0.1)
-        assert not failed
-        _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
-        assert request_handler.get_index(rt0, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'CA'}]))
-        _log.analyze("TESTRUN", "+ RT1 INDEX", {})
-        assert request_handler.get_index(rt1, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
-        _log.analyze("TESTRUN", "+ RT1 INDEX", {})
-        assert request_handler.get_index(rt2, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
-        _log.analyze("TESTRUN", "+ RT2 INDEX", {})
-        assert request_handler.get_index(rt3, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
-        _log.analyze("TESTRUN", "+ RT3 INDEX", {})
-        assert request_handler.get_index(rt4, format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode4'}]))
-        _log.analyze("TESTRUN", "+ RT4 INDEX", {})
+            assert not failed
+            for id in rt_id:
+                assert id
+            _log.info("RUNTIMES:{}".format(rt_id))
+            _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
+            failed = True
+            # Try 100 times waiting for storage to be connected
+            for i in range(100):
+                _log.info("-----------------Round {}-----------------".format(i))
+                count=[0]*len(rt)
+                try:
+                    caps=[0] * len(rt)
+                    for j in range(len(rt)):
+                        caps[j] = request_handler.get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
+                        for k in range(len(rt)):
+                            count[k] = count[k] + caps[j].count(rt_id[k])
+                    _log.info("\n\trt_ids={}\n\tcount={}\n\tcaps0={}\n\tcaps1={}\n\tcaps2={}\n\tcaps3={}\n\tcaps4={}\n\tcaps5={}".format(rt_id, count, caps[0], caps[1], caps[2], caps[3], caps[4], caps[5]))
+                    if all(x>=4 for x in count):
+                        failed = False
+                        break
+                    else:
+                        time.sleep(0.2)
+                except Exception as err:
+                    _log.error("exception from request_handler.get_index, err={}".format(err))
+                    time.sleep(0.1)
+            assert not failed
+            try:
+                _log.analyze("TESTRUN", "+ STORAGE", {'waited': 0.1*i})
+                assert request_handler.get_index(rt[0], format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'CA'}]))
+                _log.analyze("TESTRUN", "+ RT0 INDEX", {})
+                assert request_handler.get_index(rt[1], format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode1'}]))
+                _log.analyze("TESTRUN", "+ RT1 INDEX", {})
+                assert request_handler.get_index(rt[2], format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode2'}]))
+                _log.analyze("TESTRUN", "+ RT2 INDEX", {})
+                assert request_handler.get_index(rt[3], format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode3'}]))
+                _log.analyze("TESTRUN", "+ RT3 INDEX", {})
+                assert request_handler.get_index(rt[4], format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode4'}]))
+                _log.analyze("TESTRUN", "+ RT4 INDEX", {})
+                assert request_handler.get_index(rt[5], format_index_string(['node_name', {'organization': 'org.testexample', 'name': 'testNode5'}]))
+                _log.analyze("TESTRUN", "+ RT5 INDEX", {})
 
+                storage_verified = True
+            except Exception as err:
+                _log.error("Exception err={}".format(err))
+                raise
+        else:
+            _log.info("Storage has already been verified")
 
 ###################################
 #   Signature related tests
@@ -518,11 +504,15 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_CorrectlySignedApp_CorrectlySignedActors(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt1
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -530,7 +520,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
-            result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -541,25 +531,33 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # Verify that actors exist like this
-        actors = request_handler.get_actors(rt1)
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[1]
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[1]
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[1]
 
-        actual = request_handler.report(rt1, result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
         print "actual=", actual
         assert len(actual) > 5
 
-        request_handler.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt[1], result['application_id'])
 
     @pytest.mark.slow
     def testSecurity_NEGATIVE_IncorrectlySignedApp(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt1
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -567,7 +565,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
-            result = request_handler.deploy_application(rt1, "test_security1_incorrectly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "test_security1_incorrectly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -581,11 +579,15 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt1
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -593,7 +595,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
-            result = request_handler.deploy_application(rt1, "test_security1_correctlySignedApp_incorrectlySignedActor", content['file'], 
+            result = request_handler.deploy_application(rt[1], "test_security1_correctlySignedApp_incorrectlySignedActor", content['file'], 
                     credentials={domain_name:{"user": "user1", "password": "pass1"}}, content=content,
                         check=True)
         except Exception as e:
@@ -605,15 +607,19 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # Verify that actors exist like this
-        actors = request_handler.get_actors(rt1)
-        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:src'] in actors
-        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:sum'] in actors
-        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'] in actors
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:src'] in actors[1]
+        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:sum'] in actors[1]
+        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'] in actors[1]
 
-        actual = request_handler.report(rt1, result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'])
         assert len(actual) == 0  # Means that the incorrectly signed actor was not accepted
 
-        request_handler.delete_application(rt1, result['application_id'])
+        request_handler.delete_application(rt[1], result['application_id'])
 
 
 ###################################
@@ -623,11 +629,15 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_Permit_UnsignedApp_SignedActors(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt2
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -635,7 +645,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
-            result = request_handler.deploy_application(rt2, "test_security1_unsignedApp_signedActors", content['file'], 
+            result = request_handler.deploy_application(rt[2], "test_security1_unsignedApp_signedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -646,24 +656,32 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # Verify that actors exist like this
-        actors = request_handler.get_actors(rt2)
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors[2]
+        assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors[2]
+        assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors[2]
 
-        actual = request_handler.report(rt2, result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
+        actual = request_handler.report(rt[2], result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
         assert len(actual) > 5
 
-        request_handler.delete_application(rt2, result['application_id'])
+        request_handler.delete_application(rt[2], result['application_id'])
 
     @pytest.mark.slow
     def testSecurity_POSITIVE_Permit_UnsignedApp_Unsigned_Actor(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt2
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -671,7 +689,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user3", "password": "pass3"}})
-            result = request_handler.deploy_application(rt2, "test_security1_unsignedApp_unsignedActors", content['file'], 
+            result = request_handler.deploy_application(rt[2], "test_security1_unsignedApp_unsignedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -682,24 +700,32 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # Verify that actors exist like this
-        actors = request_handler.get_actors(rt2)
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors[2]
+        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors[2]
+        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[2]
 
-        actual = request_handler.report(rt2, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
+        actual = request_handler.report(rt[2], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
         assert len(actual) > 5
 
-        request_handler.delete_application(rt2, result['application_id'])
+        request_handler.delete_application(rt[2], result['application_id'])
 
     @pytest.mark.slow
     def testSecurity_NEGATIVE_Deny_SignedApp_SignedActor_UnallowedRequirement(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt2
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -707,7 +733,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "pass1"}})
-            result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[2], "test_security1_correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -719,24 +745,32 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # Verify that actors exist like this
-        actors = request_handler.get_actors(rt2)
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[2]
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[2]
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[2]
 
-        actual = request_handler.report(rt2, result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[2], result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) == 0  # Means that the actor with unallowed requirements was not accepted
 
-        request_handler.delete_application(rt2, result['application_id'])
+        request_handler.delete_application(rt[2], result['application_id'])
 
     @pytest.mark.slow
     def testSecurity_POSITIVE_External_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt4
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -744,7 +778,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user2", "password": "pass2"}})
-            result = request_handler.deploy_application(rt4, "test_security1_unsignedApp_signedActors", content['file'], 
+            result = request_handler.deploy_application(rt[4], "test_security1_unsignedApp_signedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -755,25 +789,32 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # Verify that actors exist like this
-        actors = request_handler.get_actors(rt4)
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors[4]
+        assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors[4]
+        assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors[4]
 
-        actual = request_handler.report(rt4, result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
+        actual = request_handler.report(rt[4], result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
         assert len(actual) > 5
 
-        request_handler.delete_application(rt4, result['application_id'])
+        request_handler.delete_application(rt[4], result['application_id'])
 
     @pytest.mark.slow
     def testSecurity_POSITIVE_Migration_When_Denied(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt2
-        global rt4
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -781,7 +822,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user4", "password": "pass4"}})
-            result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[2], "test_security1_correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -791,25 +832,33 @@ class TestSecurity(unittest.TestCase):
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
         time.sleep(2)
 
-        # Verify that actors exist like this (all of them should have migrated to rt4)
-        actors = request_handler.get_actors(rt4)
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
+        # Verify that actors exist like this (all of them should have migrated to rt[4])
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[4]
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[4]
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[4]
 
-        actual = request_handler.report(rt4, result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[4], result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 5
 
-        request_handler.delete_application(rt2, result['application_id'])
+        request_handler.delete_application(rt[2], result['application_id'])
 
     @pytest.mark.slow
     def testSecurity_NEGATIVE_Control_Interface_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt2
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -817,7 +866,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user6", "password": "pass6"}})
-            result = request_handler.deploy_application(rt2, "test_security1_correctly_signed", content['file'],
+            result = request_handler.deploy_application(rt[2], "test_security1_correctly_signed", content['file'],
                         content=content,
                         check=True)
         except Exception as e:
@@ -835,11 +884,15 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_UnallowedUser(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt1
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -847,7 +900,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user_not_allowed", "password": "pass1"}})
-            result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -861,11 +914,15 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_IncorrectPassword(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt1
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -873,7 +930,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user1", "password": "incorrect_password"}})
-            result = request_handler.deploy_application(rt1, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -884,16 +941,18 @@ class TestSecurity(unittest.TestCase):
 
         raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")  
 
-    #This only works if a properly configured RADIUS server is available on localhost
-    @pytest.mark.xfail
     @pytest.mark.slow
-    def testSecurity_POSITIVE_RADIUS_Authentication(self):
+    def testSecurity_POSITIVE_External_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt3
+        global rt
         global request_handler
         global security_testdir
 
-        self.verify_storage()
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
 
         result = {}
         try:
@@ -901,7 +960,54 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user5", "password": "pass5"}})
-            result = request_handler.deploy_application(rt3, "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[5], "test_security1_correctly_signed", content['file'], 
+                        content=content,
+                        check=True)
+        except Exception as e:
+            if isinstance(e, Timeout):
+                raise Exception("Can't connect to runtime 5.\n\te={}".format(e))
+            elif e.message.startswith("401"):
+                raise Exception("Failed security verification of app test_security1_correctly_signed")
+            _log.exception("Test deploy failed")
+            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+        time.sleep(2)
+
+        # Verify that actors exist like this
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[5]
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[5]
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[5]
+
+        actual = request_handler.report(rt[5], result['actor_map']['test_security1_correctly_signed:snk'])
+        time.sleep(1)
+        assert len(actual) > 5
+
+        request_handler.delete_application(rt[5], result['application_id']) 
+    @pytest.mark.xfail
+    @pytest.mark.slow
+    def testSecurity_POSITIVE_RADIUS_Authentication(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt
+        global request_handler
+        global security_testdir
+
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
+
+        result = {}
+        try:
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            request_handler.set_credentials({domain_name:{"user": "user5", "password": "pass5"}})
+            result = request_handler.deploy_application(rt[3], "test_security1_correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -914,12 +1020,17 @@ class TestSecurity(unittest.TestCase):
         time.sleep(2)
 
         # Verify that actors exist like this
-        actors = request_handler.get_actors(rt3)
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors
+        try:
+            actors = fetch_and_log_runtime_actors()
+        except Exception as err:
+            _log.error("Failed to get actors from runtimes, err={}".format(err))
+            raise
+        actors = fetch_and_log_runtime_actors()
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[3]
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[3]
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[3]
 
-        actual = request_handler.report(rt3, result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[3], result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 5
 
-        request_handler.delete_application(rt3, result['application_id'])
+        request_handler.delete_application(rt[3], result['application_id'])

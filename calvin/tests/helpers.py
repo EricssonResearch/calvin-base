@@ -34,7 +34,8 @@ def retry(retries, function, criterion, error_msg):
                 _log.error("Erroneous criteria '%r" % (e, ))
                 raise e
         except Exception as e:
-            _log.info("Encountered exception when retrying '%s'" % (e,))
+            _log.exception("Encountered exception when retrying '%s'" % (e,))
+            #_log.info("Encountered exception when retrying '%s'" % (e,))
         delay = min(2, delay * 1.5); retry += 1
         time.sleep(delay)
         try:
@@ -56,7 +57,7 @@ def actual_tokens(request_handler, rt, actor_id, size=5, retries=10):
     from functools import partial
     func = partial(request_handler.report, rt, actor_id)
     criterion = lambda tokens: len(tokens) >= size
-    return retry(retries, func, criterion, "Not enough tokens, expected %d" % size)
+    return retry(retries, func, criterion, "Not enough tokens, expected %d" % (size,))
 
 
 def multi_report(request_handler, rt, actor_ids):
@@ -230,7 +231,7 @@ def setup_distributed(control_uri, purpose, request_handler):
             continue
         rt = RT(peer["control_uri"])
         rt.id = peer_id
-        rt.uri = peer["uri"]
+        rt.uris = peer["uri"]
         runtimes.append(rt)
 
     return runtimes
@@ -319,14 +320,14 @@ def setup_bluetooth(bt_master_controluri, request_handler):
     data = request_handler.get_node(runtime, bt_master_id)
     if data:
         runtime.id = bt_master_id
-        runtime.uri = data["uri"]
+        runtime.uris = data["uri"]
         test_peers = request_handler.get_nodes(runtime)
         test_peer2_id = test_peers[0]
         test_peer2 = request_handler.get_node(runtime, test_peer2_id)
         if test_peer2:
             rt2 = RT(test_peer2["control_uri"])
             rt2.id = test_peer2_id
-            rt2.uri = test_peer2["uri"]
+            rt2.uris = test_peer2["uri"]
             runtimes.append(rt2)
         test_peer3_id = test_peers[1]
         if test_peer3_id:
@@ -334,7 +335,7 @@ def setup_bluetooth(bt_master_controluri, request_handler):
             if test_peer3:
                 rt3 = request_handler.RT(test_peer3["control_uri"])
                 rt3.id = test_peer3_id
-                rt3.uri = test_peer3["uri"]
+                rt3.uris = test_peer3["uri"]
                 runtimes.append(rt3)
     return [runtime] + runtimes
 
@@ -365,7 +366,7 @@ def setup_test_type(request_handler, nbr=3, proxy_storage=False):
     if not test_type:
         try:
             ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
-        except Exception:
+        except KeyError:
             import socket
             # If this fails add hostname to the /etc/hosts file for 127.0.0.1
             ip_addr = socket.gethostbyname(socket.gethostname())

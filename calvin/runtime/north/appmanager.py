@@ -365,7 +365,7 @@ class AppManager(object):
             del self.applications[application_id]
         if callback:
             if missing:
-                callback(status=response.CalvinResponse(False, missing))
+                callback(status=response.CalvinResponse(False, missing=missing))
             else:
                 callback(status=response.CalvinResponse(True))
 

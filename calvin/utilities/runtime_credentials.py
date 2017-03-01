@@ -457,7 +457,7 @@ class RuntimeCredentials():
                     raise
 
     def _get_certificate_from_storage_cb(self, key, value, callback):
-        _log.debug("_get_certificate_from_storage_cb, \nkey={}\nvalue={}".format(key,value))
+        _log.debug("_get_certificate_from_storage_cb, \nkey={}\nvalue={}\n\tcallback={}".format(key, value, callback))
         if value:
             nbr = len(value)
             try:

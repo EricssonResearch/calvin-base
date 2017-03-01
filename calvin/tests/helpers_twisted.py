@@ -47,20 +47,33 @@ def timeout(secs):
         return _timeout
     return wrap
 
-def create_callback(timeout=.5):
+import traceback, sys
 
+def dump_stack(stack, exc):
+    print exc
+    part_stack = stack[-3:-1]
+    #for entry in traceback.format_list(stack):
+    for entry in traceback.format_list(part_stack):
+        print entry,
+
+def create_callback(timeout=.5):
     def dummy_callback(d, *args, **kwargs):
         if d.called:
             return
         tout = kwargs.pop('__timeout', False)
         if tout:
-            d.errback("Timeout waiting for deferred")
+            dump_stack(d.__timeout_stack, d.__timeout_exc)
+            d.errback(d.__timeout_exc)
             return args, kwargs
         d.callback((args, kwargs))
         return args, kwargs
 
     d = defer.Deferred()
     reactor.callLater(timeout, dummy_callback, d, __timeout=True)
+    #exc_type, exc_value, exc_traceback = sys.exc_info()
+    #traceback.print_stack()
+    d.__timeout_exc = Exception("Timeout waiting for deferred, %ss have passed, check stdout for traceback" % (timeout,))
+    d.__timeout_stack = traceback.extract_stack()
     cb = CalvinCB(dummy_callback, d)
     return cb, d
 

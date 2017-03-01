@@ -14,10 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from calvin.utilities import calvinuuid
 from calvin.utilities import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
+
+def get_debug_info(start=-2, limit=10):
+    if _log.getEffectiveLevel() == logging.INFO:
+        import traceback
+        return traceback.format_stack(limit=10)[:start]
+    return None
+
+def dump_debug_info(debug_info):
+    if debug_info:
+        _log.info("Calvin callback created here: \n" + ''.join(debug_info))
 
 
 class CalvinCB(object):
@@ -30,6 +42,7 @@ class CalvinCB(object):
     """
     def __init__(self, func, *args, **kwargs):
         super(CalvinCB, self).__init__()
+        self._debug_info = get_debug_info()
         self._id = calvinuuid.uuid("CB")
         self.func = func
         self.args = list(args)
@@ -57,9 +70,16 @@ class CalvinCB(object):
         """
         try:
             return self.func(*(self.args + list(args)), **dict(self.kwargs, **kwargs))
-        except:
+        except (TypeError, Exception):
+            name = "unknown"
+            if hasattr(self.func, 'name'):
+                name = self.func.name
+            elif hasattr(self.func, "__name__"):
+                name = self.func.__name__
+
             _log.exception("When callback %s %s(%s, %s) is called caught the exception" % (
-                self.func, self.func.__name__, (self.args + list(args)), dict(self.kwargs, **kwargs)))
+                self.func, name, (self.args + list(args)), dict(self.kwargs, **kwargs)))
+            dump_debug_info(self._debug_info)
 
     def __str__(self):
         return "CalvinCB - " + self.name + "(%s, %s)" % (self.args, self.kwargs)
