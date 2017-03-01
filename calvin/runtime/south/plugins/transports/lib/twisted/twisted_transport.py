@@ -280,6 +280,7 @@ class CalvinServer(base_transport.BaseServer):
             _log.error("Could not resolve ip address to hostname"
                             "\n\terr={}"
                             "\n\turi={}".format(err, uri))
+            raise
 
         tp = CalvinTransport(self._rt_id, uri, self._callbacks,
                              self._client_transport, proto=protocol,

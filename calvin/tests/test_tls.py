@@ -38,6 +38,7 @@ from calvin.runtime.north.authentication.authentication_retrieval_point import F
 import os
 import json
 import copy
+import socket
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 
@@ -61,14 +62,27 @@ orig_application_store_path = os.path.join(security_testdir, "scripts")
 
 
 try:
-    ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
-except:
-    import socket
-    # If this fails add hostname to the /etc/hosts file for 127.0.0.1
-    ip_addr = socket.gethostbyname(socket.gethostname())
+    ipv6_hostname = socket.gethostbyaddr('::1')
+except Exception as err:
+    print("Failed to resolve the IPv6 localhost hostname, please update the corresponding entry in the /etc/hosts file, e.g.,:\n"
+                "\t::1              <hostname>.localdomain <hostname>.local <hostname> localhost")
+    raise
+try:
+    ipv6_hostname = socket.gethostbyaddr('::ffff:127.0.0.1')
+except Exception as err:
+    print("Failed to resolve ::ffff:127.0.0.1, please add the following line (with your hostname) to  /etc/hosts :\n"
+          "::ffff:127.0.0.1:           <hostname>.localdomain <hostname>.local <hostname>")
+    raise
+try:
     hostname = socket.gethostname()
+    ip_addr = socket.gethostbyname(hostname)
     fqdn = socket.getfqdn(hostname)
-    _log.info("ip_addr={}       hostname={}      fqdn={}".format(ip_addr, hostname, fqdn))
+    print("\n\tip_addr={}"
+              "\n\thostname={}"
+              "\n\tfqdn={}".format(ip_addr, hostname, fqdn))
+except Exception as err:
+    print("Failed to resolve the hostname, ip_addr or the FQDN of the runtime, err={}".format(err))
+    raise
 
 rt=[]
 rt_attributes=[]
