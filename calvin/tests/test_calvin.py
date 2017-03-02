@@ -206,7 +206,7 @@ class TestAdvancedConnectDisconnect(object):
 
         # Setup
         src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(rt2, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt2, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         request_handler.set_port_property(rt2, snk, 'in', 'token',
                                             port_properties={'routing': 'collect-unordered'})
         request_handler.connect(rt2, snk, 'token', rt1.id, src, 'integer')
@@ -255,7 +255,7 @@ class TestAdvancedConnectDisconnect(object):
 
         # Setup
         src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(rt2, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt2, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         request_handler.set_port_property(rt2, snk, 'in', 'token',
                                             port_properties={'routing': 'collect-unordered'})
         request_handler.connect(rt2, snk, 'token', rt1.id, src, 'integer')
@@ -304,7 +304,7 @@ class TestAdvancedConnectDisconnect(object):
 
         # Setup
         src = request_handler.new_actor(rt1, 'std.Counter', 'src')
-        snk = request_handler.new_actor_wargs(rt2, 'io.TestSink', 'snk', store_tokens=1, quiet=1, active=False)
+        snk = request_handler.new_actor_wargs(rt2, 'test.Sink', 'snk', store_tokens=1, quiet=1, active=False)
         request_handler.set_port_property(rt2, snk, 'in', 'token',
                                             port_properties={'routing': 'collect-unordered'})
         request_handler.connect(rt2, snk, 'token', rt1.id, src, 'integer')
@@ -362,7 +362,7 @@ class TestAdvancedConnectDisconnect(object):
 
         # Setup
         src = request_handler.new_actor(rt1, 'std.Counter', 'src')
-        snk = request_handler.new_actor_wargs(rt2, 'io.TestSink', 'snk', store_tokens=1, quiet=1, active=False)
+        snk = request_handler.new_actor_wargs(rt2, 'test.Sink', 'snk', store_tokens=1, quiet=1, active=False)
         request_handler.set_port_property(rt2, snk, 'in', 'token',
                                             port_properties={'routing': 'collect-unordered'})
         request_handler.connect(rt2, snk, 'token', rt1.id, src, 'integer')
@@ -438,7 +438,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
 
         # Setup
         src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         request_handler.connect(rt, snk, 'token', rt.id, src, 'integer')
 
         # Wait for some tokens to arrive
@@ -463,7 +463,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         rt = self.rt1
 
         src = request_handler.new_actor(rt, "std.CountTimer", "src")
-        snk = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, "test.Sink", "snk", store_tokens=1, quiet=1)
 
         request_handler.connect(rt, snk, 'token', rt.id, src, 'integer')
 
@@ -494,7 +494,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         rt = self.rt1
 
         src = request_handler.new_actor(rt, "std.CountTimer", "src")
-        snk = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, "test.Sink", "snk", store_tokens=1, quiet=1)
         request_handler.connect(rt, snk, "token", rt.id, src, "integer")
 
         # Wait for some tokens
@@ -525,7 +525,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
 
         src = request_handler.new_actor(rt, "std.CountTimer", "src")
         csum = request_handler.new_actor(rt, "std.Sum", "sum")
-        snk = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk", store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, "test.Sink", "snk", store_tokens=1, quiet=1)
 
         request_handler.connect(rt, snk, "token", rt.id, csum, "integer")
         request_handler.connect(rt, csum, "integer", rt.id, src, "integer")
@@ -559,7 +559,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         rt = self.rt1
 
         src = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src', sleep=0.1, steps=10)
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         request_handler.connect(rt, snk, 'token', rt.id, src, 'integer')
 
         # Wait for some tokens
@@ -594,7 +594,7 @@ class TestRemoteConnection(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(peer, 'std.Sum', 'sum')
         src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
@@ -621,7 +621,7 @@ class TestRemoteConnection(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
+        snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
         alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
@@ -652,8 +652,8 @@ class TestRemoteConnection(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
-        snk2 = request_handler.new_actor_wargs(peer, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
+        snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
+        snk2 = request_handler.new_actor_wargs(peer, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
         alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
@@ -693,7 +693,7 @@ class TestActorMigration(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(peer, 'std.Sum', 'sum')
         src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
@@ -722,8 +722,8 @@ class TestActorMigration(CalvinTestBase):
         peer = self.rt2
 
         src = request_handler.new_actor_wargs(rt, "std.CountTimer", "src", sleep=0.1, steps=100)
-        snk_1 = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk-1", store_tokens=1, quiet=1)
-        snk_2 = request_handler.new_actor_wargs(rt, "io.StandardOut", "snk-2", store_tokens=1, quiet=1)
+        snk_1 = request_handler.new_actor_wargs(rt, "test.Sink", "snk-1", store_tokens=1, quiet=1)
+        snk_2 = request_handler.new_actor_wargs(rt, "test.Sink", "snk-2", store_tokens=1, quiet=1)
 
         request_handler.set_port_property(rt, src, 'out', 'integer',
                                             port_properties={'routing': 'fanout', 'nbr_peers': 2})
@@ -767,8 +767,8 @@ class TestActorMigration(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk1 = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
-        snk2 = request_handler.new_actor_wargs(peer, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
+        snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
+        snk2 = request_handler.new_actor_wargs(peer, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
         alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=0.1, steps=100)
@@ -824,7 +824,7 @@ class TestActorMigration(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(peer, 'std.Sum', 'sum')
         src = request_handler.new_actor(peer, 'std.CountTimer', 'src')
 
@@ -852,7 +852,7 @@ class TestActorMigration(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(peer, 'std.Sum', 'sum')
         src = request_handler.new_actor(peer, 'std.CountTimer', 'src')
 
@@ -883,7 +883,7 @@ class TestActorMigration(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(peer, 'std.Sum', 'sum')
         src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
@@ -909,7 +909,7 @@ class TestActorMigration(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(rt, 'std.Sum', 'sum')
         src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
@@ -940,7 +940,7 @@ class TestActorMigration(CalvinTestBase):
         rt = self.rt1
         peer = self.rt2
 
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(rt, 'std.Sum', 'sum')
         src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
@@ -968,7 +968,7 @@ class TestActorMigration(CalvinTestBase):
         peer0 = self.rt2
         peer1 = self.rt3
 
-        snk = request_handler.new_actor_wargs(rt, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(peer0, 'std.Sum', 'sum')
         src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
@@ -995,7 +995,7 @@ class TestActorMigration(CalvinTestBase):
         rt = self.rt1
         peer0 = self.rt2
 
-        snk = request_handler.new_actor_wargs(peer0, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(peer0, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         wrapper = request_handler.new_actor(rt, 'misc.ExplicitStateExample', 'wrapper')
         src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
 
@@ -1022,7 +1022,7 @@ class TestCalvinScript(CalvinTestBase):
     def testCompileSimple(self):
         script = """
       src : std.CountTimer()
-      snk : io.StandardOut(store_tokens=1, quiet=1)
+      snk : test.Sink(store_tokens=1, quiet=1)
       src.integer > snk.token
     """
 
@@ -1045,7 +1045,7 @@ class TestCalvinScript(CalvinTestBase):
     def testDestroyAppWithLocalActors(self):
         script = """
       src : std.CountTimer()
-      snk : io.StandardOut(store_tokens=1, quiet=1)
+      snk : test.Sink(store_tokens=1, quiet=1)
       src.integer > snk.token
     """
 
@@ -1076,7 +1076,7 @@ class TestCalvinScript(CalvinTestBase):
 
         script = """
       src : std.CountTimer()
-      snk : io.StandardOut(store_tokens=1, quiet=1)
+      snk : test.Sink(store_tokens=1, quiet=1)
       src.integer > snk.token"""
 
         app_info, errors, warnings = self.compile_script(script, "simple")
@@ -1120,7 +1120,7 @@ class TestConnections(CalvinTestBase):
     def testLocalSourceSink(self):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
@@ -1135,7 +1135,7 @@ class TestConnections(CalvinTestBase):
     def testMigrateSink(self):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
@@ -1154,7 +1154,7 @@ class TestConnections(CalvinTestBase):
     def testMigrateSource(self):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
@@ -1173,7 +1173,7 @@ class TestConnections(CalvinTestBase):
     def testTwoStepMigrateSinkSource(self):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
@@ -1193,7 +1193,7 @@ class TestConnections(CalvinTestBase):
     def testTwoStepMigrateSourceSink(self):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
@@ -1218,7 +1218,7 @@ class TestScripts(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
-          snk : io.StandardOut(store_tokens=1, quiet=1)
+          snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > snk.token
           """
         app_info, errors, warnings = self.compile_script(script, "simple")
@@ -1264,7 +1264,7 @@ class TestMetering(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
-          snk : io.StandardOut(store_tokens=1, quiet=1)
+          snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > snk.token
           """
 
@@ -1305,7 +1305,7 @@ class TestMetering(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
-          snk : io.StandardOut(store_tokens=1, quiet=1)
+          snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > snk.token
           """
 
@@ -1365,7 +1365,7 @@ class TestMetering(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
-          snk : io.StandardOut(store_tokens=1, quiet=1)
+          snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > snk.token
           """
 
@@ -1426,7 +1426,7 @@ class TestMetering(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
           src : std.CountTimer()
-          snk : io.StandardOut(store_tokens=1, quiet=1)
+          snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > snk.token
           """
 
@@ -1482,7 +1482,7 @@ class TestStateMigration(CalvinTestBase):
         script = """
           src : std.CountTimer()
           sum : std.Sum()
-          snk : io.StandardOut(store_tokens=1, quiet=1)
+          snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > sum.integer
           sum.integer > snk.token
           """
@@ -1515,7 +1515,7 @@ class TestAppLifeCycle(CalvinTestBase):
         script = """
           src : std.CountTimer()
           sum : std.Sum()
-          snk : io.StandardOut(store_tokens=1, quiet=1)
+          snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > sum.integer
           sum.integer > snk.token
           """
@@ -1573,7 +1573,7 @@ class TestAppLifeCycle(CalvinTestBase):
         script = """
           src : std.CountTimer()
           sum : std.Sum()
-          snk : io.StandardOut(store_tokens=1, quiet=1)
+          snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > sum.integer
           sum.integer > snk.token
           """
@@ -1640,7 +1640,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         # Two actors, doesn't seem to trigger the bug
         src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
 
@@ -1656,7 +1656,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         # Same as test10, but scripted
         script = """
             src : std.Counter()
-            snk : io.StandardOut(store_tokens=1, quiet=1)
+            snk : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > snk.token
         """
@@ -1675,7 +1675,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
         ity = request_handler.new_actor(self.rt1, 'std.Identity', 'ity')
-        snk = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
         request_handler.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
@@ -1692,7 +1692,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
         ity = request_handler.new_actor(self.rt2, 'std.Identity', 'ity')
-        snk = request_handler.new_actor_wargs(self.rt3, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt3, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
         request_handler.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
@@ -1708,7 +1708,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
         ity = request_handler.new_actor(self.rt2, 'std.Identity', 'ity')
-        snk = request_handler.new_actor_wargs(self.rt3, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt3, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
         request_handler.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
@@ -1727,7 +1727,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
         ity = request_handler.new_actor(self.rt1, 'std.Identity', 'ity')
-        snk = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk', store_tokens=1, quiet=1)
+        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
         request_handler.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
         request_handler.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
@@ -1746,7 +1746,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         script = """
             src : std.Counter()
             ity : std.Identity()
-            snk : io.StandardOut(store_tokens=1, quiet=1)
+            snk : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > ity.token
             ity.token > snk.token
@@ -1765,8 +1765,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
     def test30(self):
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        snk1 = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
-        snk2 = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
+        snk1 = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
+        snk2 = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
 
         request_handler.set_port_property(self.rt1, src, 'out', 'integer',
                                             port_properties={'routing': 'fanout', 'nbr_peers': 2})
@@ -1789,8 +1789,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src : std.Counter()
-            snk1 : io.StandardOut(store_tokens=1, quiet=1)
-            snk2 : io.StandardOut(store_tokens=1, quiet=1)
+            snk1 : test.Sink(store_tokens=1, quiet=1)
+            snk2 : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > snk1.token
             src.integer > snk2.token
@@ -1823,8 +1823,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
               b.token > .b
             }
 
-            snk2 : io.StandardOut(store_tokens=1, quiet=1)
-            snk1 : io.StandardOut(store_tokens=1, quiet=1)
+            snk2 : test.Sink(store_tokens=1, quiet=1)
+            snk1 : test.Sink(store_tokens=1, quiet=1)
             foo : Foo()
             req : std.Counter()
             req.integer > foo.in
@@ -1850,8 +1850,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         # Verify round robin port
         _log.analyze("TESTRUN", "+", {})
         src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        snk1 = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk1', store_tokens=1, quiet=1)
-        snk2 = request_handler.new_actor_wargs(self.rt1, 'io.StandardOut', 'snk2', store_tokens=1, quiet=1)
+        snk1 = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
+        snk2 = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
 
         request_handler.set_port_property(self.rt1, src, 'out', 'integer',
                                             port_properties={'routing': 'round-robin', 'nbr_peers': 2})
@@ -1889,7 +1889,7 @@ class TestNullPorts(CalvinTestBase):
             src1 : std.Counter()
             src2 : std.Void()
             join : std.Join()
-            snk  : io.StandardOut(store_tokens=1, quiet=1)
+            snk  : test.Sink(store_tokens=1, quiet=1)
 
             src1.integer > join.token_1
             src2.void > join.token_2
@@ -1913,7 +1913,7 @@ class TestNullPorts(CalvinTestBase):
         script = """
             src  : std.Counter()
             term : std.Terminator()
-            snk  : io.StandardOut(store_tokens=1, quiet=1)
+            snk  : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > term.void
             src.integer > snk.token
@@ -1940,7 +1940,7 @@ class TestCompare(CalvinTestBase):
             src   : std.Counter()
             const : std.Constant(data=5, n=-1)
             pred  : std.Compare(op="<>")
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > pred.a
             const.token > pred.b
@@ -1964,7 +1964,7 @@ class TestCompare(CalvinTestBase):
             src   : std.Counter()
             const : std.Constant(data=5, n=-1)
             pred  : std.Compare(op="=")
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > pred.a
             const.token > pred.b
@@ -1990,7 +1990,7 @@ class TestCompare(CalvinTestBase):
             src   : std.Counter()
             const : std.Constant(data=5, n=-1)
             pred  : std.Compare(op=">=")
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > pred.a
             const.token > pred.b
@@ -2019,7 +2019,7 @@ class TestSelect(CalvinTestBase):
             src   : std.Counter()
             const : std.Constant(data=true, n=-1)
             route : std.Select()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
             src.integer > route.data
@@ -2045,7 +2045,7 @@ class TestSelect(CalvinTestBase):
             src   : std.Counter()
             const : std.Constant(data=0, n=-1)
             route : std.Select()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
             src.integer > route.data
@@ -2073,7 +2073,7 @@ class TestSelect(CalvinTestBase):
             src   : std.Counter()
             const : std.Constant(data=2, n=-1)
             route : std.Select()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
             src.integer > route.data
@@ -2107,7 +2107,7 @@ class TestDeselect(CalvinTestBase):
             const_1 : std.Constant(data=1, n=-1)
             comp    : std.Compare(op="<=")
             ds      : std.Deselect()
-            snk     : io.StandardOut(store_tokens=1, quiet=1)
+            snk     : test.Sink(store_tokens=1, quiet=1)
 
             const_0.token > ds.case_false
             const_1.token > ds.case_true
@@ -2139,7 +2139,7 @@ class TestDeselect(CalvinTestBase):
             const_1 : std.Constant(data=1, n=-1)
             comp    : std.Compare(op="<=")
             ds      : std.Deselect()
-            snk     : io.StandardOut(store_tokens=1, quiet=1)
+            snk     : test.Sink(store_tokens=1, quiet=1)
 
             const_0.token > ds.case_true
             const_1.token > ds.case_false
@@ -2171,7 +2171,7 @@ class TestDeselect(CalvinTestBase):
             const_5 : std.Constantify(constant=5)
             const_0 : std.Constant(data=0, n=11)
             ds      : std.Deselect()
-            snk     : io.StandardOut(store_tokens=1, quiet=1)
+            snk     : test.Sink(store_tokens=1, quiet=1)
 
             const_0.token > ds.case_false
             src.integer > ds.case_true
@@ -2204,7 +2204,7 @@ class TestLineJoin(CalvinTestBase):
             fname : std.Constant(data="%s")
             src   : io.FileReader()
             join  : text.LineJoin()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
 
             fname.token > src.filename
             src.out   > join.line
@@ -2237,7 +2237,7 @@ class TestRegex(CalvinTestBase):
         script = """
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"\d+\.\d+")
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
             src.token      > regex.text
@@ -2265,7 +2265,7 @@ class TestRegex(CalvinTestBase):
         script = """
             src   : std.Constant(data="x24.1632", n=1)
             regex : text.RegexMatch(regex=!"\d+\.\d+")
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
             src.token      > regex.text
@@ -2291,7 +2291,7 @@ class TestRegex(CalvinTestBase):
         script = """
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.\d+")
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
             src.token      > regex.text
@@ -2318,7 +2318,7 @@ class TestRegex(CalvinTestBase):
         script = """
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.(\d+)")
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
             src.token      > regex.text
@@ -2345,7 +2345,7 @@ class TestRegex(CalvinTestBase):
         script = """
             src   : std.Constant(data="x24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.\d+")
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
             src.token      > regex.text
@@ -2374,7 +2374,7 @@ class TestConstantAsArguments(CalvinTestBase):
         script = """
             define FOO = 42
             src   : std.Constant(data=FOO, n=10)
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.token > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstant")
@@ -2397,7 +2397,7 @@ class TestConstantAsArguments(CalvinTestBase):
             define FOO = BAR
             define BAR = 42
             src   : std.Constant(data=FOO, n=10)
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.token > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantRecursive")
@@ -2421,7 +2421,7 @@ class TestConstantOnPort(CalvinTestBase):
     def testLiteralOnPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             42 > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
@@ -2443,7 +2443,7 @@ class TestConstantOnPort(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             define FOO = "Hello"
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             FOO > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantOnPort")
@@ -2465,7 +2465,7 @@ class TestConstantOnPort(CalvinTestBase):
         script = """
             define FOO = BAR
             define BAR = "yay"
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             FOO > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantRecursiveOnPort")
@@ -2495,7 +2495,7 @@ class TestConstantAndComponents(CalvinTestBase):
                 i.out > .out
             }
             src   : Foo()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.out > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnCompPort")
@@ -2522,7 +2522,7 @@ class TestConstantAndComponents(CalvinTestBase):
                 i.out > .out
             }
             src   : Foo()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.out > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantOnCompPort")
@@ -2549,7 +2549,7 @@ class TestConstantAndComponents(CalvinTestBase):
                 i.token > .out
             }
             src   : Foo()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.out > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testStringConstantOnCompPort")
@@ -2578,7 +2578,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
             src.token > .seq
         }
         src : Count(len=5)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         src.seq > snk.token
         """
 
@@ -2604,7 +2604,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
             src.token > .seq
         }
         src : Count(len=FOO)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         src.seq > snk.token
         """
 
@@ -2631,7 +2631,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
          src.token > .seq
         }
         src : Count()
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         src.seq > snk.token
         """
 
@@ -2657,7 +2657,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
             i.token > .seq
         }
         src : Count(data="hup")
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         src.seq > snk.token
         """
 
@@ -2684,7 +2684,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
             i.token > .seq
         }
         src : Count(data=FOO)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         src.seq > snk.token
         """
 
@@ -2707,7 +2707,7 @@ class TestConstantifyOnPort(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src : std.Counter()
-            snk : io.StandardOut(store_tokens=1, quiet=1)
+            snk : test.Sink(store_tokens=1, quiet=1)
             src.integer > /"X"/ snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
@@ -2727,8 +2727,8 @@ class TestConstantifyOnPort(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src : std.Counter()
-            snk1 : io.StandardOut(store_tokens=1, quiet=1)
-            snk2 : io.StandardOut(store_tokens=1, quiet=1)
+            snk1 : test.Sink(store_tokens=1, quiet=1)
+            snk2 : test.Sink(store_tokens=1, quiet=1)
             src.integer > /"X"/ snk1.token, snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPortlist")
@@ -2753,8 +2753,8 @@ class TestConstantifyOnPort(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src : std.Counter()
-            snk1 : io.StandardOut(store_tokens=1, quiet=1)
-            snk2 : io.StandardOut(store_tokens=1, quiet=1)
+            snk1 : test.Sink(store_tokens=1, quiet=1)
+            snk2 : test.Sink(store_tokens=1, quiet=1)
             src.integer > /"X"/ snk1.token, /"Y"/ snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralsOnPortlist")
@@ -2780,8 +2780,8 @@ class TestConstantifyOnPort(CalvinTestBase):
             define FOO = "X"
             define BAR = "Y"
             src : std.Counter()
-            snk1 : io.StandardOut(store_tokens=1, quiet=1)
-            snk2 : io.StandardOut(store_tokens=1, quiet=1)
+            snk1 : test.Sink(store_tokens=1, quiet=1)
+            snk2 : test.Sink(store_tokens=1, quiet=1)
             src.integer > /FOO/ snk1.token, /BAR/ snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantsOnPortlist")
@@ -2809,8 +2809,8 @@ class TestPortProperties(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.Counter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="round-robin")
             src.integer > snk1.token
             src.integer > snk2.token
@@ -2847,8 +2847,8 @@ class TestPortProperties(CalvinTestBase):
             }
 
             src    : CompCounter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.seq(routing="round-robin")
             src.seq > snk1.token
             src.seq > snk2.token
@@ -2887,7 +2887,7 @@ class TestPortProperties(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             component CompSink() seq -> {
-                compsnk    : io.StandardOut(store_tokens=1, quiet=1)
+                compsnk    : test.Sink(store_tokens=1, quiet=1)
                 .seq > compsnk.token
             }
 
@@ -2952,8 +2952,8 @@ class TestPortProperties(CalvinTestBase):
             }
 
             src    : CompCounter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.seq > snk1.token
             src.seq > snk2.token
         """
@@ -2991,7 +2991,7 @@ class TestPortProperties(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             component CompSink() seq -> {
-                compsnk    : io.StandardOut(store_tokens=1, quiet=1)
+                compsnk    : test.Sink(store_tokens=1, quiet=1)
                 .seq > compsnk.token
                 compsnk.token(test1="dummyx")
             }
@@ -3056,8 +3056,8 @@ class TestPortProperties(CalvinTestBase):
             }
 
             src    : CompCounter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.seq > snk1.token
             src.seq > snk2.token
         """
@@ -3107,7 +3107,7 @@ class TestPortProperties(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             component CompSink() seq -> {
-                compsnk    : io.StandardOut(store_tokens=1, quiet=1)
+                compsnk    : test.Sink(store_tokens=1, quiet=1)
                 .seq > compsnk.token
                 .seq(routing="round-robin")
             }
@@ -3159,8 +3159,8 @@ class TestPortProperties(CalvinTestBase):
             }
 
             src    : CompCounter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.seq > snk1.token
             src.seq > snk2.token
         """
@@ -3207,8 +3207,8 @@ class TestPortProperties(CalvinTestBase):
             }
 
             src    : CompCounter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.seq(routing=["dummy", "round-robin"])
             src.seq > snk1.token
             src.seq > snk2.token
@@ -3257,8 +3257,8 @@ class TestPortProperties(CalvinTestBase):
             }
 
             src    : CompCounter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.seq(routing="fanout")
             src.seq > snk1.token
             src.seq > snk2.token
@@ -3274,7 +3274,7 @@ class TestPortProperties(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             component CompSink() seq -> {
-                compsnk    : io.StandardOut(store_tokens=1, quiet=1)
+                compsnk    : test.Sink(store_tokens=1, quiet=1)
                 .seq > compsnk.token
                 .seq(routing=["random", "round-robin", "fanout"])
             }
@@ -3330,8 +3330,8 @@ class TestPortProperties(CalvinTestBase):
             }
 
             src    : CompCounter()
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             snk1.token(test1=["dummyz", "dummyy"])
             snk2.token(test1="dummyy")
             src.seq > snk1.token
@@ -3397,7 +3397,7 @@ class TestCollectPort(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.01, start=1, steps=5)
         src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-unordered")
         src1.integer > snk.token
         src2.integer > snk.token
@@ -3443,8 +3443,8 @@ class TestCollectPort(CalvinTestBase):
         src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
         duo: Dual()
         duo.seqin(routing="collect-unordered")
-        snk1 : io.StandardOut(store_tokens=1, quiet=1)
-        snk2 : io.StandardOut(store_tokens=1, quiet=1)
+        snk1 : test.Sink(store_tokens=1, quiet=1)
+        snk2 : test.Sink(store_tokens=1, quiet=1)
         src1.integer > duo.seqin
         src2.integer > duo.seqin
         duo.seqout1 > snk1.token
@@ -3493,8 +3493,8 @@ class TestCollectPort(CalvinTestBase):
         src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
         duo: Dual()
         duo.seqout(routing="round-robin")
-        snk1 : io.StandardOut(store_tokens=1, quiet=1)
-        snk2 : io.StandardOut(store_tokens=1, quiet=1)
+        snk1 : test.Sink(store_tokens=1, quiet=1)
+        snk2 : test.Sink(store_tokens=1, quiet=1)
         src1.integer > duo.seqin1
         src2.integer > duo.seqin2
         duo.seqout > snk1.token
@@ -3532,7 +3532,7 @@ class TestCollectPort(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.01, start=1, steps=5)
         src2 : std.CountTimer(sleep=0.01, start=1001, steps=5)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-unordered", nbr_peers=2)
         src1.integer > snk.token
         src2.integer > snk.token
@@ -3567,7 +3567,7 @@ class TestPortRouting(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-unordered", nbr_peers=2)
         src1.integer > snk.token
         src2.integer > snk.token
@@ -3601,7 +3601,7 @@ class TestPortRouting(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-unordered", nbr_peers=2)
         src1.integer > snk.token
         src2.integer > snk.token
@@ -3637,7 +3637,7 @@ class TestPortRouting(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-unordered", nbr_peers=2)
         src1.integer > snk.token
         src2.integer > snk.token
@@ -3675,7 +3675,7 @@ class TestPortRouting(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-tagged", nbr_peers=2)
         src1.integer(tag="src_one")
         src1.integer > snk.token
@@ -3717,7 +3717,7 @@ class TestPortRouting(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-tagged", nbr_peers=2)
         src1.integer(tag="src_one")
         src1.integer > snk.token
@@ -3762,7 +3762,7 @@ class TestPortRouting(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-tagged", nbr_peers=2)
         src1.integer(tag="src_one")
         src1.integer > snk.token
@@ -3808,7 +3808,7 @@ class TestPortRouting(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-all-tagged", nbr_peers=2)
         src1.integer(tag="src_one")
         src2.integer(tag="src_two")
@@ -3850,7 +3850,7 @@ class TestPortRouting(CalvinTestBase):
         script = """
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         snk.token(routing="collect-any-tagged", nbr_peers=2)
         src1.integer(tag="src_one")
         src2.integer(tag="src_two")
@@ -3893,8 +3893,8 @@ class TestPortRouting(CalvinTestBase):
         src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
         src2 : std.FiniteCounter(start=1001, steps=100)
         expt : exception.ExceptionHandler(replace=true, replacement="exception")
-        snk : io.StandardOut(store_tokens=1, quiet=1)
-        exptsnk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
+        exptsnk : test.Sink(store_tokens=1, quiet=1)
         expt.token[in](routing="collect-tagged")
         src1.integer(tag="src_one")
         src2.integer(tag="src_two")
@@ -3931,8 +3931,8 @@ class TestPortRouting(CalvinTestBase):
         src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
         src2 : std.FiniteCounter(start=1001, steps=100)
         expt : exception.ExceptionHandler(replace=true, replacement="exception")
-        snk : io.StandardOut(store_tokens=1, quiet=1)
-        exptsnk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
+        exptsnk : test.Sink(store_tokens=1, quiet=1)
         expt.token[in](routing="collect-any-tagged")
         src1.integer(tag="src_one")
         src2.integer(tag="src_two")
@@ -3969,8 +3969,8 @@ class TestPortRouting(CalvinTestBase):
         src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
         src2 : std.FiniteCounter(start=1001, steps=100)
         expt : exception.ExceptionHandler(replace=true, replacement="exception")
-        snk : io.StandardOut(store_tokens=1, quiet=1)
-        exptsnk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
+        exptsnk : test.Sink(store_tokens=1, quiet=1)
         expt.token[in](routing="collect-all-tagged")
         src1.integer(tag="src_one")
         src2.integer(tag="src_two")
@@ -4010,8 +4010,8 @@ class TestPortRouting(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.CountTimer(sleep=0.02, start=1, steps=100)
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="round-robin")
             src.integer > snk1.token
             src.integer > snk2.token
@@ -4056,8 +4056,8 @@ class TestPortRouting(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.CountTimer(sleep=0.02, start=1, steps=100)
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="round-robin")
             src.integer > snk1.token
             src.integer > snk2.token
@@ -4103,8 +4103,8 @@ class TestPortRouting(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.CountTimer(sleep=0.02, start=1, steps=100)
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="round-robin")
             src.integer > snk1.token
             src.integer > snk2.token
@@ -4151,8 +4151,8 @@ class TestPortRouting(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.CountTimer(sleep=0.02, start=1, steps=100)
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             src.integer > snk1.token
             src.integer > snk2.token
@@ -4189,8 +4189,8 @@ class TestPortRouting(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.CountTimer(sleep=0.02, start=1, steps=100)
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             src.integer > snk1.token
             src.integer > snk2.token
@@ -4228,8 +4228,8 @@ class TestPortRouting(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.CountTimer(sleep=0.02, start=1, steps=100)
-            snk1   : io.StandardOut(store_tokens=1, quiet=1)
-            snk2   : io.StandardOut(store_tokens=1, quiet=1)
+            snk1   : test.Sink(store_tokens=1, quiet=1)
+            snk2   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             src.integer > snk1.token
             src.integer > snk2.token
@@ -4275,7 +4275,7 @@ class TestPortRouting(CalvinTestBase):
         src1 : std.CountTimer(sleep=0.02, start=1, steps=100)
         src2 : std.CountTimer(sleep=0.02, start=1001, steps=100)
         colcomp : Col()
-        snk : io.StandardOut(store_tokens=1, quiet=1)
+        snk : test.Sink(store_tokens=1, quiet=1)
         src1.integer > colcomp.token
         src2.integer > colcomp.token
         colcomp.token > snk.token
@@ -4311,7 +4311,7 @@ class TestDeployScript(CalvinTestBase):
     def testDeployScriptSimple(self):
         script = r"""
       src : std.CountTimer()
-      snk : io.StandardOut(store_tokens=1, quiet=1)
+      snk : test.Sink(store_tokens=1, quiet=1)
       src.integer > snk.token
 
       rule simple: node_attr_match(index=["node_name", {"organization": "com.ericsson"}])
@@ -4361,7 +4361,7 @@ class TestReplication(object):
             proc  : test.TestProcess(eval_str="data + kwargs[\"base\"]",
                         replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count",
                         kwargs={"base": 0}, dump=false)
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             snk.token(routing="collect-unordered")
             src.integer > proc.data
@@ -4428,7 +4428,7 @@ class TestReplication(object):
             proc  : test.TestProcess(eval_str="data + kwargs[\"base\"]",
                         replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count",
                         kwargs={"base": 0}, dump=false)
-            snk   : io.TestSink(store_tokens=1, quiet=1, active=true)
+            snk   : test.Sink(store_tokens=1, quiet=1, active=true)
             src.integer(routing="random")
             snk.token(routing="collect-unordered")
             src.integer > proc.data
@@ -4509,7 +4509,7 @@ class TestReplication(object):
             proc  : test.TestProcess(eval_str="{data.keys()[0]: data.values()[0] + kwargs[\"base\"]}",
                         replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count",
                         kwargs={"base": 0}, dump=false)
-            snk   : io.TestSink(store_tokens=1, quiet=1, active=true)
+            snk   : test.Sink(store_tokens=1, quiet=1, active=true)
             src.integer(routing="random")
             proc.data(routing="collect-tagged")
             snk.token(routing="collect-unordered")

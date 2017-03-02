@@ -13,7 +13,7 @@ component Wrapper() A, B -> out {
 counter:std.Counter()
 file:io.FileReader()
 wrap:Wrapper()
-snk:io.StandardOut()
+snk:test.Sink()
 
 "data.txt" > file.filename
 counter.integer > wrap.A

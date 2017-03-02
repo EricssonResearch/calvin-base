@@ -175,7 +175,7 @@
                 "dbg_line": 36
             }, 
             "c": {
-                "actor_type": "io.StandardOut", 
+                "actor_type": "test.Sink", 
                 "args": {}, 
                 "dbg_line": 37
             }

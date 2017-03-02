@@ -206,8 +206,8 @@ daisy_resource.out > resp.body
 resp.out > tcp_server.token
 
 # Logging
-# Tip: To help with debugging, attach a StandardOut actor
+# Tip: To help with debugging, attach a Print actor
 #      to any output port to log the data flow, e.g.
-# snk: io.StandardOut()
+# snk: io.Print()
 # tcp_server.token > snk.token
 

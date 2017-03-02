@@ -7,7 +7,7 @@ component TheSource() -> out {
 }
 button : TheSource()
 check : std.Sum()
-bell : io.StandardOut(store_tokens=true)
+bell : test.Sink(store_tokens=true)
 
 button.out > check.integer
 check.integer > bell.token

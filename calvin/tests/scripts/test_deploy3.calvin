@@ -8,7 +8,7 @@ component TheSource() -> out {
 
 src : TheSource()
 sum : std.Sum()
-snk : io.StandardOut()
+snk : test.Sink()
 
 src.out > sum.integer
 sum.integer > snk.token

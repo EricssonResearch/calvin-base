@@ -4,7 +4,7 @@
     "structure": {
         "actors": {
             "snk": {
-                "actor_type": "io.StandardOut", 
+                "actor_type": "test.Sink", 
                 "args": {
                     "quiet": [
                         "VALUE", 

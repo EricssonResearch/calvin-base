@@ -54,7 +54,7 @@
             "args": {
                 "store_tokens": true
             }, 
-            "actor_type": "io.StandardOut", 
+            "actor_type": "test.Sink", 
             "signature": "5d0b3f7d38f7673c5086b4fc85d8c3c73b8e177116dcfc561bc0806f4b5d24af"
         }, 
         "test_shadow1:sum": {

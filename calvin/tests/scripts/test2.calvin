@@ -2,7 +2,7 @@
 define FILE = "data.txt"
 /* Actors */
 src:io.FileReader()
-snk:io.StandardOut()
+snk:test.Sink()
 /* Connections */
 FILE > src.filename
 src.out > snk.token

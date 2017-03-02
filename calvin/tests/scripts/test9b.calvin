@@ -19,7 +19,7 @@ component B() in -> out {
 
 a:std.Counter()
 b:B()
-c:io.StandardOut()
+c:test.Sink()
 
 a.integer > b.in
 b.out > c.token

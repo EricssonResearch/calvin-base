@@ -2,6 +2,6 @@
 
 /* Actors */
 src : std.CountTimer()
-snk : io.StandardOut(store_tokens=1, quiet=1)
+snk : test.Sink(store_tokens=1, quiet=1)
 /* Connections */
 src.integer > snk.token

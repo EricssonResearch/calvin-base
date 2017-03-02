@@ -6,8 +6,8 @@ component WrappedSrc() -> out {
   src.integer > .out
 }
 
-snk1 : io.StandardOut()
-snk2 : io.StandardOut()
+snk1 : test.Sink()
+snk2 : test.Sink()
 src : WrappedSrc()
 
 src.out > snk1.token

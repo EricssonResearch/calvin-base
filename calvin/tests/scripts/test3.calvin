@@ -2,7 +2,7 @@
 src : std.Counter()
 delay : std.Delay(delay=0.5)
 sum : std.Sum()
-snk : io.StandardOut()
+snk : test.Sink()
 
 src.integer > delay.token
 delay.token > sum.integer

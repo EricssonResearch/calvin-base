@@ -141,7 +141,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             sum   : std.Sum()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             snk.token(routing="collect-unordered")
             src.integer > sum.integer
@@ -199,7 +199,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             sum   : std.Sum()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             snk.token(routing="collect-unordered")
             src.integer > sum.integer
@@ -263,7 +263,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             sum   : std.Sum()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             snk.token(routing="collect-unordered")
             src.integer > sum.integer
@@ -338,7 +338,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             sum   : std.Sum()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             snk.token(routing="collect-tagged")
             src.integer > sum.integer
@@ -399,7 +399,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             sum   : std.Sum()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="fanout")
             snk.token(routing="collect-tagged")
             src.integer > sum.integer
@@ -465,7 +465,7 @@ class TestReplication(CalvinTestBase):
             src1    : std.FiniteCounter(start=0)
             src2    : std.FiniteCounter(start=10000)
             alt   : std.Alternate2()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src1.integer(routing="fanout")
             src2.integer(routing="random")
             snk.token(routing="collect-tagged")
@@ -547,7 +547,7 @@ class TestReplication(CalvinTestBase):
             src1    : std.FiniteCounter(start=0)
             src2    : std.FiniteCounter(start=10000, replicate_mult=true)
             alt   : std.Alternate2()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src1.integer(routing="fanout")
             src2.integer(routing="random")
             alt.token_2(routing="collect-unordered")
@@ -642,7 +642,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.FiniteCounter(start=10000, replicate_mult=true)
             mid   : std.Identity()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             mid.token[in](routing="collect-unordered")
             mid.token[out](routing="random")
@@ -714,7 +714,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             sum   : std.Sum()
-            snk   : io.StandardOut(store_tokens=1, quiet=1)
+            snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             snk.token(routing="collect-unordered")
             src.integer > sum.integer
@@ -779,7 +779,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             ident  : std.Identity()
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             snk.token(routing="collect-tagged")
             src.integer > ident.token
@@ -858,7 +858,7 @@ class TestReplication(CalvinTestBase):
             src    : std.Counter()
             ident  : std.Identity()
             delay  : std.ClassicDelay()
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             delay.token[in](routing="collect-tagged")
             src.integer > ident.token
@@ -942,7 +942,7 @@ class TestReplication(CalvinTestBase):
             src    : std.Counter()
             ident  : std.Identity()
             delay  : std.ClassicDelay(delay=0.1)
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             delay.token[in](routing="collect-tagged")
             src.integer > ident.token
@@ -1001,7 +1001,7 @@ class TestReplication(CalvinTestBase):
             src    : std.Counter()
             ident  : std.Identity()
             delay  : std.ClassicDelay()
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             delay.token[in](routing="collect-tagged")
             src.integer > ident.token
@@ -1103,7 +1103,7 @@ class TestReplication(CalvinTestBase):
             i18     : std.Identity()
             i19     : std.Identity()
             delay  : std.ClassicDelay(delay=0.1)
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             delay.token[in](routing="collect-tagged")
             src.integer > i0.token
@@ -1180,7 +1180,7 @@ class TestReplication(CalvinTestBase):
             src    : std.CountTimer(sleep=0.022)
             ident  : std.Burn()
             delay  : std.Identity()
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="balanced")
             delay.token[in](routing="collect-tagged")
             src.integer > ident.token
@@ -1238,7 +1238,7 @@ class TestReplication(CalvinTestBase):
             src    : std.CountTimer(sleep=0.01)
             ident  : std.Burn()
             delay  : std.Identity()
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="balanced")
             delay.token[in](routing="collect-tagged")
             src.integer > ident.token
@@ -1308,7 +1308,7 @@ class TestReplication(CalvinTestBase):
             src    : std.CountTimer(sleep=0.01)
             ident  : std.Burn(duration=0.01)
             delay  : std.Identity()
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="balanced")
             delay.token[in](routing="collect-tagged")
             src.integer > ident.token
@@ -1360,7 +1360,7 @@ class TestReplication(CalvinTestBase):
             src    : std.CountTimer(sleep=0.01)
             ident  : std.Burn()
             delay  : std.Identity()
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="balanced")
             delay.token[in](routing="collect-tagged")
             src.integer > ident.token
@@ -1417,7 +1417,7 @@ class TestReplication(CalvinTestBase):
             src    : std.CountTimer(sleep=0.01)
             ident  : std.Burn()
             delay  : std.Identity()
-            snk    : io.StandardOut(store_tokens=1, quiet=1)
+            snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="balanced")
             delay.token[in](routing="collect-tagged")
             src.integer > ident.token

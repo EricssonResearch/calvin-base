@@ -3,7 +3,7 @@ timestamp : time.Timestamp()
 timer : std.CountTimer()
 fmt : text.Format(fmt="Current date is {century}{year}/{month}/{day}, time is {hour}:{minute}")
 print : io.Print()
-log : io.StandardOut()
+log : test.Sink()
 
 timer.integer > time.trigger
 time.datetime > fmt.dict

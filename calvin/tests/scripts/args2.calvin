@@ -11,6 +11,6 @@ component PrefixFile(prefix, filename) -> out {
 }
 
 src:PrefixFile(prefix="--- ", filename="data.txt")
-snk:io.StandardOut()
+snk:test.Sink()
 
 src.out > snk.token

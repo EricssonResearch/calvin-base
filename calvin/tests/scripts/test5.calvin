@@ -9,7 +9,7 @@ component Wrapper() A -> B {
 
 src:std.Counter()
 wsum:Wrapper()
-snk:io.StandardOut()
+snk:test.Sink()
 
 src.integer > wsum.A
 wsum.B > snk.token

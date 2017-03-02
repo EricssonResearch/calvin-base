@@ -7,7 +7,7 @@ sum5 : std.Sum()
 sum6 : std.Sum()
 sum7 : std.Sum()
 sum8 : std.Sum()
-snk : io.StandardOut()
+snk : test.Sink()
 
 src.integer > sum1.integer
 sum1.integer > sum2.integer

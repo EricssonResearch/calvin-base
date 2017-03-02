@@ -1,4 +1,4 @@
 # Test 4: program
-snk : io.StandardOut()
+snk : test.Sink()
 
 [1, 2] > snk.token

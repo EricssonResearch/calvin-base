@@ -76,11 +76,11 @@
             }
         }, 
         "test9:c": {
-            "actor_type": "io.StandardOut", 
+            "actor_type": "test.Sink", 
             "args": {}, 
             "signature": "5d0b3f7d38f7673c5086b4fc85d8c3c73b8e177116dcfc561bc0806f4b5d24af", 
             "signature_desc": {
-                "actor_type": "io.StandardOut", 
+                "actor_type": "test.Sink", 
                 "inports": [
                     "token"
                 ], 
