@@ -112,6 +112,9 @@ class Authorization(object):
 
             except Exception as e:
                 _log.error("Node could not be registered for authorization - %s" % str(e))
+        else:
+            _log.debug("No authorization enabled")
+
 
     def _register_node_cb(self, key, value):
         import random

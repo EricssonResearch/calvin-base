@@ -45,7 +45,7 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 homefolder = get_home()
-credentials_testdir = os.path.join(homefolder, ".calvin","test_security_credentials_dir")
+credentials_testdir = os.path.join(homefolder, ".calvin","test_authorization_authentication_dir")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
 runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")

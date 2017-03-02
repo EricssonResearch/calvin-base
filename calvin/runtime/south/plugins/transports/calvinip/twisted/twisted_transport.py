@@ -158,6 +158,15 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
 
         self._callbacks = callbacks
 
+        #If TLS is chosen, ensure that a node_name and a server_node_name are set
+        runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
+        if (runtime_to_runtime_security=="tls"):
+            if self._node_name==None or self._server_node_name==None:
+                _log.error("For TLS, both node_name and server_node_name must be given as input"
+                                "\n\tself._node_name={}"
+                                "\n\tself._server_node_name={}".format(self._node_name, self._server_node_name))
+                raise Exception("For TLS, both node_name and server_node_name must be given as input")
+
     def is_connected(self):
         return self._proto is not None
 
@@ -192,23 +201,30 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
                 client_credentials_data =self._runtime_credentials.get_runtime_credentials()
                 client_credentials = ssl.PrivateCertificate.loadPEM(client_credentials_data)
             except Exception as err:
-                _log.error("Failed to load client credentials, err={}".format(err))
+                _log.error("TwistedCalvinTransport: Failed to load client credentials, err={}".format(err))
                 raise
-            options = ssl.optionsForClientTLS(self._server_node_name,
-                                               twisted_trusted_ca_cert,
-                                               client_credentials)
+            try:
+                options = ssl.optionsForClientTLS(self._server_node_name,
+                                                   twisted_trusted_ca_cert,
+                                                   client_credentials)
+            except Exception as err:
+                _log.error("TwistedCalvinTransport: Failed to create optionsForClientTLS "
+                                "\n\terr={}"
+                                "\n\tself._server_node_name={}".format(err,
+                                                                      self._server_node_name))
+                raise
             try:
                 endpoint = endpoints.SSL4ClientEndpoint(reactor,
                                                         self._host_ip,
                                                         int(self._host_port),
                                                         options)
             except:
-                _log.error("Client failed connectSSL")
+                _log.error("TwistedCalvinTransport: Client failed connectSSL")
                 raise
             try:
                 endpoint.connect(self._factory)
             except Exception as e:
-                _log.error("Failed endpoint.connect, e={}".format(e))
+                _log.error("TwistedCalvinTransport: Failed endpoint.connect, e={}".format(e))
                 raise
         else:
             reactor.connectTCP(self._host_ip, int(self._host_port), self._factory)

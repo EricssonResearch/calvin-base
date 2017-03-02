@@ -39,8 +39,14 @@ class StorageProxy(StorageBase):
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished
         """
+        from urlparse import urlparse
+        import socket
         _log.info("PROXY start")
-        self.node.network.join([self.master_uri], CalvinCB(self._start_link_cb, org_cb=cb))
+        o=urlparse(self.master_uri)
+        fqdn = socket.getfqdn(o.hostname)
+        self.node.network.join([self.master_uri],
+                               callback=CalvinCB(self._start_link_cb, org_cb=cb),
+                               corresponding_server_node_names=[fqdn.decode('unicode-escape')])
 
     def _start_link_cb(self, status, uri, peer_node_id, org_cb):
         _log.analyze(self.node.id, "+", {'status': str(status)}, peer_node_id=peer_node_id)
