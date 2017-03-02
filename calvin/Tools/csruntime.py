@@ -107,14 +107,14 @@ Start runtime, compile calvinscript and deploy application.
     return argparser.parse_args()
 
 
-def runtime(uri, control_uri, attributes=None, dispatch=False):
+def runtime(uris, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_node, start_node
     kwargs = {'attributes': attributes} if attributes else {}
     try:
         if dispatch:
-            return dispatch_node(uri=uri, control_uri=control_uri, **kwargs)
+            return dispatch_node(uris=uris, control_uri=control_uri, **kwargs)
         else:
-            start_node(uri, control_uri, **kwargs)
+            start_node(uris, control_uri, **kwargs)
     except Exception as e:
         print "Starting runtime failed:", e
         raise
@@ -185,9 +185,9 @@ def set_loglevel(levels, filename):
             get_logger(module).setLevel(5)
 
 
-def dispatch_and_deploy(app_info, wait, uri, control_uri, attr, credentials):
+def dispatch_and_deploy(app_info, wait, uris, control_uri, attr, credentials):
     from calvin.requests.request_handler import RequestHandler
-    rt, process = runtime(uri, control_uri, attr, dispatch=True)
+    rt, process = runtime(uris, control_uri, attr, dispatch=True)
     app_id = None
     app_id = deploy(rt, app_info, credentials)
     print "Deployed application", app_id
