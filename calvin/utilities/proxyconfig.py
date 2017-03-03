@@ -36,8 +36,8 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, stor
 
     storage.set(prefix="node-", key=peer_id,
                 value={"proxy": storage.node.id,
-                "uri": None,
-                "control_uri": None,
+                "uris": None,
+                "control_uris": None,
                 "authz_server": None, # Set correct value
                 "attributes": {'public': attributes.get_public(),
                 'indexed_public': attributes.get_indexed_public(as_list=False)}},

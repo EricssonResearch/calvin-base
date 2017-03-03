@@ -51,6 +51,13 @@ def send_message(peer_id, link, msg, callback=None, status=None, **kwargs):
         if callback:
             callback(status=status)
 
+def forward_message(peer_id, link, payload, status=None):
+    if status or status is None:
+        try:
+            link.transport.send(payload)
+        except Exception as e:
+            _log.exception("Failed to forward data to {} on a link, msg => {}".format(peer_id, repr(payload)))
+
 
 class CalvinTunnel(object):
     """CalvinTunnel is a tunnel over the runtime to runtime communication with a peer node"""
@@ -187,7 +194,6 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_NEW': [CalvinCB(self.tunnel_new_handler)],
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
-            'ROUTE_REQUEST': [CalvinCB(self.route_request_handler)],
             'REPLY': [CalvinCB(self.reply_handler)],
             'AUTHENTICATION_DECISION': [CalvinCB(self.authentication_decision_handler)],
             'AUTHORIZATION_REGISTER': [CalvinCB(self.authorization_register_handler)],
@@ -262,7 +268,8 @@ class CalvinProto(CalvinCBClass):
             # Call the proper handler for the command using CalvinCBClass
             self._callback_execute(payload['cmd'], payload)
         else:
-            self.network.forward_packet(payload)
+            # Get/request a link to destination and forward message
+            self.network.link_request(payload['to_rt_uuid'], CalvinCB(forward_message, payload=payload))
 
     #
     # Remote commands supported by protocol
@@ -278,8 +285,8 @@ class CalvinProto(CalvinCBClass):
             payload['capabilities'],
             payload['port_property_capability'],
             self.node.storage,
-            CalvinCB(payload['from_rt_uuid'], callback=CalvinCB(send_message,
-                                              msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
+            CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
+                callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
 
     #### ACTORS ####
 
@@ -519,37 +526,6 @@ class CalvinProto(CalvinCBClass):
             _log.exception("Check error in tunnel recv handler")
             _log.analyze(self.rt_id, "+ EXCEPTION TUNNEL RECV HANDLER", {'payload': payload, 'exception': str(e)},
                                                                 peer_node_id=payload['from_rt_uuid'], tb=True)
-
-    #### ROUTING ####
-
-    def route_request_handler(self, payload):
-        """ Handle route request command """
-        link = self.network.link_get(payload['org_peer_id'])
-        if not link:
-            routinglink = self.network.create_routinglink(payload['org_peer_id'], self.network.links[payload['from_rt_uuid']])
-            self.network.add_routinglink(routinglink)
-        if payload['dest_peer_id'] == self.rt_id:
-            msg = {
-                'cmd': 'REPLY',
-                'msg_uuid': payload['msg_uuid'],
-                'value': response.CalvinResponse(True, {'peer_id': self.rt_id}).encode()
-            }
-            self.node.network.link_request(payload['org_peer_id'], CalvinCB(send_message, msg=msg))
-        else:
-            self.node.network.link_request(payload['dest_peer_id'], CalvinCB(self._forward_route_request, payload=payload))
-
-    def _forward_route_request(self, peer_id, link, payload, status):
-        if status:
-            link.send(payload)
-        else:
-            msg = {
-                'cmd': 'REPLY',
-                'msg_uuid': payload['msg_uuid'],
-                'value': response.CalvinResponse(False, {'peer_id': payload['dest_peer_id']}).encode()
-            }
-            link.send(msg)
-            self.network.remove_link(payload['org_peer_id'])
-
 
     #### PORTS ####
 
