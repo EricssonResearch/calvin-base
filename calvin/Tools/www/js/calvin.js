@@ -548,8 +548,8 @@ function getPeersFromIndex(index)
 // Get connected peers
 function getPeers(peer)
 {
-    if (peer.control_uri) {
-        var url = peer.control_uri + '/nodes';
+    if (peer.control_uris) {
+        var url = peer.control_uris[0] + '/nodes';
         console.log("getPeers - url: " + url);
         $.ajax({
             peer: peer,
@@ -615,15 +615,15 @@ function getPeer(id)
                     peer = new runtimeObject(id);
                     peers[peers.length] = peer;
                 }
-                if (data.uri) {
-                    peer.uri = data.uri;
+                if (data.uris) {
+                    peer.uris = data.uris;
                 } else {
-                    peer.uri = "";
+                    peer.uris = "";
                 }
-                if (data.control_uri) {
-                    peer.control_uri = data.control_uri;
+                if (data.control_uris) {
+                    peer.control_uris = data.control_uris;
                 } else {
-                    peer.control_uri = "";
+                    peer.control_uris = "";
                 }
                 if (data.proxy) {
                     peer.proxy = data.proxy;
@@ -726,10 +726,10 @@ function getApplications()
     actors = [];
     var index;
     for (index in peers) {
-        if (peers[index].control_uri) {
-            url = peers[index].control_uri + '/applications';
+        if (peers[index].control_uris) {
+            url = peers[index].control_uris[0] + '/applications';
             $.ajax({
-                uri: peers[index].control_uri,
+                uri: peers[index].control_uris[0],
                 timeout: 20000,
                 beforeSend: function() {
                     startSpin();
@@ -967,8 +967,8 @@ function getPortState(port_id)
         var actor = findActor(port.actor_id);
         if (actor) {
             var runtime = findRuntime(actor.peer_id);
-            if (runtime && runtime.control_uri) {
-                var url = runtime.control_uri + '/actor/' + port.actor_id + '/port/' + port_id + "/state";
+            if (runtime && runtime.control_uris) {
+                var url = runtime.control_uris[0] + '/actor/' + port.actor_id + '/port/' + port_id + "/state";
                 console.log("getPort - url: " + url);
                 $.ajax({
                     timeout: 20000,
@@ -1133,8 +1133,8 @@ function setRuntimeConfig()
     peer.owner.personOrGroup = update_attribute_from_input(peer.owner.personOrGroup, $("#conf_owner_personOrGroup"));
 
     var url;
-    if (peer.control_uri) {
-        url = peer.control_uri + '/node/' + peer.id + '/attributes/indexed_public';
+    if (peer.control_uris) {
+        url = peer.control_uris[0] + '/node/' + peer.id + '/attributes/indexed_public';
     } else {
         url = connect_uri + '/node/' + peer.id + '/attributes/indexed_public';
     }
@@ -1195,7 +1195,7 @@ function showPeer(peer)
     btnConfigure.value = 'Configure...';
     btnConfigure.setAttribute("onclick", "showRuntimeConfig(this.id)");
 
-    if (peer.control_uri) {
+    if (peer.control_uris) {
         var btnDestroy = document.createElement('input');
         btnDestroy.type = 'button';
         btnDestroy.className = "btn btn-danger btn-xs";
@@ -1220,8 +1220,8 @@ function showPeer(peer)
         row = AddTableItem(tableRef,
             document.createTextNode(peer.id),
             document.createTextNode(peer.node_name.name),
-            document.createTextNode(peer.uri),
-            document.createTextNode(peer.control_uri),
+            document.createTextNode(peer.uris),
+            document.createTextNode(peer.control_uris),
             document.createTextNode(peer.proxy),
             btnConfigure,
             btnDestroy,
@@ -1231,8 +1231,8 @@ function showPeer(peer)
         row = AddTableItem(tableRef,
             document.createTextNode(peer.id),
             document.createTextNode(peer.node_name.name),
-            document.createTextNode(peer.uri),
-            document.createTextNode(peer.control_uri),
+            document.createTextNode(peer.uris),
+            document.createTextNode(peer.control_uris),
             document.createTextNode(peer.proxy),
             btnConfigure);
     }
@@ -1358,7 +1358,7 @@ function showActor()
         btnMigrate.value = 'Migrate';
         btnMigrate.setAttribute("onclick", "migrate(this.id)");
 
-        // FIXME now during testing we have manual control over replication, this will be removed later 
+        // FIXME now during testing we have manual control over replication, this will be removed later
         var btnReplicate = document.createElement('input');
         btnReplicate.type = 'button';
         btnReplicate.className = "btn btn-primary btn-xs";
@@ -1366,7 +1366,7 @@ function showActor()
         btnReplicate.value = 'Replicate';
         btnReplicate.setAttribute("onclick", "replicate(this.id)");
 
-        // FIXME now during testing we have manual control over dereplication, this will be removed later 
+        // FIXME now during testing we have manual control over dereplication, this will be removed later
         var btnDereplicate = document.createElement('input');
         btnDereplicate.type = 'button';
         btnDereplicate.className = "btn btn-primary btn-xs";
@@ -1461,8 +1461,8 @@ function migrate(actor_id)
         }
         var node = findRuntime(actor.peer_id);
         if (node) {
-            if (node.control_uri) {
-                var url = node.control_uri + '/actor/' + actor.id + '/migrate';
+            if (node.control_uris) {
+                var url = node.control_uris[0] + '/actor/' + actor.id + '/migrate';
                 var data = JSON.stringify({'peer_node_id': peer_id});
                 console.log("migrate - url: " + url + " data: " + data);
                 $.ajax({
@@ -1494,7 +1494,7 @@ function migrate(actor_id)
 }
 
 // Replicate actor with "actor_id" to selected (or unselected) runtime in combobox in actorsTable
-// FIXME now during testing we have manual control over replication, this will be removed later 
+// FIXME now during testing we have manual control over replication, this will be removed later
 function replicate(actor_id)
 {
     var combo = document.getElementById('selectRuntime');
@@ -1507,8 +1507,8 @@ function replicate(actor_id)
     if (actor) {
         var node = findRuntime(actor.peer_id);
         if (node) {
-            if (node.control_uri) {
-                var url = node.control_uri + '/actor/' + actor.id + '/replicate';
+            if (node.control_uris) {
+                var url = node.control_uri[0] + '/actor/' + actor.id + '/replicate';
                 if (peer_id == "same") {
                     var data = JSON.stringify({});
                 } else {
@@ -1543,15 +1543,15 @@ function replicate(actor_id)
 }
 
 // Dereplicate actor with "actor_id"
-// FIXME now during testing we have manual control over replication, this will be removed later 
+// FIXME now during testing we have manual control over replication, this will be removed later
 function dereplicate(actor_id)
 {
     var actor = findActor(actor_id);
     if (actor) {
         var node = findRuntime(actor.peer_id);
         if (node) {
-            if (node.control_uri) {
-                var url = node.control_uri + '/actor/' + actor.id + '/replicate';
+            if (node.control_uris) {
+                var url = node.control_uris[0] + '/actor/' + actor.id + '/replicate';
                 var data = JSON.stringify({'dereplicate': true, 'exhaust': true});
                 console.log("replicate - url: " + url + " data: " + data);
                 $.ajax({
@@ -1626,7 +1626,7 @@ function destroyPeerByMethod(peer_id, method)
 {
     var peer = findRuntime(peer_id);
     if (peer) {
-        var url = peer.control_uri + '/node/' + method;
+        var url = peer.control_uris[0] + '/node/' + method;
         console.log("destroyPeer url: " + url);
 
         $.ajax({
@@ -1751,11 +1751,11 @@ function startTrace() {
 
     $("#traceDialog").modal('hide');
     for (var index in peers) {
-        if (peers[index].control_uri) {
+        if (peers[index].control_uris) {
             if (peers[index].source) {
                 showInfo("Trace already started on runtime" + peers[index].id);
             } else {
-                var url = peers[index].control_uri + '/log';
+                var url = peers[index].control_uris[0] + '/log';
                 var data = JSON.stringify({'actors': actors, 'events': events});
                 console.log("startLog - url: " + url + " data: " + data);
                 $.ajax({
@@ -1774,7 +1774,7 @@ function startTrace() {
                         if(data) {
                             console.log("startLog - data: " + JSON.stringify(data));
                             this.peer.user_id = data.user_id;
-                            this.peer.source = new EventSource(this.peer.control_uri + '/log/' + this.peer.user_id);
+                            this.peer.source = new EventSource(this.peer.control_uris[0] + '/log/' + this.peer.user_id);
                             this.peer.source.addEventListener("message", eventHandler, false);
                         } else {
                             console.log("startLog - Empty response");
@@ -1793,7 +1793,7 @@ function startTrace() {
 function stopLog()
 {
     for (var index in peers) {
-        var url = peers[index].control_uri + '/log/' + peers[index].user_id;
+        var url = peers[index].control_uris[0] + '/log/' + peers[index].user_id;
         console.log("stopLog url: " + url);
         $.ajax({
             timeout: 20000,
@@ -1917,7 +1917,7 @@ function eventHandler(event)
         cell3.appendChild(document.createTextNode(data.application_id));
     } else if(data.type == "link_connected") {
         cell3.appendChild(document.createTextNode(data.peer_id));
-        cell4.appendChild(document.createTextNode(data.uri));
+        cell4.appendChild(document.createTextNode(data.uris));
     } else if(data.type == "link_disconnected") {
         cell3.appendChild(document.createTextNode(data.peer_id));
     } else if(data.type == "log_message") {
@@ -1933,11 +1933,11 @@ function startGraphEvents(application)
     var events = ["actor_new", "actor_replicate", "actor_dereplicate"];
     var actors = application.actors;
     for (var index in peers) {
-        if (peers[index].control_uri) {
+        if (peers[index].control_uris) {
             if (peers[index].graph_source) {
                 showError("Graph trace already started on runtime" + peers[index].node_name.name);
             } else {
-                var url = peers[index].control_uri + '/log';
+                var url = peers[index].control_uris[0] + '/log';
                 var data = JSON.stringify({'actors': actors, 'events': events});
                 console.log("startGraphEvents - url: " + url + " data: " + data);
                 $.ajax({
@@ -1956,7 +1956,7 @@ function startGraphEvents(application)
                         if(data) {
                             console.log("startGraphEvents - data: " + JSON.stringify(data));
                             this.peer.graph_user_id = data.user_id;
-                            this.peer.graph_source = new EventSource(this.peer.control_uri + '/log/' + data.user_id);
+                            this.peer.graph_source = new EventSource(this.peer.control_uris[0] + '/log/' + data.user_id);
                             this.peer.graph_source.addEventListener("message", graphEventHandler, false);
                         } else {
                             console.log("startGraphEvents - Empty response");
@@ -1976,7 +1976,7 @@ function stopGraphEvents()
 {
     for (var index in peers) {
         if (peers[index].graph_source && peers[index].graph_user_id) {
-            var url = peers[index].control_uri + '/log/' + peers[index].graph_user_id;
+            var url = peers[index].control_uris[0] + '/log/' + peers[index].graph_user_id;
             console.log("stopGraphEvents url: " + url);
             $.ajax({
                 timeout: 5000,
@@ -2065,7 +2065,7 @@ function deployHandler()
     var name = $("#script_name").val();
     var reqs = $("#migrate_reqs").val();
     var creds = $("#credentials_conf").val();
-    deployApplication(peer.control_uri, script, reqs, name, creds);
+    deployApplication(peer.control_uris[0], script, reqs, name, creds);
 }
 
 // Deploy application with "script" and "name" to runtime with "uri"
