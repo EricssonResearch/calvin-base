@@ -60,30 +60,7 @@ domain_name="test_security_domain"
 orig_application_store_path = os.path.join(security_testdir, "scripts")
 #application_store_path = os.path.join(credentials_testdir, "scripts")
 
-
-try:
-    ipv6_hostname = socket.gethostbyaddr('::1')
-except Exception as err:
-    print("Failed to resolve the IPv6 localhost hostname, please update the corresponding entry in the /etc/hosts file, e.g.,:\n"
-                "\t::1              <hostname>.localdomain <hostname>.local <hostname> localhost")
-    raise
-try:
-    ipv6_hostname = socket.gethostbyaddr('::ffff:127.0.0.1')
-except Exception as err:
-    print("Failed to resolve ::ffff:127.0.0.1, please add the following line (with your hostname) to  /etc/hosts :\n"
-          "::ffff:127.0.0.1:           <hostname>.localdomain <hostname>.local <hostname>")
-    raise
-try:
-    hostname = socket.gethostname()
-    ip_addr = socket.gethostbyname(hostname)
-    fqdn = socket.getfqdn(hostname)
-    print("\n\tip_addr={}"
-              "\n\thostname={}"
-              "\n\tfqdn={}".format(ip_addr, hostname, fqdn))
-except Exception as err:
-    print("Failed to resolve the hostname, ip_addr or the FQDN of the runtime, err={}".format(err))
-    raise
-
+hostname=None
 rt=[]
 rt_attributes=[]
 request_handler=None
@@ -119,9 +96,33 @@ class TestSecurity(unittest.TestCase):
         from calvin.Tools.csruntime import csruntime
         from conftest import _config_pytest
         import fileinput
+        global hostname
         global rt
         global rt_attributes
         global request_handler
+        try:
+            ipv6_hostname = socket.gethostbyaddr('::1')
+        except Exception as err:
+            print("Failed to resolve the IPv6 localhost hostname, please update the corresponding entry in the /etc/hosts file, e.g.,:\n"
+                        "\t::1              <hostname>.localdomain <hostname>.local <hostname> localhost")
+            raise
+        try:
+            ipv6_hostname = socket.gethostbyaddr('::ffff:127.0.0.1')
+        except Exception as err:
+            print("Failed to resolve ::ffff:127.0.0.1, please add the following line (with your hostname) to  /etc/hosts :\n"
+                  "::ffff:127.0.0.1:           <hostname>.localdomain <hostname>.local <hostname>")
+            raise
+        try:
+            hostname = socket.gethostname()
+            ip_addr = socket.gethostbyname(hostname)
+            fqdn = socket.getfqdn(hostname)
+            print("\n\tip_addr={}"
+                      "\n\thostname={}"
+                      "\n\tfqdn={}".format(ip_addr, hostname, fqdn))
+        except Exception as err:
+            print("Failed to resolve the hostname, ip_addr or the FQDN of the runtime, err={}".format(err))
+            raise
+
         try:
             shutil.rmtree(credentials_testdir)
         except Exception as err:
@@ -250,6 +251,7 @@ class TestSecurity(unittest.TestCase):
 
 
     def teardown(self):
+        global hostname
         global rt
         global request_handler
         for runtime in rt:

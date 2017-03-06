@@ -110,14 +110,14 @@ class TestSecurity(unittest.TestCase):
             print "Failed to remove old tesdir, err={}".format(err)
             pass
         try:
-            os.mkdir(credentials_testdir)
-            os.mkdir(runtimesdir)
-            os.mkdir(runtimes_truststore)
-            os.mkdir(runtimes_truststore_signing_path)
-            os.mkdir(actor_store_path)
-            os.mkdir(os.path.join(actor_store_path,"io"))
-            shutil.copy(os.path.join(orig_actor_store_path,"io","__init__.py"), os.path.join(actor_store_path,"io","__init__.py"))
-            os.mkdir(os.path.join(actor_store_path,"std"))
+            os.makedirs(credentials_testdir)
+            os.makedirs(runtimesdir)
+            os.makedirs(runtimes_truststore)
+            os.makedirs(runtimes_truststore_signing_path)
+            os.makedirs(actor_store_path)
+            os.makedirs(os.path.join(actor_store_path,"test"))
+            shutil.copy(os.path.join(orig_actor_store_path,"test","__init__.py"), os.path.join(actor_store_path,"test","__init__.py"))
+            os.makedirs(os.path.join(actor_store_path,"std"))
             shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
             shutil.copytree(orig_application_store_path, application_store_path)
             filelist = [ f for f in os.listdir(application_store_path) if f.endswith(".sign.93d58fef") ]
@@ -164,16 +164,16 @@ class TestSecurity(unittest.TestCase):
         with open(actor_SumFake_path, "a") as fd:
                 fd.write(" ")
 
-        #Create signed version of StandardOut actor
-        orig_actor_StandardOut_path = os.path.join(orig_actor_store_path,"io","StandardOut.py")
-        actor_StandardOut_path = os.path.join(actor_store_path,"io","StandardOut.py")
-        shutil.copy(orig_actor_StandardOut_path, actor_StandardOut_path)
-        cs.sign_file(actor_StandardOut_path)
+        #Create signed version of Sink actor
+        orig_actor_Sink_path = os.path.join(orig_actor_store_path,"test","Sink.py")
+        actor_Sink_path = os.path.join(actor_store_path,"test","Sink.py")
+        shutil.copy(orig_actor_Sink_path, actor_Sink_path)
+        cs.sign_file(actor_Sink_path)
 
-        #Create unsigned version of StandardOut actor
-        actor_StandardOutUnsigned_path = actor_StandardOut_path.replace(".py", "Unsigned.py") 
-        shutil.copy(actor_StandardOut_path, actor_StandardOutUnsigned_path)
-        replace_text_in_file(actor_StandardOutUnsigned_path, "StandardOut", "StandardOutUnsigned")
+        #Create unsigned version of Sink actor
+        actor_SinkUnsigned_path = actor_Sink_path.replace(".py", "Unsigned.py") 
+        shutil.copy(actor_Sink_path, actor_SinkUnsigned_path)
+        replace_text_in_file(actor_SinkUnsigned_path, "Sink", "SinkUnsigned")
 
         #Sign applications
         cs.sign_file(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
@@ -407,8 +407,8 @@ class TestSecurity(unittest.TestCase):
 #            rt.append(RT("https://{}:502{}".format(hostname, i)))
             rt.append(RT("http://{}:502{}".format(hostname,i)))
             # Wait to be sure that all runtimes has started
-            time.sleep(5)
-        time.sleep(15)
+            time.sleep(1)
+        time.sleep(5)
 
         request.addfinalizer(self.teardown)
 

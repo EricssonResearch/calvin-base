@@ -270,17 +270,24 @@ class CalvinServer(base_transport.BaseServer):
             before we can callback upper layers
         """
         import socket
-        try:
-            junk, ipv6 = uri.split("//")
-            ipv6_addr_list = ipv6.split(":")[:-1]
-            ipv6_addr = ":".join(ipv6_addr_list)
-            hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ipv6_addr)
-            fqdn = socket.getfqdn(hostname)
-        except Exception as err:
-            _log.error("Could not resolve ip address to hostname"
-                            "\n\terr={}"
-                            "\n\turi={}".format(err, uri))
-            raise
+        from calvin.utilities import calvinconfig
+        _conf = calvinconfig.get()
+        runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
+        if runtime_to_runtime_security=="tls":
+            _log.debug("TLS enabled, get FQDN of runtime")
+            try:
+                junk, ipv6 = uri.split("//")
+                ipv6_addr_list = ipv6.split(":")[:-1]
+                ipv6_addr = ":".join(ipv6_addr_list)
+                hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ipv6_addr)
+                fqdn = socket.getfqdn(hostname)
+            except Exception as err:
+                _log.error("Could not resolve ip address to hostname"
+                                "\n\terr={}"
+                                "\n\turi={}".format(err, uri))
+                raise
+        else:
+            fqdn=None
 
         tp = CalvinTransport(self._rt_id, uri, self._callbacks,
                              self._client_transport, proto=protocol,

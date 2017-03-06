@@ -585,7 +585,7 @@ class CalvinProto(CalvinCBClass):
         callback: called when finished with the authentication decision
         jwt: signed JSON Web Token (JWT) containing the authentication request
         """
-        _log.debug("authentication_decision:\n\tauth_server_uuid={}\n\tcallback={}\n\tjwt={}".format(auth_server_uuid, callback, jw))
+        _log.debug("authentication_decision:\n\tauth_server_uuid={}\n\tcallback={}\n\tjwt={}".format(auth_server_uuid, callback, jwt))
         self.node.network.link_request(auth_server_uuid,
                                        CalvinCB(send_message,
             msg = {'cmd': 'AUTHENTICATION_DECISION', 'jwt': jwt, 'cert_name': self.node.runtime_credentials.cert_name},
