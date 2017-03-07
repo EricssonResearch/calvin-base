@@ -1,7 +1,7 @@
 {
     "admin": {
         "organization": "Ericsson",
-        "organizationalUnit": "IT department"
+        "organizationalUnit": ["IT department"]
     },
     "Ericsson Lund": { 
         "organization": "Ericsson1",

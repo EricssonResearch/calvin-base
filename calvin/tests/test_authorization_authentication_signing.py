@@ -52,6 +52,7 @@ runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_sign
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
 code_signer_name="test_signer"
+orig_identity_provider_path = os.path.join(security_testdir,"identity_provider")
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
 orig_actor_store_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'actorstore','systemactors'))
@@ -120,10 +121,7 @@ class TestSecurity(unittest.TestCase):
             os.makedirs(os.path.join(actor_store_path,"std"))
             shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
             shutil.copytree(orig_application_store_path, application_store_path)
-            filelist = [ f for f in os.listdir(application_store_path) if f.endswith(".sign.93d58fef") ]
-            for f in filelist:
-                    os.remove(os.path.join(application_store_path,f))
-            shutil.copytree(os.path.join(security_testdir,"identity_provider"),identity_provider_path)
+            shutil.copytree(orig_identity_provider_path, identity_provider_path)
         except Exception as err:
             _log.error("Failed to create test folder structure, err={}".format(err))
             print "Failed to create test folder structure, err={}".format(err)
@@ -255,9 +253,8 @@ class TestSecurity(unittest.TestCase):
             csr_path = ca.store_csr_with_enrollment_password(csr)
             cert_path = ca.sign_csr(csr_path)
             runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
-        #Let's hash passwords in users.json file (the runtimes will try to do this
-        # but they will all try to do it at the same time, so it will be overwritten
-        # multiple times and the first test will always fail)
+        #Let's hash passwords in users.json file.
+        #TODO: investigate why the tests faile if this is removed, is it a timing thing?
         self.arp = FileAuthenticationRetrievalPoint(identity_provider_path)
         self.arp.check_stored_users_db_for_unhashed_passwords()
 
@@ -274,8 +271,7 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('global', 'actor_paths', [actor_store_path])
 #        rt_conf.set('global', 'storage_type', "securedht")
 
-        # Runtime 0: local authentication, signature verification, local authorization.
-        # Primarily acts as Certificate Authority for the domain
+        # Runtime 0: Certificate authority, authentication server, authorization server.
         rt0_conf = copy.deepcopy(rt_conf)
         rt0_conf.set('global','storage_type','local')
         rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
@@ -285,46 +281,8 @@ class TestSecurity(unittest.TestCase):
                         "comment": "Certificate Authority",
                         "authentication": {
                             "procedure": "local",
-                            "identity_provider_path": identity_provider_path
-                        },
-                        "authorization": {
-                            "procedure": "local",
-                            "policy_storage_path": policy_storage_path
-                        }
-                    })
-        rt0_conf.save("/tmp/calvin5000.conf")
-
-        # Runtime 1: local authentication, signature verification, local authorization.
-        rt1_conf = copy.deepcopy(rt_conf)
-        rt1_conf.set('global','storage_type','proxy')
-        rt1_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
-        rt1_conf.set('security','enrollment_password',enrollment_passwords[1])
-        rt1_conf.set("security", "security_conf", {
-                        "comment": "Local authentication, local authorization",
-                        "authentication": {
-                            "procedure": "local",
                             "identity_provider_path": identity_provider_path,
                             "accept_external_requests": True
-                        },
-                        "authorization": {
-                            "procedure": "local",
-                            "policy_storage_path": policy_storage_path
-                        }
-                    })
-        rt1_conf.save("/tmp/calvin5001.conf")
-
-        # Runtime 2: local authentication, signature verification, local authorization.
-        # Can also act as authorization server for other runtimes.
-        # Other street compared to the other runtimes
-        rt2_conf = copy.deepcopy(rt_conf)
-        rt2_conf.set('global','storage_type','proxy')
-        rt2_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
-        rt2_conf.set('security','enrollment_password',enrollment_passwords[2])
-        rt2_conf.set("security", "security_conf", {
-                        "comment": "Local authentication, local authorization",
-                        "authentication": {
-                            "procedure": "local",
-                            "identity_provider_path": identity_provider_path
                         },
                         "authorization": {
                             "procedure": "local",
@@ -332,62 +290,56 @@ class TestSecurity(unittest.TestCase):
                             "accept_external_requests": True
                         }
                     })
+        rt0_conf.save("/tmp/calvin5000.conf")
+
+        # Runtime 1: Authentication server, authorization server.
+        rt1_conf = copy.deepcopy(rt_conf)
+        rt1_conf.set('global','storage_type','proxy')
+        rt1_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
+        rt1_conf.set('security','enrollment_password',enrollment_passwords[1])
+        rt1_conf.set("security", "security_conf", {
+                        "comment": "Local authentication, local authorization",
+                        "authentication": {
+                            "procedure": "external",
+                            "server_uuid": runtimes[0].node_id
+                        },
+                        "authorization": {
+                            "procedure": "external",
+                            "server_uuid": runtimes[0].node_id
+                        }
+                    })
+        rt1_conf.save("/tmp/calvin5001.conf")
+
+        # Runtime 2:
+        rt2_conf = copy.deepcopy(rt1_conf)
+        rt2_conf.set('security','enrollment_password',enrollment_passwords[2])
         rt2_conf.save("/tmp/calvin5002.conf")
 
-        # Runtime 3: external authentication (RADIUS), signature verification, local authorization.
-        rt3_conf = copy.deepcopy(rt_conf)
-        rt3_conf.set('global','storage_type','proxy')
-        rt3_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
+        # Runtime 3: external authentication (RADIUS).
+        rt3_conf = copy.deepcopy(rt1_conf)
         rt3_conf.set('security','enrollment_password',enrollment_passwords[3])
         rt3_conf.set("security", "security_conf", {
-                        "comment": "RADIUS authentication, local authorization",
+                        "comment": "RADIUS authentication, external authorization",
                         "authentication": {
                             "procedure": "radius",
                             "server_ip": "localhost",
                             "secret": "elxghyc5lz1_passwd"
                         },
                         "authorization": {
-                            "procedure": "local",
-                            "policy_storage_path": policy_storage_path
+                            "procedure": "external",
+                            "server_uuid": runtimes[0].node_id
                         }
                     })
         rt3_conf.save("/tmp/calvin5003.conf")
 
-        # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
-        rt4_conf = copy.deepcopy(rt_conf)
-        rt4_conf.set('global','storage_type','proxy')
-        rt4_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
+        # Runtime 4:
+        rt4_conf = copy.deepcopy(rt1_conf)
         rt4_conf.set('security','enrollment_password',enrollment_passwords[4])
-        rt4_conf.set("security", "security_conf", {
-                        "comment": "Local authentication, external authorization",
-                        "authentication": {
-                            "procedure": "local",
-                            "identity_provider_path": identity_provider_path
-                        },
-                        "authorization": {
-#                            "procedure": "external"
-                            "procedure": "external",
-                            "server_uuid": runtimes[2].node_id
-                        }
-                    })
         rt4_conf.save("/tmp/calvin5004.conf")
 
-        # Runtime 5: external authentication (runtime 1), signature verification, local authorization.
-        rt5_conf = copy.deepcopy(rt_conf)
-        rt5_conf.set('global','storage_type','proxy')
-        rt5_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
+        # Runtime 5:
+        rt5_conf = copy.deepcopy(rt1_conf)
         rt5_conf.set('security','enrollment_password',enrollment_passwords[5])
-        rt5_conf.set("security", "security_conf", {
-                        "comment": "Local authentication, external authorization",
-                        "authentication": {
-                            "procedure": "external",
-                            "server_uuid": runtimes[1].node_id
-                        },
-                        "authorization": {
-                            "procedure": "local",
-                            "policy_storage_path": policy_storage_path
-                        }
-                    })
         rt5_conf.save("/tmp/calvin5005.conf")
 
         #Start all runtimes
@@ -847,6 +799,11 @@ class TestSecurity(unittest.TestCase):
 
         request_handler.delete_application(rt[2], result['application_id'])
 
+###################################
+#   Control interface authorization 
+#   as well as user db management
+###################################
+
     @pytest.mark.slow
     def testSecurity_NEGATIVE_Control_Interface_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
@@ -876,6 +833,59 @@ class TestSecurity(unittest.TestCase):
             _log.exception("Test deploy failed for non security reasons")
 
         raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")
+
+    @pytest.mark.slow
+    def testSecurity_POSITIVE_Add_User(self):
+        _log.analyze("TESTRUN", "+", {})
+        global rt
+        global request_handler
+        global security_testdir
+
+        try:
+            self.verify_storage()
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
+
+        result = {}
+        try:
+            request_handler.set_credentials({domain_name:{"user": "user0", "password": "pass0"}})
+            users_db = request_handler.get_users_db(rt[0])
+        except Exception as e:
+            if e.message.startswith("401"):
+                _log.exception("Failed to get users_db, err={}".format(err))
+                raise
+        if users_db:
+            _log.info("Hakan users_db={}".format(users_db))
+            #TODO: seem more efficient to have a dictionary instead of a list of users
+            users_db['user7']={"username": "user7",
+                                        "attributes": {
+                                                        "age": "77", 
+                                                        "last_name": "Gretasdottir",
+                                                        "first_name": "Greta",
+                                                        "address": "Mobilvagen 1"
+                                                    }, 
+                                        "password": "pass7"}
+        else:
+            raise Exception("users_db not in result or users_db not in result[users_db]")
+        #PUT the update database to the authentication server
+        try:
+            result = request_handler.post_users_db(rt[0], users_db)
+        except Exception as e:
+            if e.message.startswith("401"):
+                _log.exception("Failed to get users_db, err={}".format(err))
+                raise
+        #Read the users database back again and check if Greta has been added
+        try:
+            users_db2 = request_handler.get_users_db(rt[0])
+        except Exception as e:
+            if e.message.startswith("401"):
+                _log.exception("Failed to get users_db, err={}".format(err))
+                raise
+        _log.info("Hakan users_db={}".format(users_db2))
+        if not 'user7' in users_db2:
+            raise Exception("Failed to update the users_db")
+
 
 ###################################
 #   Authentication related tests

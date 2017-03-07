@@ -62,15 +62,18 @@ class FileAuthenticationRetrievalPoint(object):
             try:
                 os.makedirs(self.path)
             except OSError as exc:  # Guard against race condition
+                _log.error("Failed to create path, path={}".format(path))
                 if exc.errno != errno.EEXIST:
                     raise
 
     def get_users_db(self):
         """Return the database of users"""
         try:
-            with open(os.path.join(self.path,'users.json'),'rt') as data:
+            users_db_path = os.path.join(self.path,'users.json')
+            with open(users_db_path,'rt') as data:
                 return json.load(data)
         except Exception:
+            _log.error("No users.json file can be found at path={}".format(users_db_path))
             return None
 
     def create_users_db(self, data):
@@ -79,21 +82,34 @@ class FileAuthenticationRetrievalPoint(object):
             json.dump(data, file)
 
     def hash_passwords(self, data):
-        """Change the content of the users database"""
-        for user in data['users_db']:
+        """Change the content of the uisers database"""
+        _log.debug("hash_passwords\n\tdata={}".format(data))
+        for username in data:
+            user_data = data[username]
             #If the password is in clear, let's hash it with a salt and store that instead
-            if not pbkdf2_sha256.identify(user['password']):
-               hash = pbkdf2_sha256.encrypt(user['password'], rounds=200000, salt_size=16)
-               user['password']=hash
+            if ('password' in user_data) and not (pbkdf2_sha256.identify(user_data['password'])):
+                try:
+                    hash = pbkdf2_sha256.encrypt(user_data['password'], rounds=200000, salt_size=16)
+                except Exception as err:
+                    _log.error("Failed to calculate PBKDF2 of password, err={}".format(err))
+                    raise
+                user_data['password']=hash
 
     def update_users_db(self, data):
         """Change the content of the users database"""
-        self.hash_passwords(data)
+        _log.debug("update_users_db"
+                   "\n\tdata={}".format(data))
+        try:
+            self.hash_passwords(data)
+        except Exception as err:
+            _log.error("Failed to hash passwords, err={}".format(err))
+            raise
         file_path = os.path.join(self.path, "users.json")
         if os.path.isfile(file_path):
             with open(file_path, "w") as file:
                 json.dump(data, file)
         else:
+            _log.error("update_users_db: file does not exist, file_path={}".format(file_path))
             raise IOError  # Raise exception if policy named filename doesn't exist
 
     def check_stored_users_db_for_unhashed_passwords(self):
@@ -116,7 +132,7 @@ class FileAuthenticationRetrievalPoint(object):
                 _log.exception("Failed to open users.json, exc={}".format(exc))
 
         else:
-            _log.error("No users.json file")
+            _log.error("No users.json file, looking at {}".format(file_path))
             raise IOError  # Raise exception if policy named filename doesn't exist
 
 

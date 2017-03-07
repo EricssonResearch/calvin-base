@@ -1,53 +1,61 @@
 {
-	"users_db": [
-		{"username": "user1",
-			"attributes": {
-				"age": "11", 
-				"last_name": "Andersson",
-				"first_name": "Anders",
-				"address": "Mobilvagen 1"
-			}, 
-			"password": "pass1"
-		}, {
-			"username": "user2",
-			"attributes": {
-				"age": "22",
-				"last_name": "Beritsdotter",
-				"first_name": "Berit",
-				"groups": ["admin", "Ericsson Lund"],
-				"address": "Mobilvagen 1"
-			}, "password": "pass2"
-		}, {
-			"username": "user3",
-			"attributes": {
-				"age": "33",
-				"last_name": "Carlsson",
-				"first_name": "Carl"
-			}, 
-			"password": "pass3"
-		}, {
-			"username": "user4",
-			"attributes": {
-				"age": "44",
-				"last_name": "Davidsson",
-				"first_name": "David"
-			},
-			"password": "pass4"
-		}, {
-			"username": "user5",
-			"attributes": {
-				"age": "55",
-				"last_name": "Elinsdotter",
-				"first_name": "Elin"
-			}, 
-			"password": "pass5"
-		}, {
-			"username": "user6",
-			"attributes": {
-				"age": "66",
-				"last_name": "Fredriksson",
-				"first_name": "Fredrik"},
-			"password": "pass6"
-		}
-	]
+	"user0":{
+		"attributes": {
+			"age": "11", 
+			"last_name": "Adminsdottir",
+			"first_name": "Admin",
+			"address": "Mobilvagen 1",
+			"groups":["admin"]
+		}, 
+		"password": "pass0"
+	},
+	"user1":{
+		"attributes": {
+			"age": "11", 
+			"last_name": "Andersson",
+			"first_name": "Anders",
+			"address": "Mobilvagen 1"
+		}, 
+		"password": "pass1"
+	},
+	"user2":{
+		"attributes": {
+			"age": "22",
+			"last_name": "Beritsdotter",
+			"first_name": "Berit",
+			"groups": ["admin", "Ericsson Lund"],
+			"address": "Mobilvagen 1"
+		}, "password": "pass2"
+	},
+	"user3":{
+		"attributes": {
+			"age": "33",
+			"last_name": "Carlsson",
+			"first_name": "Carl"
+		}, 
+		"password": "pass3"
+	},
+	"user4":{
+		"attributes": {
+			"age": "44",
+			"last_name": "Davidsson",
+			"first_name": "David"
+		},
+		"password": "pass4"
+	},
+	"user5":{
+		"attributes": {
+			"age": "55",
+			"last_name": "Elinsdotter",
+			"first_name": "Elin"
+		}, 
+		"password": "pass5"
+	},
+	"user6":{
+		"attributes": {
+			"age": "66",
+			"last_name": "Fredriksson",
+			"first_name": "Fredrik"},
+		"password": "pass6"
+	}
 }

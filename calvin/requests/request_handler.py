@@ -62,7 +62,9 @@ METER_PATH_TIMED = '/meter/{}/timed'
 METER_PATH_AGGREGATED = '/meter/{}/aggregated'
 METER_PATH_METAINFO = '/meter/{}/metainfo'
 CSR_REQUEST = '/certificate_authority/certificate_signing_request'
-
+AUTHENTICATION = '/authentication'
+AUTHENTICATION_USERS_DB = '/authentication/users_db'
+AUTHENTICATION_GROUPS_DB = '/authentication/groups_db'
 def get_runtime(value):
     if isinstance(value, basestring):
         return RT(value)
@@ -129,6 +131,10 @@ class RequestHandler(object):
     def _post(self, rt, timeout, async, path, data=None):
         req = session if async else requests
         return self._send(rt, timeout, req.post, path, data)
+
+    def _put(self, rt, timeout, async, path, data=None):
+        req = session if async else requests
+        return self._send(rt, timeout, req.put, path, data)
 
     def _delete(self, rt, timeout, async, path, data=None):
         req = session if async else requests
@@ -422,5 +428,19 @@ class RequestHandler(object):
     def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'csr': csr}
         r = self._post(rt, timeout, async, CSR_REQUEST, data=data)
+        return self.check_response(r)
+
+    def get_users_db(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
+        r = self._get(rt, timeout, async, AUTHENTICATION_USERS_DB)
+        result = self.check_response(r)
+        if 'users_db' in result:
+            return result['users_db']
+        else:
+            _log.error("Failed to fetch users_db")
+            return None
+
+    def post_users_db(self, rt, users_db, timeout=DEFAULT_TIMEOUT, async=False):
+        data = {'users_db': users_db, 'sec_credentials':self.credentials}
+        r = self._put(rt, timeout, async, AUTHENTICATION_USERS_DB, data=data)
         return self.check_response(r)
 

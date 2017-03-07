@@ -926,7 +926,13 @@ class CalvinControl(object):
             return arguments['func'](arguments['self'], arguments['handle'], arguments['connection'], arguments['match'], arguments['data'], arguments['hdr'])
 
         def inner(self, handle, connection, match, data, hdr):
-            _log.debug("authentication_decorator::inner, arguments were:\n\tfunc={}\n handle={}\n connection={}\n match={}\n data={}\n hdr={}".format(func, handle, connection, match, data, hdr))
+            _log.debug("authentication_decorator::inner, arguments were:"
+                       "\n\tfunc={}"
+                       "\n\thandle={}"
+                       "\n\tconnection={}"
+                       "\n\tmatch={}"
+                       "\n\tdata={}"
+                       "\n\thdr={}".format(func, handle, connection, match, data, hdr))
             issue_tracker = IssueTracker()
             credentials = None
             arguments={'func':func, 'self':self, 'handle':handle, 'connection':connection, 'match':match, 'data':data, 'hdr':hdr}
@@ -1824,16 +1830,20 @@ class CalvinControl(object):
     def handle_edit_authentication_users_db(self, handle, connection, match, data, hdr):
         """Edit users database"""
         # TODO: need some kind of authentication for policy management
-        try:
-#            self.node.authentication.arp.update_users_db(data, match.group(1))
-            self.node.authentication.arp.update_users_db(data)
-            status = calvinresponse.OK
-        except IOError:
-            _log.exception("handle_edit_authentication_users_db")
+        if 'users_db'in data:
+            try:
+    #            self.node.authentication.arp.update_users_db(data, match.group(1))
+                self.node.authentication.arp.update_users_db(data['users_db'])
+                status = calvinresponse.OK
+            except IOError as err:
+                _log.exception("handle_edit_authentication_users_db, err={}".format(err))
+                status = calvinresponse.NOT_FOUND
+            except Exception as err:
+                _log.exception("handle_edit_authentication_users_db, err={}".format(err))
+                status = calvinresponse.INTERNAL_ERROR
+        else:
+            _log.exception("handle_edit_authentication_users_db: no users_db in data\n\tdata={}".format(data))
             status = calvinresponse.NOT_FOUND
-        except:
-            _log.exception("handle_edit_authentication_users_db")
-            status = calvinresponse.INTERNAL_ERROR
         self.send_response(handle, connection, None, status=status)
 
     @authentication_decorator

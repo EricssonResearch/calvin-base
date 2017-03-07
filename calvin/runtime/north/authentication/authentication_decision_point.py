@@ -109,10 +109,11 @@ class AuthenticationDecisionPoint(object):
             # Verify users against stored passwords
             subject_attributes = {}
             decision = False
-            for user in users_db['users_db']:
-                if request['subject']['user'] == user['username']:
-                    if pbkdf2_sha256.verify(request['subject']['password'],user['password']):
-                        decision = True
+            if ('subject' in request) and ('user' in request['subject']) and (request['subject']['user'] in users_db):
+                user = users_db[request['subject']['user']]
+                if ('password' in request['subject']) and pbkdf2_sha256.verify(request['subject']['password'],user['password']):
+                    decision = True
+                    if 'attributes' in user:
                         for key in user['attributes']:
                             if key == "groups" and groups_db:
                                 for group_key in user['attributes']['groups']:
@@ -130,10 +131,12 @@ class AuthenticationDecisionPoint(object):
                                 elif not user['attributes'][key] in subject_attributes[key]:
                                     # List exists, make sure we don't add same value several times
                                     subject_attributes[key].append(user['attributes'][key])
-                        return (decision, subject_attributes)
                     else:
-                        decision = False
-                        return (decision, None)
+                        _log.error("No attributes for user={}".format(user))
+                    return (decision, subject_attributes)
+                else:
+                    decision = False
+                    return (decision, None)
             return (decision, None)
         except Exception as err:
             _log.error("authentication_decision: Authentication failed, err={}".format(err))
