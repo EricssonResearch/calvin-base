@@ -926,6 +926,7 @@ class CalvinControl(object):
             return arguments['func'](arguments['self'], arguments['handle'], arguments['connection'], arguments['match'], arguments['data'], arguments['hdr'])
 
         def inner(self, handle, connection, match, data, hdr):
+            from base64 import b64decode
             _log.debug("authentication_decorator::inner, arguments were:"
                        "\n\tfunc={}"
                        "\n\thandle={}"
@@ -933,14 +934,18 @@ class CalvinControl(object):
                        "\n\tmatch={}"
                        "\n\tdata={}"
                        "\n\thdr={}".format(func, handle, connection, match, data, hdr))
+
             issue_tracker = IssueTracker()
             credentials = None
             arguments={'func':func, 'self':self, 'handle':handle, 'connection':connection, 'match':match, 'data':data, 'hdr':hdr}
             try:
+                if 'authorization' in hdr:
+                    cred = b64decode(hdr['authorization'].strip('Basic ')).split(':')
+                    credentials ={'user':cred[0], 'password':cred[1]}
                 if data and 'sec_credentials' in data:
-                    credentials = data['sec_credentials']
-            except TypeError:
-                # Data is not iterable
+                    deploy_credentials = data['sec_credentials']
+            except TypeError as err:
+                _log.error("inner: code not decode credentials in header")
                 pass
             try:
                 self.security.authenticate_subject(
