@@ -548,7 +548,7 @@ def obtain_cert_node_info(name, security_dir=None):
 
 
 
-def store_trusted_root_cert(cert_file, trusted_root, security_dir=None):
+def store_trusted_root_cert(cert_file, type, security_dir=None):
     """
     Copy the certificate giving it the name that can be stored in
     trustStore for verification of signatures.
@@ -557,10 +557,12 @@ def store_trusted_root_cert(cert_file, trusted_root, security_dir=None):
     """
     commonName = cert_CN(certpath=cert_file)
     runtimes_dir = get_runtimes_credentials_path(security_dir=security_dir)
-    if trusted_root not in [TRUSTSTORE_TRANSPORT,TRUSTSTORE_SIGN]:
-        _log.exception("Incorrect value for trusted_root")
-        raise Exception("Incorrect value for trusted_root")
-    storepath = os.path.join(runtimes_dir, trusted_root)
+    if type not in [TRUSTSTORE_TRANSPORT,TRUSTSTORE_SIGN]:
+        _log.exception("Incorrect value for type")
+        raise Exception("Incorrect value for type")
+    store_dir = os.path.join(runtimes_dir, type)
+    if not os.path.isdir(store_dir):
+        os.makedirs(store_dir)
     try:
         certificate_hash = cert_hash(certpath=cert_file)
     except:
@@ -572,13 +574,13 @@ def store_trusted_root_cert(cert_file, trusted_root, security_dir=None):
     i=0
     filename_exist=True
     while filename_exist:
-        out_file = os.path.join(storepath, certificate_hash+"."+`i`)
+        out_file = os.path.join(store_dir, certificate_hash+"."+`i`)
         if os.path.isfile(out_file):
             i += 1
         else:
             filename_exist=False
 
-    shutil.copy(cert_file, storepath)
+    shutil.copy(cert_file, store_dir)
     return
 
 
@@ -728,7 +730,8 @@ def export_cert(certpath, path):
     Copy the certificate giving it the name that can be stored in
     trustStore for verification of signatures.
     file is the out file
-
+    -certpath: path of the certificate to be exported
+    -path: directory where the cert will be exported to
     """
 
     try:
@@ -741,6 +744,8 @@ def export_cert(certpath, path):
     #if filename collides with another certificate, increase last number
     #E.g., if two certificates get same has, the first file is name <cert_hash>.0
     # and the second <cert_hash>.1
+    if not os.path.isdir(path):
+        os.makedirs(path)
     while filename_exist:
         out_file = os.path.join(path, certificate_hash+"."+`i`)
         if os.path.isfile(out_file):
@@ -799,6 +804,9 @@ def unwrap_object_with_symmetric_key(wrapped_object):
 def encrypt_object_with_RSA(certificate, plaintext, unencrypted_data=None):
     """
     Encrypts an object using hybrid cryptography
+    -certificate: PEM certificate
+    -plaintext: string to be encrypted
+    -unencrypted_data: data that will not be encrypted, but appended, e.g., usefull for debugging
     """
     import base64
     from cryptography import x509
@@ -841,8 +849,16 @@ def decrypt_object_with_RSA(private_key, password, encrypted_object):
              backend=default_backend()
          )
     wrapped_object={}
-    wrapped_object['iv']=encrypted_object['iv']
-    wrapped_object['ciphertext']=encrypted_object['ciphertext']
+    if 'iv' in encrypted_object:
+        wrapped_object['iv']=encrypted_object['iv']
+    else:
+        _log.error("No IV in encrypted object, encrypted_object={}".format(encrypted_object))
+        return None
+    if 'ciphertext' in encrypted_object:
+        wrapped_object['ciphertext']=encrypted_object['ciphertext']
+    else:
+        _log.error("No ciphertext in encrypted object, encrypted_object={}".format(encrypted_object))
+        return None
     #Decrypt symmetric key
     wrapped_object['symmetric_key'] = _private_key.decrypt(
         base64.b64decode(encrypted_object['encrypted_symmetric_key']),

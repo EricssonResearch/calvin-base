@@ -220,8 +220,8 @@ class CA():
             self.configuration = self.parse_opensslconf()
             _log.debug("Configuration already exists")
 
-            print "Configuration already exists " \
-                  "using {}".format(self.configfile)
+#            print "Configuration already exists " \
+#                  "using {}".format(self.configfile)
         else:
             _log.debug("Configuration does not exist, let's create CA")
             self.new_opensslconf()
@@ -234,8 +234,8 @@ class CA():
             except:
                 _log.error("Creation of new CA credentials failed")
                 raise
-            print "Made new configuration at " \
-                  "{}".format(self.configfile)
+#            print "Made new configuration at " \
+#                  "{}".format(self.configfile)
             self.cert_enrollment_update_db_file()
 
     def new_ca_credentials(self, security_dir=None, force=False, readonly=False):
@@ -329,7 +329,7 @@ class CA():
         try:
             os.makedirs(directory, 0700)
         except OSError, e:
-            print e
+            _log.error("Failed to create directory, err={}".format(e))
         with open(self.configfile, 'wb') as configfd:
             self.config.write(configfd)
             configfd.close()
@@ -467,7 +467,6 @@ class CA():
         #signing certificates as for encrypting/decrypting
         #CSRs during enrollment, different key pairs should be
         #used
-
         if not encrypted_enrollment_request and encrypted_enrollment_request_path:
             try:
                 with open(encrypted_enrollment_request_path, 'r') as fd:
