@@ -1,35 +1,52 @@
 {
 	"id": "policy2",
-	"description": "Security policy for users with last name ending with 'dotter' and actor signed by 'signer'",
+	"description": "Security policy for user2 (Berit)",
 	"rule_combining": "permit_overrides",
 	"target": {
 		"subject": {
-			"last_name": ".*dotter",
-			"actor_signer": "signer"
+			"first_name":["Berit"]
 		}
 	},
 	"rules": [
 		{
-			"id": "policy2_rule1",
-			"description": "Permit access to 'calvinsys.events.timer', 'calvinsys.io.*' and 'runtime' if condition is true",
+			"id": "policy2_rule0",
+			"description": "Control interface",
 			"effect": "permit",
 			"target": {
+				"subject": {
+					"control_interface":["handle_deploy"]
+				}
+			}
+		},{
+			"id": "policy2_rule1",
+			"description": "Runtime resources",
+			"effect": "permit",
+			"target": {
+				"subject":{
+					"actor_signer": ["signer"]
+				},
 				"action": {
-					"requires": ["calvinsys.events.timer", "calvinsys.io.*", "runtime"]
+					"requires":["runtime", "calvinsys.io.*", "calvinsys.events.timer"]
 				}
 			},
 			"condition": {
 				"function": "and",
-				"attributes": [
-					{
-						"function": "equal",
-						"attributes": ["attr:resource:address.country", ["SE", "DK"]]
-					},
-					{
-						"function": "greater_than_or_equal",
-						"attributes": ["attr:environment:current_date", "2016-03-04"]
-					} 
-				]
+				"attributes":[{
+					"function": "equal",
+					"attributes": ["attr:resource:address.country",["SE","DK"]]
+				},{
+					"function": "greater_than_or_equal",
+					"attributes": ["attr:environment:current_date","2016-03-04"]
+				}]
+			}
+		},{
+			"id":"policy2_rule3",
+			"description":"Application signers",
+			"effect":"permit",
+			"target":{
+				"subject":{
+					"application_signer": [".*"]
+				}
 			}
 		}
 	]

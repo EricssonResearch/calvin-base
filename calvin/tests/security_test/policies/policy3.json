@@ -1,21 +1,41 @@
 {
 	"id": "policy3",
-	"description": "Security policy for user 'Carlsson'",
+	"description": "Security policy for user3 (Carl)",
 	"rule_combining": "permit_overrides",
 	"target": {
 		"subject": {
-			"last_name": "Carlsson",
-			"actor_signer": ".*"
+			"first_name":["Carl"]
 		}
 	},
 	"rules": [
 		{
-			"id": "policy3_rule1",
-			"description": "Permit access to 'calvinsys.*', and 'runtime'",
+			"id": "policy3_rule0",
+			"description": "Control interface",
 			"effect": "permit",
 			"target": {
+				"subject": {
+					"control_interface":["handle_deploy"]
+				}
+			}
+		},{
+			"id": "policy3_rule1",
+			"description": "Runtime resources",
+			"effect": "permit",
+			"target": {
+				"subject":{
+					"actor_signer": ".*"
+				},
 				"action": {
-					"requires": ["calvinsys.*", "runtime"]
+					"requires":["runtime", "calvinsys.*"]
+				}
+			}
+		},{
+			"id":"policy3_rule3",
+			"description":"Application signers",
+			"effect":"permit",
+			"target":{
+				"subject":{
+					"application_signer": [".*"]
 				}
 			}
 		}

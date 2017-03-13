@@ -19,6 +19,9 @@ import os
 import glob
 import json
 from calvin.utilities import calvinuuid
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
 
 # This is an abstract class for the PRP (Policy Retrieval Point)
 class PolicyRetrievalPoint(object):
@@ -64,16 +67,27 @@ class FilePolicyRetrievalPoint(PolicyRetrievalPoint):
 
     def get_policy(self, policy_id):
         """Return the policy identified by policy_id"""
-        with open(os.path.join(self.path, policy_id + ".json"), 'rt') as data:
-            return json.load(data)
+        try:
+            with open(os.path.join(self.path, policy_id + ".json"), 'rt') as data:
+                return json.load(data)
+        except Exception as err:
+            _log.error("Failed to open policy file for policy_id={}".format(policy_id))
+            raise
 
     def get_policies(self, name_pattern='*'):
         """Return all policies found using the name_pattern"""
         policies = {}
         for filename in glob.glob(os.path.join(self.path, name_pattern + ".json")): 
-            with open(filename, 'rb') as data:
-                policy_id = os.path.splitext(os.path.basename(filename))[0]
-                policies[policy_id] = json.load(data)
+            try:
+                with open(filename, 'rb') as data:
+                    policy_id = os.path.splitext(os.path.basename(filename))[0]
+                    policies[policy_id] = json.load(data)
+            except ValueError as err:
+                _log.error("Failed to parse policy as json, file={}".format(filename))
+                raise
+            except (OSError, IOError) as err:
+                _log.error("Failed to open file={}".format(filename))
+                raise
         return policies
 
     def create_policy(self, data):
