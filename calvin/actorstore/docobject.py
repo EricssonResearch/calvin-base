@@ -330,11 +330,18 @@ class ActorDoc(DocObject):
     @property
     def fargs(self):
         def _escape_string_arg(arg):
-            if type(arg) != str:
-                return arg
-            # Handle \n, \r etc
-            return '"{}"'.format(arg.encode('string_escape'))
-        return self._escape_text(", ".join(self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()]))
+            if type(arg) == str or type(arg) == unicode:
+                # Handle \n, \r etc
+                return '"{}"'.format(arg).encode('string_escape')
+            if arg is True:
+                return 'true'
+            if arg is False:
+                return 'false'
+            if arg is None:
+                return 'null'
+            return arg
+            # return '"{}"'.format(arg)
+        return ", ".join(self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()])
 
     @property
     def inports_compact(self):
