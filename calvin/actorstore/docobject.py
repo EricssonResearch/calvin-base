@@ -263,15 +263,15 @@ class ActorDoc(DocObject):
     ============================================================
     {{docs}}
 
-    {{#has_inputs}}Inports:{{/has_inputs}}
-    {{#inputs}}
-      {{port}} : {{docs}} {{#props}}({{props}}){{/props}}
-    {{/inputs}}
+    {{#has_inports}}Inports:{{/has_inports}}
+    {{#inports}}
+      {{name}} : {{docs}} {{#props}}Properties({{props}}){{/props}}
+    {{/inports}}
 
-    {{#has_outputs}}Outports::{{/has_outputs}}
-    {{#outputs}}
-      {{port}} : {{docs}} {{#props}}({{props}}){{/props}}
-    {{/outputs}}
+    {{#has_outports}}Outports::{{/has_outports}}
+    {{#outports}}
+      {{name}} : {{docs}} {{#props}}Properties({{props}}){{/props}}
+    {{/outports}}
     {{#is_component}}
 
     Requires: {{requires_compact}}
@@ -283,17 +283,17 @@ class ActorDoc(DocObject):
 
     {{e_docs}}
 
-    {{#has_inputs}}### Inports:{{/has_inputs}}
+    {{#has_inports}}### Inports:{{/has_inports}}
 
-    {{#inputs}}
-    **{{port}}** : {{docs}} {{#props}}(_{{props}}_){{/props}}
-    {{/inputs}}
+    {{#inports}}
+    **{{e_name}}** : {{e_docs}} {{#props}}_Properties({{e_props}})_{{/props}}
+    {{/inports}}
 
-    {{#has_outputs}}### Outports:{{/has_outputs}}
+    {{#has_outports}}### Outports:{{/has_outports}}
 
-    {{#outputs}}
-    **{{port}}** : {{docs}} {{#props}}(_{{props}}_){{/props}}
-    {{/outputs}}
+    {{#outports}}
+    **{{e_name}}** : {{e_docs}} {{#props}}_Properties({{e_props}})_{{/props}}
+    {{/outports}}
     {{#is_component}}
 
     ### Requires:
@@ -310,38 +310,39 @@ class ActorDoc(DocObject):
     def __init__(self, namespace, name, args, inputs, outputs, doclines):
         super(ActorDoc, self).__init__(namespace, name, doclines)
         self.args = args
+        self.inports = [PortDoc(namespace='in', name=pn, docs=pd, properties=pp) for pn, pd, pp in inputs]
+        self.outports = [PortDoc(namespace='out', name=pn, docs=pd, properties=pp) for pn, pd, pp in outputs]
         self.input_properties = {pn:pp for pn, _, pp in inputs}
         self.output_properties = {pn:pp for pn, _, pp in outputs}
-        self.inputs = [{'port':pn, 'docs':self._escape_text(pd), 'props':self._escape_text(pp)} for pn, pd, pp in inputs]
-        self.outputs = [{'port':pn, 'docs':self._escape_text(pd), 'props':self._escape_text(pp)} for pn, pd, pp in outputs]
+        self.inputs = [pn for pn, _, _ in inputs]
+        self.outputs = [pn for pn, _, _ in outputs]
         self.is_component = False
         self.label = "Actor"
 
     @property
-    def has_inputs(self):
-        return bool(self.inputs)
+    def has_inports(self):
+        return bool(self.inports)
 
     @property
-    def has_outputs(self):
-        return bool(self.outputs)
+    def has_outports(self):
+        return bool(self.outports)
 
     @property
     def fargs(self):
         def _escape_string_arg(arg):
             if type(arg) != str:
                 return arg
-            # if self.use_md:
-            #     return '"{}"'.format(arg.encode('string_escape'))
-            return '"{}"'.format(arg)
+            # Handle \n, \r etc
+            return '"{}"'.format(arg.encode('string_escape'))
         return self._escape_text(", ".join(self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()]))
 
     @property
     def inports_compact(self):
-        return ", ".join([p['port'] for p in self.inputs])
+        return ", ".join(self.inputs)
 
     @property
     def outports_compact(self):
-        return ", ".join([p['port'] for p in self.outputs])
+        return ", ".join(self.outputs)
 
     def metadata(self):
         metadata = {
@@ -349,13 +350,30 @@ class ActorDoc(DocObject):
             'name': self.name,
             'type': 'actor',
             'args': self.args,
-            'inputs': [p['port'] for p in self.inputs],
+            'inputs': self.inputs,
             'input_properties': self.input_properties,
-            'outputs': [p['port'] for p in self.outputs],
+            'outputs': self.outputs,
             'output_properties': self.output_properties,
             'is_known': True
         }
         return metadata
+
+class PortDoc(DocObject):
+
+    def __init__(self, namespace, name, docs, properties):
+        super(PortDoc, self).__init__(namespace, name, docs)
+        self.properties = properties;
+
+    @property
+    def props(self):
+        def _fmt_val(v):
+            if type(v) is not list:
+                return str(v)
+            l = ", ".join(v)
+            return "[{}]".format(l) if l else ""
+        res = ", ".join(["{}:{}".format(k, _fmt_val(v)) for k,v in self.properties.iteritems()])
+        return res
+
 
 
 class ComponentDoc(ActorDoc):
@@ -395,21 +413,21 @@ if __name__ == '__main__':
     # d = ErrorDoc('foo', 'Bar', 'short error description')
     # test_all_formatters(d)
     # #
-    d = ModuleDoc('root', [ModuleDoc('std', [], [], 'std short description'), ModuleDoc('io', [], [], 'io short description')], [], 'short description')
-    test_all_formatters(d)
+    # d = ModuleDoc('root', [ModuleDoc('std', [], [], 'std short description'), ModuleDoc('io', [], [], 'io short description')], [], 'short description')
+    # test_all_formatters(d)
     #
     doclines = """actor yaddda, yadda
 
         Even more
     """
-    a = ActorDoc('std', 'Comp', {'mandatory':['x', 'y'], 'optional':{'z':1}}, [('in1', 'anything', 'property'), ('in2', 'something', 'property')], [('out', 'token', 'property')], doclines)
+    a = ActorDoc('std', 'Comp', {'mandatory':['x', 'y'], 'optional':{'z':1}}, [('in1', 'anything', 'property'), ('in2', 'something', 'property')], [('out', 'token', {'foo':['apa', 'banan']})], doclines)
     test_all_formatters(a)
 
-    c = ComponentDoc('std', 'Args', {'mandatory':['x', 'y'], 'optional':{'z':1}}, [('in1', 'anything', 'property'), ('in2', 'something', 'property')], [('out', 'token', 'property')], doclines, ['alpha', 'beta'], {})
-    test_all_formatters(c)
-
-    d = ModuleDoc('std', [], [a, c], 'short description')
-    test_all_formatters(d)
+    # c = ComponentDoc('std', 'Args', {'mandatory':['x', 'y'], 'optional':{'z':1}}, [('in1', 'anything', 'property'), ('in2', 'something', 'property')], [('out', 'token', 'property')], doclines, ['alpha', 'beta'], {})
+    # test_all_formatters(c)
+    #
+    # d = ModuleDoc('std', [], [a, c], 'short description')
+    # test_all_formatters(d)
 
 
 
