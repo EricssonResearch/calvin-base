@@ -10,8 +10,8 @@ class DocObject(object):
     use_links = False
     use_md = False
 
-    COMPACT_FMT = """{{fqualified_name}} : {{fshort_desc}}"""
-    DETAILED_FMT_MD = COMPACT_FMT
+    COMPACT_FMT = "{{qualified_name}} : {{short_desc}}"
+    DETAILED_FMT_MD = "{{e_qualified_name}} : {{e_short_desc}}"
     DETAILED_FMT_PLAIN = COMPACT_FMT
 
     def __init__(self, namespace, name=None, docs=None):
@@ -20,7 +20,27 @@ class DocObject(object):
         self.name = name
         if type(docs) is list:
             docs = "\n".join(docs)
-        self.docs = docs or "DocObject"
+        self.label = "DocObject"
+        self.docs = docs or self.label
+
+    #
+    # Allow templates to use e_attr to access an escaped version of attribute attr
+    #
+    def __getattr__(self, synthetic_attr):
+        if not synthetic_attr.startswith('e_'):
+            raise AttributeError("No such attribute: %s" % synthetic_attr)
+        _, attr = synthetic_attr.split('_', 1)
+        if not hasattr(self, attr):
+            raise AttributeError("No such attribute: %s" % attr)
+        x = getattr(self, attr)
+        # N.B. Kind of escape should depend on desired output
+        return self._escape_text(x)
+
+    def _escape_text(self, txt):
+        # Not escaping < and >
+        for c in "\\`*_{}[]()#+-.!":
+            txt = txt.replace(c, "\\"+c)
+        return txt
 
     @property
     def has_actors(self):
@@ -37,40 +57,17 @@ class DocObject(object):
         return self.ns
 
     @property
-    def fns(self):
-        return self._escape_text(self.ns)
+    def own_name(self):
+        return self.name or self.ns
 
     @property
-    def fname(self):
-        return self._escape_text(self.name or self.ns)
-
-    @property
-    def fqualified_name(self):
-        return self._escape_text(self.qualified_name)
-
-    @property
-    def fshort_desc(self):
+    def short_desc(self):
         short_desc, _, _ = self.docs.partition('\n')
-        return self._escape_text(short_desc)
+        return short_desc
 
     @property
-    def fdesc(self):
-        return self._escape_text(self.docs)
-
-    @property
-    def fslug(self):
+    def slug(self):
         return self.qualified_name.replace('.', '_')
-
-    @property
-    def flabel(self):
-        return "DocObject"
-
-    def _escape_text(self, txt):
-        if not self.use_md:
-            return txt
-        for c in "\\`*_{}[]()<>#+-.!":
-            txt = txt.replace(c, "\\"+c)
-        return txt
 
     #
     # "API" to produce output from a DocObject
@@ -104,17 +101,9 @@ class DocObject(object):
 
     def raw(self):
         raw = self.metadata()
-        raw['short_desc'] = self.fshort_desc
-        raw['long_desc'] = self.fdesc
+        raw['short_desc'] = self.short_desc
+        raw['long_desc'] = self.docs
         return raw
-
-    #
-    #
-    #
-
-    # FIXME: Get rid of
-    def json(self):
-        return self.__repr__()
 
     def __repr__(self):
         def _convert(x):
@@ -131,17 +120,14 @@ class DocObject(object):
 class ErrorDoc(DocObject):
     """docstring for ErrDoc"""
 
-    COMPACT_FMT = "({{flabel}}) {{fqualified_name}} : {{fshort_desc}}"
-    DETAILED_FMT_MD = COMPACT_FMT
+    COMPACT_FMT = "({{label}}) {{qualified_name}} : {{short_desc}}"
+    DETAILED_FMT_MD = "({{label}}) {{e_qualified_name}} : {{e_short_desc}}"
     DETAILED_FMT_PLAIN = COMPACT_FMT
 
     def __init__(self, namespace, name, short_desc):
         docs = short_desc or "Unknown error"
         super(ErrorDoc, self).__init__(namespace, name, docs)
-
-    @property
-    def flabel(self):
-        return "Error"
+        self.label = "Error"
 
     def search(self, search_list):
         _log.debug("Actor module {}/ is missing file __init__.py".format(self.ns))
@@ -151,51 +137,51 @@ class ModuleDoc(DocObject):
     """docstring for ModuleDoc"""
 
     COMPACT_FMT = """
-    {{fqualified_name}}
-    {{fshort_desc}}
+    {{qualified_name}}
+    {{short_desc}}
 
-    {{#fmodules_compact}}
-    Modules: {{fmodules_compact}}
-    {{/fmodules_compact}}
-    {{#factors_compact}}
-    Actors: {{factors_compact}}
-    {{/factors_compact}}
+    {{#modules_compact}}
+    Modules: {{modules_compact}}
+    {{/modules_compact}}
+    {{#actors_compact}}
+    Actors: {{actors_compact}}
+    {{/actors_compact}}
     """
 
     DETAILED_FMT_PLAIN = """
     ============================================================
-    {{flabel}}: {{fqualified_name}}
+    {{label}}: {{qualified_name}}
     ============================================================
-    {{fdesc}}
+    {{docs}}
 
     {{#has_modules}}
     Modules:
     {{/has_modules}}
     {{#modules}}
-      {{fname}} : {{fshort_desc}}
+      {{own_name}} : {{short_desc}}
     {{/modules}}
 
     {{#has_actors}}
     Actors:
     {{/has_actors}}
     {{#actors}}
-      {{fname}} : {{fshort_desc}}
+      {{own_name}} : {{short_desc}}
     {{/actors}}
     """
 
     DETAILED_FMT_MD = """
-    ## Module: {{fqualified_name}} {{#use_links}}<a name="{{fslug}}"></a>{{/use_links}}
+    ## {{label}}: {{e_qualified_name}} {{#use_links}}<a name="{{slug}}"></a>{{/use_links}}
 
-    {{fdesc}}
+    {{e_docs}}
 
     {{#has_modules}}
     ### Modules:
     {{/has_modules}}
 
     {{#modules}}
-    {{#use_links}}[{{fname}}](#{{fslug}})  {{/use_links}}
-    {{^use_links}}**{{fname}}**  {{/use_links}}
-    {{fshort_desc}}
+    {{#use_links}}[{{e_own_name}}](#{{slug}})  {{/use_links}}
+    {{^use_links}}**{{e_own_name}}**  {{/use_links}}
+    {{e_short_desc}}
 
     {{/modules}}
 
@@ -204,9 +190,9 @@ class ModuleDoc(DocObject):
     {{/has_actors}}
 
     {{#actors}}
-    {{#use_links}}[{{fname}}](#{{fslug}})  {{/use_links}}
-    {{^use_links}}**{{fname}}**  {{/use_links}}
-    {{fshort_desc}}
+    {{#use_links}}[{{e_own_name}}](#{{slug}})  {{/use_links}}
+    {{^use_links}}**{{e_own_name}}**  {{/use_links}}
+    {{e_short_desc}}
 
     {{/actors}}
     {{#use_links}}
@@ -220,6 +206,7 @@ class ModuleDoc(DocObject):
         super(ModuleDoc, self).__init__(namespace, None, doclines)
         self.modules = modules
         self.actors = actors
+        self.label = "Module"
 
     @property
     def has_actors(self):
@@ -230,12 +217,12 @@ class ModuleDoc(DocObject):
         return bool(self.modules)
 
     @property
-    def fmodules_compact(self):
-        return ", ".join([x.fname for x in self.modules if type(x) is not ErrorDoc])
+    def modules_compact(self):
+        return ", ".join([x.own_name for x in self.modules if type(x) is not ErrorDoc])
 
     @property
-    def factors_compact(self):
-        return ", ".join([x.fname for x in self.actors if type(x) is not ErrorDoc])
+    def actors_compact(self):
+        return ", ".join([x.own_name for x in self.actors if type(x) is not ErrorDoc])
 
     def search(self, search_list):
         if not search_list:
@@ -262,19 +249,19 @@ class ActorDoc(DocObject):
     """docstring for ActorDoc"""
 
     COMPACT_FMT = """
-    {{fqualified_name}}({{fargs}})
-    {{fshort_desc}}
+    {{qualified_name}}({{fargs}})
+    {{short_desc}}
 
-    {{#finports_compact}}Inports:  {{finports_compact}}{{/finports_compact}}
-    {{#foutports_compact}}Outports: {{foutports_compact}}{{/foutports_compact}}
-    {{#is_component}}Requires: {{frequires}}{{/is_component}}
+    {{#inports_compact}}Inports:  {{inports_compact}}{{/inports_compact}}
+    {{#outports_compact}}Outports: {{outports_compact}}{{/outports_compact}}
+    {{#is_component}}Requires: {{requires_compact}}{{/is_component}}
     """
 
     DETAILED_FMT_PLAIN = """
     ============================================================
-    {{flabel}}: {{fqualified_name}}({{fargs}})
+    {{label}}: {{qualified_name}}({{fargs}})
     ============================================================
-    {{fdesc}}
+    {{docs}}
 
     {{#has_inputs}}Inports:{{/has_inputs}}
     {{#inputs}}
@@ -287,14 +274,14 @@ class ActorDoc(DocObject):
     {{/outputs}}
     {{#is_component}}
 
-    Requires: {{frequires}}
+    Requires: {{requires_compact}}
     {{/is_component}}
     """
 
     DETAILED_FMT_MD = """
-    ## {{flabel}}: {{fqualified_name}}({{fargs}}) {{#use_links}}<a name="{{fslug}}"></a>{{/use_links}}
+    ## {{label}}: {{e_qualified_name}}({{e_fargs}}) {{#use_links}}<a name="{{slug}}"></a>{{/use_links}}
 
-    {{fdesc}}
+    {{e_docs}}
 
     {{#has_inputs}}### Inports:{{/has_inputs}}
 
@@ -311,11 +298,11 @@ class ActorDoc(DocObject):
 
     ### Requires:
 
-    {{frequires}}
+    {{e_requires_compact}}
     {{/is_component}}
     {{#use_links}}
 
-    [\[Top\]](#Calvin) [\[Module: {{fns}}\]](#{{fns}})
+    [\[Top\]](#Calvin) [\[Module: {{e_ns}}\]](#{{ns}})
     {{/use_links}}
     """
 
@@ -323,9 +310,12 @@ class ActorDoc(DocObject):
     def __init__(self, namespace, name, args, inputs, outputs, doclines):
         super(ActorDoc, self).__init__(namespace, name, doclines)
         self.args = args
+        self.input_properties = {pn:pp for pn, _, pp in inputs}
+        self.output_properties = {pn:pp for pn, _, pp in outputs}
         self.inputs = [{'port':pn, 'docs':self._escape_text(pd), 'props':self._escape_text(pp)} for pn, pd, pp in inputs]
         self.outputs = [{'port':pn, 'docs':self._escape_text(pd), 'props':self._escape_text(pp)} for pn, pd, pp in outputs]
         self.is_component = False
+        self.label = "Actor"
 
     @property
     def has_inputs(self):
@@ -336,25 +326,21 @@ class ActorDoc(DocObject):
         return bool(self.outputs)
 
     @property
-    def flabel(self):
-        return "Actor"
-
-    @property
     def fargs(self):
         def _escape_string_arg(arg):
             if type(arg) != str:
                 return arg
-            if self.use_md:
-                return '"{}"'.format(arg.encode('string_escape'))
+            # if self.use_md:
+            #     return '"{}"'.format(arg.encode('string_escape'))
             return '"{}"'.format(arg)
         return self._escape_text(", ".join(self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()]))
 
     @property
-    def finports_compact(self):
+    def inports_compact(self):
         return ", ".join([p['port'] for p in self.inputs])
 
     @property
-    def foutports_compact(self):
+    def outports_compact(self):
         return ", ".join([p['port'] for p in self.outputs])
 
     def metadata(self):
@@ -364,9 +350,9 @@ class ActorDoc(DocObject):
             'type': 'actor',
             'args': self.args,
             'inputs': [p['port'] for p in self.inputs],
-            'input_properties': {p['port']:p['props'] for p in self.inputs},
+            'input_properties': self.input_properties,
             'outputs': [p['port'] for p in self.outputs],
-            'output_properties': {p['port']:p['props'] for p in self.outputs},
+            'output_properties': self.output_properties,
             'is_known': True
         }
         return metadata
@@ -381,14 +367,11 @@ class ComponentDoc(ActorDoc):
         self.requires = requires # "FIXME"
         self.definition = definition # actor.children[0]
         self.is_component = True
+        self.label = "Component"
 
     @property
-    def flabel(self):
-        return "Component"
-
-    @property
-    def frequires(self):
-        return self._escape_text(", ".join(self.requires))
+    def requires_compact(self):
+        return ", ".join(self.requires)
 
     def metadata(self):
         metadata = super(ComponentDoc, self).metadata()
@@ -396,9 +379,6 @@ class ComponentDoc(ActorDoc):
         metadata['definition'] = self.definition
         metadata['requires'] = self.requires
         return metadata
-
-
-
 
 
 if __name__ == '__main__':
@@ -409,15 +389,15 @@ if __name__ == '__main__':
             print "%s:\n-----------------------" % (formatter.__name__,)
             print formatter()
 
-    d = DocObject('yadda')
-    test_all_formatters(d)
+    # d = DocObject('yadda')
+    # test_all_formatters(d)
 
-    d = ErrorDoc('foo', 'Bar', 'short error description')
-    test_all_formatters(d)
-    #
+    # d = ErrorDoc('foo', 'Bar', 'short error description')
+    # test_all_formatters(d)
+    # #
     d = ModuleDoc('root', [ModuleDoc('std', [], [], 'std short description'), ModuleDoc('io', [], [], 'io short description')], [], 'short description')
     test_all_formatters(d)
-
+    #
     doclines = """actor yaddda, yadda
 
         Even more
