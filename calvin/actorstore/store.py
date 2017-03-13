@@ -623,394 +623,7 @@ class GlobalStore(ActorStore):
         filtered_actor_type_iter.set_name("global_lookup")
         return filtered_actor_type_iter
 
-
-
-class DocObject(object):
-    """docstring for DocObject"""
-
-    use_links = False
-    use_md = False
-
-    COMPACT_FMT = """{0.fqualified_name} : {0.fshort_desc}"""
-    DETAILED_FMT_MD = COMPACT_FMT
-    DETAILED_FMT_PLAIN = COMPACT_FMT
-
-    def __init__(self, namespace, name=None, docs=None):
-        super(DocObject, self).__init__()
-        self.ns = namespace
-        self.name = name
-        if type(docs) is list:
-            docs = "\n".join(docs)
-        self.docs = docs or "DocObject"
-
-
-    @property
-    def qualified_name(self):
-        if self.name:
-            return "{}.{}".format(self.ns, self.name)
-        return self.ns
-
-    @property
-    def fns(self):
-        return self._escape_text(self.ns)
-
-    @property
-    def fname(self):
-        return self._escape_text(self.name or self.ns)
-
-    @property
-    def fqualified_name(self):
-        return self._escape_text(self.qualified_name)
-
-    @property
-    def fshort_desc(self):
-        short_desc, _, _ = self.docs.partition('\n')
-        return self._escape_text(short_desc)
-
-    @property
-    def fdesc(self):
-        return self._escape_text(self.docs)
-
-    @property
-    def fslug(self):
-        return self.qualified_name.replace('.', '_')
-
-    @property
-    def flabel(self):
-        return "DocObject"
-
-    @property
-    def fanchor(self):
-        if not self.use_links:
-            return ''
-        return '<a name="{0.fslug}"></a>'.format(self)
-
-    @property
-    def flinkleft(self):
-        if not self.use_links:
-            return ''
-        return '['
-        # return '<a href="#{0.fslug}">'.format(self)
-
-    @property
-    def flinkright(self):
-        if not self.use_links:
-            return ''
-        return '](#{0.fslug})'.format(self)
-        # return '</a>'
-
-    @property
-    def ftoclink(self):
-        if not self.use_links:
-            return ''
-        return '\n[\[Top\]](#Calvin) [\[Module: {0.fns}\]](#{0.fns})\n'.format(self)
-        # return '\n<a href="#Calvin">\[Top\]</a> <a href="#{0.fns}">\[Module: {0.fns}\]</a>\n'.format(self)
-
-    def _escape_text(self, txt):
-        if not self.use_md:
-            return txt
-        for c in "\\`*_{}[]()<>#+-.!":
-            txt = txt.replace(c, "\\"+c)
-        return txt
-
-    def _compact_fmt(self):
-        return inspect.cleandoc(self.COMPACT_FMT)+ "\n"
-
-    def _detailed_fmt(self):
-        fmt = self.DETAILED_FMT_MD if self.use_md else self.DETAILED_FMT_PLAIN
-        return inspect.cleandoc(fmt)+ "\n"
-
-    def compact(self):
-        DocObject.use_md = False
-        DocObject.use_links = False
-        fmt = self._compact_fmt()
-        return fmt.format(self)
-
-    def detailed(self, md=False, links=True):
-        DocObject.use_md = md
-        DocObject.use_links = links and md
-        fmt = self._detailed_fmt()
-        return fmt.format(self) + self.ftoclink + "\n"
-
-    def metadata(self):
-        return {'is_known': False}
-
-    def raw(self):
-        raw = self.metadata()
-        raw['short_desc'] = self.fshort_desc
-        raw['long_desc'] = self.fdesc
-        return raw
-
-    # FIXME: Get rid of
-    def json(self):
-        return self.__repr__()
-
-    def __repr__(self):
-        def _convert(x):
-            try:
-                return x.name or x.ns
-            except:
-                return None
-
-        r = {'type':str(self.__class__.__name__)}
-        r.update(self.__dict__)
-        return json.dumps(r, default=_convert)
-
-
-class ErrorDoc(DocObject):
-    """docstring for ErrDoc"""
-
-    COMPACT_FMT = "({0.flabel}) {0.fqualified_name} : {0.fshort_desc}"
-
-    def __init__(self, namespace, name, short_desc):
-        docs = short_desc or "Unknown error"
-        super(ErrorDoc, self).__init__(namespace, name, docs)
-
-    @property
-    def flabel(self):
-        return "Error"
-
-    def search(self, search_list):
-        _log.debug("Actor module {}/ is missing file __init__.py".format(self.ns))
-        return self
-
-class ModuleDoc(DocObject):
-    """docstring for ModuleDoc"""
-
-    ITEM_FMT_MD = "{0.flinkleft}**{0.fname}**{0.flinkright}\n: {0.fshort_desc}\n\n"
-    ITEM_FMT_PLAIN = "  {0.fname} : {0.fshort_desc}"
-
-    COMPACT_FMT = """
-    {0.fqualified_name}
-    {0.fshort_desc}
-
-    Modules: {0.fmodules_compact}
-    Actors: {0.factors_compact}
-    """
-
-    DETAILED_FMT_MD = """
-    {0.fanchor}
-    ## Module: {0.fqualified_name}
-
-    {0.fdesc}
-
-    ### Modules:
-
-    {0.fmodules}
-
-    ### Actors:
-
-    {0.factors}
-    """
-
-    DETAILED_FMT_PLAIN = """
-    ============================================================
-    {0.flabel}: {0.fqualified_name}
-    ============================================================
-    {0.fdesc}
-
-    Modules:
-    {0.fmodules}
-
-    Actors:
-    {0.factors}
-    """
-
-    def __init__(self, namespace, modules, actors, doclines):
-        super(ModuleDoc, self).__init__(namespace, None, doclines)
-        self.modules = modules
-        self.actors = actors
-
-    def _item_fmt(self):
-        return self.ITEM_FMT_MD if self.use_md else self.ITEM_FMT_PLAIN
-
-    def _format_items(self, items, fmt=None):
-        if not fmt:
-            res = ", ".join([x.fname for x in items if type(x) is not ErrorDoc]) or "-"
-        else:
-            res  = "\n".join([fmt.format(x) for x in items if type(x) is not ErrorDoc]) or "  -"
-        return res
-
-    @property
-    def fmodules(self):
-        return self._format_items(self.modules, self._item_fmt())
-
-    @property
-    def factors(self):
-        return self._format_items(self.actors, self._item_fmt())
-
-    @property
-    def fmodules_compact(self):
-        return self._format_items(self.modules)
-
-    @property
-    def factors_compact(self):
-        return self._format_items(self.actors)
-
-    def search(self, search_list):
-        if not search_list:
-            return self
-        name = search_list.pop(0)
-        for x in self.modules:
-            if name == x.ns:
-                return x.search(search_list)
-        for x in self.actors:
-            if name == x.name:
-                if not search_list:
-                    return x
-                return None # Error
-        return None
-
-    def raw(self):
-        raw = super(ModuleDoc, self).raw()
-        raw['modules'] = [x.ns for x in self.modules]
-        raw['actors'] = [x.name for x in self.actors]
-        return raw
-
-
-class ActorDoc(DocObject):
-    """docstring for ActorDoc"""
-
-    PORT_FMT_MD = "**{}**\n: {}\n\n"
-    PORT_FMT_PLAIN = "{} : {}"
-
-    COMPACT_FMT = """
-    {0.fqualified_name}({0.fargs})
-    {0.fdesc}
-
-    Inports:  {0.finports_compact}
-    Outports: {0.foutports_compact}
-    """
-
-    DETAILED_FMT_MD = """
-    {0.fanchor}
-    ## {0.flabel}: {0.fqualified_name}({0.fargs})
-
-    {0.fdesc}
-
-    ### Inports:
-
-    {0.finports}
-
-    ### Outports:
-
-    {0.foutports}
-    """
-
-    DETAILED_FMT_PLAIN = """
-    ============================================================
-    {0.flabel}: {0.fqualified_name}({0.fargs})
-    ============================================================
-    {0.fdesc}
-
-    Inports:
-    {0.finports}
-
-    Outports:
-    {0.foutports}
-    """
-
-    def __init__(self, namespace, name, args, inputs, outputs, doclines):
-        super(ActorDoc, self).__init__(namespace, name, doclines)
-        self.args = args
-        self.inputs = [p for p, _, _ in inputs]
-        self.input_properties = {p: pp for p, _, pp in inputs}
-        # TODO make better looking port property documentation
-        self.input_docs = [d + ' properties ' + str(pp) for _, d, pp in inputs]
-        self.outputs = [p for p, _, _ in outputs]
-        self.output_properties = {p: pp for p, _, pp in outputs}
-        self.output_docs = [d + ' properties ' + str(pp) for _, d, pp in outputs]
-
-    def _port_fmt(self):
-        return self.PORT_FMT_MD if self.use_md else self.PORT_FMT_PLAIN
-
-    def _format_ports(self, ports, port_docs=None, fmt=None):
-        if not fmt:
-            res = self._escape_text(", ".join(ports) or "-")
-        else:
-            res = "\n".join([fmt.format(self._escape_text(p), self._escape_text(doc)) for p, doc in zip(ports, port_docs)]) or self._escape_text("-")
-        return res
-
-    @property
-    def flabel(self):
-        return "Actor"
-
-    @property
-    def fargs(self):
-        def _escape_string_arg(arg):
-            if type(arg) != str:
-                return arg
-            return '"{}"'.format(arg.encode('string_escape'))
-        return self._escape_text(", ".join(self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()]))
-
-    @property
-    def finports(self):
-        return self._format_ports(self.inputs, self.input_docs, self._port_fmt())
-
-    @property
-    def foutports(self):
-        return self._format_ports(self.outputs, self.output_docs, self._port_fmt())
-
-    @property
-    def finports_compact(self):
-        return self._format_ports(self.inputs)
-
-    @property
-    def foutports_compact(self):
-        return self._format_ports(self.outputs)
-
-    def metadata(self):
-        metadata = {
-            'ns': self.ns,
-            'name': self.name,
-            'type': 'actor',
-            'args': self.args,
-            'inputs': self.inputs,
-            'input_properties': self.input_properties,
-            'outputs': self.outputs,
-            'output_properties': self.output_properties,
-            'is_known': True
-        }
-        return metadata
-
-
-class ComponentDoc(ActorDoc):
-    #
-    # Augment a couple of methods in the superclass
-    #
-
-    REQUIRE_FMT = "\nRequires: {0.frequires}\n"
-    REQUIRE_FMT_MD = "\n### Requires: {0.frequires}\n"
-
-    def __init__(self, namespace, name, args, inputs, outputs, doclines, requires, definition):
-        super(ComponentDoc, self).__init__(namespace, name, args, inputs, outputs, doclines)
-        self.requires = requires # "FIXME"
-        self.definition = definition # actor.children[0]
-
-    def _compact_fmt(self):
-        fmt = super(ComponentDoc, self)._compact_fmt()
-        return fmt + self.REQUIRE_FMT
-
-    def _detailed_fmt(self):
-        fmt = super(ComponentDoc, self)._detailed_fmt()
-        req_fmt = self.REQUIRE_FMT_MD if self.use_md else self.REQUIRE_FMT
-        return fmt + req_fmt
-
-    @property
-    def flabel(self):
-        return "Component"
-
-    @property
-    def frequires(self):
-        return self._escape_text(", ".join(self.requires) or "-")
-
-    def metadata(self):
-        metadata = super(ComponentDoc, self).metadata()
-        metadata['type'] = 'component'
-        metadata['definition'] = self.definition
-        metadata['requires'] = self.requires
-        return metadata
-
+from docobject import ErrorDoc, ModuleDoc, ComponentDoc, ActorDoc
 
 class DocumentationStore(ActorStore):
     """Interface to documentation"""
@@ -1066,7 +679,6 @@ class DocumentationStore(ActorStore):
         doc = self._help(qualified_name)
         return doc.metadata()
 
-
     def _help(self, what):
         if not what:
             doc = self.docs
@@ -1082,13 +694,21 @@ class DocumentationStore(ActorStore):
         doc = self._help(what)
         return doc.raw()
 
+    def _formatter(self, doc, compact=False, formatting='plain', links=False):
+        if compact:
+            return doc.compact
+        if formatting != 'md':
+            return doc.detailed
+        return doc.markdown_links if links else doc.markdown
 
     def help(self, what=None, compact=False, formatting='plain', links=False):
         """Return help for <what>"""
         doc = self._help(what)
-        if compact:
-            return doc.compact()
-        return doc.detailed(md=bool(formatting == 'md'), links=links)
+        formatter = self._formatter(doc, compact, formatting, links)
+        return formatter()
+        # if compact:
+        #     return doc.compact()
+        # return doc.detailed(md=bool(formatting == 'md'), links=links)
 
 
     def documentation(self, formatting='md', links=True):
@@ -1103,7 +723,8 @@ class DocumentationStore(ActorStore):
                 visit.extend(next.actors)
                 visit.extend(next.modules)
             docs.append(next)
-        docs = [x.detailed(md=bool(formatting == 'md'), links=links) for x in docs if type(x) is not ErrorDoc]
+        # docs = [x.detailed(md=bool(formatting == 'md'), links=links) for x in docs if type(x) is not ErrorDoc]
+        docs = [self._formatter(x, False, formatting, links)() for x in docs if type(x) is not ErrorDoc]
         docs = "\n".join(docs)
         return docs
 
