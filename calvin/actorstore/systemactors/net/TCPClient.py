@@ -28,7 +28,7 @@ class TCPClient(Actor):
 
     Input:
       data_in : Each received token will be sent out through the TCP connection.
-      control_in : Each z<a token will be sent out through the TCP connection.
+      control_in : Each received token will be sent out through the TCP connection.
     Output:
       data_out : Data received on the TCP connection will be sent as tokens.
     """
