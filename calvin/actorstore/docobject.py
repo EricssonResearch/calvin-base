@@ -21,7 +21,7 @@ class DocObject(object):
         if type(docs) is list:
             docs = "\n".join(docs)
         self.label = "DocObject"
-        self.docs = docs or self.label
+        self.docs = docs or ""
 
     #
     # Allow templates to use e_attr to access an escaped version of attribute attr
