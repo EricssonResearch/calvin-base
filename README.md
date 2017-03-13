@@ -6,7 +6,7 @@ Calvin is an application environment that lets things talk to things. It compris
 
 ## Getting Started
 
-Go to the [Calvin Wiki](https://github.com/EricssonResearch/calvin-base/wiki) for instructions on how to install and configure Calvin, and how to write and deploy applications..
+Go to the [Calvin Wiki](https://github.com/EricssonResearch/calvin-base/wiki) for instructions on how to install and configure Calvin, and how to write and deploy applications.
 
 ## Contact
 This is a community project that was started by a team in Ericsson Research. If you have questions or problems, [report an issue](https://github.com/EricssonResearch/calvin-base/issues) and we will get back go you as soon as we can.
