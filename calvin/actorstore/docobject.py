@@ -318,7 +318,6 @@ class ActorDoc(DocObject):
         self.inputs = [pn for pn, _, _ in inputs]
         self.outputs = [pn for pn, _, _ in outputs]
         self.requires = requires
-        self.is_component = False
         self.label = "Actor"
 
     @property
@@ -402,7 +401,6 @@ class ComponentDoc(ActorDoc):
         super(ComponentDoc, self).__init__(namespace, name, args, inputs, outputs, doclines)
         self.requires = requires # "FIXME"
         self.definition = definition # actor.children[0]
-        self.is_component = True
         self.label = "Component"
 
     def metadata(self):
