@@ -58,6 +58,8 @@ class FileAuthenticationRetrievalPoint(object):
         # Replace ~ by the user's home directory.
         _log.debug("FileAuthenticationRetrievalPoint::__init__")
         self.path = os.path.expanduser(path) 
+        self.users_db=None
+        self.groups_db=None
         if not os.path.exists(self.path):
             try:
                 os.makedirs(self.path)
@@ -68,32 +70,56 @@ class FileAuthenticationRetrievalPoint(object):
 
     def get_users_db(self):
         """Return the database of users"""
-        try:
-            users_db_path = os.path.join(self.path,'users.json')
-            with open(users_db_path,'rt') as data:
-                return json.load(data)
-        except Exception:
-            _log.error("No users.json file can be found at path={}".format(users_db_path))
-            return None
+        _log.debug("get_users_db")
+        if not self.users_db:
+            try:
+                self.check_stored_users_db_for_unhashed_passwords()
+            except Exception as err:
+                _log.error("Failed to check for unhashed passwords in users file, err={}".format(err))
+                return None
+            try:
+                users_db_path = os.path.join(self.path,'users.json')
+                with open(users_db_path,'rt') as data:
+                    self.users_db = json.load(data)
+            except Exception as err:
+                _log.error("No users.json file can be found at path={}, err={}".format(users_db_path, err))
+                return None
+        return self.users_db
 
     def create_users_db(self, data):
         """Create a database of users"""
+        _log.debug("create_users_db")
+        hashed_data = self.hash_passwords(data)
         with open(os.path.join(self.path, "users.json"), "w") as file:
-            json.dump(data, file)
+            json.dump(hashed_data, file)
 
     def hash_passwords(self, data):
-        """Change the content of the uisers database"""
+        """Change the content of the users database"""
+        #TODO: remove printing passwords into log 
         _log.debug("hash_passwords\n\tdata={}".format(data))
+        updates_made = False
         for username in data:
             user_data = data[username]
+            try:
+                is_pbkdf2 = pbkdf2_sha256.identify(user_data['password'])
+            except Exception as err:
+                _log.error("Failed to identify if password is PBKDF2 or not:"
+                           "\n\tusername={}"
+                           "\n\tuser_data={}"
+                           "\n\terr={}".format(username, user_data, err))
+                raise
+
             #If the password is in clear, let's hash it with a salt and store that instead
-            if ('password' in user_data) and not (pbkdf2_sha256.identify(user_data['password'])):
+            if ('password' in user_data) and not (is_pbkdf2):
                 try:
                     hash = pbkdf2_sha256.encrypt(user_data['password'], rounds=200000, salt_size=16)
                 except Exception as err:
                     _log.error("Failed to calculate PBKDF2 of password, err={}".format(err))
                     raise
                 user_data['password']=hash
+                updates_made = True
+        _log.debug("hashed_passwords\n\tdata={}".format(data))
+        return updates_made
 
     def update_users_db(self, data):
         """Change the content of the users database"""
@@ -111,6 +137,7 @@ class FileAuthenticationRetrievalPoint(object):
         else:
             _log.error("update_users_db: file does not exist, file_path={}".format(file_path))
             raise IOError  # Raise exception if policy named filename doesn't exist
+        self.users_db = data
 
     def check_stored_users_db_for_unhashed_passwords(self):
         """
@@ -124,10 +151,10 @@ class FileAuthenticationRetrievalPoint(object):
             try:
                 with open(file_path, "r+") as file:
                     data = json.load(file)
-                    self.hash_passwords(data)
-                    file.seek(0)
-                    json.dump(data, file)
-                    file.truncate()
+                    if self.hash_passwords(data):
+                        file.seek(0)
+                        json.dump(data, file)
+                        file.truncate()
             except Exception as exc:
                 _log.exception("Failed to open users.json, exc={}".format(exc))
 
@@ -138,30 +165,44 @@ class FileAuthenticationRetrievalPoint(object):
 
     def delete_users_db(self):
         """Delete the policy named policy_id"""
+        _log.debug("delete_users_db")
         os.remove(os.path.join(self.path, "users.json"))
+        self.users_db=None
 
     def get_groups_db(self):
         """Return the database of groups"""
-        try:
-            with open(os.path.join(self.path,"groups.json"), 'rt') as data:
-                return json.load(data)
-        except Exception:
-            return None
+        path = os.path.join(self.path,"groups.json")
+        _log.debug("get_groups_db, path={}".format(path))
+        if not self.groups_db:
+            try:
+                with open(path, 'rt') as data:
+                    self.groups_db = json.load(data)
+            except Exception as err:
+                _log.error("Failed to open groups.json:"
+                           "\n\tpath={}"
+                           "\n\terr={}".format(path, err))
+                return None
+        return self.groups_db
 
     def create_groups_db(self, data):
         """Create a database of groups"""
+        _log.debug("create_grousp_db")
         with open(os.path.join(self.path, "groups.json"), "w") as file:
             json.dump(data, file)
 
     def update_groups_db(self, data):
         """Change the content of the groups database """
+        _log.debug("update_groups_db")
         file_path = os.path.join(self.path, "groups.json")
         if os.path.isfile(file_path):
             with open(file_path, "w") as file:
                 json.dump(data, file)
         else:
             raise IOError  # Raise exception if policy named filename doesn't exist
+        self.groups_db = data
 
     def delete_groups_db(self):
         """Delete the policy named policy_id"""
+        _log.debug("delete_groups_db")
         os.remove(os.path.join(self.path, "groups.json"))
+        self.groups_db = None

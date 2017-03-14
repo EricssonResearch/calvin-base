@@ -165,7 +165,7 @@ class RuntimeCredentials():
                         value = self.node_name
                     elif option == 'dnQualifier':
                         value = self.node_id
-                    #The pythong cryptography and the pyOpensSSL packages does not support
+                    #The python cryptography and the pyOpensSSL packages does not support
                     #parsing the Attributes extension in a CSR, so instead it is stored
                     #outside of the CSR
 #                    elif option == 'challengePassword':
