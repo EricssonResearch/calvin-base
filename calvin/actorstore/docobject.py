@@ -248,7 +248,7 @@ class ActorDoc(DocObject):
 
     {{#has_inports}}Inports: {{{inports_compact}}}{{/has_inports}}
     {{#has_outports}}Outports: {{{outports_compact}}}{{/has_outports}}
-    {{#is_component}}Requires: {{{requires_compact}}}{{/is_component}}
+    {{#has_requirements}}Requires: {{{requires_compact}}}{{/has_requirements}}
     """
 
     DETAILED_FMT_PLAIN = """
@@ -270,10 +270,11 @@ class ActorDoc(DocObject):
     {{#outports}}
       {{{name}}} : {{{docs}}} {{#props}}Properties({{{props}}}){{/props}}
     {{/outports}}
-    {{#is_component}}
+    {{#has_requirements}}
 
-    Requires: {{{requires_compact}}}
-    {{/is_component}}
+    Requires:
+      {{{requires_compact}}}
+    {{/has_requirements}}
     """
 
     DETAILED_FMT_MD = """
@@ -297,17 +298,17 @@ class ActorDoc(DocObject):
     **{{{e_name}}}** : {{{e_docs}}} {{#props}}_Properties({{{e_props}}})_{{/props}}
 
     {{/outports}}
-    {{#is_component}}
+    {{#has_requirements}}
     ### Requires:
 
     {{{e_requires_compact}}}
 
-    {{/is_component}}
+    {{/has_requirements}}
     {{#use_links}}[\[Top\]](#Calvin) [\[Module: {{{e_ns}}}\]](#{{{ns}}}){{/use_links}}
     """
 
 
-    def __init__(self, namespace, name, args, inputs, outputs, doclines):
+    def __init__(self, namespace, name, args, inputs, outputs, doclines, requires):
         super(ActorDoc, self).__init__(namespace, name, doclines)
         self.args = args
         self.inports = [PortDoc(namespace='in', name=pn, docs=pd, properties=pp) for pn, pd, pp in inputs]
@@ -316,6 +317,7 @@ class ActorDoc(DocObject):
         self.output_properties = {pn:pp for pn, _, pp in outputs}
         self.inputs = [pn for pn, _, _ in inputs]
         self.outputs = [pn for pn, _, _ in outputs]
+        self.requires = requires
         self.is_component = False
         self.label = "Actor"
 
@@ -326,6 +328,10 @@ class ActorDoc(DocObject):
     @property
     def has_outports(self):
         return bool(self.outports)
+
+    @property
+    def has_requirements(self):
+        return bool(self.requires)
 
     @property
     def fargs(self):
@@ -351,6 +357,10 @@ class ActorDoc(DocObject):
     def outports_compact(self):
         return ", ".join(self.outputs)
 
+    @property
+    def requires_compact(self):
+        return ", ".join(self.requires)
+
     def metadata(self):
         metadata = {
             'ns': self.ns,
@@ -361,6 +371,7 @@ class ActorDoc(DocObject):
             'input_properties': self.input_properties,
             'outputs': self.outputs,
             'output_properties': self.output_properties,
+            'requires': self.requires,
             'is_known': True
         }
         return metadata
@@ -394,15 +405,10 @@ class ComponentDoc(ActorDoc):
         self.is_component = True
         self.label = "Component"
 
-    @property
-    def requires_compact(self):
-        return ", ".join(self.requires)
-
     def metadata(self):
         metadata = super(ComponentDoc, self).metadata()
         metadata['type'] = 'component'
         metadata['definition'] = self.definition
-        metadata['requires'] = self.requires
         return metadata
 
 

@@ -656,7 +656,8 @@ class DocumentationStore(ActorStore):
         if is_primitive:
             args = self._get_args(actor)
             inputs, outputs, doclines = self._parse_docstring(actor)
-            doc = ActorDoc(namespace, name, args, inputs, outputs, doclines)
+            requires = getattr(actor, 'requires', [])
+            doc = ActorDoc(namespace, name, args, inputs, outputs, doclines, requires)
         else:
             if type(actor) is dict:
                 return ErrorDoc(namespace, name, "Old-style components are not valid")
