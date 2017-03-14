@@ -75,9 +75,9 @@ request : net.HTTPGet()
 commit_date : LatestCommitDate()
 etag : ExtractETag()
 
-init_url : std.Init(data=URL)
-init_params : std.Init(data={"sha":"develop", "per_page":1})
-init_header : std.Init(data={})
+init_url : flow(data=URL)
+init_params : flow.Init(data={"sha":"develop", "per_page":1})
+init_header : flow.Init(data={})
 
 commitlist : json.Items()
 extract : ExtractCommit()

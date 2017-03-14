@@ -19,7 +19,7 @@ class TestBase(unittest.TestCase):
           Documentation please
           """
 
-          init : std.Init(data=arg)
+          init : flow.Init(data=arg)
 
           .in > init.in
           init.out > .out

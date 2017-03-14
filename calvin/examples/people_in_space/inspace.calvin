@@ -1,6 +1,6 @@
 /* Actors */
 tick : std.Trigger(tick=3600.0, data="http://api.open-notify.org/astros.json")
-iip : std.Init(data="nothing")
+iip : flow.Init(data="nothing")
 client : net.HTTPGet()
 cmp : std.Compare(op="=")
 sel : flow.Select()

@@ -46,14 +46,14 @@ class ModuleDocs(TestBase):
         actual = self.ds.help_raw(what="")
         self.assertEqual(actual['short_desc'], 'A systematic approach to handling impedence mismatch in IoT.')
 
-    def test_help_raw_std(self):
-        actual = self.ds.help_raw(what='std')
+    def test_help_raw_flow(self):
+        actual = self.ds.help_raw(what='flow')
         self.assertEqual(set(['is_known', 'long_desc', 'short_desc', 'modules', 'actors']), set(actual.keys()))
         self.assertTrue(actual['actors'])
         self.assertTrue('Init' in actual['actors'])
 
-    def test_help_raw_std_init(self):
-        actual = self.ds.help_raw('std.Init')
+    def test_help_raw_flow_init(self):
+        actual = self.ds.help_raw('flow.Init')
         self.assertTrue(actual['is_known'])
         self.assertEqual(set(['inputs', 'name', 'outputs', 'args', 'is_known', 'ns', 'type', 'long_desc', 'short_desc', 'output_properties', 'input_properties']), set(actual.keys()))
 
@@ -70,7 +70,7 @@ class ModuleDocs(TestBase):
         actual = self.ds.metadata('std')
         self.assertFalse(actual['is_known'])
 
-    def test_metadata_std_init(self):
-        actual = self.ds.metadata('std.Init')
+    def test_metadata_flow_init(self):
+        actual = self.ds.metadata('flow.Init')
         self.assertTrue(actual['is_known'])
         self.assertEqual(set(['inputs', 'name', 'outputs', 'args', 'is_known', 'ns', 'type', 'output_properties', 'input_properties']), set(actual.keys()))

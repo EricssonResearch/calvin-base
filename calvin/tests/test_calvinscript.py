@@ -526,7 +526,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testVoidOnInPort(self):
         script = """
-        iip : std.Init(data="ping")
+        iip : flow.Init(data="ping")
         print : io.Print()
         voidport > iip.in
         iip.out > print.token

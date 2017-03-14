@@ -268,7 +268,7 @@ def visualize_component(source_text, name, show_args=False):
 if __name__ == '__main__':
     source_text = """
     component FilterUnchanged() string -> string {
-      iip : std.Init(data="nothing")
+      iip : flow.Init(data="nothing")
       cmp : std.Compare(op="=")
       sel : flow.Select()
 
