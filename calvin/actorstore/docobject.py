@@ -172,8 +172,7 @@ class ModuleDoc(DocObject):
 
     {{/has_modules}}
     {{#modules}}
-    {{#use_links}}[{{{e_own_name}}}](#{{{slug}}})  {{/use_links}}{{^use_links}}**{{{e_own_name}}}**  {{/use_links}}
-    {{{e_short_desc}}}
+    {{#use_links}}[**{{{e_own_name}}}**](#{{{slug}}}){{/use_links}}{{^use_links}}**{{{e_own_name}}}**{{/use_links}} : {{{e_short_desc}}}
 
     {{/modules}}
     {{#has_actors}}
@@ -181,8 +180,7 @@ class ModuleDoc(DocObject):
 
     {{/has_actors}}
     {{#actors}}
-    {{#use_links}}[{{{e_own_name}}}](#{{{slug}}})  {{/use_links}}{{^use_links}}**{{{e_own_name}}}**  {{/use_links}}
-    {{{e_short_desc}}}
+    {{#use_links}}[**{{{e_own_name}}}**](#{{{slug}}}){{/use_links}}{{^use_links}}**{{{e_own_name}}}**{{/use_links}} : {{{e_short_desc}}}
 
     {{/actors}}
     {{#use_links}}[\[Top\]](#Calvin){{/use_links}}
@@ -310,7 +308,7 @@ class ActorDoc(DocObject):
         self.output_properties = {pn:pp for pn, _, pp in outputs}
         self.inputs = [pn for pn, _, _ in inputs]
         self.outputs = [pn for pn, _, _ in outputs]
-        self.requires = requires
+        self.requires = sorted(requires)
         self.label = "Actor"
 
     @property
