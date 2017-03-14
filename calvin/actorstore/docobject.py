@@ -10,8 +10,8 @@ class DocObject(object):
     use_links = False
     use_md = False
 
-    COMPACT_FMT = "{{qualified_name}} : {{short_desc}}"
-    DETAILED_FMT_MD = "{{e_qualified_name}} : {{e_short_desc}}"
+    COMPACT_FMT = "{{{qualified_name}}} : {{{short_desc}}}"
+    DETAILED_FMT_MD = "{{{e_qualified_name}}} : {{{e_short_desc}}}"
     DETAILED_FMT_PLAIN = COMPACT_FMT
 
     def __init__(self, namespace, name=None, docs=None):
@@ -21,7 +21,7 @@ class DocObject(object):
         if type(docs) is list:
             docs = "\n".join(docs)
         self.label = "DocObject"
-        self.docs = docs or ""
+        self.docs = docs.rstrip() or ""
 
     #
     # Allow templates to use e_attr to access an escaped version of attribute attr
@@ -120,8 +120,8 @@ class DocObject(object):
 class ErrorDoc(DocObject):
     """docstring for ErrDoc"""
 
-    COMPACT_FMT = "({{label}}) {{qualified_name}} : {{short_desc}}"
-    DETAILED_FMT_MD = "({{label}}) {{e_qualified_name}} : {{e_short_desc}}"
+    COMPACT_FMT = "({{{label}}}) {{{qualified_name}}} : {{{short_desc}}}"
+    DETAILED_FMT_MD = "({{{label}}}) {{{e_qualified_name}}} : {{{e_short_desc}}}"
     DETAILED_FMT_PLAIN = COMPACT_FMT
 
     def __init__(self, namespace, name, short_desc):
@@ -137,68 +137,62 @@ class ModuleDoc(DocObject):
     """docstring for ModuleDoc"""
 
     COMPACT_FMT = """
-    {{qualified_name}}
-    {{short_desc}}
+    {{{qualified_name}}}
+    {{{short_desc}}}
 
     {{#modules_compact}}
-    Modules: {{modules_compact}}
+    Modules: {{{modules_compact}}}
     {{/modules_compact}}
     {{#actors_compact}}
-    Actors: {{actors_compact}}
+    Actors: {{{actors_compact}}}
     {{/actors_compact}}
     """
 
     DETAILED_FMT_PLAIN = """
     ============================================================
-    {{label}}: {{qualified_name}}
+    {{{label}}}: {{{qualified_name}}}
     ============================================================
-    {{docs}}
-
+    {{{docs}}}
     {{#has_modules}}
+
     Modules:
     {{/has_modules}}
     {{#modules}}
-      {{own_name}} : {{short_desc}}
+      {{{own_name}}} : {{{short_desc}}}
     {{/modules}}
-
     {{#has_actors}}
+
     Actors:
     {{/has_actors}}
     {{#actors}}
-      {{own_name}} : {{short_desc}}
+      {{{own_name}}} : {{{short_desc}}}
     {{/actors}}
     """
 
     DETAILED_FMT_MD = """
-    ## {{label}}: {{e_qualified_name}} {{#use_links}}<a name="{{slug}}"></a>{{/use_links}}
+    ## {{{label}}}: {{{e_qualified_name}}} {{#use_links}}<a name="{{{slug}}}"></a>{{/use_links}}
 
-    {{e_docs}}
+    {{{e_docs}}}
 
     {{#has_modules}}
     ### Modules:
-    {{/has_modules}}
 
+    {{/has_modules}}
     {{#modules}}
-    {{#use_links}}[{{e_own_name}}](#{{slug}})  {{/use_links}}
-    {{^use_links}}**{{e_own_name}}**  {{/use_links}}
-    {{e_short_desc}}
+    {{#use_links}}[{{{e_own_name}}}](#{{{slug}}})  {{/use_links}}{{^use_links}}**{{{e_own_name}}}**  {{/use_links}}
+    {{{e_short_desc}}}
 
     {{/modules}}
-
     {{#has_actors}}
     ### Actors:
-    {{/has_actors}}
 
+    {{/has_actors}}
     {{#actors}}
-    {{#use_links}}[{{e_own_name}}](#{{slug}})  {{/use_links}}
-    {{^use_links}}**{{e_own_name}}**  {{/use_links}}
-    {{e_short_desc}}
+    {{#use_links}}[{{{e_own_name}}}](#{{{slug}}})  {{/use_links}}{{^use_links}}**{{{e_own_name}}}**  {{/use_links}}
+    {{{e_short_desc}}}
 
     {{/actors}}
-    {{#use_links}}
-
-    [\[Top\]](#Calvin)
-    {{/use_links}}
+    {{#use_links}}[\[Top\]](#Calvin){{/use_links}}
     """
 
 
@@ -249,61 +243,67 @@ class ActorDoc(DocObject):
     """docstring for ActorDoc"""
 
     COMPACT_FMT = """
-    {{qualified_name}}({{fargs}})
-    {{short_desc}}
+    {{{qualified_name}}}({{{fargs}}})
+    {{{short_desc}}}
 
-    {{#inports_compact}}Inports:  {{inports_compact}}{{/inports_compact}}
-    {{#outports_compact}}Outports: {{outports_compact}}{{/outports_compact}}
-    {{#is_component}}Requires: {{requires_compact}}{{/is_component}}
+    {{#has_inports}}Inports: {{{inports_compact}}}{{/has_inports}}
+    {{#has_outports}}Outports: {{{outports_compact}}}{{/has_outports}}
+    {{#is_component}}Requires: {{{requires_compact}}}{{/is_component}}
     """
 
     DETAILED_FMT_PLAIN = """
     ============================================================
-    {{label}}: {{qualified_name}}({{fargs}})
+    {{{label}}}: {{{qualified_name}}}({{{fargs}}})
     ============================================================
-    {{docs}}
+    {{{docs}}}
+    {{#has_inports}}
 
-    {{#has_inports}}Inports:{{/has_inports}}
+    Inports:
+    {{/has_inports}}
     {{#inports}}
-      {{name}} : {{docs}} {{#props}}Properties({{props}}){{/props}}
+      {{{name}}} : {{{docs}}} {{#props}}Properties({{{props}}}){{/props}}
     {{/inports}}
+    {{#has_outports}}
 
-    {{#has_outports}}Outports::{{/has_outports}}
+    Outports:
+    {{/has_outports}}
     {{#outports}}
-      {{name}} : {{docs}} {{#props}}Properties({{props}}){{/props}}
+      {{{name}}} : {{{docs}}} {{#props}}Properties({{{props}}}){{/props}}
     {{/outports}}
     {{#is_component}}
 
-    Requires: {{requires_compact}}
+    Requires: {{{requires_compact}}}
     {{/is_component}}
     """
 
     DETAILED_FMT_MD = """
-    ## {{label}}: {{e_qualified_name}}({{e_fargs}}) {{#use_links}}<a name="{{slug}}"></a>{{/use_links}}
+    ## {{{label}}}: {{{e_qualified_name}}}({{{e_fargs}}}) {{#use_links}}<a name="{{{slug}}}"></a>{{/use_links}}
 
-    {{e_docs}}
+    {{{e_docs}}}
 
-    {{#has_inports}}### Inports:{{/has_inports}}
+    {{#has_inports}}
+    ### Inports:
 
+    {{/has_inports}}
     {{#inports}}
-    **{{e_name}}** : {{e_docs}} {{#props}}_Properties({{e_props}})_{{/props}}
+    **{{{e_name}}}** : {{{e_docs}}} {{#props}}_Properties({{{e_props}}})_{{/props}}
+
     {{/inports}}
+    {{#has_outports}}
+    ### Outports:
 
-    {{#has_outports}}### Outports:{{/has_outports}}
-
+    {{/has_outports}}
     {{#outports}}
-    **{{e_name}}** : {{e_docs}} {{#props}}_Properties({{e_props}})_{{/props}}
+    **{{{e_name}}}** : {{{e_docs}}} {{#props}}_Properties({{{e_props}}})_{{/props}}
+
     {{/outports}}
     {{#is_component}}
-
     ### Requires:
 
-    {{e_requires_compact}}
-    {{/is_component}}
-    {{#use_links}}
+    {{{e_requires_compact}}}
 
-    [\[Top\]](#Calvin) [\[Module: {{e_ns}}\]](#{{ns}})
-    {{/use_links}}
+    {{/is_component}}
+    {{#use_links}}[\[Top\]](#Calvin) [\[Module: {{{e_ns}}}\]](#{{{ns}}}){{/use_links}}
     """
 
 
