@@ -7,9 +7,6 @@ import pystache
 class DocObject(object):
     """docstring for DocObject"""
 
-    use_links = False
-    use_md = False
-
     COMPACT_FMT = "{{{qualified_name}}} : {{{short_desc}}}"
     DETAILED_FMT_MD = "{{{e_qualified_name}}} : {{{e_short_desc}}}"
     DETAILED_FMT_PLAIN = COMPACT_FMT
@@ -22,6 +19,7 @@ class DocObject(object):
             docs = "\n".join(docs)
         self.label = "DocObject"
         self.docs = docs.rstrip() or ""
+        self.use_links = False
 
     #
     # Allow templates to use e_attr to access an escaped version of attribute attr
@@ -73,27 +71,20 @@ class DocObject(object):
     # "API" to produce output from a DocObject
     #
     def compact(self):
-        DocObject.use_md = False
-        DocObject.use_links = False
-        fmt = inspect.cleandoc(self.COMPACT_FMT)+ "\n"
+        fmt = inspect.cleandoc(self.COMPACT_FMT)
         return pystache.render(fmt, self)
 
     def detailed(self):
-        DocObject.use_md = False
-        DocObject.use_links = False
-        fmt = inspect.cleandoc(self.DETAILED_FMT_PLAIN)+ "\n"
+        fmt = inspect.cleandoc(self.DETAILED_FMT_PLAIN)
         return pystache.render(fmt, self)
 
     def markdown(self):
-        DocObject.use_md = True
-        DocObject.use_links = False
-        fmt = inspect.cleandoc(self.DETAILED_FMT_MD)+ "\n"
+        fmt = inspect.cleandoc(self.DETAILED_FMT_MD)
         return pystache.render(fmt, self)
 
     def markdown_links(self):
-        DocObject.use_md = True
-        DocObject.use_links = True
-        fmt = inspect.cleandoc(self.DETAILED_FMT_MD)+ "\n"
+        self.use_links = True
+        fmt = inspect.cleandoc(self.DETAILED_FMT_MD)
         return pystache.render(fmt, self)
 
     def metadata(self):
