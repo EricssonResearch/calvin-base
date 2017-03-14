@@ -36,10 +36,17 @@ class DocObject(object):
         return self._escape_text(x)
 
     def _escape_text(self, txt):
-        # Not escaping < and >
-        for c in "\\`*_{}[]()#+-.!":
-            txt = txt.replace(c, "\\"+c)
-        return txt
+
+        def _escape_line(line):
+            if line.startswith('    '):
+                return line
+            for c in "\\<>*_{}[]()#+-.!":
+                line = line.replace(c, "\\"+c)
+            return line
+
+        lines_in = txt.split('\n')
+        lines_out = [_escape_line(line) for line in lines_in]
+        return "\n".join(lines_out)
 
     @property
     def has_actors(self):

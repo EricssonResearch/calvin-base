@@ -258,7 +258,7 @@ class ActorStore(Store):
 
     def _parse_docstring(self, class_):
         # Extract port names from docstring
-        docstring = class_.__doc__
+        docstring = inspect.cleandoc(class_.__doc__)
         inputs = []
         outputs = []
         doctext = []
@@ -271,9 +271,8 @@ class ActorStore(Store):
                 dest = outputs
                 continue
             elif dest is doctext:
-                line = line.strip()
-                if line:
-                    dest.append(line)
+                line = line.rstrip()
+                dest.append(line)
                 continue
 
             if dest in [inputs, outputs]:
@@ -323,6 +322,9 @@ class ActorStore(Store):
                         _log.error("Error in port property of actor %s: %s" % (class_.__name__,
                                    ", ".join([r.data['reason'] for r in issues])))
                     dest.append((match.group(1), match.group(3), port_properties))
+
+        while not doctext[-1]:
+            doctext.pop()
 
         return (inputs, outputs, doctext)
 
