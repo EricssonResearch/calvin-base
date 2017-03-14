@@ -1,13 +1,13 @@
-dem: std.Demux(select={"one":&out1.in, "two": &out2.in, "three": &out3.in})
+dem: flow.Demux(select={"one":&out1.in, "two": &out2.in, "three": &out3.in})
 input: std.CountTimer(sleep=0.5)
-sel: std.Alternate(order=[&c1.token, &c2.token, &c3.token])
+sel: flow.Alternate(order=[&c1.token, &c2.token, &c3.token])
 
 out1 : text.PrefixString(prefix="tag-1:")
 out2 : text.PrefixString(prefix="tag-2:")
 out3 : text.PrefixString(prefix="tag-3:")
 
 print : io.Print()
-coll : std.Collect()
+coll : flow.Collect()
 
 input.integer > dem.token
 

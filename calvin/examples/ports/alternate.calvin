@@ -1,4 +1,4 @@
-alt: std.Alternate(order=[&out1.out, &out2.out, &out3.out])
+alt: flow.Alternate(order=[&out1.out, &out2.out, &out3.out])
 input: std.CountTimer(sleep=0.5)
 
 out1 : text.PrefixString(prefix="tag-1:")

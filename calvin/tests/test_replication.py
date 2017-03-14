@@ -464,7 +464,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src1    : std.FiniteCounter(start=0)
             src2    : std.FiniteCounter(start=10000)
-            alt   : std.Alternate2()
+            alt   : flow.Alternate2()
             snk   : test.Sink(store_tokens=1, quiet=1)
             src1.integer(routing="fanout")
             src2.integer(routing="random")
@@ -546,7 +546,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src1    : std.FiniteCounter(start=0)
             src2    : std.FiniteCounter(start=10000, replicate_mult=true)
-            alt   : std.Alternate2()
+            alt   : flow.Alternate2()
             snk   : test.Sink(store_tokens=1, quiet=1)
             src1.integer(routing="fanout")
             src2.integer(routing="random")

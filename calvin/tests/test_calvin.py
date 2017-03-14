@@ -622,7 +622,7 @@ class TestRemoteConnection(CalvinTestBase):
         peer = self.rt2
 
         snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
-        alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
+        alt = request_handler.new_actor(peer, 'flow.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
 
@@ -654,7 +654,7 @@ class TestRemoteConnection(CalvinTestBase):
 
         snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
         snk2 = request_handler.new_actor_wargs(peer, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
-        alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
+        alt = request_handler.new_actor(peer, 'flow.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
 
@@ -769,7 +769,7 @@ class TestActorMigration(CalvinTestBase):
 
         snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
         snk2 = request_handler.new_actor_wargs(peer, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
-        alt = request_handler.new_actor(peer, 'std.Alternate2', 'alt')
+        alt = request_handler.new_actor(peer, 'flow.Alternate2', 'alt')
         src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=0.1, steps=100)
 
@@ -4268,7 +4268,7 @@ class TestPortRouting(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
         component Col() token -> token {
-            col : std.Collect()
+            col : flow.Collect()
             .token > col.token
             col.token > .token
         }
