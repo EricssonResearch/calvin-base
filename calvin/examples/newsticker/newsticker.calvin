@@ -18,7 +18,6 @@ component LatestCommitDate() body -> date {
   compare  : std.Compare(op="!=")
   sampler  : std.SampleHold(default="")
   exc_handler : exception.ExceptionHandler(replace=true, replacement="")
-  term : std.Terminator()
 
   .body > getdate.container
   # What we get is a list of commits, each with nested dicts.
@@ -26,7 +25,7 @@ component LatestCommitDate() body -> date {
   [0, "commit", "author", "date"] > getdate.key
   getdate.value > exc_handler.token
   exc_handler.token > compare.a
-  exc_handler.status > term.void
+  exc_handler.status > voidport
   "" > compare.b
   compare.result > sampler.sample
   exc_handler.token > sampler.in
@@ -75,7 +74,7 @@ request : net.HTTPGet()
 commit_date : LatestCommitDate()
 etag : ExtractETag()
 
-init_url : flow(data=URL)
+init_url : flow.Init(data=URL)
 init_params : flow.Init(data={"sha":"develop", "per_page":1})
 init_header : flow.Init(data={})
 
@@ -88,7 +87,6 @@ delay : std.ClassicDelay(delay=DELAY)
 printout : io.Print()
 cmp : std.Compare(op="=")
 route : flow.Switch()
-drop : std.Terminator()
 body_to_json : json.FromString()
 
 
@@ -123,5 +121,5 @@ header.dict > init_header.in
 params.container > route.a
 init_params.out > route.b
 route.a > init_params.in
-route.b > drop.void
+route.b > voidport
 

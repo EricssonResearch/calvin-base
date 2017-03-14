@@ -1,6 +1,5 @@
 /* Actors */
 client : net.HTTPGet()
-header : std.Terminator()
 status : io.Print()
 pacer  : std.ClassicDelay(delay=0.5)
 seq    : std.Sequencer()
@@ -17,5 +16,5 @@ auth.header > client.header
 client.status > status.token
 client.data > seq.data_in
 seq.data_out > image.data
-client.header > header.void
+client.header > voidport
 

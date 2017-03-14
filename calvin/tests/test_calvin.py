@@ -1883,12 +1883,12 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 class TestNullPorts(CalvinTestBase):
 
     def testVoidActor(self):
-        # Verify that the null port of a std.Void actor behaves as expected
+        # Verify that the null port of a flow.Void actor behaves as expected
         _log.analyze("TESTRUN", "+", {})
         script = """
             src1 : std.Counter()
-            src2 : std.Void()
-            join : std.Join()
+            src2 : flow.Void()
+            join : flow.Join()
             snk  : test.Sink(store_tokens=1, quiet=1)
 
             src1.integer > join.token_1
@@ -1908,11 +1908,11 @@ class TestNullPorts(CalvinTestBase):
         helpers.destroy_app(d)
 
     def testTerminatorActor(self):
-        # Verify that the null port of a std.Terminator actor behaves as expected
+        # Verify that the null port of a flow.Terminator actor behaves as expected
         _log.analyze("TESTRUN", "+", {})
         script = """
             src  : std.Counter()
-            term : std.Terminator()
+            term : flow.Terminator()
             snk  : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > term.void
@@ -2020,7 +2020,7 @@ class TestSelect(CalvinTestBase):
             const : std.Constant(data=true, n=-1)
             route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
-            term  : std.Terminator()
+            term  : flow.Terminator()
 
             src.integer > route.data
             const.token > route.select
@@ -2046,7 +2046,7 @@ class TestSelect(CalvinTestBase):
             const : std.Constant(data=0, n=-1)
             route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
-            term  : std.Terminator()
+            term  : flow.Terminator()
 
             src.integer > route.data
             const.token > route.select
@@ -2074,7 +2074,7 @@ class TestSelect(CalvinTestBase):
             const : std.Constant(data=2, n=-1)
             route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
-            term  : std.Terminator()
+            term  : flow.Terminator()
 
             src.integer > route.data
             const.token > route.select
@@ -2238,7 +2238,7 @@ class TestRegex(CalvinTestBase):
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"\d+\.\d+")
             snk   : test.Sink(store_tokens=1, quiet=1)
-            term  : std.Terminator()
+            term  : flow.Terminator()
 
             src.token      > regex.text
             regex.match    > snk.token
@@ -2266,7 +2266,7 @@ class TestRegex(CalvinTestBase):
             src   : std.Constant(data="x24.1632", n=1)
             regex : text.RegexMatch(regex=!"\d+\.\d+")
             snk   : test.Sink(store_tokens=1, quiet=1)
-            term  : std.Terminator()
+            term  : flow.Terminator()
 
             src.token      > regex.text
             regex.no_match > snk.token
@@ -2292,7 +2292,7 @@ class TestRegex(CalvinTestBase):
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.\d+")
             snk   : test.Sink(store_tokens=1, quiet=1)
-            term  : std.Terminator()
+            term  : flow.Terminator()
 
             src.token      > regex.text
             regex.match    > snk.token
@@ -2319,7 +2319,7 @@ class TestRegex(CalvinTestBase):
             src   : std.Constant(data="24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.(\d+)")
             snk   : test.Sink(store_tokens=1, quiet=1)
-            term  : std.Terminator()
+            term  : flow.Terminator()
 
             src.token      > regex.text
             regex.match    > snk.token
@@ -2346,7 +2346,7 @@ class TestRegex(CalvinTestBase):
             src   : std.Constant(data="x24.1632", n=1)
             regex : text.RegexMatch(regex=!"(\d+)\.\d+")
             snk   : test.Sink(store_tokens=1, quiet=1)
-            term  : std.Terminator()
+            term  : flow.Terminator()
 
             src.token      > regex.text
             regex.no_match > snk.token

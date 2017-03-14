@@ -1,7 +1,7 @@
 src:std.CountTimer()
 filter:std.Constantify(constant={"FOO":"Hello", "bar":1})
 port:io.SerialPort(devicename="/dev/serial", baudrate=300)
-term:std.Terminator()
+term:flow.Terminator()
 
 src.integer > filter.in
 filter.out > port.in

@@ -1,6 +1,6 @@
 
 component Wrapper() A, B -> out {
-  join: std.Join()
+  join: flow.Join()
   sum: std.Sum()
 
   .A > sum.integer

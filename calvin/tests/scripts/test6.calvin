@@ -1,7 +1,7 @@
 // Wrapper component [2] -> [1] without arguments
 
 component Wrapper() A, B -> out {
-  join: std.Join()
+  join: flow.Join()
   sum: std.Sum()
 
   .A > sum.integer

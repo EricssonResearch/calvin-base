@@ -440,7 +440,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testUnusedConstant(self):
         script = """
         define FOO=2
-        sink : std.Terminator()
+        sink : flow.Terminator()
         1 > sink.void
         """
         result, errors, warnings = self.parse('inline', script)

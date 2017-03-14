@@ -1,8 +1,6 @@
 /* Actors */
 client : net.HTTPGet()
 status : io.Print()
-data : std.Terminator()
-header : std.Terminator()
 
 /* Connections */
 "http://www.example.com" > client.URL
@@ -10,6 +8,6 @@ header : std.Terminator()
 {} > client.params
 
 client.status > status.token
-client.data > data.void
-client.header > header.void
+client.data > voidport
+client.header > voidport
 

@@ -2,9 +2,8 @@
 servo : servo.Servo()
 btn : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
 pwm : io.GPIOPWM(gpio_pin=17, frequency=50, dutycycle=7.5)
-freqency : std.Void()
 
 /* Connections */
 btn.state > servo.trigger
 servo.dutycycle > pwm.dutycycle
-freqency.void > pwm.frequency
+voidport > pwm.frequency

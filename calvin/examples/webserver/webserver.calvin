@@ -39,9 +39,8 @@ component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_d
   cmp : std.Compare(op="=")
   route_input : flow.Select()
   route_status : flow.Select()
-  join_status : std.Join()
-  join_output : std.Join()
-  term : std.Terminator()
+  join_status : flow.Join()
+  join_output : flow.Join()
 
 
   # Is incoming status 200 (OK)?
@@ -58,7 +57,7 @@ component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_d
   # Also bypass any computation and pass input directly to output
   route_input.case_false > join_output.token_1
   # If incoming status is 200 (OK) drop it since we will soon have a new status
-  route_status.case_true > term.void
+  route_status.case_true > voidport
   # Merge statii
   join_status.token > .status
   join_output.token > .out
@@ -85,8 +84,8 @@ component HTTPGETRequestCheck() request -> path, status {
   match_request_path : text.RegexMatch(regex="[A-Z]+ (\S+) HTTP/\d\.\d")
   const_BAD_REQUEST : std.Constantify(constant=BAD_REQ)
   const_OK : std.Constantify(constant=OK)
-  join_output : std.Join()
-  join_status : std.Join()
+  join_output : flow.Join()
+  join_status : flow.Join()
 
   .request > match_request_method.text
   .request > match_request_path.text

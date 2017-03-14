@@ -3,7 +3,6 @@ component ComingOrGoing() container, key, empty_value -> value {
   get_status : json.GetValue()
   get_key : json.GetValue()
   switch : flow.Switch()
-  terminate : std.Terminator()
 
   dbg: io.Print()
 
@@ -18,10 +17,9 @@ component ComingOrGoing() container, key, empty_value -> value {
   .empty_value > switch.b
   get_status.value > switch.switch
   switch.b > .value
-  switch.a > terminate.void
+  switch.a > voidport
 }
 
-nothing : std.Void()
 reader : sensor.RFIDReader()
 server: misc.OPCServer()
 get_uid : ComingOrGoing()
@@ -32,7 +30,7 @@ set_current_value: json.SetValue()
 out: io.Print()
 dbg: io.Print()
 
-nothing.void > reader.data
+voidport > reader.data
 
 reader.data > get_uid.container
 "cardno" > get_uid.key

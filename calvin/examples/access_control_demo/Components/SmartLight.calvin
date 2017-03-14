@@ -1,9 +1,6 @@
 component RedGreenLight() select -> {
     light : net.HTTPPut()
     to_string : json.ToString()
-    reply_header : std.Terminator()
-    reply_data: std.Terminator()
-    reply_status: std.Terminator()
     set_color : flow.Deselect()
 
 
@@ -16,9 +13,9 @@ component RedGreenLight() select -> {
     {"Content-Type": "application/json"} > light.header
     {} > light.params
 
-    light.status  > reply_status.void
-    light.header > reply_header.void
-    light.data > reply_data.void
+    light.status  > voidport
+    light.header > voidport
+    light.data > voidport
 }
 
 

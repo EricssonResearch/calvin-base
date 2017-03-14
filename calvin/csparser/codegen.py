@@ -244,12 +244,12 @@ class ImplicitPortRewrite(object):
     def visit(self, node):
         link = node.parent
         if link.outport is node:
-            actor_type = 'std.Void'
+            actor_type = 'flow.Void'
             port_class = ast.OutPort
             reason = "Using 'void' as input to '{}.{}'".format(link.inport.actor, link.inport.port)
             self.issue_tracker.add_warning(reason, node)
         else:
-            actor_type='std.Terminator'
+            actor_type='flow.Terminator'
             port_class = ast.InPort
 
         self.counter += 1

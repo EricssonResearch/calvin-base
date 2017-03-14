@@ -17,7 +17,6 @@ bgselect : flow.Deselect()
 alarm : std.Alarm()
 twit : web.Twitter()
 sel : flow.Select()
-term : std.Terminator()
 
 /* Connections */
 src.data > hygrometer.trigger
@@ -43,7 +42,7 @@ GREEN > bgselect.case_false
 alarm.warning > sel.select
 formatter.text > sel.data
 sel.case_true > twit.status
-sel.case_false > term.void
+sel.case_false > voidport
 
 bgselect.data > set_background.value
 "bgcolor" > set_background.key
