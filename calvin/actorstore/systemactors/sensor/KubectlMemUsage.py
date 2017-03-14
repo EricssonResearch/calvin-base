@@ -23,7 +23,8 @@ _log = get_actor_logger(__name__)
 class KubectlMemUsage(Actor):
 
     """
-        Get mem usage of Kubernetes cluster
+    Get mem usage of Kubernetes cluster
+
     Outputs:
         usage : mem usage in bytes
     """
@@ -38,13 +39,13 @@ class KubectlMemUsage(Actor):
         self.use('calvinsys.sensors.kubectl', shorthand='kube')
         self['kube'].enable(metric="memory/usage")
 
-        
+
     def will_migrate(self):
         self['kube'].disable()
-        
+
     def did_migrate(self):
         self.setup()
-    
+
     @stateguard(lambda self: self['kube'].has_metric("memory/usage"))
     @condition([], [])
     def measure(self):
@@ -53,8 +54,8 @@ class KubectlMemUsage(Actor):
         self.data = [item for item in metrics["metrics"] if item["timestamp"] > self.last_timestamp ]
         for item in self.data:
             item["value"] /= 1024*1024
-        
-        
+
+
     @stateguard(lambda self: self.data)
     @condition([], ['usage'])
     def dispatch_single(self):

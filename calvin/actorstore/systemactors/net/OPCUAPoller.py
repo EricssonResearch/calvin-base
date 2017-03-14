@@ -24,26 +24,28 @@ _log = get_logger(__name__)
 class OPCUAPoller(Actor):
     """
     An OPCUA Client. Connects to given OPCUA server and polls given node id's at given interval
-    nodeids are of the form ns=<#>;s=<string>
-    
+    nodeids are of the form ns=<#>;s=<string>.
+
+        {
+          "Status": {
+            "Doc": <human readable description of status code>,
+            "Code": <status code>,
+            "Name": <name of status code>
+            },
+          "Name": <name of variable>,
+          "ServerTimestamp": <server timestamp>,
+          "SourceTimestamp": <source timestamp>,
+          "CalvinTimestamp": <local timestamp>
+          "Value": <variable value>,
+          "Type": <type of variable (or contents for compound variables)>,
+          "Id": <id of variable>
+        }
+
     Output:
-        variable : {
-                      "Status": {
-                        "Doc": <human readable description of status code>,
-                        "Code": <status code>,
-                        "Name": <name of status code>
-                        },                                        
-                      "Name": <name of variable>,
-                      "ServerTimestamp": <server timestamp>,
-                      "SourceTimestamp": <source timestamp>,
-                      "CalvinTimestamp": <local timestamp>
-                      "Value": <variable value>,
-                      "Type": <type of variable (or contents for compound variables)>,
-                      "Id": <id of variable>
-                    }
+        variable :
     """
 
-    @manage(['endpoint', 'interval', 'nodeids']) 
+    @manage(['endpoint', 'interval', 'nodeids'])
     def init(self, endpoint, interval, nodeids):
         self.endpoint = endpoint
         self.nodeids = [str(nodeid) for nodeid in nodeids]
@@ -58,7 +60,7 @@ class OPCUAPoller(Actor):
         for timer in self.timers.values():
             if timer.active():
                 timer.cancel()
-        
+
     def setup(self):
         self.timers = {}
         self.use('calvinsys.opcua.client', shorthand='opcua')
@@ -71,8 +73,8 @@ class OPCUAPoller(Actor):
         # Connected - setup polling timers
         for nodeid in self.nodeids:
             self.timers[nodeid] = self['timer'].once(0)
-        
-    
+
+
     @stateguard(lambda self: self['opcua'].variable_changed)
     @condition(action_output=['variable'])
     def changed(self):
@@ -89,7 +91,7 @@ class OPCUAPoller(Actor):
         for t in active_timers:
             t[1].ack()
             self['opcua'].poll(t[0])
-        
-        
+
+
     action_priority = (changed, poll, connected)
     requires = ['calvinsys.opcua.client', 'calvinsys.events.timer']

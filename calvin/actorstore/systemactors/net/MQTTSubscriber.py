@@ -31,14 +31,17 @@ class MQTTSubscriber(Actor):
       topics: <list of topics to subscribe to>
 
     settings is a dictionary with optional arguments :
-      "ca-cert-file": <ca certificate file>,
-      "verify-hostname": <False iff hostname in cert should not be verified>,
-      "client-cert-file" : <client certificate file>,
-      "client-key-file" : <client key file>,
-      "username": <self explanatory>,
-      "password": <self explanatory>,
-      "will-topic" : <topic of mqtt will>
-      "will-payload" : <payload of mqtt will>
+
+        {
+          "ca-cert-file": <ca certificate file>,
+          "verify-hostname": <False iff hostname in cert should not be verified>,
+          "client-cert-file" : <client certificate file>,
+          "client-key-file" : <client key file>,
+          "username": <self explanatory>,
+          "password": <self explanatory>,
+          "will-topic" : <topic of mqtt will>
+          "will-payload" : <payload of mqtt will>
+        }
 
     output:
       message : dictionary {"topic": <topic>, "payload": <payload>}

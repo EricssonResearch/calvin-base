@@ -20,8 +20,8 @@ from calvin.actor.actor import Actor, manage, condition
 class Humidity(Actor):
 
     """
-        Read Humidity when told to
-        
+    Read Humidity when told to
+
     Inputs:
         measure: Triggers a temperature reading
     Outputs:
@@ -34,13 +34,13 @@ class Humidity(Actor):
 
     def setup(self):
         self.use("calvinsys.sensors.environmental", shorthand="humid")
-        
+
     def will_migrate(self):
         pass
-        
+
     def did_migrate(self):
         self.setup()
-    
+
     @condition(['measure'], ['percent'])
     def measure(self, _):
         humidity = self['humid'].get_humidity()

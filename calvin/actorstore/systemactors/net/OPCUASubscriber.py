@@ -24,26 +24,28 @@ _log = get_logger(__name__)
 class OPCUASubscriber(Actor):
     """
     An OPCUA Client. Connects to given OPCUA server and sets up subscriptions for given node id's
-    nodeids are of the form ns=<#>;s=<string>
-    
+    nodeids are of the form ns=<#>;s=<string>.
+
+        {
+          "Status": {
+            "Doc": <human readable description of status code>,
+            "Code": <status code>,
+            "Name": <name of status code>
+            },
+          "Name": <name of variable>,
+          "ServerTimestamp": <server timestamp>,
+          "SourceTimestamp": <source timestamp>,
+          "CalvinTimestamp": <local timestamp>
+          "Value": <variable value>,
+          "Type": <type of variable (or contents for compound variables)>,
+          "Id": <id of variable>
+        }
+
     Output:
-        variable : {
-                      "Status": {
-                        "Doc": <human readable description of status code>,
-                        "Code": <status code>,
-                        "Name": <name of status code>
-                        },                                        
-                      "Name": <name of variable>,
-                      "ServerTimestamp": <server timestamp>,
-                      "SourceTimestamp": <source timestamp>,
-                      "CalvinTimestamp": <local timestamp>
-                      "Value": <variable value>,
-                      "Type": <type of variable (or contents for compound variables)>,
-                      "Id": <id of variable>
-                    }
+        variable :
     """
 
-    @manage(['endpoint', 'nodeids']) 
+    @manage(['endpoint', 'nodeids'])
     def init(self, endpoint, nodeids):
         self.endpoint = endpoint
         self.nodeids = [ str(nodeid) for nodeid in nodeids]
@@ -57,7 +59,7 @@ class OPCUASubscriber(Actor):
 
     def will_end(self):
         self['opcua'].shutdown()
-        
+
     def setup(self):
         self.use('calvinsys.opcua.client', shorthand='opcua')
         self['opcua'].start_subscription(self.endpoint, self.nodeids)

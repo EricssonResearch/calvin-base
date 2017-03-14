@@ -27,10 +27,10 @@ class UDPSender(Actor):
 
     Control port takes control commands of the form (uri only applicable for connect.)
 
-    {
-        "command" : "connect"/"disconnect",
-        "uri": "udp://<address>:<port>"
-    }
+        {
+            "command" : "connect"/"disconnect",
+            "uri": "udp://<address>:<port>"
+        }
 
 
     Input:

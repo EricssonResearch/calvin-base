@@ -20,7 +20,8 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 class EnclosureFanSpeed(Actor):
 
     """
-        Read fan speeds of enclosure
+    Read fan speeds of enclosure
+
     Outputs:
         rpms : rpm values for fans in enclosure (as dict)
     """
@@ -36,13 +37,13 @@ class EnclosureFanSpeed(Actor):
     def setup(self):
         self.use('calvinsys.sensors.enclosure', shorthand='enclosure')
         self['enclosure'].enable(fans=self.fans)
-        
+
     def will_migrate(self):
         self['enclosure'].disable()
-        
+
     def did_migrate(self):
         self.setup()
-    
+
     @stateguard(lambda self: self['enclosure'].has_fan_data)
     @condition([], ['rpms'])
     def measure(self):

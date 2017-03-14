@@ -27,11 +27,10 @@ class UDPListener(Actor):
 
     Control port takes control commands of the form (uri only applicable for connect.)
 
-    {
-        "command" : "connect"/"disconnect",
-        "uri": "udp://<ipv4 address>:<port>"
-    }
-
+        {
+            "command" : "listen"/"stop",
+            "uri": "udp://<ipv4 address>:<port>"
+        }
 
 
     Input:
@@ -90,7 +89,7 @@ class UDPListener(Actor):
             self._new_port(control)
         elif control.get('command', '') == 'stop' and self.listener:
             self._close_port()
-        
+
 
     def _new_port(self, control):
         if self.parse_uri(control.get('uri', '')):

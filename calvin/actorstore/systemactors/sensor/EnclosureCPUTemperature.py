@@ -20,7 +20,8 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 class EnclosureCPUTemperature(Actor):
 
     """
-        Read CPU temperature of servers in an enclosure
+    Read CPU temperature of servers in an enclosure
+
     Outputs:
         temperatures : dict of the form {"server-n": temp | 1 <= n <= 16 }
     """
@@ -33,13 +34,13 @@ class EnclosureCPUTemperature(Actor):
     def setup(self):
         self.use('calvinsys.sensors.enclosure', shorthand='enclosure')
         self['enclosure'].enable(cpu_temps=self.servers)
-        
+
     def will_migrate(self):
         self['enclosure'].disable()
-        
+
     def did_migrate(self):
         self.setup()
-    
+
     @stateguard(lambda self: self['enclosure'].has_cpu_temps)
     @condition([], ['temperatures'])
     def measure(self):

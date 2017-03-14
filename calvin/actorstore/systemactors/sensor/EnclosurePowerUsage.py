@@ -20,7 +20,8 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 class EnclosurePowerUsage(Actor):
 
     """
-        Read PowerUsage of enclosure
+    Read PowerUsage of enclosure
+
     Outputs:
         watts : wattage values for powersupplies in enclosure (as dict)
     """
@@ -36,13 +37,13 @@ class EnclosurePowerUsage(Actor):
     def setup(self):
         self.use('calvinsys.sensors.enclosure', shorthand='enclosure')
         self['enclosure'].enable(power_supplies=self.power_supplies)
-        
+
     def will_migrate(self):
         self['enclosure'].disable()
-        
+
     def did_migrate(self):
         self.setup()
-    
+
     @stateguard(lambda self: self['enclosure'].has_power_data)
     @condition([], ['watts'])
     def measure(self):

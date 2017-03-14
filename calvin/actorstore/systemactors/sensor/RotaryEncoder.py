@@ -20,8 +20,8 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 class RotaryEncoder(Actor):
 
     """
-        Read a knob to see which way it turned.
-        
+    Read a knob to see which way it turned.
+
     Outputs:
         direction: clockwise or anti-clockwise
         button: True if button was pressed
@@ -34,18 +34,18 @@ class RotaryEncoder(Actor):
     def setup(self):
         self.use("calvinsys.sensors.rotary_encoder", shorthand="knob")
         self['knob'].start()
-        
+
     def will_migrate(self):
         self['knob'].stop()
-        
+
     def did_migrate(self):
         self.setup()
-    
+
     @stateguard(lambda self: self['knob'].was_pressed())
     @condition([], ['button'])
     def button(self):
         return (True,)
-        
+
     @stateguard(lambda self: self['knob'].was_turned())
     @condition([], ['direction'])
     def turn(self):

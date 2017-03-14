@@ -23,7 +23,8 @@ _log = get_actor_logger(__name__)
 class KubectlCpuUsage(Actor):
 
     """
-        Get cpu usage of Kubernetes cluster
+    Get cpu usage of Kubernetes cluster
+
     Outputs:
         usage : cpu usage in millicores
     """
@@ -38,21 +39,21 @@ class KubectlCpuUsage(Actor):
         self.use('calvinsys.sensors.kubectl', shorthand='kube')
         self['kube'].enable(metric="cpu/usage_rate")
 
-        
+
     def will_migrate(self):
         self['kube'].disable()
-        
+
     def did_migrate(self):
         self.setup()
-    
+
     @stateguard(lambda self: self['kube'].has_metric("cpu/usage_rate"))
     @condition([], [])
     def measure(self):
         metrics = self['kube'].get_metric("cpu/usage_rate")
         self['kube'].ack_metric("cpu/usage_rate")
         self.data = [item for item in metrics["metrics"] if item["timestamp"] > self.last_timestamp ]
-        
-        
+
+
     @stateguard(lambda self: self.data)
     @condition([], ['usage'])
     def dispatch_single(self):

@@ -28,18 +28,19 @@ class MQTTPublisher(Actor):
     Arguments:
       host: <ip/name of of mqtt broker>,
       port: <port to use on mqtt broker>,
-    
+
     Settings is a dictionary with optional arguments:
-    {
-      "ca-cert-file": <ca certificate file>,
-      "verify-hostname": <False iff hostname in cert should not be verified>,
-      "client-cert-file" : <client certificate file>,
-      "client-key-file" : <client key file>,
-      "username": <self explanatory>,
-      "password": <self explanatory>,
-      "will-topic" : <topic of mqtt will>
-      "will-payload" : <payload of mqtt will>
-    }
+
+        {
+          "ca-cert-file": <ca certificate file>,
+          "verify-hostname": <False iff hostname in cert should not be verified>,
+          "client-cert-file" : <client certificate file>,
+          "client-key-file" : <client key file>,
+          "username": <self explanatory>,
+          "password": <self explanatory>,
+          "will-topic" : <topic of mqtt will>
+          "will-payload" : <payload of mqtt will>
+        }
 
     input:
       topic : topic of message
@@ -55,7 +56,7 @@ class MQTTPublisher(Actor):
 
     def did_migrate(self):
         self.setup()
-        
+
     def will_migrate(self):
         if self.publisher:
             self.publisher.stop()
@@ -73,8 +74,8 @@ class MQTTPublisher(Actor):
     @condition(action_input=['topic', 'payload'])
     def send_message(self, topic, payload):
         self.publisher.publish(topic, payload)
-        
 
- 
+
+
     action_priority = (send_message, )
     requires = ['calvinsys.network.mqtthandler']

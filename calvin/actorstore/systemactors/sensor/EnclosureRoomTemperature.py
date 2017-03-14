@@ -20,7 +20,8 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 class EnclosureRoomTemperature(Actor):
 
     """
-        Read Room temperature of enclosure
+    Read Room temperature of enclosure
+
     Outputs:
         centigrade : temperature around enclosure
     """
@@ -32,13 +33,13 @@ class EnclosureRoomTemperature(Actor):
     def setup(self):
         self.use('calvinsys.sensors.enclosure', shorthand='enclosure')
         self['enclosure'].enable(ambient_temp=True)
-        
+
     def will_migrate(self):
         self['enclosure'].disable()
-        
+
     def did_migrate(self):
         self.setup()
-    
+
     @stateguard(lambda self: self['enclosure'].has_ambient_temp)
     @condition([], ['centigrade'])
     def measure(self):
