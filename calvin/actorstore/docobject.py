@@ -184,6 +184,7 @@ class ModuleDoc(DocObject):
 
     {{/actors}}
     {{#use_links}}[\[Top\]](#Calvin){{/use_links}}
+    ***
     """
 
 
@@ -296,6 +297,7 @@ class ActorDoc(DocObject):
 
     {{/has_requirements}}
     {{#use_links}}[\[Top\]](#Calvin) [\[Module: {{{e_ns}}}\]](#{{{ns}}}){{/use_links}}
+    ***
     """
 
 
