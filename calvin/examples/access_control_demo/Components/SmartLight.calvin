@@ -4,7 +4,7 @@ component RedGreenLight() select -> {
     reply_header : std.Terminator()
     reply_data: std.Terminator()
     reply_status: std.Terminator()
-    set_color : std.Deselect()
+    set_color : flow.Deselect()
 
 
     .select > set_color.select

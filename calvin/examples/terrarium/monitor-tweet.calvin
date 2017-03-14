@@ -13,10 +13,10 @@ formatter: text.Format(fmt="{value}{unit}")
 display : io.Display()
 display_format : json.SetValue()
 set_background : json.SetValue()
-bgselect : std.Deselect()
+bgselect : flow.Deselect()
 alarm : std.Alarm()
 twit : web.Twitter()
-sel : std.Select()
+sel : flow.Select()
 term : std.Terminator()
 
 /* Connections */

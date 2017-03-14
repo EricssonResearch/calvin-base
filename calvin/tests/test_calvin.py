@@ -2018,7 +2018,7 @@ class TestSelect(CalvinTestBase):
         script = """
             src   : std.Counter()
             const : std.Constant(data=true, n=-1)
-            route : std.Select()
+            route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
@@ -2044,7 +2044,7 @@ class TestSelect(CalvinTestBase):
         script = """
             src   : std.Counter()
             const : std.Constant(data=0, n=-1)
-            route : std.Select()
+            route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
@@ -2072,7 +2072,7 @@ class TestSelect(CalvinTestBase):
         script = """
             src   : std.Counter()
             const : std.Constant(data=2, n=-1)
-            route : std.Select()
+            route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : std.Terminator()
 
@@ -2106,7 +2106,7 @@ class TestDeselect(CalvinTestBase):
             const_0 : std.Constant(data=0, n=-1)
             const_1 : std.Constant(data=1, n=-1)
             comp    : std.Compare(op="<=")
-            ds      : std.Deselect()
+            ds      : flow.Deselect()
             snk     : test.Sink(store_tokens=1, quiet=1)
 
             const_0.token > ds.case_false
@@ -2138,7 +2138,7 @@ class TestDeselect(CalvinTestBase):
             const_0 : std.Constant(data=0, n=-1)
             const_1 : std.Constant(data=1, n=-1)
             comp    : std.Compare(op="<=")
-            ds      : std.Deselect()
+            ds      : flow.Deselect()
             snk     : test.Sink(store_tokens=1, quiet=1)
 
             const_0.token > ds.case_true
@@ -2170,7 +2170,7 @@ class TestDeselect(CalvinTestBase):
             src     : std.Counter()
             const_5 : std.Constantify(constant=5)
             const_0 : std.Constant(data=0, n=11)
-            ds      : std.Deselect()
+            ds      : flow.Deselect()
             snk     : test.Sink(store_tokens=1, quiet=1)
 
             const_0.token > ds.case_false

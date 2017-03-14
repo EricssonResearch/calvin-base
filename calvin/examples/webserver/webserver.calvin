@@ -37,8 +37,8 @@ component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_d
 
   const_OK : std.Constantify(constant=status_OK)
   cmp : std.Compare(op="=")
-  route_input : std.Select()
-  route_status : std.Select()
+  route_input : flow.Select()
+  route_status : flow.Select()
   join_status : std.Join()
   join_output : std.Join()
   term : std.Terminator()
@@ -118,7 +118,7 @@ component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
   """
 
   const_base : std.Constantify(constant=base_path)
-  status : std.Deselect()
+  status : flow.Deselect()
   abs_path : path.Append(inside_base=true)
 
   .rel_path > const_base.in
@@ -150,7 +150,7 @@ component HTTPFileReader() filename -> resource, status {
   concat : text.LineJoin()
   exception_handler : exception.ExceptionHandler()
   is_eos : std.Compare(op="=")
-  status_mapper : std.Deselect()
+  status_mapper : flow.Deselect()
 
 
   .filename > read_html.filename

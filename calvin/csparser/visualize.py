@@ -270,7 +270,7 @@ if __name__ == '__main__':
     component FilterUnchanged() string -> string {
       iip : std.Init(data="nothing")
       cmp : std.Compare(op="=")
-      sel : std.Select()
+      sel : flow.Select()
 
       .string > cmp.a
       iip.out > cmp.b

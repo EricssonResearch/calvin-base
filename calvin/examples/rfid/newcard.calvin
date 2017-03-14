@@ -2,7 +2,7 @@
 component ComingOrGoing() container, key, empty_value -> value {
   get_status : json.GetValue()
   get_key : json.GetValue()
-  switch : std.Switch()
+  switch : flow.Switch()
   terminate : std.Terminator()
 
   dbg: io.Print()

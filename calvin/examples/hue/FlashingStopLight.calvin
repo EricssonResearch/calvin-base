@@ -20,7 +20,7 @@ component PhilipsHue(address, username, lightno) on, saturation, brightness, hue
 }
 
 component StopLight(address, username, lightno) state -> status {
-    select: std.Deselect()
+    select: flow.Deselect()
     light : PhilipsHue(address=address, username=username, lightno=lightno)
 
     true > light.on

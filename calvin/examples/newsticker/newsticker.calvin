@@ -87,7 +87,7 @@ header : json.Dict(n=1)
 delay : std.ClassicDelay(delay=DELAY)
 printout : io.Print()
 cmp : std.Compare(op="=")
-route : std.Switch()
+route : flow.Switch()
 drop : std.Terminator()
 body_to_json : json.FromString()
 
