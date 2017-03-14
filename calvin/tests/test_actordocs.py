@@ -55,7 +55,7 @@ class ModuleDocs(TestBase):
     def test_help_raw_flow_init(self):
         actual = self.ds.help_raw('flow.Init')
         self.assertTrue(actual['is_known'])
-        self.assertEqual(set(['inputs', 'name', 'outputs', 'args', 'is_known', 'ns', 'type', 'long_desc', 'short_desc', 'output_properties', 'input_properties']), set(actual.keys()))
+        self.assertEqual(set(['inputs', 'name', 'outputs', 'args', 'is_known', 'ns', 'type', 'long_desc', 'short_desc', 'output_properties', 'input_properties', 'requires']), set(actual.keys()))
 
     def test_help_raw_unknown(self):
         actual = self.ds.help_raw(what='no_such_thing')
@@ -73,4 +73,4 @@ class ModuleDocs(TestBase):
     def test_metadata_flow_init(self):
         actual = self.ds.metadata('flow.Init')
         self.assertTrue(actual['is_known'])
-        self.assertEqual(set(['inputs', 'name', 'outputs', 'args', 'is_known', 'ns', 'type', 'output_properties', 'input_properties']), set(actual.keys()))
+        self.assertEqual(set(['inputs', 'name', 'outputs', 'args', 'is_known', 'ns', 'type', 'output_properties', 'input_properties', 'requires']), set(actual.keys()))
