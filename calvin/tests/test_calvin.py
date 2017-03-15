@@ -4615,4 +4615,285 @@ class TestReplication(object):
         for a in src_rep:
             assert a not in actors
 
+class TestPortmappingScript(CalvinTestBase):
 
+    def _run_test(self, script, minlen):
+        rt = self.rt1
+        response = helpers.deploy_script(request_handler, "simple", script, rt)
+        snk = response['actor_map']['simple:snk']
+        wait_for_tokens(rt, snk, minlen)
+        actual = actual_tokens(rt, snk)
+        helpers.delete_app(request_handler, rt, response['application_id'])
+        return actual
+
+    def testSimple(self):
+        script = r"""
+        dummy : std.Constantify(constant=42)
+        cdict : flow.CollectCompleteDict(mapping={"dummy":&dummy.out})
+        snk : test.Sink(store_tokens=1, quiet=1)
+
+        1 > dummy.in
+        dummy.out > cdict.token
+        cdict.dict > snk.token
+        """
+
+        expected = [{u'dummy': 42}]*5
+        actual = self._run_test(script, len(expected))
+        self.assert_lists_equal(expected, actual)
+
+    def testMapAlternate(self):
+        script = r"""
+        snk : test.Sink(store_tokens=1, quiet=1)
+        input: std.Counter()
+        alt: flow.Alternate(order=[&out1.out, &out2.out, &out3.out])
+        out1 : text.PrefixString(prefix="tag-1:")
+        out2 : text.PrefixString(prefix="tag-2:")
+        out3 : text.PrefixString(prefix="tag-3:")
+        input.integer > out1.in
+        input.integer > out2.in
+        input.integer > out3.in
+        out1.out > alt.token
+        out2.out > alt.token
+        out3.out > alt.token
+        alt.token > snk.token
+        """
+        expected = [
+            "tag-1:1",
+            "tag-2:1",
+            "tag-3:1",
+            "tag-1:2",
+            "tag-2:2",
+            "tag-3:2",
+            "tag-1:3",
+            "tag-2:3",
+            "tag-3:3",
+            "tag-1:4",
+            "tag-2:4",
+            "tag-3:4"
+        ]
+        actual = self._run_test(script, len(expected))
+        self.assert_lists_equal(expected, actual)
+
+    def testMapDealternate(self):
+        script = r"""
+        snk : test.Sink(store_tokens=1, quiet=1)
+        input: std.Counter()
+        switch: flow.Dealternate(order=[&out3.in, &out1.in, &out2.in])
+        out1 : text.PrefixString(prefix="tag-1:")
+        out2 : text.PrefixString(prefix="tag-2:")
+        out3 : text.PrefixString(prefix="tag-3:")
+        collect : flow.Alternate(order=[&out1.out, &out2.out, &out3.out])
+        input.integer > switch.token
+        switch.token > out1.in
+        switch.token > out2.in
+        switch.token > out3.in
+        out1.out > collect.token
+        out2.out > collect.token
+        out3.out > collect.token
+        collect.token > snk.token
+        """
+        expected = [
+            "tag-1:2",
+            "tag-2:3",
+            "tag-3:1",
+            "tag-1:5",
+            "tag-2:6",
+            "tag-3:4",
+            "tag-1:8",
+            "tag-2:9",
+            "tag-3:7"
+        ]
+        actual = self._run_test(script, len(expected))
+        self.assert_lists_equal(expected, actual)
+
+    def testMapMux(self):
+        script = r"""
+        snk : test.Sink(store_tokens=1, quiet=1)
+        input: std.Counter()
+        mux: flow.Mux(mapping={"one": &out1.out, "two":&out2.out, "three":&out3.out})
+        sel: json.Items()
+        out1 : text.PrefixString(prefix="tag-1:")
+        out2 : text.PrefixString(prefix="tag-2:")
+        out3 : text.PrefixString(prefix="tag-3:")
+        input.integer > out1.in
+        input.integer > out2.in
+        input.integer > out3.in
+        out1.out > mux.token
+        out2.out > mux.token
+        out3.out > mux.token
+        ["one", "two", "three"] > sel.list
+        sel.item > mux.select
+        mux.token > snk.token
+        """
+        expected = [
+            "tag-1:1",
+            "tag-2:2",
+            "tag-3:3",
+            "tag-1:4",
+            "tag-2:5",
+            "tag-3:6",
+            "tag-1:7",
+            "tag-2:8",
+            "tag-3:9",
+        ]
+        actual = self._run_test(script, len(expected))
+        self.assert_lists_equal(expected, actual)
+
+    @pytest.mark.xfail
+    def testMapDemux(self):
+        script = r"""
+        snk : test.Sink(store_tokens=1, quiet=1)
+        input: std.Counter()
+        dem: flow.Demux(select={"one":&out1.in, "two": &out2.in, "three": &out3.in})
+        sel: json.Items()
+        out1 : text.PrefixString(prefix="tag-1:")
+        out2 : text.PrefixString(prefix="tag-2:")
+        out3 : text.PrefixString(prefix="tag-3:")
+        coll : flow.Mux(mapping={"one":&out1.out, "two": &out2.out, "three": &out3.out})
+        input.integer > dem.token
+        dem.token > out1.in
+        dem.token > out2.in
+        dem.token > out3.in
+        ["one", "two", "three"] > sel.list
+        sel.item > dem.select, coll.select
+        dem.default > voidport
+        out1.out > coll.token
+        out2.out > coll.token
+        out3.out > coll.token
+        coll.token > snk.token
+        """
+        expected = [
+            "tag-1:1",
+            "tag-2:2",
+            "tag-3:3",
+            "tag-1:4",
+            "tag-2:5",
+            "tag-3:6",
+            "tag-1:7",
+            "tag-2:8",
+            "tag-3:9",
+        ]
+        actual = self._run_test(script, len(expected))
+        self.assert_lists_equal(expected, actual)
+
+    def testMapDispatchCollect(self):
+        script = r"""
+        snk : test.Sink(store_tokens=1, quiet=1)
+        input: std.Counter()
+        disp : flow.Dispatch()
+        coll : flow.Collect()
+        tag1: text.PrefixString(prefix="tag1-")
+        tag2: text.PrefixString(prefix="tag2-")
+        tag3: text.PrefixString(prefix="tag3-")
+
+        input.integer > disp.token
+        disp.token > tag1.in
+        disp.token > tag2.in
+        disp.token > tag3.in
+        tag1.out > coll.token
+        tag2.out > coll.token
+        tag3.out > coll.token
+        coll.token > snk.token
+        """
+        actual = self._run_test(script, 50)
+        pairs = [x.split('-') for x in actual]
+        tags = [p[0] for p in pairs]
+        values = [int(p[1]) for p in pairs]
+        assert (set(values) == set(range(1, len(actual)+1)))
+        print tags
+        assert set(tags) == set(["tag1", "tag2", "tag3"])
+
+
+    def testMapDispatchDict(self):
+        script = r"""
+        snk : test.Sink(store_tokens=1, quiet=1)
+        dd : flow.DispatchDict(mapping={"t1": &tag1.in, "t2": &tag2.in, "t3": &tag3.in})
+        tag1: text.PrefixString(prefix="tag-1:")
+        tag2: text.PrefixString(prefix="tag-2:")
+        tag3: text.PrefixString(prefix="tag-3:")
+        coll : flow.Alternate(order=[&tag1.out, &tag2.out, &tag3.out])
+        {"t1": 1, "t2": 2, "t3": 3} > dd.dict
+        dd.token > tag1.in
+        dd.token > tag2.in
+        dd.token > tag3.in
+        dd.default > voidport
+        tag1.out > coll.token
+        tag2.out > coll.token
+        tag3.out > coll.token
+        coll.token > snk.token
+        """
+
+        expected = [
+            "tag-1:1",
+            "tag-2:2",
+            "tag-3:3",
+            "tag-1:1",
+            "tag-2:2",
+            "tag-3:3",
+            "tag-1:1",
+            "tag-2:2",
+            "tag-3:3",
+        ]
+        actual = self._run_test(script, len(expected))
+        self.assert_lists_equal(expected, actual)
+
+    def testMapCollectCompleteDict(self):
+        script = r"""
+        snk : test.Sink(store_tokens=1, quiet=1)
+        dd : flow.DispatchDict(mapping={"t1": &tag1.in, "t2": &tag2.in, "t3": &tag3.in})
+        tag1: text.PrefixString(prefix="tag-1:")
+        tag2: text.PrefixString(prefix="tag-2:")
+        tag3: text.PrefixString(prefix="tag-3:")
+        cd : flow.CollectCompleteDict(mapping={"t1": &tag2.out, "t2": &tag3.out, "t3": &tag1.out})
+        {"t1": 1, "t2": 2, "t3": 3} > dd.dict
+        dd.token > tag1.in
+        dd.token > tag2.in
+        dd.token > tag3.in
+        dd.default > voidport
+        tag1.out > cd.token
+        tag2.out > cd.token
+        tag3.out > cd.token
+        cd.dict > snk.token
+        """
+        actual = self._run_test(script, 50)
+        expected = [{u't2': 'tag-3:3', u't3': 'tag-1:1', u't1': 'tag-2:2'}]*len(actual)
+        self.assert_lists_equal(expected, actual)
+
+    @pytest.mark.xfail
+    def testMapComponentPort(self):
+        script = r"""
+        component Dummy() in -> out {
+            identity : std.Identity()
+            .in > identity.token
+            identity.token > .out
+        }
+        snk : test.Sink(store_tokens=1, quiet=1)
+        dummy : Dummy()
+        cdict : flow.CollectCompleteDict(mapping={"dummy":&dummy.out})
+        1 > dummy.in
+        dummy.out > cdict.token
+        cdict.dict > snk.token
+        """
+        actual = self._run_test(script, 10)
+        expected = [{u'dummy': 1}]*len(actual)
+        self.assert_lists_equal(expected, actual)
+
+
+    @pytest.mark.xfail
+    def testMapComponentInternalPort(self):
+        script = r"""
+        component Dummy() in -> out {
+            # Works with &foo.token or "foo.token" if constant has label :foo
+            cdict : flow.CollectCompleteDict(mapping={"dummy":&.in})
+
+            .in > cdict.token
+            cdict.dict > .out
+        }
+        snk : test.Sink(store_tokens=1, quiet=1)
+        dummy : Dummy()
+        1 > dummy.in
+        dummy.out > snk.token
+        """
+        actual = self._run_test(script, 10)
+        expected = [{u'dummy': 1}]*len(actual)
+        self.assert_lists_equal(expected, actual)
