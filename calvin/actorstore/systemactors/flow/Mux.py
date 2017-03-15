@@ -20,7 +20,7 @@ class Mux(Actor):
     """
     Fetch tokens from the fan-in port corresponding to value at 'select'
     Inputs:
-      token(routing="collect-all-tagged"): incoming tokens from connected ports to select from
+      token(routing="collect-tagged"): incoming tokens from connected ports to select from
       select: key to select among incoming values
     Outputs:
       token : token selected as given by select
