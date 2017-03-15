@@ -35,40 +35,28 @@ component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_d
   flow, without further processing.
   """
 
-  const_OK : std.Constantify(constant=status_OK)
-  cmp : std.Compare(op="=")
+  status_check : std.Compare(op="=")
   route_input : flow.Select()
-  route_status : flow.Select()
-  join_status : flow.Join()
-  join_output : flow.Join()
+  route_status : flow.Switch()
+  join_output : flow.Collect()
 
+  # Is incoming status OK?
+  status_OK > status_check.a
+  .status > status_check.b
+  # Route input and status based on the outcome of checking input status
+  status_check.result > route_status.switch, route_input.select
 
-  # Is incoming status 200 (OK)?
-  .status > const_OK.in
-  const_OK.out > cmp.a
-  .status > cmp.b
-  # Route input and status based on the outcome
-  cmp.result > route_status.select
-  cmp.result > route_input.select
-  .status > route_status.data
+  .status > route_status.a
+  .work_status > route_status.b
+  route_status.b > voidport
+  route_status.a > .status
+
   .in > route_input.data
-  # Propagate any incoming status != 200 (OK) to status out
-  route_status.case_false > join_status.token_1
-  # Also bypass any computation and pass input directly to output
-  route_input.case_false > join_output.token_1
-  # If incoming status is 200 (OK) drop it since we will soon have a new status
-  route_status.case_true > voidport
-  # Merge statii
-  join_status.token > .status
-  join_output.token > .out
-  #
-  # Connect to work actor here
-  #
   route_input.case_true > .work_data
-  .work_result > join_output.token_2
-  .work_status > join_status.token_2
+  route_input.case_false > join_output.token
+  .work_result > join_output.token
+  join_output.token > .out
 }
-
 
 component HTTPGETRequestCheck() request -> path, status {
   """
@@ -82,24 +70,58 @@ component HTTPGETRequestCheck() request -> path, status {
   """
   match_request_method : text.RegexMatch(regex="(GET) \S+ HTTP/\d\.\d")
   match_request_path : text.RegexMatch(regex="[A-Z]+ (\S+) HTTP/\d\.\d")
-  const_BAD_REQUEST : std.Constantify(constant=BAD_REQ)
-  const_OK : std.Constantify(constant=OK)
-  join_output : flow.Join()
-  join_status : flow.Join()
+  join_output : flow.Collect()
+  join_status : flow.Collect()
 
   .request > match_request_method.text
   .request > match_request_path.text
-  match_request_method.match > const_OK.in
-  match_request_path.match > join_output.token_1
-  match_request_path.no_match > join_output.token_2
+
+  match_request_path.match > join_output.token
+  match_request_path.no_match > join_output.token
   join_output.token > .path
   // Successful path
-  const_OK.out > join_status.token_1
+  match_request_method.match > /OK/ join_status.token
   // Error path
-  match_request_method.no_match > const_BAD_REQUEST.in
-  const_BAD_REQUEST.out > join_status.token_2
+  match_request_method.no_match > /BAD_REQ/ join_status.token
   // Status
   join_status.token > .status
+}
+
+# Alternative implementation of HTTPGETRequestCheck, not used
+component HTTPGETRequestCheck_ALT() request -> path, status {
+  """
+  Check if request is valid HTTP GET request.
+
+  Input:
+	  request: an HTTP request, possibly malformed
+  Outputs:
+    path: the requested resource path, or the full request on error
+    status: the request status, either OK (200) or Bad Request (400)
+  """
+  split_request : text.Split(delim=" ")
+  request_method : json.GetValue()
+  request_path : json.GetValue()
+  check_method : std.Compare(op="=")
+  status : flow.Deselect()
+  route_path : flow.Switch()
+
+  .request > split_request.text
+  split_request.lines > request_method.container, request_path.container
+  0 > request_method.key
+  1 > request_path.key
+
+  request_method.value > check_method.a
+  "GET" > check_method.b
+  check_method.result > status.select, route_path.switch
+
+  OK > status.case_true
+  BAD_REQ > status.case_false
+  status.data > .status
+
+  request_path.value > route_path.b
+  .request > route_path.a
+  route_path.b > voidport
+  route_path.a > .path
 }
 
 
@@ -107,7 +129,7 @@ component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
   """
   Locate a resource by appending rel_path to base_path.
   If the resulting path is outside of base_path,
-  or if the resource doesn't exist an error is genrated.
+  or if the resource doesn't exist an error is generated.
 
   Input:
     rel_path : Path for resource relative to base_path
@@ -116,12 +138,10 @@ component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
     status : An integer status code (200) 'OK' or (404) 'Not found'
   """
 
-  const_base : std.Constantify(constant=base_path)
   status : flow.Deselect()
   abs_path : path.Append(inside_base=true)
 
-  .rel_path > const_base.in
-  const_base.out > abs_path.base
+  base_path > abs_path.base
   .rel_path > abs_path.append
   # Partially successful path
   abs_path.path > .abs_path
@@ -164,6 +184,7 @@ component HTTPFileReader() filename -> resource, status {
   status_mapper.data > .status
 }
 
+
 tcp_server : net.TCPServer(delimiter="\r\n\r\n")
 daisy_GET : DaisyAdapter(status_OK=OK)
 daisy_path : DaisyAdapter(status_OK=OK)
@@ -172,17 +193,17 @@ check_GET : HTTPGETRequestCheck()
 resource_path : HTTPResourceLocator(base_path="html")
 resource_reader : HTTPFileReader()
 resp: http.HTTPResponseGenerator()
-const_OK : std.Constantify(constant=OK)
 
 HOST > tcp_server.host
 PORT > tcp_server.port
 # This line is a surprising consequence of the dataflow paradigm
 tcp_server.handle > tcp_server.handle
+
+# Bootstrap status (OK)
+tcp_server.token > /OK/ daisy_GET.status
 # Request
 tcp_server.token > daisy_GET.in
-# Bootstrap status (OK)
-tcp_server.token > const_OK.in
-const_OK.out > daisy_GET.status
+
 daisy_GET.work_data > check_GET.request
 check_GET.path > daisy_GET.work_result
 check_GET.status > daisy_GET.work_status
@@ -196,12 +217,14 @@ resource_path.status > daisy_path.work_status
 
 daisy_path.status > daisy_resource.status
 daisy_path.out > daisy_resource.in
+
 daisy_resource.work_data > resource_reader.filename
 resource_reader.resource > daisy_resource.work_result
 resource_reader.status > daisy_resource.work_status
 
 daisy_resource.status > resp.status
 daisy_resource.out > resp.body
+
 resp.out > tcp_server.token
 
 # Logging
