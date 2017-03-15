@@ -52,3 +52,9 @@ class CollectTagged(CollectUnordered):
                 data.value = {self.tags[writer]: data.value}
                 return data
         raise QueueEmpty(reader=metadata)
+
+    def _set_port_mapping(self, mapping):
+        if not set(mapping.values()) == set(self.writers):
+            print mapping, self.writers
+            raise Exception("Illegal port mapping dictionary")
+        self.tags = { v: k for k,v in mapping.items() }

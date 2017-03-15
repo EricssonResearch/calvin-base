@@ -136,10 +136,10 @@ class CollectBase(object):
     def remove_reader(self, reader):
         pass
 
-    def _set_port_mapping(mapping):
+    def _set_port_mapping(self, mapping):
         raise NotImplementedError
         
-    def _set_port_order(ordering):
+    def _set_port_order(self, ordering):
         raise NotImplementedError
         
     def set_config(self, config):
