@@ -19,10 +19,12 @@ define CHART_PARAMETERS = {"chart_title": ["More parameters", "3AB8E1", 24],
 //                  Components                 //
 /////////////////////////////////////////////////
 component GetTimestamp() in -> out {
-  timestamp : time.StrfTime(formating="%H:%M:%S")
+  timestamp : time.Datetime()
+  formater : text.Format(fmt="{hour}:{minute}:{second}")
   
   .in > timestamp.trigger
-  timestamp.timestamp > .out
+  timestamp.datetime > formater.dict
+  formater.text > .out
 }
 
 
