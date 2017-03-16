@@ -1,0 +1,6 @@
+t : std.Trigger(data=true, tick=0.5)
+r : math.Random(lower=10, upper=100)
+o : io.Print()
+
+t.data > r.trigger
+r.integer > o.token

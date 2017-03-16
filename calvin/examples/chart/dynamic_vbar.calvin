@@ -14,7 +14,7 @@ define CHART_PARAMETERS = {"chart_title": "A Vertical Bar Chart",
 bar_chart : chart.DynamicVBar(chart_param=CHART_PARAMETERS, left_to_right=false)
 screen : media.ImageRenderer(width=600, height=450)
 counter : std.CountTimer(sleep=1)
-random : std.Random(minimum=1, maximum=100)
+random : math.Random(lower=1, upper=101)
 
 
 /////////////////////////////////////////////////

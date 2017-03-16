@@ -22,32 +22,31 @@ _log = get_actor_logger(__name__)
 
 class Random(Actor):
     """
-    Produce random integer in range [minimum ... maximum]
+    Produce random integer in range [lower ... upper-1]
 
     Inputs:
       trigger : Any token
     Outputs:
-      integer : Random integer in range [minimum ... maximum]
+      integer : Random integer in range [lower ... upper-1]
     """
 
-    @manage(['min', 'max'])
-    def init(self, minimum, maximum):
-        self.min = minimum
-        self.max = maximum
+    @manage(['lower', 'upper'])
+    def init(self, lower, upper):
+        self.lower = lower
+        self.upper = upper
 
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.native.python-random', shorthand="random")
+        self.use('calvinsys.math.rng', shorthand="random")
 
     def did_migrate(self):
         self.setup()
 
     @condition(action_input=['trigger'], action_output=['integer'])
     def action(self, trigger):
-        result = self['random'].randint(self.min, self.max)
-        return (result, )
+        return (self['random'].randrange(self.lower, self.upper), )
 
     action_priority = (action, )
 
-    requires = ['calvinsys.native.python-random']
+    requires = ['calvinsys.math.rng']

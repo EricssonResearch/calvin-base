@@ -13,7 +13,7 @@ define CHART_PARAMETERS = {"chart_title": "A Simple Line Chart",
 bar_chart : chart.DynamicLine(chart_param=CHART_PARAMETERS)
 screen : media.ImageRenderer(width=600, height=450)
 counter : std.CountTimer(sleep=1)
-random : std.Random(minimum=25, maximum=75)
+random : math.Random(lower=25, upper=76)
 
 
 /////////////////////////////////////////////////

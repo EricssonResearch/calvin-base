@@ -1,0 +1,15 @@
+tick : std.Trigger(data=true, tick=0.5)
+in1 : math.Random(lower=1, upper=7)
+in2 : math.Random(lower=1, upper=7)
+
+sum : math.Evaluate(expr="x+y")
+
+out : io.Print()
+
+tick.data > in1.trigger
+tick.data > in2.trigger
+in1.integer > sum.x
+in2.integer > sum.y
+
+sum.result > out.token
+

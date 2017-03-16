@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
 from calvin.actor.actor import Actor, manage, condition
 from calvin.utilities.calvinlogger import get_actor_logger
+from calvin.runtime.north.calvin_token import ExceptionToken
 
 
 _log = get_actor_logger(__name__)
@@ -41,25 +41,18 @@ class Compute(Actor):
         self.setup()
         
     def setup(self):
-        try:
-            self.op = {
-                '+': operator.add,
-                '-': operator.sub,
-                '*': operator.mul,
-                '/': operator.div,
-                'div': operator.floordiv,
-                'mod': operator.mod,
-            }[self.op_string]
-        except KeyError:
-            _log.warning('Invalid operator %s, will always produce NULL as result' % str(self.op_string))
-            self.op = None
+        self.use("calvinsys.math.arithmetic", shorthand="arith")
+        self.op = self["arith"].operation(self.op_string)
         
     def did_migrate(self):
         self.setup()
         
     @condition(['a', 'b'], ['result'])
     def compute(self, a, b):
-        res = self.op(a, b) if self.op else None
+        try:
+            res = self.op(a, b)
+        except Exception as e:
+            res = ExceptionToken(str(e))
         return (res, )
 
 
@@ -81,3 +74,4 @@ class Compute(Actor):
 
     ]
 
+    requires = ['calvinsys.math.arithmetic']
