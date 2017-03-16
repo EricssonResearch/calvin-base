@@ -183,27 +183,31 @@ class CalvinSysFileMock(object):
         fdmock.close()
 
 
-def load_python_requirement(req):
+
+def load_simple_requirement(req):
+    # For 'simple' requirements with no external dependencies,
     import importlib
-    loaded = importlib.import_module("calvin.calvinsys.native." + req)
-    return loaded.register
+    loaded = importlib.import_module("calvin." + req)
+    return loaded.register()
 
 requirements = \
     {
-        'calvinsys.io.filehandler': CalvinSysFileMock,
-        'calvinsys.events.timer': CalvinSysTimerMock,
-        'calvinsys.native.python-os-path': load_python_requirement('python-os-path'),
-        'calvinsys.native.python-re': load_python_requirement('python-re'),
-        'calvinsys.native.python-json': load_python_requirement('python-json'),
-        'calvinsys.native.python-copy': load_python_requirement('python-copy'),
-        'calvinsys.native.python-base64': load_python_requirement('python-base64')
-
+        'calvinsys.io.filehandler': CalvinSysFileMock(),
+        'calvinsys.events.timer': CalvinSysTimerMock()
     }
 
 
 class CalvinSysMock(dict):
     def use_requirement(self, actor, requirement):
-        return requirements[requirement]()
+        print actor
+        if requirement in requirements:
+            return requirements[requirement]
+        elif requirement.startswith("calvinsys.native"):
+            return load_simple_requirement(requirement)
+        elif requirement.startswith("calvinsys.math"):
+            return load_simple_requirement(requirement)
+        else:
+            raise Exception("Test framework does not know how to handle requirement '%s'" % (requirement,))
 
 
 class ActorTester(object):
