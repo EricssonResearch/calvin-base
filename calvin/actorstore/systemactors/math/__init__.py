@@ -1,0 +1,1 @@
+"""A collection of (simple) mathematical operations and functions"""
