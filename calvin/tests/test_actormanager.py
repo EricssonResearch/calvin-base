@@ -58,7 +58,7 @@ class ActorManagerTests(unittest.TestCase):
 
         self.assertEqual(s['data'], data)
         self.assertEqual(s['_id'], a_id)
-        self.assertEqual(s['n'], 1)
+        self.assertEqual(s['n'], -1)
 
     def test_new_actor_from_state(self):
         # Test basic actor state manipulation

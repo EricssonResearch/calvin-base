@@ -19,12 +19,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 
 class Constant(Actor):
     """
-    Send predetermined data on output.
+    Send predetermined data on output. Defaults to a never ending sequence.
     Outputs:
       token : Some data
     """
     @manage(['data', 'n', 'dump'])
-    def init(self, data, n=1, dump=False):
+    def init(self, data, n=-1, dump=False):
         self.data = data
         self.n = n
         self.dump = dump
