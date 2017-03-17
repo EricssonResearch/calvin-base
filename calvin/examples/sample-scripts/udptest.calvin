@@ -1,0 +1,4 @@
+out: io.Print()
+in : net.SimpleUDPListener(address="127.0.0.1:1337")
+
+in.data > out.token
