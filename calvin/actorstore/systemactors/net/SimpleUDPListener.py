@@ -21,7 +21,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-class UDPListener(Actor):
+class SimpleUDPListener(Actor):
     """
     Listen for UDP messages on a given port. Address is of the form "ip:port" (note: ip is ipv4)
 

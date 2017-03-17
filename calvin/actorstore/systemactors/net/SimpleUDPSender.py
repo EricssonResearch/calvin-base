@@ -21,7 +21,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-class SimpleUDP(Actor):
+class SimpleUDPSender(Actor):
     """
     Send all incoming tokens to given address/port over UDP
 
