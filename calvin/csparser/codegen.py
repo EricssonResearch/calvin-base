@@ -1117,12 +1117,17 @@ def calvin_components(source_text, names=None):
 
 
 if __name__ == '__main__':
+    from inspect import cleandoc
+
     script = 'inline'
     source_text = \
     """
     snk : io.Print()
     1 > snk.token
     """
+    source_text = cleandoc(source_text)
+    print source_text
+    print
     ai, it = calvin_codegen(source_text, script)
     if it.issue_count == 0:
         print "No issues"
