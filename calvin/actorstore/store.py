@@ -697,6 +697,9 @@ class DocumentationStore(ActorStore):
         metadata = doc.metadata()
         metadata['short_desc'] = doc.short_desc
         metadata['long_desc'] = doc.docs
+        if doc.label in ["Actor", "Component"]:
+            metadata['input_docs'] = {port.name:port.docs for port in doc.inports}
+            metadata['output_docs'] = {port.name:port.docs for port in doc.outports}
         return json.dumps(metadata, default=node_encoder)
 
 
