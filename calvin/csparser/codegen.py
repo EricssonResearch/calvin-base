@@ -378,6 +378,10 @@ class ResolvePortRefs(object):
         def _resolve_portref(ref):
             return "{}.{}".format(v.actor, v.port)
 
+        # Exclude constant identifiee from processing
+        if type(node.arg) is ast.Id:
+            return
+
         value = node.arg.value
         if isinstance(value, dict):
             for k, v in value.iteritems():
