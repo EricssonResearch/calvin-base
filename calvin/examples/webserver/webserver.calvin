@@ -184,6 +184,114 @@ component HTTPFileReader() filename -> resource, status {
   status_mapper.data > .status
 }
 
+/*component StatusMap2() status -> reason {
+  """
+  StatusMap(arglist)
+  Documentation please
+  """
+
+  choice : flow.Mux(select={"200":&ok.token, "400":&bad.token, "404":&fnf.token, "501":&ni.token})
+  stringify : std.Stringify()
+
+  .status > stringify.in
+  stringify.out > choice.select
+
+  :ok "OK" > choice.token
+  :bad "Bad Request" > choice.token
+  :fnf "Not Found" > choice.token
+  :ni "Not Implemented" > choice.token
+
+  choice.token > .reason
+}
+*/
+component StatusMap() status -> reason {
+  """
+  StatusMap()
+  Documentation please
+  """
+
+  choice : json.GetValue()
+  except : exception.ExceptionHandler(replacement="Unknown Status", replace=true)
+  stringify : std.Stringify()
+
+  .status > stringify.in
+  stringify.out > choice.key
+  {
+      "200":"OK",
+      "400":"Bad Request",
+      "404":"Not Found",
+      "501":"Not Implemented"
+  } > choice.container
+
+  choice.value > except.token
+  except.status > voidport
+  except.token > .reason
+}
+
+
+component HTTPResponseTemplate(template) status, body -> response {
+  """
+  HTTPResponseTemplate(arglist)
+  Documentation please
+  """
+
+  # FIXME: Workaround for port references not working directly on component ports
+  body : std.Identity()
+  status : std.Identity()
+  .status > status.token
+  status.token > voidport
+  .body > body.token
+  body.token > voidport
+  # --- end workaround ---
+  statusmap : StatusMap()
+  cdict : flow.CollectCompleteDict(mapping={"status":&status.token, "reason":&statusmap.reason, "body":&body.token})
+  fmt : text.Mustache(fmt=template)
+
+  .status > statusmap.status
+  # FIXME: Workaround fan-in to flow.CollectCompleteDict
+  statusmap.reason > voidport
+
+  # FIXME: Workaround fan-in to flow.CollectCompleteDict
+  "Dummy" > cdict.token
+  cdict.dict > fmt.dict
+  fmt.text > .response
+
+  # Debugging
+  log : io.Print()
+  fmt.text > log.token
+
+}
+
+component HTTPResponseGenerator() status, body -> out {
+  """
+  HTTPResponseGenerator(arglist)
+  Documentation please
+  """
+
+  check_status : std.Compare(op="=")
+  route_status : flow.Select()
+  route_body: flow.Select()
+  success : HTTPResponseTemplate(template="{{status}} {{reason}} {{body}}")
+  failure : HTTPResponseTemplate(template="{{status}} {{reason}} {{body}}")
+  route_response : flow.Collect()
+
+
+  .status > check_status.a
+  OK > check_status.b
+  check_status.result > route_status.select, route_body.select
+  .status > route_status.data
+  .body > route_body.data
+
+  route_status.case_true > success.status
+  route_body.case_true > success.body
+  success.response > route_response.token
+
+  route_status.case_false > failure.status
+  route_body.case_false > failure.body
+  failure.response > route_response.token
+
+  route_response.token > .out
+}
 
 tcp_server : net.TCPServer(delimiter="\r\n\r\n")
 daisy_GET : DaisyAdapter(status_OK=OK)
@@ -192,7 +300,7 @@ daisy_resource : DaisyAdapter(status_OK=OK)
 check_GET : HTTPGETRequestCheck()
 resource_path : HTTPResourceLocator(base_path="html")
 resource_reader : HTTPFileReader()
-resp: http.HTTPResponseGenerator()
+resp: HTTPResponseGenerator()
 
 HOST > tcp_server.host
 PORT > tcp_server.port
