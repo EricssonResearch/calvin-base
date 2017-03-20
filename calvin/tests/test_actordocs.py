@@ -1,5 +1,6 @@
 import pytest
 import unittest
+import json
 from calvin.actorstore.store import DocumentationStore
 
 class TestBase(unittest.TestCase):
@@ -31,38 +32,38 @@ class ModuleDocs(TestBase):
         self.assertEqual("Calvin", actual[:6])
 
     def test_help_raw_root_no_args(self):
-        actual = self.ds.help_raw()
+        actual = json.loads(self.ds.help_raw())
         self.assertTrue(actual['modules'])
         self.assertTrue('std' in actual['modules'])
         self.assertFalse(actual['actors'])
 
     def test_help_raw_root_arg_none(self):
-        actual = self.ds.help_raw(what=None)
+        actual = json.loads(self.ds.help_raw(what=None))
         self.assertTrue(actual['modules'])
         self.assertTrue('std' in actual['modules'])
         self.assertFalse(actual['actors'])
 
     def test_help_raw_root_arg_empty_string(self):
-        actual = self.ds.help_raw(what="")
+        actual = json.loads(self.ds.help_raw(what=""))
         self.assertEqual(actual['short_desc'], 'A systematic approach to handling impedence mismatch in IoT.')
 
     def test_help_raw_flow(self):
-        actual = self.ds.help_raw(what='flow')
+        actual = json.loads(self.ds.help_raw(what='flow'))
         self.assertEqual(set(['is_known', 'long_desc', 'short_desc', 'modules', 'actors']), set(actual.keys()))
         self.assertTrue(actual['actors'])
         self.assertTrue('Init' in actual['actors'])
 
     def test_help_raw_flow_init(self):
-        actual = self.ds.help_raw('flow.Init')
+        actual = json.loads(self.ds.help_raw('flow.Init'))
         self.assertTrue(actual['is_known'])
         self.assertEqual(set(['inputs', 'name', 'outputs', 'args', 'is_known', 'ns', 'type', 'long_desc', 'short_desc', 'output_properties', 'input_properties', 'requires']), set(actual.keys()))
 
     def test_help_raw_unknown(self):
-        actual = self.ds.help_raw(what='no_such_thing')
+        actual = json.loads(self.ds.help_raw(what='no_such_thing'))
         self.assertEqual(actual['short_desc'], 'No such entity')
 
     def test_help_raw_qualified_unknown(self):
-        actual = self.ds.help_raw(what='no.such.thing')
+        actual = json.loads(self.ds.help_raw(what='no.such.thing'))
         self.assertEqual(actual['short_desc'], 'No such entity')
 
     def test_metadata_std(self):

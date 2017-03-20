@@ -695,7 +695,11 @@ class DocumentationStore(ActorStore):
 
     def help_raw(self, what=None):
         doc = self._help(what)
-        return doc.raw()
+        metadata = doc.metadata()
+        metadata['short_desc'] = doc.short_desc
+        metadata['long_desc'] = doc.docs
+        return json.dumps(metadata, default=node_encoder)
+
 
     def _formatter(self, doc, compact=False, formatting='plain', links=False):
         if compact:

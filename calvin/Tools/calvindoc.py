@@ -49,7 +49,7 @@ def main():
         print store.documentation()
     else:
         if args.format == 'raw':
-            print json.dumps(store.help_raw(args.what))
+            print store.help_raw(args.what)
         else:
             compact = bool(args.format == 'compact')
             print store.help(args.what, compact=compact, formatting=args.prettyprinter)

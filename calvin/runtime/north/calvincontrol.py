@@ -1130,7 +1130,7 @@ class CalvinControl(object):
         ds = DocumentationStore()
         what = None if not what else what
         data = ds.help_raw(what)
-        self.send_response(handle, connection, json.dumps(data))
+        self.send_response(handle, connection, data)
 
     @authentication_decorator
     def handle_post_log(self, handle, connection, match, data, hdr):

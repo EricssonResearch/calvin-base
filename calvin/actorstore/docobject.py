@@ -2,8 +2,6 @@ import json
 import inspect
 import pystache
 
-
-
 class DocObject(object):
     """docstring for DocObject"""
 
@@ -98,12 +96,6 @@ class DocObject(object):
 
     def metadata(self):
         return {'is_known': False}
-
-    def raw(self):
-        raw = self.metadata()
-        raw['short_desc'] = self.short_desc
-        raw['long_desc'] = self.docs
-        return raw
 
     def __repr__(self):
         def _convert(x):
@@ -231,11 +223,11 @@ class ModuleDoc(DocObject):
                 return None # Error
         return None
 
-    def raw(self):
-        raw = super(ModuleDoc, self).raw()
-        raw['modules'] = [x.ns for x in self.modules]
-        raw['actors'] = [x.name for x in self.actors]
-        return raw
+    def metadata(self):
+        metadata = super(ModuleDoc, self).metadata()
+        metadata['modules'] = [x.ns for x in self.modules]
+        metadata['actors'] = [x.name for x in self.actors]
+        return metadata
 
 
 class ActorDoc(DocObject):
