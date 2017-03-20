@@ -674,7 +674,7 @@ class DocumentationStore(ActorStore):
 
     def root_docs(self):
         modules = [self.module_docs(x) for x in self.modules()]
-        return ModuleDoc('Calvin', modules, [], ["A systematic approach to handling impedence mismatch in IoT."])
+        return ModuleDoc('Calvin', modules, [], ["A systematic approach to handling impedance mismatch in IoT."])
 
 
     def metadata(self, qualified_name):

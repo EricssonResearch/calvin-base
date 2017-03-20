@@ -45,7 +45,7 @@ class ModuleDocs(TestBase):
 
     def test_help_raw_root_arg_empty_string(self):
         actual = json.loads(self.ds.help_raw(what=""))
-        self.assertEqual(actual['short_desc'], 'A systematic approach to handling impedence mismatch in IoT.')
+        self.assertEqual(actual['short_desc'], 'A systematic approach to handling impedance mismatch in IoT.')
 
     def test_help_raw_flow(self):
         actual = json.loads(self.ds.help_raw(what='flow'))
