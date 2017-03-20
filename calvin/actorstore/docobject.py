@@ -398,8 +398,7 @@ class ComponentDoc(ActorDoc):
     # Augment a couple of methods in the superclass
     #
     def __init__(self, namespace, name, args, inputs, outputs, doclines, requires, definition):
-        super(ComponentDoc, self).__init__(namespace, name, args, inputs, outputs, doclines)
-        self.requires = requires # "FIXME"
+        super(ComponentDoc, self).__init__(namespace, name, args, inputs, outputs, doclines, requires)
         self.definition = definition # actor.children[0]
         self.label = "Component"
 
