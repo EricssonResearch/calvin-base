@@ -667,9 +667,8 @@ class DocumentationStore(ActorStore):
             inputs = [(x, "", {}) for x in actor.inports or []] # FIXME append port docs and port properties
             outputs = [(x, "", {}) for x in actor.outports or []] # FIXME append port docs and port properties
             doclines = actor.docstring.splitlines()
-            requires = [] # FIXME Requirements
             definition = actor.children[0]
-            doc = ComponentDoc(namespace, name, args, inputs, outputs, doclines, requires, definition)
+            doc = ComponentDoc(namespace, name, args, inputs, outputs, doclines, definition)
         return doc
 
 

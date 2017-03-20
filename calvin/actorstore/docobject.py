@@ -389,9 +389,11 @@ class ComponentDoc(ActorDoc):
     #
     # Augment a couple of methods in the superclass
     #
-    def __init__(self, namespace, name, args, inputs, outputs, doclines, requires, definition):
+    def __init__(self, namespace, name, args, inputs, outputs, doclines, definition):
+        # FIXME: Build requirements by recursing definition
+        requires = []
         super(ComponentDoc, self).__init__(namespace, name, args, inputs, outputs, doclines, requires)
-        self.definition = definition # actor.children[0]
+        self.definition = definition
         self.label = "Component"
 
     def metadata(self):
