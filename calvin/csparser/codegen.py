@@ -356,6 +356,40 @@ class Expander(object):
         self.visit(new)
 
 
+class ResolvePortRefs(object):
+    """docstring for PortlistRewrite"""
+    def __init__(self, issue_tracker):
+        super(ResolvePortRefs, self).__init__()
+        self.issue_tracker = issue_tracker
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if node.is_leaf():
+            return
+        map(self.visit, node.children[:])
+
+    @visitor.when(ast.NamedArg)
+    def visit(self, node):
+
+        def _resolve_portref(ref):
+            return "{}.{}".format(v.actor, v.port)
+
+        value = node.arg.value
+        if isinstance(value, dict):
+            for k, v in value.iteritems():
+                if isinstance(v, ast.PortRef):
+                    value[k] = _resolve_portref(v)
+
+        if isinstance(value, list):
+            for i, v in enumerate(value):
+                if isinstance(v, ast.PortRef):
+                    value[i] = _resolve_portref(v)
+
+
 class Flatten(object):
     """
     Flattens a block by wrapping everything in the block's namespace
@@ -981,6 +1015,11 @@ class CodeGen(object):
         flattener.process(self.root)
         self.dump_tree('FLATTENED')
 
+    def resolve_portrefs(self, issue_tracker):
+        resolver = ResolvePortRefs(issue_tracker)
+        resolver.visit(self.root)
+        self.dump_tree('RESOLVED PORTREFS')
+
     def consolidate(self, issue_tracker):
         consolidate = ConsolidatePortProperty(issue_tracker)
         consolidate.process(self.root)
@@ -998,6 +1037,7 @@ class CodeGen(object):
 
     def phase2(self, issue_tracker, verify):
         self.expand_components(issue_tracker, verify)
+        self.resolve_portrefs(issue_tracker)
         self.flatten(issue_tracker)
         self.consolidate(issue_tracker)
 

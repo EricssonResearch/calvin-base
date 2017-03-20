@@ -54,18 +54,22 @@ class Port(object):
         The default behaviour is to delegate the information to the port's queue.
         The 'config' parameter is a dictionary with settings.
         """
+
+        def _local_name(peer_actor):
+            _, local_name = peer_actor._name.rsplit(':', 1)
+            return local_name
+
+        port_to_id = {'{}.{}'.format(_local_name(ep.peer_port.owner), ep.peer_port.name) : ep.peer_port.id for ep in self.endpoints}
         if 'port-order' in config:
             # Remap from actor.port to port_id
-            # FIXME: Will likely not work in the general case.
+            # FIXME: Will not work in the general case.
             #        Extend calvinsys with runtime API and use that instead
-            mapping = {'{}.{}'.format(ep.peer_port.owner._name.rsplit(':', 1)[1], ep.peer_port.name) : ep.peer_port.id for ep in self.endpoints}
             port_order = config['port-order']
-            config['port-order'] = [mapping[p] for p in port_order]
+            config['port-order'] = [port_to_id[p] for p in port_order]
         if 'port-mapping' in config:
             # Remap from actor.port to port_id
-            # FIXME: Will likely not work in the general case.
+            # FIXME: Will not work in the general case.
             #        Extend calvinsys with runtime API and use that instead
-            port_to_id = {'{}.{}'.format(ep.peer_port.owner._name.rsplit(':', 1)[1], ep.peer_port.name) : ep.peer_port.id for ep in self.endpoints}
             mapping = config['port-mapping']
             config['port-mapping'] = {k:port_to_id[p] for k,p in mapping.iteritems()}
 
