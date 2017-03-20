@@ -401,19 +401,11 @@ class CalvinParser(object):
                    | AND DOT IDENTIFIER opt_direction """
         if len(p) == 6:
             _, _, actor, _, port, direction = p[:]
-            ref = {
-                'in':ast.InPort,
-                'out':ast.OutPort
-            }.get(direction, ast.Port)(actor=actor, port=port, debug_info=self.debug_info(p, 1))
+            ref = ast.PortRef(actor=actor, port=port, direction=direction, debug_info=self.debug_info(p, 1))
         else:
             _, _, _, port, direction = p[:]
-            ref = {
-                'in':ast.InternalInPort,
-                'out':ast.InternalOutPort
-            }.get(direction, ast.InternalPort)(port=port, debug_info=self.debug_info(p, 1))
-        # FIXME: Use actual port type in code gen portref phase, name for now
-        # p[0] = ref
-        p[0] = ref.name
+            ref = ast.InternalPortRef(port=port, direction=direction, debug_info=self.debug_info(p, 1))
+        p[0] = ref
 
 
     def p_bool(self, p):
