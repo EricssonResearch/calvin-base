@@ -4,6 +4,23 @@ define OK=200
 define BAD_REQ=400
 define NOT_FOUND=404
 
+define SUCCESS_TEMPLATE=
+"HTTP/1.0 {{{status}}} {{{reason}}}\r\n"
+"Content-Type: text/html\r\n"
+"Content-Length: {{{length}}}\n\n"
+"\r\n"
+"{{{body}}}\r\n"
+"\r\n"
+
+
+define ERROR_TEMPLATE=
+"HTTP/1.0 {{{status}}} {{{reason}}}\r\n"
+"Content-Type: text/html\r\n"
+"Content-Length: 0\r\n"
+"\r\n"
+"No such resource, sorry.\r\n"
+"\r\n"
+
 
 component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_data, out, status {
   """
@@ -184,30 +201,10 @@ component HTTPFileReader() filename -> resource, status {
   status_mapper.data > .status
 }
 
-/*component StatusMap2() status -> reason {
-  """
-  StatusMap(arglist)
-  Documentation please
-  """
 
-  choice : flow.Mux(select={"200":&ok.token, "400":&bad.token, "404":&fnf.token, "501":&ni.token})
-  stringify : std.Stringify()
-
-  .status > stringify.in
-  stringify.out > choice.select
-
-  :ok "OK" > choice.token
-  :bad "Bad Request" > choice.token
-  :fnf "Not Found" > choice.token
-  :ni "Not Implemented" > choice.token
-
-  choice.token > .reason
-}
-*/
 component StatusMap() status -> reason {
   """
-  StatusMap()
-  Documentation please
+  Map an integer stutus to a human readable string.
   """
 
   choice : json.GetValue()
@@ -216,12 +213,7 @@ component StatusMap() status -> reason {
 
   .status > stringify.in
   stringify.out > choice.key
-  {
-      "200":"OK",
-      "400":"Bad Request",
-      "404":"Not Found",
-      "501":"Not Implemented"
-  } > choice.container
+  {"200":"OK", "400":"Bad Request", "404":"Not Found", "501":"Not Implemented"} > choice.container
 
   choice.value > except.token
   except.status > voidport
@@ -231,36 +223,34 @@ component StatusMap() status -> reason {
 
 component HTTPResponseTemplate(template) status, body -> response {
   """
-  HTTPResponseTemplate(arglist)
   Documentation please
   """
 
+  # --- begin workaround ---
   # FIXME: Workaround for port references not working directly on component ports
   body : std.Identity()
   status : std.Identity()
+  reason : std.Identity()
   .status > status.token
-  status.token > voidport
   .body > body.token
-  body.token > voidport
+  statusmap.reason > reason.token
   # --- end workaround ---
+
   statusmap : StatusMap()
-  cdict : flow.CollectCompleteDict(mapping={"status":&status.token, "reason":&statusmap.reason, "body":&body.token})
+  len : text.Length()
+  #cdict : flow.CollectCompleteDict(mapping={"status":&status.token, "reason":&reason.token, "body":&body.token, , "length":&len.length})
+  cdict : flow.CollectCompleteDict(mapping={"status":"status.token", "reason":"reason.token", "body":"body.token", "length":"len.length"})
   fmt : text.Mustache(fmt=template)
-
   .status > statusmap.status
-  # FIXME: Workaround fan-in to flow.CollectCompleteDict
-  statusmap.reason > voidport
-
-  # FIXME: Workaround fan-in to flow.CollectCompleteDict
-  "Dummy" > cdict.token
+  .body > len.string
+  reason.token > cdict.token
+  status.token > cdict.token
+  body.token > cdict.token
+  len.length > cdict.token
   cdict.dict > fmt.dict
   fmt.text > .response
-
-  # Debugging
-  log : io.Print()
-  fmt.text > log.token
-
 }
+
 
 component HTTPResponseGenerator() status, body -> out {
   """
@@ -271,8 +261,8 @@ component HTTPResponseGenerator() status, body -> out {
   check_status : std.Compare(op="=")
   route_status : flow.Select()
   route_body: flow.Select()
-  success : HTTPResponseTemplate(template="{{status}} {{reason}} {{body}}")
-  failure : HTTPResponseTemplate(template="{{status}} {{reason}} {{body}}")
+  success : HTTPResponseTemplate(template=SUCCESS_TEMPLATE)
+  failure : HTTPResponseTemplate(template=ERROR_TEMPLATE)
   route_response : flow.Collect()
 
 
@@ -292,6 +282,7 @@ component HTTPResponseGenerator() status, body -> out {
 
   route_response.token > .out
 }
+
 
 tcp_server : net.TCPServer(delimiter="\r\n\r\n")
 daisy_GET : DaisyAdapter(status_OK=OK)
@@ -340,4 +331,3 @@ resp.out > tcp_server.token
 #      to any output port to log the data flow, e.g.
 # snk: io.Print()
 # tcp_server.token > snk.token
-
