@@ -148,7 +148,7 @@ class AuthenticationDecisionPoint(object):
                     _log.error("No password in request or no password in database")
                     return (decision, None)
             else:
-                _log.error("Incorrectly formated request")
+                _log.error("Incorrectly formated request or user not allowed: \n\trequest={}".format(request))
             return (decision, None)
         except Exception as err:
             _log.error("authentication_decision: Authentication failed, err={}".format(err))

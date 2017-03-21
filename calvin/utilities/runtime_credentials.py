@@ -26,6 +26,7 @@ import tempfile
 import time
 import random
 import shutil
+import socket
 from calvin.utilities import confsort
 import OpenSSL
 from cryptography.x509 import load_pem_x509_certificate
@@ -86,17 +87,17 @@ class RuntimeCredentials():
                                         'dnQualifier': 'dnQualifier'},
 #            'req_attributes':{'challengePassword':'password'},
             'alt_names':{'IP.1':'x',
-#                        'URI.1':'https://elxahyc5lz1:5022',
-                        'DNS.3':'elxahyc5lz1.localdomain',
-                        'DNS.2':'elxahyc5lz1',
-                        'DNS.1':'runtime'},
+                         'DNS.1':'x',
+                         'DNS.2':'x',
+                         'DNS.3':'x',
+                         'DNS.4':'x'},
             'ca': {'default_ca': 'RT_default'},
             'RT_default': {'dir': '~/.calvin/security/',
                            'security_dir':'~/.calvin/security/',
                             'preserve': 'no',
                             'crl_dir': '$dir/crl',
                             'RANDFILE': '$dir/private/.rand',
-                            'certificate': '$dir/mine/cert.pem',
+#                            'certificate': '$dir/mine/cert.pem',
                             'private_dir': '$dir/private/',
                             'new_certs_dir': '$dir/newcerts',
                             'private_key': '$dir/private/ca.key',
@@ -127,7 +128,7 @@ class RuntimeCredentials():
                             'commonName': 'supplied',
                             'dnQualifier': 'supplied',
                             'stateOrProvinceName': 'optional'}}
-    def __init__(self, name, node=None, domain=None, nodeid=None, security_dir=None, enrollment_password=None, force=False, readonly=False):
+    def __init__(self, name, node=None, domain=None, hostnames=None, nodeid=None, security_dir=None, enrollment_password=None, force=False, readonly=False):
         _log.debug("runtime::init name={} domain={}, nodeid={}".format(name, domain, nodeid))
 #        print "runtime::init name={} domain={}, nodeid={} enrollment_password={} security_dir={}".format(name, domain, nodeid, enrollment_password, security_dir)
 
@@ -140,25 +141,26 @@ class RuntimeCredentials():
             """
             Create new openssl.conf configuration file.
             """
-            import socket
 #            print "new_opensslconf"
             _log.debug("__init__::new_opensslconf")
             for section in self.__class__.DEFAULT.keys():
                 self.config.add_section(section)
-#                print "[{}]".format(section)
+    #            print "[{}]".format(section)
                 hostname = socket.gethostname()
                 for option in self.__class__.DEFAULT[section]:
                     if option == "0.organizationName":
                         value = self.domain
+                    #TODO: use dynamic number of DNS entries instead of hardcoding the number
                     elif option == "DNS.1":
                         value = self.node_name
-                    elif option == "DNS.2":
-                        value = hostname
-                    elif option == "DNS.3":
-                        fqdn = socket.getfqdn(hostname)
-                        value = fqdn
+                    elif (option == "DNS.2") and len(self.hostnames)>0:
+                        value = self.hostnames[0]
+                    elif (option == "DNS.3") and len(self.hostnames)>1:
+                        value = self.hostnames[1]
+                    elif (option == "DNS.4") and len(self.hostnames)>2:
+                        value = self.hostnames[2]
                     elif option == "IP.1":
-                        value = self.subjectAltName
+                        value = self.ip
                     elif option == "dir":
                         value = self.runtime_dir
                     elif section == 'req_distinguished_name' and option == 'commonName':
@@ -168,13 +170,12 @@ class RuntimeCredentials():
                     #The python cryptography and the pyOpensSSL packages does not support
                     #parsing the Attributes extension in a CSR, so instead it is stored
                     #outside of the CSR
-#                    elif option == 'challengePassword':
-#                        value = self.enrollment_password
+    #                    elif option == 'challengePassword':
+    #                        value = self.enrollment_password
                     else:
                         value = self.__class__.DEFAULT[section][option]
-#                    print "\t{}={}".format(option, value)
+    #                    print "\t{}={}".format(option, value)
                     self.config.set(section, option, value)
-
             with open(self.configfile, 'wb') as configfd:
                 self.config.write(configfd)
                 configfd.close()
@@ -282,7 +283,8 @@ class RuntimeCredentials():
         self.config.optionxform = str
         os.umask(0077)
         self.domain = None
-        self.subjectAltName="127.0.1.1"
+        self.ip="127.0.1.1"
+        self.hostnames = hostnames if hostnames!=None else [socket.gethostname(),  socket.getfqdn(socket.gethostname())]
         self.enrollment_password=enrollment_password
         #Create generic runtimes folder and trust store folders
         self.security_dir=security_dir
@@ -361,54 +363,6 @@ class RuntimeCredentials():
         self.cert_name = self.get_own_cert_name()
         if enrollment_password:
             self.cert_enrollment_encrypt_csr()
-
-
-    def update_opensslconf(self):
-        """
-        Update openssl.conf configuration file.
-        """
-        import socket
-#        print "update_opensslconf"
-        _log.debug("update_opensslconf")
-        self.config=ConfigParser.SafeConfigParser()
-        self.config.optionxform = str
-        for section in self.__class__.DEFAULT.keys():
-            self.config.add_section(section)
-#            print "[{}]".format(section)
-            hostname = socket.gethostname()
-            for option in self.__class__.DEFAULT[section]:
-                if option == "0.organizationName":
-                    value = self.domain
-                elif option == "DNS.1":
-                    value = self.node_name
-                elif option == "DNS.2":
-                    value = hostname
-                elif option == "DNS.3":
-                    fqdn = socket.getfqdn(hostname)
-                    value = fqdn
-                elif option == "IP.1":
-                    value = self.subjectAltName
-                elif option == "dir":
-                    value = self.runtime_dir
-                elif section == 'req_distinguished_name' and option == 'commonName':
-                    value = self.node_name
-                elif option == 'dnQualifier':
-                    value = self.node_id
-                elif option == 'certificate':
-                    value = self.configuration['RT_default']['certificate']
-                else:
-                    value = self.__class__.DEFAULT[section][option]
-#                print "\t{}={}".format(option, value)
-                self.config.set(section, option, value)
-        try:
-            os.rename(self.configfile, self.configfile+".OLD")
-        except Exception as exc:
-            _log.exception("Failed to rename old config file")
-            raise
-        with open(self.configfile, 'wb') as configfd:
-            self.config.write(configfd)
-            configfd.close()
-        confsort.reorder(self.configfile)
 
 
     def get_node_name(self, security_dir=None):
@@ -729,8 +683,8 @@ class RuntimeCredentials():
         #Let's update openssl.conf, but this entry should probably not
         #be trusted, it is likely that someone will copy certs into the folder 
         #by other means
-        self.configuration['RT_default']['certificate'] = path
-        self.update_opensslconf()
+#        self.configuration['RT_default']['certificate'] = path
+#        self.update_opensslconf()
         self.cert_name = self.get_own_cert_name()
         return path
 

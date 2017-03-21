@@ -60,7 +60,7 @@ actor_store_path = os.path.join(credentials_testdir, "store")
 orig_application_store_path = os.path.join(security_testdir, "scripts")
 application_store_path = os.path.join(credentials_testdir, "scripts")
 
-NBR_OF_RUNTIMES=4
+NBR_OF_RUNTIMES=3
 
 try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
@@ -232,6 +232,7 @@ class TestSecurity(unittest.TestCase):
             enrollment_passwords.append(enrollment_password)
             runtime=runtime_credentials.RuntimeCredentials(node_name,
                                                            domain=domain_name,
+#                                                           hostnames=["elxahyc5lz1","elxahyc5lz1.localdomain"],
                                                            security_dir=credentials_testdir,
                                                            nodeid=nodeid,
                                                            enrollment_password=enrollment_password)
@@ -335,7 +336,7 @@ class TestSecurity(unittest.TestCase):
 #            rt.append(RT("https://{}:502{}".format(hostname, i)))
             rt.append(RT("http://{}:502{}".format(hostname,i)))
             # Wait to be sure that all runtimes has started
-            time.sleep(1)
+            time.sleep(0.1)
         time.sleep(5)
 
         request.addfinalizer(self.teardown)
@@ -392,14 +393,17 @@ class TestSecurity(unittest.TestCase):
                 count=[0]*NBR_OF_RUNTIMES
                 try:
                     caps=[0] * NBR_OF_RUNTIMES
+                    #Loop through all runtimes to ask them which runtimes they node with calvisys.native.python-json
                     for j in range(NBR_OF_RUNTIMES):
                         caps[j] = request_handler.get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
+                        #Add the known nodes to statistics of how many nodes store keys from that node
                         for k in range(NBR_OF_RUNTIMES):
                             count[k] = count[k] + caps[j].count(rt_id[k])
                     _log.info("rt_ids={}\n\tcount={}".format(rt_id, count))
                     for k in range(NBR_OF_RUNTIMES):
                         _log.info("caps{}={}".format(k, caps[k]))
-                    if all(x>=4 for x in count):
+                    #Keys should have spread to atleast 5 other runtimes (or all if there are fewer than 5 runtimes)
+                    if all(x>=min(5, NBR_OF_RUNTIMES) for x in count):
                         failed = False
                         break
                     else:
@@ -409,6 +413,7 @@ class TestSecurity(unittest.TestCase):
                     time.sleep(0.1)
             assert not failed
             try:
+                #Loop through all runtimes and make sure they can lookup all other runtimes
                 for runtime in rt:
                     for rt_attribute in rt_attributes:
                         node_name = rt_attribute['indexed_public']['node_name']

@@ -262,6 +262,7 @@ def runtime_certificate(rt_attributes):
     security_dir = _conf.get("security","security_dir")
     ca_control_uri = _conf.get("security","ca_control_uri")
     domain_name = _conf.get("security","domain_name")
+    storage_type = _conf.get("global","storage_type")
     enrollment_password = _conf.get("security","enrollment_password")
     is_ca =_conf.get("security","certificate_authority")
     if domain_name:
@@ -307,7 +308,7 @@ def runtime_certificate(rt_attributes):
                 if ca_control_uri:
                     _log.debug("CA control_uri in config={}".format(ca_control_uri))
                     ca_control_uris.append(ca_control_uri)
-                else:
+                elif storage_type in ["dht","securedht"]:
                     _log.debug("Find CA via SSDP")
                     responses = discover()
                     for response in responses:
@@ -317,12 +318,15 @@ def runtime_certificate(rt_attributes):
                             ca_control_uri = ca_control_uri.replace("http","https")
                             ca_control_uris.append(ca_control_uri)
                             _log.debug("CA control_uri={}, node_id={}".format(ca_control_uri, ca_node_id))
-
+                else:
+                    _log.error("There is no runtime certificate. For automatic certificate enrollment using proxy storage,"
+                                    "the CA control uri must be configured in the calvin configuration ")
+                    raise Exception("There is no runtime certificate. For automatic certificate enrollment using proxy storage,"
+                                    "the CA control uri must be configured in the calvin configuration ")
                 cert_available=False
                 # Loop through all CA:s that responded until hopefully one signs our CSR
                 # Potential improvement would  be to have domain name in response and only try
-                # appropriate CAs, alternatively, fetch certificate chain of node and use data from
-                # the chaing
+                # appropriate CAs
                 i=0
                 while not cert_available and i<len(ca_control_uris):
                     certstr=None

@@ -244,6 +244,9 @@ def parse_args():
     cmd_runtime_create.add_argument('attr', metavar='<attr>', type=str,
                            help='runtime attributes, at least name and organization of node_name needs to be supplied, e.g. \'{"indexed_public":{"node_name":{"name":"testName", "organization":"testOrg"}}}\'')
     #optional arguments
+    cmd_runtime_create.add_argument('--hostnames', metavar='<hostnames>', type=lambda s: [str(item) for item in s.split(',')],
+                           help='Comma separated list of hostnames of the runtime where the runtime '
+                                    'will execute, e.g., "examplehostname,examplehostname.localdomain.com"')
     cmd_runtime_create.add_argument('--dir', metavar='<dir>', type=str,
                            help='Path to create the runtime at')
     cmd_runtime_create.add_argument('--force', dest='force', action='store_true',
@@ -497,18 +500,20 @@ def manage_cs_sign(args):
 ######################
 
 def manage_runtime_create(args):
-#    print args
+    print args
     if not args.attr:
         raise Exception("No runtime attributes supplied")
     if not args.domain:
         raise Exception("No domain name supplied")
+    if args.hostnames and len(args.hostnames)>4:
+        raise Exception("At most 3 hostnames can be supplied")
     attr = json.loads(args.attr)
     if not all (k in attr['indexed_public']['node_name'] for k in ("organization","name")):
         raise Exception("please supply name and organization of runtime")
     attributes=AttributeResolver(attr)
     node_name=attributes.get_node_name_as_str()
     nodeid = calvinuuid.uuid("NODE")
-    rt_cred = runtime_credentials.RuntimeCredentials(node_name, domain=args.domain, security_dir=args.dir, nodeid=nodeid)
+    rt_cred = runtime_credentials.RuntimeCredentials(node_name, domain=args.domain, security_dir=args.dir, nodeid=nodeid, hostnames=args.hostnames)
     print "node_name_start<{}>node_name_stop\n".format(rt_cred.get_node_name())
 
 def manage_runtime_export(args):
