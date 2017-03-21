@@ -3,22 +3,13 @@ define PORT=8089
 define OK=200
 define BAD_REQ=400
 define NOT_FOUND=404
-
-define SUCCESS_TEMPLATE=
+define ERR_MSG="No such resource, sorry."
+define RESPONSE_TEMPLATE=
 "HTTP/1.0 {{{status}}} {{{reason}}}\r\n"
 "Content-Type: text/html\r\n"
-"Content-Length: {{{length}}}\n\n"
+"Content-Length: {{{length}}}\r\n"
 "\r\n"
 "{{{body}}}\r\n"
-"\r\n"
-
-
-define ERROR_TEMPLATE=
-"HTTP/1.0 {{{status}}} {{{reason}}}\r\n"
-"Content-Type: text/html\r\n"
-"Content-Length: 0\r\n"
-"\r\n"
-"No such resource, sorry.\r\n"
 "\r\n"
 
 
@@ -104,43 +95,6 @@ component HTTPGETRequestCheck() request -> path, status {
   join_status.token > .status
 }
 
-# Alternative implementation of HTTPGETRequestCheck, not used
-component HTTPGETRequestCheck_ALT() request -> path, status {
-  """
-  Check if request is valid HTTP GET request.
-
-  Input:
-	  request: an HTTP request, possibly malformed
-  Outputs:
-    path: the requested resource path, or the full request on error
-    status: the request status, either OK (200) or Bad Request (400)
-  """
-  split_request : text.Split(delim=" ")
-  request_method : json.GetValue()
-  request_path : json.GetValue()
-  check_method : std.Compare(op="=")
-  status : flow.Deselect()
-  route_path : flow.Switch()
-
-  .request > split_request.text
-  split_request.lines > request_method.container, request_path.container
-  0 > request_method.key
-  1 > request_path.key
-
-  request_method.value > check_method.a
-  "GET" > check_method.b
-  check_method.result > status.select, route_path.switch
-
-  OK > status.case_true
-  BAD_REQ > status.case_false
-  status.data > .status
-
-  request_path.value > route_path.b
-  .request > route_path.a
-  route_path.b > voidport
-  route_path.a > .path
-}
-
 
 component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
   """
@@ -223,7 +177,7 @@ component StatusMap() status -> reason {
 
 component HTTPResponseTemplate(template) status, body -> response {
   """
-  Documentation please
+  Generate an HTTP response from a HTML body and status code using the provided template.
   """
 
   # --- begin workaround ---
@@ -238,7 +192,7 @@ component HTTPResponseTemplate(template) status, body -> response {
 
   statusmap : StatusMap()
   len : text.Length()
-  #cdict : flow.CollectCompleteDict(mapping={"status":&status.token, "reason":&reason.token, "body":&body.token, , "length":&len.length})
+  # cdict : flow.CollectCompleteDict(mapping={"status":&status.token, "reason":&reason.token, "body":&body.token, "length":&len.length})
   cdict : flow.CollectCompleteDict(mapping={"status":"status.token", "reason":"reason.token", "body":"body.token", "length":"len.length"})
   fmt : text.Mustache(fmt=template)
   .status > statusmap.status
@@ -254,33 +208,23 @@ component HTTPResponseTemplate(template) status, body -> response {
 
 component HTTPResponseGenerator() status, body -> out {
   """
-  HTTPResponseGenerator(arglist)
   Documentation please
   """
 
   check_status : std.Compare(op="=")
-  route_status : flow.Select()
-  route_body: flow.Select()
-  success : HTTPResponseTemplate(template=SUCCESS_TEMPLATE)
-  failure : HTTPResponseTemplate(template=ERROR_TEMPLATE)
-  route_response : flow.Collect()
+  route_body: flow.Switch()
+  response : HTTPResponseTemplate(template=RESPONSE_TEMPLATE)
 
-
-  .status > check_status.a
+  .status > check_status.a, response.status
   OK > check_status.b
-  check_status.result > route_status.select, route_body.select
-  .status > route_status.data
-  .body > route_body.data
+  check_status.result > route_body.switch
 
-  route_status.case_true > success.status
-  route_body.case_true > success.body
-  success.response > route_response.token
+  .body > route_body.b
+  ERR_MSG > route_body.a
+  route_body.a > response.body
+  route_body.b > voidport
 
-  route_status.case_false > failure.status
-  route_body.case_false > failure.body
-  failure.response > route_response.token
-
-  route_response.token > .out
+  response.response > .out
 }
 
 
