@@ -206,14 +206,14 @@ component HTTPResponseTemplate(template) status, body -> response {
 }
 
 
-component HTTPResponseGenerator() status, body -> out {
+component HTTPResponseGenerator(response_template) body, status -> out {
   """
-  Documentation please
+  Generate an HTTP response based on body and status.
   """
 
   check_status : std.Compare(op="=")
   route_body: flow.Switch()
-  response : HTTPResponseTemplate(template=RESPONSE_TEMPLATE)
+  response : HTTPResponseTemplate(template=response_template)
 
   .status > check_status.a, response.status
   OK > check_status.b
@@ -227,48 +227,101 @@ component HTTPResponseGenerator() status, body -> out {
   response.response > .out
 }
 
+component Server(host, port) response -> request {
+  """
+  TCPServer
+  """
+  tcp_server : net.TCPServer(delimiter="\r\n\r\n")
 
-tcp_server : net.TCPServer(delimiter="\r\n\r\n")
-daisy_GET : DaisyAdapter(status_OK=OK)
-daisy_path : DaisyAdapter(status_OK=OK)
-daisy_resource : DaisyAdapter(status_OK=OK)
-check_GET : HTTPGETRequestCheck()
-resource_path : HTTPResourceLocator(base_path="html")
-resource_reader : HTTPFileReader()
-resp: HTTPResponseGenerator()
+  host > tcp_server.host
+  port > tcp_server.port
+  # This line is a surprising consequence of the dataflow paradigm
+  # as long as we make sure the responses always arrives in order.
+  tcp_server.handle > tcp_server.handle
 
-HOST > tcp_server.host
-PORT > tcp_server.port
-# This line is a surprising consequence of the dataflow paradigm
-tcp_server.handle > tcp_server.handle
+  # Request
+  tcp_server.token > .request
 
-# Bootstrap status (OK)
-tcp_server.token > /OK/ daisy_GET.status
-# Request
-tcp_server.token > daisy_GET.in
+  .response > tcp_server.token
+}
 
-daisy_GET.work_data > check_GET.request
-check_GET.path > daisy_GET.work_result
-check_GET.status > daisy_GET.work_status
 
-daisy_GET.status > daisy_path.status
-daisy_GET.out > daisy_path.in
+component ProcessRequest() request -> path, status {
+  """
+  Process request and produce a path and status.
+  """
+  daisy_GET : DaisyAdapter(status_OK=OK)
+  check_GET : HTTPGETRequestCheck()
+  .request > daisy_GET.in
+  OK > daisy_GET.status
 
-daisy_path.work_data > resource_path.rel_path
-resource_path.abs_path > daisy_path.work_result
-resource_path.status > daisy_path.work_status
+  daisy_GET.work_data > check_GET.request
+  check_GET.path > daisy_GET.work_result
+  check_GET.status > daisy_GET.work_status
 
-daisy_path.status > daisy_resource.status
-daisy_path.out > daisy_resource.in
+  daisy_GET.out > .path
+  daisy_GET.status > .status
+}
 
-daisy_resource.work_data > resource_reader.filename
-resource_reader.resource > daisy_resource.work_result
-resource_reader.status > daisy_resource.work_status
 
-daisy_resource.status > resp.status
-daisy_resource.out > resp.body
+component LocateResource(base_path) relative_path, status -> absolute_path, status {
+  """
+  Locate resource by combining base_path with relative_path if input status is OK.
+  Produce absolute_path and status that is OK if resource exist at absolute_path.
+  """
+  daisy_path : DaisyAdapter(status_OK=OK)
+  resource_path : HTTPResourceLocator(base_path=base_path)
 
-resp.out > tcp_server.token
+  .relative_path > daisy_path.in
+  .status > daisy_path.status
+
+  daisy_path.work_data > resource_path.rel_path
+  resource_path.abs_path > daisy_path.work_result
+  resource_path.status > daisy_path.work_status
+
+  daisy_path.out > .absolute_path
+  daisy_path.status > .status
+}
+
+
+component GetResource() absolute_path, status -> body, status {
+  """
+  Get resource (file content) if input status is OK.
+  Produce a string (body) from file content, and status.
+  """
+  daisy_resource : DaisyAdapter(status_OK=OK)
+  resource_reader : HTTPFileReader()
+
+  .absolute_path > daisy_resource.in
+  .status > daisy_resource.status
+
+  daisy_resource.work_data > resource_reader.filename
+  resource_reader.resource > daisy_resource.work_result
+  resource_reader.status > daisy_resource.work_status
+
+  daisy_resource.out > .body
+  daisy_resource.status > .status
+}
+
+
+server : Server(host=HOST, port=PORT)
+process_req : ProcessRequest()
+locate_resource : LocateResource(base_path="html")
+get_resource : GetResource()
+generate_response: HTTPResponseGenerator(response_template=RESPONSE_TEMPLATE)
+
+server.request > process_req.request
+
+process_req.path > locate_resource.relative_path
+process_req.status > locate_resource.status
+
+locate_resource.absolute_path > get_resource.absolute_path
+locate_resource.status > get_resource.status
+
+get_resource.status > generate_response.status
+get_resource.body > generate_response.body
+
+generate_response.out > server.response
 
 # Logging
 # Tip: To help with debugging, attach a Print actor
