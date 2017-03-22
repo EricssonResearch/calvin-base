@@ -36,7 +36,7 @@ class CalvinParser(object):
         # have to be recreated
         this_file = os.path.realpath(__file__)
         containing_dir = os.path.dirname(this_file)
-        self.parser = yacc.yacc(module=self, debug=True, optimize=False, outputdir=containing_dir)
+        self.parser = yacc.yacc(module=self, debug=False, optimize=True, outputdir=containing_dir)
 
     tokens = calvin_tokens
 
