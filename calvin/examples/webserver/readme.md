@@ -4,22 +4,17 @@ This is an example of a moderately complex application written using CalvinScrip
 
 Disregarding the fact that this is probably not the kind of application that you would want to use Calvin for in general, it serves as an example of how to structure a CalvinScript (CS) of some complexity.
 
-Additionally, it also exposes some ugly spots in CS, most notably the frequent use of Constant-actors. We plan to add support for literal constants in future releases.
-
 ## Overview
 
 The directory contains the following files and subdirectories: 
 
-    ├── devactors
-    │   └── http
-    │       └── HTTPResponseGenerator.py
     ├── html
     │   ├── bar.html
     │   ├── foo.html
     │   └── index.html
     └── webserver.calvin
 
-The main script is `webserver.calvin`, and the `devactors` directory contains a utility actor `http.HTTPResponseGenerator` that will format an HTTP-response given a body of text. The `html` directory unsurprisingly contains a couple of HTML files.
+The main script is `webserver.calvin`, and the `html` directory unsurprisingly contains a couple of HTML files.
 
 ## Running the webserver
 
