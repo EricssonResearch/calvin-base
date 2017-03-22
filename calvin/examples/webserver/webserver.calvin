@@ -45,21 +45,21 @@ component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_d
 
   status_check : std.Compare(op="=")
   route_input : flow.Select()
-  route_status : flow.Switch()
+  join_status : flow.Collect()
   join_output : flow.Collect()
 
   # Is incoming status OK?
   status_OK > status_check.a
   .status > status_check.b
   # Route input and status based on the outcome of checking input status
-  status_check.result > route_status.switch, route_input.select
-
-  .status > route_status.a
-  .work_status > route_status.b
-  route_status.b > voidport
-  route_status.a > .status
+  status_check.result > route_input.select
 
   .in > route_input.data
+
+  .work_status > join_status.token
+   route_input.case_false > /NOT_FOUND/ join_status.token
+  join_status.token > .status
+
   route_input.case_true > .work_data
   route_input.case_false > join_output.token
   .work_result > join_output.token
