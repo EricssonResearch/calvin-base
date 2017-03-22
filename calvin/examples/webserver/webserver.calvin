@@ -109,20 +109,24 @@ component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
     status : An integer status code (200) 'OK' or (404) 'Not found'
   """
 
-  status : flow.Deselect()
-  abs_path : path.Append(inside_base=true)
+  filter_path : text.RegexMatch(regex=!"^.*?/?([^\.]+\.html)$")
+  collect_status : flow.Collect()
+  collect_path : flow.Collect()
+  prepend : text.PrefixString(prefix=base_path)
+  prepend_slash : text.PrefixString(prefix="/")
 
-  base_path > abs_path.base
-  .rel_path > abs_path.append
-  # Partially successful path
-  abs_path.path > .abs_path
-  # Update status based on error
-  # false => OK
-  # true => FILE NOT FOUND
-  abs_path.error > status.select
-  OK > status.case_false
-  NOT_FOUND > status.case_true
-  status.data > .status
+  .rel_path > filter_path.text
+
+  filter_path.match > prepend_slash.in
+  prepend_slash.out > prepend.in
+  prepend.out > collect_path.token
+  filter_path.no_match > /base_path/ collect_path.token
+
+  filter_path.match > /OK/ collect_status.token
+  filter_path.no_match > /NOT_FOUND/ collect_status.token
+
+  collect_path.token > .abs_path
+  collect_status.token > .status
 }
 
 
