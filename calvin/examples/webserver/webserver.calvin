@@ -9,8 +9,7 @@ define RESPONSE_TEMPLATE=
 "Content-Type: text/html\r\n"
 "Content-Length: {{{length}}}\r\n"
 "\r\n"
-"{{{body}}}\r\n"
-"\r\n"
+"{{{body}}}{{#length}}\r\n\r\n{{/length}}"
 
 
 component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_data, out, status {
@@ -76,6 +75,7 @@ component HTTPGETRequestCheck() request -> path, status {
     path: the requested resource path, or the full request on error
     status: the request status, either OK (200) or Bad Request (400)
   """
+
   match_request_method : text.RegexMatch(regex="(GET) \S+ HTTP/\d\.\d")
   match_request_path : text.RegexMatch(regex="[A-Z]+ (\S+) HTTP/\d\.\d")
   join_output : flow.Collect()
@@ -94,7 +94,6 @@ component HTTPGETRequestCheck() request -> path, status {
   // Status
   join_status.token > .status
 }
-
 
 component HTTPResourceLocator(base_path) rel_path -> abs_path, status {
   """
@@ -140,12 +139,12 @@ component HTTPFileReader() filename -> resource, status {
     resource : contents of resource file
     status : OK (200) or File not found (404)
   """
+
   read_html : io.FileReader()
   concat : text.LineJoin()
   exception_handler : exception.ExceptionHandler()
   is_eos : std.Compare(op="=")
   status_mapper : flow.Deselect()
-
 
   .filename > read_html.filename
   read_html.out > exception_handler.token
@@ -157,6 +156,7 @@ component HTTPFileReader() filename -> resource, status {
   OK > status_mapper.case_true
   NOT_FOUND > status_mapper.case_false
   status_mapper.data > .status
+
 }
 
 
@@ -196,8 +196,7 @@ component HTTPResponseTemplate(template) status, body -> response {
 
   statusmap : StatusMap()
   len : text.Length()
-  # cdict : flow.CollectCompleteDict(mapping={"status":&status.token, "reason":&reason.token, "body":&body.token, "length":&len.length})
-  cdict : flow.CollectCompleteDict(mapping={"status":"status.token", "reason":"reason.token", "body":"body.token", "length":"len.length"})
+  cdict : flow.CollectCompleteDict(mapping={"status":&status.token, "reason":&reason.token, "body":&body.token, "length":&len.length})
   fmt : text.Mustache(fmt=template)
   .status > statusmap.status
   .body > len.string
@@ -231,6 +230,7 @@ component HTTPResponseGenerator(response_template) body, status -> out {
   response.response > .out
 }
 
+
 component Server(host, port) response -> request {
   """
   TCPServer
@@ -256,6 +256,7 @@ component ProcessRequest() request -> path, status {
   """
   daisy_GET : DaisyAdapter(status_OK=OK)
   check_GET : HTTPGETRequestCheck()
+
   .request > daisy_GET.in
   OK > daisy_GET.status
 
@@ -308,6 +309,19 @@ component GetResource() absolute_path, status -> body, status {
 }
 
 
+# component Probe(label) in -> {
+#     """
+#     Debugging helper
+#     """
+#     to_str : std.Stringify()
+#     add_label : text.PrefixString(prefix=label)
+#     log : io.Print()
+#
+#     .in > to_str.in
+#     to_str.out > add_label.in
+#     add_label.out > log.token
+# }
+
 server : Server(host=HOST, port=PORT)
 process_req : ProcessRequest()
 locate_resource : LocateResource(base_path="html")
@@ -328,7 +342,16 @@ get_resource.body > generate_response.body
 generate_response.out > server.response
 
 # Logging
-# Tip: To help with debugging, attach a Print actor
+# Tip: To help with debugging, attach a Probe actor
 #      to any output port to log the data flow, e.g.
-# snk: io.Print()
-# tcp_server.token > snk.token
+# p1 : Probe(label="request: ")
+# p2 : Probe(label="path: ")
+# p3 : Probe(label="abs_path: ")
+# p4 : Probe(label="body: ")
+# p5 : Probe(label="response: ")
+#
+# server.request > p1.in
+# process_req.path > p2.in
+# locate_resource.absolute_path > p3.in
+# get_resource.body > p4.in
+# generate_response.out > p5.in
