@@ -245,7 +245,7 @@ def visualize_script(source_text, show_args=False):
     rw.visit(ir)
     rw = ResolvePortRefs(issuetracker)
     rw.visit(ir)
-    r = DotRenderer(show_args, debug)
+    r = DotRenderer(show_args, debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir)
     return dot_source, issuetracker
