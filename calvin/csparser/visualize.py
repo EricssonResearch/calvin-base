@@ -3,7 +3,7 @@ import random
 import inspect
 import visitor
 import astnode as ast
-from codegen import calvin_astgen, calvin_components, query, PortlistRewrite
+from codegen import calvin_astgen, calvin_components, query, PortlistRewrite, ResolvePortRefs
 from parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore
 
@@ -243,7 +243,9 @@ def visualize_script(source_text, show_args=False):
     # ... but expand portlists to simplify rendering
     rw = PortlistRewrite(issuetracker)
     rw.visit(ir)
-    r = DotRenderer(show_args, debug=False)
+    rw = ResolvePortRefs(issuetracker)
+    rw.visit(ir)
+    r = DotRenderer(show_args, debug)
     v = Visualize(renderer = r)
     dot_source = v.process(ir)
     return dot_source, issuetracker
