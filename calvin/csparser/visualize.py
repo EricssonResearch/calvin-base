@@ -209,6 +209,14 @@ class DotRenderer(BaseRenderer):
             self.pop_namespace()
             return '}\n'
 
+    def PortProperty(self, node, order):
+        if order == 'preorder':
+            return '/*  portprop '
+        if order == 'inorder':
+            return ' = '
+        if order == 'postorder':
+            return ' */\n'
+
 
 class Visualize(object):
    """docstring for VizPrinter"""
