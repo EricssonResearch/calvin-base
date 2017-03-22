@@ -48,6 +48,8 @@ class Deployer(object):
         Ask a runtime to instantiate actors and link them together.
         """
         if not self.deployable['valid']:
+            import json
+            print(json.dumps(self.deployable, indent=2, default=str))
             raise Exception("Deploy information is not valid")
 
         result = self.request_handler.deploy_app_info(self.runtime, self.name, self.deployable,

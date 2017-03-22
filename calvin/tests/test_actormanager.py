@@ -58,7 +58,6 @@ class ActorManagerTests(unittest.TestCase):
 
         self.assertEqual(s['data'], data)
         self.assertEqual(s['_id'], a_id)
-        self.assertEqual(s['n'], -1)
 
     def test_new_actor_from_state(self):
         # Test basic actor state manipulation
@@ -66,7 +65,6 @@ class ActorManagerTests(unittest.TestCase):
         data = 42
         a, a_id = self._new_actor(a_type, {'data':data})
         a.data = 43
-        a.n = 2
         s = a.state()
         self.am.destroy(a_id)
         self.assertEqual(len(self.am.actors), 0)
@@ -74,7 +72,6 @@ class ActorManagerTests(unittest.TestCase):
         b, b_id = self._new_actor(a_type, None, state = s)
 
         self.assertEqual(a.data, 43)
-        self.assertEqual(a.n, 2)
         # Assert id is preserved
         self.assertEqual(a.id, a_id)
         # Assert actor database is consistent

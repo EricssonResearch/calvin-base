@@ -14,48 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition
 
 
 class Constant(Actor):
     """
-    Send predetermined data on output. Defaults to a never ending sequence.
+    Send predetermined data on output. Never ending sequence.
     Outputs:
       token : Some data
     """
-    @manage(['data', 'n', 'dump'])
-    def init(self, data, n=-1, dump=False):
+    @manage(['data'])
+    def init(self, data):
         self.data = data
-        self.n = n
-        self.dump = dump
 
-    def log(self, data):
-        print "%s<%s>: %s" % (self.__class__.__name__, self.id, data)
-
-    @stateguard(lambda self: self.n > 0 or self.n == -1)
     @condition([], ['token'])
     def send_it(self):
-        if self.n > 0:
-            self.n -= 1
-        if self.dump:
-            self.log(self.data)
         return (self.data,)
 
     action_priority = (send_it, )
 
     test_args = (42,)
-    test_kwargs = {"n": 3}
 
     test_set = [
         {
             'in': {},
             'out': {'token': [42]}
         } for i in range(3)
-    ]
-
-    test_set += [
-        {
-            'in': {},
-            'out': {'token': []}
-        }
     ]

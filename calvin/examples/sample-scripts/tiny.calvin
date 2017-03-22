@@ -1,5 +1,5 @@
 /* Actors */
-src : std.Constant(data="test", n=10)
+src : std.Constant(data="test")
 delay : std.ClassicDelay(delay=1)
 snk : io.Print()
 /* Connections */

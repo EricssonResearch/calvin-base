@@ -1938,7 +1938,7 @@ class TestCompare(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
-            const : std.Constant(data=5, n=-1)
+            const : std.Constant(data=5)
             pred  : std.Compare(op="<>")
             snk   : test.Sink(store_tokens=1, quiet=1)
 
@@ -1962,7 +1962,7 @@ class TestCompare(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
-            const : std.Constant(data=5, n=-1)
+            const : std.Constant(data=5)
             pred  : std.Compare(op="=")
             snk   : test.Sink(store_tokens=1, quiet=1)
 
@@ -1988,7 +1988,7 @@ class TestCompare(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
-            const : std.Constant(data=5, n=-1)
+            const : std.Constant(data=5)
             pred  : std.Compare(op=">=")
             snk   : test.Sink(store_tokens=1, quiet=1)
 
@@ -2017,7 +2017,7 @@ class TestSelect(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
-            const : std.Constant(data=true, n=-1)
+            const : std.Constant(data=true)
             route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : flow.Terminator()
@@ -2043,7 +2043,7 @@ class TestSelect(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
-            const : std.Constant(data=0, n=-1)
+            const : std.Constant(data=0)
             route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : flow.Terminator()
@@ -2071,7 +2071,7 @@ class TestSelect(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.Counter()
-            const : std.Constant(data=2, n=-1)
+            const : std.Constant(data=2)
             route : flow.Select()
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : flow.Terminator()
@@ -2103,8 +2103,8 @@ class TestDeselect(CalvinTestBase):
         script = """
             src     : std.Counter()
             const_5 : std.Constantify(constant=5)
-            const_0 : std.Constant(data=0, n=-1)
-            const_1 : std.Constant(data=1, n=-1)
+            const_0 : std.Constant(data=0)
+            const_1 : std.Constant(data=1)
             comp    : std.Compare(op="<=")
             ds      : flow.Deselect()
             snk     : test.Sink(store_tokens=1, quiet=1)
@@ -2135,8 +2135,8 @@ class TestDeselect(CalvinTestBase):
         script = """
             src     : std.Counter()
             const_5 : std.Constantify(constant=5)
-            const_0 : std.Constant(data=0, n=-1)
-            const_1 : std.Constant(data=1, n=-1)
+            const_0 : std.Constant(data=0)
+            const_1 : std.Constant(data=1)
             comp    : std.Compare(op="<=")
             ds      : flow.Deselect()
             snk     : test.Sink(store_tokens=1, quiet=1)
@@ -2169,7 +2169,7 @@ class TestDeselect(CalvinTestBase):
         script = """
             src     : std.Counter()
             const_5 : std.Constantify(constant=5)
-            const_0 : std.Constant(data=0, n=11)
+            const_0 : std.Constant(data=0)
             ds      : flow.Deselect()
             snk     : test.Sink(store_tokens=1, quiet=1)
 
@@ -2235,7 +2235,7 @@ class TestRegex(CalvinTestBase):
     def testRegexMatch(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src   : std.Constant(data="24.1632", n=1)
+            src   : std.Constant(data="24.1632")
             regex : text.RegexMatch(regex=!"\d+\.\d+")
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : flow.Terminator()
@@ -2263,7 +2263,7 @@ class TestRegex(CalvinTestBase):
     def testRegexNoMatch(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src   : std.Constant(data="x24.1632", n=1)
+            src   : std.Constant(data="x24.1632")
             regex : text.RegexMatch(regex=!"\d+\.\d+")
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : flow.Terminator()
@@ -2289,7 +2289,7 @@ class TestRegex(CalvinTestBase):
     def testRegexCapture(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src   : std.Constant(data="24.1632", n=1)
+            src   : std.Constant(data="24.1632")
             regex : text.RegexMatch(regex=!"(\d+)\.\d+")
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : flow.Terminator()
@@ -2316,7 +2316,7 @@ class TestRegex(CalvinTestBase):
     def testRegexMultiCapture(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src   : std.Constant(data="24.1632", n=1)
+            src   : std.Constant(data="24.1632")
             regex : text.RegexMatch(regex=!"(\d+)\.(\d+)")
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : flow.Terminator()
@@ -2343,7 +2343,7 @@ class TestRegex(CalvinTestBase):
     def testRegexCaptureNoMatch(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src   : std.Constant(data="x24.1632", n=1)
+            src   : std.Constant(data="x24.1632")
             regex : text.RegexMatch(regex=!"(\d+)\.\d+")
             snk   : test.Sink(store_tokens=1, quiet=1)
             term  : flow.Terminator()
@@ -2373,7 +2373,7 @@ class TestConstantAsArguments(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
             define FOO = 42
-            src   : std.Constant(data=FOO, n=10)
+            src   : std.Constant(data=FOO)
             snk   : test.Sink(store_tokens=1, quiet=1)
             src.token > snk.token
         """
@@ -2396,7 +2396,7 @@ class TestConstantAsArguments(CalvinTestBase):
         script = """
             define FOO = BAR
             define BAR = 42
-            src   : std.Constant(data=FOO, n=10)
+            src   : std.Constant(data=FOO)
             snk   : test.Sink(store_tokens=1, quiet=1)
             src.token > snk.token
         """
@@ -2574,8 +2574,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
         component Count(len) -> seq {
-            src : std.Constant(data="hup", n=len)
-            src.token > .seq
+            src : std.FiniteCounter(start=1, steps=len)
+            src.integer > .seq
         }
         src : Count(len=5)
         snk : test.Sink(store_tokens=1, quiet=1)
@@ -2588,7 +2588,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
         snk = d.actor_map['testComponentArgument:snk']
 
-        expected = ["hup"]*5
+        expected = [1,2,3,4,5]
         actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=5)
@@ -2600,8 +2600,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         script = """
         define FOO = 5
         component Count(len) -> seq {
-            src : std.Constant(data="hup", n=len)
-            src.token > .seq
+            src : std.FiniteCounter(start=1, steps=len)
+            src.integer > .seq
         }
         src : Count(len=FOO)
         snk : test.Sink(store_tokens=1, quiet=1)
@@ -2614,7 +2614,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
         snk = d.actor_map['testComponentConstantArgument:snk']
 
-        expected = ["hup"]*5
+        expected = [1,2,3,4,5]
         actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=5)
@@ -2627,8 +2627,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         script = """
         define FOO = 10
         component Count() -> seq {
-         src : std.Constant(data="hup", n=FOO)
-         src.token > .seq
+         src : std.FiniteCounter(start=1, steps=FOO)
+         src.integer > .seq
         }
         src : Count()
         snk : test.Sink(store_tokens=1, quiet=1)
@@ -2641,7 +2641,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
         snk = d.actor_map['testComponentConstantArgumentDirect:snk']
 
-        expected = ["hup"]*10
+        expected = [1,2,3,4,5,6,7,8,9,10]
         actual = wait_for_tokens(self.rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)

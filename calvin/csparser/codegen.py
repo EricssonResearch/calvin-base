@@ -201,7 +201,7 @@ class ImplicitPortRewrite(object):
 
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
-        args = [ ast.NamedArg(ident=ast.Id(ident='data'), arg=node.arg),  ast.NamedArg(ident=ast.Id(ident='n'), arg=ast.Value(value=-1))]
+        args = [ ast.NamedArg(ident=ast.Id(ident='data'), arg=node.arg) ]
         if node.label:
             const_name = node.label.ident
         else:
