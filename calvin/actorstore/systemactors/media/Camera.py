@@ -22,6 +22,9 @@ class Camera(Actor):
 
     def setup(self):
         self.use("calvinsys.media.camerahandler", shorthand="camera")
+        self.use("calvinsys.media.image", shorthand="image")
+        self.use('calvinsys.native.python-base64', shorthand="base64")
+
         self.camera = self["camera"].open(self.device, self.width, self.height)
 
     def did_migrate(self):
@@ -35,16 +38,17 @@ class Camera(Actor):
 
     @stateguard(lambda self: self.trigger is True)
     @condition(action_output=['image'])
-    def get_image(self, trigger):
+    def get_image(self):
         self.trigger = None
-        image = self.camera.get_image()
-        return (image, )
+        img = self.camera.get_image()
+        result = self['base64'].b64encode(img)
 
-    @stateguard(lambda self: trigger is None)
+        return (result, )
+
+    @stateguard(lambda self: self.trigger is None)
     @condition(action_input=['trigger'])
     def trigger_action(self, trigger):
         self.trigger = True if trigger else None
-        
 
     action_priority = (get_image, trigger_action)
-    requires =  ['calvinsys.media.camerahandler']
+    requires = ['calvinsys.media.image', 'calvinsys.native.python-base64', 'calvinsys.media.camerahandler']

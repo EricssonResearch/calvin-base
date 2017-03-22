@@ -1,11 +1,11 @@
 {
     "indexed_public" : {
         "node_name": {
-            "organization" : "com.ericsson"
+            "organization" : "com.ericsson",
+            "name" : "outdoor_device"
         },
         "address" : {
-            "locality" : "inside"
+            "locality" : "outside"
         }
     }
 }
-

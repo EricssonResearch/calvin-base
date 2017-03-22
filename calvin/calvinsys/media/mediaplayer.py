@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.plugins.media import mediaplayer
+from calvin.runtime.south.plugins.media.mediaplayer import mediaplayer
 
 
 class MediaPlayer(object):

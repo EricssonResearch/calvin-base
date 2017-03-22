@@ -1,0 +1,8 @@
+{
+  "global": {
+    "actor_paths": ["./devactors"],
+    "image_plugin": "opencv_impl",
+    "camera_plugin": "opencv_impl"
+  }
+}
+

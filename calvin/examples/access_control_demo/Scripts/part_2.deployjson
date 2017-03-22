@@ -8,14 +8,8 @@
         "lock": [
         {
             "op": "node_attr_match",
-            "kwargs": {"index": ["address", {"locality": "outside"}]},
-            "type": "+"
-        }],
-        "check": [
-        {
-            "op": "node_attr_match",
-            "kwargs": {"index": ["node_name", {"name": "display"}]},
+            "kwargs": {"index": ["node_name", {"name": "server"}]},
             "type": "+"
         }]
-        }
+    }
 }

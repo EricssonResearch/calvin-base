@@ -3,5 +3,5 @@
 HOST=$1
 ATTRIBUTE_FILE="RuntimeAttributes/computer.attr"
 
-# GLOBAL_STORAGE_START=false \
+CALVIN_GLOBAL_STORAGE_TYPE=\"local\" \
 csruntime --host $HOST --attr-file $ATTRIBUTE_FILE

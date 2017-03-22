@@ -11,10 +11,18 @@ The example assumes the following devices:
  - A computer to server as 'server'
  - Two Raspberry Pi's 
  - One Philips-Hue Smart Light 
- - One IP Camera
+ - One Web Camera
 
-Install the required components by running the install.sh script in the
-Components-folder. (This assumes a compatible shell such as bash/zsh/ash.)
+Install the required components by running the install_components.sh script.
+(This assumes a compatible shell such as bash/zsh/ash.)
+
+Rename the relevant config file on each device to calvin.conf, i.e. on the
+rasparry pis, rename "calvin.conf_raspberry" and on the computer, rename
+calvin.conf_server.
+
+Edit the indoor and outdoor start-scripts by adding the ip address of the
+device serving as 'server'.
+
 
 ### Device specifics
 
@@ -27,11 +35,10 @@ The computer should also have OpenCV installed, with python-bindings. This may
 or may not be easy to achieve.
 
 The Hue is, by default, using ip "192.168.0.101", user "newdeveloper" and light
-number "1". Change these to reflect your settings if necessary.
+number "1". Change these settings in Scripts/part_2.calvin to reflect your
+settings if necessary.
 
-The IP Camera is by default an Axis Communications camera with ip
-"192.168.0.137" with username "root" and password "pass". Consult your camera's
-documentation if this does not match your setup.
+For camera, the first available webcam found will be used.
 
 ## Running
 
@@ -39,6 +46,8 @@ Start calvin on the computer and on the Raspberry Pi's using the accompanying
 scripts if you are on a computer with a compatible shell, such as
 bash/zsh/ash. Instructions for other platforms forthcoming, but slowly. The
 scripts should be given the IP address of the respective devices as arguments.
+In addition, make sure to run the start script from the directory where the
+calvin.conf file is placed.
 
 Start 'csweb' and log onto one of the devices - preferrably the "server"
 device. If all is well, there should be three devices listed. If not, reload
@@ -49,15 +58,3 @@ Click "deploy" and select one of the scripts in the Script-folder. Got to the
 it. Click "migrate" and select the corresponding deployment script (ending with
 .deployjson) in the same folder as the script. Apply the script to migrate
 actors to their respective devices.
-
-## Troubleshooting
-
-If the devices cannot find eachother, there may be network issues, and a simple
-readme-file is not the place to try to slay such a diverse beast, but we can
-offer one possible solution that may, or may not, help.
-
-Edit the scripts, and remove the commented out sections to try the example
-without the full feature set. This turns off Calvin's internal registry, which
-is not strictly needed when running this small demonstration. Make sure to add
-the ip address of the device serving as 'computer' in the demo to the indoor
-and outdoor device startup script.

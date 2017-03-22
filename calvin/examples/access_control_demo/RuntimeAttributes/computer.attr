@@ -1,8 +1,8 @@
 {
     "indexed_public" : {
         "node_name": {
-            "name" : "display"
+            "name" : "server"
         }
-   }
+    }
 }
 

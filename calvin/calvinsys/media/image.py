@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.plugins.media import image
+from calvin.runtime.south.plugins.media.image import image
 
 
 class Image(object):

@@ -14,21 +14,14 @@
         "camera": [
         {
             "op": "node_attr_match",
-            "kwargs": {"index": ["node_name", {"name": "display"}]},
+            "kwargs": {"index": ["node_name", {"name": "server"}]},
             "type": "+"
         }],
         "screen": [
         {
             "op": "node_attr_match",
-            "kwargs": {"index": ["node_name", {"name": "display"}]},
-            "type": "+"
-        }],
-        "check": [
-        {
-            "op": "node_attr_match",
-            "kwargs": {"index": ["node_name", {"name": "display"}]},
+            "kwargs": {"index": ["node_name", {"name": "server"}]},
             "type": "+"
         }]
-
     }
 }

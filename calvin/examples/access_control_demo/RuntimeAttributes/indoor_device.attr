@@ -1,11 +1,11 @@
 {
     "indexed_public" : {
         "node_name": {
-            "organization" : "com.ericsson"
+            "organization" : "com.ericsson",
+            "name" : "indoor_device"
         },
         "address": {
-            "locality" : "outside"
+            "locality" : "inside"
         }
     }
 }
-
