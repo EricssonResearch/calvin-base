@@ -24,7 +24,7 @@ def read_description(fname):
 
 
 setup(name='calvin',
-      version='0.6',
+      version='0.7',
       url="http://github.com/EricssonResearch/calvin-base",
       license="Apache Software License",
       author="Ericsson Research",
