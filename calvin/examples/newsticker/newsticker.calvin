@@ -2,54 +2,8 @@ define URL = "https://api.github.com/repos/EricssonResearch/calvin-base/commits"
 define DELAY = 60
 define NO_CHANGE = 304
 
-component LatestCommitDate() body -> date {
-  """
-  Extract the latest commit date from github server response body.
 
-  The body may be empty [] on 304 responses
-
-  Inputs:
-    body : github server response body
-  Outputs:
-    date : date of most recent commit
-  """
-
-  getdate  : json.GetValue()
-  compare  : std.Compare(op="!=")
-  sampler  : std.SampleHold(default="")
-  exc_handler : exception.ExceptionHandler(replace=true, replacement="")
-
-  .body > getdate.container
-  # What we get is a list of commits, each with nested dicts.
-  # Pick the first commit and drill down to its date
-  [0, "commit", "author", "date"] > getdate.key
-  getdate.value > exc_handler.token
-  exc_handler.token > compare.a
-  exc_handler.status > voidport
-  "" > compare.b
-  compare.result > sampler.sample
-  exc_handler.token > sampler.in
-  sampler.out > .date
-}
-
-component ExtractETag() header -> tag {
-  """
-  Retrieve the latest ETag from github server response header.
-
-  Inputs:
-    header : github response header
-  Outputs:
-    tag : header 'ETag' value
-  """
-
-  gettag : json.GetValue()
-
-  .header > gettag.container
-  "etag" > gettag.key
-  gettag.value > .tag
-}
-
-component ExtractCommit() dict -> commit_info {
+component FormatCommit() dict -> commit_info {
   """
   Produce nicely a formatted string from a commit.
 
@@ -73,6 +27,9 @@ component ExtractCommit() dict -> commit_info {
 component Timer(url, delay) -> url {
   """
   Produces url argument at its url outport every delay seconds
+
+  Outputs:
+    url : the URL given as argument
   """
   init_url : flow.Init(data=url)
   delay : std.ClassicDelay(delay=delay)
@@ -85,43 +42,64 @@ component Timer(url, delay) -> url {
   # init_url.out >log.token
 }
 
-component HeaderGen() in -> out {
+component HeaderGen() header -> header {
   """
-  Documentation please
+  Prepare a request header.
+
+  Retrieve the latest ETag from github server response header and
+  prepare a request header. Initial header is empty.
+
+  Inputs:
+    header : github response header
+  Outputs:
+    header : header with current 'ETag' value
   """
+
   init_header : flow.Init(data={})
-  etag : ExtractETag()
+  etag : json.GetValue()
   header : json.Dict(n=1)
 
-  .in > etag.header
-  etag.tag > header.value
+  .header > etag.container
+  "etag" > etag.key
+  etag.value > header.value
   "If-None-Match" > header.key
-
   header.dict > init_header.in
-  init_header.out > .out
+  init_header.out > .header
 
 }
 
-component PackLatestCommitDate() in -> out {
+component PackLatestCommitDate() data -> params {
   """
-  Documentation please
+  Extract the latest commit date from an updated github server response.
+
+  Inputs:
+    data : github server response in JSON format
+  Outputs:
+    params : date of most recent commit packed in param dict
   """
-  commit_date : LatestCommitDate()
+  commit_date : json.GetValue()
   params : json.SetValue()
 
-  .in > commit_date.body
+  .data > commit_date.container
+  # What we get is a list of commits, each with nested dicts.
+  # Pick the first commit and drill down to its date
+  [0, "commit", "author", "date"] > commit_date.key
+  commit_date.value > params.value
+
   {"sha":"develop"} > params.container
-  commit_date.date > params.value
   "since" > params.key
-  params.container > .out
+  params.container > .params
 }
 
 component PrintCommits() commits ->  {
   """
-  Documentation please
+  Iterate over a commitlist and print each one nicely formatted.
+
+  Inputs:
+    commits : a list of commits in JSON format
   """
   commitlist : json.Items()
-  extract : ExtractCommit()
+  extract : FormatCommit()
   printout : io.Print()
 
   .commits > commitlist.list
@@ -131,8 +109,19 @@ component PrintCommits() commits ->  {
 
 component ParamGen() status, data -> params {
   """
-  Documentation please
+  Generate request params from latest commit date.
+
+  Only generate new params if there was an update as indicated by the status.
+  If not, use previous params.
+
+  Inputs:
+    status : request status
+    data : request response in JSON format
+
+  Outputs:
+    params : request params
   """
+
   cmp : std.Compare(op="=")
   route : flow.Switch()
   init_params : flow.Init(data={"sha":"develop", "per_page":1})
@@ -143,14 +132,14 @@ component ParamGen() status, data -> params {
   cmp.result > route.switch
   .data > route.a
   init_params.out > route.b, .params
-  route.a > pack.in
-  pack.out > init_params.in
+  route.a > pack.data
+  pack.params > init_params.in
   route.b > voidport
 }
 
 component GetCommitData() url, params -> status, data {
   """
-  Documentation please
+  Wrap up the GET request to minimize clutter.
   """
   header_gen : HeaderGen()
   request : net.HTTPGet()
@@ -158,10 +147,10 @@ component GetCommitData() url, params -> status, data {
 
   .url > request.URL
   .params > request.params
-  header_gen.out > request.header
+  header_gen.header > request.header
 
   request.data > body_to_json.string
-  request.header > header_gen.in
+  request.header > header_gen.header
   request.status > .status
   body_to_json.data > .data
 
@@ -175,8 +164,7 @@ print_commits: PrintCommits()
 timer.url > get_commit.url
 param_gen.params > get_commit.params
 
-get_commit.data > print_commits.commits
-get_commit.data > param_gen.data
+get_commit.data > param_gen.data, print_commits.commits
 get_commit.status > param_gen.status
 
 
