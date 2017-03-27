@@ -1,6 +1,7 @@
 import json
 import inspect
 import pystache
+from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
