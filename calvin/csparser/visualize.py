@@ -28,6 +28,7 @@ class BaseRenderer(object):
     def __init__(self, debug=False):
         super(BaseRenderer, self).__init__()
         self.debug = debug
+        self.suppress = False
 
     def _default(self, node, order):
         if self.debug:
@@ -98,11 +99,13 @@ class DotRenderer(BaseRenderer):
 
     def Constant(self, node, order):
         if order == 'preorder':
-            return '/* define '
+            self.suppress = True
+            return ''
         if order == 'inorder':
             return ' = '
         if order == 'postorder':
-            return ' */\n'
+            self.suppress = False
+            return ''
 
     def Assignment(self, node, order):
         # ident, actor_type, args
@@ -130,15 +133,21 @@ class DotRenderer(BaseRenderer):
             # Class
             lines.append('<TR><TD COLSPAN="3">{}</TD></TR>'.format(node.actor_type))
             # Skipping arguments arriving inorder by commenting them out for now
-            lines.append('<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">' if show_args else '/* ')
+            if show_args:
+                lines.append('<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">')
+            else:
+                self.suppress = True
             return '\n'.join(lines)
 
         if order == 'inorder':
-            return '</TD></TR>\n<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">' if show_args else ', '
+            return '</TD></TR>\n<TR><TD COLSPAN="3" bgcolor="palegreen" ALIGN="left">'
 
         if order == 'postorder':
             # Close comment
-            lines = ['</TD></TR>'if show_args else ' */']
+            self.suppress = False
+            lines = []
+            if show_args:
+                lines = ['</TD></TR>']
             is_first=True
             for inport, outport in zip(inports, outports):
                 inref = ' bgcolor="lightgrey" PORT="{}_in"'.format(inport) if inport else ''
@@ -211,11 +220,13 @@ class DotRenderer(BaseRenderer):
 
     def PortProperty(self, node, order):
         if order == 'preorder':
-            return '/*  portprop '
+            self.suppress = True
+            return ''
         if order == 'inorder':
             return ' = '
         if order == 'postorder':
-            return ' */\n'
+            self.suppress = False
+            return ''
 
 
 class Visualize(object):
@@ -237,8 +248,9 @@ class Visualize(object):
    @visitor.when(ast.Node)
    def visit(self, node):
        self.renderer.render(node, order='preorder')
-       if not node.children:
+       if not node.children or self.renderer.suppress:
            self.renderer.render(node, order='postorder')
+           return
        for n in node.children or []:
            self.visit(n)
            self.renderer.render(node, order='postorder' if n is node.children[-1] else 'inorder')
