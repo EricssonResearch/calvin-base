@@ -70,56 +70,113 @@ component ExtractCommit() dict -> commit_info {
   fmt.text > .commit_info
 }
 
-request : net.HTTPGet()
-commit_date : LatestCommitDate()
-etag : ExtractETag()
+component Timer(url, delay) -> url {
+  """
+  Produces url argument at its url outport every delay seconds
+  """
+  init_url : flow.Init(data=url)
+  delay : std.ClassicDelay(delay=delay)
 
-init_url : flow.Init(data=URL)
-init_params : flow.Init(data={"sha":"develop", "per_page":1})
-init_header : flow.Init(data={})
+  delay.token > init_url.in
+  init_url.out > delay.token, .url
 
-commitlist : json.Items()
-extract : ExtractCommit()
+  # Debugging
+  # log : io.Print()
+  # init_url.out >log.token
+}
 
-params : json.SetValue()
-header : json.Dict(n=1)
-delay : std.ClassicDelay(delay=DELAY)
-printout : io.Print()
-cmp : std.Compare(op="=")
-route : flow.Switch()
-body_to_json : json.FromString()
+component HeaderGen() in -> out {
+  """
+  Documentation please
+  """
+  init_header : flow.Init(data={})
+  etag : ExtractETag()
+  header : json.Dict(n=1)
 
+  .in > etag.header
+  etag.tag > header.value
+  "If-None-Match" > header.key
 
-URL > delay.token
-delay.token > init_url.in
+  header.dict > init_header.in
+  init_header.out > .out
 
-init_url.out > request.URL
-init_params.out > request.params
-init_header.out > request.header
+}
 
-request.data > body_to_json.string
+component PackLatestCommitDate() in -> out {
+  """
+  Documentation please
+  """
+  commit_date : LatestCommitDate()
+  params : json.SetValue()
 
-body_to_json.data > commit_date.body
-request.header > etag.header
+  .in > commit_date.body
+  {"sha":"develop"} > params.container
+  commit_date.date > params.value
+  "since" > params.key
+  params.container > .out
+}
 
-body_to_json.data > commitlist.list
-commitlist.item > extract.dict
-extract.commit_info > printout.token
+component PrintCommits() commits ->  {
+  """
+  Documentation please
+  """
+  commitlist : json.Items()
+  extract : ExtractCommit()
+  printout : io.Print()
 
-{"sha":"develop"} > params.container
-commit_date.date > params.value
-"since" > params.key
+  .commits > commitlist.list
+  commitlist.item > extract.dict
+  extract.commit_info > printout.token
+}
 
-etag.tag > header.value
-"If-None-Match" > header.key
+component ParamGen() status, data -> params {
+  """
+  Documentation please
+  """
+  cmp : std.Compare(op="=")
+  route : flow.Switch()
+  init_params : flow.Init(data={"sha":"develop", "per_page":1})
+  pack : PackLatestCommitDate()
 
-request.status > cmp.a
-NO_CHANGE > cmp.b
-cmp.result > route.switch
+  .status > cmp.a
+  NO_CHANGE > cmp.b
+  cmp.result > route.switch
+  .data > route.a
+  init_params.out > route.b, .params
+  route.a > pack.in
+  pack.out > init_params.in
+  route.b > voidport
+}
 
-header.dict > init_header.in
-params.container > route.a
-init_params.out > route.b
-route.a > init_params.in
-route.b > voidport
+component GetCommitData() url, params -> status, data {
+  """
+  Documentation please
+  """
+  header_gen : HeaderGen()
+  request : net.HTTPGet()
+  body_to_json : json.FromString()
+
+  .url > request.URL
+  .params > request.params
+  header_gen.out > request.header
+
+  request.data > body_to_json.string
+  request.header > header_gen.in
+  request.status > .status
+  body_to_json.data > .data
+
+}
+
+timer : Timer(url=URL, delay=DELAY)
+get_commit: GetCommitData()
+param_gen : ParamGen()
+print_commits: PrintCommits()
+
+timer.url > get_commit.url
+param_gen.params > get_commit.params
+
+get_commit.data > print_commits.commits
+get_commit.data > param_gen.data
+get_commit.status > param_gen.status
+
 
