@@ -13,4 +13,6 @@ If the ETag has changed, get the commits since our last recorded timestamp and p
     csruntime --host \<host ip\>  --controlport 5101 --port 5100 newsticker.calvin
 
 
+## Notes
 
+2017-03-27 : This version is much improved, with better structuring of the code.
