@@ -2,6 +2,8 @@ import json
 import inspect
 import pystache
 
+_log = get_logger(__name__)
+
 class DocObject(object):
     """docstring for DocObject"""
 
