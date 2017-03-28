@@ -130,10 +130,10 @@ component ParamGen() status, data -> params {
   .status > cmp.a
   NO_CHANGE > cmp.b
   cmp.result > route.switch
-  .data > route.a
+  .data > pack.data
+  pack.params > route.a
   init_params.out > route.b, .params
-  route.a > pack.data
-  pack.params > init_params.in
+  route.a > init_params.in
   route.b > voidport
 }
 
