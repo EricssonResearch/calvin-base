@@ -23,32 +23,40 @@ _log = get_logger(__name__)
 
 class OPCUASubscriber(Actor):
     """
-    An OPCUA Client. Connects to given OPCUA server and sets up subscriptions for given node id's
-    nodeids are of the form ns=<#>;s=<string>.
+    An OPCUA Client. Connects to given OPCUA server and sets up subscriptions for given parameters.
 
-        {
-          "Status": {
-            "Doc": <human readable description of status code>,
-            "Code": <status code>,
-            "Name": <name of status code>
-            },
-          "Name": <name of variable>,
-          "ServerTimestamp": <server timestamp>,
-          "SourceTimestamp": <source timestamp>,
-          "CalvinTimestamp": <local timestamp>
-          "Value": <variable value>,
-          "Type": <type of variable (or contents for compound variables)>,
-          "Id": <id of variable>
-        }
+    Configuration input is of the form:
+    {
+      "namespace": <namespace number>,
+      "parameters": {
+        "<tag>" : "<address>"
+        ...
+      }
+
+    }
+
+    Variable output is of the form (sample values given)
+	{
+	  "id": "ns=2;s=/Channel/Parameter/rpa[u1,115]",
+	  "tag": "R115",
+	  "type": "Double",
+	  "value": "0.0",
+	  "servertimestamp": "2017-03-20 15:42:41.600000",
+          "sourcetimestamp": "2017-03-20 15:42:41.542000",
+	  "calvintimestamp": 1490021096.11,
+	  "status": "0, Good, The operation completed successfully."
+	}
 
     Output:
-        variable :
+        variable : json description of variable as given above.
     """
 
-    @manage(['endpoint', 'nodeids'])
-    def init(self, endpoint, nodeids):
+    @manage(['endpoint', 'parameters', 'namespace', 'changed'])
+    def init(self, endpoint, config):
         self.endpoint = endpoint
-        self.nodeids = [ str(nodeid) for nodeid in nodeids]
+	self.namespace = config.get("namespace", 2)
+	self.parameters= config["parameters"]
+	self.changed = []
         self.setup()
 
     def did_migrate(self):
@@ -61,14 +69,35 @@ class OPCUASubscriber(Actor):
         self['opcua'].shutdown()
 
     def setup(self):
+	self.tags = { str("ns=%d;s=%s" % (self.namespace, tag_value["address"])) : str(tag) for tag, tag_value in self.parameters.items() }
         self.use('calvinsys.opcua.client', shorthand='opcua')
-        self['opcua'].start_subscription(self.endpoint, self.nodeids)
+        self['opcua'].start_subscription(self.endpoint, self.tags.keys())
+	self._report = False
+	self._idx = 0
+	print(self.tags)
 
     @stateguard(lambda self: self['opcua'].variable_changed)
-    @condition(action_output=['variable'])
+    @condition()
     def changed(self):
-        variable = self['opcua'].get_first_changed()
-        return (variable,)
+	while self['opcua'].variable_changed:
+            variable = self['opcua'].get_first_changed()
+	    variable["Tag"] = self.tags[variable["Id"]]
+	    self.changed.append(variable)
+	self._idx += 1
+	if self._idx == 100:
+	    self._idx = 0
+	    _log.info(" - changed: %d variables queued" % (len(self.changed),))
+	    self._report = True
+        return ()
 
-    action_priority = (changed,)
+    @stateguard(lambda actor: bool(actor.changed))
+    @condition(action_output=['variable'])
+    def handle_changed(self):
+        variable = self.changed.pop(0)
+	if self._report:
+	    _log.info(" - handle_changed: %d variables queued" % (len(self.changed),))
+	    self._report = False
+	return (variable,)
+    
+    action_priority = (handle_changed, changed)
     requires = ['calvinsys.opcua.client']

@@ -19,7 +19,6 @@ import logging
 logging.basicConfig()
 
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.plugins.async import async
 
 
 _log = get_logger(__name__)
@@ -50,19 +49,12 @@ def data_value_to_struct(data_value):
         }
 
 
-def get_node_name_and_id(node):
-    # these actually connect to the remote server to fetch the data
-    # so they need to run in a separate thread
-    node_id = node.nodeid.to_string()
-    try:
-        path = node.get_path_as_string()
-        node_name = "/".join([ p.split(":")[1] for p in path ])
-        # node_name = node.get_display_name().to_string()
-    except Exception:
-        # Not all nodes have a name, use node id
-        node_name = node_id
-    return node_id, node_name
-    
+def get_node_id_as_string(node):
+    nodeid = str(node.nodeid)
+    # nodeid is of the form (ns=X;s=XXX), remove parentheses
+    nodeid = nodeid[nodeid.index('(')+1:nodeid.rindex(')')]
+    return nodeid
+
 class OPCUAClient(object):
     
     class SubscriptionHandler(object):
@@ -71,14 +63,12 @@ class OPCUAClient(object):
             self._handler = handler
 
         def notify_handler(self, node, variable):
-            node_id, node_name = get_node_name_and_id(node)
-            variable["Id"] = node_id
-            variable["Name"] = node_name 
+            variable["Id"] = get_node_id_as_string(node)
             # hand the notification over to the scheduler
             self._handler(variable)
 
         def datachange_notification(self, node, val, data):
-            async.call_in_thread(self.notify_handler, node, data_value_to_struct(data.monitored_item.Value))
+            self.notify_handler(node, data_value_to_struct(data.monitored_item.Value))
 
         def event_notification(self, event):
             _log.info("%r" % (event,))
@@ -105,10 +95,9 @@ class OPCUAClient(object):
     def get_value(self, nodeid, handler):
         try:
             n = self._client.get_node(nodeid)
-            s = data_value_to_struct(n.get_data_value())
-            node_id, node_name = get_node_name_and_id(n)
-            s["Id"] = node_id
-            s["Name"] = node_name
+            s = data_value_to_struct(n.get_data_value())            
+            nodeid = get_node_id_as_string(n)
+            s["Id"] = nodeid
             handler(s)
         except Exception as e:
             _log.error("get_value failed: '%s'" % (e,))

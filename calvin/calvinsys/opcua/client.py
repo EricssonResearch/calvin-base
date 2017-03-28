@@ -27,7 +27,7 @@ class OPCUAClient(object):
         A calvinsys module for communicating with an OPCUAServer
     """
     
-    INTERVAL = 100 # Interval to use in subscription check, probably ms
+    INTERVAL = 1000 # Interval to use in subscription check, probably ms
     
     STATE = {"init": 1, "ready": 2, "running": 3}
     

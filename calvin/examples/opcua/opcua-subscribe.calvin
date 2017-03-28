@@ -5,7 +5,6 @@ variable : {
                 "Code": <status code>,
                 "Name": <name of status code>
                 },
-              "Name": <name of variable>,
               "ServerTimestamp": <server timestamp>,
               "SourceTimestamp": <source timestamp>,
               "Value": <variable value>,
@@ -14,11 +13,19 @@ variable : {
             }
 */
 
-
-opcclient: net.OPCUASubscriber(endpoint="opc.tcp://opcuaserver.com:26543", nodeids=["ns=1;s=FanSpeed", "ns=1;s=PumpSpeed", "ns=1;s=Pressure", "ns=1;s=TemperatureAnalogItem"])
+define CONFIG={
+    "namespace": 1,
+    "parameters": {
+        "FanSpeed": {"address": "FanSpeed", "description": ""},
+        "PumpSpeed": {"address": "PumpSpeed", "description": ""},
+        "Pressure": {"address": "Pressure", "description": ""},
+        "TemperatureAnalogItem": {"address": "TemperatureAnalogItem", "description": ""},
+    }
+}
+opcclient: net.OPCUASubscriber(endpoint="opc.tcp://opcuaserver.com:26543", config=CONFIG)
 
 format: text.Format(fmt="========\n"
-    "Variable: {Name} ({Id})\nValue: {Value} ({Type}\n"
+    "Variable: {Id}\nValue: {Value} ({Type}\n"
     "ServerTimestamp: {ServerTimestamp}\n"
     "SourceTimestamp: {SourceTimestamp}\n"
     "CalvinTimestamp: {CalvinTimestamp}\n"
