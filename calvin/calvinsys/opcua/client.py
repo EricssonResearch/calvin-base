@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.plugins.async import async, threads
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.opcua import client
 import time
@@ -93,10 +92,6 @@ class OPCUAClient(object):
             except Exception as e:
                 print e
         self._set_state(OPCUAClient.STATE["running"])
-        
-    def stop_subscription(self):
-        self._client.unsubscribe_all()
-        self._set_state(OPCUAClient.STATE["ready"])
 
     def shutdown(self):
         self._client.disconnect()
