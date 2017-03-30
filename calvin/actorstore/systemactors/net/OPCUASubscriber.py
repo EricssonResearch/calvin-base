@@ -29,7 +29,7 @@ class OPCUASubscriber(Actor):
     {
       "namespace": <namespace number>,
       "parameters": {
-        "<tag>" : "<address>"
+        "<tag>" : {"address": "<address>", "description": "<description>"}
         ...
       }
 
@@ -54,9 +54,9 @@ class OPCUASubscriber(Actor):
     @manage(['endpoint', 'parameters', 'namespace', 'changed'])
     def init(self, endpoint, config):
         self.endpoint = endpoint
-	self.namespace = config.get("namespace", 2)
-	self.parameters= config["parameters"]
-	self.changed = []
+        self.namespace = config.get("namespace", 2)
+        self.parameters= config["parameters"]
+        self.changed = []
         self.setup()
 
     def did_migrate(self):
@@ -66,35 +66,36 @@ class OPCUASubscriber(Actor):
         self['opcua'].shutdown()
 
     def setup(self):
-	self.tags = { str("ns=%d;s=%s" % (self.namespace, tag_value["address"])) : str(tag) for tag, tag_value in self.parameters.items() }
+        self.tags = { str("ns=%d;s=%s" % (self.namespace, tag_value["address"])) : str(tag) for tag, tag_value in self.parameters.items() }
         self.use('calvinsys.opcua.client', shorthand='opcua')
         self['opcua'].start_subscription(self.endpoint, self.tags.keys())
-	self._report = False
-	self._idx = 0
-	print(self.tags)
+        self._report = False
+        self._idx = 0
+        print(self.tags)
 
     @stateguard(lambda self: self['opcua'].variable_changed)
     @condition()
     def changed(self):
-	while self['opcua'].variable_changed:
+        while self['opcua'].variable_changed:
             variable = self['opcua'].get_first_changed()
-	    variable["tag"] = self.tags[variable["id"]]
-	    self.changed.append(variable)
-	self._idx += 1
-	if self._idx == 100:
-	    self._idx = 0
-	    _log.info(" - changed: %d variables queued" % (len(self.changed),))
-	    self._report = True
+            variable["tag"] = self.tags[variable["id"]]
+            variable["desc"] = self.parameters[variable["tag"]]["description"]
+            self.changed.append(variable)
+            self._idx += 1
+            if self._idx == 100:
+                self._idx = 0
+                _log.info(" - changed: %d variables queued" % (len(self.changed),))
+                self._report = True
         return ()
 
     @stateguard(lambda actor: bool(actor.changed))
     @condition(action_output=['variable'])
     def handle_changed(self):
         variable = self.changed.pop(0)
-	if self._report:
-	    _log.info(" - handle_changed: %d variables queued" % (len(self.changed),))
-	    self._report = False
-	return (variable,)
+        if self._report:
+            _log.info(" - handle_changed: %d variables queued" % (len(self.changed),))
+            self._report = False
+        return (variable,)
     
     action_priority = (handle_changed, changed)
     requires = ['calvinsys.opcua.client']
