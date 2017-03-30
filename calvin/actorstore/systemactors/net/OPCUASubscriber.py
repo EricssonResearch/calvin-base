@@ -41,9 +41,9 @@ class OPCUASubscriber(Actor):
 	  "tag": "R115",
 	  "type": "Double",
 	  "value": "0.0",
-	  "servertimestamp": "2017-03-20 15:42:41.600000",
-          "sourcetimestamp": "2017-03-20 15:42:41.542000",
-	  "calvintimestamp": 1490021096.11,
+	  "serverts": "2017-03-20 15:42:41.600000",
+          "sourcets": "2017-03-20 15:42:41.542000",
+	  "calvints": 1490021096.11,
 	  "status": "0, Good, The operation completed successfully."
 	}
 
@@ -62,9 +62,6 @@ class OPCUASubscriber(Actor):
     def did_migrate(self):
         self.setup()
 
-    def will_migrate(self):
-        self['opcua'].stop_subscription()
-
     def will_end(self):
         self['opcua'].shutdown()
 
@@ -81,7 +78,7 @@ class OPCUASubscriber(Actor):
     def changed(self):
 	while self['opcua'].variable_changed:
             variable = self['opcua'].get_first_changed()
-	    variable["Tag"] = self.tags[variable["Id"]]
+	    variable["tag"] = self.tags[variable["id"]]
 	    self.changed.append(variable)
 	self._idx += 1
 	if self._idx == 100:

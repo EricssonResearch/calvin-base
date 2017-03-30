@@ -1,15 +1,15 @@
 /*
 variable : {
-              "Status": {
-                "Doc": <human readable description of status code>,
-                "Code": <status code>,
-                "Name": <name of status code>
+              "status": {
+                "doc": <human readable description of status code>,
+                "code": <status code>,
+                "name": <name of status code>
                 },
-              "ServerTimestamp": <server timestamp>,
-              "SourceTimestamp": <source timestamp>,
-              "Value": <variable value>,
-              "Type": <type of variable (or contents for compound variables)>,
-              "Id": <id of variable>
+              "serverts": <server timestamp>,
+              "sourcets": <source timestamp>,
+              "value": <variable value>,
+              "type": <type of variable (or contents for compound variables)>,
+              "id": <id of variable>
             }
 */
 
@@ -25,11 +25,11 @@ define CONFIG={
 opcclient: net.OPCUASubscriber(endpoint="opc.tcp://opcuaserver.com:26543", config=CONFIG)
 
 format: text.Format(fmt="========\n"
-    "Variable: {Id}\nValue: {Value} ({Type}\n"
-    "ServerTimestamp: {ServerTimestamp}\n"
-    "SourceTimestamp: {SourceTimestamp}\n"
-    "CalvinTimestamp: {CalvinTimestamp}\n"
-    "Status: {Status.Code}, {Status.Name}, {Status.Doc}")
+    "Variable: {id}\nValue: {value} ({type})\n"
+    "ServerTimestamp: {serverts}\n"
+    "SourceTimestamp: {sourcets}\n"
+    "CalvinTimestamp: {calvints}\n"
+    "Status: {status.code}, {status.name}, {status.doc}")
 out: io.Print()
 
 opcclient.variable > format.dict

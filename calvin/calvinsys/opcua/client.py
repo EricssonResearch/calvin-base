@@ -27,7 +27,6 @@ class OPCUAClient(object):
         A calvinsys module for communicating with an OPCUAServer
     """
     
-    INTERVAL = 1000 # Interval to use in subscription check, probably ms
     
     STATE = {"init": 1, "ready": 2, "running": 3}
     
@@ -49,17 +48,14 @@ class OPCUAClient(object):
         self.state = new_state
         self._trigger()
         
-    def _connect(self):
-        try:
-            self._client = client.OPCUAClient(self.endpoint)
-            self._client.connect()
-            self._set_state(OPCUAClient.STATE["ready"])
-        except Exception as e:
-            print e
-
+    def _connected(self):
+        _log.info("OPCUA client is connected")
+        self._set_state(OPCUAClient.STATE(["ready"]))
+        
     def connect(self, endpoint):
         self.endpoint = endpoint
-        async.call_in_thread(self._connect)
+        self._client = client.OPCUAClient(self.endpoint)
+        self._client.connect(notify=self._connected)
     
     @property
     def connected(self):
@@ -71,8 +67,9 @@ class OPCUAClient(object):
         self._set_state(OPCUAClient.STATE["init"])
 
     def disconnect(self):
-        if self.state == OPCUAClient.STATE["ready"]:
-            async.call_in_thread(self._disconnect)
+        self._client.disconnect()
+        self._client = None
+        self._set_State(OPCUAClient.STATE["init"])
 
     def add_change(self, change):
         self._changed_variables.append(change)
@@ -83,8 +80,8 @@ class OPCUAClient(object):
         variable = self._changed_variables.pop(0)
         if not self._changed_variables :
             self.variable_changed = False
-        variable['Endpoint'] = self.endpoint
-        variable['CalvinTimestamp'] = time.time()
+        variable['endpoint'] = self.endpoint
+        variable['calvints'] = time.time()
         return variable
     
     def _start(self, nodeids):
@@ -97,37 +94,22 @@ class OPCUAClient(object):
                 print e
         self._set_state(OPCUAClient.STATE["running"])
         
-    def _stop(self):
-        self._client.unsubscribe(self._subscription, self._handle)
-        self._subscription = None
+    def stop_subscription(self):
+        self._client.unsubscribe_all()
         self._set_state(OPCUAClient.STATE["ready"])
 
-    def stop_subscription(self):
-        if self.state == OPCUAClient.STATE["running"]:
-            async.call_in_thread(self._stop)
-            
-    def _shutdown(self):
-        if self.state == OPCUAClient.STATE["running"]:
-            self._stop()
-        if self.state == OPCUAClient.STATE["ready"]:
-            self._disconnect()
-        self._set_state(OPCUAClient.STATE["init"])
-         
     def shutdown(self):
-         async.call_in_thread(self._shutdown)
+        self._client.disconnect()
+        self._client = None
+        self.state = OPCUAClient.STATE["init"]
+        
 
     def start_subscription(self, endpoint, nodeids):
-        self.endpoint = endpoint
-        threads.call_multiple_in_thread([
-            (self._connect, [], {}),
-            (self._start, [nodeids], {})
-        ])
+        if not self._client:
+            self.endpoint = endpoint
+            self._client = client.OPCUAClient(self.endpoint)
+        self._client.subscribe(nodeids, self.add_change)
 
-    def poll(self, nodeid):
-        if self.state != OPCUAClient.STATE["ready"]:
-            _log.warning("Cannot poll - no connection, or connection busy")
-            return
-        async.call_in_thread(self._client.get_value, str(nodeid), self.add_change)
-        
+
 def register(node, actor):
     return OPCUAClient(node, actor)

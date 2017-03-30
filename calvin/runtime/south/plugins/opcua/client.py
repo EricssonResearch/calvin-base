@@ -19,7 +19,10 @@ import logging
 logging.basicConfig()
 
 from calvin.utilities.calvinlogger import get_logger
+from calvin.runtime.south.plugins.async import threads, async
 
+WATCHDOG_TIMER=10
+RECONNECT_TIMER=10
 
 _log = get_logger(__name__)
 
@@ -38,14 +41,14 @@ def data_value_to_struct(data_value):
         return res
 
     return {
-        "Type": data_value.Value.VariantType.name,
-        "Value": str(data_value.Value.Value),
-        "Status": { "Code": data_value.StatusCode.value, 
-                    "Name": data_value.StatusCode.name,
-                    "Doc": data_value.StatusCode.doc
+        "type": data_value.Value.VariantType.name,
+        "value": str(data_value.Value.Value),
+        "status": { "code": data_value.StatusCode.value, 
+                    "name": data_value.StatusCode.name,
+                    "doc": data_value.StatusCode.doc
                 },
-        "SourceTimestamp": str(data_value.SourceTimestamp),
-        "ServerTimestamp": str(data_value.ServerTimestamp)
+        "sourcets": str(data_value.SourceTimestamp),
+        "serverts": str(data_value.ServerTimestamp)
         }
 
 
@@ -57,13 +60,30 @@ def get_node_id_as_string(node):
 
 class OPCUAClient(object):
     
+    INTERVAL = 1000 # Interval to use in subscription check, probably ms
+    
     class SubscriptionHandler(object):
-        def __init__(self, handler):
+        def __init__(self, handler, watchdog=None):
             super(OPCUAClient.SubscriptionHandler, self).__init__()
             self._handler = handler
+            self._watchdog = watchdog
+            self.saw_data = False
+            # if available, set up watchdog to be called every 30 seconds
+            if self._watchdog:
+                async.DelayedCall(WATCHDOG_TIMER, self.check_data)
 
+        def check_data(self):
+            if self.saw_data:
+                self.saw_data = False
+                async.DelayedCall(WATCHDOG_TIMER, self.check_data)
+            else:
+                _log.info("No data for {} seconds".format(2*WATCHDOG_TIMER))
+                self._watchdog()
+            
         def notify_handler(self, node, variable):
-            variable["Id"] = get_node_id_as_string(node)
+            variable["id"] = get_node_id_as_string(node)
+            # kick the watchdog
+            self.saw_data = True
             # hand the notification over to the scheduler
             self._handler(variable)
 
@@ -75,36 +95,35 @@ class OPCUAClient(object):
             
     def __init__(self, endpoint):
         self._endpoint = endpoint
-        self._variables = []
+        self.nodeids = []
+        self.subscription = None
         self._changed_variables = []
         self._running = False
         self._client = None
         self._handle = None
-        self._subscription = None
+        self._reconnect_in_progress = None
             
-    def connect(self):
+    def connect(self, notifier):
         self._client = opcua.Client(self._endpoint)
-        self._client.connect()
+        d = threads.defer_to_thread(self._client.connect)
+        d.addCallback(notifier)
+        d.addErrback(self._retry_connect, notifier)
     
-    def disconnect(self):
-        if not self._running and self._client:
-            self._client.disconnect()
-            self._variables = []
-            self._client = None
-    
-    def get_value(self, nodeid, handler):
-        try:
-            n = self._client.get_node(nodeid)
-            s = data_value_to_struct(n.get_data_value())            
-            nodeid = get_node_id_as_string(n)
-            s["Id"] = nodeid
-            handler(s)
-        except Exception as e:
-            _log.error("get_value failed: '%s'" % (e,))
+    def _retry_connect(self, failure, notifier):
+        failtype = failure.type
+        _log.info("Failed to connect, with reason {}, retrying in {}".format(failtype, RECONNECT_TIMER))
+        self._reconnect_in_progress = async.DelayedCall(RECONNECT_TIMER, self.connect, notifier)
 
-    def collect_variables(self, nodeids):
+    def disconnect(self):
+        if self.subscription:
+            async.call_in_thread(self.subscription.delete)
+        if self._client:
+            async.call_in_thread(self._client.disconnect)
+        self._client = None
+
+    def _collect_variables(self):
         vars = []
-        for n in nodeids:
+        for n in self.nodeids:
             var = None
             try:
                 var = self._client.get_node(n)
@@ -112,35 +131,45 @@ class OPCUAClient(object):
                 _log.warning("Failed to get node %s: %s" % (n,e))
             vars.append(var)
         return vars
-            
-    def create_subscription(self, interval, handler):
-        """Create OPCUA subscription
-           interval: how frequently (prob in ms) to check for changes
-           handler: callback when variable changed
-        """
-        return self._client.create_subscription(interval, self.SubscriptionHandler(handler))
+
+    def _subscribe_variables(self, variables):
+        for v in variables:
+            self.subscription.subscribe_data_change(v)
+        
+    def _subscribe_changes(self, variables):
+        d = threads.defer_to_thread(self._subscribe_variables, variables)
+        d.addErrback(self._subscribe_error)
+
+    def _setup_subscription(self, subscription):
+        self.subscription = subscription
+        d = threads.defer_to_thread(self._collect_variables)
+        d.addCallback(self._subscribe_changes)
+        d.addErrback(self._subscribe_error)
+
+    def _subscribe_error(self, failure):
+        _log.warning("Failed to setup subscription with reason {} - resetting connection".format(failure.type))
+        async.DelayedCall(WATCHDOG_TIMER, self.watchdog)
+    
+    def subscribe(self, nodeids, handler):
+        self.nodeids = nodeids
+        self.handler = handler
+        def notifier(dummy=None):
+            d = threads.defer_to_thread(self._client.create_subscription, self.INTERVAL, self.SubscriptionHandler(handler, self._watchdog))
+            d.addCallback(self._setup_subscription)
+            d.addErrback(self._subscribe_error)
+        if self._client:
+            notifier()
+        else :
+            self.connect(notifier)
+
+    def _watchdog(self):
+        if self._client:
+            _log.warning("Data watchdog triggered, resetting connection")
+            self.disconnect()
+            self.subscribe(self.nodeids, self.handler)
         
     def subscribe_change(self, subscription, variable):
         return subscription.subscribe_data_change(variable)
     
     def unsubscribe(self, subscription, handle):
         return subscription.unsubscribe(handle)
-        
-    def all_variables(self, namespace):
-        if not self._variables :
-            self._collect_variables(namespace)
-        return self._variables
-
-    @classmethod
-    def get_variables(cls, node):
-        from opcua.ua.uaprotocol_auto import NodeClass
-        return node.get_children(nodeclassmask=NodeClass.Variable)
-    
-    @classmethod
-    def get_browse_name(cls, node):
-        return node.get_browse_name().to_string()
-
-    @classmethod
-    def get_display_name(cls, node):
-        return node.get_display_name().to_string()
-    
