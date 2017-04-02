@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from calvin.runtime.south.plugins.media import camera
+from calvin.calvinsys.media.calvinpicamera import CalvinPiCamera
+
+
+class NotSupported(Exception):
+
+    def __init__(self, message):
+        self.message = message
 
 
 class Cam(object):
@@ -27,6 +34,7 @@ class Cam(object):
         """
         Initialize camera
         """
+
         self.camera = camera.Camera(device, width, height)
 
     def get_image(self):
@@ -46,6 +54,8 @@ class Cam(object):
 class CameraHandler(object):
 
     def open(self, device, width, height):
+        if device == 'picamera':
+            return CalvinPiCamera()
         return Cam(device, width, height)
 
     def close(self, camera):

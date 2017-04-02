@@ -25,7 +25,6 @@ def get_home():
     from os.path import expanduser
     return expanduser("~")
 
-
 def get_local_ip():
     import socket
     return [(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close())

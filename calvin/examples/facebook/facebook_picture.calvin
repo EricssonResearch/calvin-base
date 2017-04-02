@@ -1,0 +1,4 @@
+msg : std.Constant(data={"picture" : "/home/emirkomo/Pictures/calvin2.jpg", "message" : "This is Calvin" })
+facebook : web.FacebookPicture()
+
+msg.token > facebook.picture

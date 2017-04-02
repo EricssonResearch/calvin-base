@@ -1,0 +1,4 @@
+msg : std.Constant(data={"attachment": {"caption": "This is a test", "description": "Sample script from a Calvin Actor", "link": "https://github.com/EricssonResearch/calvin-base","name": "Calvin", "picture": "http://www.ericsson.com/research-blog/wp-content/uploads/2015/07/Calvin_2-feature.png"},"message": "Hello from Calvin"})
+facebook : web.FacebookPost()
+
+msg.token > facebook.status

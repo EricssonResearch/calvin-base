@@ -1,0 +1,22 @@
+#define devid = "DFF9"
+#define operation = "get"
+#define property = "temperature"
+
+source : std.Counter()
+delay : std.ClassicDelay(delay=0.5)
+const : std.Constantify(constant="get")
+devid : std.Constant(data="DFF9", n=1000)
+#operation : std.Constant(data="get", n=1000)
+property : std.Constant(data="temperature", n=1000)
+thermostat : integration.NestDevice()
+io : io.Print()
+void : std.Void()
+
+
+source.integer > delay.token
+delay.token > const.in
+const.out > thermostat.operation
+void.void > thermostat.value
+devid.token > thermostat.device
+property.token > thermostat.property_name
+thermostat.result > io.token

@@ -1,0 +1,7 @@
+define device = "DFF9"
+
+io : io.Print()
+nest : integration.TemperatureCheck()
+
+device > nest.device
+nest.alert > io.token

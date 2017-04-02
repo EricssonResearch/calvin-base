@@ -1,0 +1,4 @@
+define debug1 = "starting DEBUG"
+
+sink1:io.Print()
+debug1 > sink1.token

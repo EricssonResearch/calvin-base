@@ -1,0 +1,14 @@
+name : std.Constant(data="HomeTest",n=1000)
+structure : integration.NestStructure()
+io : io.Print()
+source : std.Counter()
+delay : std.ClassicDelay(delay=0.5)
+const : std.Constantify(constant="list")
+
+
+
+source.integer > delay.token
+delay.token > const.in
+name.token > structure.structure_name
+const.out > structure.operation
+structure.devices > io.token

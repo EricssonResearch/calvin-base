@@ -1,0 +1,7 @@
+define picture = "/home/emirkomo/Pictures/image.jpg"
+
+detector: media.FaceDetect()
+io : io.Print()
+
+picture > detector.image
+detector.faces > io.token

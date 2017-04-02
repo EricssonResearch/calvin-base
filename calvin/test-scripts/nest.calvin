@@ -1,0 +1,16 @@
+define host = "http://localhost:3000/login"
+define opt = {}
+define headers = {}
+
+http : net.HTTPGet()
+io_data : io.Print()
+io_header : io.Print()
+io_status : io.Print()
+
+host > http.URL
+opt > http.params
+headers > http.header
+http.data > io_data.token
+http.status > io_status.token
+http.header > io_header.token
+

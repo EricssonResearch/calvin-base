@@ -16,7 +16,6 @@
 
 from calvin.runtime.south.plugins.io.sensors.rotary_encoder import rotary_encoder
 
-
 class RotaryEncoder(object):
 
     """

@@ -43,6 +43,10 @@ class Image(object):
         self.display.blit(img, (0, 0))
         pygame.display.flip()
 
+    def detect_face_from_file(self, image_path):
+        image_bytes = file.read(open(image_path))
+        return self.detect_face(image_bytes)
+
     def detect_face(self, image):
         linux_prefix = "/usr/share/opencv"
         mac_prefix = "/usr/local/share/OpenCV"

@@ -1,0 +1,9 @@
+define user = "nanotrippolo@gmail.com"
+define pass = "yourpass"
+
+nest : std.TestNest()
+io_data : io.Print()
+
+user > nest.username
+pass > nest.password
+nest.devices > io_data.tokens
