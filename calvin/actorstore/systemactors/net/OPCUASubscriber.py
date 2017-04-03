@@ -29,26 +29,29 @@ class OPCUASubscriber(Actor):
     {
       "namespace": <namespace number>,
       "parameters": {
-        "<tag>" : {"address": "<address>", "description": "<description>"}
+        "<tag>" : {"address": "<address>", "info": "<description>"}
         ...
       }
 
     }
 
     Variable output is of the form (sample values given)
-	{
-	  "id": "ns=2;s=/Channel/Parameter/rpa[u1,115]",
-	  "tag": "R115",
-	  "type": "Double",
-	  "value": "0.0",
-	  "serverts": "2017-03-20 15:42:41.600000",
-          "sourcets": "2017-03-20 15:42:41.542000",
-	  "calvints": 1490021096.11,
-	  "status": "0, Good, The operation completed successfully."
-	}
+    {
+        "id": "ns=2;s=/Channel/Parameter/rpa[u1,115]",
+        "tag": "R115",
+        "type": "Double",
+        "value": "0.0",
+        "serverts": "2017-03-20 15:42:41.600000",
+        "sourcets": "2017-03-20 15:42:41.542000",
+        "calvints": 1490021096110,
+        "status": "0, Good, The operation completed successfully."
+        "info": "description given for parameter"
+    }
+
+    Note: calvints is time in ms since epoch and is always present. Other timestamps may or may not be present depending on OPCUA server.
 
     Output:
-        variable : json description of variable as given above.
+        variable : json description of variable as shown above.
     """
 
     @manage(['endpoint', 'parameters', 'namespace', 'changed'])
@@ -56,7 +59,7 @@ class OPCUASubscriber(Actor):
         self.endpoint = endpoint
         self.namespace = config.get("namespace", 2)
         self.parameters= config["parameters"]
-        self.changed = []
+        self.changed_params = []
         self.setup()
 
     def did_migrate(self):
@@ -79,21 +82,21 @@ class OPCUASubscriber(Actor):
         while self['opcua'].variable_changed:
             variable = self['opcua'].get_first_changed()
             variable["tag"] = self.tags[variable["id"]]
-            variable["desc"] = self.parameters[variable["tag"]]["description"]
-            self.changed.append(variable)
+            variable["info"] = self.parameters[variable["tag"]]["info"]
+            self.changed_params.append(variable)
             self._idx += 1
             if self._idx == 100:
                 self._idx = 0
-                _log.info(" - changed: %d variables queued" % (len(self.changed),))
+                _log.info(" - changed: %d variables queued" % (len(self.changed_params),))
                 self._report = True
         return ()
 
     @stateguard(lambda actor: bool(actor.changed))
     @condition(action_output=['variable'])
     def handle_changed(self):
-        variable = self.changed.pop(0)
+        variable = self.changed_params.pop(0)
         if self._report:
-            _log.info(" - handle_changed: %d variables queued" % (len(self.changed),))
+            _log.info(" - handle_changed: %d variables queued" % (len(self.changed_params),))
             self._report = False
         return (variable,)
     

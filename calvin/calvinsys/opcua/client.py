@@ -80,7 +80,7 @@ class OPCUAClient(object):
         if not self._changed_variables :
             self.variable_changed = False
         variable['endpoint'] = self.endpoint
-        variable['calvints'] = time.time()
+        variable['calvints'] = int(1000*time.time())
         return variable
     
     def _start(self, nodeids):
