@@ -54,7 +54,7 @@ class OPCUASubscriber(Actor):
         variable : json description of variable as shown above.
     """
 
-    @manage(['endpoint', 'parameters', 'namespace', 'changed'])
+    @manage(['endpoint', 'parameters', 'namespace', 'changed_params'])
     def init(self, endpoint, config):
         self.endpoint = endpoint
         self.namespace = config.get("namespace", 2)
@@ -91,7 +91,7 @@ class OPCUASubscriber(Actor):
                 self._report = True
         return ()
 
-    @stateguard(lambda actor: bool(actor.changed))
+    @stateguard(lambda actor: bool(actor.changed_params))
     @condition(action_output=['variable'])
     def handle_changed(self):
         variable = self.changed_params.pop(0)
