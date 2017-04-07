@@ -435,7 +435,7 @@ def main():
 
 
 def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False,
-              credentials=None, outfile=None, configfile=None):
+              credentials=None, outfile=None, configfile=None, dht_network_filter=None):
     """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
         runtimes from the same python script, since some objects otherwise gets unexceptedly shared.
     """
@@ -451,6 +451,10 @@ def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, at
             call += " --loglevel %s" % (l, )
     try:
         call += (" --credentials \"%s\"" % (json.dumps(credentials).replace('"',"\\\""), )) if credentials else ""
+    except:
+        pass
+    try:
+        call += (" --dht-network-filter \"%s\"" % (dht_networ_filter, )) if dht_network_filter else ""
     except:
         pass
     call += " -w 0"

@@ -372,7 +372,7 @@ class RuntimeCredentials():
             raise Exception("Node name not set in runtime_credentials")
 
     def get_runtime_credentials(self, security_dir=None):
-        _log.debug("get_runtime_credentials:: node_name={}".format(self.node_name))
+#        _log.debug("get_runtime_credentials:: node_name={}".format(self.node_name))
         runtime_cert_chain = self.get_runtime_certificate_chain_as_string(security_dir=security_dir)
         private_key = self.get_private_key()
         return runtime_cert_chain + private_key
@@ -387,9 +387,9 @@ class RuntimeCredentials():
         _log.debug("get_csr_path: my_node_name={}".format(self.node_name))
         return os.path.join(self.runtime_dir, "{}.csr".format(self.node_name))
 
-    def get_certificate(self, cert_name, callback=None):
+    def get_certificate_locally(self, cert_name, callback=None):
         """Return certificate with name cert_name from disk or storage"""
-        _log.debug("get_certificate:\n\tmy_node_name={}\n\tcert_name={}\n\tcallback={}".format(self.node_name, cert_name, callback))
+#        _log.debug("get_certificate_locally:\n\tmy_node_name={}\n\tcert_name={}\n\tcallback={}".format(self.node_name, cert_name, callback))
         try:
             _log.debug("Look for certificate in others folder, cert_name={}".format(cert_name))
             # Check if the certificate is in the 'others' folder for runtime my_node_name.
@@ -418,7 +418,18 @@ class RuntimeCredentials():
                 else:
                     return certstr
             except Exception as err:
-                _log.debug("Certificate {} is not in {{others, mine}} folder, continue looking in storage, err={}".format(cert_name, err))
+                _log.debug("Certificate {} is not in {{others, mine}} folder, err={}".format(cert_name, err))
+                return None
+
+    def get_certificate(self, cert_name, callback=None):
+        """Return certificate with name cert_name from disk or storage"""
+        # TODO: get certificate from DHT (alternative to getting from disk).
+#        _log.debug("get_certificate:\n\tmy_node_name={}\n\tcert_name={}\n\tcallback={}".format(self.node_name, cert_name, callback))
+        try:
+            cert = self.get_certificate_locally(cert_name, callback=callback)
+            if cert:
+                return cert
+            else:
                 try:
                     self.node.storage.get_index(['certificate',cert_name],
                                                 CalvinCB(self._get_certificate_from_storage_cb,
@@ -426,6 +437,8 @@ class RuntimeCredentials():
                 except Exception as err:
                     _log.debug("Certificate could not be found in storage, err={}".format(err))
                     raise
+        except Exception as err:
+            _log.debug("Failed searching for certificate locally, cert_name={},  err={}".format(cert_name, err))
 
     def _get_certificate_from_storage_cb(self, key, value, callback):
         _log.debug("_get_certificate_from_storage_cb, \nkey={}\nvalue={}\n\tcallback={}".format(key, value, callback))
@@ -444,10 +457,10 @@ class RuntimeCredentials():
                 callback(certstring=value[0])
         else:
             _log.error("The certificate can not be found")
-            raise Exception("The certificate can not be found")
+            callback(certstring=None)
 
     def verify_certificate(self, cert_str, type):
-        _log.debug("verify_certificate:\n\tcert_str={}\n\ttype={}".format(cert_str, type))
+#        _log.debug("verify_certificate:\n\tcert_str={}\n\ttype={}".format(cert_str, type))
         try:
             cert = certificate.verify_certificate(type, cert_str, security_dir=self.security_dir)
         except Exception as err:
@@ -456,7 +469,7 @@ class RuntimeCredentials():
 
     def get_private_key(self, security_dir=None):
         """Return the node's private key"""
-        _log.debug("get_private_key: node_name={}".format(self.node_name))
+#        _log.debug("get_private_key: node_name={}".format(self.node_name))
         with open(os.path.join(self.runtime_dir, "private", "private.key"), 'rb') as f:
             return f.read()
 
@@ -467,7 +480,7 @@ class RuntimeCredentials():
         of OpenSSL certificate objects
         """
         # TODO: make for flexible to support intermediate certificates
-        _log.debug("get_runtime_certificate_chain_as_list: my_node_name={}".format(self.node_name))
+#        _log.debug("get_runtime_certificate_chain_as_list: my_node_name={}".format(self.node_name))
         cert_chain_list_of_strings = []
         cert_chain_list_of_x509 = []
         try:
@@ -490,7 +503,7 @@ class RuntimeCredentials():
         Return the full certificate chain as a string
         """
         # TODO: get certificate from DHT (alternative to getting from disk).
-        _log.debug("get_runtime_certificate_chain_as_string: my_node_name={}".format(self.node_name))
+#        _log.debug("get_runtime_certificate_chain_as_string: my_node_name={}".format(self.node_name))
         try:
             # Check if cert_name is the runtime's own certificate.
             files = os.listdir(os.path.join(self.runtime_dir, "mine"))
@@ -502,7 +515,7 @@ class RuntimeCredentials():
             raise Exception("Failed to get the runtimes certificate chain")
 
     def get_own_cert_fingerprint(self):
-        _log.debug("get_own_cert_fingerprint")
+#        _log.debug("get_own_cert_fingerprint")
         certpath, cert, certstr = self.get_own_cert()
         return cert.digest("sha256")
 
@@ -513,7 +526,7 @@ class RuntimeCredentials():
         not the entire chain even if the whole chain is in
         the same pem file.
         """
-        _log.debug("get_own_cert: node_name={}".format(self.node_name))
+#        _log.debug("get_own_cert: node_name={}".format(self.node_name))
         cert_dir = os.path.join(self.runtime_dir, "mine")
         try:
             filename = os.listdir(cert_dir)
@@ -523,11 +536,12 @@ class RuntimeCredentials():
             certstr = "{}{}".format(BEGIN_CRT_LINE, cert_part[1])
             cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                                   certstr)
-            _log.debug("get_own_cert: certpath={}, cert={}, certstr={}".format(certpath, cert, certstr))
+            _log.debug("get_own_cert"
+                       "\n\tcertpath={}".format(certpath))
             return certpath, cert, certstr
-        except:
+        except Excpetion as err:
             # Certificate not available
-            _log.debug("No runtime certificate can be found")
+            _log.debug("No runtime certificate can be found, err={}".format(err))
             return None, None, None
 
     def get_own_cert_path(self):
@@ -535,7 +549,7 @@ class RuntimeCredentials():
         Return the paht to the signed runtime certificate
         in the "mine" folder.
         """
-        _log.debug("get_own_cert_path: node_name={}".format(self.node_name))
+#        _log.debug("get_own_cert_path: node_name={}".format(self.node_name))
         cert_dir = os.path.join(self.runtime_dir, "mine")
         try:
             filename = os.listdir(cert_dir)
@@ -551,7 +565,7 @@ class RuntimeCredentials():
         in the "mine" folder as a string. The entire
         chain is returned as one string
         """
-        _log.debug("get_own_cert_chain_as_string: node_name={}".format(self.node_name))
+#        _log.debug("get_own_cert_chain_as_string: node_name={}".format(self.node_name))
         cert_path = self.get_own_cert_path()
         try:
             cert_chain_str = open(cert_path, 'rt').read()
@@ -567,7 +581,7 @@ class RuntimeCredentials():
         in the "mine" folder as a string. The entire
         chain is returned as one string
         """
-        _log.debug("get_own_cert_as_string: node_name={}".format(self.node_name))
+#        _log.debug("get_own_cert_as_string: node_name={}".format(self.node_name))
         cert_chain_str = self.get_own_cert_chain_as_string()
         try:
             cert_part = cert_chain_str.split(BEGIN_CRT_LINE)
@@ -585,7 +599,7 @@ class RuntimeCredentials():
         not the entire chain even if the whole chain is in
         the same pem file.
         """
-        _log.debug("get_own_cert_as_openssl_object: node_name={}".format(self.node_name))
+#        _log.debug("get_own_cert_as_openssl_object: node_name={}".format(self.node_name))
         certstr = self.get_own_cert_as_string()
         try:
             cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
@@ -598,7 +612,7 @@ class RuntimeCredentials():
 
     def get_own_cert_name(self):
         """Return the node's own certificate name without file extension"""
-        _log.debug("get_own_cert_name: node_name={}".format(self.node_name))
+#        _log.debug("get_own_cert_name: node_name={}".format(self.node_name))
         certs = os.listdir(os.path.join(self.runtime_dir, "mine"))
         if certs:
             return os.path.splitext(certs[0])[0]
@@ -607,7 +621,7 @@ class RuntimeCredentials():
 
     def get_public_key(self):
         """Return the public key from certificate"""
-        _log.debug("get_public_key")
+#        _log.debug("get_public_key")
         certpath, cert, certstr = self.get_own_cert()
 #        try:
 #            cert_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
@@ -633,7 +647,7 @@ class RuntimeCredentials():
         """ Obtain node id based on name and domain from config
             Return dict with domain, node name and node id
         """
-        _log.debug("obtain_cert_node_info: node_name={}".format(self.node_name))
+#        _log.debug("obtain_cert_node_info: node_name={}".format(self.node_name))
         if self.domain is None or self.node_name is None:
             # No security or name specified just use standard node UUID
             _log.debug("OBTAINING no security domain={}, name={}".format(self.domain, self.node_name))
@@ -677,7 +691,7 @@ class RuntimeCredentials():
         Store the signed runtime certificate
         in the "mine" folder
         """
-        _log.debug("store_own_cert:\n\tcertstring={}\n\tcertpath={}".format(certstring, certpath))
+#        _log.debug("store_own_cert:\n\tcertstring={}\n\tcertpath={}".format(certstring, certpath))
         path = self.store_cert("mine", certstring=certstring, certpath=certpath)
         print "Hakan path={}".format(path)
         #Let's update openssl.conf, but this entry should probably not
@@ -692,11 +706,9 @@ class RuntimeCredentials():
         """
         Check if the certificate is already store in the other folder
         """
-        _log.debug("others_cert_stored")
+#        _log.debug("others_cert_stored")
         dnQualifier = certificate.cert_DN_Qualifier(certstring)
-        _log.debug("others_cert_stored")
         filename = "{}.pem".format(dnQualifier)
-        _log.debug("others_cert_stored")
         path = os.path.join(self.runtime_dir, "others", filename)
         if os.path.isfile(path):
             return True
@@ -708,7 +720,7 @@ class RuntimeCredentials():
         Store the signed runtime certificate
         in the "others" folder
         """
-        _log.debug("store_others_cert")
+#        _log.debug("store_others_cert")
         return self.store_cert("others", certstring=certstring, certpath=certpath, force=force)
 
     def store_cert(self, type, certstring=None, certpath=None, force=False):
@@ -717,7 +729,7 @@ class RuntimeCredentials():
         return values.
             path: path to the stored certificate
         """
-        _log.debug("store_cert:\n\ttype={}\n\tcertstring={}\n\tcertpath={}\n\tforce=={}".format(type, certstring, certpath, force))
+#        _log.debug("store_cert:\n\ttype={}\n\tcertstring={}\n\tcertpath={}\n\tforce=={}".format(type, certstring, certpath, force))
         if certpath:
             try:
                 with open(certpath, 'rb') as f:
@@ -775,8 +787,7 @@ class RuntimeCredentials():
         from cryptography.hazmat.primitives import padding
         from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
         from cryptography.hazmat.backends import default_backend
-        _log.debug("cert_enrollment_encrypt_csr:")
-
+#        _log.debug("cert_enrollment_encrypt_csr:\n\tcsr_path={}, cert={}".format(csr_path, cert))
         #TODO: support multiple CA certs
         try:
             ca_cert = self.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
@@ -807,7 +818,7 @@ class RuntimeCredentials():
         return encrypted_csr
 
     def sign_data(self, data):
-        _log.debug("sign_data, data={}".format(data))
+#        _log.debug("sign_data, data={}".format(data))
         from OpenSSL import crypto
         private_key_str = self.get_private_key()
         try:
@@ -833,7 +844,7 @@ class RuntimeCredentials():
 
     def verify_signed_data_from_certname(self,  signature, data, type, certname):
         from OpenSSL import crypto
-        _log.debug("verify_signed_data_from_certname:\n\tsigned_data={}\n\ttype={}\n\tcertname={}".format(signed_data, type, certname))
+#        _log.debug("verify_signed_data_from_certname:\n\tsigned_data={}\n\ttype={}\n\tcertname={}".format(signed_data, type, certname))
         if type not in ["mine","others"]:
             _log.error("type not supported")
             raise Exception("type not supported")
@@ -852,11 +863,14 @@ class RuntimeCredentials():
 
     def verify_signed_data_from_certstring(self, certstring, signature, data, type, callback=None):
         from OpenSSL import crypto
-        _log.debug("verify_signed_data_from_certstring:\n\tcertstring={}\n\tdata={}\n\tsignature={}\n\ttype={}".format(certstring, data, signature, type))
+#        _log.debug("verify_signed_data_from_certstring:\n\tcertstring={}\n\tdata={}\n\tsignature={}\n\ttype={}".format(certstring, data, signature.encode('hex'), type))
         try:
             cert_OpenSSL = self.verify_certificate(certstring, type)
         except Exception as err:
-            _log.error("Certificate verification failed, err={}".format(err))
+            _log.error("Certificate verification failed"
+                       "type={}"
+                       "certstring={}"
+                       "err={}".format(type, certstring, err))
             raise
         try:
             OpenSSL.crypto.verify(cert_OpenSSL,
@@ -864,7 +878,7 @@ class RuntimeCredentials():
                                  data,
                                  "sha256")
         except Exception as err:
-            _log.error("Signature verification failed, err={}\n\tcertstring={}\n\tdata={}\n\tsignature={}".format(err,certstring, data, signature))
+            _log.error("Signature verification failed, err={}\n\tcertstring={}\n\tdata={}\n\tsignature={}".format(err,certstring, data, signature.encode('hex')))
             raise
         _log.debug("verify_signed_data_from_certstring: signature is ok")
         try:
