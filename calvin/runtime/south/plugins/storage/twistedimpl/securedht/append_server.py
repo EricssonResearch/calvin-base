@@ -129,22 +129,23 @@ class KademliaProtocolAppend(KademliaProtocol):
     # Call Functions    #
     #####################
 
-    def callCertFindValue(self, node):
+    def callCertFindValue(self, nodeToAsk):
         """
         Asks 'nodeToAsk' for its certificate.
         """
-        address = (node.ip, node.port)
+        _log.debug("KademliaProtocolAppend::callCertFindValue:")
+        address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
-        key = digest("{}cert".format(node))
+        key = digest("{}cert".format(nodeToAsk.id.encode('hex')))
         _log.debug("KademliaProtocolAppend::callCertFindValue:"
                    "\n\tchallenge generated={}"
                    "\n\tnodeToAsk={}"
                    "\n\tkey={}".format(challenge,
-                                              node.id.encode('hex'),
+                                              nodeToAsk.id.encode('hex'),
                                               key.encode('hex')))
         try:
             signature = self.runtime_credentials.sign_data(
-                                            node.id.encode("hex") + challenge)
+                                            nodeToAsk.id.encode("hex") + challenge)
         except:
             _log.error("RETNONE: Signing of certFindValue failed")
             return None
@@ -155,9 +156,8 @@ class KademliaProtocolAppend(KademliaProtocol):
                            signature,
                            self.getOwnCert())
         return d.addCallback(self.handleCertCallResponse,
-                            node,
+                            nodeToAsk,
                             challenge)
-
 
     def callFindNode(self, nodeToAsk, nodeToFind):
         """
@@ -429,8 +429,6 @@ class KademliaProtocolAppend(KademliaProtocol):
                             nonCertifiedNode = Node(buId,
                                                     buIp,
                                                     buPort)
-                            buIdDigest = digest(str(buIdHex))
-                            buIdReq = Node(buIdDigest)
                             self.callCertFindValue(nonCertifiedNode)
                         else:
                             newbucket.append(bucketnode)
@@ -1105,7 +1103,10 @@ class KademliaProtocolAppend(KademliaProtocol):
     def certificateExists(self, id):
         """
         Returns however the certificate for a
-        given id exists in the own DHT storage.
+        given id exists in the own DHT storage. 
+
+        Args:
+            id: node id, should be hex encoded.
         """
 #        _log.debug("certificateExist")
         return digest("{}cert".format(id)) in self.storage
@@ -1113,9 +1114,12 @@ class KademliaProtocolAppend(KademliaProtocol):
     def searchForCertificate(self, id):
         """
         Seaches the internal storage for the certificate
-        for a node with a given ID. If only one certificate
+        for a node with a given ID (expected to be in hex). If only one certificate
         is found to match the ID, this is returned.
         If none or several is found, None is returned.
+
+        Args:
+            id: node id, should be hex encoded.
         """
 #        _log.debug("searchForCertificate, id={}".format(id))
         try:
@@ -1134,6 +1138,36 @@ class KademliaProtocolAppend(KademliaProtocol):
         except Exception as err:
             _log.error("searchForCertificate: Failed search, err={}, id={}".format(err, id))
             return None
+
+    def verify_signature(self, signing_nodeid, signed_data, signature):
+        """
+        Seaches for certificate for signing_nodid, and verifies the signature of signed_data
+        for a node with a given ID (expected to be in hex). If only one certificate
+
+        Args:
+            signing_nodeid: node id that signed the data, should be hex encoded.
+            signed_data: signed data
+            signature: signature
+        """
+        cert_stored = self.searchForCertificate(nodeIdHex)
+        if cert_stored == None:
+            _log.error("Certificate for sender of value response cannot be found not present in store"
+                       "\n\tnodeIdHex={}".format(node.id.encode('hex')))
+            raise Exception("Certificate for sender of value response cannot be found not present in store"
+                       "\n\tnodeIdHex={}".format(node.id.encode('hex')))
+        try: 
+            self.runtime_credentials.verify_signed_data_from_certstring(
+                                                                cert_stored,
+                                                                result[1]['signature'].decode('hex'),
+                                                                challenge,
+                                                                certificate.TRUSTSTORE_TRANSPORT)
+        except Exception as err:
+            _log.error("Signature veification failed"
+                       "\n\terr={}"
+                       "\n\tsigning_nodeid={}"
+                       "\n\tsigned_data={}"
+                       "\n\tsignature={}".format(err, signing_nodeid, signed_data, signature))
+            raise
 
     def _timeout(self, msgID):
         self._outstanding[msgID][0].callback((False, None))
@@ -1200,8 +1234,6 @@ class KademliaProtocolAppend(KademliaProtocol):
             self.storage[dkey] = [cert_str]
             store_path = self.runtime_credentials.store_others_cert(certstring=cert_str)
             _log.debug("storeCert: Also stored certificate persistently at: {}".format(store_path))
-#        else:
-#            _log.debug("storeCert: certificate for {} is already in local store".format(id.encode('hex')))
 
     def getOwnCert(self):
         """
