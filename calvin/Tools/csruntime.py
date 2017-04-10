@@ -454,7 +454,7 @@ def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, at
     except:
         pass
     try:
-        call += (" --dht-network-filter \"%s\"" % (dht_networ_filter, )) if dht_network_filter else ""
+        call += (" --dht-network-filter \"%s\"" % (dht_network_filter, )) if dht_network_filter else ""
     except:
         pass
     call += " -w 0"

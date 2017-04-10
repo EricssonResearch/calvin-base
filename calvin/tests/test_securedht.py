@@ -248,7 +248,7 @@ class TestSecurity(unittest.TestCase):
         for i in range(NBR_OF_RUNTIMES):
             _log.info("Starting runtime {}".format(i))
             try:
-                logfile = _config_pytest.getoption("logfile")+"{}".format(5000+i),
+                logfile = _config_pytest.getoption("logfile")+"{}".format(5000+i)
                 outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
                 if outfile == logfile:
                     outfile = None
@@ -366,7 +366,7 @@ class TestSecurity(unittest.TestCase):
             content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_unsignedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            request_handler.set_credentials({domain_name:{"user": "user3", "password": "pass3"}})
+            request_handler.set_credentials({"user": "user3", "password": "pass3"})
             result = request_handler.deploy_application(rt[0], "test_security1_unsignedApp_unsignedActors", content['file'], 
                         content=content,
                         check=True)
@@ -395,18 +395,18 @@ class TestSecurity(unittest.TestCase):
         try:
             actual = request_handler.report(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
         except Exception as err:
-            _log.error("Failed to report from runtime 2, err={}".format(err))
+            _log.error("Failed to report from runtime 0, err={}".format(err))
             raise
         _log.info("actual={}".format(actual))
         assert len(actual) > 5
 
         #Migrate snk actor to rt1
         time.sleep(2)
-        _log.info("Let's migrate actor {} from runtime {}(rt2) to runtime {}(rt1)".format(rt0_id, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'], rt1_id))
+        _log.info("Let's migrate actor {} from runtime {}(rt0) to runtime {}(rt1)".format(rt0_id, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'], rt1_id))
         try:
             request_handler.migrate(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'], rt1_id)
         except Exception as err:
-            _log.error("Failed to send first migration request to runtime 2, err={}".format(err))
+            _log.error("Failed to send first migration request to runtime 0, err={}".format(err))
             raise
         time.sleep(3)
         try:
@@ -431,7 +431,7 @@ class TestSecurity(unittest.TestCase):
         try:
             request_handler.migrate(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:src'], rt1_id)
         except Exception as err:
-            _log.error("Failed to send second migration requestfrom runtime 2, err={}".format(err))
+            _log.error("Failed to send second migration requestfrom runtime 0, err={}".format(err))
             raise
         time.sleep(3)
         try:
