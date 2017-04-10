@@ -62,6 +62,14 @@ def generate_challenge():
     """ Generate a random challenge of 8 bytes, hex string formated"""
     return os.urandom(8).encode("hex")
 
+def cert_key_from_id(id):
+    """
+    Args:
+        id: runtime id in binary
+    """
+    return digest("{}cert".format(id.encode('hex')))
+
+
 def dhtidhex_from_certstring(cert_str):
     nodeid = certificate.cert_DN_Qualifier(certstring=cert_str)
     dhtid = dhtid_from_nodeid(nodeid) 
@@ -136,7 +144,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         _log.debug("KademliaProtocolAppend::callCertFindValue:")
         address = (nodeToAsk.ip, nodeToAsk.port)
         challenge = generate_challenge()
-        key = digest("{}cert".format(nodeToAsk.id.encode('hex')))
+        key = cert_key_from_id(nodeToAsk.id)
         _log.debug("KademliaProtocolAppend::callCertFindValue:"
                    "\n\tchallenge generated={}"
                    "\n\tnodeToAsk={}"
@@ -354,35 +362,40 @@ class KademliaProtocolAppend(KademliaProtocol):
         Return results if signatures are valid?
         """
         _log.debug("KademliaProtocolAppend::handleCertCallResponse, result={}, node={}, challenge={}".format(result, node.id.encode('hex'), challenge))
-        cert_str = result[1]['value']
-        signature = result[1]['signature'].decode('hex')
-        if 'value' in result[1]:
-            try:
-                id = dhtidhex_from_certstring(cert_str)
-            except:
-                _log.error("RETFALSENONE: Invalid certificate "
-                                        "response from {}".format(node.id.encode('hex')))
-                return (False, None)
-            if node.id.encode('hex') == id:
-                try:
-                    self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                        cert_str,
-                                                                        signature,
-                                                                        challenge,
-                                                                        certificate.TRUSTSTORE_TRANSPORT)
-                except:
-                    _log.error(
-                          "Invalid signature on certificate "
-                          "response from {}".format(node.id.encode('hex')))
-                self.router.addContact(node)
-                self.storeCert(cert_str, id)
-                if self.router.isNewNode(node):
-                    self.transferKeyValues(node)
-            else:
-                _log.error("RETFALSENONE: Certificate from {} does not match claimed node id".format(node.id.encode('hex')))
-                return (False, None)
-        else:
+        try:
+            signature = result[1]['signature'].decode('hex')
+            cert_str = result[1]['value'][0]
+        except Exception as err:
+            _log.error("handleCertCallResponse::incorrectly formated result"
+                       "\n\terr={}"
+                       "\n\tresult={}".format(err))
             self.router.removeContact(node)
+            return (False, None)
+        try:
+            id = dhtidhex_from_certstring(cert_str)
+        except Exception as err:
+            _log.error("Failed to extract id from certstr"
+                       "\n\terr={}"
+                       "\n\tid={}".format(err, node.id.encode('hex')))
+            return (False, None)
+        if node.id.encode('hex') == id:
+            try:
+                self.runtime_credentials.verify_signed_data_from_certstring(
+                                                                    cert_str,
+                                                                    signature,
+                                                                    challenge,
+                                                                    certificate.TRUSTSTORE_TRANSPORT)
+            except:
+                _log.error(
+                      "Invalid signature on certificate "
+                      "response from {}".format(node.id.encode('hex')))
+            self.router.addContact(node)
+            self.storeCert(cert_str, id)
+            if self.router.isNewNode(node):
+                self.transferKeyValues(node)
+        else:
+            _log.error("RETFALSENONE: Certificate from {} does not match claimed node id".format(node.id.encode('hex')))
+            return (False, None)
         return result
 
     def handleSignedBucketResponse(self, result, node, challenge):
@@ -401,12 +414,11 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                               challenge))
         except Exception as err:
             _log.debug("handleSignedBucketResponse: Failed to hexify result, err={}, result={}".format(err, result))
-        nodeIdHex = node.id.encode('hex')
         if result[0]:
             if "NACK" in result[1]:
                 return (False, self.handleSignedNACKResponse(result, node, challenge))
             elif 'bucket' in result[1] and 'signature' in result[1]:
-                cert_stored = self.searchForCertificate(nodeIdHex)
+                cert_stored = self.searchForCertificate(node.id)
                 if cert_stored == None:
                     _log.debug(
                            "RETFALSENONE: Certificate for sender of bucket:"
@@ -425,7 +437,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                         buIdHex = buId.encode('hex')
                         buIp = bucketnode[1]
                         buPort = bucketnode[2]
-                        if not self.certificateExists(buIdHex):
+                        if not self.certificateExists(buId):
                             nonCertifiedNode = Node(buId,
                                                     buIp,
                                                     buPort)
@@ -483,25 +495,19 @@ class KademliaProtocolAppend(KademliaProtocol):
                           "RETNONE: Pong ID return "
                           "mismatch for {}".format(node.id.encode('hex')))
                     return None
-                nodeIdHex = node.id.encode('hex')
-                cert_stored = self.searchForCertificate(nodeIdHex)
-                if cert_stored == None:
-                    _log.debug(
-                          "RETNONE: Certificate for sender of pong: {} "
-                          "not present in store".format(node.id.encode('hex')))
-                    return None
-                try: 
-                    self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                        cert_stored,
-                                                                        result[1]['signature'].decode('hex'),
-                                                                        payload,
-                                                                        certificate.TRUSTSTORE_TRANSPORT)
+                verified = self.handle_verify_signature(signing_nodeid=node.id,
+                                                 signed_data=challenge,
+                                                 signature=result[1]['signature'].decode('hex'))
+                if verified:
+                    _log.debug("KademliaProtocolAppend::handleSignedPingResponse:  Signed value is ok"
+                                            "\n\tresult={}"
+                                            "\n\tnode={}"
+                                            "\n\tchallenge={}".format(result,
+                                                                  node.id.encode('hex'),
+                                                                  challenge))
                     self.router.addContact(node)
-                    return result[1]['id']
-                except:
-                    _log.error(
-                          "RETNONE: Bad signature for sender"
-                          " of pong: {}".format(node.id.encode('hex')))
+                else:
+                    _log.error("RETNONE: Signed pong not accepted from {}".format(node.id.encode('hex')))
                     return None
             else:
                 _log.debug(
@@ -532,26 +538,17 @@ class KademliaProtocolAppend(KademliaProtocol):
                 return (False, self.handleSignedNACKResponse(hexify_list_of_tuples(result),
                                                             node,
                                                             challenge))
-            nodeIdHex = node.id.encode('hex')
-            cert_stored = self.searchForCertificate(nodeIdHex)
-            if cert_stored == None:
-                _log.debug(
-                "RETFALSENONE: Certificate for sender of store confirmation: {}"
-                " not present in store".format(node.id.encode('hex')))
-                return (False, None)
-            try: 
-                self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                    cert_stored,
-                                                                    result[1],
-                                                                    challenge,
-                                                                    certificate.TRUSTSTORE_TRANSPORT)
+            verified = self.handle_verify_signature(signing_nodeid=node.id,
+                                         signed_data=challenge,
+                                         signature=result[1])
+            if verified:
                 self.router.addContact(node)
                 _log.debug("handleSignedStoreResponse - finished OK")
                 return (True, True)
-            except:
+            else:
                 _log.error(
-                      "RETFALSENONE: Bad signature for sender of store"
-                      " confirmation: {}".format(node.id.encode('hex')))
+                      "RETFALSENONE: signed store response not accepted from "
+                      "{}".format(node.id.encode('hex')))
                 return (False, None)
         else:
             _log.debug(
@@ -577,19 +574,10 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                       node,
                                                       challenge)
             elif 'value' in result[1] and 'signature' in result[1]:
-                nodeIdHex = node.id.encode('hex')
-                cert_stored = self.searchForCertificate(nodeIdHex)
-                if cert_stored == None:
-                    _log.debug(
-                          "RETFALSENONE: Certificate for sender of value response: {}"
-                          " not present in store".format(node.id.encode('hex')))
-                    return (False, None)
-                try: 
-                    self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                        cert_stored,
-                                                                        result[1]['signature'].decode('hex'),
-                                                                        challenge,
-                                                                        certificate.TRUSTSTORE_TRANSPORT)
+                verified = self.handle_verify_signature(signing_nodeid=node.id,
+                                             signed_data=challenge,
+                                             signature=result[1]['signature'].decode('hex'))
+                if verified:
                     self.router.addContact(node)
                     _log.debug("KademliaProtocolAppend::handleSignedValueResponse:  Signed value is ok"
                                             "\n\tresult={}"
@@ -598,10 +586,8 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                                   node.id.encode('hex'),
                                                                   challenge))
                     return result
-                except:
-                    _log.error(
-                          "RETFALSENONE: Bad signature for sender of "
-                          "value response: {}".format(node.id.encode('hex')))
+                else:
+                    _log.error("RETFALSENONE: Signed value response not accepted from {}".format(node.id.encode('hex')))
                     return (False, None)
             else:
                 _log.debug(
@@ -618,27 +604,24 @@ class KademliaProtocolAppend(KademliaProtocol):
     def handleSignedNACKResponse(self, result, node, challenge):
         _log.debug("KademliaProtocolAppend::handleSignedNACKResponse, result={}, node={}, challenge={}".format(result, node.id.encode('hex'), challenge))
         address = (nodeToAsk.ip, nodeToAsk.port)
-        nodeIdHex = node.id.encode('hex')
-        cert_stored = self.searchForCertificate(nodeIdHex)
-        if cert_stored == None:
-            _log.debug(
-                  "Certificate for sender of NACK: {} "
-                  "not present in store".format(node.id.encode('hex')))
+        cert_stored = self.searchForCertificate(node.id)
         if "NACK" in result[1]:
-            _log.debug(
-                  "NACK in Value response")
-            try:
-                self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                    cert_stored,
-                                                                    result[1]['signature'].decode('hex'),
-                                                                    challenge,
-                                                                    certificate.TRUSTSTORE_TRANSPORT)
+            _log.debug("NACK in Value response")
+            verified = self.handle_verify_signature(signing_nodeid=node.id,
+                                             signed_data=challenge,
+                                             signature=result[1]['signature'].decode('hex'))
+            if verified:
+                self.router.addContact(node)
+                _log.debug("KademliaProtocolAppend::handleSignedValueResponse:  Signed value is ok"
+                                        "\n\tresult={}"
+                                        "\n\tnode={}"
+                                        "\n\tchallenge={}".format(result,
+                                                              node.id.encode('hex'),
+                                                              challenge))
                 self.callPing(node, self.getOwnCert())
                 _log.debug("Certificate sent!")
-            except:
-                _log.error(
-                      "Bad signature for sender "
-                      "of NACK: {}".format(node.id.encode('hex')))
+            else:
+                _log.error("RETNONE: Signed NACK response not accepted from {}".format(node.id.encode('hex')))
         _log.debug("RETNONE: handleSignedNACKResponse")
         return None
 
@@ -662,45 +645,24 @@ class KademliaProtocolAppend(KademliaProtocol):
                                          signature.encode('hex')))
         _log.debug("rpc_store sender=%s, source=%s, key=%s, value=%s" % (sender, nodeid.encode('hex'), key.encode('hex'), str(value)))
         source = Node(nodeid, sender[0], sender[1])
-        nodeIdHex = nodeid.encode('hex')
-        cert_stored = self.searchForCertificate(nodeIdHex)
-        if cert_stored == None:
-            try:
-                signature = self.runtime_credentials.sign_data(challenge)
-            except:
-                _log.error("RETNONE: Failed make signature for store")
-                return None
-            _log.debug(
-                  "Certificate for {} not "
-                  "found in store".format(source))
-            return {'NACK' : None, "signature" : signature}
-        else:
-            try:
-                sourceNodeIdHex = self.sourceNode.id.encode('hex')
-                payload = "{}{}".format(sourceNodeIdHex, challenge)
-                self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                    cert_stored,
-                                                                    signature,
-                                                                    payload,
-                                                                    certificate.TRUSTSTORE_TRANSPORT)
-            except:
-                _log.error(
-                      "RETNONE: Bad signature for sender of "
-                      "store request: {}".format(source))
-                return None
-            try:
-                self.router.addContact(source)
-            except Exception as err:
-                _log.error("Failed to add contact to router, err={}".format(err))
-            self.storage[key] = value
-            try:
-                signature = self.runtime_credentials.sign_data(challenge)
-            except:
-                _log.error(
-                      "RETNONE: Signing of rpc_store failed")
-                return None
-            _log.debug("Signing of rpc_store success")
-            return signature
+        verified, sign = self.rpc_verify_signature(nodeid, challenge, signature)
+        if verified==False and sign:
+            return {'NACK' : None, "signature" : sign}
+        elif verified==False and not sign:
+            return None
+        try:
+            self.router.addContact(source)
+        except Exception as err:
+            _log.error("Failed to add contact to router, err={}".format(err))
+        self.storage[key] = value
+        try:
+            signature = self.runtime_credentials.sign_data(challenge)
+        except:
+            _log.error(
+                  "RETNONE: Signing of rpc_store failed")
+            return None
+        _log.debug("Signing of rpc_store success")
+        return signature
 
     def rpc_append(self, sender, nodeid, key, value, challenge, signature):
         _log.debug("KademliaProtocolAppend::rpc_append:"
@@ -715,58 +677,42 @@ class KademliaProtocolAppend(KademliaProtocol):
                                          value,
                                          challenge,
                                          signature.encode('hex')))
-        source = Node(nodeid, sender[0], sender[1])
-        nodeIdHex = nodeid.encode('hex')
-        cert_stored = self.searchForCertificate(nodeIdHex)
-        if cert_stored == None:
-            try:
-                signature = self.runtime_credentials.sign_data(challenge)
-            except:
-                _log.error("RETNONE: Failed make signature for append")
-                return None
-            _log.debug(
-                  "Certificate for {} not "
-                  "found in store".format(source))
-            return {'NACK' : None, "signature" : signature}
-        else:
-            try:
-                sourceNodeIdHex = self.sourceNode.id.encode('hex')
-                payload = "{}{}".format(sourceNodeIdHex, challenge)
-                self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                    cert_stored,
-                                                                    signature,
-                                                                    payload,
-                                                                    certificate.TRUSTSTORE_TRANSPORT)
-            except:
-                _log.error(
-                      "RETNONE: Bad signature for sender of "
-                      "append request: {}".format(source))
-                return None
-            self.router.addContact(source)
-            try:
-                pvalue = json.loads(value)
-                self.set_keys.add(key)
-                if key not in self.storage:
-                    _log.debug("append key: %s not in storage set value: %s" %
-                                            (base64.b64encode(key), pvalue))
-                    self.storage[key] = value
-                else:
-                    old_value_ = self.storage[key]
-                    old_value = json.loads(old_value_)
-                    new_value = list(set(old_value + pvalue))
-                    _log.debug("append key: %s old: %s add: %s new: %s" %
-                                            (base64.b64encode(key), old_value, pvalue, new_value))
-                    self.storage[key] = json.dumps(new_value)
-            except:
-                _log.error("RETNONE: Trying to append something not a JSON coded list %s" % value, exc_info=True)
-                return None
-            try:
-                signature = self.runtime_credentials.sign_data(challenge)
-            except:
-                _log.error(
-                      "RETNONE: Signing of rpc_append failed")
-                return None
-            return signature
+        try:
+            source = Node(nodeid, sender[0], sender[1])
+        except Exception as err:
+            _log.error("rpc_append: Failed to prepare input for signature verififation, err={}".format(err))
+        verified, sign = self.rpc_verify_signature(nodeid, challenge, signature)
+        if verified==False and sign:
+            #Certificate is missing, return signed challenge and NACK
+            return {'NACK' : None, "signature" : sign}
+            #Signature verification failed
+        elif verified==False and not sign:
+            return None
+        self.router.addContact(source)
+        try:
+            pvalue = json.loads(value)
+            self.set_keys.add(key)
+            if key not in self.storage:
+                _log.debug("append key: %s not in storage set value: %s" %
+                                        (base64.b64encode(key), pvalue))
+                self.storage[key] = value
+            else:
+                old_value_ = self.storage[key]
+                old_value = json.loads(old_value_)
+                new_value = list(set(old_value + pvalue))
+                _log.debug("append key: %s old: %s add: %s new: %s" %
+                                        (base64.b64encode(key), old_value, pvalue, new_value))
+                self.storage[key] = json.dumps(new_value)
+        except:
+            _log.error("RETNONE: Trying to append something not a JSON coded list %s" % value, exc_info=True)
+            return None
+        try:
+            signature = self.runtime_credentials.sign_data(challenge)
+        except:
+            _log.error(
+                  "RETNONE: Signing of rpc_append failed")
+            return None
+        return signature
 
 
 
@@ -778,58 +724,39 @@ class KademliaProtocolAppend(KademliaProtocol):
                "\n\tvalue={}"
                "\n\tchallenge={}"
                "\n\tsignature={}".format(sender,
-                                         nodeid,
-                                         key,
+                                         nodeid.encode('hex'),
+                                         key.encode('hex'),
                                          value,
                                          challenge,
                                          signature.encode('hex')))
         source = Node(nodeid, sender[0], sender[1])
-        nodeIdHex = nodeid.encode('hex')
-        cert_stored = self.searchForCertificate(nodeIdHex)
-        if cert_stored == None:
-            try:
-                signature = self.runtime_credentials.sign_data(challenge)
-            except:
-                _log.error("RETNONE: Failed make signature for remove")
-                return None
-            _log.debug(
-                  "Certificate for {} not "
-                  "found in store".format(source))
-            return {'NACK' : None, "signature" : signature}
-        else:
-            try:
-                sourceNodeIdHex = self.sourceNode.id.encode('hex')
-                payload = "{}{}".format(sourceNodeIdHex, challenge)
-                self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                    cert_stored,
-                                                                    signature,
-                                                                    payload,
-                                                                    certificate.TRUSTSTORE_TRANSPORT)
-            except:
-                _log.error(
-                      "RETNONE: Bad signature for sender of "
-                      "remove request: {}".format(source))
-                return None
-            self.router.addContact(source)
-            try:
-                pvalue = json.loads(value)
-                self.set_keys.add(key)
-                if key in self.storage:
-                    old_value = json.loads(self.storage[key])
-                    new_value = list(set(old_value) - set(pvalue))
-                    self.storage[key] = json.dumps(new_value)
-                    _log.debug("remove key: %s old: %s add: %s new: %s" %
-                                            (base64.b64encode(key), old_value, pvalue, new_value))
-            except:
-                _log.error("RETNONE: Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
-                return None
-            try:
-                signature = self.runtime_credentials.sign_data(challenge)
-            except:
-                _log.error(
-                      "RETNONE: Signing of rpc_remove failed")
-                return None
-            return signature
+        verified, sign = self.rpc_verify_signature(nodeid, challenge, signature)
+        if verified==False and sign:
+            #Certificate is missing, return signed challenge and NACK
+            return {'NACK' : None, "signature" : sign}
+            #Signature verification failed
+        elif verified==False and not sign:
+            return None
+        self.router.addContact(source)
+        try:
+            pvalue = json.loads(value)
+            self.set_keys.add(key)
+            if key in self.storage:
+                old_value = json.loads(self.storage[key])
+                new_value = list(set(old_value) - set(pvalue))
+                self.storage[key] = json.dumps(new_value)
+                _log.debug("remove key: %s old: %s add: %s new: %s" %
+                                        (base64.b64encode(key), old_value, pvalue, new_value))
+        except:
+            _log.error("RETNONE: Trying to remove somthing not a JSON coded list %s" % value, exc_info=True)
+            return None
+        try:
+            signature = self.runtime_credentials.sign_data(challenge)
+        except:
+            _log.error(
+                  "RETNONE: Signing of rpc_remove failed")
+            return None
+        return signature
 
     def rpc_find_node(self, sender, nodeid, key, challenge, signature):
         _log.debug("KademliaProtocolAppend::rpc_find_node:"
@@ -842,66 +769,45 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                          key.encode('hex'),
                                                          challenge,
                                                          signature.encode('hex')))
-        nodeIdHex = nodeid.encode('hex')
         source = Node(nodeid, sender[0], sender[1])
-        cert_stored = self.searchForCertificate(nodeIdHex)
-        if cert_stored == None:
-            _log.erro("No certificate for {} found".format(nodeIdHex))
-            try:
-                signature = self.runtime_credentials.sign_data(challenge)
-            except:
-                _log.error("RETNONE: Failed make signature for find node, challenge={}".format(challenge))
-                return None
-            _log.debug(
-                  "Certificate for {} not found "
-                  "in store, challenge={}".format(source, challenge))
-            return {'NACK' : None, "signature" : signature}
-        else:
-            try:
-                sourceNodeIdHex = self.sourceNode.id.encode('hex')
-                payload = "{}{}".format(sourceNodeIdHex, challenge)
-                self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                    cert_stored,
-                                                                    signature,
-                                                                    payload,
-                                                                    certificate.TRUSTSTORE_TRANSPORT)
-            except:
-                _log.error(
-                      "RETNONE: Bad signature for sender of "
-                      "find_node: {}, challenge={}".format(source, challenge))
-                return None
-            _log.debug("KademliaProtocolAppend::rpc_find_node: signature of challenge was ok, addContact, challenge={}".format(challenge))
-            self.router.addContact(source)
-            node = Node(key)
-            bucket = map(list, self.router.findNeighbors(node, exclude=source))
-            _log.debug("KademliaProtocolAppend::rpc_find_node: bucket={}. Let us now sign challenge={}".format(hexify_list_of_nodes(bucket), challenge))
-            try:
-                signature = self.runtime_credentials.sign_data(challenge)
-            except Exception as err:
-                _log.error(
-                      "RETNONE: Signing of rpc_find_node failed, err={}, challenge={}".format(err, challenge))
-                return None
-            value = {'bucket': bucket, 'signature': signature.encode('hex')}
-            try:
-                hex_buckets=[]
-                for b in bucket:
-                    hex_buckets.append(b[0].encode('hex'))
-            except Exception as err:
-                _log.error("Failed to hexify buckets, err={}, challenge={}".format(err, challenge))
-                hex_buckets=None
-            _log.debug("KademliaProtocolAppend::rpc_find_node: we have found the bucket, signed the challenge and will now return it"
-                               "\n\tdhtid={}"
-                               "\n\tkey={}"
-                               "\n\thex_buckets={}"
-                               "\n\treturned value={}"
-                               "\n\tchallenge={}"
-                               "\n\tsignature={}".format(nodeid.encode('hex'),
-                                                         key.encode('hex'),
-                                                         hex_buckets,
-                                                         value,
-                                                         challenge,
-                                                         signature.encode('hex')))
-            return value
+        verified, sign = self.rpc_verify_signature(nodeid, challenge, signature)
+        if verified==False and sign:
+            #Certificate is missing, return signed challenge and NACK
+            return {'NACK' : None, "signature" : sign}
+            #Signature verification failed
+        elif verified==False and not sign:
+            return None
+        self.router.addContact(source)
+        node = Node(key)
+        bucket = map(list, self.router.findNeighbors(node, exclude=source))
+        _log.debug("KademliaProtocolAppend::rpc_find_node: bucket={}. Let us now sign challenge={}".format(hexify_list_of_nodes(bucket), challenge))
+        try:
+            signature = self.runtime_credentials.sign_data(challenge)
+        except Exception as err:
+            _log.error(
+                  "RETNONE: Signing of rpc_find_node failed, err={}, challenge={}".format(err, challenge))
+            return None
+        value = {'bucket': bucket, 'signature': signature.encode('hex')}
+        try:
+            hex_buckets=[]
+            for b in bucket:
+                hex_buckets.append(b[0].encode('hex'))
+        except Exception as err:
+            _log.error("Failed to hexify buckets, err={}, challenge={}".format(err, challenge))
+            hex_buckets=None
+        _log.debug("KademliaProtocolAppend::rpc_find_node: we have found the bucket, signed the challenge and will now return it"
+                           "\n\tdhtid={}"
+                           "\n\tkey={}"
+                           "\n\thex_buckets={}"
+                           "\n\treturned value={}"
+                           "\n\tchallenge={}"
+                           "\n\tsignature={}".format(nodeid.encode('hex'),
+                                                     key.encode('hex'),
+                                                     hex_buckets,
+                                                     value,
+                                                     challenge,
+                                                     signature.encode('hex')))
+        return value
 
     def rpc_find_value(self, sender, nodeid, key, challenge, signature, cert_str=None):
         """
@@ -922,62 +828,93 @@ class KademliaProtocolAppend(KademliaProtocol):
                                          signature.encode('hex'),
                                          cert_str != None))
         source = Node(nodeid, sender[0], sender[1])
-        nodeIdHex = nodeid.encode('hex')
-        cert_stored = self.searchForCertificate(nodeIdHex)
-        if cert_stored == None:
-            sourceNodeIdHex = self.sourceNode.id.encode("hex")
-
-            if key == digest("{}cert".format(self.sourceNode.id)) and \
-                                                        cert_str != None:
+        verified, sign = self.rpc_verify_signature(nodeid, challenge, signature)
+        if verified==False and sign:
             # If the senders certificate is not in store,
             # the only allowed action is to ask it for its certificate
+            sourceNodeIdHex = self.sourceNode.id.encode("hex")
+            if key == cert_key_from_id(self.sourceNode.id) and \
+                                                        cert_str != None:
                 try:
                     #verify certificate chain
                     self.runtime_credentials.verify_certificate(cert_str, certificate.TRUSTSTORE_TRANSPORT)
                     id = dhtidhex_from_certstring(cert_str)
-                    if id != nodeIdHex:
+                    if id != nodeid.encode('hex'):
                         _log.debug(
                               "RETNONE: Explicit certificate in find_value "
                               "from {} does not match nodeid, challenge={}".format(source, challenge))
                         return None
-                    sourceNodeIdHex = self.sourceNode.id.encode('hex')
                     payload = "{}{}".format(sourceNodeIdHex, challenge)
                     self.runtime_credentials.verify_signed_data_from_certstring(
                                                                     cert_str,
                                                                     signature,
                                                                     payload,
                                                                     certificate.TRUSTSTORE_TRANSPORT)
-                    self.storeCert(cert_str, nodeIdHex)
+                    self.storeCert(cert_str, node.id)
                 except:
                     _log.error(
                           "RETNONE: Invalid certificate "
                           "request: {}, challenge={}".format(source, challenge))
                     return None
-            else:
-                try:
-                    signature = self.runtime_credentials.sign_data(challenge)
-                except:
-                    _log.error("RETNONE: Failed make signature for find value, challenge={}".format(challenge))
-                    return None
-                _log.debug(
-                      "Certificate for {} not "
-                      "found in store, challenge={}".format(source, challenge))
-                return { 'NACK' : None, 'signature': signature.encode('hex')}
-        else:
-            try:
-                sourceNodeIdHex = self.sourceNode.id.encode('hex')
-                payload = "{}{}".format(sourceNodeIdHex, challenge)
-                # Verifying stored certificate with signature.
-                self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                    cert_stored,
-                                                                    signature,
-                                                                    payload,
-                                                                    certificate.TRUSTSTORE_TRANSPORT)
-            except:
-                _log.error(
-                      "RETNONE: Bad signature for sender of "
-                      "find_value: {}, challenge={}".format(source, challenge))
-                return None
+            return {'NACK' : None, "signature" : sign}
+        elif verified==False and not sign:
+            return None
+#        nodeIdHex = nodeid.encode('hex')
+#        cert_stored = self.searchForCertificate(nodeIdHex)
+#        if cert_stored == None:
+#            sourceNodeIdHex = self.sourceNode.id.encode("hex")
+
+#            if key == digest("{}cert".format(self.sourceNode.id)) and \
+#                                                        cert_str != None:
+#            # If the senders certificate is not in store,
+#            # the only allowed action is to ask it for its certificate
+#                try:
+#                    #verify certificate chain
+#                    self.runtime_credentials.verify_certificate(cert_str, certificate.TRUSTSTORE_TRANSPORT)
+#                    id = dhtidhex_from_certstring(cert_str)
+#                    if id != nodeIdHex:
+#                        _log.debug(
+#                              "RETNONE: Explicit certificate in find_value "
+#                              "from {} does not match nodeid, challenge={}".format(source, challenge))
+#                        return None
+#                    sourceNodeIdHex = self.sourceNode.id.encode('hex')
+#                    payload = "{}{}".format(sourceNodeIdHex, challenge)
+#                    self.runtime_credentials.verify_signed_data_from_certstring(
+#                                                                    cert_str,
+#                                                                    signature,
+#                                                                    payload,
+#                                                                    certificate.TRUSTSTORE_TRANSPORT)
+#                    self.storeCert(cert_str, nodeIdHex)
+#                except:
+#                    _log.error(
+#                          "RETNONE: Invalid certificate "
+#                          "request: {}, challenge={}".format(source, challenge))
+#                    return None
+#            else:
+#            try:
+#                signature = self.runtime_credentials.sign_data(challenge)
+#            except:
+#                _log.error("RETNONE: Failed make signature for find value, challenge={}".format(challenge))
+#                return None
+#            _log.debug(
+#                  "Certificate for {} not "
+#                  "found in store, challenge={}".format(source, challenge))
+#            return { 'NACK' : None, 'signature': signature.encode('hex')}
+#        else:
+#            try:
+#                sourceNodeIdHex = self.sourceNode.id.encode('hex')
+#                payload = "{}{}".format(sourceNodeIdHex, challenge)
+#                # Verifying stored certificate with signature.
+#                self.runtime_credentials.verify_signed_data_from_certstring(
+#                                                                    cert_stored,
+#                                                                    signature,
+#                                                                    payload,
+#                                                                    certificate.TRUSTSTORE_TRANSPORT)
+#            except:
+#                _log.error(
+#                      "RETNONE: Bad signature for sender of "
+#                      "find_value: {}, challenge={}".format(source, challenge))
+#                return None
         _log.debug("KademliaProtocolAppend::rpc_find_value: signed challenge ok, addContact, challenge={}".format(challenge))
         self.router.addContact(source)
         exists, value = self.storage.get(key, None)
@@ -1027,16 +964,15 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                  signature.encode("hex"),
                                                  cert_str != None))
         source = Node(nodeid, sender[0], sender[1])
-        nodeIdHex = nodeid.encode("hex")
         if cert_str != None:
             try:
                 self.runtime_credentials.verify_certificate(cert_str, certificate.TRUSTSTORE_TRANSPORT)
                 # Ensure that the CA of the received certificate is trusted
                 id = dhtidhex_from_certstring(cert_str)
-                if id != nodeIdHex:
+                if id != nodeid.encode("hex"):
                     _log.debug(
                           "RETNONE: Explicit certificate in ping from {} "
-                          "does not match nodeid\n\tid from cert={}\n\tid in ping={}, challenge={}".format(source, id, nodeIdHex, challenge))
+                          "does not match nodeid\n\tid from cert={}\n\tid in ping={}, challenge={}".format(source, id, nodeid.encode('hex'), challenge))
                     return None
                 sourceNodeIdHex = self.sourceNode.id.encode('hex')
                 payload = "{}{}".format(sourceNodeIdHex, challenge)
@@ -1062,7 +998,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                       "explicit certificate: {}, err={}, challenge={}".format(source, e, challenge))
                 return None
         else:
-            cert_stored = self.searchForCertificate(nodeIdHex)
+            cert_stored = self.searchForCertificate(node.id)
             if cert_stored == None:
                 try:
                     signature = self.runtime_credentials.sign_data(challenge)
@@ -1100,16 +1036,57 @@ class KademliaProtocolAppend(KademliaProtocol):
     # MISC              #
     #####################
 
+    def storeOwnCert(self, cert_str):
+        """
+        Stores the string representation of the nodes own
+        certificate in the DHT.
+
+        """
+#        _log.debug("storeOwnCert")
+        self.storage[cert_key_from_id(self.sourceNode.id)] = [cert_str]
+
+    def getOwnCert(self):
+        """
+        Retrieves the nodes own certificate from the nodes DHT-storage and
+        returns it.
+        """
+#        _log.debug("getOwnCert")
+        return self.storage[cert_key_from_id(self.sourceNode.id)][0]
+
+    def storeCert(self, cert_str, id):
+        """
+        Takes a string representation of a PEM-encoded certificate and
+        a nodeid as input. If the string is a valid PEM-encoded certificate
+        and the CA of the the certificate is present in the trustedStore of
+        this node, the certificate is stored in the DHT and written to disk
+        for later use.
+        """
+        _log.debug("storeCert"
+                "\n\tid={}".format(id.encode('hex')))
+        try:
+            self.runtime_credentials.verify_certificate(cert_str, certificate.TRUSTSTORE_TRANSPORT)
+        except:
+            _log.error("The certificate for {} is not signed by a trusted CA!".format(id.encode('hex')))
+            return
+        exists = self.storage.get(cert_key_from_id(id))
+        if not exists[0]:
+            dkey=cert_key_from_id(id)
+            _log.debug("storeCert  Cert not stored, let's store it at dkey={}".format(dkey.encode('hex')))
+            self.storage[dkey] = [cert_str]
+            store_path = self.runtime_credentials.store_others_cert(certstring=cert_str)
+            _log.debug("storeCert: Also stored certificate persistently at: {}".format(store_path))
+
     def certificateExists(self, id):
         """
         Returns however the certificate for a
         given id exists in the own DHT storage. 
 
         Args:
-            id: node id, should be hex encoded.
+            id: node id
         """
 #        _log.debug("certificateExist")
-        return digest("{}cert".format(id)) in self.storage
+#        return digest("{}cert".format(id)) in self.storage
+        return cert_key_from_id(id) in self.storage
 
     def searchForCertificate(self, id):
         """
@@ -1119,55 +1096,99 @@ class KademliaProtocolAppend(KademliaProtocol):
         If none or several is found, None is returned.
 
         Args:
-            id: node id, should be hex encoded.
+            id: node id.
         """
-#        _log.debug("searchForCertificate, id={}".format(id))
+        _log.debug("searchForCertificate, id={}".format(id.encode('hex')))
         try:
-            key = digest("{}cert".format(id))
+            key = cert_key_from_id(id)
             if key in self.storage:
-#                _log.debug("Certificate found in local storage {}".format(self.storage.get(digest("{}cert".format(id)))))
+                _log.debug("Certificate found in local storage {}".format(self.storage.get(cert_key_from_id(id))))
                 result = self.storage.get(key)
                 cert_list = list(result)[1]
                 cert_str = cert_list[0]
-                return cert_str 
+                return cert_str
             else:
+#                return None
  #               _log.debug("Certificate not in local storage, search for it in persistant storage")
-                nodeid = nodeid_from_dhtid(id)
+                nodeid = nodeid_from_dhtid(id.encode('hex'))
                 return self.runtime_credentials.get_certificate_locally(cert_name=nodeid)
 
         except Exception as err:
             _log.error("searchForCertificate: Failed search, err={}, id={}".format(err, id))
             return None
 
-    def verify_signature(self, signing_nodeid, signed_data, signature):
+    def rpc_verify_signature(self, signing_nodeid, challenge, signature, cert_str=None):
+        """
+        Seaches for certificate for signing_nodid, and verifies the signature of signed_data
+        for a node with a given ID (expected to be in hex). If only one certificate
+
+        Args:
+            signing_nodeid: node id that signed the data, should be binary value.
+            signed_data: signed data (binary data)
+            signature: signature (binary data)
+        """
+        try:
+            sourceNodeIdHex = self.sourceNode.id.encode('hex')
+            payload = "{}{}".format(sourceNodeIdHex, challenge)
+        except Exception as err:
+            _log.error("rpc_append: Failed to encode nodeid, err={}".format(err))
+            raise
+        if not cert_str:
+            cert_str = self.searchForCertificate(signing_nodeid)
+        if cert_str == None:
+            _log.debug("Certificate for sender cannot be found in local store, sign challenge and return signature"
+                       "\n\tnodeIdHex={}".format(siging_nodeid.encode('hex')))
+            try:
+                sign = self.runtime_credentials.sign_data(challenge)
+                return False, sign
+            except Exception as err:
+                _log.error("RETNONE: Failed to sign the challenge, err={}".format(err))
+                return None, None
+        try: 
+            self.runtime_credentials.verify_signed_data_from_certstring(
+                                                                cert_str,
+                                                                signature,
+                                                                payload,
+                                                                certificate.TRUSTSTORE_TRANSPORT)
+            return True, None
+        except Exception as err:
+            _log.error("Signature verification failed"
+                       "\n\terr={}"
+                       "\n\tsigning_nodeid={}"
+                       "\n\tsigned_data={}"
+                       "\n\tsignature={}".format(err, siging_nodeid.encode('hex'), payload, signature))
+            return False, None
+
+    def handle_verify_signature(self, signing_nodeid, signed_data, signature, cert_str=None):
         """
         Seaches for certificate for signing_nodid, and verifies the signature of signed_data
         for a node with a given ID (expected to be in hex). If only one certificate
 
         Args:
             signing_nodeid: node id that signed the data, should be hex encoded.
-            signed_data: signed data
-            signature: signature
+            signed_data: signed data (binary data)
+            signature: signature (binary data)
         """
-        cert_stored = self.searchForCertificate(nodeIdHex)
-        if cert_stored == None:
-            _log.error("Certificate for sender of value response cannot be found not present in store"
-                       "\n\tnodeIdHex={}".format(node.id.encode('hex')))
-            raise Exception("Certificate for sender of value response cannot be found not present in store"
-                       "\n\tnodeIdHex={}".format(node.id.encode('hex')))
+        if not cert_str:
+            cert_str = self.searchForCertificate(signing_nodeid)
+        if cert_str == None:
+            _log.error("Certificate for sender cannot be found in local store, deny access"
+                       "\n\tnodeIdHex={}".format(signing_nodeid))
+            return False
         try: 
             self.runtime_credentials.verify_signed_data_from_certstring(
-                                                                cert_stored,
-                                                                result[1]['signature'].decode('hex'),
-                                                                challenge,
+                                                                cert_str,
+                                                                signature,
+                                                                signed_data,
                                                                 certificate.TRUSTSTORE_TRANSPORT)
+            return True
         except Exception as err:
-            _log.error("Signature veification failed"
+            _log.error("Signature verification failed"
                        "\n\terr={}"
                        "\n\tsigning_nodeid={}"
                        "\n\tsigned_data={}"
                        "\n\tsignature={}".format(err, signing_nodeid, signed_data, signature))
-            raise
+            return False
 
     def _timeout(self, msgID):
         self._outstanding[msgID][0].callback((False, None))
@@ -1203,46 +1224,6 @@ class KademliaProtocolAppend(KademliaProtocol):
                     self.callStore(node, key, value)
                     return None
 
-    def storeOwnCert(self, cert_str):
-        """
-        Stores the string representation of the nodes own
-        certificate in the DHT.
-        """
-#        _log.debug("storeOwnCert")
-        sourceNodeIdHex = self.sourceNode.id.encode("hex")
-        self.storage[digest("{}cert".format(self.sourceNode.id))] = [cert_str]
-
-    def storeCert(self, cert_str, id):
-        """
-        Takes a string representation of a PEM-encoded certificate and
-        a nodeid as input. If the string is a valid PEM-encoded certificate
-        and the CA of the the certificate is present in the trustedStore of
-        this node, the certificate is stored in the DHT and written to disk
-        for later use.
-        """
-#        _log.debug("storeCert"
-#                "\n\tid={}".format(id.encode('hex')))
-        try:
-            self.runtime_credentials.verify_certificate(cert_str, certificate.TRUSTSTORE_TRANSPORT)
-        except:
-            _log.error("The certificate for {} is not signed by a trusted CA!".format(id.encode('hex')))
-            return
-        exists = self.storage.get(digest("{}cert".format(id)))
-        if not exists[0]:
-            dkey = digest("{}cert".format(id))
-            _log.debug("storeCert  Cert not stored, let's store it at dkey={}".format(dkey.encode('hex')))
-            self.storage[dkey] = [cert_str]
-            store_path = self.runtime_credentials.store_others_cert(certstring=cert_str)
-            _log.debug("storeCert: Also stored certificate persistently at: {}".format(store_path))
-
-    def getOwnCert(self):
-        """
-        Retrieves the nodes own certificate from the nodes DHT-storage and
-        returns it.
-        """
-#        _log.debug("getOwnCert")
-        sourceNodeIdHex = self.sourceNode.id.encode("hex")
-        return self.storage[digest("{}cert".format(self.sourceNode.id))][0]
 
 class AppendServer(Server):
 
@@ -1289,7 +1270,6 @@ class AppendServer(Server):
                 if result[0]:
                     resultSign = result[1]['signature'].decode('hex')
                     resultId = result[1]['id'].decode('hex')
-                    resultIdHex = resultId.encode('hex')
 #                    data = self.protocol.certificateExists(resultId)
 #                    if not data:
 #                        identifier = digest("{}cert".format(resultId))
@@ -1298,7 +1278,8 @@ class AppendServer(Server):
 #                                                            port),
 #                                                       Node(identifier))
 #                    else:
-                    cert_stored = self.protocol.searchForCertificate(resultIdHex)
+#                    cert_stored = self.protocol.searchForCertificate(resultIdHex)
+                    cert_stored = self.protocol.searchForCertificate(resultId)
                     try:
                         self.runtime_credentials.verify_signed_data_from_certstring(
                                                                     cert_stored,

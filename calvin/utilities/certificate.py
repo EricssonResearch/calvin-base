@@ -321,7 +321,13 @@ def verify_certificate(type, certstring, domain=None, security_dir=None):
     try:
         store_ctx.verify_certificate()
     except Exception as e:
-        _log.error("Failed to verify certificate: %s" % e)
+        _log.error("Failed to verify certificate:"
+                   "\n\terr={}"
+                   "\n\ttype={}"
+                   "\n\tcertstring={}"
+                   "\n\tdomain={}"
+                   "\n\tsecurity_dir={}"
+                   "".format(err, type, certstring, domain, security_dir))
     return certx509
 
 def verify_cert_with_policy(certpath):

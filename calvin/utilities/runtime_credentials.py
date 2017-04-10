@@ -463,9 +463,10 @@ class RuntimeCredentials():
 #        _log.debug("verify_certificate:\n\tcert_str={}\n\ttype={}".format(cert_str, type))
         try:
             cert = certificate.verify_certificate(type, cert_str, security_dir=self.security_dir)
+            return cert
         except Exception as err:
             _log.error("Failed to verify certificate, err={}".format(err))
-        return cert
+            raise
 
     def get_private_key(self, security_dir=None):
         """Return the node's private key"""
