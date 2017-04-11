@@ -8,10 +8,15 @@ increasing complexity, with limited effort.
 
 The example assumes the following devices:
 
- - A computer to server as 'server'
+ - A computer to serve as 'server'
  - Two Raspberry Pi's 
  - One Philips-Hue Smart Light 
  - One Web Camera
+
+The Philips Hue is used in the part_2.calvin script as well as in the CalvinGUI
+manual. However, should no Philips Hue be available, there´s a substitute script
+part_2_no_hue.calvin available to use instead. In this script the lock status
+will be printed to the terminal instead of controlling the lamp.
 
 Install the required components by running the install_components.sh script.
 (This assumes a compatible shell such as bash/zsh/ash.)

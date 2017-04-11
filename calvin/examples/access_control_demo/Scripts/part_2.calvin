@@ -1,16 +1,6 @@
-component Lock(address, username, lightno) state -> {
-    green   : std.Constant(data=1)
-    compare : std.Compare(op="=")
-    lock    : hue.StopLight(address=address, username=username, lightno=lightno)
-    sink    : flow.Terminator()
-
-    .state          > compare.a
-    green.token     > compare.b
-    compare.result  > lock.state
-    lock.status > sink.void
-}
-
 button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
-lock   : Lock(address="192.168.0.101", username="newdeveloper", lightno=1)
+lock   : hue.StopLight(address="192.168.0.101", username="newdeveloper", lightno=1)
+sink   : flow.Terminator()
 
 button.state > lock.state
+lock.status > sink.void
