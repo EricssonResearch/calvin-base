@@ -60,7 +60,7 @@ actor_store_path = os.path.join(credentials_testdir, "store")
 orig_application_store_path = os.path.join(security_testdir, "scripts")
 application_store_path = os.path.join(credentials_testdir, "scripts")
 
-NBR_OF_RUNTIMES=8
+NBR_OF_RUNTIMES=6
 
 try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
@@ -267,6 +267,7 @@ class TestSecurity(unittest.TestCase):
                      )
             rt.append(RT("http://{}:{}".format(hostname,5020+i)))
             time.sleep(0.2)
+        time.sleep(1)
         _log.info("------------------------------------------------")
         for i in range(NBR_OF_RUNTIMES):
             _log.info("rt[{}] = {}".format(i,  runtimes[i].node_id))
