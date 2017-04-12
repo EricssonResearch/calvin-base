@@ -257,7 +257,6 @@ class KademliaProtocolAppend(KademliaProtocol):
             payload = self.payload_to_be_signed(nodeToAsk.id,
                                                  challenge,
                                                  "ping_request")
-            _log.info("Hakan callPing payload={}".format(payload))
             signature = self.sign_data(payload)
         except:
             _log.error("RETNONE: Signing of ping failed")
@@ -680,7 +679,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                              challenge,
                                              "find_value_request",
                                              key=key)
-        verified, sign = self.rpc_verify_signature(nodeid, challenge, payload, signature)
+        verified, sign = self.verify_signature(nodeid, challenge, payload, signature)
         if verified==False and sign:
             #Certificate is missing, return signed challenge and NACK
             return {'NACK' : None, "signature" : sign}
@@ -746,13 +745,13 @@ class KademliaProtocolAppend(KademliaProtocol):
                                              challenge,
                                              "find_cert_request",
                                              key=key)
-        verified, sign = self.rpc_verify_signature(nodeid, challenge, payload, signature)
+        verified, sign = self.verify_signature(nodeid, challenge, payload, signature)
         if verified==False and sign:
             # If the senders certificate is not in store,
             # the only allowed action is to ask for our certificate
             sourceNodeIdHex = self.sourceNode.id.encode("hex")
             if cert_str != None:
-                verified, sign = self.rpc_verify_signature(nodeid, key, value, challenge, signature, cert_str=cert_str)
+                verified, sign = self.verify_signature(nodeid, key, value, challenge, signature, cert_str=cert_str)
                 if verified==True:
                     #The supplied cert checks out, store it for furher use
                     self.storeCert(cert_str, node.id)
@@ -812,29 +811,9 @@ class KademliaProtocolAppend(KademliaProtocol):
                                              challenge,
                                              "find_value_request",
                                              key=key)
-        verified, sign = self.rpc_verify_signature(nodeid, challenge, payload, signature)
+        verified, sign = self.verify_signature(nodeid, challenge, payload, signature)
         if verified==False and sign:
-            # If the senders certificate is not in store,
-            # the only allowed action is to ask for our certificate
-            sourceNodeIdHex = self.sourceNode.id.encode("hex")
-            if key == cert_key_from_id(self.sourceNode.id) and \
-                                                        cert_str != None:
-                verified, sign = self.rpc_verify_signature(nodeid, key, value, challenge, signature, cert_str=cert_str)
-                if verified==True:
-                    #The supplied cert checks out, store it for furher use
-                    self.storeCert(cert_str, node.id)
-                elif verified==False and sign==None:
-                    #Verification of the signature failed
-                    _log.error(
-                          "RETNONE: Invalid certificate "
-                          "source: {}, challenge={}".format(source, challenge))
-                    return None
-                else:
-                    #Verification of the signature failed
-                    _log.error(
-                          "RETNONE: Should not end up heree"
-                          "source: {}, challenge={}".format(source, challenge))
-                    return None
+            return {'NACK' : None, "signature" : sign}
         elif verified==False and not sign:
             return None
         _log.debug("KademliaProtocolAppend::rpc_find_value: signed challenge ok, addContact, challenge={}".format(challenge))
@@ -894,14 +873,12 @@ class KademliaProtocolAppend(KademliaProtocol):
             payload = self.payload_to_be_signed(self.sourceNode.id,
                                                  challenge,
                                                  "ping_request")
-            _log.info("Hakan rpc_ping payload={}".format(payload))
         except Exception as err:
             _log.error("Failed to derive payload"
                        "\n\terr={}".format(err))
         if cert_str != None:
             try:
-                verified, sign = self.rpc_verify_signature(nodeid, challenge, payload, signature, cert_str=cert_str)
-                _log.info("Hakan efter, verified={}".format(verified))
+                verified, sign = self.verify_signature(nodeid, challenge, payload, signature, cert_str=cert_str)
             except Exception as err:
                 _log.error("Signature verification of ping failed"
                            "\n\terr={}".format(err))
@@ -913,7 +890,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                 self.storeCert(cert_str, nodeid)
                 self.transferKeyValues(source)
         else:
-            verified, sign = self.rpc_verify_signature(nodeid, challenge, payload, signature)
+            verified, sign = self.verify_signature(nodeid, challenge, payload, signature)
             if verified==False and sign:
                 #Certificate is missing, return signed challenge and NACK
                 return {'NACK' : None, "signature" : sign}
@@ -960,7 +937,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                              "store_request",
                                              key=key,
                                              value=value)
-        verified, sign = self.rpc_verify_signature(nodeid, challenge, payload, signature)
+        verified, sign = self.verify_signature(nodeid, challenge, payload, signature)
         if verified==False and sign:
             return {'NACK' : None, "signature" : sign}
         elif verified==False and not sign:
@@ -1004,7 +981,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                              "append_request",
                                              key=key,
                                              value=value)
-        verified, sign = self.rpc_verify_signature(nodeid, challenge, payload, signature)
+        verified, sign = self.verify_signature(nodeid, challenge, payload, signature)
         if verified==False and sign:
             #Certificate is missing, return signed challenge and NACK
             return {'NACK' : None, "signature" : sign}
@@ -1061,7 +1038,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                              "remove_request",
                                              key=key,
                                              value=value)
-        verified, sign = self.rpc_verify_signature(nodeid, challenge, payload, signature)
+        verified, sign = self.verify_signature(nodeid, challenge, payload, signature)
         if verified==False and sign:
             #Certificate is missing, return signed challenge and NACK
             return {'NACK' : None, "signature" : sign}
@@ -1178,10 +1155,6 @@ class KademliaProtocolAppend(KademliaProtocol):
             _log.error("searchForCertificate: Failed search, err={}, id={}".format(err, id))
             return None
 
-    def rpc_ping_payload(self, sender, nodeid, challenge):
-        _log.info("Hakan signed_payload")
-        return "{}{}{}".format(nodeid, sender, nodeid, challenge)
-
     def payload_to_be_signed(self, recepient_nodeid, challenge, method, key=None, value=None, nodeToFind=None):
         import pickle
         nodeIdHex=recepient_nodeid.encode('hex')
@@ -1221,7 +1194,6 @@ class KademliaProtocolAppend(KademliaProtocol):
             raise Exception("payload_to_be_signed: Method chosen not supported")
 
     def sign_data(self, payload):
-        _log.info("Hakan sign_data, payload={}".format(payload))
         try:
             signature = self.runtime_credentials.sign_data(payload)
         except Exception as err:
@@ -1230,7 +1202,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         return signature
 
     #TODO: rename as it is not a RPC method
-    def rpc_verify_signature(self, nodeid, challenge, payload, signature, cert_str=None):
+    def verify_signature(self, nodeid, challenge, payload, signature, cert_str=None):
         """
         Seaches for certificate for nodeid, and verifies the signature of signed_data
         for a node with a given ID (expected to be in hex). If only one certificate
@@ -1240,7 +1212,6 @@ class KademliaProtocolAppend(KademliaProtocol):
             signed_data: signed data (binary data)
             signature: signature (binary data)
         """
-        _log.info("Hakan kommer hit")
         if not cert_str:
             cert_str = self.searchForCertificate(nodeid)
         if cert_str == None:
@@ -1271,7 +1242,7 @@ class KademliaProtocolAppend(KademliaProtocol):
                                                                 certificate.TRUSTSTORE_TRANSPORT)
             return True, None
         except Exception as err:
-            _log.error("rpc_verify_signature: Signature verification failed"
+            _log.error("verify_signature: Signature verification failed"
                        "\n\terr={}"
                        "\n\tnodeid={}"
                        "\n\tpayload={}"
