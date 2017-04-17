@@ -1,0 +1,19 @@
+# Some of the steps that can be used to install the develop branch on Arch Linux:
+
+# step 1:
+sudo pacman -Syyu git
+
+# step 2:
+sudo wget https://bootstrap.pypa.io/ez_setup.py -O - | sudo python2
+
+# step 3:
+sudo easy_install pip
+
+# step 4:
+git clone -b develop https://github.com/EricssonResearch/calvin-base calvin-base
+
+# step 5:
+cd calvin-base && sudo pip2 install -e .
+
+# step 6, test (we are in calvin-base/):
+csruntime --host localhost calvin/examples/sample-scripts/test1.calvin

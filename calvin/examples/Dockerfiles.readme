@@ -1,0 +1,13 @@
+The containers are based on Alpine Linux base image. The develop branch of calvin is installed. The current container image size would be around 115 MB (it could be furthermore reduced).
+
+1. To build the image:
+sudo docker build -t imriss/calvin:1.0 .
+
+2. To fix a bug:
+ID=$(sudo docker run -d imriss/calvin:1.0 /bin/sh)
+sudo docker export $ID | sudo docker import - imriss/calvin:1.5
+
+3. To run in interactive mode:
+sudo docker run -t -i imriss/calvin:1.5 /bin/sh
+
+Note: Step 2 is required for now because starting version 1.0 in interactive mode results in an ELF error to be fixed.
