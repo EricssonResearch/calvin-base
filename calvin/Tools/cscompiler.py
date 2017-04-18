@@ -50,8 +50,6 @@ def main():
                            help='source file to compile')
     # argparser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False,
     #                        help='leave debugging information in output')
-    argparser.add_argument('--stdout', dest='to_stdout', action='store_true',
-                           help='send output to stdout instead of file (default)')
     argparser.add_argument('--compact', dest='indent', action='store_const', const=None, default=4,
                            help='use compact JSON format instead of readable (default)')
     argparser.add_argument('--sorted', dest='sorted', action='store_true', default=False,
@@ -63,6 +61,12 @@ def main():
                            help='informational output from the compiler')
     argparser.add_argument('--deployscript', action='store_true',
                            help='generate deployjson file')
+    outgroup = argparser.add_mutually_exclusive_group()
+    outgroup.add_argument('--stdout', dest='outfile', action='store_const', const="/dev/stdout",
+                           help='send output to stdout instead of file (default)')
+    outgroup.add_argument('--output', dest='outfile', type=str, default='', metavar='<filename>',
+                           help='Output file, default is filename.json')
+                           
 
     args = argparser.parse_args()
 
@@ -80,13 +84,13 @@ def main():
             # Don't produce output if there were errors
             continue
         string_rep = json.dumps(deployable, indent=args.indent, sort_keys=args.sorted)
-        if args.to_stdout:
-            print(string_rep)
+        if args.outfile:
+            dst = args.outfile
         else:
             path, ext = os.path.splitext(filename)
             dst = path + ".json"
-            with open(dst, 'w') as f:
-                f.write(string_rep)
+        with open(dst, 'w') as f:
+            f.write(string_rep)
 
     return exit_code
 
