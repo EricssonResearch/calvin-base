@@ -50,7 +50,8 @@ setup(name='calvin',
           'PyJWT==1.4.0',
           'service-identity==16.0.0',
           'ndg-httpsclient==0.4.2',
-          'pyasn1==0.1.9'
+          'pyasn1==0.1.9',
+          'pystache==0.5.4'
       ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
@@ -78,7 +79,8 @@ setup(name='calvin',
               'cscompile=calvin.Tools.cscompiler:main',
               'csmanage=calvin.Tools.csmanage:main',
               'csweb=calvin.Tools.www.csweb:main',
-              'csviz=calvin.Tools.csviz:main'
+              'csviz=calvin.Tools.csviz:main',
+              'csactortest=calvin.Tools.csactortest:main'
           ]
       }
       )

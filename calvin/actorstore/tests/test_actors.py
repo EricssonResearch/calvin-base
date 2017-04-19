@@ -335,6 +335,17 @@ class ActorTester(object):
         return {'pass': test_pass, 'fail': test_fail, 'skipped': no_test,
                 'errors': self.illegal_actors, 'components': self.components}
 
+def merge_results(result1, result2):
+  result = {}
+  for k in result1.keys():
+    x = result1[k]
+    if type(x) is list:
+      x.extend(result2[k])
+    else:
+      x.update(result2[k])
+    result[k] = x
+  return result
+
 
 def show_result(header, result):
     print header
