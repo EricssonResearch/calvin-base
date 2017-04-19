@@ -53,6 +53,9 @@ class HTTPClientHandler(object):
     def _receive_body(self, dummy=None):
         self._node.sched.trigger_loop()
 
+    def received_error(self, handle):
+        return self._requests[handle].error() is not None
+
     def received_headers(self, handle):
         return self._requests[handle].headers() is not None
 
@@ -72,6 +75,9 @@ class HTTPClientHandler(object):
 
     def status(self, handle):
         return self._requests[handle].status()
+
+    def error(self, handle):
+        return self._requests[handle].error()
 
     def phrase(self, handle):
         return self._requests[handle].phrase()

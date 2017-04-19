@@ -59,7 +59,7 @@ class HTTPPut(Actor):
     def new_request(self, url, params, header, data):
         url = url.encode('ascii', 'ignore')
         self.request = self['http'].put(url, params, header, data)
-        
+        return ()
 
     @stateguard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     @condition(action_output=['status', 'header'])
@@ -80,7 +80,14 @@ class HTTPPut(Actor):
     @condition()
     def handle_empty_body(self):
         self.reset_request()
+        return ()
         
+    @stateguard(lambda actor: actor.request and actor['http'].received_error(actor.request))
+    @condition()
+    def handle_error(self):
+        _log.warning("There was an error handling the request")
+        self.reset_request()
+        return ()
 
-    action_priority = (handle_body, handle_empty_body, handle_headers, new_request)
+    action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-json']

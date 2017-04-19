@@ -82,6 +82,12 @@ class HTTPGet(Actor):
     def handle_empty_body(self):
         self.reset_request()
         
+    @stateguard(lambda actor: actor.request and actor['http'].received_error(actor.request))
+    @condition()
+    def handle_error(self):
+        _log.warning("There was an error handling the request")
+        self.reset_request()
+        return ()
 
-    action_priority = (handle_body, handle_empty_body, handle_headers, new_request)
+    action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler']

@@ -43,7 +43,6 @@ class HTTPRequest(object):
         self._response = {}
 
     def parse_headers(self, response):
-        self._response = {}
         self._response['version'] = "%s/%d.%d" % (response.version)
         self._response['status'] = response.code
         self._response['phrase'] = response.phrase
@@ -54,6 +53,13 @@ class HTTPRequest(object):
     def parse_body(self, body):
         self._response['body'] = body
 
+    def parse_error(self, err_msg):
+        self._response['error'] = err_msg
+        
+
+    def error(self):
+        return self._response.get('error', None)
+        
     def body(self):
         return self._response.get('body', None)
 
@@ -136,8 +142,10 @@ class HTTPClient(CalvinCBClass):
         request.parse_body(response)
         self._callback_execute('receive-body', request)
 
-    def _log_error(self, reason):
-        _log.error(reason.getErrorMessage())
+    def _receive_error(self, reason, request):
+        request.parse_error(reason.getErrorMessage())
+        self._callback_execute('receive-headers', request)
+            
 
     def request(self, command, url, params, headers, data):
         url += encode_params(params)
@@ -146,5 +154,5 @@ class HTTPClient(CalvinCBClass):
         deferred = self._agent.request(command, url, headers=twisted_headers, bodyProducer=body)
         request = HTTPRequest()
         deferred.addCallback(self._receive_headers, request)
-        deferred.addErrback(self._log_error)
+        deferred.addErrback(self._receive_error, request)
         return request
