@@ -1879,6 +1879,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
 
 
+
 @pytest.mark.essential
 class TestNullPorts(CalvinTestBase):
 
@@ -2798,6 +2799,35 @@ class TestConstantifyOnPort(CalvinTestBase):
 
         self.assert_lists_equal(expected1, actual1, min_length=10)
         self.assert_lists_equal(expected2, actual2, min_length=10)
+
+        d.destroy()
+
+    def testLiteralOnComponentInPort(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            component Ticker() trigger -> out {
+                id : std.Identity()
+                .trigger > /"X"/ id.token
+                id.token > .out
+            }
+
+            tick : std.Trigger(data="tick", tick=1.0)
+            ticker : Ticker()
+            test : test.Sink(store_tokens=1, quiet=1)
+                                            
+            tick.data > ticker.trigger
+            ticker.out > test.token
+        """
+        app_info, errors, warnings = self.compile_script(script, "testLiteralOnComponentInPort")
+        d = deployer.Deployer(self.rt1, app_info)
+        deploy_app(d)
+
+        snk = d.actor_map['testLiteralOnComponentInPort:snk']
+
+        actual = wait_for_tokens(self.rt1, snk, 10)
+        expected = ['X']*len(actual)
+
+        self.assert_lists_equal(expected, actual, min_length=10)
 
         d.destroy()
 
