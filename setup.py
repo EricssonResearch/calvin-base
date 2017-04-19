@@ -80,7 +80,7 @@ setup(name='calvin',
               'csmanage=calvin.Tools.csmanage:main',
               'csweb=calvin.Tools.www.csweb:main',
               'csviz=calvin.Tools.csviz:main',
-              'cstest=calvin.Tools.cstest:main'
+              'csactortest=calvin.Tools.csactortest:main'
           ]
       }
       )
