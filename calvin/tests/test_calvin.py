@@ -2814,7 +2814,7 @@ class TestConstantifyOnPort(CalvinTestBase):
             tick : std.Trigger(data="tick", tick=1.0)
             ticker : Ticker()
             test : test.Sink(store_tokens=1, quiet=1)
-                                            
+
             tick.data > ticker.trigger
             ticker.out > test.token
         """
@@ -2822,7 +2822,7 @@ class TestConstantifyOnPort(CalvinTestBase):
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
-        snk = d.actor_map['testLiteralOnComponentInPort:snk']
+        snk = d.actor_map['testLiteralOnComponentInPort:test']
 
         actual = wait_for_tokens(self.rt1, snk, 10)
         expected = ['X']*len(actual)

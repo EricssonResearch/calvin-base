@@ -263,31 +263,20 @@ class CalvinParser(object):
         """link : outport GT port
                 | outport GT portlist
                 | outport GT void
-                | implicit_port GT port
-                | implicit_port GT portlist
-                | internal_outport GT inport
-                | internal_outport GT inportlist
+                | implicit_outport GT port
+                | implicit_outport GT portlist
+                | internal_outport GT port
+                | internal_outport GT portlist
                 | void GT inport
                 | void GT inportlist
         """
         p[0] = ast.Link(outport=p[1], inport=p[3], debug_info=self.debug_info(p, 1))
 
-    def p_link_error(self, p):
-        """link : internal_outport GT internal_inport"""
-        info = {
-            'line': p.lineno(2),
-            'col': self._find_column(p.lexpos(2))
-        }
-        self.issuetracker.add_error('Component inport connected directly to outport.', info)
-
-    # def p_portmap(self, p):
-    #     """portmap : port GT internal_port
-    #                | internal_port GT port"""
-    #     p[0] = ast.Portmap(p[1], p[3])
 
     def p_void(self, p):
         """void : VOIDPORT"""
         p[0] = ast.Void(debug_info=self.debug_info(p, 1))
+
 
     def p_portlist(self, p):
         """portlist : portlist COMMA port
@@ -299,6 +288,7 @@ class CalvinParser(object):
             p[0] = ast.PortList()
             p[0].add_child(p[1])
             p[0].add_child(p[3])
+
 
     def p_inportlist(self, p):
         """inportlist : inportlist COMMA inport
@@ -315,19 +305,29 @@ class CalvinParser(object):
     def p_port(self, p):
         """port : inport
                 | internal_inport
-                | transformed_inport"""
+                | transformed_inport
+                | transformed_internal_inport"""
         p[0]=p[1]
 
     def p_transformed_inport(self, p):
-        """transformed_inport : SLASH argument SLASH port
-                              | SLASH COLON identifier argument SLASH port"""
+        """transformed_inport : SLASH argument SLASH inport
+                              | SLASH COLON identifier argument SLASH inport"""
         if len(p) > 5:
             p[0] = ast.TransformedPort(port=p[6], value=p[4], label=p[3], debug_info=self.debug_info(p, 4))
         else:
             p[0] = ast.TransformedPort(port=p[4], value=p[2], debug_info=self.debug_info(p, 4))
 
-    def p_implicit_port(self, p):
-        """implicit_port : argument
+    def p_transformed_internal_inport(self, p):
+        """transformed_internal_inport : SLASH argument SLASH internal_inport
+                                       | SLASH COLON identifier argument SLASH internal_inport"""
+        if len(p) > 5:
+            p[0] = ast.TransformedPort(port=p[6], value=p[4], label=p[3], debug_info=self.debug_info(p, 4))
+        else:
+            p[0] = ast.TransformedPort(port=p[4], value=p[2], debug_info=self.debug_info(p, 4))
+
+
+    def p_implicit_outport(self, p):
+        """implicit_outport : argument
                          | COLON identifier argument"""
         if len(p) > 2:
             p[0] = ast.ImplicitPort(arg=p[3], label=p[2], debug_info=self.debug_info(p, 1))

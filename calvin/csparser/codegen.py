@@ -949,6 +949,13 @@ class ConsistencyCheck(object):
             reason = "Internal port '.{}' outside component definition".format(node.port)
             self.issue_tracker.add_error(reason, node)
 
+    @visitor.when(ast.Link)
+    def visit(self, node):
+        passthrough = type(node.inport) is ast.InternalInPort and type(node.outport) is ast.InternalOutPort
+        if passthrough:
+            self.issue_tracker.add_error('Component inport connected directly to outport.', node.inport)
+        else:
+            map(self.visit, node.children)
 
 
 class CodeGen(object):

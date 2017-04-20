@@ -217,10 +217,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         print errors
-        self.assertEqual(len(errors), 3)
-        self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to inport 'in'")
-        self.assertEqual(errors[1]['reason'], "Component Foo is missing connection to outport 'out'")
-        self.assertEqual(errors[2]['reason'], "Component inport connected directly to outport.")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['reason'], "Component inport connected directly to outport.")
 
 
 
@@ -670,7 +668,71 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['reason'], "Syntax error.")
+        self.assertEqual(errors[0]['reason'], "Component inport connected directly to outport.")
+
+    def testTokenTransform(self):
+        script = """
+        snk1 : io.Print()
+        1 > /2/ snk1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testTokenTransformBad(self):
+        script = """
+        snk1 : io.Print()
+        1 /2/ > snk1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 2)
+
+    def testTokenTransformInternalInport(self):
+        script = """
+        component Foo() in ->  {
+            snk1 : io.Print()
+            .in  > /2/ snk1.token
+        }
+        f : Foo()
+        1 > f.in
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testTokenTransformInternalInportBad(self):
+        script = """
+        component Foo() in ->  {
+            snk1 : io.Print()
+            .in /2/ > snk1.token
+        }
+        f : Foo()
+        1 > f.in
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 4)
+
+    def testTokenTransformInternalOutport(self):
+        script = """
+        component Foo()  -> out {
+
+            1 > /2/ .out
+        }
+        f : Foo()
+        f.out > voidport
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    def testTokenTransformInternalOutportBad(self):
+        script = """
+        component Foo()  -> out {
+
+            1 /2/ >  .out
+        }
+        f : Foo()
+        f.out > voidport
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 3)
 
     def testStringLiteral(self):
         # N.B raw string (r"") required to have same behaviour as script file
