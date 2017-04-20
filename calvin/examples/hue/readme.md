@@ -1,9 +1,46 @@
 # Philips Hue example
 
-To run the example, change the line
+In this example the Philips Hue API is used to build a Calvin application which
+controls a Philips Hue lamp.
+
+
+## Setup
+
+### Hardware
+
+ - A computer or other device capable of deploying the calvin script.
+ - A Philips Hue Lamp.
+
+### Installation
+
+Before running this example, make sure the Philips Hue is available via the API.
+See [Philips Hue](https://www.developers.meethue.com/documentation/getting-started)
+for details.
+
+In the `FlashingStopLight.calvin` the line:
 
     flash : FlashStopLight(address="philips-hue", username="username", lightno=1, interval=2.0)
 
-to reflect your setup - i.e. address, username, lightno should all be according to your configuration.
+to reflect your setup - i.e. __address__, __username__, __lightno__ should all be according to your configuration.
 
-See http://www.developers.meethue.com/documentation/getting-started for details.
+
+## Running
+
+Run the script with one of the following commands:
+
+### With DHT
+
+    $ csruntime --host localhost --keep-alive FlashingStopLight.calvin
+
+### Without DHT
+
+Calvin's internal registry is not strictly needed when running this small
+example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"`
+to the command:
+
+
+    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive FlashingStopLight.calvin
+
+
+
+

@@ -1,21 +1,48 @@
-REST-based stdout
-=================
+# REST-based stdout
 
-Edit the file `server_attr.json` to reflect your receiving server. The example assumes a webserver running on `localhost` listening on port 8087 with a service `add_message` which receives POST-data.
+A small example of how to use a rest implementation as `stdout_plugin` and thus
+make the `io.Print` actor use this new standard out.
 
-    {
-    	"private": {
-    		"io": {
-    			"stdout": {
-    				"url": "http://localhost:8087/add_message"
-    			}
-    		}
-    	}
-    }
 
-To start a runtime with this "stdout" backend, change the file `server_attr.json` to reflect the webservice you want to use (The data is sent as POST data.) Start `csruntime` with
+## Setup
 
-    $ CALVIN_GLOBAL_STDOUT_IMPL=\"rest_impl\" csruntime --host <your ip> --attr-file server_attr.json
+### Hardware
 
-and the `io.Print` actor will now make use of this new standard out.
+- A computer to run the script is enough.
 
+
+### Installation
+
+Edit the file `server_attr.json` to reflect your receiving server. The example
+assumes a webserver running on `localhost` listening on port 8087 with a service
+`add_message` which receives POST-data.
+
+For mor information about attribute files please see the Calvin Wiki page about
+[Application Deployment Requirement](https://github.com/EricssonResearch/calvin-base/wiki/Application-Deployment-Requirement)
+
+### Calvin configuration
+
+The following plugins needs to be loaded to run this script:
+- stdout_plugin
+
+A `calvin.conf` file is prepared for this purpose. For the `calvin.conf` to be
+loaded, start the calvin script from within the directory the `calvin.conf`
+file is placed. For other ways of loading the configuration, please see
+the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/calvin-base/wiki/Configuration)
+
+
+## Running
+
+As a simple example; run `webserver.py` from one terminal and in another
+terminal run the `test1.calvin` script provided in examples/sample-scripts
+
+Remember to start `csruntime` from within the directory the `calvin.conf` file
+is placed
+
+
+    $ python webserver.py
+
+    $ csruntime --host localhost --attr-file server_attr.json ../sample-scripts/test1.calvin
+
+
+The `io.Print` actor will now make use of this new standard out.

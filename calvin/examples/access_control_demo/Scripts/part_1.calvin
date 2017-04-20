@@ -4,3 +4,13 @@ bell   : media.MediaPlayer(media_file="dingdong.ogg")
 
 button.state > check.token
 check.token > bell.play
+
+# Deployment
+
+rule inside  : node_attr_match(index=["address", {"locality": "inside"}])
+rule outside : node_attr_match(index=["address", {"locality": "outside"}])
+rule server  : runtime_name(name="server")
+
+apply button : outside
+apply bell   : inside
+apply check  : server

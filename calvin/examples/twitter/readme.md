@@ -1,33 +1,52 @@
-# Twitter example #
+# Twitter
 
-The following calvinscript uses the [http://www.twitter.com](twitter) api to tweet a message:
-
-	msg : std.Constant(data="This is another test, please ignore.")
-	out : web.Twitter()
-	
-	msg.token > out.status
+In this example the [twitter](http://www.twitter.com) API is used to tweet a message:
 
 
-In order to use the twitter API, you need to register got get a collection of keys. These  should be given as a private
-attribute to the runtime on startup, e.g.
+## Setup
 
-    $ csruntime --host localhost twitter.calvin --attr-file twitter-credentials.json
+### Hardware
 
-where the file `twitter-credentials.json` contains (at least)
+- A computer to run the script is enough.
 
-	{
-		"private": {
-			"web": {
-				"twitter.com": {
-					"consumer_key": "<enter consumer key here>",
-					"consumer_secret": "<enter consumer secret here>",
-					"access_token_key": "<enter access_token_key here>",
-					"access_token_secret": "<enter access_token_secret here>"
-				}
-			}
-		}
-	}
 
-## Installation
+### Installation
 
-Install dependencies using e.g. `pip install -r requirements`  
+Install dependencies using:
+
+    § pip install -r requirements.txt
+
+
+### Register 
+
+In order to use the twitter API, you need to register an application at
+[https://dev.twitter.com/apps](https://dev.twitter.com/apps)
+A collection of keys will be available for the application after registering,
+these should be given as private attributes to the runtime on startup.
+
+Update the following rows of the file `twitter_credentials.json` with the
+received keys and secrets:
+
+    "consumer_key": "<enter consumer key here>",
+    "consumer_secret": "<enter consumer secret here>",
+    "access_token_key": "<enter access_token_key here>",
+    "access_token_secret": "<enter access_token_secret here>"
+
+
+## Running
+
+Run one of the following commands from within the directory the `calvin.conf` file is placed:
+
+### With DHT
+
+    $ csruntime --host localhost tweet.calvin --attr-file twitter_credentials.json
+
+
+### Without DHT
+
+Calvin's internal registry is not strictly needed when running this small
+example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"`
+to the command:
+
+    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost tweet.calvin --attr-file twitter_credentials.json
+

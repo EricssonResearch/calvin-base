@@ -1,38 +1,71 @@
-# Temperature example #
+# Temperature
 
-Read temeprature from a thermometor.
+This example reads temperature from a thermometer. The thermometer could be
+either a 1-wire sensor or a 
 
-## 1-wire sensor
 
-On Raspberry Pi, this needs w1-gpio and w1-therm modules:
+## Setup
 
-    modprobe w1-gpio
-    modprobe w1-therm
-    
-Do not forget to edit `/boot/config.txt` and add
+### Hardware
 
-        dtoverlay=w1-gpio
+The example assumes the following devices:
 
-and create a file `calvin.conf` with the following contents:
+- A Raspberry Pi with:
+  - A Sense HAT (https://www.raspberrypi.org/products/sense-hat/) __or__
+  - A 1-wire temperature sensor
 
-    {
-        "global": {
-            "environmental_sensor_plugin": "platform/raspberry_pi/w1temp_impl",
-        }
-    }
 
 ## SenseHat
 
-Create a file `calvin.conf` with the following contents:
+### Calvin configuration
+
+The following plugins needs to be loaded to run this script:
+- `environmental_sensor_plugin`
+
+A `calvin.conf` file is prepared for this purpose. For the `calvin.conf` to be
+loaded, start the calvin script from within the directory the `calvin.conf`
+file is placed. For other ways of loading the configuration, please see
+the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/calvin-base/wiki/Configuration)
+
+
+## 1-wire sensor
+
+### Calvin configuration
+In order to load the `w1temp_impl` plugin, the file `calvin.conf` needs to be
+updated with this `environmental_sensor_plugin`:
 
     {
         "global": {
-            "environmental_sensor_plugin": "platform/raspberry_pi/sensehat_impl",
+            "environmental_sensor_plugin": "platform/raspberry_pi/w1temp_impl"
         }
     }
 
-## Running the example
 
-Ensure the configuration file is in the search path; either start the calvin runtime from this directory, or add this path to CALVIN\_CONFIG\_PATH. Then execute
+On the Raspberry Pi, the following line needs to be added to `/boot/config.txt`
+
+    dtoverlay=w1-gpio
+
+__Note, for the change to have effect the Raspberry Pi needs to be restarted.__
+
+In addition, w1-gpio and w1-therm modules needs to be added, run the following commands:
+
+    $ sudo modprobe w1-gpio
+    $ sudo modprobe w1-therm
+    
+
+## Running
+
+Run one of the following commands from within the directory the `calvin.conf` file is placed:
+
+### With DHT
 
     $ csruntime --host localhost temperature.calvin
+
+
+### Without DHT
+
+Calvin's internal registry is not strictly needed when running this small
+example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"`
+to the command:
+
+    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost temperature.calvin

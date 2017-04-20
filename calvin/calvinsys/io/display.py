@@ -40,7 +40,7 @@ class Display(object):
 
     def show_text(self, text):
         self.display.show(text, None, None)
-        
+
     def clear(self):
         """
         Clear display

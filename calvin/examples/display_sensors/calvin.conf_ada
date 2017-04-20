@@ -1,0 +1,6 @@
+{
+  "global": {
+    "display_plugin": "platform/raspberry_pi/adafruitcharlcd_impl",
+    "actor_paths": ["./devactors"]
+  }
+}

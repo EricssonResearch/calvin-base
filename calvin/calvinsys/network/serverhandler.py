@@ -15,7 +15,17 @@
 # limitations under the License.
 
 from calvin.runtime.south.plugins.async import server_connection
-from calvin.runtime.south.plugins.io.websocket import ws_server_connection
+from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities import calvinconfig
+
+_log = get_logger(__name__)
+
+try:
+    from calvin.runtime.south.plugins.io.websocket import ws_server_connection
+except ImportError as e:
+    _conf = calvinconfig.get()
+    if _conf.get('GLOBAL', 'websocket_plugin'):
+        _log.error("Loading plugin for websocket failed: %s" % e)
 
 
 class MessageServer(object):

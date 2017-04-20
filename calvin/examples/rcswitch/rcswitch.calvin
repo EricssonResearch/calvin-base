@@ -6,7 +6,7 @@ define zerobit=[{"state":1, "time":250}, {"state":0, "time":250}]
 
 /* Actors */
 btn : io.GPIOReader(gpio_pin=22, edge="b", pull="d")
-switch : rcswitch.RCSwitch(gpio_pin=17, homecode=2476015488, group=0, channel=0, startBit=startbit, stopBit=stopbit, oneBit=onebit, zeroBit=zerobit, repeat=6)
+switch : rcswitch.RCSwitch(gpio_pin=17, homecode=2476015488, grp=0, channel=0, startBit=startbit, stopBit=stopbit, oneBit=onebit, zeroBit=zerobit, repeat=6)
 
 /* Connections */
 btn.state > switch.state

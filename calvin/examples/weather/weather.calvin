@@ -1,7 +1,10 @@
-weather : web.OpenWeatherMap()
+void     : flow.Void()
+city     : flow.Init(data="Ystad")
+weather  : web.OpenWeatherMap()
 forecast : io.Print()
-status: io.Print()
+status   : io.Print()
 
-"Ystad" > weather.city
+void.void        > city.in
+city.out         > weather.city
 weather.forecast > forecast.token
-weather.status > status.token
+weather.status   > status.token

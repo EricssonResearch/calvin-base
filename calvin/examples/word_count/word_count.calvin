@@ -1,9 +1,11 @@
 component WordCountComponent(file) -> out {
-    filename:std.Constant(data=file)
-    file:io.FileReader()
-    counter: text.WordCount()
+    void     : flow.Void()
+    filename : flow.Init(data=file)
+    file     : io.FileReader()
+    counter  : text.WordCount()
 
-    filename.token > file.filename
+    void.void > filename.in
+    filename.out > file.filename
     file.out > counter.in
     counter.out > .out
 }
