@@ -259,17 +259,20 @@ class CalvinParser(object):
         p[0] = ast.PortProperty(actor=None, port=p[2], direction=p[3], args=p[5], debug_info=self.debug_info(p, 1))
 
 
+    def p_link_error(self, p):
+        """link : void GT void"""
+        info = {
+            'line': p.lineno(2),
+            'col': self._find_column(p.lexpos(2))
+        }
+        self.issuetracker.add_error('Pointless construct.', info)
+
     def p_link(self, p):
-        """link : real_outport GT inport
-                | real_outport GT inport_list
-                | real_outport GT void
-                | implicit_outport GT inport
-                | implicit_outport GT inport_list
-                | internal_outport GT inport
-                | internal_outport GT inport_list
-                | void GT real_inport
+        """link : real_outport GT void
                 | void GT real_inport_list
-        """
+                | real_outport GT inport_list
+                | implicit_outport GT inport_list
+                | internal_outport GT inport_list"""
         p[0] = ast.Link(outport=p[1], inport=p[3], debug_info=self.debug_info(p, 1))
 
 
@@ -277,30 +280,26 @@ class CalvinParser(object):
         """void : VOIDPORT"""
         p[0] = ast.Void(debug_info=self.debug_info(p, 1))
 
-
     def p_inport_list(self, p):
         """inport_list : inport_list COMMA inport
-                    | inport COMMA inport"""
-        if type(p[1]) is ast.PortList:
-            p[1].add_child(p[3])
-            p[0] = p[1]
-        else:
+                       | inport"""
+        if len(p) == 2:
             p[0] = ast.PortList()
             p[0].add_child(p[1])
-            p[0].add_child(p[3])
+        else:
+            p[1].add_child(p[3])
+            p[0] = p[1]
 
 
     def p_real_inport_list(self, p):
-        """real_inport_list : real_inport_list COMMA real_inport
-                            | real_inport COMMA real_inport"""
-        if type(p[1]) is ast.PortList:
-            p[1].add_child(p[3])
-            p[0] = p[1]
-        else:
+        """real_inport_list : inport_list COMMA real_inport
+                       | real_inport"""
+        if len(p) == 2:
             p[0] = ast.PortList()
             p[0].add_child(p[1])
-            p[0].add_child(p[3])
-
+        else:
+            p[1].add_child(p[3])
+            p[0] = p[1]
 
     def p_inport(self, p):
         """inport : real_or_internal_inport
