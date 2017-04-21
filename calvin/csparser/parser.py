@@ -20,6 +20,7 @@ import ply.yacc as yacc
 import calvin_rules
 from calvin_rules import tokens as calvin_tokens
 import astnode as ast
+from astprint import BraceFormatter
 from calvin.utilities.issuetracker import IssueTracker
 
 
@@ -522,6 +523,13 @@ def calvin_parse(source_text):
     parser = CalvinParser()
     return parser.parse(source_text)
 
+def printable_ir(source_text):
+    ir, ds_ir, it = calvin_parse(source_text)
+    bf = BraceFormatter()
+    ir_str = bf.process(ir)
+    ds_ir_str = bf.process(ds_ir)
+    return "\n----\n".join([ir_str, ds_ir_str]), it
+
 
 if __name__ == '__main__':
     import os
@@ -606,10 +614,10 @@ apply actor, actor: some_rule | node_attr(node_spec=NODE1) &~ current()
 
     print "CalvinScript:"
     bp = astprint.BracePrinter()
-    bp.visit(ir)
+    bp.process(ir)
     print
     print "DeployScript:"
     bp = astprint.BracePrinter()
-    bp.visit(deploy_ir)
+    bp.process(deploy_ir)
 
 

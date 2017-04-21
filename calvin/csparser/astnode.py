@@ -505,7 +505,7 @@ if __name__ == '__main__':
 
     root = ast.Node()
     root.add_child(ast.Constant(ident=ast.Id(ident="foo"), arg=ast.Value(value=1)))
-    bp.visit(root)
+    bp.process(root)
 
     s = json.dumps(root, default=ast.node_encoder, indent=2)
 

@@ -21,20 +21,23 @@ import json
 import argparse
 from calvin.csparser.cscompile import compile_script, appname_from_filename
 from calvin.csparser.dscodegen import calvin_dscodegen
+from calvin.csparser.parser import printable_ir
 
-def compile_file(filename, ds, credentials=None):
+def compile_file(filename, ds, ir, credentials=None):
     with open(filename, 'r') as source:
         sourceText = source.read()
         appname = appname_from_filename(filename)
         if ds:
             return calvin_dscodegen(sourceText, appname)
+        elif ir:
+            return printable_ir(sourceText)
         else:
             return compile_script(sourceText, appname, credentials=credentials)
 
-def compile_generator(files, ds):
+def compile_generator(files, ds, ir):
     for filename in files:
-        deployable, issuetracker = compile_file(filename, ds)
-        yield((deployable, issuetracker, filename))
+        result, issuetracker = compile_file(filename, ds, ir)
+        yield((result, issuetracker, filename))
 
 
 def main():
@@ -59,20 +62,23 @@ def main():
                            help='custom format for issue reporting.')
     argparser.add_argument('--verbose', action='store_true',
                            help='informational output from the compiler')
-    argparser.add_argument('--deployscript', action='store_true',
+    output_type = argparser.add_mutually_exclusive_group()
+    output_type.add_argument('--deployscript', action='store_true', default=False,
                            help='generate deployjson file')
+    output_type.add_argument('--intermediate', action='store_true', default=False,
+                           help='generate intermediate representation file')
     outgroup = argparser.add_mutually_exclusive_group()
     outgroup.add_argument('--stdout', dest='outfile', action='store_const', const="/dev/stdout",
                            help='send output to stdout instead of file (default)')
     outgroup.add_argument('--output', dest='outfile', type=str, default='', metavar='<filename>',
                            help='Output file, default is filename.json')
-                           
+
 
     args = argparser.parse_args()
 
 
     exit_code = 0
-    for deployable, issuetracker, filename in compile_generator(args.files, args.deployscript):
+    for result, issuetracker, filename in compile_generator(args.files, args.deployscript, args.intermediate):
         if issuetracker.error_count:
             for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=filename, line=0, col=0):
                 sys.stderr.write(issue + "\n")
@@ -83,7 +89,10 @@ def main():
         if exit_code == 1:
             # Don't produce output if there were errors
             continue
-        string_rep = json.dumps(deployable, indent=args.indent, sort_keys=args.sorted)
+        if args.intermediate is True:
+            string_rep = result
+        else:
+            string_rep = json.dumps(result, indent=args.indent, sort_keys=args.sorted)
         if args.outfile:
             dst = args.outfile
         else:

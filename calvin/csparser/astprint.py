@@ -63,7 +63,7 @@ class DotDebugPrinter(DotPrinter):
             self.add(stmt)
 
 
-class BracePrinter(object):
+class BraceFormatter(object):
     def __init__(self):
         self.indent = 0
 
@@ -89,7 +89,10 @@ class BracePrinter(object):
         return "    "*self.indent
 
     def process(self, node):
+        self.indent = 0
+        self.result = []
         self.visit(node)
+        return "\n".join(self.result)
 
     @visitor.on('node')
     def visit(self, node):
@@ -98,130 +101,138 @@ class BracePrinter(object):
     @visitor.when(ast.Node)
     def visit(self, node):
         def f(node):
-            print "{}( {}".format(self._indentation(), node)
+            self.result.append("{}( {}".format(self._indentation(), node))
             self.indent += 1
         def g(node):
             self.indent -= 1
-            print "{})".format(self._indentation())
+            self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
     @visitor.when(ast.Block)
     def visit(self, node):
         def f(node):
             xtra_indent = self._indentation() + " "*11
-            print "{}( {}\n{}namespace: {},\n{}args: {}".format(
+            self.result.append("{}( {}\n{}namespace: {},\n{}args: {}".format(
                 self._indentation(), node,
                 xtra_indent, node.namespace,
                 xtra_indent, node.args
-            )
+            ))
         def g(node):
-            print "{})".format(self._indentation())
+            self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
     @visitor.when(ast.Id)
     def visit(self, node):
-        print "{}( {} {} )".format(self._indentation(), node, node.ident)
+        self.result.append("{}( {} {} )".format(self._indentation(), node, node.ident))
 
     @visitor.when(ast.Value)
     def visit(self, node):
-        print "{}( {} {} )".format(self._indentation(), node, node.value)
+        self.result.append("{}( {} {} )".format(self._indentation(), node, node.value))
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
         def f(node):
-            print "{}( {} {} {}".format(self._indentation(), node, node.ident, node.actor_type)
+            self.result.append("{}( {} {} {}".format(self._indentation(), node, node.ident, node.actor_type))
             self.indent += 1
         def g(node):
             self.indent -= 1
-            print "{})".format(self._indentation())
+            self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
     @visitor.when(ast.Port)
     def visit(self, node):
-        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
+        self.result.append("{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port))
 
     @visitor.when(ast.InPort)
     def visit(self, node):
-        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
+        self.result.append("{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port))
 
     @visitor.when(ast.OutPort)
     def visit(self, node):
-        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
+        self.result.append("{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port))
 
     @visitor.when(ast.ImplicitPort)
     def visit(self, node):
         def f(node):
-            print "{}( {}".format(self._indentation(), node)
+            self.result.append("{}( {}".format(self._indentation(), node))
             self.indent += 1
         def g(node):
             self.indent -= 1
-            print "{})".format(self._indentation())
+            self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
         # print "{}( {} {} )".format(self._indentation(), node, node.arg)
 
     @visitor.when(ast.InternalInPort)
     def visit(self, node):
-        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
+        self.result.append("{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port))
 
     @visitor.when(ast.InternalOutPort)
     def visit(self, node):
-        print "{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port)
+        self.result.append("{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port))
 
     @visitor.when(ast.Component)
     def visit(self, node):
         def f(node):
-            print "{}( {} {}".format(self._indentation(), node, node.name)
+            self.result.append("{}( {} {}".format(self._indentation(), node, node.name))
             self.indent += 1
         def g(node):
             self.indent -= 1
-            print "{})".format(self._indentation())
+            self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
     @visitor.when(ast.RuleSetOp)
     def visit(self, node):
-        print "{}( {} {} )".format(self._indentation(), node, node.op)
+        self.result.append("{}( {} {} )".format(self._indentation(), node, node.op))
 
     @visitor.when(ast.Group)
     def visit(self, node):
         def f(node):
-            print "{}( {} {}".format(self._indentation(), node, node.group.ident)
+            self.result.append("{}( {} {}".format(self._indentation(), node, node.group.ident))
             self.indent += 1
         def g(node):
             self.indent -= 1
-            print "{})".format(self._indentation())
+            self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
     @visitor.when(ast.RuleApply)
     def visit(self, node):
         def f(node):
-            print "{}( {} optional={} {}".format(self._indentation(), node, node.optional, node.rule)
+            self.result.append("{}( {} optional={} {}".format(self._indentation(), node, node.optional, node.rule))
             self.indent += 1
         def g(node):
             self.indent -= 1
-            print "{})".format(self._indentation())
+            self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
 
     @visitor.when(ast.Rule)
     def visit(self, node):
         def f(node):
-            print "{}( {} {}".format(self._indentation(), node, node.rule.ident)
+            self.result.append("{}( {} {}".format(self._indentation(), node, node.rule.ident))
             self.indent += 1
         def g(node):
             self.indent -= 1
-            print "{})".format(self._indentation())
+            self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
+class BracePrinter(BraceFormatter):
+    """docstring for BracePrinter"""
+    def __init__(self):
+        super(BracePrinter, self).__init__()
+
+    def process(self, node):
+        text = super(BracePrinter, self).process(node)
+        print text
 
 if __name__ == '__main__':
     ast.Node._verbose_desc = True
 
     n = ast.Node()
     bp = BracePrinter()
-    bp.visit(n)
+    bp.process(n)
 
-    dp = DotPrinter()
-    dp.process(n)
+    # dp = DotPrinter()
+    # dp.process(n)
 
 
