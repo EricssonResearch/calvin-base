@@ -115,6 +115,7 @@ class CalvinParser(object):
     def p_comp_statement(self, p):
         """comp_statement : assignment
                           | port_property
+                          | internal_port_property
                           | link"""
         p[0] = p[1]
 
@@ -249,10 +250,15 @@ class CalvinParser(object):
 
 
     def p_port_property(self, p):
-        """port_property : qualified_port opt_direction LPAREN named_args RPAREN
-                         | unqualified_port opt_direction LPAREN named_args RPAREN"""
+        """port_property : qualified_port opt_direction LPAREN named_args RPAREN"""
         _, (actor, port), direction, _, args, _ = p[:]
-        p[0] = ast.PortProperty(actor=actor, port=port, direction=direction, args=args, debug_info=self.debug_info(p, 1))
+        p[0] = ast.PortProperty(actor=actor, port=port, direction=direction, args=args, debug_info=self.debug_info(p, 3))
+
+
+    def p_internal_port_property(self, p):
+        """internal_port_property : unqualified_port opt_direction LPAREN named_args RPAREN"""
+        _, (actor, port), direction, _, args, _ = p[:]
+        p[0] = ast.PortProperty(actor=actor, port=port, direction=direction, args=args, debug_info=self.debug_info(p, 3))
 
 
     def p_link_error(self, p):
