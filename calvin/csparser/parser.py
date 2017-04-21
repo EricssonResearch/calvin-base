@@ -43,13 +43,8 @@ class CalvinParser(object):
 
     def p_script(self, p):
         """script : opt_constdefs opt_compdefs opt_program"""
-        s = ast.Node()
-        s.add_children(p[1] + p[2] + p[3][0])
         root = ast.Node()
-        root.add_child(s.clone())
-        d = ast.Node()
-        d.add_children(p[1] + p[3][1])
-        root.add_child(d)
+        root.add_children(p[1] + p[2] + p[3])
         p[0] = root
 
     def p_empty(self, p):
@@ -119,27 +114,15 @@ class CalvinParser(object):
     def p_opt_program(self, p):
         """opt_program : program
                        | empty"""
-        if p[1] is None:
-            p[0] = [[],[]]
-        else:
-            p[0] = [
-                [ast.Block(program=p[1][0], namespace='__scriptname__', debug_info=self.debug_info(p, 1))],
-                p[1][1]
-            ]
+        p[0] = [] if p[1] is None else [ast.Block(program=p[1], namespace='__scriptname__', debug_info=self.debug_info(p, 1))]
 
     def p_program(self, p):
         """program : program statement
                    | statement """
         if len(p) == 2:
-            if type(p[1]) in [ast.Group, ast.Rule, ast.RuleApply]:
-                p[0] = [[], [p[1]]]
-            else:
-                p[0] = [[p[1]], []]
+            p[0] = [p[1]]
         else:
-            if type(p[2]) in [ast.Group, ast.Rule, ast.RuleApply]:
-                p[0] = [p[1][0], p[1][1] + [p[2]]]
-            else:
-                p[0] = [p[1][0] + [p[2]], p[1][1]]
+            p[0] = p[1] + [p[2]]
 
     def p_statement(self, p):
         """statement : assignment
@@ -512,7 +495,7 @@ class CalvinParser(object):
         except SyntaxError as e:
             self.issuetracker.add_error(e.text, {'line':e.lineno, 'col':e.offset})
         finally:
-            ir, deploy_ir = root.children if root else (ast.Node(), ast.Node())
+            ir, deploy_ir = (root or ast.Node(), ast.Node())
 
         return ir, deploy_ir, self.issuetracker
 
