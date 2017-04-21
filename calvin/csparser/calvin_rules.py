@@ -31,8 +31,8 @@ tokens = [
     'AND', 'OR', 'NOT', 'STAR',
     'RARROW', 'SLASH',
     'DOCSTRING',
-    'FALSE', 'TRUE', 'NULL'
-
+    'FALSE', 'TRUE', 'NULL',
+    'AT'
 ] + list(keywords.values())
 
 t_LPAREN = r'\('
@@ -52,6 +52,7 @@ t_AND = r'&'
 t_OR = r'\|'
 t_NOT = r'~'
 t_STAR = r'\*'
+t_AT = r'@'
 
 # t_FALSE = r'false'
 # t_TRUE = r'true'

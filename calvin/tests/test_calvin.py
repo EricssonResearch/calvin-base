@@ -4656,6 +4656,7 @@ class TestPortmappingScript(CalvinTestBase):
         helpers.delete_app(request_handler, rt, response['application_id'])
         return actual
 
+    @pytest.mark.xfail
     def testSimple(self):
         script = r"""
         dummy : std.Constantify(constant=42)
@@ -4671,6 +4672,7 @@ class TestPortmappingScript(CalvinTestBase):
         actual = self._run_test(script, len(expected))
         self.assert_lists_equal(expected, actual)
 
+    @pytest.mark.xfail
     def testMapAlternate(self):
         script = r"""
         snk : test.Sink(store_tokens=1, quiet=1)
@@ -4704,6 +4706,7 @@ class TestPortmappingScript(CalvinTestBase):
         actual = self._run_test(script, len(expected))
         self.assert_lists_equal(expected, actual)
 
+    @pytest.mark.xfail
     def testMapDealternate(self):
         script = r"""
         snk : test.Sink(store_tokens=1, quiet=1)
@@ -4764,7 +4767,7 @@ class TestPortmappingScript(CalvinTestBase):
         print tags
         assert set(tags) == set(["tag1", "tag2", "tag3"])
 
-
+    @pytest.mark.xfail
     def testMapDispatchDict(self):
         script = r"""
         snk : test.Sink(store_tokens=1, quiet=1)
@@ -4798,6 +4801,7 @@ class TestPortmappingScript(CalvinTestBase):
         actual = self._run_test(script, len(expected))
         self.assert_lists_equal(expected, actual)
 
+    @pytest.mark.xfail
     def testMapCollectCompleteDict(self):
         script = r"""
         snk : test.Sink(store_tokens=1, quiet=1)

@@ -322,10 +322,21 @@ class CalvinParser(object):
                                    | internal_inport"""
         p[0] = p[1]
 
+    def p_opt_tag(self, p):
+        """opt_tag : AT tag_value
+                   | empty"""
+        p[0] = p[1] if p[1] is None else p[2]
+
+    def p_tag_value(self, p):
+        """tag_value : NUMBER
+                     | STRING"""
+        # FIXME: Verify that number is positive integer
+        p[0] = p[1]
+
     def p_real_inport(self, p):
-        """real_inport : qualified_port"""
-        actor, port = p[1]
-        p[0] = ast.InPort(actor=actor, port=port, debug_info=self.debug_info(p, 1))
+        """real_inport : opt_tag qualified_port"""
+        _, tag, (actor, port) = p[:]
+        p[0] = ast.InPort(actor=actor, port=port, tag=tag, debug_info=self.debug_info(p, 2))
 
     def p_real_outport(self, p):
         """real_outport : qualified_port"""
@@ -396,20 +407,8 @@ class CalvinParser(object):
                  | bool
                  | null
                  | NUMBER
-                 | string
-                 | portref"""
+                 | string"""
         p[0] = ast.Value(value=p[1], debug_info=self.debug_info(p, 1))
-
-
-    def p_portref(self, p):
-        """portref : AND qualified_port opt_direction
-                   | AND unqualified_port opt_direction """
-        _, _, (actor, port), direction = p[:]
-        if actor is not None:
-            ref = ast.PortRef(actor=actor, port=port, direction=direction, debug_info=self.debug_info(p, 1))
-        else:
-            ref = ast.InternalPortRef(port=port, direction=direction, debug_info=self.debug_info(p, 1))
-        p[0] = ref
 
 
     def p_bool(self, p):

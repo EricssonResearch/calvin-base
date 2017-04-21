@@ -305,6 +305,7 @@ class Port(Node):
         self.children = None
         self.actor = kwargs.get('actor')
         self.port = kwargs.get('port')
+        self.tag = kwargs.get('tag')
 
     @property
     def name(self):
@@ -316,16 +317,6 @@ class Port(Node):
                                                 hex(id(self)), self.debug_info)
         else:
             return "{} {}.{}".format(self.__class__.__name__, str(self.actor), self.port)
-
-class PortRef(Port):
-    def __init__(self, **kwargs):
-        super(PortRef, self).__init__(**kwargs)
-        self.direction = kwargs.get('direction')
-
-class InternalPortRef(PortRef):
-    def __init__(self, **kwargs):
-        super(InternalPortRef, self).__init__(actor='', **kwargs)
-        self.direction = kwargs.get('direction')
 
 class PortList(Node):
     """docstring for LinkNode"""
@@ -490,8 +481,6 @@ def node_decoder(o):
         'InternalPort':InternalPort,
         'InternalInPort':InternalInPort,
         'InternalOutPort':InternalOutPort,
-        'InternalPortRef':InternalPortRef,
-        'PortRef':PortRef,
         'Block':Block,
         'Component':Component,
         'RuleApply':RuleApply,
