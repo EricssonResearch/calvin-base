@@ -115,7 +115,6 @@ class CalvinParser(object):
     def p_comp_statement(self, p):
         """comp_statement : assignment
                           | port_property
-                          | internal_port_property
                           | link"""
         p[0] = p[1]
 
@@ -250,13 +249,10 @@ class CalvinParser(object):
 
 
     def p_port_property(self, p):
-        """port_property : IDENTIFIER DOT IDENTIFIER opt_direction LPAREN named_args RPAREN"""
-        p[0] = ast.PortProperty(actor=p[1], port=p[3], direction=p[4], args=p[6], debug_info=self.debug_info(p, 1))
-
-
-    def p_internal_port_property(self, p):
-        """internal_port_property : DOT IDENTIFIER opt_direction LPAREN named_args RPAREN"""
-        p[0] = ast.PortProperty(actor=None, port=p[2], direction=p[3], args=p[5], debug_info=self.debug_info(p, 1))
+        """port_property : qualified_port opt_direction LPAREN named_args RPAREN
+                         | unqualified_port opt_direction LPAREN named_args RPAREN"""
+        _, (actor, port), direction, _, args, _ = p[:]
+        p[0] = ast.PortProperty(actor=actor, port=port, direction=direction, args=args, debug_info=self.debug_info(p, 1))
 
 
     def p_link_error(self, p):
@@ -323,28 +319,40 @@ class CalvinParser(object):
         p[0] = p[1]
 
     def p_real_inport(self, p):
-        """real_inport : IDENTIFIER DOT IDENTIFIER"""
-        p[0] = ast.InPort(actor=p[1], port=p[3], debug_info=self.debug_info(p, 1))
+        """real_inport : qualified_port"""
+        actor, port = p[1]
+        p[0] = ast.InPort(actor=actor, port=port, debug_info=self.debug_info(p, 1))
 
     def p_real_outport(self, p):
-        """real_outport : IDENTIFIER DOT IDENTIFIER"""
-        p[0] = ast.OutPort(actor=p[1], port=p[3], debug_info=self.debug_info(p, 1))
+        """real_outport : qualified_port"""
+        actor, port = p[1]
+        p[0] = ast.OutPort(actor=actor, port=port, debug_info=self.debug_info(p, 1))
 
 
     def p_internal_inport(self, p):
-        """internal_inport : DOT IDENTIFIER"""
-        p[0] = ast.InternalInPort(port=p[2], debug_info=self.debug_info(p, 1))
+        """internal_inport : unqualified_port"""
+        _, port = p[1]
+        p[0] = ast.InternalInPort(port=port, debug_info=self.debug_info(p, 1))
 
 
     def p_internal_outport(self, p):
-        """internal_outport : DOT IDENTIFIER"""
-        p[0] = ast.InternalOutPort(port=p[2], debug_info=self.debug_info(p, 1))
+        """internal_outport : unqualified_port"""
+        _, port = p[1]
+        p[0] = ast.InternalOutPort(port=port, debug_info=self.debug_info(p, 1))
 
 
     def p_port_transform(self, p):
         """port_transform : SLASH argument SLASH
                           | SLASH label argument SLASH"""
         p[0] = (p[2], None) if len(p) == 4 else (p[3], p[2])
+
+    def p_qualified_port(self, p):
+        """qualified_port : IDENTIFIER DOT IDENTIFIER"""
+        p[0] = (p[1], p[3])
+
+    def p_unqualified_port(self, p):
+        """unqualified_port : DOT IDENTIFIER"""
+        p[0] = (None, p[2])
 
 
     def p_label(self, p):
@@ -394,13 +402,12 @@ class CalvinParser(object):
 
 
     def p_portref(self, p):
-        """portref : AND IDENTIFIER DOT IDENTIFIER opt_direction
-                   | AND DOT IDENTIFIER opt_direction """
-        if len(p) == 6:
-            _, _, actor, _, port, direction = p[:]
+        """portref : AND qualified_port opt_direction
+                   | AND unqualified_port opt_direction """
+        _, _, (actor, port), direction = p[:]
+        if actor is not None:
             ref = ast.PortRef(actor=actor, port=port, direction=direction, debug_info=self.debug_info(p, 1))
         else:
-            _, _, _, port, direction = p[:]
             ref = ast.InternalPortRef(port=port, direction=direction, debug_info=self.debug_info(p, 1))
         p[0] = ref
 
