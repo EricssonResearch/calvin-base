@@ -51,13 +51,15 @@ class CalvinParser(object):
         root.add_child(d)
         p[0] = root
 
+    def p_empty(self, p):
+        """empty : """
+        pass
+
     def p_opt_constdefs(self, p):
-        """opt_constdefs :
-                         | constdefs"""
-        if len(p) == 2:
-            p[0] = p[1]
-        else:
-            p[0] = []
+        """opt_constdefs : constdefs
+                         | empty"""
+
+        p[0] = p[1] or []
 
     def p_constdefs(self, p):
         """constdefs : constdefs constdef
@@ -75,12 +77,9 @@ class CalvinParser(object):
 
 
     def p_opt_compdefs(self, p):
-        """opt_compdefs :
-                         | compdefs"""
-        if len(p) == 2:
-            p[0] = p[1]
-        else:
-            p[0] = []
+        """opt_compdefs : compdefs
+                        | empty"""
+        p[0] = p[1] or []
 
     def p_compdefs(self, p):
         """compdefs : compdefs compdef
@@ -97,12 +96,9 @@ class CalvinParser(object):
 
 
     def p_docstring(self, p):
-        """docstring :
-                     | DOCSTRING """
-        if len(p) == 1:
-            p[0] = "Someone(TM) should write some documentation for this component."
-        else:
-            p[0] = p[1]
+        """docstring : DOCSTRING
+                     | empty"""
+        p[0] = p[1] or "Someone(TM) should write some documentation for this component."
 
     def p_comp_statements(self, p):
         """comp_statements : comp_statements comp_statement
@@ -120,9 +116,9 @@ class CalvinParser(object):
         p[0] = p[1]
 
     def p_opt_program(self, p):
-        """opt_program :
-                       | program"""
-        if len(p) == 1:
+        """opt_program : program
+                       | empty"""
+        if p[1] is None:
             p[0] = [[],[]]
         else:
             p[0] = [
@@ -158,12 +154,14 @@ class CalvinParser(object):
         p[0] = ast.Group(group=p[2], members=p[4], debug_info=self.debug_info(p, 1))
 
     def p_ident_list(self, p):
-        """ident_list :
-                       | ident_list identifier COMMA
-                       | ident_list identifier"""
-        if len(p) > 2:
-            p[1].append(p[2])
-        p[0] = p[1] if len(p) > 1 else []
+        """ident_list : ident_list identifier COMMA
+                      | ident_list identifier
+                      | empty"""
+        if p[1] is None:
+            p[0] = []
+            return
+        p[1].append(p[2])
+        p[0] = p[1]
 
     def p_rule(self, p):
         """rule : RULE identifier COLON expression"""
@@ -235,9 +233,9 @@ class CalvinParser(object):
 
 
     def p_opt_direction(self, p):
-        """opt_direction :
-                         | LBRACK IDENTIFIER RBRACK"""
-        if len(p) == 1:
+        """opt_direction : LBRACK IDENTIFIER RBRACK
+                         | empty"""
+        if p[1] is None:
             p[0] = None
         else:
             if p[2] not in ['in', 'out']:
@@ -366,14 +364,10 @@ class CalvinParser(object):
         p[0] = p[2]
 
     def p_named_args(self, p):
-        """named_args :
-                      | named_args named_arg COMMA
-                      | named_args named_arg"""
-        if len(p) > 1:
-            p[0] = p[1] + [p[2]]
-        else:
-            p[0] = []
-
+        """named_args : named_args named_arg COMMA
+                      | named_args named_arg
+                      | empty"""
+        p[0] = p[1] + [p[2]] if p[1] is not None else []
 
     def p_named_arg(self, p):
         """named_arg : identifier EQ argument"""
@@ -435,15 +429,10 @@ class CalvinParser(object):
 
 
     def p_members(self, p):
-        """members :
-                    | members member COMMA
-                    | members member"""
-        if len(p) == 1:
-            p[0] = list()
-        else:
-            p[1].append(p[2])
-            p[0] = p[1]
-
+        """members : members member COMMA
+                   | members member
+                   | empty"""
+        p[0] = p[1] + [p[2]] if p[1] is not None else []
 
     def p_member(self, p):
         """member : string COLON value"""
@@ -451,15 +440,10 @@ class CalvinParser(object):
 
 
     def p_values(self, p):
-        """values :
-                    | values value COMMA
-                    | values value"""
-        if len(p) == 1:
-            p[0] = list()
-        else:
-            p[1].append(p[2].value)
-            p[0] = p[1]
-
+        """values : values value COMMA
+                  | values value
+                  | empty"""
+        p[0] = p[1] + [p[2].value] if p[1] is not None else []
 
     def p_array(self, p):
         """array :  LBRACK values RBRACK"""
@@ -467,13 +451,10 @@ class CalvinParser(object):
 
 
     def p_identifiers(self, p):
-        """identifiers :
-                       | identifiers IDENTIFIER COMMA
-                       | identifiers IDENTIFIER"""
-        if len(p) > 2:
-            p[1].append(p[2])
-        p[0] = p[1] if len(p) > 1 else []
-
+        """identifiers : identifiers IDENTIFIER COMMA
+                       | identifiers IDENTIFIER
+                       | empty"""
+        p[0] = p[1] + [p[2]] if p[1] is not None else []
 
     def p_qualified_name(self, p):
         """qualified_name : qualified_name DOT IDENTIFIER
