@@ -47,6 +47,9 @@ class HTTPClientHandler(object):
     def get(self, url, params=None, headers=None):
         return self._issue_request('GET', url, params, headers, None)
 
+    def delete(self, url, headers=None):
+        return self._issue_request('DELETE', url, {}, headers, None)
+
     def _receive_headers(self, dummy=None):
         self._node.sched.trigger_loop()
 

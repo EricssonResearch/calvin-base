@@ -113,14 +113,14 @@ class CalvinLink(CalvinBaseLink):
             # remove timeout
             self.replies_timeout.pop(msg_id)
         except KeyError:
-            _log.warning("Tried to handle reply for unknown message msgid %s", payload['msg_uuid'])
+            _log.warning("Tried to handle reply for unknown message msgid {}".format(msg_id))
             # We ignore any errors in cancelling timeout
             pass
 
         try:
             self.replies.pop(msg_id)['callback'](response.CalvinResponse(response.GATEWAY_TIMEOUT))
         except KeyError:
-            _log.warning("Tried to handle reply for unknown message msgid %s", payload['msg_uuid'])
+            _log.warning("Tried to handle reply for unknown message msgid {}".format(msg_id))
         except: # Dangerous but needed
             _log.exception("Unknown exception in response handler")
             # We ignore unknown replies
@@ -609,7 +609,7 @@ class CalvinNetwork(object):
             for cb in cbs:
                 cb(status=response.CalvinResponse(False), uri=uri, peer_node_id=None)
 
-        _log.warning("Connection failed on uri %s, status %s", uri, status)
+        _log.warning("Connection failed on uri {}, status {}".format(uri, status))
 
     def _peer_disconnected(self, link, rt_id, reason):
         if reason == "ERROR": _log.warning("Peer disconnected %s with reason %s", rt_id, reason)
