@@ -29,7 +29,8 @@ class StorageProxy(StorageBase):
     """ Implements a storage that asks a master node, this is the client class"""
     def __init__(self, node):
         self.master_uri = _conf.get('global', 'storage_proxy')
-        self.num_retries = _conf.get('global', 'storage_retries') or -1
+        self.max_retries = _conf.get('global', 'storage_retries') or -1
+        self.retries = 0
         self.node = node
         self.tunnel = None
         self.replies = {}
@@ -64,12 +65,12 @@ class StorageProxy(StorageBase):
         _log.info("status: {}, {}".format(status, str(status)))
 
         if status != 200:
-            if self.num_retries > 0:
-                self.num_retries -= 1
+            self.retries += 1
                 
-            if self.num_retries != 0:
-                _log.info("Link to proxy failed, retrying in 10")
-                async.DelayedCall(2, self.node.network.join,
+            if self.max_retries - self.retries != 0:
+                delay = 0.5 * self.retries if self.retries < 20 else 10
+                _log.info("Link to proxy failed, retrying in {}".format(delay))
+                async.DelayedCall(delay, self.node.network.join,
                     [self.master_uri], callback=CalvinCB(self._start_link_cb, org_cb=org_cb),
                     corresponding_server_node_names=[self._server_node_name])
                 return
