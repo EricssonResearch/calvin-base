@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
+from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvin_callback import CalvinCB
@@ -28,6 +29,8 @@ class StorageProxy(StorageBase):
     """ Implements a storage that asks a master node, this is the client class"""
     def __init__(self, node):
         self.master_uri = _conf.get('global', 'storage_proxy')
+        self.max_retries = _conf.get('global', 'storage_retries') or -1
+        self.retries = 0
         self.node = node
         self.tunnel = None
         self.replies = {}
@@ -44,22 +47,41 @@ class StorageProxy(StorageBase):
         _log.info("PROXY start")
         o=urlparse(self.master_uri)
         fqdn = socket.getfqdn(o.hostname)
+        self._server_node_name = fqdn.decode('unicode-escape')
         self.node.network.join([self.master_uri],
                                callback=CalvinCB(self._start_link_cb, org_cb=cb),
-                               corresponding_server_node_names=[fqdn.decode('unicode-escape')])
+                               corresponding_server_node_names=[self._server_node_name])
 
-    def _start_link_cb(self, status, uri, peer_node_id, org_cb):
-        _log.analyze(self.node.id, "+", {'status': str(status)}, peer_node_id=peer_node_id)
-        if status == "NACK":
-            if org_cb:
-                org_cb(False)
-            return
-        # Got link set up tunnel
-        self.master_id = peer_node_id
+    def _got_link(self, master_id, org_cb):
+        self.master_id = master_id
         self.tunnel = self.node.proto.tunnel_new(self.master_id, 'storage', {})
         self.tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, org_cb=org_cb))
         self.tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, org_cb=org_cb))
         self.tunnel.register_recv(self.tunnel_recv_handler)
+        
+    def _start_link_cb(self, status, uri, peer_node_id, org_cb):
+        _log.analyze(self.node.id, "+", {'status': str(status)}, peer_node_id=peer_node_id)
+
+        _log.info("status: {}, {}".format(status, str(status)))
+
+        if status != 200:
+            self.retries += 1
+                
+            if self.max_retries - self.retries != 0:
+                delay = 0.5 * self.retries if self.retries < 20 else 10
+                _log.info("Link to proxy failed, retrying in {}".format(delay))
+                async.DelayedCall(delay, self.node.network.join,
+                    [self.master_uri], callback=CalvinCB(self._start_link_cb, org_cb=org_cb),
+                    corresponding_server_node_names=[self._server_node_name])
+                return
+            else :
+                _log.info("Link to proxy still failing, giving up")
+                if org_cb:
+                    org_cb(False)
+                return
+
+        # Got link set up tunnel
+        self._got_link(peer_node_id, org_cb)
 
     def tunnel_down(self, org_cb):
         """ Callback that the tunnel is not accepted or is going down """

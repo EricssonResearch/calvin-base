@@ -23,7 +23,7 @@ _log = get_logger(__name__)
 
 class TimerEvent(async.DelayedCall):
     def __init__(self, actor_id, delay, trigger_loop, repeats=False):
-        super(TimerEvent, self).__init__(delay, callback=self.trigger)
+        super(TimerEvent, self).__init__(delay, dc_callback=self.trigger)
         self._actor_id = actor_id
         self._triggered = False
         self.trigger_loop = trigger_loop
