@@ -65,8 +65,7 @@ class StorageProxy(StorageBase):
         _log.info("status: {}, {}".format(status, str(status)))
 
         if status != 200:
-            if self.max_retries != -1 :
-                self.retries += 1
+            self.retries += 1
                 
             if self.max_retries - self.retries != 0:
                 delay = 0.5 * self.retries if self.retries < 20 else 10
