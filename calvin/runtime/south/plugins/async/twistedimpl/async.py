@@ -19,11 +19,11 @@ from twisted.internet import reactor
 
 class DelayedCall(object):
 
-    def __init__(self, delay, callback, *args, **kwargs):
+    def __init__(self, delay, dc_callback, *args, **kwargs):
         self._args = args
         self._kwargs = kwargs
         self.delay = delay
-        self.callback = callback
+        self.callback = dc_callback
         self.reset()
 
     def reset(self):
