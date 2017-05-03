@@ -1,0 +1,27 @@
+
+dd : flow.DispatchDict(mapping={"t1": "tag_1.in", "t2": "tag_2.in", "t3": "tag_3.in"})
+trigger: std.Trigger(tick=0.5, data={"t1": 1, "t2": 2, "t3": 3}, )
+tag_1: text.PrefixString(prefix="tag-1:")
+tag_2: text.PrefixString(prefix="tag-2:")
+tag_3: text.PrefixString(prefix="tag-3:")
+coll : flow.Collect()
+out : io.Print()
+
+trigger.data > dd.dict
+dd.token > tag_1.in
+dd.token > tag_2.in
+dd.token > tag_3.in
+dd.default > coll.token
+
+tag_1.out > coll.token
+tag_2.out > coll.token
+tag_3.out > coll.token
+
+coll.token > out.token
+
+
+rule rt1 : node_attr_match(index=["node_name",{"name":"runtime-1"}])
+rule all_nodes : all_nodes()
+
+apply dd : rt1
+apply trigger, tag_1, tag_2, tag_3, coll, out : all_nodes

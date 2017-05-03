@@ -1,0 +1,15 @@
+{
+    "requirements": {
+        "button": [{
+            "op": "node_attr_match",
+            "kwargs": {"index": ["address", {"locality": "inside"}]},
+            "type": "+"
+        }],
+        "lock": [
+        {
+            "op": "node_attr_match",
+            "kwargs": {"index": ["node_name", {"name": "server"}]},
+            "type": "+"
+        }]
+    }
+}

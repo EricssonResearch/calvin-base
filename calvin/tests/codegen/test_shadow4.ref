@@ -1,0 +1,67 @@
+{
+    "actors": {
+        "test_shadow4:bell": {
+            "actor_type": "test.Sink", 
+            "args": {
+                "store_tokens": true
+            }, 
+            "signature": "797d9e5483ae235af0772329ecf3d37bff628542181279a98b73fb8c748a7e7c"
+        }, 
+        "test_shadow4:button": {
+            "actor_type": "std.CountTimer", 
+            "args": {}, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }, 
+        "test_shadow4:check": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }
+    }, 
+    "connections": {
+        "test_shadow4:button.integer": [
+            "test_shadow4:check.integer"
+        ], 
+        "test_shadow4:check.integer": [
+            "test_shadow4:bell.token"
+        ]
+    }, 
+    "name": "test_shadow4", 
+    "port_properties": {
+        "test_shadow4:bell": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_shadow4:button": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_shadow4:check": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

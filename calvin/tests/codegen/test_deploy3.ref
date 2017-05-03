@@ -1,0 +1,89 @@
+{
+    "actors": {
+        "test_deploy3:snk": {
+            "actor_type": "test.Sink", 
+            "args": {}, 
+            "signature": "797d9e5483ae235af0772329ecf3d37bff628542181279a98b73fb8c748a7e7c"
+        }, 
+        "test_deploy3:src:first": {
+            "actor_type": "std.CountTimer", 
+            "args": {}, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }, 
+        "test_deploy3:src:second": {
+            "actor_type": "std.Identity", 
+            "args": {}, 
+            "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
+        }, 
+        "test_deploy3:sum": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }
+    }, 
+    "connections": {
+        "test_deploy3:src:first.integer": [
+            "test_deploy3:src:second.token"
+        ], 
+        "test_deploy3:src:second.token": [
+            "test_deploy3:sum.integer"
+        ], 
+        "test_deploy3:sum.integer": [
+            "test_deploy3:snk.token"
+        ]
+    }, 
+    "name": "test_deploy3", 
+    "port_properties": {
+        "test_deploy3:snk": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy3:src:first": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy3:src:second": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy3:sum": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

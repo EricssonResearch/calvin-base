@@ -1,0 +1,27 @@
+switch: flow.Dealternate(order=["out3.in", "out1.in", "out2.in"])
+input: std.CountTimer(sleep=0.5)
+
+out1 : text.PrefixString(prefix="tag-1:")
+out2 : text.PrefixString(prefix="tag-2:")
+out3 : text.PrefixString(prefix="tag-3:")
+
+collect : flow.Collect()
+print : io.Print()
+
+input.integer > switch.token
+switch.token > out1.in
+switch.token > out2.in
+switch.token > out3.in
+
+out1.out > collect.token
+out2.out > collect.token
+out3.out > collect.token
+
+collect.token > print.token
+
+
+rule rt1 : node_attr_match(index=["node_name",{"name":"runtime-1"}])
+rule all_nodes : all_nodes()
+
+apply switch : rt1
+apply input, print, out1, out2, out3, collect : all_nodes

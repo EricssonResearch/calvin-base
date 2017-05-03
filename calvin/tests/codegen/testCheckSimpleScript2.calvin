@@ -1,0 +1,7 @@
+        a:std.CountTimer()
+        b:io.Print()
+
+        a.integer > b.token
+        
+        rule simple: node_attr(node_name={"name": "simple_rt"}) & node_attr(owner={"personOrGroup": "me"})
+        apply a, b: simple 

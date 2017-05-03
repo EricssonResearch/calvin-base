@@ -1,0 +1,77 @@
+{
+    "actors": {
+        "random1:delay": {
+            "actor_type": "std.ClassicDelay", 
+            "args": {}, 
+            "signature": "5787838e931900c0dd74d6bee2347038577a2677016ed4992c7653889cf1678f"
+        }, 
+        "random1:print": {
+            "actor_type": "io.Print", 
+            "args": {}, 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }, 
+        "random1:src:init": {
+            "actor_type": "flow.Init", 
+            "args": {
+                "data": -1
+            }, 
+            "signature": "3e308e47a996352b4965a7449eeb84f049b9e0931e5011dd923bad6660e6e002"
+        }
+    }, 
+    "connections": {
+        "random1:delay.token": [
+            "random1:src:init.in"
+        ], 
+        "random1:src:init.out": [
+            "random1:print.token", 
+            "random1:delay.token"
+        ]
+    }, 
+    "name": "random1", 
+    "port_properties": {
+        "random1:delay": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1, 
+                    "routing": "round-robin"
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "random1:print": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "random1:src:init": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 2, 
+                    "routing": "round-robin"
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

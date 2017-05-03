@@ -1,0 +1,18 @@
+component StopLight() state -> status {
+    id : std.Identity()
+
+    .state > id.token
+    id.token > .status
+}
+
+button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+lock   : StopLight()
+sink   : flow.Terminator()
+
+button.state > lock.state
+lock.status > sink.void
+
+rule button_rule : node_attr_match(index=["address", {"locality": "inside"}])
+rule lock_rule : node_attr_match(index=["node_name", {"name": "server"}])
+apply button: button_rule
+apply lock : lock_rule

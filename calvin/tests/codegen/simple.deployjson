@@ -1,0 +1,33 @@
+{
+    "valid": true, 
+    "requirements": {
+        "src": [
+            {
+                "kwargs": {
+                    "index": [
+                        "node_name", 
+                        {
+                            "organization": "com.ericsson"
+                        }
+                    ]
+                }, 
+                "type": "+", 
+                "op": "node_attr_match"
+            }
+        ], 
+        "snk": [
+            {
+                "kwargs": {
+                    "index": [
+                        "node_name", 
+                        {
+                            "organization": "com.ericsson"
+                        }
+                    ]
+                }, 
+                "type": "+", 
+                "op": "node_attr_match"
+            }
+        ]
+    }
+}

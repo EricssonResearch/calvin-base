@@ -1,0 +1,16 @@
+button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+bell: media.MediaPlayer(media_file="dingdong.ogg")
+camera : media.Camera()
+screen : media.ImageRenderer()
+
+
+button.state > camera.trigger
+camera.image > screen.image
+button.state > bell.play
+
+rule outside_rule : node_attr_match(index=["address", {"locality": "outside"}])
+rule inside_rule : node_attr_match(index=["address", {"locality": "inside"}])
+rule server_rule : node_attr_match(index=["node_name", {"name": "server"}])
+apply button : outside_rule
+apply bell : inside_rule
+apply camera, screen : server_rule

@@ -1,0 +1,113 @@
+{
+    "requirements": {
+        "delay": [
+            {
+                "kwargs": {
+                    "node_name": {
+                        "name": "testNode2"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "owner": {
+                        "personOrGroup": "me"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "adress": {
+                        "locality": "Lund"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }
+        ], 
+        "print": [
+            {
+                "kwargs": {
+                    "node_name": {
+                        "name": "testNode2"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "owner": {
+                        "personOrGroup": "me"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "adress": {
+                        "locality": "Lund"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "node_name": "NODE1"
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "node_name": {
+                        "name": "testNode2"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }
+        ], 
+        "src": [
+            {
+                "kwargs": {
+                    "node_name": "NODE1"
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "node_name": {
+                        "name": "testNode2"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "node_name": "NODE1"
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "node_name": {
+                        "name": "testNode2"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }
+        ]
+    }, 
+    "valid": true
+}

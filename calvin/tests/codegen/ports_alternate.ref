@@ -1,0 +1,154 @@
+{
+    "actors": {
+        "ports_alternate:alt": {
+            "actor_type": "flow.Alternate", 
+            "args": {
+                "order": [
+                    "out1.out", 
+                    "out2.out", 
+                    "out3.out"
+                ]
+            }, 
+            "signature": "582eba03dca312fd157139eb94fce1cb89137bdbb8ffcadce4697102c2b58364"
+        }, 
+        "ports_alternate:input": {
+            "actor_type": "std.CountTimer", 
+            "args": {
+                "sleep": 0.5
+            }, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }, 
+        "ports_alternate:out1": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag-1:"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "ports_alternate:out2": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag-2:"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "ports_alternate:out3": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag-3:"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "ports_alternate:print": {
+            "actor_type": "io.Print", 
+            "args": {}, 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }
+    }, 
+    "connections": {
+        "ports_alternate:alt.token": [
+            "ports_alternate:print.token"
+        ], 
+        "ports_alternate:input.integer": [
+            "ports_alternate:out1.in", 
+            "ports_alternate:out2.in", 
+            "ports_alternate:out3.in"
+        ], 
+        "ports_alternate:out1.out": [
+            "ports_alternate:alt.token"
+        ], 
+        "ports_alternate:out2.out": [
+            "ports_alternate:alt.token"
+        ], 
+        "ports_alternate:out3.out": [
+            "ports_alternate:alt.token"
+        ]
+    }, 
+    "name": "ports_alternate", 
+    "port_properties": {
+        "ports_alternate:alt": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 3, 
+                    "routing": "collect-all-tagged"
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_alternate:input": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 3
+                }
+            }
+        ], 
+        "ports_alternate:out1": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_alternate:out2": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_alternate:out3": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_alternate:print": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

@@ -1,0 +1,44 @@
+{
+    "connections": {
+        "basic:src.integer": [
+            "basic:snk.token"
+        ]
+    }, 
+    "port_properties": {
+        "basic:snk": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "basic:src": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true, 
+    "actors": {
+        "basic:snk": {
+            "args": {
+                "store_tokens": 1, 
+                "quiet": 1
+            }, 
+            "actor_type": "test.Sink", 
+            "signature": "797d9e5483ae235af0772329ecf3d37bff628542181279a98b73fb8c748a7e7c"
+        }, 
+        "basic:src": {
+            "args": {}, 
+            "actor_type": "std.CountTimer", 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }
+    }, 
+    "name": "basic"
+}

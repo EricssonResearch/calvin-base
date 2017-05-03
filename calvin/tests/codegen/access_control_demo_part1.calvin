@@ -1,0 +1,13 @@
+button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+check  : std.Identity(dump=true)
+bell   : media.MediaPlayer(media_file="dingdong.ogg")
+
+button.state > check.token
+check.token > bell.play
+
+rule button_rule: node_attr_match(index=["address", {"locality": "outside"}])
+apply button : button_rule
+rule bell_rule: node_attr_match(index=["address", {"locality": "inside"}])
+apply bell : bell_rule
+rule check_rule: node_attr_match(index=["node_name", {"name": "server"}])
+apply check : check_rule

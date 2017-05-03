@@ -1,0 +1,44 @@
+{
+    "requirements": {
+        "src": [{"op": "node_attr_match", 
+                "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]},
+                "type": "+"
+                }], 
+        "sum1": [{"op": "all_nodes", 
+                 "kwargs": {},
+                 "type": "+"
+                }], 
+        "sum2": [{"op": "all_nodes", 
+                 "kwargs": {},
+                 "type": "+"
+                }], 
+        "sum3": [{"op": "all_nodes", 
+                 "kwargs": {},
+                 "type": "+"
+                }], 
+        "sum4": [{"op": "all_nodes", 
+                 "kwargs": {},
+                 "type": "+"
+                }], 
+        "sum5": [{"op": "all_nodes", 
+                 "kwargs": {},
+                 "type": "+"
+                }], 
+        "sum6": [{"op": "all_nodes", 
+                 "kwargs": {},
+                 "type": "+"
+                }], 
+        "sum7": [{"op": "all_nodes", 
+                 "kwargs": {},
+                 "type": "+"
+                }], 
+        "sum8": [{"op": "all_nodes", 
+                 "kwargs": {},
+                 "type": "+"
+                }], 
+        "snk": [{"op": "node_attr_match", 
+                 "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode3"}]},
+                 "type": "+"
+                }]
+            }
+}

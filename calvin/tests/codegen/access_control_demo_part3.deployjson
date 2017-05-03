@@ -1,0 +1,21 @@
+{
+    "requirements": {
+        "button": [{
+            "op": "node_attr_match",
+            "kwargs": {"index": ["address", {"locality": "outside"}]},
+            "type": "+"
+        }],
+        "camera": [
+        {
+            "op": "node_attr_match",
+            "kwargs": {"index": ["node_name", {"name": "server"}]},
+            "type": "+"
+        }],
+        "screen": [
+        {
+            "op": "node_attr_match",
+                    "kwargs": {"index": ["node_name", {"name": "server"}]},
+            "type": "+"
+        }]
+    }
+}

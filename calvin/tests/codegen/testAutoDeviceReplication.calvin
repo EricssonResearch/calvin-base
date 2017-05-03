@@ -1,0 +1,14 @@
+src    : std.CountTimer(sleep=0.01)
+ident  : std.Burn(duration=0.01)
+delay  : std.Identity()
+snk    : test.Sink(store_tokens=1, quiet=1)
+src.integer(routing="balanced")
+delay.token[in](routing="collect-tagged")
+src.integer > ident.token
+ident.token > delay.token
+delay.token > snk.token
+
+rule first: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "first"}])
+rule rest: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}])
+apply src, snk, delay: first
+apply ident: rest

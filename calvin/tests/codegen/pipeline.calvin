@@ -1,0 +1,19 @@
+src : std.Trigger(tick=1, data="fire")
+id1 : std.Identity()
+id2 : std.Identity()
+snk : io.Log(loglevel="INFO")
+
+src.data > id1.token
+id1.token > id2.token
+id2.token > snk.data
+
+
+rule rt0 : node_attr_match(index=["node_name",{"name":"runtime-0"}])
+rule rt1 : node_attr_match(index=["node_name",{"name":"runtime-1"}])
+rule rt2 : node_attr_match(index=["node_name",{"name":"runtime-2"}])
+rule rt3 : node_attr_match(index=["node_name",{"name":"runtime-3"}])
+
+apply src : rt0
+apply snk : rt3
+apply id1 : rt1
+apply id2 : rt2

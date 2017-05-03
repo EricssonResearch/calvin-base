@@ -1,0 +1,194 @@
+{
+    "actors": {
+        "ports_dispatch_dict:coll": {
+            "actor_type": "flow.Collect", 
+            "args": {}, 
+            "signature": "e6b5141ac9ddab19cec49d8785f1f3cf4acf763498c721870ff1dcafca119059"
+        }, 
+        "ports_dispatch_dict:dd": {
+            "actor_type": "flow.DispatchDict", 
+            "args": {
+                "mapping": {
+                    "t1": "tag_1.in", 
+                    "t2": "tag_2.in", 
+                    "t3": "tag_3.in"
+                }
+            }, 
+            "signature": "65b56c8056b4a147c11874c8d1f1c9c8516daf8a92261efbf71ef226f3bedf55"
+        }, 
+        "ports_dispatch_dict:out": {
+            "actor_type": "io.Print", 
+            "args": {}, 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }, 
+        "ports_dispatch_dict:tag_1": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag-1:"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "ports_dispatch_dict:tag_2": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag-2:"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "ports_dispatch_dict:tag_3": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag-3:"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "ports_dispatch_dict:trigger": {
+            "actor_type": "std.Trigger", 
+            "args": {
+                "data": {
+                    "t1": 1, 
+                    "t2": 2, 
+                    "t3": 3
+                }, 
+                "tick": 0.5
+            }, 
+            "signature": "ba09c716dfc88b9fdf447ede4d0ad64ee4ea24c03a7fb1568f24f5b89254b58e"
+        }
+    }, 
+    "connections": {
+        "ports_dispatch_dict:coll.token": [
+            "ports_dispatch_dict:out.token"
+        ], 
+        "ports_dispatch_dict:dd.default": [
+            "ports_dispatch_dict:coll.token"
+        ], 
+        "ports_dispatch_dict:dd.token": [
+            "ports_dispatch_dict:tag_1.in", 
+            "ports_dispatch_dict:tag_2.in", 
+            "ports_dispatch_dict:tag_3.in"
+        ], 
+        "ports_dispatch_dict:tag_1.out": [
+            "ports_dispatch_dict:coll.token"
+        ], 
+        "ports_dispatch_dict:tag_2.out": [
+            "ports_dispatch_dict:coll.token"
+        ], 
+        "ports_dispatch_dict:tag_3.out": [
+            "ports_dispatch_dict:coll.token"
+        ], 
+        "ports_dispatch_dict:trigger.data": [
+            "ports_dispatch_dict:dd.dict"
+        ]
+    }, 
+    "name": "ports_dispatch_dict", 
+    "port_properties": {
+        "ports_dispatch_dict:coll": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 4, 
+                    "routing": "collect-unordered"
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch_dict:dd": [
+            {
+                "direction": "in", 
+                "port": "dict", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "default", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 3, 
+                    "routing": "dispatch-mapped"
+                }
+            }
+        ], 
+        "ports_dispatch_dict:out": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch_dict:tag_1": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch_dict:tag_2": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch_dict:tag_3": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch_dict:trigger": [
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

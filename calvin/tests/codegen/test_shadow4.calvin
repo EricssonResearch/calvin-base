@@ -1,0 +1,11 @@
+button : std.CountTimer()
+check : std.Sum()
+bell : test.Sink(store_tokens=true)
+
+button.integer > check.integer
+check.integer > bell.token
+
+
+apply button : node_attr_match(index=["address", {"locality": "outside"}])
+apply bell : node_attr_match(index=["address", {"locality": "inside"}])
+apply check : node_attr_match(index=["node_name", {"name": "display"}])

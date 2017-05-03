@@ -1,0 +1,67 @@
+{
+    "requirements": {
+        "a": [
+            {
+                "op": "union_group", 
+                "requirements": [
+                    {
+                        "kwargs": {
+                            "node_name": {
+                                "name": "simple_rt1"
+                            }
+                        }, 
+                        "op": "node_attr", 
+                        "type": "+"
+                    }, 
+                    {
+                        "kwargs": {
+                            "node_name": {
+                                "name": "simple_rt2"
+                            }
+                        }, 
+                        "op": "node_attr", 
+                        "type": "+"
+                    }
+                ], 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {}, 
+                "op": "current", 
+                "type": "-"
+            }
+        ], 
+        "b": [
+            {
+                "op": "union_group", 
+                "requirements": [
+                    {
+                        "kwargs": {
+                            "node_name": {
+                                "name": "simple_rt1"
+                            }
+                        }, 
+                        "op": "node_attr", 
+                        "type": "+"
+                    }, 
+                    {
+                        "kwargs": {
+                            "node_name": {
+                                "name": "simple_rt2"
+                            }
+                        }, 
+                        "op": "node_attr", 
+                        "type": "+"
+                    }
+                ], 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {}, 
+                "op": "current", 
+                "type": "-"
+            }
+        ]
+    }, 
+    "valid": true
+}

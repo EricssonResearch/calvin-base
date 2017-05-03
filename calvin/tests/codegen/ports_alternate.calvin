@@ -1,0 +1,26 @@
+alt: flow.Alternate(order=["out1.out", "out2.out", "out3.out"])
+input: std.CountTimer(sleep=0.5)
+
+out1 : text.PrefixString(prefix="tag-1:")
+out2 : text.PrefixString(prefix="tag-2:")
+out3 : text.PrefixString(prefix="tag-3:")
+
+print : io.Print()
+
+input.integer > out1.in
+input.integer > out2.in
+input.integer > out3.in
+
+out1.out > alt.token
+out2.out > alt.token
+out3.out > alt.token
+
+
+alt.token > print.token
+
+
+rule rt1 : node_attr_match(index=["node_name",{"name":"runtime-1"}])
+rule all_nodes : all_nodes()
+
+apply alt : rt1
+apply input, print, out1, out2, out3 : all_nodes

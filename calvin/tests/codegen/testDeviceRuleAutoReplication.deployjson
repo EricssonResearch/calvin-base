@@ -1,0 +1,76 @@
+{
+    "requirements": {
+        "delay": [
+            {
+                "kwargs": {
+                    "index": [
+                        "node_name", 
+                        {
+                            "group": "first", 
+                            "organization": "com.ericsson", 
+                            "purpose": "distributed-test"
+                        }
+                    ]
+                }, 
+                "op": "node_attr_match", 
+                "type": "+"
+            }
+        ], 
+        "ident": [
+            {
+                "kwargs": {
+                    "index": [
+                        "node_name", 
+                        {
+                            "group": "rest", 
+                            "organization": "com.ericsson", 
+                            "purpose": "distributed-test"
+                        }
+                    ]
+                }, 
+                "op": "node_attr_match", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "max": 6
+                }, 
+                "op": "device_scaling", 
+                "type": "+"
+            }
+        ], 
+        "snk": [
+            {
+                "kwargs": {
+                    "index": [
+                        "node_name", 
+                        {
+                            "group": "first", 
+                            "organization": "com.ericsson", 
+                            "purpose": "distributed-test"
+                        }
+                    ]
+                }, 
+                "op": "node_attr_match", 
+                "type": "+"
+            }
+        ], 
+        "src": [
+            {
+                "kwargs": {
+                    "index": [
+                        "node_name", 
+                        {
+                            "group": "first", 
+                            "organization": "com.ericsson", 
+                            "purpose": "distributed-test"
+                        }
+                    ]
+                }, 
+                "op": "node_attr_match", 
+                "type": "+"
+            }
+        ]
+    }, 
+    "valid": true
+}

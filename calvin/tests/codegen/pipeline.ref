@@ -1,0 +1,94 @@
+{
+    "actors": {
+        "pipeline:id1": {
+            "actor_type": "std.Identity", 
+            "args": {}, 
+            "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
+        }, 
+        "pipeline:id2": {
+            "actor_type": "std.Identity", 
+            "args": {}, 
+            "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
+        }, 
+        "pipeline:snk": {
+            "actor_type": "io.Log", 
+            "args": {
+                "loglevel": "INFO"
+            }, 
+            "signature": "e73ce6ca0ccc9bce14f8d546e930f53cb69e466eb3325e1cc24d64e8b0bb97b5"
+        }, 
+        "pipeline:src": {
+            "actor_type": "std.Trigger", 
+            "args": {
+                "data": "fire", 
+                "tick": 1
+            }, 
+            "signature": "ba09c716dfc88b9fdf447ede4d0ad64ee4ea24c03a7fb1568f24f5b89254b58e"
+        }
+    }, 
+    "connections": {
+        "pipeline:id1.token": [
+            "pipeline:id2.token"
+        ], 
+        "pipeline:id2.token": [
+            "pipeline:snk.data"
+        ], 
+        "pipeline:src.data": [
+            "pipeline:id1.token"
+        ]
+    }, 
+    "name": "pipeline", 
+    "port_properties": {
+        "pipeline:id1": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "pipeline:id2": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "pipeline:snk": [
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "pipeline:src": [
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

@@ -1,0 +1,98 @@
+{
+    "actors": {
+        "testAutoDeviceReplication:delay": {
+            "actor_type": "std.Identity", 
+            "args": {}, 
+            "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
+        }, 
+        "testAutoDeviceReplication:ident": {
+            "actor_type": "std.Burn", 
+            "args": {
+                "duration": 0.01
+            }, 
+            "signature": "0c96f5e6808a0be275065c0716662f865af5fde7cb733c142e2d6c151320c05b"
+        }, 
+        "testAutoDeviceReplication:snk": {
+            "actor_type": "test.Sink", 
+            "args": {
+                "quiet": 1, 
+                "store_tokens": 1
+            }, 
+            "signature": "797d9e5483ae235af0772329ecf3d37bff628542181279a98b73fb8c748a7e7c"
+        }, 
+        "testAutoDeviceReplication:src": {
+            "actor_type": "std.CountTimer", 
+            "args": {
+                "sleep": 0.01
+            }, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }
+    }, 
+    "connections": {
+        "testAutoDeviceReplication:delay.token": [
+            "testAutoDeviceReplication:snk.token"
+        ], 
+        "testAutoDeviceReplication:ident.token": [
+            "testAutoDeviceReplication:delay.token"
+        ], 
+        "testAutoDeviceReplication:src.integer": [
+            "testAutoDeviceReplication:ident.token"
+        ]
+    }, 
+    "name": "testAutoDeviceReplication", 
+    "port_properties": {
+        "testAutoDeviceReplication:delay": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1, 
+                    "routing": "collect-tagged"
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "testAutoDeviceReplication:ident": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "testAutoDeviceReplication:snk": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "testAutoDeviceReplication:src": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1, 
+                    "routing": "balanced"
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

@@ -1,0 +1,252 @@
+{
+    "actors": {
+        "ports_dispatch:disp": {
+            "actor_type": "flow.Dispatch", 
+            "args": {}, 
+            "signature": "738125b4274e11301639359ceab6e7f82de1f531f8e517bd4ecef5c690b23d7b"
+        }, 
+        "ports_dispatch:input": {
+            "actor_type": "std.CountTimer", 
+            "args": {}, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }, 
+        "ports_dispatch:tag1:d": {
+            "actor_type": "std.ClassicDelay", 
+            "args": {
+                "delay": 0.5
+            }, 
+            "signature": "5787838e931900c0dd74d6bee2347038577a2677016ed4992c7653889cf1678f"
+        }, 
+        "ports_dispatch:tag1:o": {
+            "actor_type": "io.Print", 
+            "args": {}, 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }, 
+        "ports_dispatch:tag1:t": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag1-"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "ports_dispatch:tag2:d": {
+            "actor_type": "std.ClassicDelay", 
+            "args": {
+                "delay": 0.5
+            }, 
+            "signature": "5787838e931900c0dd74d6bee2347038577a2677016ed4992c7653889cf1678f"
+        }, 
+        "ports_dispatch:tag2:o": {
+            "actor_type": "io.Print", 
+            "args": {}, 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }, 
+        "ports_dispatch:tag2:t": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag2-"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "ports_dispatch:tag3:d": {
+            "actor_type": "std.ClassicDelay", 
+            "args": {
+                "delay": 0.5
+            }, 
+            "signature": "5787838e931900c0dd74d6bee2347038577a2677016ed4992c7653889cf1678f"
+        }, 
+        "ports_dispatch:tag3:o": {
+            "actor_type": "io.Print", 
+            "args": {}, 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }, 
+        "ports_dispatch:tag3:t": {
+            "actor_type": "text.PrefixString", 
+            "args": {
+                "prefix": "tag3-"
+            }, 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }
+    }, 
+    "connections": {
+        "ports_dispatch:disp.token": [
+            "ports_dispatch:tag1:t.in", 
+            "ports_dispatch:tag2:t.in", 
+            "ports_dispatch:tag3:t.in"
+        ], 
+        "ports_dispatch:input.integer": [
+            "ports_dispatch:disp.token"
+        ], 
+        "ports_dispatch:tag1:d.token": [
+            "ports_dispatch:tag1:o.token"
+        ], 
+        "ports_dispatch:tag1:t.out": [
+            "ports_dispatch:tag1:d.token"
+        ], 
+        "ports_dispatch:tag2:d.token": [
+            "ports_dispatch:tag2:o.token"
+        ], 
+        "ports_dispatch:tag2:t.out": [
+            "ports_dispatch:tag2:d.token"
+        ], 
+        "ports_dispatch:tag3:d.token": [
+            "ports_dispatch:tag3:o.token"
+        ], 
+        "ports_dispatch:tag3:t.out": [
+            "ports_dispatch:tag3:d.token"
+        ]
+    }, 
+    "name": "ports_dispatch", 
+    "port_properties": {
+        "ports_dispatch:disp": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 3, 
+                    "routing": "balanced"
+                }
+            }
+        ], 
+        "ports_dispatch:input": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag1:d": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag1:o": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag1:t": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag2:d": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag2:o": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag2:t": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag3:d": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag3:o": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_dispatch:tag3:t": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

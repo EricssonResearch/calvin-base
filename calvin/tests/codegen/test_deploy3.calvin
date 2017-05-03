@@ -1,0 +1,19 @@
+component TheSource() -> out {
+  first: std.CountTimer()
+  second: std.Identity()
+
+  first.integer > second.token
+  second.token > .out
+}
+
+src : TheSource()
+sum : std.Sum()
+snk : test.Sink()
+
+src.out > sum.integer
+sum.integer > snk.token
+
+
+apply src : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode1"}])
+apply sum : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode2"}])
+apply snk : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode3"}]) & ~current_node()

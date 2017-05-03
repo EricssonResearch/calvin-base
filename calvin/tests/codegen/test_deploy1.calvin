@@ -1,0 +1,85 @@
+src : std.CountTimer()
+sum : std.Sum()
+snk : test.Sink()
+
+src.integer > sum.integer
+sum.integer > snk.token
+/*
+{
+    "groups": {"firstgroup": ["src", "sum"]},
+    "requirements": {
+        "src": [{"op": "union_group",
+                 "requirements": [{"op": "node_attr_match",
+                                   "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
+                                   },
+                                  {"op": "node_attr_match",
+                                   "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode2"}]}
+                                   }],
+                 "type": "+"
+                },
+                {"op": "current_node",
+                 "kwargs": {},
+                 "type": "-"
+                }],
+        "sum": [{"op": "node_attr_match",
+                 "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode2"}]},
+                 "type": "+"
+                }],
+        "snk": [{"op": "node_attr_match",
+                 "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode3"}]},
+                 "type": "+"
+                },
+                {"op": "current_node",
+                 "kwargs": {},
+                 "type": "-"
+                }]
+            }
+}
+
+
+        "src": [
+            {
+                "op": "union_group",
+                "requirements": [{"op": "node_attr_match"
+                                  "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]
+                                  },
+                        "type": "+",
+                    },
+                    {
+                        "kwargs": {
+                            "index": [
+                                "node_name",
+                                {
+                                    "organization": "org.testexample",
+                                    "name": "testNode2"
+                                }
+                            ]
+                        },
+                        "type": "+",
+                        "op": "node_attr_match"
+                    }
+                ],
+                "type": "+",
+            },
+            {
+                "kwargs": {},
+                "type": "-",
+                "op": "current_node"
+            }
+        ],
+*/
+
+/*rule node1 : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode1"}])
+rule node2 : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode2"}])
+rule node3 : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode3"}])
+*/
+rule src_rule : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode1"}]) | node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode2"}])
+rule snk_rule : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode3"}]) &~ current_node()
+rule sum_rule : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode2"}])
+
+group firstgroup : src, sum
+
+apply src : src_rule & ~current_node()
+apply sum : sum_rule
+apply snk : snk_rule
+# apply firstgroup : node2

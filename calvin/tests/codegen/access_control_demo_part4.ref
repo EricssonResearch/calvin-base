@@ -1,0 +1,86 @@
+{
+    "actors": {
+        "access_control_demo_part4:bell": {
+            "actor_type": "media.MediaPlayer", 
+            "args": {
+                "media_file": "dingdong.ogg"
+            }, 
+            "signature": "09bd0a9af355aecb05c65508494ef3580ca8f4a2d0b026058effad3fbfc7bf9a"
+        }, 
+        "access_control_demo_part4:button": {
+            "actor_type": "io.GPIOReader", 
+            "args": {
+                "edge": "b", 
+                "gpio_pin": 23, 
+                "pull": "d"
+            }, 
+            "signature": "b8a738b359dd1aa1327b5e298cb13ef3eb267368d221e35ae28697c010a8c2ce"
+        }, 
+        "access_control_demo_part4:camera": {
+            "actor_type": "media.Camera", 
+            "args": {}, 
+            "signature": "9030eabce45c273b2f43402fa5dfd72e219937fb57978ddfabe944025b22d2fe"
+        }, 
+        "access_control_demo_part4:screen": {
+            "actor_type": "media.ImageRenderer", 
+            "args": {}, 
+            "signature": "e7a548b578fa70c317dfaf8ed2d2132bde8c1f568600a13b775c5aee25d336ec"
+        }
+    }, 
+    "connections": {
+        "access_control_demo_part4:button.state": [
+            "access_control_demo_part4:camera.trigger", 
+            "access_control_demo_part4:bell.play"
+        ], 
+        "access_control_demo_part4:camera.image": [
+            "access_control_demo_part4:screen.image"
+        ]
+    }, 
+    "name": "access_control_demo_part4", 
+    "port_properties": {
+        "access_control_demo_part4:bell": [
+            {
+                "direction": "in", 
+                "port": "play", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "access_control_demo_part4:button": [
+            {
+                "direction": "out", 
+                "port": "state", 
+                "properties": {
+                    "nbr_peers": 2
+                }
+            }
+        ], 
+        "access_control_demo_part4:camera": [
+            {
+                "direction": "in", 
+                "port": "trigger", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "image", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "access_control_demo_part4:screen": [
+            {
+                "direction": "in", 
+                "port": "image", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

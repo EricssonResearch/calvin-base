@@ -1,0 +1,3 @@
+        rule union: node_attr(node_name={"name": "simple_rt1"}) | node_attr(node_name={"name": "simple_rt2"})
+        rule hierarchical: union & ~current()
+        apply a, b: hierarchical 

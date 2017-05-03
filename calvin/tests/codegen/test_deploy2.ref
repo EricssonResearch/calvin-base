@@ -1,0 +1,233 @@
+{
+    "actors": {
+        "test_deploy2:snk": {
+            "actor_type": "test.Sink", 
+            "args": {}, 
+            "signature": "797d9e5483ae235af0772329ecf3d37bff628542181279a98b73fb8c748a7e7c"
+        }, 
+        "test_deploy2:src": {
+            "actor_type": "std.CountTimer", 
+            "args": {}, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }, 
+        "test_deploy2:sum1": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }, 
+        "test_deploy2:sum2": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }, 
+        "test_deploy2:sum3": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }, 
+        "test_deploy2:sum4": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }, 
+        "test_deploy2:sum5": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }, 
+        "test_deploy2:sum6": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }, 
+        "test_deploy2:sum7": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }, 
+        "test_deploy2:sum8": {
+            "actor_type": "std.Sum", 
+            "args": {}, 
+            "signature": "3c8c47e7b3e488fd8c98179368a3d2060003de9fc9a3f588f4569f223fb51286"
+        }
+    }, 
+    "connections": {
+        "test_deploy2:src.integer": [
+            "test_deploy2:sum1.integer"
+        ], 
+        "test_deploy2:sum1.integer": [
+            "test_deploy2:sum2.integer"
+        ], 
+        "test_deploy2:sum2.integer": [
+            "test_deploy2:sum3.integer"
+        ], 
+        "test_deploy2:sum3.integer": [
+            "test_deploy2:sum4.integer"
+        ], 
+        "test_deploy2:sum4.integer": [
+            "test_deploy2:sum5.integer"
+        ], 
+        "test_deploy2:sum5.integer": [
+            "test_deploy2:sum6.integer"
+        ], 
+        "test_deploy2:sum6.integer": [
+            "test_deploy2:sum7.integer"
+        ], 
+        "test_deploy2:sum7.integer": [
+            "test_deploy2:sum8.integer"
+        ], 
+        "test_deploy2:sum8.integer": [
+            "test_deploy2:snk.token"
+        ]
+    }, 
+    "name": "test_deploy2", 
+    "port_properties": {
+        "test_deploy2:snk": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:src": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:sum1": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:sum2": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:sum3": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:sum4": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:sum5": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:sum6": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:sum7": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "test_deploy2:sum8": [
+            {
+                "direction": "in", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

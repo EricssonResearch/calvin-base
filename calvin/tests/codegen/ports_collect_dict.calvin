@@ -1,0 +1,18 @@
+
+cnt1 : std.CountTimer(sleep=0.5, start=10)
+cnt2 : std.CountTimer(sleep=0.8, start=100)
+
+cd : flow.CollectDict(mapping={"t1": "cnt1.integer", "t2": "cnt2.integer"})
+
+out : io.Print()
+
+cnt1.integer > cd.token
+cnt2.integer > cd.token
+
+cd.dict > out.token
+
+rule rt1 : node_attr_match(index=["node_name",{"name":"runtime-1"}])
+rule all_nodes : all_nodes()
+
+apply cd : rt1
+apply cnt1, cnt2, out : all_nodes

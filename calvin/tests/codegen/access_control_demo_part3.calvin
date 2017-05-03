@@ -1,0 +1,11 @@
+button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+camera : media.Camera()
+screen : media.ImageRenderer()
+
+button.state > camera.trigger
+camera.image > screen.image
+
+rule button_rule : node_attr_match(index=["address", {"locality": "outside"}])
+rule server_rule : node_attr_match(index=["node_name", {"name": "server"}])
+apply button : button_rule
+apply camera, screen : server_rule

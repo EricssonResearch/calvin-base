@@ -1,0 +1,27 @@
+component Tag(tag) in -> {
+    t : text.PrefixString(prefix=tag)
+    d : std.ClassicDelay(delay=0.5)
+    o : io.Print()
+
+    .in > t.in
+    t.out > d.token
+    d.token > o.token
+}
+
+disp : flow.Dispatch()
+input : std.CountTimer()
+tag1: Tag(tag="tag1-")
+tag2: Tag(tag="tag2-")
+tag3: Tag(tag="tag3-")
+
+input.integer > disp.token
+disp.token > tag1.in
+disp.token > tag2.in
+disp.token > tag3.in
+
+
+rule rt1 : node_attr_match(index=["node_name",{"name":"runtime-1"}])
+rule all_nodes : all_nodes()
+
+apply disp : rt1
+apply input, tag1, tag2, tag3: all_nodes

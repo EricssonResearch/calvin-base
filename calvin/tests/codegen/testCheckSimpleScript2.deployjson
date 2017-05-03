@@ -1,0 +1,45 @@
+{
+    "requirements": {
+        "a": [
+            {
+                "kwargs": {
+                    "node_name": {
+                        "name": "simple_rt"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "owner": {
+                        "personOrGroup": "me"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }
+        ], 
+        "b": [
+            {
+                "kwargs": {
+                    "node_name": {
+                        "name": "simple_rt"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }, 
+            {
+                "kwargs": {
+                    "owner": {
+                        "personOrGroup": "me"
+                    }
+                }, 
+                "op": "node_attr", 
+                "type": "+"
+            }
+        ]
+    }, 
+    "valid": true
+}

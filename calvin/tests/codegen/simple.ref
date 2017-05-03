@@ -1,0 +1,44 @@
+{
+    "connections": {
+        "simple:src.integer": [
+            "simple:snk.token"
+        ]
+    },
+    "port_properties": {
+        "simple:src": [
+            {
+                "direction": "out",
+                "port": "integer",
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ],
+        "simple:snk": [
+            {
+                "direction": "in",
+                "port": "token",
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    },
+    "valid": true,
+    "actors": {
+        "simple:src": {
+            "args": {},
+            "actor_type": "std.CountTimer",
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        },
+        "simple:snk": {
+            "args": {
+                "store_tokens": 1,
+                "quiet": 1
+            },
+            "actor_type": "test.Sink",
+            "signature": "797d9e5483ae235af0772329ecf3d37bff628542181279a98b73fb8c748a7e7c"
+        }
+    },
+    "name": "simple"
+}

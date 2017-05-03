@@ -1,0 +1,41 @@
+{
+    "actors": {
+        "testCheckSimpleScript2:a": {
+            "actor_type": "std.CountTimer", 
+            "args": {}, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }, 
+        "testCheckSimpleScript2:b": {
+            "actor_type": "io.Print", 
+            "args": {}, 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }
+    }, 
+    "connections": {
+        "testCheckSimpleScript2:a.integer": [
+            "testCheckSimpleScript2:b.token"
+        ]
+    }, 
+    "name": "testCheckSimpleScript2", 
+    "port_properties": {
+        "testCheckSimpleScript2:a": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "testCheckSimpleScript2:b": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

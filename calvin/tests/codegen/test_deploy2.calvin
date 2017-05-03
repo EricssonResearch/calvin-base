@@ -1,0 +1,28 @@
+src : std.CountTimer()
+sum1 : std.Sum()
+sum2 : std.Sum()
+sum3 : std.Sum()
+sum4 : std.Sum()
+sum5 : std.Sum()
+sum6 : std.Sum()
+sum7 : std.Sum()
+sum8 : std.Sum()
+snk : test.Sink()
+
+src.integer > sum1.integer
+sum1.integer > sum2.integer
+sum2.integer > sum3.integer
+sum3.integer > sum4.integer
+sum4.integer > sum5.integer
+sum5.integer > sum6.integer
+sum6.integer > sum7.integer
+sum7.integer > sum8.integer
+sum8.integer > snk.token
+
+
+rule node1 : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode1"}])
+rule node3 : node_attr_match(index=["node_name", {"organization": "org.testexample", "name": "testNode3"}])
+
+apply src : node1
+apply snk : node3
+apply sum1, sum2, sum3, sum4, sum5, sum6, sum7, sum8 : all_nodes()

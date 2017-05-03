@@ -1,0 +1,94 @@
+{
+    "actors": {
+        "ports_collect_complete_dict:cd": {
+            "actor_type": "flow.CollectCompleteDict", 
+            "args": {
+                "mapping": {
+                    "t1": "cnt1.integer", 
+                    "t2": "cnt2.integer"
+                }
+            }, 
+            "signature": "949b003ea1321c133a2bcb0b5001c8c169f13ee72aab3a45ca40321588862351"
+        }, 
+        "ports_collect_complete_dict:cnt1": {
+            "actor_type": "std.CountTimer", 
+            "args": {
+                "sleep": 0.5, 
+                "start": 10
+            }, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }, 
+        "ports_collect_complete_dict:cnt2": {
+            "actor_type": "std.CountTimer", 
+            "args": {
+                "sleep": 0.5, 
+                "start": 100
+            }, 
+            "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+        }, 
+        "ports_collect_complete_dict:out": {
+            "actor_type": "io.Print", 
+            "args": {}, 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }
+    }, 
+    "connections": {
+        "ports_collect_complete_dict:cd.dict": [
+            "ports_collect_complete_dict:out.token"
+        ], 
+        "ports_collect_complete_dict:cnt1.integer": [
+            "ports_collect_complete_dict:cd.token"
+        ], 
+        "ports_collect_complete_dict:cnt2.integer": [
+            "ports_collect_complete_dict:cd.token"
+        ]
+    }, 
+    "name": "ports_collect_complete_dict", 
+    "port_properties": {
+        "ports_collect_complete_dict:cd": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 2, 
+                    "routing": "collect-all-tagged"
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "dict", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_collect_complete_dict:cnt1": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_collect_complete_dict:cnt2": [
+            {
+                "direction": "out", 
+                "port": "integer", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "ports_collect_complete_dict:out": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true
+}

@@ -1,0 +1,5 @@
+{"requirements":{"cnt1":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "cnt2":[{"op":"all_nodes","kwargs":{},"type":"+"}],
+                 "cd":[{"op":"node_attr_match","kwargs":{"index":["node_name",{"name":"runtime-1"}]},"type":"+"}],
+                 "out":[{"op":"all_nodes","kwargs":{},"type":"+"}]
+                 }}
