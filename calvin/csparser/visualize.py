@@ -259,7 +259,7 @@ class Visualize(object):
 def visualize_script(source_text, show_args=False):
     """Process script and return graphviz (dot) source representing application."""
     # Here we need the unprocessed tree ...
-    ir, _, issuetracker = calvin_parse(source_text)
+    ir, issuetracker = calvin_parse(source_text)
     # ... but expand portlists to simplify rendering
     rw = PortlistRewrite(issuetracker)
     rw.visit(ir)

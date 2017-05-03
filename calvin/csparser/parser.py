@@ -495,9 +495,9 @@ class CalvinParser(object):
         except SyntaxError as e:
             self.issuetracker.add_error(e.text, {'line':e.lineno, 'col':e.offset})
         finally:
-            ir, deploy_ir = (root or ast.Node(), ast.Node())
+            ir = root or ast.Node()
 
-        return ir, deploy_ir, self.issuetracker
+        return ir, self.issuetracker
 
 
 # FIXME: [PP] Optionally supply an IssueTracker
@@ -507,11 +507,10 @@ def calvin_parse(source_text):
     return parser.parse(source_text)
 
 def printable_ir(source_text):
-    ir, ds_ir, it = calvin_parse(source_text)
+    ir, it = calvin_parse(source_text)
     bf = BraceFormatter()
     ir_str = bf.process(ir)
-    ds_ir_str = bf.process(ds_ir)
-    return "\n----\n".join([ir_str, ds_ir_str]), it
+    return ir_str, it
 
 
 if __name__ == '__main__':
@@ -589,7 +588,7 @@ apply actor, actor: some_rule | node_attr(node_spec=NODE1) &~ current()
             sys.exit(1)
 
     parser = CalvinParser()
-    ir, deploy_ir, it = parser.parse(source_text, logger=log)
+    ir, it = parser.parse(source_text, logger=log)
     if it.issue_count == 0:
         print "No issues"
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
@@ -598,9 +597,9 @@ apply actor, actor: some_rule | node_attr(node_spec=NODE1) &~ current()
     print "CalvinScript:"
     bp = astprint.BracePrinter()
     bp.process(ir)
-    print
-    print "DeployScript:"
-    bp = astprint.BracePrinter()
-    bp.process(deploy_ir)
+    # print
+    # print "DeployScript:"
+    # bp = astprint.BracePrinter()
+    # bp.process(deploy_ir)
 
 

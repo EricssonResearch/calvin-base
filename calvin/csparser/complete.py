@@ -101,7 +101,7 @@ class Completion(object):
                 src_lines.remove(l)
                 break
         src = "\n".join(src_lines)
-        ir, _, issues = calvin_parse(src)
+        ir, issues = calvin_parse(src)
         return ir
 
     def source_line(self, lineno):

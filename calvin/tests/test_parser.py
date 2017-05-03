@@ -55,7 +55,7 @@ class TestBase(unittest.TestCase):
     '''
 
     def setUp(self):
-        self.ir, self.deploy_ir, self.it = calvin_parse(inspect.cleandoc(self.source_text))
+        self.ir, self.it = calvin_parse(inspect.cleandoc(self.source_text))
 
     def tearDown(self):
         pass
@@ -64,13 +64,13 @@ class SanityCheck(TestBase):
 
     def test_sanity(self):
         from calvin.csparser import astprint
-        bp = astprint.BracePrinter()
-        bp.visit(self.deploy_ir)
+        # bp = astprint.BracePrinter()
+        # bp.process(self.ir)
 
         self.assertTrue(self.ir)
-        self.assertTrue(self.deploy_ir)
         self.assertTrue(self.it)
         self.assertEqual(len(self.ir.children), 5)
-        self.assertEqual(len(self.deploy_ir.children), 13)
+        self.assertEqual(len(self.ir.children[4].children), 18)
+
         self.assertEqual(self.it.issue_count, 0)
 
