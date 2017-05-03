@@ -168,7 +168,7 @@ def parse_args():
     argparser = argparse.ArgumentParser(description=long_desc)
     argparser.add_argument('node', metavar="<control uri>",
                            help="control uri of node")
-    cmdparsers = argparser.add_subparsers(help="command help")
+    cmdparsers = argparser.add_subparsers()
 
     # parser for id cmd
     cmd_id = cmdparsers.add_parser('id', help="get id of node", description="Get id of node")
