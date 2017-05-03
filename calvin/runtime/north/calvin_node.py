@@ -249,7 +249,7 @@ class Node(object):
         _log.analyze(self.id, "+", {})
         self.storage.delete_node(self, cb=deleted_node)
         for link in self.network.list_direct_links():
-            self.network.links[link].close()
+            self.network.link_get(link).close()
 
     def stop_with_cleanup(self):
         # Set timeout in case some actor is refusing to stop (or leave if already migrating)
@@ -297,7 +297,7 @@ class Node(object):
             # When already migrating, we can only poll, since we don't get the callback
             if self.am.actors:
                 # Check again in a sec
-                async.DelayedCall(1, self.poll_migrated)
+                async.DelayedCall(1, poll_migrated)
                 return
             timeout_stop.cancel()
             self.stop(callback)
@@ -316,14 +316,14 @@ class Node(object):
                     # Ok, we have failed migrate actor according to requirements and to any known peer
                     # FIXME find unknown peers and try migrate to them, now just destroy actor, so storage is cleaned
                     _log.error("Failed to evict actor %s before quitting" % actor_id)
-                    self.node.am.destroy(actor_id)
+                    self.am.destroy(actor_id)
             if self.am.actors:
                 return
             timeout_stop.cancel()
             self.stop(callback)
 
         if already_migrating:
-            async.DelayedCall(1, self.poll_migrated)
+            async.DelayedCall(1, poll_migrated)
             if not actors:
                 return
         elif not actors:
