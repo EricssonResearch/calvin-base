@@ -472,14 +472,15 @@ re_post_disconnect = re.compile(r"POST /disconnect\sHTTP/1")
 
 control_api_doc += \
     """
-    DELETE /node{/now|/migrate}
+    DELETE /node{/now|/migrate|/clean}
     Stop (this) calvin node
-     now: stop the runtime without handling actors on the runtime [default]
+     now: stop the runtime without handling actors on the runtime
      migrate: migrate any actors before stopping the runtime
+     clean: stop & destroy all actors before stopping [default]
     Response status code: ACCEPTED
     Response: none
 """
-re_delete_node = re.compile(r"DELETE /node(?:/(now|migrate))?\sHTTP/1")
+re_delete_node = re.compile(r"DELETE /node(?:/(now|migrate|clean))?\sHTTP/1")
 
 control_api_doc += \
     """
@@ -1657,12 +1658,16 @@ class CalvinControl(object):
 
     @authentication_decorator
     def handle_quit(self, handle, connection, match, data, hdr):
-        if match.group(1) is None or match.group(1) == "now":
-            async.DelayedCall(.2, self.node.stop)
-            self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
+        if match.group(1) == "now":
+            stop_method = self.node.stop
         elif match.group(1) == "migrate":
-            async.DelayedCall(.2, self.node.stop_with_migration)
-            self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
+            stop_method = self.node.stop_with_migration
+        else: # Clean up
+            stop_method = self.node.stop_with_cleanup
+        
+        async.DelayedCall(.2, stop_method)
+        self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
+        
 
     @authentication_decorator
     def handle_disconnect(self, handle, connection, match, data, hdr):

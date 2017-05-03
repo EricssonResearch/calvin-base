@@ -232,6 +232,7 @@ class Node(object):
                 self.control.start(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
 
     def stop(self, callback=None):
+        # TODO: Handle blocking in poorly implemented calvinsys/runtime south.
         self.quitting = True
         def stopped(*args):
             _log.analyze(self.id, "+", {'args': args})
@@ -248,7 +249,35 @@ class Node(object):
         _log.analyze(self.id, "+", {})
         self.storage.delete_node(self, cb=deleted_node)
         for link in self.network.list_direct_links():
-            self.network.links[link].close()
+            self.network.link_get(link).close()
+
+    def stop_with_cleanup(self):
+        # Set timeout in case some actor is refusing to stop (or leave if already migrating)
+        timeout = async.DelayedCall(50, self.stop)
+        self.quitting = True
+        # get all actors
+        if not self.am.actors:
+            # No actors, we're basically done
+            return self.stop()
+        actors = []
+        for actor in self.am.actors.values():
+            # Do not delete migrating actors (for now)
+            if actor._migrating_to is None:
+                actors.append(actor)
+        # delete all actors
+        for actor in actors:
+            self.am.destroy(actor.id)
+                # and die - hopefully, things should clean up nicely within reasonable time
+        
+        def poll_deleted(retry):
+            if self.am.actors:
+                _log.info("{} actors remaining, rechecking in {} secs".format(len(self.am.actors)))
+                async.DelayedCall(1*retry, poll_deleted)
+            else :
+                _log.info("All done, exiting")
+                timeout.cancel()
+                self.stop()
+        async.DelayedCall(0.5, poll_deleted, retry=1)
 
     def stop_with_migration(self, callback=None):
         # Set timeout if we are still failing after 50 seconds
@@ -268,7 +297,7 @@ class Node(object):
             # When already migrating, we can only poll, since we don't get the callback
             if self.am.actors:
                 # Check again in a sec
-                async.DelayedCall(1, self.poll_migrated)
+                async.DelayedCall(1, poll_migrated)
                 return
             timeout_stop.cancel()
             self.stop(callback)
@@ -287,14 +316,14 @@ class Node(object):
                     # Ok, we have failed migrate actor according to requirements and to any known peer
                     # FIXME find unknown peers and try migrate to them, now just destroy actor, so storage is cleaned
                     _log.error("Failed to evict actor %s before quitting" % actor_id)
-                    self.node.am.destroy(actor_id)
+                    self.am.destroy(actor_id)
             if self.am.actors:
                 return
             timeout_stop.cancel()
             self.stop(callback)
 
         if already_migrating:
-            async.DelayedCall(1, self.poll_migrated)
+            async.DelayedCall(1, poll_migrated)
             if not actors:
                 return
         elif not actors:
