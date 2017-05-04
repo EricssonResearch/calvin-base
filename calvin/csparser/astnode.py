@@ -389,35 +389,72 @@ class Component(Node):
         self.docstring = kwargs.get('docstring')
         self.add_child(Block(program=kwargs.get('program', [])))
 
+class RuleDefinition(Node):
+    def __init__(self, **kwargs):
+        super(RuleDefinition, self).__init__(**kwargs)
+        self.add_children([kwargs.get('name'), kwargs.get('rule')])
+
+    @property
+    def name(self):
+        return self.children[0]
+
+    @property
+    def rule(self):
+        return self.children[1]
+
+
 class Rule(Node):
     def __init__(self, **kwargs):
         super(Rule, self).__init__(**kwargs)
-        self.rule = kwargs.get('rule')
-        # FIXME We only have one expression why is this a child?
-        self.add_children([kwargs.get('expression')])
+        self.add_children([kwargs.get('left'), kwargs.get('op'), kwargs.get('right')])
 
-class RuleExpression(Node):
-    def __init__(self, **kwargs):
-        super(RuleExpression, self).__init__(**kwargs)
-        if kwargs and 'first_predicate' in kwargs:
-            self.add_child(kwargs.get('first_predicate'))
+    @property
+    def left(self):
+        return self.children[0]
+
+    @left.setter
+    def left(self, value):
+        value.parent = self
+        self.left.parent = None
+        self.children[0] = value
+
+    @property
+    def right(self):
+        return self.children[2]
+
+    @right.setter
+    def right(self, value):
+        value.parent = self
+        self.right.parent = None
+        self.children[2] = value
+
+    @property
+    def op(self):
+        return self.children[1]
+
+    @op.setter
+    def op(self, value):
+        value.parent = self
+        self.op.parent = None
+        self.children[1] = value
+
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {} {} {} {} {} {}".format(self.__class__.__name__, self.rule, str(self.left), str(self.op), str(self.right), hex(id(self)), self.debug_info)
+        else:
+            return "{} {} {} {} {}".format(self.__class__.__name__, self.rule, str(self.left), str(self.op), str(self.right))
 
 class RulePredicate(Node):
     def __init__(self, **kwargs):
         super(RulePredicate, self).__init__(**kwargs)
         self.predicate = kwargs.get('predicate')
-        self.op = kwargs.get('op', RuleSetOp(op=""))
-        self.type = kwargs.get('type')
         self.add_children(kwargs.get('args', []))
 
     def __str__(self):
         if self._verbose_desc:
-            return "{} {} {} {} {}".format(
-                self.__class__.__name__, "" if self.op is None else self.op.op,
-                self.predicate.ident, hex(id(self)), self.debug_info)
+            return "{} {} {} {}".format(self.__class__.__name__, self.predicate.ident, hex(id(self)), self.debug_info)
         else:
-            return "{} {} {}".format(
-                self.__class__.__name__, "" if self.op is None else self.op.op, self.predicate.ident)
+            return "{} {}".format(self.__class__.__name__, self.predicate.ident)
 
 class RuleSetOp(Node):
     def __init__(self, **kwargs):
@@ -487,7 +524,6 @@ def node_decoder(o):
         'Group':Group,
         'RuleSetOp':RuleSetOp,
         'RulePredicate':RulePredicate,
-        'RuleExpression':RuleExpression,
         'Rule':Rule
     }.get(o['class'])()
     instance.__dict__ = o['data']

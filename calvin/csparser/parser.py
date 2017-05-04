@@ -37,9 +37,15 @@ class CalvinParser(object):
         # have to be recreated
         this_file = os.path.realpath(__file__)
         containing_dir = os.path.dirname(this_file)
-        self.parser = yacc.yacc(module=self, debug=False, optimize=True, outputdir=containing_dir)
+        self.parser = yacc.yacc(module=self, debug=True, optimize=False, outputdir=containing_dir)
 
     tokens = calvin_tokens
+
+    precedence = (
+        ('left', 'OR'),
+        ('left', 'AND'),
+        ('right', 'UNOT'),
+    )
 
     def p_script(self, p):
         """script : opt_constdefs opt_compdefs opt_program"""
@@ -87,7 +93,7 @@ class CalvinParser(object):
 
 
     def p_compdef(self, p):
-        """compdef : COMPONENT qualified_name LPAREN identifiers RPAREN identifiers RARROW identifiers LBRACE docstring comp_statements RBRACE"""
+        """compdef : COMPONENT qualified_name LPAREN opt_argnames RPAREN opt_argnames RARROW opt_argnames LBRACE docstring comp_statements RBRACE"""
         p[0] = ast.Component(name=p[2], arg_names=p[4], inports=p[6], outports=p[8], docstring=p[10], program=p[11], debug_info=self.debug_info(p, 1))
 
 
@@ -128,88 +134,11 @@ class CalvinParser(object):
         """statement : assignment
                      | port_property
                      | link
-                     | rule
+                     | define_rule
                      | group
                      | apply"""
         p[0] = p[1]
 
-    def p_group(self, p):
-        """group : GROUP identifier COLON ident_list"""
-        p[0] = ast.Group(group=p[2], members=p[4], debug_info=self.debug_info(p, 1))
-
-    def p_ident_list(self, p):
-        """ident_list : ident_list identifier COMMA
-                      | ident_list identifier
-                      | empty"""
-        if p[1] is None:
-            p[0] = []
-            return
-        p[1].append(p[2])
-        p[0] = p[1]
-
-    def p_rule(self, p):
-        """rule : RULE identifier COLON expression"""
-        p[0] = ast.Rule(rule=p[2], expression=p[4], debug_info=self.debug_info(p, 1))
-
-    def p_expression(self, p):
-        """expression : expression predicate
-                      | first_predicate"""
-        if len(p) > 2:
-            p[1].add_child(p[2])
-            p[0] = p[1]
-        else:
-            p[0] = ast.RuleExpression(first_predicate=p[1])
-
-    def p_first_predicate(self, p):
-        """first_predicate : identifier
-                           | NOT identifier
-                           | identifier LPAREN named_args RPAREN
-                           | NOT identifier LPAREN named_args RPAREN"""
-        # print p[1], p[3], self.debug_info(p, 1)
-        if len(p) == 2:
-            # identifier
-            p[0] = ast.RulePredicate(predicate=p[1], type="rule", debug_info=self.debug_info(p, 1))
-        elif len(p) == 3:
-            # NOT identifier
-            p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=ast.RuleSetOp(op="~"), debug_info=self.debug_info(p, 1))
-        elif len(p) == 5:
-            # identifier LPAREN named_args RPAREN
-            p[0] = ast.RulePredicate(predicate=p[1], type="constraint", args=p[3], debug_info=self.debug_info(p, 1))
-        else:
-            # NOT identifier LPAREN named_args RPAREN
-            p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=ast.RuleSetOp(op="~"), args=p[4], debug_info=self.debug_info(p, 1))
-
-    def p_predicate(self, p):
-        """predicate : setop identifier
-                     | setop identifier LPAREN named_args RPAREN"""
-        # print p[1], p[3], self.debug_info(p, 1)
-        if len(p) == 3:
-            # setop identifier
-            p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=p[1], debug_info=self.debug_info(p, 1))
-        else:
-            # setop identifier LPAREN named_args RPAREN
-            p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=p[1], args=p[4], debug_info=self.debug_info(p, 1))
-
-    def p_setop(self, p):
-        """setop : AND
-                 | OR
-                 | AND NOT
-                 | OR NOT"""
-        #print p[1], self.debug_info(p, 1)
-        if len(p) == 2:
-            p[0] = ast.RuleSetOp(op=p[1])
-        else:
-            p[0] = ast.RuleSetOp(op=p[1] + p[2])
-
-    def p_apply(self, p):
-        """apply : APPLY ident_list COLON expression
-                 | APPLY STAR ident_list COLON expression"""
-        if len(p) == 5:
-            # print p[2], p[4], self.debug_info(p, 1)
-            p[0] = ast.RuleApply(optional=False, targets=p[2], rule=p[4], debug_info=self.debug_info(p,1))
-        else:
-            # print p[2], p[3], p[5], self.debug_info(p, 1)
-            p[0] = ast.RuleApply(optional=True, targets=p[3], rule=p[5], debug_info=self.debug_info(p,1))
 
     def p_assignment(self, p):
         """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
@@ -374,6 +303,30 @@ class CalvinParser(object):
                     | identifier"""
         p[0] = p[1]
 
+
+    def p_opt_argnames(self, p):
+        """opt_argnames : argnames
+                           | empty"""
+        p[0] = p[1] if p[1] is not None else []
+
+
+    def p_argnames(self, p):
+        """argnames : argnames COMMA IDENTIFIER
+                    | IDENTIFIER"""
+        p[0] = [p[1]] if len(p) == 2 else p[1]+ [p[3]]
+
+
+    # def p_opt_identifiers(self, p):
+    #     """opt_identifiers : identifiers
+    #                        | empty"""
+    #     p[0] = [p[1]] if p[1] is not None else []
+
+    def p_identifiers(self, p):
+        """identifiers : identifiers COMMA identifier
+                       | identifier"""
+        p[0] = [p[1]] if len(p) == 2 else p[1]+ [p[3]]
+
+
     def p_identifier(self, p):
         """identifier : IDENTIFIER"""
         p[0] = ast.Id(ident=p[1], debug_info=self.debug_info(p, 1))
@@ -432,13 +385,6 @@ class CalvinParser(object):
         """array :  LBRACK values RBRACK"""
         p[0] = p[2]
 
-
-    def p_identifiers(self, p):
-        """identifiers : identifiers IDENTIFIER COMMA
-                       | identifiers IDENTIFIER
-                       | empty"""
-        p[0] = p[1] + [p[2]] if p[1] is not None else []
-
     def p_qualified_name(self, p):
         """qualified_name : qualified_name DOT IDENTIFIER
                           | IDENTIFIER"""
@@ -447,6 +393,133 @@ class CalvinParser(object):
             p[0] = p[1] + p[2] + p[3]
         else:
             p[0] = p[1]
+
+    ########################################################################################
+    #
+    # Deploy rules
+    #
+    #   defrule : RULE identifier COLON rule
+    #
+    #   rule : rule op rule
+    #        | LPAREN rule RPAREN
+    #        | UNOT rule
+    #        | predicate
+    #
+    #   op : AND
+    #      | OR
+    #
+    #   predicate : identifier LPAREN named_arguments RPAREN
+    #
+    #   apply : APPLY identifier_list COLON rule
+    #   (or possibly)
+    #   apply : APPLY rule COLON identifier_list
+    #
+    ########################################################################################
+
+    def p_define_rule(self, p):
+        """define_rule : RULE identifier COLON rule"""
+        p[0] = ast.RuleDefinition(name=p[2], rule=p[4], debug_info=self.debug_info(p, 1))
+
+    def p_combine_rule(self, p):
+        """rule : rule op rule"""
+        p[0] = ast.Rule(left=p[1], op=p[2], right=p[3], debug_info=self.debug_info(p, 1))
+
+    def p_negate_rule(self, p):
+        """rule : UNOT rule"""
+        p[0] = ast.Rule(left=p[2], op=p[1], debug_info=self.debug_info(p, 1))
+
+    def p_subrule(self, p):
+        """rule : LPAREN rule RPAREN"""
+        p[0] = p[2]
+
+    def p_rule(self, p):
+        """rule : identifier
+                | predicate"""
+        p[0] = p[1]
+
+    def p_op(self, p):
+        """op : AND
+              | OR"""
+        p[0] = ast.RuleSetOp(op=p[1])
+
+    def p_predicate(self, p):
+        """predicate : identifier LPAREN named_args RPAREN"""
+        p[0] = ast.RulePredicate(predicate=p[1], args=p[3], debug_info=self.debug_info(p, 1))
+
+    def p_apply(self, p):
+        """apply : APPLY identifiers COLON rule"""
+        # or possibly
+        # """apply : APPLY rule COLON identifiers"""
+        p[0] = ast.RuleApply(optional=False, targets=p[2], rule=p[4], debug_info=self.debug_info(p,1))
+
+    # def p_rule(self, p):
+    #     """rule : RULE identifier COLON expression"""
+    #     p[0] = ast.Rule(rule=p[2], expression=p[4], debug_info=self.debug_info(p, 1))
+    #
+    # def p_expression(self, p):
+    #     """expression : expression predicate
+    #                   | first_predicate"""
+    #     if len(p) > 2:
+    #         p[1].add_child(p[2])
+    #         p[0] = p[1]
+    #     else:
+    #         p[0] = ast.RuleExpression(first_predicate=p[1])
+    #
+    # def p_first_predicate(self, p):
+    #     """first_predicate : identifier
+    #                        | NOT identifier
+    #                        | identifier LPAREN named_args RPAREN
+    #                        | NOT identifier LPAREN named_args RPAREN"""
+    #     # print p[1], p[3], self.debug_info(p, 1)
+    #     if len(p) == 2:
+    #         # identifier
+    #         p[0] = ast.RulePredicate(predicate=p[1], type="rule", debug_info=self.debug_info(p, 1))
+    #     elif len(p) == 3:
+    #         # NOT identifier
+    #         p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=ast.RuleSetOp(op="~"), debug_info=self.debug_info(p, 1))
+    #     elif len(p) == 5:
+    #         # identifier LPAREN named_args RPAREN
+    #         p[0] = ast.RulePredicate(predicate=p[1], type="constraint", args=p[3], debug_info=self.debug_info(p, 1))
+    #     else:
+    #         # NOT identifier LPAREN named_args RPAREN
+    #         p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=ast.RuleSetOp(op="~"), args=p[4], debug_info=self.debug_info(p, 1))
+    #
+    # def p_predicate(self, p):
+    #     """predicate : setop identifier
+    #                  | setop identifier LPAREN named_args RPAREN"""
+    #     # print p[1], p[3], self.debug_info(p, 1)
+    #     if len(p) == 3:
+    #         # setop identifier
+    #         p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=p[1], debug_info=self.debug_info(p, 1))
+    #     else:
+    #         # setop identifier LPAREN named_args RPAREN
+    #         p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=p[1], args=p[4], debug_info=self.debug_info(p, 1))
+    #
+    # def p_setop(self, p):
+    #     """setop : AND
+    #              | OR
+    #              | AND NOT
+    #              | OR NOT"""
+    #     #print p[1], self.debug_info(p, 1)
+    #     if len(p) == 2:
+    #         p[0] = ast.RuleSetOp(op=p[1])
+    #     else:
+    #         p[0] = ast.RuleSetOp(op=p[1] + p[2])
+    #
+    # def p_apply(self, p):
+    #     """apply : APPLY ident_list COLON expression
+    #              | APPLY STAR ident_list COLON expression"""
+    #     if len(p) == 5:
+    #         # print p[2], p[4], self.debug_info(p, 1)
+    #         p[0] = ast.RuleApply(optional=False, targets=p[2], rule=p[4], debug_info=self.debug_info(p,1))
+    #     else:
+    #         # print p[2], p[3], p[5], self.debug_info(p, 1)
+    #         p[0] = ast.RuleApply(optional=True, targets=p[3], rule=p[5], debug_info=self.debug_info(p,1))
+
+
+    def p_group(self, p):
+        """group : GROUP identifier COLON identifiers"""
+        p[0] = ast.Group(group=p[2], members=p[4], debug_info=self.debug_info(p, 1))
 
 
     # Error rule for syntax errors
@@ -532,49 +605,19 @@ if __name__ == '__main__':
         script = 'inline'
         source_text = \
 '''
-define NODE1={"organization": "org.testexample", "name": "testNode1"}
-define NODE2={"organization": "org.testexample", "name": "testNode2"}
-
-
-define ARG=-1
-
-component Foo(arg) in -> out {
-  """
-  Foo(arg)
-  Documentation please
-  """
-
-  init : flow.Init(data=arg)
-
-  .in > init.in
-  init.out > .out
+component Foo(a, b, c)  -> out {
+        foo : std.Identity()
+        .in > foo.token
+        foo.token > .out
 }
 
-src : Foo(arg=ARG)
-delay : std.ClassicDelay()
-print : io.Print()
+src : std.CountTimer()
+snk : test.Sink(store_tokens=1, quiet=1)
+src.integer > snk.token
 
-src.out > print.token
-src.out > delay.token
-delay.token > src.in
+rule simple : node_attr_match(index=["node_name", {"organization": "com.ericsson"}])
 
-src.out(routing="round-robin")
-delay.token[in](routing="round-robin")
-
-# define rules
-rule src_rule: node_attr(node_spec=NODE1)
-
-rule dst_rule: node_attr(node_spec=NODE1) | node_attr(node_spec={"name": "testNode2"})
-rule src_rule: node_attr(node_spec=NODE1) | node_attr(node_spec=NODE2) &~ current()
-rule combined_rule: dst_rule & src_rule | current()
-
-# define a group
-group group_name: actor, some_group
-
-# apply rules, '*' indicates optional rule
-apply actor: some_rule
-apply* actor, actor: some_rule
-apply actor, actor: some_rule | node_attr(node_spec=NODE1) &~ current()
+apply src, snk : simple
 
 '''
     else:

@@ -28,7 +28,7 @@ tokens = [
     'LBRACK', 'RBRACK',
     'DOT', 'COMMA', 'COLON',
     'GT', 'EQ',
-    'AND', 'OR', 'NOT', 'STAR',
+    'AND', 'OR', 'UNOT',
     'RARROW', 'SLASH',
     'DOCSTRING',
     'FALSE', 'TRUE', 'NULL',
@@ -50,8 +50,7 @@ t_RARROW = r'->'
 t_SLASH = r'/'
 t_AND = r'&'
 t_OR = r'\|'
-t_NOT = r'~'
-t_STAR = r'\*'
+t_UNOT = r'~'
 t_AT = r'@'
 
 # t_FALSE = r'false'
