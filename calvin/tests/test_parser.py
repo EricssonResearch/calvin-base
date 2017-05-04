@@ -50,7 +50,7 @@ class TestBase(unittest.TestCase):
 
         # apply rules, '*' indicates optional rule
         apply src: combined_rule
-        apply* delay, print: long
+        apply delay, print: long
         apply src, print: dst_rule | node_attr(node_spec=NODE1) & ~current()
     '''
 
