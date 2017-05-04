@@ -347,13 +347,6 @@ class TestSecurity(unittest.TestCase):
         global rt
         global request_handler
         global security_testdir
-        try:
-            rt0_id = request_handler.get_node_id(rt[0])
-            rt1_id = request_handler.get_node_id(rt[1])
-        except Exception as err:
-            _log.error("Failed to fetch runtime ids, err={}".format(err))
-            raise
-        time.sleep(1)
         start = time.time()
         try:
             self.verify_storage()
@@ -361,7 +354,13 @@ class TestSecurity(unittest.TestCase):
             _log.error("Failed storage verification, err={}".format(err))
             raise
         time_to_verify_storaget = time.time()-start
-
+        time.sleep(1)
+        try:
+            rt0_id = request_handler.get_node_id(rt[0])
+            rt1_id = request_handler.get_node_id(rt[1])
+        except Exception as err:
+            _log.error("Failed to fetch runtime ids, err={}".format(err))
+            raise
         result = {}
         try:
             content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_unsignedActors.calvin"))
