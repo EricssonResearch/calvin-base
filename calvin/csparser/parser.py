@@ -426,7 +426,7 @@ class CalvinParser(object):
 
     def p_negate_rule(self, p):
         """rule : UNOT rule"""
-        p[0] = ast.Rule(left=p[2], op=p[1], debug_info=self.debug_info(p, 1))
+        p[0] = ast.UnaryRule(rule=p[2], op=ast.RuleSetOp(op=p[1]), debug_info=self.debug_info(p, 1))
 
     def p_subrule(self, p):
         """rule : LPAREN rule RPAREN"""

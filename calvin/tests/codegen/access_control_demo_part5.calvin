@@ -15,4 +15,4 @@ rule inside_rule : node_attr_match(index=["address", {"locality": "inside"}])
 rule server_rule : node_attr_match(index=["node_name", {"name": "server"}])
 apply button : outside_rule
 apply bell : inside_rule
-apply camera, screen fd : server_rule
+apply camera, screen, fd : server_rule

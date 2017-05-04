@@ -198,7 +198,7 @@ class BraceFormatter(object):
     @visitor.when(ast.RuleApply)
     def visit(self, node):
         def f(node):
-            self.result.append("{}( {} optional={} {}".format(self._indentation(), node, node.optional, node.rule.ident))
+            self.result.append("{}( {} optional={}".format(self._indentation(), node, node.optional))
             self.indent += 1
         def g(node):
             self.indent -= 1

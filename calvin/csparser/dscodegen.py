@@ -27,11 +27,24 @@ class RuleExpander(object):
 
     @visitor.when(ast.Rule)
     def visit(self, node):
-        print "rule", node
+        print "Rule", node
+        self.visit(node.left)
+        self.visit(node.op)
+        self.visit(node.right)
+
+
+    @visitor.when(ast.UnaryRule)
+    def visit(self, node):
+        print "UnaryRule", node
+        # FIXME: Just testing, too simplistic!!
+        self.visit(node.rule)
+        if node.op.op == "~":
+            self.result[-1]['type'] = "-"
+
 
     @visitor.when(ast.RulePredicate)
     def visit(self, node):
-        # print "predicate", node
+        print "predicate", node
         pred = {c.ident.ident:c.arg.value for c in node.children}
         res = {"kwargs":pred, "type":"+", "op":node.predicate.ident}
         self.result.append(res)
@@ -59,11 +72,16 @@ class DeployInfo(object):
 
     @visitor.when(ast.RuleApply)
     def visit(self, node):
-        rule_name = node.rule.ident
-        matched = query(self.root, kind=ast.RuleDefinition, attributes={('name', 'ident'):rule_name}, maxdepth=1024)
-        # print matched, rule_name
-        rule_def = matched[0]
-        expr = expand_rule(rule_def.rule, self.issue_tracker)
+        if type(node.rule) is ast.Id:
+            # Lookup rule
+            rule_name = node.rule.ident
+            matched = query(self.root, kind=ast.RuleDefinition, attributes={('name', 'ident'):rule_name}, maxdepth=1024)
+            print matched, rule_name
+            rule_def = matched[0]
+            rule = rule_def.rule
+        else:
+            rule = node.rule
+        expr = expand_rule(rule, self.issue_tracker)
         for c in node.children:
             self.requirements[c.ident] = expr
 

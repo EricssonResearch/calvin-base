@@ -444,6 +444,37 @@ class Rule(Node):
         else:
             return "{} {} {} {}".format(self.__class__.__name__, str(self.left), str(self.op), str(self.right))
 
+class UnaryRule(Node):
+    def __init__(self, **kwargs):
+        super(UnaryRule, self).__init__(**kwargs)
+        self.add_children([kwargs.get('rule'), kwargs.get('op')])
+
+    @property
+    def rule(self):
+        return self.children[0]
+
+    @rule.setter
+    def rule(self, value):
+        value.parent = self
+        self.rule.parent = None
+        self.children[0] = value
+
+    @property
+    def op(self):
+        return self.children[1]
+
+    @op.setter
+    def op(self, value):
+        value.parent = self
+        self.op.parent = None
+        self.children[1] = value
+
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {} {} {} {}".format(self.__class__.__name__, str(self.rule), str(self.op),hex(id(self)), self.debug_info)
+        else:
+            return "{} {} {}".format(self.__class__.__name__, str(self.rule), str(self.op))
+
 class RulePredicate(Node):
     def __init__(self, **kwargs):
         super(RulePredicate, self).__init__(**kwargs)
@@ -524,7 +555,8 @@ def node_decoder(o):
         'Group':Group,
         'RuleSetOp':RuleSetOp,
         'RulePredicate':RulePredicate,
-        'Rule':Rule
+        'Rule':Rule,
+        'UnaryRule':UnaryRule
     }.get(o['class'])()
     instance.__dict__ = o['data']
     return instance
