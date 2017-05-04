@@ -529,11 +529,12 @@ def obtain_cert_node_info(name, security_dir=None):
         Return dict with domain, node name and node id
     """
 #    _log.debug("obtain_cert_node_info: node_name={}".format(name))
+    nosecuuid = _conf.get('ARGUMENTS', 'uuid') or calvinuuid.uuid("NODE")
     domain = _conf.get("security", "domain_name")
     if domain is None or name is None:
         # No security or name specified just use standard node UUID
         _log.debug("OBTAINING no security domain={}, name={}".format(domain, name))
-        return {'domain': None, 'name': name, 'id': calvinuuid.uuid("NODE")}
+        return {'domain': None, 'name': name, 'id': nosecuuid}
 
     runtime_dir = get_own_credentials_path(name, security_dir=security_dir)
     # Does existing signed runtime certificate exist, return info
@@ -551,8 +552,7 @@ def obtain_cert_node_info(name, security_dir=None):
         pass
         #_log.exception("OBTAINING fail existing security domain={}, name={}".format(domain, name))
     # No valid signed cert available, create new node id and let user create certificate later
-    nodeid = calvinuuid.uuid("NODE")
-    return {'domain': domain, 'name': name, 'id': nodeid}
+    return {'domain': domain, 'name': name, 'id': nosecuuid}
 
 
 
