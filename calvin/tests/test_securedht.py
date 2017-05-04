@@ -267,7 +267,7 @@ class TestSecurity(unittest.TestCase):
                      )
             rt.append(RT("http://{}:{}".format(hostname,5020+i)))
             time.sleep(0.2)
-        time.sleep(1)
+        time.sleep(2)
         _log.info("------------------------------------------------")
         for i in range(NBR_OF_RUNTIMES):
             _log.info("rt[{}] = {}".format(i,  runtimes[i].node_id))

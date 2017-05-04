@@ -418,7 +418,7 @@ class RuntimeCredentials():
                 else:
                     return certstr
             except Exception as err:
-                _log.debug("Certificate {} is not in {{others, mine}} folder, err={}".format(cert_name, err))
+                _log.debug("Certificate {} is not in {{others, mine}} folder, return None, err={}".format(cert_name, err))
                 return None
 
     def get_certificate(self, cert_name, callback=None):
@@ -540,7 +540,7 @@ class RuntimeCredentials():
             _log.debug("get_own_cert"
                        "\n\tcertpath={}".format(certpath))
             return certpath, cert, certstr
-        except Excpetion as err:
+        except Exception as err:
             # Certificate not available
             _log.debug("No runtime certificate can be found, err={}".format(err))
             return None, None, None
