@@ -402,19 +402,6 @@ class TestSecurity(unittest.TestCase):
                     _log.error("exception from request_handler.get_index, err={}".format(err))
                     time.sleep(0.1)
             assert not failed
-            try:
-                #Loop through all runtimes and make sure they can lookup all other runtimes
-                for runtime in rt:
-                    for rt_attribute in rt_attributes:
-                        node_name = rt_attribute['indexed_public']['node_name']
-                        _log.debug("get_index node_name={} from rt={}".format(node_name, runtime))
-                        response = request_handler.get_index(runtime, format_index_string(['node_name', node_name]))
-                        _log.info("\tresponse={}".format(response))
-                        assert(response)
-                storage_verified = True
-            except Exception as err:
-                _log.error("Exception err={}".format(err))
-                raise
         else:
             _log.info("Storage has already been verified")
 
