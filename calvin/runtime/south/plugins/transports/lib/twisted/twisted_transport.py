@@ -207,7 +207,6 @@ class CalvinTransport(base_transport.BaseTransport):
         status = "ERROR"
         if reason.getErrorMessage() == "Connection was closed cleanly.":
             status = "OK"
-            _log.info("disconnecting ok")
         self._callback_execute('peer_disconnected', self, self._remote_rt_id, status) # transport, .. "ok"
 
     def _connection_failed(self, reason):
@@ -243,6 +242,7 @@ class CalvinServer(base_transport.BaseServer):
         super(CalvinServer, self).__init__(rt_id, listen_uri, callbacks=callbacks)
         self._rt_id = rt_id
         self._node_name = node_name
+
         self._port = None
         self._peers = {}
         self._callbacks = callbacks
@@ -304,7 +304,7 @@ class CalvinServer(base_transport.BaseServer):
                 raise
         else:
             fqdn=None
-        
+
         tp = CalvinTransport(self._rt_id, uri, self._callbacks,
                              self._client_transport, proto=protocol,
                              node_name=self._node_name,

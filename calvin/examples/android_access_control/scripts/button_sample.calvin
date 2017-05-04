@@ -1,0 +1,4 @@
+button : io.Button(text="hejsan hoppsan")
+snk : io.Print()
+
+button.trigger > snk.token

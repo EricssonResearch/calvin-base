@@ -280,7 +280,6 @@ class CalvinProto(CalvinCBClass):
     def proxy_config_handler(self, payload):
         """ Configure a node using this node as a proxyconfig
         """
-        _log.info("proxy config command: %s" % payload)
         proxyconfig.set_proxy_config(payload['from_rt_uuid'],
             payload['name'],
             payload['capabilities'],

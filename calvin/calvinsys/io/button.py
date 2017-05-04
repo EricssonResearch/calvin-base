@@ -14,17 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import umsgpack
-from message_coder import MessageCoderBase
+from calvin.runtime.south.plugins.io.button import button
 
-umsgpack.compatibility = True
+class Button():
+    
+    """
+    Button
+    """
 
-# set of functions to encode/decode data tokens to/from a json description
-class MessageCoder(MessageCoderBase):
+    def __init__(self):
+        self.button = button.Button()
+    
+    def set_text(self, text):
+        self.button.set_text(text)
 
-    def encode(self, data):
-        return umsgpack.packb(data)
+    def was_triggered(self):
+        return self.button.was_triggered()
 
-    def decode(self, data):
-        data = umsgpack.unpackb(data)
-        return data
+    def show_button(self):
+        return self.button.show_button()
+
+    def destroy(self):
+        return self.button.destroy()
+    
+def register(node=None, actor=None):
+    """
+        Called when the system object is first created.
+    """
+    return Button()

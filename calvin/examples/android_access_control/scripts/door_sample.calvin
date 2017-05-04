@@ -1,0 +1,8 @@
+/* actors */
+closeButton : io.Button(text="Close")
+openButton : io.Button(text="Open")
+door : door.Door(channel=0)
+
+/* Connections */
+closeButton.trigger > door.close_door
+openButton.trigger > door.open_door
