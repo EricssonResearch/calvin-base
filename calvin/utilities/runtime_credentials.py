@@ -387,9 +387,10 @@ class RuntimeCredentials():
         _log.debug("get_csr_path: my_node_name={}".format(self.node_name))
         return os.path.join(self.runtime_dir, "{}.csr".format(self.node_name))
 
-    def get_certificate_locally(self, cert_name, callback=None):
+    def get_certificate_locally(self, cert_name):
         """Return certificate with name cert_name from disk or storage"""
-#        _log.debug("get_certificate_locally:\n\tmy_node_name={}\n\tcert_name={}\n\tcallback={}".format(self.node_name, cert_name, callback))
+        #TODO: this should be made asynchronous as it reads from filessystem
+#        _log.debug("get_certificate_locally:\n\tmy_node_name={}\n\tcert_name={}\n\t".format(self.node_name, cert_name))
         try:
             _log.debug("Look for certificate in others folder, cert_name={}".format(cert_name))
             # Check if the certificate is in the 'others' folder for runtime my_node_name.
@@ -399,10 +400,7 @@ class RuntimeCredentials():
             certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath, security_dir=self.security_dir)
             with open(certpath, 'rb') as fd:
                 certstr=fd.read()
-            if callback:
-                callback(certstring=certstr)
-            else:
-                return certstr
+            return certstr
         except Exception as err:
             _log.debug("Certificate {} is not in {{others}} folder, continue looking in {{mine}} folder, err={}".format(cert_name, err))
             try:
@@ -413,10 +411,7 @@ class RuntimeCredentials():
                 certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath, security_dir=self.security_dir)
                 with open(certpath, 'rb') as fd:
                     certstr=fd.read()
-                if callback:
-                    callback(certstring=certstr)
-                else:
-                    return certstr
+                return certstr
             except Exception as err:
                 _log.debug("Certificate {} is not in {{others, mine}} folder, return None, err={}".format(cert_name, err))
                 return None
@@ -426,8 +421,10 @@ class RuntimeCredentials():
         # TODO: get certificate from DHT (alternative to getting from disk).
 #        _log.debug("get_certificate:\n\tmy_node_name={}\n\tcert_name={}\n\tcallback={}".format(self.node_name, cert_name, callback))
         try:
-            cert = self.get_certificate_locally(cert_name, callback=callback)
-            if cert:
+            cert = self.get_certificate_locally(cert_name)
+            if cert and callback:
+                callback(certstring=cert)
+            elif cert:
                 return cert
             else:
                 try:

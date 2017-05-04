@@ -158,6 +158,7 @@ class Authorization(object):
                                           jwt_request)
 
     def _register_node_external_cb(self, status):
+        import time
         global registration_attempt
         _log.debug("_register_node_external_cb, status={}".format(status))
         if not status or status.status != 200:
