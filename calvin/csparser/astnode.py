@@ -440,9 +440,9 @@ class Rule(Node):
 
     def __str__(self):
         if self._verbose_desc:
-            return "{} {} {} {} {} {} {}".format(self.__class__.__name__, self.rule, str(self.left), str(self.op), str(self.right), hex(id(self)), self.debug_info)
+            return "{} {} {} {} {} {}".format(self.__class__.__name__, str(self.left), str(self.op), str(self.right), hex(id(self)), self.debug_info)
         else:
-            return "{} {} {} {} {}".format(self.__class__.__name__, self.rule, str(self.left), str(self.op), str(self.right))
+            return "{} {} {} {}".format(self.__class__.__name__, str(self.left), str(self.op), str(self.right))
 
 class RulePredicate(Node):
     def __init__(self, **kwargs):
