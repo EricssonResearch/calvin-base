@@ -76,6 +76,8 @@ class CalvinLink(CalvinBaseLink):
         # to handle dying transports losing reply callbacks
         self.replies = old_link.replies if old_link else {}
         self.replies_timeout = old_link.replies_timeout if old_link else {}
+        self.peer_is_sleeping = False
+        self.buffered_msgs = []
         if old_link:
             # close old link after a period, since might still receive messages on the transport layer
             # TODO chose the delay based on RTT instead of arbitrary 3 seconds
@@ -144,14 +146,26 @@ class CalvinLink(CalvinBaseLink):
         """
         msg['from_rt_uuid'] = self.rt_id
         msg['to_rt_uuid'] = self.peer_id if dest_peer_id is None else dest_peer_id
-        _log.analyze(self.rt_id, "SEND", msg)
-        self.transport.send(msg)
+        if not self.peer_is_sleeping:
+            _log.analyze(self.rt_id, "SEND", msg)
+            self.transport.send(msg)
+        else:
+            _log.analyze(self.rt_id, "SEND_BUFFERED", msg)
+            self.buffered_msgs.append(msg)
 
     def close(self, dest_peer_id=None):
         """ Disconnect the transport and hence the link object won't work anymore """
         _log.analyze(self.rt_id, "+ LINK", {})
         if dest_peer_id is None:
             self.transport.disconnect()
+
+    def flush_buffered_msgs(self):
+        for msg in self.buffered_msgs:
+            self.send(msg)
+        self.buffered_msgs = []
+
+    def set_peer_insleep(self):
+        self.peer_is_sleeping = True
 
 
 class CalvinRoutingLink(CalvinBaseLink):
@@ -374,23 +388,31 @@ class CalvinNetwork(object):
             return
         # Only support for one RT to RT communication link per peer
         if peer_id in self._links:
-            # Likely simultaneous join requests, use the one requested by the node with highest id
-            if is_orginator and self.node.id > peer_id:
-                # We requested it and we have highest node id, hence the one in links is the peer's and we replace it
-                _log.analyze(self.node.id, "+ REPLACE ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                self._links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self._links[peer_id])
-            elif is_orginator and self.node.id < peer_id:
-                # We requested it and peer have highest node id, hence the one in links is peer's and we close this new
-                _log.analyze(self.node.id, "+ DROP ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                tp_link.disconnect()
-            elif not is_orginator and self.node.id > peer_id:
-                # Peer requested it and we have highest node id, hence the one in links is ours and we close this new
-                _log.analyze(self.node.id, "+ DROP", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                tp_link.disconnect()
-            elif not is_orginator and self.node.id < peer_id:
-                # Peer requested it and peer have highest node id, hence the one in links is ours and we replace it
-                _log.analyze(self.node.id, "+ REPLACE", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
-                self._links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, old_link=self._links[peer_id])
+            # If link with peer in sleep
+            if self._links[peer_id].peer_is_sleeping:
+                # Set new transport
+                _log.analyze(self.node.id, "+ WAKE_SLEEPING_LINK", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+                self._links[peer_id].peer_is_sleeping = False
+                self._links[peer_id].transport = tp_link
+                self._links[peer_id].flush_buffered_msgs()
+            else:
+                # Likely simultaneous join requests, use the one requested by the node with highest id
+                if is_orginator and self.node.id > peer_id:
+                    # We requested it and we have highest node id, hence the one in links is the peer's and we replace it
+                    _log.analyze(self.node.id, "+ REPLACE ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+                    self._links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, self._links[peer_id])
+                elif is_orginator and self.node.id < peer_id:
+                    # We requested it and peer have highest node id, hence the one in links is peer's and we close this new
+                    _log.analyze(self.node.id, "+ DROP ORGINATOR", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+                    tp_link.disconnect()
+                elif not is_orginator and self.node.id > peer_id:
+                    # Peer requested it and we have highest node id, hence the one in links is ours and we close this new
+                    _log.analyze(self.node.id, "+ DROP", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+                    tp_link.disconnect()
+                elif not is_orginator and self.node.id < peer_id:
+                    # Peer requested it and peer have highest node id, hence the one in links is ours and we replace it
+                    _log.analyze(self.node.id, "+ REPLACE", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id)
+                    self._links[peer_id] = CalvinLink(self.node.id, peer_id, tp_link, old_link=self._links[peer_id])
         else:
             # No simultaneous join detected, just add the link
             _log.analyze(self.node.id, "+ INSERT", {'uri': uri, 'peer_id': peer_id}, peer_node_id=peer_id, tb=True)
@@ -618,10 +640,11 @@ class CalvinNetwork(object):
                                          'links_equal': link == self._links[rt_id].transport if rt_id in self._links else "Gone"},
                                          peer_node_id=rt_id)
         if rt_id in self._links and link == self._links[rt_id].transport:
-            for route in self._links[rt_id].routes[:]:
-                self.link_remove(route)
-                self.control.log_link_disconnected(route)
-            self.link_remove(rt_id)
+            if not self._links[rt_id].peer_is_sleeping:
+                for route in self._links[rt_id].routes[:]:
+                    self.link_remove(route)
+                    self.control.log_link_disconnected(route)
+                self.link_remove(rt_id)
         self.control.log_link_disconnected(rt_id)
 
     def link_remove(self, peer_id):

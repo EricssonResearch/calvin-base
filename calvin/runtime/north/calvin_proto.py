@@ -284,6 +284,8 @@ class CalvinProto(CalvinCBClass):
             payload['name'],
             payload['capabilities'],
             payload['port_property_capability'],
+            payload['will_sleep'],
+            self.network.link_get(payload['from_rt_uuid']),
             self.node.storage,
             CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
                 callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))

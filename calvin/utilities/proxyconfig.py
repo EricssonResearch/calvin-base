@@ -6,15 +6,15 @@ from calvin.csparser.port_property_syntax import list_port_property_capabilities
 
 _log = get_logger(__name__)
 
-def set_proxy_config_cb(key, value, callback):
+def set_proxy_config_cb(key, value, will_sleep, link, callback):
     if not value:
-        # the peer_id did not exist in storage
-        callback(status=response.CalvinResponse(response.NOT_FOUND, {'peer_node_id': key}))
+        callback(status=response.CalvinResponse(response.INTERNAL_ERROR, {'peer_node_id': key}))
         return
-
     callback(status=response.CalvinResponse(response.OK))
+    if will_sleep:
+        link.set_peer_insleep()
 
-def set_proxy_config(peer_id, name, capabilities, port_property_capability, storage, callback):
+def set_proxy_config(peer_id, name, capabilities, port_property_capability, will_sleep, link, storage, callback):
     """
     Store node
     """
@@ -39,6 +39,7 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, stor
                 "uris": None,
                 "control_uris": None,
                 "authz_server": None, # Set correct value
+                "sleeping": will_sleep,
                 "attributes": {'public': attributes.get_public(),
                 'indexed_public': attributes.get_indexed_public(as_list=False)}},
-                cb=CalvinCB(set_proxy_config_cb, callback=callback))
+                cb=CalvinCB(set_proxy_config_cb, will_sleep=will_sleep, link=link, callback=callback))

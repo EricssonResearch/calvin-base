@@ -630,6 +630,11 @@ function getPeer(id)
                 } else {
                     peer.proxy = "";
                 }
+                if (data.sleeping) {
+                    peer.sleeping = data.sleeping;
+                } else {
+                    peer.sleeping = false;
+                }
                 peer.attributes = data.attributes;
                 if (peer.attributes.indexed_public) {
                     for (attribute in peer.attributes.indexed_public) {
@@ -1006,7 +1011,7 @@ function getPortState(port_id)
 }
 
 // Helper for adding a table row with elements
-function AddTableItem(tableRef, element1, element2, element3, element4, element5, element6, element7, element8, element9)
+function AddTableItem(tableRef, element1, element2, element3, element4, element5, element6, element7, element8, element9, element10)
 {
     var row = tableRef.insertRow();
     if (element1) {
@@ -1052,6 +1057,11 @@ function AddTableItem(tableRef, element1, element2, element3, element4, element5
     if (element9) {
         var cell = row.insertCell(8);
         cell.appendChild(element9);
+    }
+
+    if (element10) {
+        var cell = row.insertCell(9);
+        cell.appendChild(element10);
     }
 
     return row;
@@ -1223,6 +1233,7 @@ function showPeer(peer)
             document.createTextNode(peer.uris),
             document.createTextNode(peer.control_uris),
             document.createTextNode(peer.proxy),
+            document.createTextNode(peer.sleeping),
             btnConfigure,
             btnDestroy,
             btnAbolish,
@@ -1234,6 +1245,7 @@ function showPeer(peer)
             document.createTextNode(peer.uris),
             document.createTextNode(peer.control_uris),
             document.createTextNode(peer.proxy),
+            document.createTextNode(peer.sleeping),
             btnConfigure);
     }
 
