@@ -119,9 +119,35 @@ class DeployInfo(object):
         return rule
 
 
+class Backport(object):
+    """docstring for Backport"""
+    def __init__(self, issuetracker):
+        super(Backport, self).__init__()
+        self.issuetracker = issuetracker
+
+    def transform(self, requirements):
+        for actor, rule in requirements.iteritems():
+            new_rule = self.mangle(rule)
+            if new_rule is None:
+                self.issuetracker.add_error("Cannot mangle rule for actor '{}'".format(actor), info={'line':0, 'col':0})
+            else:
+                requirements[actor] = new_rule
+        return requirements
+
+    def mangle(self, rule):
+        if 'predicate' in rule:
+            new_rule = [{
+                "op": rule["predicate"],
+                "kwargs": rule["kwargs"],
+                "type": "+"
+            }]
+            return new_rule
+        return None
+
+
 class DSCodeGen(object):
 
-    verbose = True
+    verbose = False
     verbose_nodes = False
 
     """
@@ -148,7 +174,9 @@ class DSCodeGen(object):
 
         gen_deploy_info = DeployInfo(self.root, issue_tracker)
         gen_deploy_info.process()
-        return gen_deploy_info.requirements
+
+        bp = Backport(issue_tracker)
+        return bp.transform(gen_deploy_info.requirements)
 
     def generate_code(self, issue_tracker):
         requirements = self.generate_code_from_ast(issue_tracker)
@@ -194,9 +222,8 @@ apply snk : snk_rule
     ai, it = calvin_dscodegen(source_text, script)
     if it.issue_count == 0:
         print "No issues"
-        print "-------------"
-        print json.dumps(ai, indent=4)
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
         print i
-
+    print "-------------"
+    print json.dumps(ai, indent=4)
 
