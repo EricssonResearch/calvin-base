@@ -404,6 +404,7 @@ class CalvinParser(object):
     #        | LPAREN rule RPAREN
     #        | UNOT rule
     #        | predicate
+    #        | identifier
     #
     #   op : AND
     #      | OR
@@ -421,12 +422,13 @@ class CalvinParser(object):
         p[0] = ast.RuleDefinition(name=p[2], rule=p[4], debug_info=self.debug_info(p, 1))
 
     def p_combine_rule(self, p):
-        """rule : rule op rule"""
-        p[0] = ast.Rule(left=p[1], op=p[2], right=p[3], debug_info=self.debug_info(p, 1))
+        """rule : rule AND rule
+                | rule OR rule"""
+        p[0] = ast.SetOp(left=p[1], op=p[2], right=p[3], debug_info=self.debug_info(p, 1))
 
     def p_negate_rule(self, p):
         """rule : UNOT rule"""
-        p[0] = ast.UnaryRule(rule=p[2], op=ast.RuleSetOp(op=p[1]), debug_info=self.debug_info(p, 1))
+        p[0] = ast.UnarySetOp(rule=p[2], op=p[1], debug_info=self.debug_info(p, 1))
 
     def p_subrule(self, p):
         """rule : LPAREN rule RPAREN"""
@@ -437,11 +439,6 @@ class CalvinParser(object):
                 | predicate"""
         p[0] = p[1]
 
-    def p_op(self, p):
-        """op : AND
-              | OR"""
-        p[0] = ast.RuleSetOp(op=p[1])
-
     def p_predicate(self, p):
         """predicate : identifier LPAREN named_args RPAREN"""
         p[0] = ast.RulePredicate(predicate=p[1], args=p[3], debug_info=self.debug_info(p, 1))
@@ -451,71 +448,6 @@ class CalvinParser(object):
         # or possibly
         # """apply : APPLY rule COLON identifiers"""
         p[0] = ast.RuleApply(optional=False, targets=p[2], rule=p[4], debug_info=self.debug_info(p,1))
-
-    # def p_rule(self, p):
-    #     """rule : RULE identifier COLON expression"""
-    #     p[0] = ast.Rule(rule=p[2], expression=p[4], debug_info=self.debug_info(p, 1))
-    #
-    # def p_expression(self, p):
-    #     """expression : expression predicate
-    #                   | first_predicate"""
-    #     if len(p) > 2:
-    #         p[1].add_child(p[2])
-    #         p[0] = p[1]
-    #     else:
-    #         p[0] = ast.RuleExpression(first_predicate=p[1])
-    #
-    # def p_first_predicate(self, p):
-    #     """first_predicate : identifier
-    #                        | NOT identifier
-    #                        | identifier LPAREN named_args RPAREN
-    #                        | NOT identifier LPAREN named_args RPAREN"""
-    #     # print p[1], p[3], self.debug_info(p, 1)
-    #     if len(p) == 2:
-    #         # identifier
-    #         p[0] = ast.RulePredicate(predicate=p[1], type="rule", debug_info=self.debug_info(p, 1))
-    #     elif len(p) == 3:
-    #         # NOT identifier
-    #         p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=ast.RuleSetOp(op="~"), debug_info=self.debug_info(p, 1))
-    #     elif len(p) == 5:
-    #         # identifier LPAREN named_args RPAREN
-    #         p[0] = ast.RulePredicate(predicate=p[1], type="constraint", args=p[3], debug_info=self.debug_info(p, 1))
-    #     else:
-    #         # NOT identifier LPAREN named_args RPAREN
-    #         p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=ast.RuleSetOp(op="~"), args=p[4], debug_info=self.debug_info(p, 1))
-    #
-    # def p_predicate(self, p):
-    #     """predicate : setop identifier
-    #                  | setop identifier LPAREN named_args RPAREN"""
-    #     # print p[1], p[3], self.debug_info(p, 1)
-    #     if len(p) == 3:
-    #         # setop identifier
-    #         p[0] = ast.RulePredicate(predicate=p[2], type="rule", op=p[1], debug_info=self.debug_info(p, 1))
-    #     else:
-    #         # setop identifier LPAREN named_args RPAREN
-    #         p[0] = ast.RulePredicate(predicate=p[2], type="constraint", op=p[1], args=p[4], debug_info=self.debug_info(p, 1))
-    #
-    # def p_setop(self, p):
-    #     """setop : AND
-    #              | OR
-    #              | AND NOT
-    #              | OR NOT"""
-    #     #print p[1], self.debug_info(p, 1)
-    #     if len(p) == 2:
-    #         p[0] = ast.RuleSetOp(op=p[1])
-    #     else:
-    #         p[0] = ast.RuleSetOp(op=p[1] + p[2])
-    #
-    # def p_apply(self, p):
-    #     """apply : APPLY ident_list COLON expression
-    #              | APPLY STAR ident_list COLON expression"""
-    #     if len(p) == 5:
-    #         # print p[2], p[4], self.debug_info(p, 1)
-    #         p[0] = ast.RuleApply(optional=False, targets=p[2], rule=p[4], debug_info=self.debug_info(p,1))
-    #     else:
-    #         # print p[2], p[3], p[5], self.debug_info(p, 1)
-    #         p[0] = ast.RuleApply(optional=True, targets=p[3], rule=p[5], debug_info=self.debug_info(p,1))
-
 
     def p_group(self, p):
         """group : GROUP identifier COLON identifiers"""

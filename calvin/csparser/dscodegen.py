@@ -5,16 +5,43 @@ from parser import calvin_parse
 from codegen import query
 
 
-class RuleExpander(object):
-    """docstring for RuleExpander"""
-    def __init__(self, root, issue_tracker):
-        super(RuleExpander, self).__init__()
-        self.root = root
+class ExpandRules(object):
+    """docstring for ExpandRules"""
+    def __init__(self, issue_tracker):
+        super(ExpandRules, self).__init__()
         self.issue_tracker = issue_tracker
 
-    def process(self):
-        self.result = []
-        self.visit(self.root)
+    def process(self, root):
+        self.expanded_rules = {}
+        rules = query(root, ast.RuleDefinition)
+        seen = [rule.name.ident for rule in rules]
+        unresolved = rules
+        while True:
+            self._replaced = False
+            for rule in unresolved[:]:
+                rule_resolved = self._expand_rule(rule)
+                if rule_resolved:
+                    self.expanded_rules[rule.name.ident] = rule.rule
+                    unresolved.remove(rule)
+            if not unresolved:
+                # Done
+                break
+            if not self._replaced:
+                # Give up
+                for rule in unresolved:
+                    reason = "Cannot expand rule '{}'".format(rule.name.ident)
+                    self.issue_tracker.add_error(reason, rule)
+                return self.expanded_rules
+        # OK, final pass over RuleApply
+        applies = query(root, ast.RuleApply)
+        for a in applies:
+            self._expand_rule(a)
+        # FIXME: Run a second pass to catch errors
+
+    def _expand_rule(self, rule):
+        self._clean = True
+        self.visit(rule.rule)
+        return self._clean
 
     @visitor.on('node')
     def visit(self, node):
@@ -22,32 +49,23 @@ class RuleExpander(object):
 
     @visitor.when(ast.Node)
     def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children)
+        pass
 
-    @visitor.when(ast.Rule)
+    @visitor.when(ast.SetOp)
     def visit(self, node):
-        print "Rule", node
         self.visit(node.left)
-        self.visit(node.op)
         self.visit(node.right)
 
-
-    @visitor.when(ast.UnaryRule)
+    @visitor.when(ast.UnarySetOp)
     def visit(self, node):
-        print "UnaryRule", node
-        # FIXME: Just testing, too simplistic!!
         self.visit(node.rule)
-        if node.op.op == "~":
-            self.result[-1]['type'] = "-"
 
-
-    @visitor.when(ast.RulePredicate)
+    @visitor.when(ast.Id)
     def visit(self, node):
-        print "predicate", node
-        pred = {c.ident.ident:c.arg.value for c in node.children}
-        res = {"kwargs":pred, "type":"+", "op":node.predicate.ident}
-        self.result.append(res)
+        self._clean = False
+        if node.ident in self.expanded_rules:
+            node.parent.replace_child(node, self.expanded_rules[node.ident].clone())
+            self._replaced = True
 
 
 class DeployInfo(object):
@@ -72,24 +90,39 @@ class DeployInfo(object):
 
     @visitor.when(ast.RuleApply)
     def visit(self, node):
-        if type(node.rule) is ast.Id:
-            # Lookup rule
-            rule_name = node.rule.ident
-            matched = query(self.root, kind=ast.RuleDefinition, attributes={('name', 'ident'):rule_name}, maxdepth=1024)
-            print matched, rule_name
-            rule_def = matched[0]
-            rule = rule_def.rule
-        else:
-            rule = node.rule
-        expr = expand_rule(rule, self.issue_tracker)
-        for c in node.children:
-            self.requirements[c.ident] = expr
+        rule = self.visit(node.rule)
+        for t in node.targets:
+            self.requirements[t.ident] = rule
+
+    @visitor.when(ast.RulePredicate)
+    def visit(self, node):
+        pred = {
+            "predicate":node.predicate.ident,
+            "kwargs":{arg.ident.ident:arg.arg.value for arg in node.args}
+        }
+        return pred
+
+    @visitor.when(ast.SetOp)
+    def visit(self, node):
+        rule = {
+            "operator":node.op,
+            "operands":[self.visit(node.left), self.visit(node.right)]
+        }
+        return rule
+
+    @visitor.when(ast.UnarySetOp)
+    def visit(self, node):
+        rule = {
+            "operator":node.op,
+            "operand":self.visit(node.rule)
+        }
+        return rule
 
 
 class DSCodeGen(object):
 
     verbose = True
-    verbose_nodes = True
+    verbose_nodes = False
 
     """
     Generate code from a deploy script file
@@ -109,25 +142,24 @@ class DSCodeGen(object):
 
 
     def generate_code_from_ast(self, issue_tracker):
+        er = ExpandRules(issue_tracker)
+        er.process(self.root)
+        self.dump_tree('EXPANDED')
+
         gen_deploy_info = DeployInfo(self.root, issue_tracker)
         gen_deploy_info.process()
         return gen_deploy_info.requirements
 
     def generate_code(self, issue_tracker):
-        # self.set_op_on_first_predicates(issue_tracker)
-        # self.fold_in_rule_expr(issue_tracker)
         requirements = self.generate_code_from_ast(issue_tracker)
         self.deploy_info = {'requirements':requirements}
         self.deploy_info['valid'] = (issue_tracker.error_count == 0)
 
 
-def expand_rule(node, issue_tracker):
-    rule_expander = RuleExpander(node, issue_tracker)
-    rule_expander.process()
-    return rule_expander.result
-
 def _calvin_cg(source_text, app_name):
+    global global_root
     ast_root, issuetracker = calvin_parse(source_text)
+    global_root = ast_root
     cg = DSCodeGen(ast_root, app_name)
     return cg, issuetracker
 

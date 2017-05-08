@@ -161,8 +161,6 @@ class BraceFormatter(object):
             self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
-        # print "{}( {} {} )".format(self._indentation(), node, node.arg)
-
     @visitor.when(ast.InternalInPort)
     def visit(self, node):
         self.result.append("{}( {} {}.{} )".format(self._indentation(), node, node.actor, node.port))
@@ -181,10 +179,6 @@ class BraceFormatter(object):
             self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
-    @visitor.when(ast.RuleSetOp)
-    def visit(self, node):
-        self.result.append("{}( {} {} )".format(self._indentation(), node, node.op))
-
     @visitor.when(ast.Group)
     def visit(self, node):
         def f(node):
@@ -195,26 +189,6 @@ class BraceFormatter(object):
             self.result.append("{})".format(self._indentation()))
         self._visit(node, preorder=f, postorder=g)
 
-    @visitor.when(ast.RuleApply)
-    def visit(self, node):
-        def f(node):
-            self.result.append("{}( {} optional={}".format(self._indentation(), node, node.optional))
-            self.indent += 1
-        def g(node):
-            self.indent -= 1
-            self.result.append("{})".format(self._indentation()))
-        self._visit(node, preorder=f, postorder=g)
-
-
-    # @visitor.when(ast.Rule)
-    # def visit(self, node):
-    #     def f(node):
-    #         self.result.append("{}( {} {}".format(self._indentation(), node, node.rule.ident))
-    #         self.indent += 1
-    #     def g(node):
-    #         self.indent -= 1
-    #         self.result.append("{})".format(self._indentation()))
-    #     self._visit(node, preorder=f, postorder=g)
 
 class BracePrinter(BraceFormatter):
     """docstring for BracePrinter"""

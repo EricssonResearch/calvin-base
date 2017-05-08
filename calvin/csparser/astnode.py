@@ -403,10 +403,11 @@ class RuleDefinition(Node):
         return self.children[1]
 
 
-class Rule(Node):
+class SetOp(Node):
     def __init__(self, **kwargs):
-        super(Rule, self).__init__(**kwargs)
-        self.add_children([kwargs.get('left'), kwargs.get('op'), kwargs.get('right')])
+        super(SetOp, self).__init__(**kwargs)
+        self.op = kwargs.get('op')
+        self.add_children([kwargs.get('left'), kwargs.get('right')])
 
     @property
     def left(self):
@@ -420,34 +421,26 @@ class Rule(Node):
 
     @property
     def right(self):
-        return self.children[2]
+        return self.children[1]
 
     @right.setter
     def right(self, value):
         value.parent = self
         self.right.parent = None
-        self.children[2] = value
-
-    @property
-    def op(self):
-        return self.children[1]
-
-    @op.setter
-    def op(self, value):
-        value.parent = self
-        self.op.parent = None
         self.children[1] = value
 
     def __str__(self):
         if self._verbose_desc:
-            return "{} {} {} {} {} {}".format(self.__class__.__name__, str(self.left), str(self.op), str(self.right), hex(id(self)), self.debug_info)
+            return "{} {} {} {}".format(self.__class__.__name__, str(self.op), hex(id(self)), self.debug_info)
         else:
-            return "{} {} {} {}".format(self.__class__.__name__, str(self.left), str(self.op), str(self.right))
+            return "{} {}".format(self.__class__.__name__, str(self.op))
 
-class UnaryRule(Node):
+
+class UnarySetOp(Node):
     def __init__(self, **kwargs):
-        super(UnaryRule, self).__init__(**kwargs)
-        self.add_children([kwargs.get('rule'), kwargs.get('op')])
+        super(UnarySetOp, self).__init__(**kwargs)
+        self.op = kwargs.get('op')
+        self.add_children([kwargs.get('rule')])
 
     @property
     def rule(self):
@@ -459,21 +452,12 @@ class UnaryRule(Node):
         self.rule.parent = None
         self.children[0] = value
 
-    @property
-    def op(self):
-        return self.children[1]
-
-    @op.setter
-    def op(self, value):
-        value.parent = self
-        self.op.parent = None
-        self.children[1] = value
-
     def __str__(self):
         if self._verbose_desc:
-            return "{} {} {} {} {}".format(self.__class__.__name__, str(self.rule), str(self.op),hex(id(self)), self.debug_info)
+            return "{} {} {} {}".format(self.__class__.__name__, str(self.op), hex(id(self)), self.debug_info)
         else:
-            return "{} {} {}".format(self.__class__.__name__, str(self.rule), str(self.op))
+            return "{} {}".format(self.__class__.__name__, str(self.op))
+
 
 class RulePredicate(Node):
     def __init__(self, **kwargs):
@@ -481,18 +465,16 @@ class RulePredicate(Node):
         self.predicate = kwargs.get('predicate')
         self.add_children(kwargs.get('args', []))
 
+    @property
+    def args(self):
+        return self.children
+
     def __str__(self):
         if self._verbose_desc:
             return "{} {} {} {}".format(self.__class__.__name__, self.predicate.ident, hex(id(self)), self.debug_info)
         else:
             return "{} {}".format(self.__class__.__name__, self.predicate.ident)
 
-class RuleSetOp(Node):
-    def __init__(self, **kwargs):
-        super(RuleSetOp, self).__init__(**kwargs)
-        # op is & intersection, | union and/or with the unary ~ not operator
-        self.op = kwargs.get('op')
-        self.children = None
 
 class Group(Node):
     def __init__(self, **kwargs):
@@ -504,8 +486,16 @@ class RuleApply(Node):
     def __init__(self, **kwargs):
         super(RuleApply, self).__init__(**kwargs)
         self.optional = kwargs.get('optional')
-        self.rule = kwargs.get('rule')
-        self.add_children(kwargs.get('targets'))
+        self.add_children([kwargs.get('rule')] + kwargs.get('targets'))
+
+    @property
+    def rule(self):
+        return self.children[0]
+
+    @property
+    def targets(self):
+        return self.children[1:]
+
 
 
 ################################
@@ -553,10 +543,9 @@ def node_decoder(o):
         'Component':Component,
         'RuleApply':RuleApply,
         'Group':Group,
-        'RuleSetOp':RuleSetOp,
+        'SetOp':SetOp,
         'RulePredicate':RulePredicate,
-        'Rule':Rule,
-        'UnaryRule':UnaryRule
+        'UnarySetOp':UnarySetOp
     }.get(o['class'])()
     instance.__dict__ = o['data']
     return instance
