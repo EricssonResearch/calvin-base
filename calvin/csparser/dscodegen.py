@@ -131,17 +131,53 @@ class Backport(object):
             if new_rule is None:
                 self.issuetracker.add_error("Cannot mangle rule for actor '{}'".format(actor), info={'line':0, 'col':0})
             else:
-                requirements[actor] = new_rule
+                requirements[actor] = new_rule if type(new_rule) is list else [new_rule]
         return requirements
 
     def mangle(self, rule):
         if 'predicate' in rule:
-            new_rule = [{
+            new_rule = {
                 "op": rule["predicate"],
                 "kwargs": rule["kwargs"],
                 "type": "+"
-            }]
+            }
             return new_rule
+
+        if 'operands' in rule and rule['operator'] == '&':
+            left = self.mangle(rule['operands'][0])
+            right = self.mangle(rule['operands'][1])
+            try:
+                new_rule = [left, right]
+            except:
+                print "EXCEPTION (&)", left, right
+                new_rule = None
+            return new_rule
+
+        if 'operands' in rule and rule['operator'] == '|':
+            left = self.mangle(rule['operands'][0])
+            right = self.mangle(rule['operands'][1])
+            try:
+                left.pop('type')
+                right.pop('type')
+                new_rule = {
+                    "op": "union_group",
+                    "requirements": [left, right],
+                    "type": "+"
+                }
+            except:
+                print "EXCEPTION (|)", left, right
+                new_rule = None
+            return new_rule
+
+
+        if 'operand' in rule and rule['operator'] == '~':
+            new_rule = {
+                "op": rule["operand"]["predicate"],
+                "kwargs": rule["operand"]["kwargs"],
+                "type": "-"
+            }
+            return new_rule
+
         return None
 
 
