@@ -2,7 +2,7 @@ import astnode as ast
 import visitor
 import astprint
 from parser import calvin_parse
-from codegen import query
+from codegen import query, ReplaceConstants
 
 
 class ExpandRules(object):
@@ -168,6 +168,11 @@ class DSCodeGen(object):
 
 
     def generate_code_from_ast(self, issue_tracker):
+        rc = ReplaceConstants(issue_tracker)
+        rc.process(self.root)
+        self.dump_tree('RESOLVED CONSTANTS')
+
+
         er = ExpandRules(issue_tracker)
         er.process(self.root)
         self.dump_tree('EXPANDED')
@@ -208,13 +213,14 @@ if __name__ == '__main__':
     script = 'inline'
     source_text = \
     """
-rule src_rule : a() & b() | c()
-rule sum_rule : a() & ( b() | src_rule )
-rule snk_rule : a() & b() | ~c()
+define FOO=["node_name", {"organization": "com.ericsson"}]
 
-apply src : src_rule
-apply sum : sum_rule
-apply snk : snk_rule
+src : std.CountTimer()
+snk : test.Sink(store_tokens=1, quiet=1)
+src.integer > snk.token
+
+rule simple: node_attr_match(index=FOO)
+apply src, snk: simple
     """
     source_text = cleandoc(source_text)
     print source_text
