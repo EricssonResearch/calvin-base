@@ -173,3 +173,30 @@ def calvin_dscodegen(source_text, app_name):
     cg.generate_code(issuetracker)
     return cg.deploy_info, issuetracker
 
+if __name__ == '__main__':
+    from inspect import cleandoc
+    import json
+
+    script = 'inline'
+    source_text = \
+    """
+rule src_rule : a() & b() | c()
+rule sum_rule : a() & ( b() | src_rule )
+rule snk_rule : a() & b() | ~c()
+
+apply src : src_rule
+apply sum : sum_rule
+apply snk : snk_rule
+    """
+    source_text = cleandoc(source_text)
+    print source_text
+    print
+    ai, it = calvin_dscodegen(source_text, script)
+    if it.issue_count == 0:
+        print "No issues"
+        print "-------------"
+        print json.dumps(ai, indent=4)
+    for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
+        print i
+
+
