@@ -10,8 +10,7 @@
                                 "name": "simple_rt1"
                             }
                         }, 
-                        "op": "node_attr", 
-                        "type": "+"
+                        "op": "node_attr"
                     }, 
                     {
                         "kwargs": {
@@ -19,8 +18,7 @@
                                 "name": "simple_rt2"
                             }
                         }, 
-                        "op": "node_attr", 
-                        "type": "+"
+                        "op": "node_attr"
                     }
                 ], 
                 "type": "+"
@@ -41,8 +39,7 @@
                                 "name": "simple_rt1"
                             }
                         }, 
-                        "op": "node_attr", 
-                        "type": "+"
+                        "op": "node_attr"
                     }, 
                     {
                         "kwargs": {
@@ -50,8 +47,7 @@
                                 "name": "simple_rt2"
                             }
                         }, 
-                        "op": "node_attr", 
-                        "type": "+"
+                        "op": "node_attr"
                     }
                 ], 
                 "type": "+"

@@ -1,7 +1,19 @@
-        a:std.CountTimer()
-        b:io.Print()
+a:std.CountTimer()
+b:io.Print()
 
-        a.integer > b.token
-        
-        rule simple: node_attr(node_name={"name": "simple_rt1"}) | node_attr(node_name={"name": "simple_rt2"})
-        apply a, b: simple 
+a.integer > b.token
+
+rule simple: node_attr(node_name={"name": "simple_rt1"}) | node_attr(node_name={"name": "simple_rt2"})
+apply a, b: simple
+
+/*
+N.B.: The reference output for this test was probably wrong since calvincontrol.py specifies that:
+
+A special matching rule exist, to first form a union between matching
+rules, i.e. alternative matches. This is useful for e.g. alternative
+namings, ownerships or specifying either of two specific nodes.
+    {"op": "union_group",
+     "requirements": [list as above of matching rules but without type key]
+     "type": "+"
+    }
+*/

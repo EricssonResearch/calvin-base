@@ -1,8 +1,8 @@
-        a:std.CountTimer()
-        b:io.Print()
+a:std.CountTimer()
+b:io.Print()
 
-        a.integer > b.token
-        
-        rule union: node_attr(node_name={"name": "simple_rt1"}) | node_attr(node_name={"name": "simple_rt2"})
-        rule hierarchical: union & ~current()
-        apply a, b: hierarchical 
+a.integer > b.token
+
+rule union: node_attr(node_name={"name": "simple_rt1"}) | node_attr(node_name={"name": "simple_rt2"})
+rule hierarchical: union & ~current()
+apply a, b: hierarchical
