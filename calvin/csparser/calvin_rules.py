@@ -75,9 +75,14 @@ def t_DOCSTRING(t):
 # Multiline strings are not allowed, but
 # parser will concatenate sequential strings
 # separated by any number/kind of whitespace.
+# FIXME: The second form is a temporary workaround until we have reimplemented the port mappings
 def t_STRING(t):
-    r'!?"([^"\\\n]|(\\.))*?"'
+    r'(?:!?\"(?:[^\"\\\n]|(?:\\.))*?\")|(?:&[A-Za-z][A-Za-z0-9_]*\.[A-Za-z][A-Za-z0-9_]*)'
+#   r'!?"([^"\\\n]|(\\.))*?"'
     is_raw = False
+    if t.value.startswith('&'):
+        t.value = t.value[1:]
+        return t
     if t.value.startswith('!'):
         # Keep as raw string
         is_raw = True

@@ -781,4 +781,32 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
+    def testPortRef(self):
+        script = r"""
+        print1 : io.Print()
+        &print1.token >  print1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 0)
+
+    @pytest.mark.xfail()
+    def testPortRefMissingSyntaxCheck(self):
+        # FIXME: io.Print has no outport
+        script = r"""
+        print1 : io.Print()
+        &print1.token[out] >  print1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertEqual(len(errors), 1)
+
+    def testPortRefAsKey(self):
+        script = r"""
+        print1 : io.Print()
+        {&print1.token:"Comment"} >  print1.token
+        """
+        result, errors, warnings = self.parse('inline', script)
+        self.assertTrue(len(errors) > 0)
+
+
+
 
