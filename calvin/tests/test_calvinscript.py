@@ -799,6 +799,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
 
+    @pytest.mark.xfail()
     def testPortRefAsKey(self):
         script = r"""
         print1 : io.Print()
