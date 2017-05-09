@@ -127,15 +127,28 @@ class Backport(object):
 
     def transform(self, requirements):
         for actor, rule in requirements.iteritems():
-            new_rule = self.mangle(rule)
-            if new_rule is None:
-                self.issuetracker.add_error("Cannot mangle rule for actor '{}'".format(actor), info={'line':0, 'col':0})
-            else:
+            try:
+                new_rule = self.mangle(rule)
                 requirements[actor] = new_rule if type(new_rule) is list else [new_rule]
+            except Exception as e:
+                self.issuetracker.add_error("Cannot mangle rule for actor '{}'".format(actor), info={'line':0, 'col':0})
         return requirements
 
     def mangle(self, rule):
-        if 'predicate' in rule:
+
+        def is_predicate(rule):
+            return 'predicate' in rule
+
+        def is_intersection(rule):
+            return 'operands' in rule and rule['operator'] == '&'
+
+        def is_union(rule):
+            return 'operands' in rule and rule['operator'] == '|'
+
+        def is_unary_not(rule):
+            return 'operand' in rule and rule['operator'] == '~'
+
+        if is_predicate(rule):
             new_rule = {
                 "op": rule["predicate"],
                 "kwargs": rule["kwargs"],
@@ -143,34 +156,46 @@ class Backport(object):
             }
             return new_rule
 
-        if 'operands' in rule and rule['operator'] == '&':
-            left = self.mangle(rule['operands'][0])
-            right = self.mangle(rule['operands'][1])
+        if is_intersection(rule):
             try:
-                new_rule = [left, right]
-            except:
-                print "EXCEPTION (&)", left, right
-                new_rule = None
+                left = self.mangle(rule['operands'][0])
+                right = self.mangle(rule['operands'][1])
+                new_rule = (left if type(left) is list else [left]) + (right if type(right) is list else [right])
+            except Exception as e:
+                print "REASON:", e
+                raise Exception("EXCEPTION (&)\n{}\n{}".format(left, right))
             return new_rule
 
-        if 'operands' in rule and rule['operator'] == '|':
+        if is_union(rule):
             left = self.mangle(rule['operands'][0])
             right = self.mangle(rule['operands'][1])
+            ll, rd = False, False
             try:
-                left.pop('type')
-                right.pop('type')
+                if type(left) is dict and 'requirements' in left:
+                    left = left['requirements']
+                    ll = True
+                if type(left) is dict:
+                    left.pop('type', None)
+                if type(right) is dict and 'requirements' in right:
+                    right = right['requirements']
+                if type(right) is dict:
+                    right.pop('type', None)
+                    rd = True
+                if  ll and rd:
+                    reqs = left + [right]
+                else:
+                    reqs = [left, right]
                 new_rule = {
                     "op": "union_group",
-                    "requirements": [left, right],
+                    "requirements":reqs,
                     "type": "+"
                 }
-            except:
-                print "EXCEPTION (|)", left, right
-                new_rule = None
+            except Exception as e:
+                raise Exception("EXCEPTION (|)\n{}\n{}".format(left, right))
             return new_rule
 
 
-        if 'operand' in rule and rule['operator'] == '~':
+        if is_unary_not(rule):
             new_rule = {
                 "op": rule["operand"]["predicate"],
                 "kwargs": rule["operand"]["kwargs"],
@@ -249,14 +274,17 @@ if __name__ == '__main__':
     script = 'inline'
     source_text = \
     """
-define FOO=["node_name", {"organization": "com.ericsson"}]
+    snk : io.Print()
+    1 > snk.token
 
-src : std.CountTimer()
-snk : test.Sink(store_tokens=1, quiet=1)
-src.integer > snk.token
+    rule r1 : a() & b() & c() & d() & e()
+    rule r2 : a() | b() | c() | d() | e()
+    rule r3 : a() | b() & c() & d()
+    rule r4 : a() & b() | c() & d()
+    rule r5 : a() & b() | c() & d() | e() | f()
 
-rule simple: node_attr_match(index=FOO)
-apply src, snk: simple
+    apply snk : r2
+
     """
     source_text = cleandoc(source_text)
     print source_text
