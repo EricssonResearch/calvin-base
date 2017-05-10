@@ -221,7 +221,8 @@ class HTTPProtocol(LineReceiver):
             self.factory.trigger()
 
     def send(self, data):
-        LineReceiver.sendLine(self, data)  # LineReceiver is an old style class.
+        # Do not add newlines - data may be binary
+        self.transport.write(data)
 
     def close(self):
         self.transport.loseConnection()
