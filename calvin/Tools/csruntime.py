@@ -315,6 +315,8 @@ def runtime_certificate(rt_attributes):
                 elif storage_type in ["dht","securedht"]:
                     _log.debug("Find CA via SSDP")
                     responses = discover()
+                    if not responses:
+                        _log.error("No responses received")
                     for response in responses:
                         cmd, headers = parse_http_response(response)
                         if 'location' in headers:

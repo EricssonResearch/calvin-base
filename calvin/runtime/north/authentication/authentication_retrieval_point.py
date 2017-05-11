@@ -58,8 +58,8 @@ class FileAuthenticationRetrievalPoint(object):
         # Replace ~ by the user's home directory.
         _log.debug("FileAuthenticationRetrievalPoint::__init__")
         self.path = os.path.expanduser(path) 
-        self.users_db=None
-        self.groups_db=None
+        self.users_db=self.get_users_db()
+        self.groups_db=self.get_groups_db()
         if not os.path.exists(self.path):
             try:
                 os.makedirs(self.path)
@@ -71,20 +71,19 @@ class FileAuthenticationRetrievalPoint(object):
     def get_users_db(self):
         """Return the database of users"""
         _log.debug("get_users_db")
-        if not self.users_db:
-            try:
-                self.check_stored_users_db_for_unhashed_passwords()
-            except Exception as err:
-                _log.error("Failed to check for unhashed passwords in users file, err={}".format(err))
-                return None
-            try:
-                users_db_path = os.path.join(self.path,'users.json')
-                with open(users_db_path,'rt') as data:
-                    self.users_db = json.load(data)
-            except Exception as err:
-                _log.error("No users.json file can be found at path={}, err={}".format(users_db_path, err))
-                return None
-        return self.users_db
+        try:
+            self.check_stored_users_db_for_unhashed_passwords()
+        except Exception as err:
+            _log.error("Failed to check for unhashed passwords in users file, err={}".format(err))
+            return None
+        try:
+            users_db_path = os.path.join(self.path,'users.json')
+            with open(users_db_path,'rt') as data:
+                users_db = json.load(data)
+        except Exception as err:
+            _log.error("No users.json file can be found at path={}, err={}".format(users_db_path, err))
+            return None
+        return users_db
 
     def create_users_db(self, data):
         """Create a database of users"""
@@ -95,9 +94,11 @@ class FileAuthenticationRetrievalPoint(object):
 
     def hash_passwords(self, data):
         """Change the content of the users database"""
+        import time
         #TODO: remove printing passwords into log 
         _log.debug("hash_passwords\n\tdata={}".format(data))
         updates_made = False
+        start = time.time()
         for username in data:
             user_data = data[username]
             try:
@@ -118,7 +119,9 @@ class FileAuthenticationRetrievalPoint(object):
                     raise
                 user_data['password']=hash
                 updates_made = True
-        _log.debug("hashed_passwords\n\tdata={}".format(data))
+        _log.debug("hashed_passwords"
+                   "\n\tdata={}"
+                   "\n\ttime it took to hash passwords={}".format(data, time.time()-start))
         return updates_made
 
     def update_users_db(self, data):
@@ -173,16 +176,15 @@ class FileAuthenticationRetrievalPoint(object):
         """Return the database of groups"""
         path = os.path.join(self.path,"groups.json")
         _log.debug("get_groups_db, path={}".format(path))
-        if not self.groups_db:
-            try:
-                with open(path, 'rt') as data:
-                    self.groups_db = json.load(data)
-            except Exception as err:
-                _log.error("Failed to open groups.json:"
-                           "\n\tpath={}"
-                           "\n\terr={}".format(path, err))
-                return None
-        return self.groups_db
+        try:
+            with open(path, 'rt') as data:
+                groups_db = json.load(data)
+        except Exception as err:
+            _log.error("Failed to open groups.json:"
+                       "\n\tpath={}"
+                       "\n\terr={}".format(path, err))
+            return None
+        return groups_db
 
     def create_groups_db(self, data):
         """Create a database of groups"""

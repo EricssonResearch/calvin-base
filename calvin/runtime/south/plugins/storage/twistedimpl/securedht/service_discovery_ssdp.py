@@ -136,7 +136,23 @@ class ServerBase(DatagramProtocol):
                                                   response, address)
                 elif CA_SERVICE_UUID in headers['st'] and address not in self.ignore_list\
                     and self._msearches_resp[CA_SERVICE_UUID]["sign"]:
-                    _log.error("CA signing via SSDP no longer supported")
+                    for k, addrs in self._services.items():
+                        for addr in addrs:
+                            # Only tell local about local
+                            if addr[0] == "127.0.0.1" and address[0] != "127.0.0.1":
+                                continue
+                            try:
+                                response = MS_RESP[CA_SERVICE_UUID] % (str(addr),
+                                                                    str(time.time()),
+                                                                    self._control_uri + "/node/" + self._node_id,
+                                                                    datetimeToString())
+                            except Exception as err:
+                                _log.error("Failed to create response, err={}".format(err))
+                                raise
+                            _log.debug("ServerBase::Sending response: %s" % repr(response))
+                            delay = random.randint(0, min(5, int(headers['mx'])))
+                            reactor.callLater(delay, self.send_it,
+                                                  response, address)
         except Exception as err:
             _log.exception("SSDP search received, but failed handling, err={}".format(err))
 

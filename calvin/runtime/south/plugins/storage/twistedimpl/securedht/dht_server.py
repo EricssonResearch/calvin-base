@@ -177,6 +177,11 @@ class AutoDHTServer(StorageBase):
         self._dlist += self._ssdps.start()
         domain = _conf.get("security", "domain_name")
         is_ca=False
+        try:
+            if _conf.get("security", "certificate_authority") == "True":
+                is_ca = True
+        except:
+            is_ca = False
         self._ssdps.update_server_params(CA_SERVICE_UUID, sign=is_ca, name=name)
         dht_id = dhtid_from_nodeid(self._node_id)
         self.dht_server = ServerApp(AppendServer, dht_id, node_name=self._name, runtime_credentials=self._runtime_credentials)

@@ -45,7 +45,7 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 homefolder = get_home()
-test_name="test_securedht"
+test_name="test_automatic_ca_discovery"
 credentials_testdir = os.path.join(homefolder, ".calvin", test_name)
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
@@ -224,24 +224,21 @@ class TestSecurity(unittest.TestCase):
                                                            nodeid=nodeid,
                                                            enrollment_password=enrollment_password)
             runtimes.append(runtime)
-            ca_cert = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
-            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            #Encrypt CSR with CAs public key (to protect enrollment password)
-            rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert)
-            #Decrypt encrypted CSR with CAs private key
-            csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
-            csr_path = ca.store_csr_with_enrollment_password(csr)
-            cert_path = ca.sign_csr(csr_path)
-            runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'domain_name', domain_name)
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
-#        rt_conf.set('global', 'storage_type', "securedht")
-        rt_conf.set('global', 'storage_type', "dht")
+        rt_conf.set('security', 'control_interface_security', "tls")
+        rt_conf.set('global', 'storage_type', "securedht")
 
-        for i in range(NBR_OF_RUNTIMES):
+        # Runtime 0: Certificate authority.
+        rt0_conf = copy.deepcopy(rt_conf)
+        rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
+        rt0_conf.set('security','certificate_authority','True')
+        rt0_conf.save("/tmp/calvin5000.conf")
+
+        for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.set('security','enrollment_password',enrollment_passwords[i])
             rt_conf.save("/tmp/calvin{}.conf".format(5000+i))
 
@@ -266,9 +263,9 @@ class TestSecurity(unittest.TestCase):
                         configfile="/tmp/calvin{}.conf".format(5000+i),
                         dht_network_filter=test_name
                      )
-            rt.append(RT("http://{}:{}".format(hostname,5020+i)))
-            time.sleep(0.2)
-        time.sleep(2)
+            rt.append(RT("https://{}:{}".format(hostname,5020+i)))
+            time.sleep(0.3)
+        time.sleep(15)
         _log.info("------------------------------------------------")
         for i in range(NBR_OF_RUNTIMES):
             _log.info("rt[{}] = {}".format(i,  runtimes[i].node_id))

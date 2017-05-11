@@ -691,7 +691,6 @@ class RuntimeCredentials():
         """
 #        _log.debug("store_own_cert:\n\tcertstring={}\n\tcertpath={}".format(certstring, certpath))
         path = self.store_cert("mine", certstring=certstring, certpath=certpath)
-        print "Hakan path={}".format(path)
         #Let's update openssl.conf, but this entry should probably not
         #be trusted, it is likely that someone will copy certs into the folder 
         #by other means

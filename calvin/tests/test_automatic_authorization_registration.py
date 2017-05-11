@@ -45,14 +45,14 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 homefolder = get_home()
-test_name="test_securedht"
-credentials_testdir = os.path.join(homefolder, ".calvin", test_name)
+credentials_testdir = os.path.join(homefolder, ".calvin","test_all_security_together_dir")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
 runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
 code_signer_name="test_signer"
+orig_identity_provider_path = os.path.join(security_testdir,"identity_provider")
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
 orig_actor_store_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'actorstore','systemactors'))
@@ -60,7 +60,7 @@ actor_store_path = os.path.join(credentials_testdir, "store")
 orig_application_store_path = os.path.join(security_testdir, "scripts")
 application_store_path = os.path.join(credentials_testdir, "scripts")
 
-NBR_OF_RUNTIMES=6
+NBR_OF_RUNTIMES=3
 
 try:
     ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
@@ -89,7 +89,6 @@ def replace_text_in_file(file_path, text_to_be_replaced, text_to_insert):
         file.write(filedata)
 
 def fetch_and_log_runtime_actors():
-    import pprint
     global rt
     # Verify that actors exist like this
     actors=[]
@@ -128,10 +127,7 @@ class TestSecurity(unittest.TestCase):
             os.makedirs(os.path.join(actor_store_path,"std"))
             shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
             shutil.copytree(orig_application_store_path, application_store_path)
-            filelist = [ f for f in os.listdir(application_store_path) if f.endswith(".sign.93d58fef") ]
-            for f in filelist:
-                    os.remove(os.path.join(application_store_path,f))
-            shutil.copytree(os.path.join(security_testdir,"identity_provider"),identity_provider_path)
+            shutil.copytree(orig_identity_provider_path, identity_provider_path)
         except Exception as err:
             _log.error("Failed to create test folder structure, err={}".format(err))
             print "Failed to create test folder structure, err={}".format(err)
@@ -144,7 +140,7 @@ class TestSecurity(unittest.TestCase):
         orig_actor_CountTimer_path = os.path.join(orig_actor_store_path,"std","CountTimer.py")
         actor_CountTimer_path = os.path.join(actor_store_path,"std","CountTimer.py")
         shutil.copy(orig_actor_CountTimer_path, actor_CountTimer_path)
-#        cs.sign_file(actor_CountTimer_path)
+        cs.sign_file(actor_CountTimer_path)
 
         #Create unsigned version of CountTimer actor
         actor_CountTimerUnsigned_path = actor_CountTimer_path.replace(".py", "Unsigned.py") 
@@ -155,7 +151,7 @@ class TestSecurity(unittest.TestCase):
         orig_actor_Sum_path = os.path.join(orig_actor_store_path,"std","Sum.py")
         actor_Sum_path = os.path.join(actor_store_path,"std","Sum.py")
         shutil.copy(orig_actor_Sum_path, actor_Sum_path)
-#        cs.sign_file(actor_Sum_path)
+        cs.sign_file(actor_Sum_path)
 
         #Create unsigned version of Sum actor
         actor_SumUnsigned_path = actor_Sum_path.replace(".py", "Unsigned.py") 
@@ -163,25 +159,36 @@ class TestSecurity(unittest.TestCase):
         replace_text_in_file(actor_SumUnsigned_path, "Sum", "SumUnsigned")
 
         #Create incorrectly signed version of Sum actor
-#        actor_SumFake_path = actor_Sum_path.replace(".py", "Fake.py") 
-#        shutil.copy(actor_Sum_path, actor_SumFake_path)
-#        #Change the class name to SumFake
-#        replace_text_in_file(actor_SumFake_path, "Sum", "SumFake")
-#        cs.sign_file(actor_SumFake_path)
-#        #Now append to the signed file so the signature verification fails
-#        with open(actor_SumFake_path, "a") as fd:
-#                fd.write(" ")
+        actor_SumFake_path = actor_Sum_path.replace(".py", "Fake.py") 
+        shutil.copy(actor_Sum_path, actor_SumFake_path)
+        #Change the class name to SumFake
+        replace_text_in_file(actor_SumFake_path, "Sum", "SumFake")
+        cs.sign_file(actor_SumFake_path)
+        #Now append to the signed file so the signature verification fails
+        with open(actor_SumFake_path, "a") as fd:
+                fd.write(" ")
 
         #Create signed version of Sink actor
         orig_actor_Sink_path = os.path.join(orig_actor_store_path,"test","Sink.py")
         actor_Sink_path = os.path.join(actor_store_path,"test","Sink.py")
         shutil.copy(orig_actor_Sink_path, actor_Sink_path)
-#        cs.sign_file(actor_Sink_path)
+        cs.sign_file(actor_Sink_path)
 
         #Create unsigned version of Sink actor
         actor_SinkUnsigned_path = actor_Sink_path.replace(".py", "Unsigned.py") 
         shutil.copy(actor_Sink_path, actor_SinkUnsigned_path)
         replace_text_in_file(actor_SinkUnsigned_path, "Sink", "SinkUnsigned")
+
+        #Sign applications
+        cs.sign_file(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+        cs.sign_file(os.path.join(application_store_path, "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
+        cs.sign_file(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"))
+        #Now append to the signed file so the signature verification fails
+        with open(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"), "a") as fd:
+                fd.write(" ")
+
+        print "Export Code Signers certificate to the truststore for code signing"
+        out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
 
         print "Trying to create a new test domain configuration."
         ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
@@ -203,6 +210,7 @@ class TestSecurity(unittest.TestCase):
                             }
              rt_attributes.append(rt_attribute)
         rt_attributes_cpy = deepcopy(rt_attributes)
+
         runtimes=[]
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
@@ -210,6 +218,9 @@ class TestSecurity(unittest.TestCase):
         #   The following is less than optimal if multiple CA certs exist
         ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
         request_handler = RequestHandler(verify=ca_cert_path)
+        #Let's use the admin user0 for request_handler 
+        request_handler.set_credentials({"user": "user0", "password": "pass0"})
+
         #Generate credentials, create CSR, sign with CA and import cert for all runtimes
         enrollment_passwords=[]
         for rt_attribute in rt_attributes_cpy:
@@ -236,55 +247,97 @@ class TestSecurity(unittest.TestCase):
 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'domain_name', domain_name)
+        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
-#        rt_conf.set('global', 'storage_type', "securedht")
-        rt_conf.set('global', 'storage_type', "dht")
 
-        for i in range(NBR_OF_RUNTIMES):
+        # Runtime 0: Certificate authority, authentication server, authorization server, proxy storage server.
+        rt0_conf = copy.deepcopy(rt_conf)
+        rt0_conf.set('global','storage_type','local')
+        rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
+        rt0_conf.set("security", "security_conf", {
+                        "comment": "Certificate Authority",
+                        "authentication": {
+                            "procedure": "local",
+                            "identity_provider_path": identity_provider_path,
+                            "accept_external_requests": True
+                        },
+                        "authorization": {
+                            "procedure": "local",
+                            "policy_storage_path": policy_storage_path,
+                            "accept_external_requests": True
+                        }
+                    })
+        rt0_conf.save("/tmp/calvin5000.conf")
+
+        # Other runtimes 
+        rt_conf.set('global','storage_type','proxy')
+        rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
+        rt_conf.set("security", "security_conf", {
+                        "comment": "External authentication, external authorization",
+                        "authentication": {
+                            "procedure": "external",
+                            "server_uuid": runtimes[0].node_id
+                        },
+                        "authorization": {
+                            "procedure": "external"
+#                            "procedure": "external",
+#                            "server_uuid": runtimes[0].node_id
+                        }
+                    })
+
+        for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.set('security','enrollment_password',enrollment_passwords[i])
-            rt_conf.save("/tmp/calvin{}.conf".format(5000+i))
+            rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
-        #Start all runtimes
-        for i in range(NBR_OF_RUNTIMES):
+        #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
+        for i in range(0, 1):
             _log.info("Starting runtime {}".format(i))
             try:
-                logfile = _config_pytest.getoption("logfile")+"{}".format(5000+i)
+                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
                 outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
                 if outfile == logfile:
                     outfile = None
             except:
                 logfile = None
                 outfile = None
-            csruntime(hostname,
-                        port=5000+i,
-                        controlport=5020+i,
-                        attr=rt_attributes[i],
-                        loglevel=_config_pytest.getoption("loglevel"),
-                        logfile=logfile,
-                        outfile=outfile,
-                        configfile="/tmp/calvin{}.conf".format(5000+i),
-                        dht_network_filter=test_name
-                     )
-            rt.append(RT("http://{}:{}".format(hostname,5020+i)))
-            time.sleep(0.2)
-        time.sleep(2)
-        _log.info("------------------------------------------------")
-        for i in range(NBR_OF_RUNTIMES):
-            _log.info("rt[{}] = {}".format(i,  runtimes[i].node_id))
-        _log.info("------------------------------------------------")
-
+            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
+                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                       configfile="/tmp/calvin500{}.conf".format(i))
+            rt.append(RT("http://{}:502{}".format(hostname,i)))
+        #It takes 4,5 seconds for rt0 to hash the passwords in the users_db file, so wait for that to be done
+        time.sleep(5)
+        #Start the other runtimes
+        for i in range(1, NBR_OF_RUNTIMES):
+            _log.info("Starting runtime {}".format(i))
+            try:
+                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
+                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+                if outfile == logfile:
+                    outfile = None
+            except:
+                logfile = None
+                outfile = None
+            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
+                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                       configfile="/tmp/calvin500{}.conf".format(i))
+#            rt.append(RT("https://{}:502{}".format(hostname, i)))
+            rt.append(RT("http://{}:502{}".format(hostname,i)))
+            time.sleep(0.1)
         request.addfinalizer(self.teardown)
 
+
     def teardown(self):
+        _log.info("-----------------teardown----------------------")
         global rt
         global request_handler
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
         for i in range(1, NBR_OF_RUNTIMES):
             _log.info("kill runtime {}".format(i))
             request_handler.quit(rt[i])
-        # Kill Auth/Authz node last since the other nodes need it for authorization
-        # of the kull requests
+        # Kill storage node last since the othernodes might be a need to lookup 
+        # certificates (if they have not contacted the authentication server previously)
+        # to actually kill the node
         time.sleep(1)
         request_handler.quit(rt[0])
         time.sleep(0.2)
@@ -295,12 +348,10 @@ class TestSecurity(unittest.TestCase):
             os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
         time.sleep(0.2)
 
-
     def verify_storage(self):
         global rt
         global request_handler
         global storage_verified
-        _log.info("storage_verified={}".format(storage_verified))
         if not storage_verified:
             _log.info("Let's verify storage, rt={}".format(rt))
             rt_id=[None]*NBR_OF_RUNTIMES
@@ -320,8 +371,8 @@ class TestSecurity(unittest.TestCase):
                 assert id
             _log.info("RUNTIMES:{}".format(rt_id))
             _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
-             # Try 100 times waiting for storage to be connected
             failed = True
+            # Try 100 times waiting for storage to be connected
             for i in range(100):
                 _log.info("-----------------Round {}-----------------".format(i))
                 count=[0]*NBR_OF_RUNTIMES
@@ -346,67 +397,42 @@ class TestSecurity(unittest.TestCase):
                     _log.error("exception from request_handler.get_index, err={}".format(err))
                     time.sleep(0.1)
             assert not failed
-            try:
-                #Loop through all runtimes and make sure they can lookup all other runtimes
-                for runtime in rt:
-                    for rt_attribute in rt_attributes:
-                        node_name = rt_attribute['indexed_public']['node_name']
-                        response = request_handler.get_index(runtime, format_index_string(['node_name', node_name]))
-                        _log.info("\tresponse={}".format(response))
-                        assert(response)
-                storage_verified = True
-            except Exception as err:
-                _log.error("Exception when trying to lookup index={} from rt={},  err={}".format(format_index_string(['node_name', node_name]), runtime.control_uri, err))
-                raise
+            storage_verified=True
         else:
             _log.info("Storage has already been verified")
 
-
-
 ###################################
-#   Policy related tests
+#   Signature related tests
 ###################################
 
     @pytest.mark.slow
-    def testSecurity_deploy_and_migrate(self):
+    def testSecurity_POSITIVE_CorrectlySignedApp_CorrectlySignedActors(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
         global request_handler
         global security_testdir
-        start = time.time()
+
         try:
             self.verify_storage()
         except Exception as err:
             _log.error("Failed storage verification, err={}".format(err))
             raise
-        time_to_verify_storaget = time.time()-start
-        time.sleep(1)
-        try:
-            rt0_id = request_handler.get_node_id(rt[0])
-            rt1_id = request_handler.get_node_id(rt[1])
-        except Exception as err:
-            _log.error("Failed to fetch runtime ids, err={}".format(err))
-            raise
+
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_unsignedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
-            request_handler.set_credentials({"user": "user3", "password": "pass3"})
-            result = request_handler.deploy_application(rt[0], "test_security1_unsignedApp_unsignedActors", content['file'], 
+            request_handler.set_credentials({"user": "user1", "password": "pass1"})
+            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed to deploy test_security1_unsignedApp_unsignedActors")
+                raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
         time.sleep(2)
-        #Log actor ids:
-        _log.info("Actors id:s:\n\tsrc id={}\n\tsum={}\n\tsnk={}".format(result['actor_map']['test_security1_unsignedApp_unsignedActors:src'],
-                                                                        result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'],
-                                                                        result['actor_map']['test_security1_unsignedApp_unsignedActors:snk']))
-
 
         # Verify that actors exist like this
         try:
@@ -414,74 +440,15 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[0]
-        time.sleep(1)
-        try:
-            actual = request_handler.report(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
-        except Exception as err:
-            _log.error("Failed to report from runtime 0, err={}".format(err))
-            raise
-        _log.info("actual={}".format(actual))
+        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[1]
+        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[1]
+        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[1]
+        request_handler.set_credentials({"user": "user0", "password": "pass0"})
+        actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
+        print "actual=", actual
         assert len(actual) > 5
 
-        #Migrate snk actor to rt1
-        time.sleep(2)
-        _log.info("Let's migrate actor {} from runtime {}(rt0) to runtime {}(rt1)".format(rt0_id, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'], rt1_id))
-        try:
-            request_handler.migrate(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'], rt1_id)
-        except Exception as err:
-            _log.error("Failed to send first migration request to runtime 0, err={}".format(err))
-            raise
-        time.sleep(3)
-        try:
-            actors = fetch_and_log_runtime_actors()
-        except Exception as err:
-            _log.error("Failed to get actors from runtimes, err={}".format(err))
-            raise
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[1]
-        time.sleep(1)
-        try:
-            actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
-        except Exception as err:
-            _log.error("Failed to report snk values from runtime 1, err={}".format(err))
-            raise
-        _log.info("actual={}".format(actual))
-        assert len(actual) > 3
+        request_handler.delete_application(rt[1], result['application_id'])
 
-        #Migrate src actor to rt3
-        time.sleep(1)
-        try:
-            request_handler.migrate(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:src'], rt1_id)
-        except Exception as err:
-            _log.error("Failed to send second migration requestfrom runtime 0, err={}".format(err))
-            raise
-        time.sleep(3)
-        try:
-            actors = fetch_and_log_runtime_actors()
-        except Exception as err:
-            _log.error("Failed to get actors from runtimes, err={}".format(err))
-            raise
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors[1]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[1]
-        time.sleep(1)
-        try:
-            actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
-        except Exception as err:
-            _log.error("Failed to report snk values from runtime 1, err={}".format(err))
-            raise
-        _log.info("actual={}".format(actual))
-        assert len(actual) > 3
-        _log.info("\n\t----------------------------"
-                  "\n\tTotal time to verify storage is {} seconds"
-                  "\n\tTotal time of entire (including storage verification) is {} seconds"
-                  "\n\t----------------------------".format(time_to_verify_storaget, time.time()-start))
-
-        time.sleep(1)
-        request_handler.delete_application(rt[0], result['application_id'])
 
 

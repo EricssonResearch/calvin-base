@@ -278,12 +278,12 @@ class TestSecurity(unittest.TestCase):
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
 
-        # Runtime 1: Authentication server, authorization server.
-        rt1_conf = copy.deepcopy(rt_conf)
-        rt1_conf.set('global','storage_type','proxy')
-        rt1_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
-        rt1_conf.set('security','enrollment_password',enrollment_passwords[1])
-        rt1_conf.set("security", "security_conf", {
+        _log.info("Starting runtime 0")
+
+        # Other runtimes
+        rt_conf.set('global','storage_type','proxy')
+        rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
+        rt_conf.set("security", "security_conf", {
                         "comment": "External authentication, external authorization",
                         "authentication": {
                             "procedure": "external",
@@ -294,10 +294,8 @@ class TestSecurity(unittest.TestCase):
                             "server_uuid": runtimes[0].node_id
                         }
                     })
-        rt1_conf.save("/tmp/calvin5001.conf")
 
-        for i in range(2, NBR_OF_RUNTIMES):
-            rt_conf = copy.deepcopy(rt1_conf)
+        for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.set('security','enrollment_password',enrollment_passwords[i])
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
@@ -319,8 +317,8 @@ class TestSecurity(unittest.TestCase):
 #        rt3_conf.save("/tmp/calvin5003.conf")
 
 
-        #Start all runtimes
-        for i in range(NBR_OF_RUNTIMES):
+        #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
+        for i in range(0, 1):
             _log.info("Starting runtime {}".format(i))
             try:
                 logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
@@ -335,14 +333,30 @@ class TestSecurity(unittest.TestCase):
                        configfile="/tmp/calvin500{}.conf".format(i))
 #            rt.append(RT("https://{}:502{}".format(hostname, i)))
             rt.append(RT("http://{}:502{}".format(hostname,i)))
-            # Wait to be sure that all runtimes has started
-            time.sleep(0.1)
+        #It takes 4,5 seconds for rt0 to hash the passwords in the users_db file, so wait for that to be done
         time.sleep(5)
-
+        #Start the other runtimes
+        for i in range(1, NBR_OF_RUNTIMES):
+            _log.info(" Starting runtime {}".format(i))
+            try:
+                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
+                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+                if outfile == logfile:
+                    outfile = None
+            except:
+                logfile = None
+                outfile = None
+            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
+                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                       configfile="/tmp/calvin500{}.conf".format(i))
+#            rt.append(RT("https://{}:502{}".format(hostname, i)))
+            rt.append(RT("http://{}:502{}".format(hostname,i)))
+            time.sleep(0.1)
         request.addfinalizer(self.teardown)
 
 
     def teardown(self):
+        _log.info("-----------------teardown----------------------")
         global rt
         global request_handler
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
@@ -366,7 +380,6 @@ class TestSecurity(unittest.TestCase):
         global rt
         global request_handler
         global storage_verified
-        _log.info("storage_verified={}".format(storage_verified))
         if not storage_verified:
             _log.info("Let's verify storage, rt={}".format(rt))
             rt_id=[None]*NBR_OF_RUNTIMES
@@ -412,6 +425,7 @@ class TestSecurity(unittest.TestCase):
                     _log.error("exception from request_handler.get_index, err={}".format(err))
                     time.sleep(0.1)
             assert not failed
+            storage_verified=True
         else:
             _log.info("Storage has already been verified")
 
@@ -545,6 +559,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 #   Policy related tests
 ###################################
+
 
     @pytest.mark.slow
     def testSecurity_POSITIVE_Permit_UnsignedApp_SignedActors(self):

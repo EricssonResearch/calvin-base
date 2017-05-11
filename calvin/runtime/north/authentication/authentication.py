@@ -48,7 +48,7 @@ class Authentication(object):
                 _log.debug("Authentication::__init__   external authentication procedure configured")
                 self.auth_server_id = _sec_conf['authentication']['server_uuid']
         except Exception as e:
-            _log.info("Missing or incomplete security config")
+            _log.info("Missing or incomplete security config, e={}".format(e))
             self.auth_server_id = None
 
     def decode_request(self, data, callback):

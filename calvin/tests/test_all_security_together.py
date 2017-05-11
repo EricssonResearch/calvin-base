@@ -243,10 +243,7 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
-        #TODO: securedht has even more stability issues than dht, so may be preferable
-        # to use ordinary dht!
-#        rt_conf.set('global', 'storage_type', "securedht")
-        rt_conf.set('global', 'storage_type', "dht")
+        rt_conf.set('global', 'storage_type', "securedht")
 
         # Runtime 0: Certificate authority, authentication server, authorization server.
         rt0_conf = copy.deepcopy(rt_conf)
@@ -309,8 +306,8 @@ class TestSecurity(unittest.TestCase):
 #        rt3_conf.save("/tmp/calvin5003.conf")
 
 
-        #Start all runtimes
-        for i in range(NBR_OF_RUNTIMES):
+        #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
+        for i in range(0, 1):
             _log.info("Starting runtime {}".format(i))
             try:
                 logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
@@ -323,16 +320,30 @@ class TestSecurity(unittest.TestCase):
             csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
                        loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                        configfile="/tmp/calvin500{}.conf".format(i))
-            rt.append(RT("https://{}:502{}".format(hostname, i)))
-#            rt.append(RT("http://{}:502{}".format(hostname,i)))
-            # Wait to be sure that all runtimes has started
+            rt.append(RT("https://{}:502{}".format(hostname,i)))
+        #It takes 4.5 seconds for rt0 to hash the passwords in the users_db file, so wait for that to be done
+        time.sleep(5)
+        #Start the other runtimes
+        for i in range(1, NBR_OF_RUNTIMES):
+            _log.info("Starting runtime {}".format(i))
+            try:
+                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
+                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+                if outfile == logfile:
+                    outfile = None
+            except:
+                logfile = None
+                outfile = None
+            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
+                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                       configfile="/tmp/calvin500{}.conf".format(i))
+            rt.append(RT("https://{}:502{}".format(hostname,i)))
             time.sleep(0.1)
-#        time.sleep(10)
-
         request.addfinalizer(self.teardown)
 
 
     def teardown(self):
+        _log.info("-----------------teardown----------------------")
         global rt
         global request_handler
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
@@ -356,7 +367,6 @@ class TestSecurity(unittest.TestCase):
         global rt
         global request_handler
         global storage_verified
-        _log.info("storage_verified={}".format(storage_verified))
         if not storage_verified:
             _log.info("Let's verify storage, rt={}".format(rt))
             rt_id=[None]*NBR_OF_RUNTIMES
@@ -402,6 +412,7 @@ class TestSecurity(unittest.TestCase):
                     _log.error("exception from request_handler.get_index, err={}".format(err))
                     time.sleep(0.1)
             assert not failed
+            storage_verified=True
         else:
             _log.info("Storage has already been verified")
 
