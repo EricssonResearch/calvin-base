@@ -16,16 +16,8 @@
 
 from calvin.runtime.south.plugins.async import server_connection
 from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities import calvinconfig
 
 _log = get_logger(__name__)
-
-try:
-    from calvin.runtime.south.plugins.io.websocket import ws_server_connection
-except ImportError as e:
-    _conf = calvinconfig.get()
-    if _conf.get('GLOBAL', 'websocket_plugin'):
-        _log.error("Loading plugin for websocket failed: %s" % e)
 
 
 class MessageServer(object):
@@ -77,25 +69,6 @@ class Server(object):
         return connection.data_get()
 
 
-class WSServer(object):
-    """ Only for broadcasting as of yet """
-    def __init__(self, host, port, node_name):
-        super(WSServer, self).__init__()
-        self.connection_factory = ws_server_connection.WSServerProtocolFactory(host, port, node_name)
-
-    def start(self, host, port):
-        self.connection_factory.start(host, port)
-
-    def stop(self):
-        self.connection_factory.stop()
-
-    def clients_connected(self):
-        return self.connection_factory.clients
-
-    def broadcast(self, msg):
-        self.connection_factory.broadcast(msg)
-
-
 class ServerHandler(object):
     def __init__(self, node, actor):
         super(ServerHandler, self).__init__()
@@ -106,8 +79,6 @@ class ServerHandler(object):
     def start(self, host, port, mode, delimiter=None, max_length=None):
         if mode == "udp":
             self.server = MessageServer(self.node, actor_id=self._actor.id)
-        elif mode == "websocket":
-            self.server = WSServer(host, port, self.node.node_name)
         else:
             self.server = Server(self.node, mode, delimiter, max_length, actor_id=self._actor.id)
         self.server.start(host, port)
