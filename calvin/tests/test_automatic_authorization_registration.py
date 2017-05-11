@@ -365,7 +365,7 @@ class TestSecurity(unittest.TestCase):
                     break
                 except Exception as err:
                     _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(j, err))
-                    time.sleep(0.1)
+                    time.sleep(0.5)
             assert not failed
             for id in rt_id:
                 assert id

@@ -372,7 +372,7 @@ class TestSecurity(unittest.TestCase):
             rt_id=[None]*NBR_OF_RUNTIMES
             failed = True
             # Try 30 times waiting for control API to be up and running
-            for i in range(30):
+            for i in range(60):
                 try:
                     for j in range(NBR_OF_RUNTIMES):
                         rt_id[j] = rt_id[j] or request_handler.get_node_id(rt[j])
@@ -380,7 +380,7 @@ class TestSecurity(unittest.TestCase):
                     break
                 except Exception as err:
                     _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(j, err))
-                    time.sleep(0.1)
+                    time.sleep(0.5)
             assert not failed
             for id in rt_id:
                 assert id
