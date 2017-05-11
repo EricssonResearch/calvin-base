@@ -10,17 +10,17 @@ variable : {
               "value": <variable value>,
               "type": <type of variable (or contents for compound variables)>,
               "id": <id of variable>,
-              "desc": <description of variable>
+              "info": <description of variable>
             }
 */
 
 define CONFIG={
     "namespace": 1,
     "parameters": {
-        "FanSpeed": {"address": "FanSpeed", "description": "Speed of fan"},
-        "PumpSpeed": {"address": "PumpSpeed", "description": "Speed of pump"},
-        "Pressure": {"address": "Pressure", "description": "Pressure of some kind"},
-        "TemperatureAnalogItem": {"address": "TemperatureAnalogItem", "description": "Temperature"},
+        "FanSpeed": {"address": "FanSpeed", "info": "Speed of fan"},
+        "PumpSpeed": {"address": "PumpSpeed", "info": "Speed of pump"},
+        "Pressure": {"address": "Pressure", "info": "Pressure of some kind"},
+        "TemperatureAnalogItem": {"address": "TemperatureAnalogItem", "info": "Temperature"},
     }
 }
 opcclient: net.OPCUASubscriber(endpoint="opc.tcp://opcuaserver.com:26543", config=CONFIG)
@@ -31,7 +31,7 @@ format: text.Format(fmt="========\n"
     "SourceTimestamp: {sourcets}\n"
     "CalvinTimestamp: {calvints}\n"
     "Status: {status.code}, {status.name}, {status.doc}\n"
-    "Description: {desc}")
+    "Information: {info}")
 out: io.Print()
 
 opcclient.variable > format.dict

@@ -38,7 +38,7 @@ class WSBroadcast(Actor):
         self.setup()
 
     def setup(self):
-        self.server = self.use("calvinsys.network.serverhandler", shorthand="server")
+        self.server = self.use("calvinsys.network.websockethandler", shorthand="server")
 
     def will_migrate(self):
         self.server.stop()
@@ -50,7 +50,7 @@ class WSBroadcast(Actor):
     @condition()
     def start(self):
         try:
-            self.server = self['server'].start(self.host, self.port, "websocket")
+            self.server = self['server'].start(self.host, self.port)
         except Exception as e:
             _log.exception(e)
             self.server = None
@@ -62,4 +62,4 @@ class WSBroadcast(Actor):
 
     # add receive
     action_priority = (broadcast, start)
-    requires = ['calvinsys.network.serverhandler']
+    requires = ['calvinsys.network.websockethandler']

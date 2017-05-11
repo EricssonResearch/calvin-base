@@ -18,3 +18,11 @@ lock   : Lock()
 button.state > lock.state 
 
 
+# Deployment
+
+rule outside : node_attr_match(index=["address", {"locality": "outside"}])
+rule server  : runtime_name(name="server")
+
+apply button : outside
+apply lock   : server
+

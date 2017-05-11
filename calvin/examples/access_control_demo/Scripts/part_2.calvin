@@ -4,3 +4,14 @@ sink   : flow.Terminator()
 
 button.state > lock.state
 lock.status > sink.void
+
+
+
+# Deployment
+
+rule outside : node_attr_match(index=["address", {"locality": "outside"}])
+rule server  : runtime_name(name="server")
+
+apply button : outside
+apply sink   : server
+apply lock   : server

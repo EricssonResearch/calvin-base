@@ -25,3 +25,6 @@ class Display(base_display.DisplayBase):
 
     def show_text(self, text):
         print text
+
+    def show(self, text, *args, **kwargs):
+        print text

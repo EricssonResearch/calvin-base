@@ -1,4 +1,6 @@
-msg : std.Constant(data="This is another test, please ignore.")
-out : web.Twitter()
+void : flow.Void()
+msg  : flow.Init(data="This is a test, using an application built in calvin <https://github.com/EricssonResearch/calvin-base> to tweet.")
+out  : web.Twitter()
 
-msg.token > out.status
+void.void > msg.in
+msg.out   > out.status

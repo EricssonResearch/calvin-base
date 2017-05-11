@@ -42,7 +42,7 @@ class WSServerProtocol(WebSocketServerProtocol):
 
 
 class WSServerProtocolFactory(WebSocketServerFactory):
-    def __init__(self, host, port, node_name=None):
+    def __init__(self, host, port, actor_id=None, node_name=None):
         # WebSocketServerFactory will set self.isSecure, self.host, self.port, etc, from parsing url string
         control_interface_security = _conf.get("security", "control_interface_security")
         if control_interface_security == "tls":
@@ -52,6 +52,7 @@ class WSServerProtocolFactory(WebSocketServerFactory):
         super(WSServerProtocolFactory, self).__init__(url=url)
         self.clients = []
         self._port = None
+        self._actor_id = actor_id
         self._node_name = node_name
 
     def register(self, client):

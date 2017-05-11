@@ -9,11 +9,11 @@ class RCSwitch(Actor):
     """
 
     @manage(['gpio_pin', 'databits', 'startBit', 'stopBit', 'oneBit', 'zeroBit', 'repeat'])
-    def init(self, gpio_pin, homecode, group, channel, startBit, stopBit, oneBit, zeroBit, repeat):
+    def init(self, gpio_pin, homecode, grp, channel, startBit, stopBit, oneBit, zeroBit, repeat):
         self.gpio_pin = gpio_pin
         self.databits = homecode
         self.databits &= 0xFFFFFFC0
-        self.databits |= ((group & 1) << 5)
+        self.databits |= ((grp & 1) << 5)
         self.databits |= ((~channel) & 15)
         self.startBit = startBit
         self.stopBit = stopBit

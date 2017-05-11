@@ -1,0 +1,6 @@
+{
+  "global": {
+    "display_plugin": "stdout_impl",
+    "actor_paths": ["./devactors"]
+  }
+}

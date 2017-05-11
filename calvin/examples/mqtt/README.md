@@ -1,3 +1,47 @@
-This example uses the paho-mqtt implementation of the mqtt-plugin, thus csruntime needs to be started with either the `calvin.conf` file from this directory, or by specifying the plugin on the command line:
+# MQTT example
 
-    CALVIN_GLOBAL_MQTT_PLUGIN=\"paho_impl\" csruntime --host <ip> ...
+In this example the `paho-mqtt` implementation of the __mqtt-plugin__, is used
+to subscribe and publish messages over mqtt.
+
+
+## Setup
+
+### Hardware
+
+- Two devices capable of running a Calvin script.
+
+
+### Installation
+
+Install dependencies using:
+
+    § pip install -r requirements.txt
+
+
+### Calvin configuration
+
+The following plugins needs to be loaded to run this script:
+- mqtt_plugin
+
+A `calvin.conf` file is prepared for this purpose. For the `calvin.conf` to be
+loaded, start the calvin script from within the directory the `calvin.conf`
+file is placed. For other ways of loading the configuration, please see
+the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/calvin-base/wiki/Configuration)
+
+
+## Running
+
+The scripts needs to be run from within the directory the `calvin.conf` file is
+placed. To run the scripts, execute the following commands:
+
+### Subscribing device
+
+    $ csruntime --host localhost --keep-alive mqtt_sub_test.calvin
+
+### Publishing device
+
+Run the following command:
+
+    $ csruntime --host localhost --keep-alive mqtt_pub_test.calvin
+
+

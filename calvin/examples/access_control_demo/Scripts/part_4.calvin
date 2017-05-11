@@ -3,7 +3,18 @@ bell: media.MediaPlayer(media_file="dingdong.ogg")
 camera : media.Camera()
 screen : media.ImageRenderer()
 
-
 button.state > camera.trigger
 camera.image > screen.image
 button.state > bell.play
+
+
+# Deployment
+
+rule inside  : node_attr_match(index=["address", {"locality": "inside"}])
+rule outside : node_attr_match(index=["address", {"locality": "outside"}])
+rule server  : runtime_name(name="server")
+
+apply button : outside
+apply bell   : inside
+apply camera : server
+apply screen : server

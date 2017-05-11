@@ -4,3 +4,13 @@ screen : media.ImageRenderer()
 
 button.state > camera.trigger
 camera.image > screen.image
+
+
+# Deployment
+
+rule outside : node_attr_match(index=["address", {"locality": "outside"}])
+rule server  : runtime_name(name="server")
+
+apply button : outside
+apply camera : server
+apply screen : server

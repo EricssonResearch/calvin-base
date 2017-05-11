@@ -1,7 +1,4 @@
 mqtt : net.MQTTSubscriber(topics=["testing/calvin/#"], host="iot.eclipse.org", port=1883, settings=null)
-# formatter : text.Format(fmt="{topic}: {payload}")
 out: io.Print()
 
 mqtt.message > out.token
-#formatter.dict
-#formatter.text > out.token
