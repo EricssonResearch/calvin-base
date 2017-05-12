@@ -25,25 +25,22 @@ _log = calvinlogger.get_logger(__name__)
 class URI(object):
     def __init__(self, uri):
         self.uri = uri
-        self.port = None
-        schema, peer_addr = uri.split(':', 1)
-        if schema == 'calvinbt':
-            data = uri.split(":")
-            self.scheme = data[0]
-            self.port = data[7]
-            hostname = "%s:%s:%s:%s:%s:%s" % (data[1], data[2], data[3], data[4], data[5], data[6])
-            self.hostname = hostname.replace("//", "")
-        elif schema == 'calvinfcm':
-           self.scheme = schema
-           data = uri.split(":", 2)
-           self.port = data[2]
-           self.hostname = data[1].replace("//", "")
+        scheme_del = uri.index("://")
+        port_del = uri.rindex(":")
+        self.scheme = uri[0:scheme_del]
+        self.hostname = uri[scheme_del + 3:port_del]
+
+        if self.scheme == "calvinfcm":
+            # calvinfcm may have : in the device token.
+            address = uri[scheme_del+3:]
+            port_del = address.index(':')
+            self.hostname = address[:port_del]
+            self.port = address[port_del+1:]
+        elif scheme_del != port_del:
+            self.port = int(uri[port_del + 1:len(uri)])
         else:
-            url = urlparse(uri)
-            self.scheme = url.scheme
-            self.port = url.port
-            self.hostname = url.hostname
-    
+            self.port = None
+
     def geturl(self):
         return self.uri
 

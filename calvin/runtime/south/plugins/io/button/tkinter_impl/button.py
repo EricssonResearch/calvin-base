@@ -15,19 +15,22 @@
 # limitations under the License.
 
 import Tkinter
-import thread
-import threading
 import Queue
+from twisted.internet import tksupport
+
+def close_callback():
+    pass
+
+active_buttons = 0
+root = None
 
 class Button():
     
     def __init__(self):
         self.text = "Button"
-        self.lock = threading.Lock()
         self.button = None
         self.button_showing = False
         self.button_presses = Queue.Queue()
-        self.btthread = None
 
     def set_text(self, text):
         self.text = text
@@ -37,31 +40,32 @@ class Button():
             return self.button_presses.get_nowait()
         else:
             return False
-        
-    def show_button(self):
-        self.btthread = thread.start_new_thread(self.tkinter_thread, (self.text,))
 
     def destroy(self):
-        with self.lock:
-            self.button_showing = False
+        global active_buttons
+        global root
+
+        self.button.pack_forget()
+        self.button_showing = False
+        active_buttons -= 1
+        if active_buttons <= 0:
+            tksupport.uninstall()
+            root.destroy()
+            root = None
 
     def tkinter_button_callback(self):
         self.button_presses.put(True)
 
-    def tkinter_thread(self, text):
-        with self.lock:
-            self.button_showing = True
-        self.master = Tkinter.Tk() 
-        # Make it impossible to close the window
-        def close_callback():
-            pass
-        self.master.protocol("WM_DELETE_WINDOW", close_callback)
-        self.button = Tkinter.Button(self.master, text=text, command=self.tkinter_button_callback)
+    def show_button(self):
+        global active_buttons
+        global root
+        
+        if not root:
+            root = Tkinter.Tk() 
+            root.protocol("WM_DELETE_WINDOW", close_callback)
+        if active_buttons is 0:
+            tksupport.install(root)
+
+        self.button = Tkinter.Button(root, text=self.text, command=self.tkinter_button_callback)
         self.button.pack()
-        while 1:
-            with self.lock:
-                if self.button_showing:
-                    self.master.update()
-                else:
-                    self.master.destroy()
-                    break
+        active_buttons += 1

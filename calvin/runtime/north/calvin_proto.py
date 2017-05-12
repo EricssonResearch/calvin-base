@@ -280,6 +280,8 @@ class CalvinProto(CalvinCBClass):
     def proxy_config_handler(self, payload):
         """ Configure a node using this node as a proxyconfig
         """
+        if "will_sleep" not in payload:
+            payload["will_sleep"] = False
         proxyconfig.set_proxy_config(payload['from_rt_uuid'],
             payload['name'],
             payload['capabilities'],
@@ -289,8 +291,7 @@ class CalvinProto(CalvinCBClass):
             self.node.storage,
             CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
                 callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})),
-            payload.get('attributes'),
-            payload.get('redeploy'))
+            payload.get('attributes'))
 
     #### ACTORS ####
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 HOST=$1
-CONFIG_FILE="config/calvin.conf_computer"
 ATTR_FILE="attributes/computer.attr"
 export CALVIN_GLOBAL_STORAGE_TYPE=\"local\"
 

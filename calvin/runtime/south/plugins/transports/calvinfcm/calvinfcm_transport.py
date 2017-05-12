@@ -40,6 +40,7 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
                 try:
                     proto = server.protocol_factory.proto
                 except Exception as e:
+                    _log.error("No protocol factory found when joining.")
                     return None
                 return server._callback_execute('client_connected', create_uri(self.hostname, uri.port), proto)
             else:
@@ -53,7 +54,6 @@ class CalvinTransportFactory(base_transport.BaseTransportFactory):
         if schema != "calvinfcm":
             raise Exception("Unable to handle schema %s" % schema)
         try:
-            _log.info("creating server with callbacks: %s" % str(self._callbacks)) 
             tp = twisted_transport.CalvinServer(
                                     self._rt_id,
                                     self._node_name,

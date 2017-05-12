@@ -207,7 +207,7 @@ class CalvinTransport(base_transport.BaseTransport):
         status = "ERROR"
         if reason.getErrorMessage() == "Connection was closed cleanly.":
             status = "OK"
-        self._callback_execute('peer_disconnected', self, self._remote_rt_id, status) # transport, .. "ok"
+        self._callback_execute('peer_disconnected', self, self._remote_rt_id, status)
 
     def _connection_failed(self, reason):
         status = "ERROR"
@@ -269,7 +269,7 @@ class CalvinServer(base_transport.BaseServer):
             Callback when the client connects still needs a join to be finnshed
             before we can callback upper layers
         """
-        _log.info("Client connected")
+        _log.debug("Client connected")
         import socket
         
         if uri in self._peers:
@@ -282,9 +282,7 @@ class CalvinServer(base_transport.BaseServer):
 
                 def getErrorMessage(self):
                     return self._str
-            #self._peers[uri]._transport._disconnected(ErrorMessage("Connection was closed cleanly."))
             self._peers[uri]._transport._proto.connectionLost(ErrorMessage("Connection was closed cleanly."))
-            _log.info("creating new peer")
         
         from calvin.utilities import calvinconfig
         _conf = calvinconfig.get()

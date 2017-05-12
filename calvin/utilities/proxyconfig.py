@@ -14,7 +14,7 @@ def set_proxy_config_cb(key, value, will_sleep, link, callback):
     if will_sleep:
         link.set_peer_insleep()
 
-def set_proxy_config(peer_id, name, capabilities, port_property_capability, storage, callback, attributes, redeploy):
+def set_proxy_config(peer_id, name, capabilities, port_property_capability, will_sleep, link, storage, callback, attributes):
     """
     Store node
     """
@@ -36,7 +36,7 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, stor
             storage.add_index(index, peer_id)
     except:
         _log.error("Failed to add node index")
-
+    
     storage.set(prefix="node-", key=peer_id,
                 value={"proxy": storage.node.id,
                 "uris": None,
@@ -47,4 +47,3 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, stor
                 'indexed_public': attributes.get_indexed_public(as_list=False)}},
                 cb=CalvinCB(set_proxy_config_cb, will_sleep=will_sleep, link=link, callback=callback))
     
-    #TODO: If redeploy is true, trigger a redeployment of the application

@@ -143,7 +143,6 @@ class CalvinCBClass(object):
                     self.__callbacks[name][cb._id] = cb
     
     def get_callbacks_by_name(self, name):
-        _log.info("available callbacks: %s" % str(self.__callbacks))
         if name not in self.__callbacks:
             _log.info("Did not find callbacks for %s" % name)
             return None

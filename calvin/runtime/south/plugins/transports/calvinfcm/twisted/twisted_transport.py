@@ -53,15 +53,12 @@ class CalvinXMLStreamProtocol(CalvinCBClass, xmlstream.XmlStream):
         xmlstream.XmlStream.__init__(self, self._authenticator)
         CalvinCBClass.__init__(self, self._callbacks)
         self.counter = 0
-        #self._callback_execute('set_proto', self)
 
     def send(self, obj):
         return super(CalvinXMLStreamProtocol, self).send(obj)
 
     def sendCalvinMsg(self, to, data, msgType="payload"):
         toSend ="<message id=\"\"><gcm xmlns=\"google:mobile:data\">%s</gcm></message>"
-        # TODO: Fix message id to something better...
-        
         # Payload should be base64 encoded
         # Add 4 byte data length before data
         dataSize = len(data)
@@ -85,22 +82,17 @@ class CalvinXMLStreamProtocol(CalvinCBClass, xmlstream.XmlStream):
 
     def connectionLost(self, reason):
         self._callback_execute('disconnected', reason)
-        _log.info("here we should remove all callbacks")
         valid_names = self.callback_valid_names()
-        _log.info("Valid names: %s" % str(valid_names))
         ids = []
         for name in valid_names:
-            _log.info("Removing cbs for %s" % name)
             cbs = self.get_callbacks_by_name(name)
-            _log.info("got cbs: %s" % cbs)
             for cb_id in cbs:
+                _log.debug("Removing cbs: %s" % cb_id)
                 ids.append(cb_id)
         
         for cb_id in ids:
             self.callback_unregister(cb_id)
 
-        valid_names = self.callback_valid_names()
-        _log.info("Valid names should be none here: %s" % str(valid_names))
         #return super(CalvinXMLStreamProtocol, self).connectionLost(reason)
 
     def onElement(self, element):
@@ -132,16 +124,10 @@ class CalvinXMLStreamProtocol(CalvinCBClass, xmlstream.XmlStream):
                 msg_type = payload["msg_type"]
                 if msg_type == "set_connect":
                     if payload["connect"] == "1":
-                        _log.info("connect data")
-                        #pdb.set_trace()
-                        #self._server._callback_execute("connected", self, data["from"])
                         self._server._connected(self, data["from"])
-                        #self._callback_execute("connected", self, data["from"])
                     else:
-                        _log.info("disconnect data")
                         self._callback_execute("disconnect")
                 elif msg_type == "payload":
-                    _log.info("payload data")
                     self._callback_execute("data", data)
         except Exception as e:
             traceback.print_exc()
@@ -208,15 +194,12 @@ class TwistedCalvinTransport(base_transport.CalvinServerBase):
         return True
 
     def _connected(self, proto, token):
-        _log.info("Client connected over FCM")
-        #_log.info("Current peers: %s" % str(self._peers))
         self._callback_execute('client_connected', create_uri(self._jid, token), proto)
 
 # Client
 class TwistedCalvinTransportClient(base_transport.CalvinTransportBase):
     def __init__(self, host, port, callbacks=None, proto=None, node_name=None, server_node_name=None, *args, **kwargs):
         super(TwistedCalvinTransportClient, self).__init__(host, port, callbacks=callbacks)
-        _log.info("fcm client init")
         self._jid = host
         self._token = port
         self._proto = proto
@@ -247,28 +230,23 @@ class TwistedCalvinTransportClient(base_transport.CalvinTransportBase):
         raise NotImplementedError
     
     def _connected(self, proto, token):
-        _log.info("======== client connected called ==========")
         self._is_connected = True
         self._callback_execute('connected')
-        #self.sendConnected()
 
     def _disconnected(self, reason):
-        _log.info("client disconnected func")
         self._callback_execute('disconnected', reason)
         self._is_connected = False
 
     def _data(self, data):
-        _log.info("data on client %s, first 10 bytes: %s" % (self, str(data)))
         try:
             sender = data["from"]
             if sender == self._token: # MUX
                 payload = data["data"]["payload"]
                 # Payload will be base64 RFC3548 encoded
                 payload = base64.b64decode(payload)
-                _log.info("Payload: %s" % payload)
                 self._callback_execute('data', payload)
             else:
-                _log.debug("Message not mean for me, ignoring")
+                _log.debug("Message not meant for me, ignoring")
         except Exception as e:
             _log.error("could not get payload data %s" % str(e))
             traceback.print_exc()

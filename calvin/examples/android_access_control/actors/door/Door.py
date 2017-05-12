@@ -26,9 +26,18 @@ class Door(Actor):
     
     @manage([])
     def init(self, channel=0):
+        self.setup()
+    
+    def setup(self):
         self.use("calvinsys.io.servo", shorthand="servo")
         self.servo = self["servo"]
     	self.channel = channel
+
+    def did_migrate(self):
+        self.setup()
+
+    def will_end(self):
+        pass
 
     @stateguard(lambda self: self.servo)
     @condition(["open_door"], [])
