@@ -76,6 +76,7 @@ class TestDHT(object):
         a = None
         b = None
         q = Queue.Queue()
+        rt_credentials=[]
 
 
         def server_started(aa, *args):
@@ -97,6 +98,7 @@ class TestDHT(object):
                 uri="http://{}:500{}".format(ip_addr, servno)
                 control_uri="http://{}:502{}".format(ip_addr, servno)
                 rt_cred = runtime_credentials.RuntimeCredentials(name=name+str(servno), domain=domain,security_dir=testdir)
+                rt_credentials.append(rt_cred)
                 node_id = rt_cred.node_id
                 a = AutoDHTServer(node_id, control_uri, rt_cred)
                 servers.append(a)

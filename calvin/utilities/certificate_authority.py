@@ -205,7 +205,6 @@ class CA():
         self.domain = domain
         _log.debug("CA init")
         security_path = _conf.get("security", "security_dir")
-        self.calvin_ca_conf = _conf.get("security","certificate_authority_1")
         if security_dir:
             self.configfile = os.path.join(security_dir, domain, "openssl.conf")
         elif security_path:
@@ -732,41 +731,6 @@ class CA():
             return cert_conf_file
         else:
             return None
-
-    ###########################################################
-    # Linking a runtime name on a host to a persistent node-id
-    # This linkage is included in CSR and signed by CA
-    ###########################################################
-
-    def obtain_cert_node_info(self, name):
-        """ Obtain node id based on name and domain from config
-            Return dict with domain, node name and node id
-        """
-        if self.domain is None or name is None:
-            # No security or name specified just use standard node UUID
-            _log.debug("OBTAINING no security domain={}, name={}".format(domain, name))
-            return {'domain': None, 'name': name, 'id': calvinuuid.uuid("NODE")}
-
-        runtime_dir = get_own_credentials_path(name)
-        # Does existing signed runtime certificate exist, return info
-        try:
-            filenames = os.listdir(os.path.join(runtime_dir, "mine"))
-            content = open(os.path.join(runtime_dir, "mine", filenames[0]), 'rt').read()
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                  content)
-            subject = cert.get_subject()
-            if subject.commonName != name or subject.organizationName != self.domain:
-                raise
-            _log.debug("OBTAINING existing security domain={}, name={}".format(self.domain, name))
-            return {'domain': self.domain, 'name': name, 'id': subject.dnQualifier}
-        except:
-            pass
-            #_log.exception("OBTAINING fail existing security domain={}, name={}".format(domain, name))
-
-        # No valid signed cert available, create new node id and let user create certificate later
-        nodeid = calvinuuid.uuid("NODE")
-        return {'domain': self.domain, 'name': name, 'id': nodeid}
-
 
 
     def generate_password(self, length):

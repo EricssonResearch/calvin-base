@@ -131,145 +131,6 @@ class RuntimeCredentials():
     def __init__(self, name, node=None, domain=None, hostnames=None, nodeid=None, security_dir=None, enrollment_password=None, force=False, readonly=False):
         _log.debug("runtime::init name={} domain={}, nodeid={}".format(name, domain, nodeid))
 #        print "runtime::init name={} domain={}, nodeid={} enrollment_password={} security_dir={}".format(name, domain, nodeid, enrollment_password, security_dir)
-
-        def get_own_credentials_path(security_dir=None):
-            """Return the full path of the node's own certificate"""
-            _log.debug("__init__::get_own_credentials_path, security_dir={}".format(security_dir))
-            return os.path.join(certificate.get_runtimes_credentials_path(security_dir=security_dir),self.node_name)
-
-        def new_opensslconf():
-            """
-            Create new openssl.conf configuration file.
-            """
-#            print "new_opensslconf"
-            _log.debug("__init__::new_opensslconf")
-            for section in self.__class__.DEFAULT.keys():
-                self.config.add_section(section)
-    #            print "[{}]".format(section)
-                hostname = socket.gethostname()
-                for option in self.__class__.DEFAULT[section]:
-                    if option == "0.organizationName":
-                        value = self.domain
-                    #TODO: use dynamic number of DNS entries instead of hardcoding the number
-                    elif option == "DNS.1":
-                        value = self.node_name
-                    elif (option == "DNS.2") and len(self.hostnames)>0:
-                        value = self.hostnames[0]
-                    elif (option == "DNS.3") and len(self.hostnames)>1:
-                        value = self.hostnames[1]
-                    elif (option == "DNS.4") and len(self.hostnames)>2:
-                        value = self.hostnames[2]
-                    elif option == "IP.1":
-                        value = self.ip
-                    elif option == "dir":
-                        value = self.runtime_dir
-                    elif section == 'req_distinguished_name' and option == 'commonName':
-                        value = self.node_name
-                    elif option == 'dnQualifier':
-                        value = self.node_id
-                    #The python cryptography and the pyOpensSSL packages does not support
-                    #parsing the Attributes extension in a CSR, so instead it is stored
-                    #outside of the CSR
-    #                    elif option == 'challengePassword':
-    #                        value = self.enrollment_password
-                    else:
-                        value = self.__class__.DEFAULT[section][option]
-    #                    print "\t{}={}".format(option, value)
-                    self.config.set(section, option, value)
-            with open(self.configfile, 'wb') as configfd:
-                self.config.write(configfd)
-                configfd.close()
-            confsort.reorder(self.configfile)
-
-
-        def parse_opensslconf():
-            """
-            Parse the openssl.conf file to find relevant paths.
-            """
-#            print "parse_opensslconf"
-            _log.debug("__init__::parse_opensslconf")
-            if not self.config.read(self.configfile):
-#                print "could not parse config file"
-                # Empty openssl.conf file or could not successfully parse the file.
-                self.new_opensslconf()
-            configuration = {}
-            for section in self.__class__.DEFAULT.keys():
-                for option in self.__class__.DEFAULT[section].keys():
-                    raw = self.config.get(section, option)
-                    value = raw.split("#")[0].strip()  # Remove comments
-
-                    if "$" in value:  # Manage OpenSSL variables
-                        variable = "".join(value.split("$")[1:])
-                        variable = variable.split("/")[0]
-                        if variable == "calvindir":
-                            varvalue = _conf.install_location()
-                        else:
-                            varvalue = self.config.get(section, variable).split("#")[0].strip()
-                            if "$calvindir" in varvalue:
-                                varvalue = _conf.install_location() + "/" + "/".join(varvalue.split("/")[1:])
-                        path = "/" + "/".join(value.split("/")[1:])
-                        value = varvalue + path
-                    try:
-                        configuration[section].update({option: value})
-                    except KeyError:
-                        configuration[section] = {}  # New section
-                        configuration[section].update({option: value})
-            return configuration
-
-        def new_runtime_credentials(force=False, readonly=False):
-            """
-            Generate keys, files and certificate
-            for the new runtime
-            """
-            _log.debug("new_runtime_credentials")
-            #Create keys and certificate request
-            private_key = os.path.join(self.runtime_dir, "private", "private.key")
-            private = os.path.dirname(private_key)
-            _log.debug("new_runtime: %s" % self.runtime_dir)
-            out = os.path.join(self.runtime_dir, "{}.csr".format(self.node_name))
-            _log.debug("out dir: %s"% out)
-            # Create ECC-based certificate
-            log = subprocess.Popen(["openssl", "ecparam", "-genkey",
-                                    "-name", "prime256v1",
-                                    "-out", private_key],
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-            stdout, stderr = log.communicate()
-            if log.returncode != 0:
-                raise IOError(stderr)
-
-            log = subprocess.Popen(["openssl", "req", "-new",
-                                    "-config",self.configfile,
-                              #      "-subj", subject,
-                                    "-key", private_key,
-                                    "-nodes",
-                                    "-utf8",
-                                    "-out", out],
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-            stdout, stderr = log.communicate()
-            if log.returncode != 0:
-                raise IOError(stderr)
-
-            return out
-
-        def get_domain(domain=None, security_dir=None):
-            """Return the node's own certificate name without file extension"""
-            _log.debug("get_domain")
-            try:
-                _domain = _conf.get("security", "domain_name")
-                if _domain:
-                    return _domain
-            except Exception as err:
-                _log.error("get_domain: error while trying to read domain from Calvin config, err={}".format(err))
-            _log.debug("get_domain: Domain not found in Calvin config, let's use supplied domain")
-            if domain:
-                return domain
-            else:
-                raise Exception("Domain not set anywhere")
-
-
-
         self.node=node
         self.node_name=name
         self.node_id=nodeid
@@ -309,7 +170,7 @@ class RuntimeCredentials():
                 pass
 
         #Create folders for runtime
-        self.runtime_dir = get_own_credentials_path(security_dir=security_dir)
+        self.runtime_dir = self._get_own_credentials_path()
         if not os.path.isdir(self.runtime_dir):
             try:
                 os.makedirs(self.runtime_dir, 0755)
@@ -337,7 +198,7 @@ class RuntimeCredentials():
         if not exist and readonly:
             raise Exception("Configuration file does not exist, create runtime openssl.conf first")
         if exist and not force:
-            self.configuration = parse_opensslconf()
+            self.configuration = self._parse_opensslconf()
             _log.debug("Runtime openssl.conf already exists, self.configuration={}".format(self.configuration))
 #            print "Runtime openssl.conf already exists, self.configuration={}".format(self.configuration)
             self.node_id =  self.configuration['req_distinguished_name']['dnQualifier'] 
@@ -348,14 +209,14 @@ class RuntimeCredentials():
             self.cert=None
         else:
             _log.debug("Runtime openssl.conf does not exist, let's create it")
-            self.domain = get_domain(domain=domain)
-            new_opensslconf()
-            self.configuration = parse_opensslconf()
+            self.domain = self.get_domain(domain=domain)
+            self._new_opensslconf()
+            self.configuration = self._parse_opensslconf()
 #            print "Made new configuration at " \
 #                  "{}".format(self.configfile)
             #Generate keys and certiticate request
             try:
-                out = new_runtime_credentials(force=False, readonly=False)
+                out = self._new_runtime_credentials(force=False, readonly=False)
 #                print "Created new credentials for runtime, CSR at={}".format(out)
             except:
                 _log.error("creation of new runtime credentials failed")
@@ -364,16 +225,162 @@ class RuntimeCredentials():
         if enrollment_password:
             self.cert_enrollment_encrypt_csr()
 
+    def _get_own_credentials_path(self):
+        """Return the full path of the node's own certificate"""
+        _log.debug("__init__::get_own_credentials_path, security_dir={}".format(self.security_dir))
+        return os.path.join(certificate.get_runtimes_credentials_path(security_dir=self.security_dir), self.node_name)
 
-    def get_node_name(self, security_dir=None):
+    def _new_opensslconf(self):
+        """
+        Create new openssl.conf configuration file.
+        """
+#            print "new_opensslconf"
+        _log.debug("__init__::new_opensslconf")
+        for section in self.__class__.DEFAULT.keys():
+            self.config.add_section(section)
+#            print "[{}]".format(section)
+            hostname = socket.gethostname()
+            for option in self.__class__.DEFAULT[section]:
+                if option == "0.organizationName":
+                    value = self.domain
+                #TODO: use dynamic number of DNS entries instead of hardcoding the number
+                elif option == "DNS.1":
+                    value = self.node_name
+                elif (option == "DNS.2") and len(self.hostnames)>0:
+                    value = self.hostnames[0]
+                elif (option == "DNS.3") and len(self.hostnames)>1:
+                    value = self.hostnames[1]
+                elif (option == "DNS.4") and len(self.hostnames)>2:
+                    value = self.hostnames[2]
+                elif option == "IP.1":
+                    value = self.ip
+                elif option == "dir":
+                    value = self.runtime_dir
+                elif section == 'req_distinguished_name' and option == 'commonName':
+                    value = self.node_name
+                elif option == 'dnQualifier':
+                    value = self.node_id
+                #The python cryptography and the pyOpensSSL packages does not support
+                #parsing the Attributes extension in a CSR, so instead it is stored
+                #outside of the CSR
+#                    elif option == 'challengePassword':
+#                        value = self.enrollment_password
+                else:
+                    value = self.__class__.DEFAULT[section][option]
+#                    print "\t{}={}".format(option, value)
+                self.config.set(section, option, value)
+        with open(self.configfile, 'wb') as configfd:
+            self.config.write(configfd)
+            configfd.close()
+        confsort.reorder(self.configfile)
+
+
+    def _parse_opensslconf(self):
+        """
+        Parse the openssl.conf file to find relevant paths.
+        """
+#            print "parse_opensslconf"
+        _log.debug("__init__::parse_opensslconf")
+        if not self.config.read(self.configfile):
+#                print "could not parse config file"
+            # Empty openssl.conf file or could not successfully parse the file.
+            self.new_opensslconf()
+        configuration = {}
+        for section in self.__class__.DEFAULT.keys():
+            for option in self.__class__.DEFAULT[section].keys():
+                raw = self.config.get(section, option)
+                value = raw.split("#")[0].strip()  # Remove comments
+
+                if "$" in value:  # Manage OpenSSL variables
+                    variable = "".join(value.split("$")[1:])
+                    variable = variable.split("/")[0]
+                    if variable == "calvindir":
+                        varvalue = _conf.install_location()
+                    else:
+                        varvalue = self.config.get(section, variable).split("#")[0].strip()
+                        if "$calvindir" in varvalue:
+                            varvalue = _conf.install_location() + "/" + "/".join(varvalue.split("/")[1:])
+                    path = "/" + "/".join(value.split("/")[1:])
+                    value = varvalue + path
+                try:
+                    configuration[section].update({option: value})
+                except KeyError:
+                    configuration[section] = {}  # New section
+                    configuration[section].update({option: value})
+        return configuration
+
+    def _new_runtime_credentials(self, force=False, readonly=False):
+        """
+        Generate keys, files and certificate
+        for the new runtime
+        """
+        _log.debug("new_runtime_credentials")
+        #Create keys and certificate request
+        private_key = os.path.join(self.runtime_dir, "private", "private.key")
+        private = os.path.dirname(private_key)
+        _log.debug("new_runtime: %s" % self.runtime_dir)
+        out = os.path.join(self.runtime_dir, "{}.csr".format(self.node_name))
+        _log.debug("out dir: %s"% out)
+        # Create ECC-based certificate
+        log = subprocess.Popen(["openssl", "ecparam", "-genkey",
+                                "-name", "prime256v1",
+                                "-out", private_key],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+        stdout, stderr = log.communicate()
+        if log.returncode != 0:
+            raise IOError(stderr)
+
+        log = subprocess.Popen(["openssl", "req", "-new",
+                                "-config",self.configfile,
+                          #      "-subj", subject,
+                                "-key", private_key,
+                                "-nodes",
+                                "-utf8",
+                                "-out", out],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+        stdout, stderr = log.communicate()
+        if log.returncode != 0:
+            raise IOError(stderr)
+
+        return out
+
+#    def _compare_certificate_with_config():
+
+    def get_domain(self, domain=None, security_dir=None):
+        """Return the node's own certificate name without file extension"""
+        _log.debug("get_domain")
+        try:
+            _domain = _conf.get("security", "domain_name")
+            if _domain:
+                return _domain
+        except Exception as err:
+            _log.error("get_domain: error while trying to read domain from Calvin config, err={}".format(err))
+        _log.debug("get_domain: Domain not found in Calvin config, let's use supplied domain")
+        if domain:
+            return domain
+        else:
+            raise Exception("Domain not set anywhere")
+
+
+    def get_node_name(self):
         if self.node_name is not None:
             return self.node_name
         else:
+            _log.error("Node name not set in runtime_credentials")
             raise Exception("Node name not set in runtime_credentials")
 
-    def get_runtime_credentials(self, security_dir=None):
+    def get_node_id(self):
+        if self.node_id is not None:
+            return self.node_id
+        else:
+            _log.error("Node id not set in runtime_credentials")
+            raise Exception("Node id not set in runtime_credentials")
+
+    def get_runtime_credentials(self):
 #        _log.debug("get_runtime_credentials:: node_name={}".format(self.node_name))
-        runtime_cert_chain = self.get_runtime_certificate_chain_as_string(security_dir=security_dir)
+        runtime_cert_chain = self.get_runtime_certificate_chain_as_string()
         private_key = self.get_private_key()
         return runtime_cert_chain + private_key
 
@@ -482,7 +489,7 @@ class RuntimeCredentials():
         cert_chain_list_of_strings = []
         cert_chain_list_of_x509 = []
         try:
-            cert_chain_str = get_runtime_certificate_chain_as_string(security_dir=security_dir)
+            cert_chain_str = self.get_runtime_certificate_chain_as_string(security_dir=security_dir)
             cert_part = cert_chain_str.split(BEGIN_CRT_LINE)
             cert_chain_list_of_strings = []
             cert_chain_list_of_strings.append("{}{}".format(BEGIN_CRT_LINE, cert_part[1]))
@@ -536,6 +543,16 @@ class RuntimeCredentials():
                                                   certstr)
             _log.debug("get_own_cert"
                        "\n\tcertpath={}".format(certpath))
+            #Check that the certificate parameters are the same as our attributes
+            if not certificate.cert_O(certstring=certstr) == self.domain:
+                _log.error("Domain does not match certificate")
+                raise Exception("Domain does not match certificate")
+            if not certificate.cert_CN(certstring=certstr) == self.node_name:
+                _log.error("Node name does not match certificate")
+                raise Exception("Node name does not match certificate")
+            if not certificate.cert_DN_Qualifier(certstring=certstr) == self.node_id:
+                _log.error("Node ID does not match certificate")
+                raise Exception("Node ID does not match certificate")
             return certpath, cert, certstr
         except Exception as err:
             # Certificate not available
@@ -634,42 +651,6 @@ class RuntimeCredentials():
         return cert.public_key()
         # The following line can replace the two lines above in pyOpenSSL version 16.0.0 (unreleased):
         # return OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, certificate.get_pubkey())
-
-
-    ###########################################################
-    # Linking a runtime name on a host to a persistent node-id
-    # This linkage is included in CSR and signed by CA
-    ###########################################################
-
-    def obtain_cert_node_info(self, security_dir=None):
-        """ Obtain node id based on name and domain from config
-            Return dict with domain, node name and node id
-        """
-#        _log.debug("obtain_cert_node_info: node_name={}".format(self.node_name))
-        if self.domain is None or self.node_name is None:
-            # No security or name specified just use standard node UUID
-            _log.debug("OBTAINING no security domain={}, name={}".format(self.domain, self.node_name))
-            return {'domain': None, 'name': self.node_name, 'id': calvinuuid.uuid("NODE")}
-
-        # Does existing signed runtime certificate exist, return info
-        try:
-            filenames = os.listdir(os.path.join(self.runtime_dir, "mine"))
-            content = open(os.path.join(self.runtime_dir, "mine", filenames[0]), 'rt').read()
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
-                                                  content)
-            subject = cert.get_subject()
-            if subject.commonName != self.node_name or subject.organizationName != domain:
-                raise Exception("names of cert incorrect")
-            _log.debug("OBTAINING existing security domain={}, name={}, id={}".format(self.domain, self.node_name, subject.dnQualifier))
-            return {'domain': self.domain, 'name': self.node_name, 'id': subject.dnQualifier}
-        except:
-            pass
-            #_log.exception("OBTAINING fail existing security domain={}, name={}".format(domain, name))
-        # No valid signed cert available, create new node id and let user create certificate later
-        nodeid = calvinuuid.uuid("NODE")
-        return {'domain': self.domain, 'name': self.node_name, 'id': nodeid}
-
-
 
 
     def store_trusted_root_cert(self, cert_file, trusted_root):

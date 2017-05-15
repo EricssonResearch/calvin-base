@@ -51,7 +51,7 @@ class CertificateAuthority(object):
                 _log.debug("__init__ Runtime is not a CA")
                 self.ca = None
         except Exception as e:
-            _log.info("Missing or incomplete security config")
+            _log.info("Missing or incomplete security config, e={}".format(e))
             self.ca = None
 
     def sign_csr_request(self, data):

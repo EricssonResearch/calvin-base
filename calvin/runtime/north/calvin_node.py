@@ -94,16 +94,17 @@ class Node(object):
             self.attributes = AttributeResolver(None)
         self.node_name = self.attributes.get_node_name_as_str()
         # Obtain node id, when using security also handle runtime certificate
-        self.id = certificate.obtain_cert_node_info(self.node_name)['id']
-        self.certificate_authority = certificate_authority.CertificateAuthority(self)
-        self.authentication = authentication.Authentication(self)
-        self.authorization = authorization.Authorization(self)
-        security_dir = _conf.get("security", "security_dir")
         try:
+            security_dir = _conf.get("security", "security_dir")
             self.runtime_credentials = RuntimeCredentials(self.node_name, node=self, security_dir=security_dir)
+            self.id = self.runtime_credentials.get_node_id()
         except Exception as err:
             _log.debug("No runtime credentials, err={}".format(err))
             self.runtime_credentials = None
+            self.id = calvinuuid.uuid("Node")
+        self.certificate_authority = certificate_authority.CertificateAuthority(self)
+        self.authentication = authentication.Authentication(self)
+        self.authorization = authorization.Authorization(self)
         self.metering = metering.set_metering(metering.Metering(self))
         self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
