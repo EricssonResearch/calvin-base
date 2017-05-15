@@ -20,6 +20,7 @@ import time
 import traceback
 import base64
 import pdb
+import struct
 
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
@@ -62,7 +63,7 @@ class CalvinXMLStreamProtocol(CalvinCBClass, xmlstream.XmlStream):
         # Payload should be base64 encoded
         # Add 4 byte data length before data
         dataSize = len(data)
-        dlen = chr(dataSize >> 24 & 0xFF) + chr(dataSize >> 16 & 0xFF) + chr(dataSize >> 8 & 0xFF) + chr(dataSize & 0xFF) + data
+        dlen = struct.pack("cccc"+str(dataSize)+"s", chr(dataSize >> 24 & 0xFF), chr(dataSize >> 16 & 0xFF), chr(dataSize >> 8 & 0xFF), chr(dataSize & 0xFF), data)
         data = base64.b64encode(dlen)
         d = {
                 "to": to,

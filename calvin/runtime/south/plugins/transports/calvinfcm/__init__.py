@@ -15,8 +15,10 @@
 # limitations under the License.
 
 import traceback
+from calvin.utilities import calvinlogger
 
 factories = {}
+_log = calvinlogger.get_logger(__name__)
 
 def register(_id, node_name, callbacks, schemas, formats):
     ret = {}
@@ -27,8 +29,8 @@ def register(_id, node_name, callbacks, schemas, formats):
             factories[_id] = f
             ret['calvinfcm'] = f
         except ImportError:
-            traceback.print_exc()
+            _log.exception("Could not import calvinfcm transport")
         except Exception:
-            traceback.print_exc()
+            _log.exception("Exception when importing calvinfcm transport")
     return ret
 
