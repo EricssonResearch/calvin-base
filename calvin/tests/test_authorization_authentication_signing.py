@@ -52,6 +52,7 @@ runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_sign
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
 code_signer_name="test_signer"
+org_name='org.testexample'
 orig_identity_provider_path = os.path.join(security_testdir,"identity_provider")
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
@@ -198,7 +199,10 @@ class TestSecurity(unittest.TestCase):
         ca.export_ca_cert(runtimes_truststore)
         #Define the runtime attributes
         for i in range(NBR_OF_RUNTIMES):
-             node_name ={'organization': 'org.testexample', 'name': 'testNode{}'.format(i)}
+             purpose = 'authzserver' if i==0 else ""
+             node_name ={'organization': org_name,
+                         'purpose':purpose,
+                         'name': 'testNode{}'.format(i)}
              owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
              address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
              rt_attribute=  {
@@ -228,6 +232,9 @@ class TestSecurity(unittest.TestCase):
             attributes=AttributeResolver(rt_attribute)
             node_name = attributes.get_node_name_as_str()
             nodeid = calvinuuid.uuid("")
+            #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
+            if "testNode0" in node_name:
+                ca.add_new_authorization_server(node_name)
             enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
             enrollment_passwords.append(enrollment_password)
             runtime=runtime_credentials.RuntimeCredentials(node_name,

@@ -200,10 +200,12 @@ class CA():
         self.config = ConfigParser.SafeConfigParser()
         self.config.optionxform = str
         self.enrollment_challenge_db = {}
+        self.allowed_authorization_servers = None
         os.umask(0077)
         self.domain = domain
         _log.debug("CA init")
         security_path = _conf.get("security", "security_dir")
+        self.calvin_ca_conf = _conf.get("security","certificate_authority_1")
         if security_dir:
             self.configfile = os.path.join(security_dir, domain, "openssl.conf")
         elif security_path:
@@ -574,6 +576,20 @@ class CA():
             subject = csrx509.get_subject()
             common_name = subject.commonName
             domain = subject.organizationName
+            #Only runtimes listed in the CA runtime configuration are allowed
+            #to claim a runtime name with authz in. This is use full to prevent
+            #any runtime from being an applicable authorization server when they are
+            #automatically bootstraped from the DHT. Runtimes can now filter out valide
+            #authorization server by looking at the certified runtime name in the certificate
+            if "authzserver" in common_name:
+                if not self.runtime_in_allowed_authorization_server_list(common_name):
+                    _log.error("The runtime is not allowed to operate as an authorization server."
+                                    "To be applicable, the runtime name must be listed in the"
+                                    "security->certificate_authority->authorization_servers configuration for the CA runtime")
+                    raise Exception("The runtime is not allowed to operate as an authorization server."
+                                    "To be applicable, the runtime name must be listed in the"
+                                    "security->certificate_authority->authorization_servers configuration for the CA runtime")
+
             try:
                 self.validate_challenge_password(csr_path, common_name)
             except Exception as err:
@@ -795,4 +811,38 @@ class CA():
         except Exception as exc:
             _log.exception("Failed to create/update Certificate Enrollment Authority password database")
             raise
+
+    def add_new_authorization_server(self, node_name):
+        if not self.allowed_authorization_servers:
+            self._load_allowed_authorization_server_list()
+        self.allowed_authorization_servers.append(node_name)
+        self._update_allowed_authorization_server_file()
+
+    def _load_allowed_authorization_server_list(self):
+        _log.debug("_load_allowed_authorization_server_list")
+        authz_list_path = os.path.join(self.configuration["CA_default"]["dir"],"allowed_authz_list.json")
+        try:
+            with open(authz_list_path,'r') as f:
+                self.allowed_authorization_servers = f.read().splitlines()
+        except Exception as exc:
+            _log.debug("Failed to load allowed authorization server list, create empty list")
+            self.allowed_authorization_servers = []
+
+    def _update_allowed_authorization_server_file(self):
+        authz_list_path = os.path.join(self.configuration["CA_default"]["dir"],"allowed_authz_list.json")
+        try:
+            with open(authz_list_path,'w') as f:
+                for item in self.allowed_authorization_servers:
+                    f.write("%s\n" % item)
+        except Exception as exc:
+            _log.exception("Failed to create/update allowed authorization runtime list")
+            raise
+
+    def runtime_in_allowed_authorization_server_list(self, node_name):
+        if not self.allowed_authorization_servers:
+            self._load_allowed_authorization_server_list()
+        if node_name in self.allowed_authorization_servers:
+            return True
+        else:
+            return False
 

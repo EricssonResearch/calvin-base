@@ -27,6 +27,7 @@ from calvin.runtime.north.authorization.policy_decision_point import PolicyDecis
 from calvin.runtime.north.authorization.policy_retrieval_point import FilePolicyRetrievalPoint
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
+from calvin.utilities import certificate
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
@@ -125,9 +126,15 @@ class Authorization(object):
             nbr = len(value)
             #For loadbalanding of authorization server, randomly select
             # one of the found authorization servers
+            #TODO: there is a risk that we end up in a never ending loop if none of the authorization servers
+            # certificates is valid!!
             rand = random.randint(0, nbr-1)
             self.authz_server_id = value[rand]
-            self.register_node_external()
+            #Fetch authorization runtime certificate and verify that it is certified as an
+            # authorization server
+            self.node.storage.get_index(['certificate',self.authz_server_id],
+                                        CalvinCB(self._check_authz_certificate_cb, authz_list_key=key, authz_list=value))
+#            self.register_node_external()
         elif registration_search_attempt<10:
             time_to_sleep = 1+registration_search_attempt*registration_search_attempt*registration_search_attempt
             _log.error("No authorization server found, try again after sleeping {} seconds".format(time_to_sleep))
@@ -138,6 +145,27 @@ class Authorization(object):
                                         CalvinCB(self._register_node_cb))
         else:
             raise Exception("No athorization server accepting external clients can be found")
+
+    def _check_authz_certificate_cb(self, key, value, authz_list_key=None, authz_list=None):
+        """Register node attributes for external authorization"""
+        # FIXME: should this include certificate exchange?
+        _log.debug("_check_authz_certificate_cb"
+                   "\n\tkey={}"
+                   "\n\tvalue={}".format(key, value))
+        if value:
+            certstr = value[0]
+            try:
+                certx509 = certificate.verify_certificate(certificate.TRUSTSTORE_TRANSPORT, certstr)
+            except Exception as err:
+                _log.error("Failed to verify the authorization servers certificate from storage, err={}".format(err))
+                raise
+        if not "authzserver" in certificate.cert_CN(certstr):
+            _log.error("The authorization server IS NOT certified by the CA as an authorization server, let's try another one.")
+            self._register_node_cb(key=authz_list_key, value=authz_list)
+        else:
+            _log.info("The authorization server IS certified by the CA as an authorization server")
+            self.register_node_external()
+
 
     def register_node_external(self):
         """Register node attributes for external authorization"""

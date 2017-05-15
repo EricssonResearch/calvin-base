@@ -52,6 +52,7 @@ runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_sign
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
 code_signer_name="test_signer"
+org_name='org.testexample'
 orig_identity_provider_path = os.path.join(security_testdir,"identity_provider")
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
@@ -197,7 +198,10 @@ class TestSecurity(unittest.TestCase):
         ca.export_ca_cert(runtimes_truststore)
         #Define the runtime attributes
         for i in range(NBR_OF_RUNTIMES):
-             node_name ={'organization': 'org.testexample', 'name': 'testNode{}'.format(i)}
+             purpose = 'authzserver' if i==0 else ""
+             node_name ={'organization': org_name,
+                         'purpose':purpose,
+                         'name': 'testNode{}'.format(i)}
              owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
              address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
              rt_attribute=  {
@@ -227,6 +231,9 @@ class TestSecurity(unittest.TestCase):
             attributes=AttributeResolver(rt_attribute)
             node_name = attributes.get_node_name_as_str()
             nodeid = calvinuuid.uuid("")
+            #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
+            if "testNode0" in node_name or "testNode1" in node_name:
+                ca.add_new_authorization_server(node_name)
             enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
             enrollment_passwords.append(enrollment_password)
             runtime=runtime_credentials.RuntimeCredentials(node_name,
@@ -267,9 +274,7 @@ class TestSecurity(unittest.TestCase):
         rt0_conf.save("/tmp/calvin5000.conf")
 
         # Runtime 1: local authentication, signature verification, local authorization.
-        rt1_conf = copy.deepcopy(rt_conf)
-        rt1_conf.set('security','enrollment_password',enrollment_passwords[1])
-        rt1_conf.set("security", "security_conf", {
+        rt_conf.set("security", "security_conf", {
                         "comment": "External authentication, external authorization",
                         "authentication": {
                             "procedure": "external",
@@ -281,10 +286,8 @@ class TestSecurity(unittest.TestCase):
 #                            "server_uuid": runtimes[0].node_id
                         }
                     })
-        rt1_conf.save("/tmp/calvin5001.conf")
 
-        for i in range(2, NBR_OF_RUNTIMES):
-            rt_conf = copy.deepcopy(rt1_conf)
+        for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.set('security','enrollment_password',enrollment_passwords[i])
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
