@@ -47,6 +47,8 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
 
     def __init__(self, node_id, control_uri, runtime_credentials):
         self._name = None
+        self._node_id = node_id
+        self._control_uri = control_uri
         self._runtime_credentials = runtime_credentials
         super(evilAutoDHTServer, self).__init__(node_id, control_uri, runtime_credentials)
 
@@ -72,7 +74,7 @@ class evilAutoDHTServer(dht_server.AutoDHTServer):
         dlist = []
         dlist.append(self.dht_server.bootstrap(bootstrap))
 
-        self._ssdps = service_discovery_ssdp.SSDPServiceDiscovery(iface)
+        self._ssdps = service_discovery_ssdp.SSDPServiceDiscovery(self._node_id, self._control_uri, iface)
         dlist += self._ssdps.start()
 
         _log.debug("Register service %s %s:%s" % (network, ip, port))

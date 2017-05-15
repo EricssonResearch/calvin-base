@@ -170,7 +170,7 @@ class RuntimeCredentials():
                 pass
 
         #Create folders for runtime
-        self.runtime_dir = self._get_own_credentials_path()
+        self.runtime_dir = self.get_own_credentials_path()
         if not os.path.isdir(self.runtime_dir):
             try:
                 os.makedirs(self.runtime_dir, 0755)
@@ -225,7 +225,7 @@ class RuntimeCredentials():
         if enrollment_password:
             self.cert_enrollment_encrypt_csr()
 
-    def _get_own_credentials_path(self):
+    def get_own_credentials_path(self):
         """Return the full path of the node's own certificate"""
         _log.debug("__init__::get_own_credentials_path, security_dir={}".format(self.security_dir))
         return os.path.join(certificate.get_runtimes_credentials_path(security_dir=self.security_dir), self.node_name)
@@ -671,7 +671,7 @@ class RuntimeCredentials():
         in the "mine" folder
         """
 #        _log.debug("store_own_cert:\n\tcertstring={}\n\tcertpath={}".format(certstring, certpath))
-        path = self.store_cert("mine", certstring=certstring, certpath=certpath)
+        path = self._store_cert("mine", certstring=certstring, certpath=certpath)
         #Let's update openssl.conf, but this entry should probably not
         #be trusted, it is likely that someone will copy certs into the folder 
         #by other means
@@ -699,9 +699,9 @@ class RuntimeCredentials():
         in the "others" folder
         """
 #        _log.debug("store_others_cert")
-        return self.store_cert("others", certstring=certstring, certpath=certpath, force=force)
+        return self._store_cert("others", certstring=certstring, certpath=certpath, force=force)
 
-    def store_cert(self, type, certstring=None, certpath=None, force=False):
+    def _store_cert(self, type, certstring=None, certpath=None, force=False):
         """
         Store the signed runtime certificate
         return values.

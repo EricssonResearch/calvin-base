@@ -1,6 +1,6 @@
 #!/bin/bash
 #To be able to run it easily from calvin-base dir
-SECDHT_TESTDIR=~/Calvin/secure_dht2/calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests
+SECDHT_TESTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo $SECDHT_TESTDIR
 pushd ~/.calvin/sec_dht_security_test/
 rm -r runtimes test

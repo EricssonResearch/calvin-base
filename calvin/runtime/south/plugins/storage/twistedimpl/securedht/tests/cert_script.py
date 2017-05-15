@@ -24,6 +24,9 @@ print "Creating new domain."
 testca = certificate_authority.CA(domain="test", commonName="sec-dht-test-security-CA", security_dir=testdir)
 print "Created new domain."
 
+print "Import CA cert into truststore."
+testca.export_ca_cert(runtimes_truststore)
+
 print "Generate runtime credentials and sign their certificates"
 for i in range(1, 5):
     for j in range(0, 6):
@@ -61,5 +64,4 @@ except Exception as err:
 certpath = testca.sign_csr(csr_path)
 rt_cred.store_own_cert(certpath=certpath)
 
-testca.export_ca_cert(runtimes_truststore)
 

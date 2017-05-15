@@ -154,11 +154,6 @@ class TestDHT(object):
             traceback.print_exc()
             pytest.fail(traceback.format_exc())
         finally:
-            i=0
             for server in servers:
-                name_dir = certificate.get_own_credentials_path(name, security_dir=testdir)
-                shutil.rmtree(os.path.join(name_dir, "others"), ignore_errors=True)
-                os.mkdir(os.path.join(name_dir, "others"))
-                i+=1
                 server.stop()
                 yield threads.defer_to_thread(time.sleep, 5)
