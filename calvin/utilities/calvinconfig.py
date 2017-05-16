@@ -55,12 +55,10 @@ class CalvinConfig(object):
     """
     def __init__(self):
         super(CalvinConfig, self).__init__()
-
         self.config = {}
         self.wildcards = []
         self.override_path = os.environ.get('CALVIN_CONFIG', None)
         self.extra_paths = os.environ.get('CALVIN_CONFIG_PATH', None)
-
 
         # Setting CALVIN_CONFIG takes preceedence over all other configs
         if self.override_path is not None:
@@ -101,7 +99,8 @@ class CalvinConfig(object):
                 'display_plugin': 'stdout_impl',
                 'stdout_plugin': 'defaultimpl',
                 'transports': ['calvinip'],
-                'control_proxy': None
+                'control_proxy': None,
+                'fcm_server_secret': None
             },
             'testing': {
                 'comment': 'Test settings',

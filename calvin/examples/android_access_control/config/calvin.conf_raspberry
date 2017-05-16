@@ -1,0 +1,6 @@
+{
+    "global": {
+    	"servo_plugin": "pca9685_impl",
+	"actor_paths": ["/home/pi/android_demo/calvin-base/calvin/examples/android_access_control/actors"]
+    }
+}

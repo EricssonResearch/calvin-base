@@ -141,6 +141,12 @@ class CalvinCBClass(object):
                     if not isinstance(cb, CalvinCB):
                         raise Exception("One callback of name %s is not a CalvinCB object %s, %s", name, type(cb), repr(cb))
                     self.__callbacks[name][cb._id] = cb
+    
+    def get_callbacks_by_name(self, name):
+        if name not in self.__callbacks:
+            _log.info("Did not find callbacks for %s" % name)
+            return None
+        return self.__callbacks[name]
 
     def callback_valid_names(self):
         """ Returns list of valid or current names that callbacks can be registered on."""

@@ -1,0 +1,6 @@
+{
+    "global": {
+         "actor_paths": ["/home/alexander/repos/calvin/calvin-base/calvin/examples/android_access_control/actors"],
+         "button_plugin": "tkinter_impl"
+    }
+}

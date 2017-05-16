@@ -1,0 +1,16 @@
+
+/* Actors */
+cameraButton : io.Button()
+mobileCamera : media.Camera()
+computerScreen :  media.ImageRenderer()
+computerButtonOpen : io.Button(text="Open door")
+computerButtonClose : io.Button(text="Close door")
+door : door.Door(channel=0)
+p : std.Identity()
+
+/* Connections */
+cameraButton.trigger > p.token
+p.token > mobileCamera.trigger
+mobileCamera.image > computerScreen.image
+computerButtonOpen.trigger > door.open_door
+computerButtonClose.trigger > door.close_door

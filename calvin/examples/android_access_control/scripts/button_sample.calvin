@@ -1,0 +1,4 @@
+button : io.Button(text="Sample Button")
+snk : io.Print()
+
+button.trigger > snk.token

@@ -18,6 +18,8 @@ from calvin.utilities.calvin_callback import CalvinCBClass
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
 
 from calvin.utilities import calvinlogger
+from urlparse import urlparse
+
 _log = calvinlogger.get_logger(__name__)
 
 class URI(object):
@@ -27,14 +29,20 @@ class URI(object):
         port_del = uri.rindex(":")
         self.scheme = uri[0:scheme_del]
         self.hostname = uri[scheme_del + 3:port_del]
-        if scheme_del != port_del:
+
+        if self.scheme == "calvinfcm":
+            # calvinfcm may have : in the device token.
+            address = uri[scheme_del+3:]
+            port_del = address.index(':')
+            self.hostname = address[:port_del]
+            self.port = address[port_del+1:]
+        elif scheme_del != port_del:
             self.port = int(uri[port_del + 1:len(uri)])
         else:
             self.port = None
 
     def geturl(self):
         return self.uri
-
 
 def split_uri(uri):
     return URI(uri)

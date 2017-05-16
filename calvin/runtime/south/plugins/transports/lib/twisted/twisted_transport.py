@@ -251,7 +251,7 @@ class CalvinServer(base_transport.BaseServer):
         # TODO: Get iface from addr and lookup host
         iface = '::'
 
-        self._transport = server_transport(iface=iface, node_name=self._node_name, port=self._listen_uri.port or 0)
+        self._transport = server_transport(iface=iface, node_name=self._node_name, port=self._listen_uri.port or 0, uri=listen_uri)
         self._client_transport = client_transport
 
     def _started(self, port):
@@ -269,7 +269,21 @@ class CalvinServer(base_transport.BaseServer):
             Callback when the client connects still needs a join to be finnshed
             before we can callback upper layers
         """
+        _log.debug("Client connected")
         import socket
+        
+        if uri in self._peers:
+            _log.info("Peer %s already connected" % uri)
+            # Disconnect client localy and remove callbacks
+            
+            class ErrorMessage:
+                def __init__(self, str):
+                    self._str = str
+
+                def getErrorMessage(self):
+                    return self._str
+            self._peers[uri]._transport._proto.connectionLost(ErrorMessage("Connection was closed cleanly."))
+        
         from calvin.utilities import calvinconfig
         _conf = calvinconfig.get()
         runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
