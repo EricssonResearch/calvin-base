@@ -62,6 +62,7 @@ METER_PATH_TIMED = '/meter/{}/timed'
 METER_PATH_AGGREGATED = '/meter/{}/aggregated'
 METER_PATH_METAINFO = '/meter/{}/metainfo'
 CSR_REQUEST = '/certificate_authority/certificate_signing_request'
+ENROLLMENT_PASSWORD = '/certificate_authority/certificate_enrollment_password/{}'
 AUTHENTICATION = '/authentication'
 AUTHENTICATION_USERS_DB = '/authentication/users_db'
 AUTHENTICATION_GROUPS_DB = '/authentication/groups_db'
@@ -427,8 +428,23 @@ class RequestHandler(object):
 
     def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'csr': csr}
-        r = self._post(rt, timeout, async, CSR_REQUEST, data=data)
+        r = self._post(rt, timeout, async, CSR_REQUEST, data=data['csr'])
         return self.check_response(r)
+
+    def set_enrollment_password(self, rt, node_name, enrollment_password, timeout=DEFAULT_TIMEOUT, async=False):
+        import base64
+        data = {'enrollment_password':enrollment_password}
+        r = self._put(rt, timeout, async, ENROLLMENT_PASSWORD.format(node_name), data=data)
+        return self.check_response(r)
+
+    def get_enrollment_password(self, rt, node_name, timeout=DEFAULT_TIMEOUT, async=False):
+        r = self._get(rt, timeout, async, ENROLLMENT_PASSWORD.format(node_name))
+        result = self.check_response(r)
+        if 'enrollment_password' in result:
+            return result['enrollment_password']
+        else:
+            _log.error("Failed to fetch enrollment password")
+            return None
 
     def get_users_db(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, AUTHENTICATION_USERS_DB)

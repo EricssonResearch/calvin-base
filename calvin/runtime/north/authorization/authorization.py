@@ -40,6 +40,7 @@ class Authorization(object):
     """Authorization helper functions"""
 
     def __init__(self, node):
+        _log.debug("Authorization::__init__")
         self.authz_server_id = None
         self.node = node
         try:

@@ -287,15 +287,7 @@ def runtime_certificate(rt_attributes):
                 _log.debug("No runtime certificate, but node is a CA, just sign csr, domain={}".format(domain_name))
                 ca = certificate_authority.CA(domain=domain_name,
                                               security_dir=security_dir)
-                #Write challenge password to file, not very usefull for the CA runtime
-                #but currently the challenge verification is required for all runtimes
-                try:
-                    with open(csr_path +".challenge_password", 'w') as csr_fd:
-                        csr_fd.write(enrollment_password)
-                except Exception as err:
-                    _log.exception("Failed to write challenge password to file, err={}".format(err))
-                    raise
-                cert_path = ca.sign_csr(csr_path)
+                cert_path = ca.sign_csr(csr_path, is_ca=True)
                 runtime.store_own_cert(certpath=cert_path, security_dir=security_dir)
 
             else:

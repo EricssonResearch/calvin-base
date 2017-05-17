@@ -520,6 +520,7 @@ class CA():
         Raise store failed if there was problems storing.
         Return path to csr-file.
         """
+#        _log.debug("store_csr_with_enrollment_password, plaintext={}".format(plaintext))
         plaintext_json = json.loads(plaintext)
         challenge_password = plaintext_json['challenge_password']
         csr = plaintext_json['csr']
@@ -549,17 +550,25 @@ class CA():
             self.cert_enrollment_load_db_file()
 
         if self.enrollment_challenge_db and self.enrollment_challenge_db[common_name]['password'] != challenge_password:
-            raise CsrIncorrectPassword(err)
+            raise CsrIncorrectPassword("Incorrect challenge password, "
+                                       "\n\t{}"
+                                       "\n\t{}".format(self.enrollment_challenge_db[common_name]['password'],challenge_password))
 
-    def validate_csr(self, csr_path):
+    def validate_csr(self, csr_path, is_ca=False):
         """
         Validate that the `csr` matches with configuration.
+        Args:
+            csr_path: path to the CSR
+            is_ca: if the CSR is for the current CA runtime, skipp enrollment
+                    password verification
         Raise CsrDeniedConfiguration if the CSR did not satisfy the
         configuration.
         Raise CsrDeniedMalformed if the csr could not be read at all.
         Raise CertDeniedConfiguration is the CSR key is too short.
         """
-        _log.debug("ca.validate_csr %s" % csr_path)
+        _log.debug("CA::validate_csr"
+                   "\n\tcsr_path={}"
+                   "\n\tis_ca={}".format(csr_path, is_ca))
         try:
             with open(csr_path) as fd:
                 csr=fd.read()
@@ -590,12 +599,14 @@ class CA():
                                     "To be applicable, the runtime name must be listed in the"
                                     "security->certificate_authority->authorization_servers configuration for the CA runtime")
 
-            try:
-                self.validate_challenge_password(csr_path, common_name)
-            except Exception as err:
-                _log.exception("Failed to validate challenge password")
-                #TODO: sent appropriate reply to requester
-                raise
+            #Validate challenge password, skip this if the node is a CA
+            if not is_ca: 
+                try:
+                    self.validate_challenge_password(csr_path, common_name)
+                except Exception as err:
+                    _log.exception("Failed to validate challenge password, err={}".format(err))
+                    #TODO: sent appropriate reply to requester
+                    raise
             try:
                 dnQualifier = subject.dnQualifier
             except:
@@ -611,10 +622,12 @@ class CA():
             raise CsrDeniedConfiguration(err)
         return csrx509
 
-    def sign_csr(self, request):
+    def sign_csr(self, request, is_ca=False):
         """
         Sign a certificate request.
         request: is the path to a Certificate Signing Request.
+        is_ca: True if the CSR is for the current runtime and that runtime
+                is acting as a CA
 
         Equivalent of:
         mkdir -p $certs
@@ -625,7 +638,7 @@ class CA():
         """
         _log.debug("sign_csr")
         try:
-            csrx509 = self.validate_csr(request)
+            csrx509 = self.validate_csr(request, is_ca)
         except:
             raise
         private = self.configuration["CA_default"]["private_dir"]
@@ -744,12 +757,25 @@ class CA():
         return "".join(chars[ord(c) % len(chars)] for c in urandom(length))
 
 
-    def cert_enrollment_add_new_runtime(self, node_name):
-
+    def cert_enrollment_add_new_runtime(self, node_name, password=None):
+        """Sets a enrollment password for the runtime with name node_name
+        Args:
+            node_name: name of the node in question
+            password: if provided, this password is set in the database (optional), if
+                    not provided, a random password is generated and returned. Mainly
+                    available to enable group passwords that can be same for several
+                    runtimes
+        Results:
+            random_password: the password set for the runtime which is required to be
+                            sent along the with the CSR
+        """
         _log.debug("add_new_runtime_enrollment_password for node_name={}".format(node_name))
         if not self.enrollment_challenge_db:
             self.cert_enrollment_load_db_file()
-        random_password = self.generate_password(20)
+        if password:
+            random_password=password
+        else:
+            random_password = self.generate_password(20)
         self.enrollment_challenge_db[node_name] = {'password':random_password}
         self.cert_enrollment_update_db_file()
         return random_password
@@ -784,7 +810,6 @@ class CA():
         self._update_allowed_authentication_server_file()
 
     def _load_allowed_authentication_server_list(self):
-        _log.debug("_load_allowed_authentication_server_list")
         auth_list_path = os.path.join(self.configuration["CA_default"]["dir"],"allowed_auth_list.json")
         try:
             with open(auth_list_path,'r') as f:

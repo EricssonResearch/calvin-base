@@ -654,6 +654,29 @@ re_post_certificate_signing_request = re.compile(r"POST /certificate_authority/c
 
 control_api_doc += \
     """
+    PUT /certiticate_authority/certificate_enrollment_password/{node_name}
+    Set a password to be later user as authorization for the Certificate Signing Request from the runtime
+    Body:
+    {
+        "value": <string>
+    }
+    Response status code: OK or INTERNAL_ERROR
+    Response: none
+"""
+re_edit_certificate_enrollment_password = re.compile(r"PUT /certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+
+control_api_doc += \
+    """
+    GET /certiticate_authority/certificate_enrollment_password/{node_name}
+    Request a password to be later user as authorization for the Certificate Signing Request from the runtime
+    Response status code: OK or INTERNAL_ERROR
+    Response:
+    {"enrollment_password":<value>}
+"""
+re_get_certificate_enrollment_password = re.compile(r"GET /certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+
+control_api_doc += \
+    """
     GET /authentication/users_db
     Get user database on this runtime
     Response status code: OK or INTERNAL_ERROR
@@ -868,6 +891,8 @@ class CalvinControl(object):
             (re_dump_storage, self.handle_dump_storage),
             (re_post_storage, self.handle_post_storage),
             (re_post_certificate_signing_request,self.handle_post_certificate_signing_request),
+            (re_edit_certificate_enrollment_password, self.handle_edit_certificate_enrollment_password),
+            (re_get_certificate_enrollment_password, self.handle_get_certificate_enrollment_password),
             (re_get_authentication_users_db, self.handle_get_authentication_users_db),
             (re_edit_authentication_users_db, self.handle_edit_authentication_users_db),
             (re_get_authentication_groups_db, self.handle_get_authentication_groups_db),
@@ -1823,6 +1848,33 @@ class CalvinControl(object):
             status = calvinresponse.INTERNAL_ERROR
         self.send_response(handle, connection, json.dumps({"certificate": cert}) if status == calvinresponse.OK else None,
                            status=status)
+
+    #Only authorized users, e.g.,an admin, should be allowed to query certificate enrollment passwords
+    # from the CA runtime
+    @authentication_decorator
+    def handle_get_certificate_enrollment_password(self, handle, connection, match, data, hdr):
+        """Get a challenge password for node_name """
+        try:
+            password = self.node.certificate_authority.get_enrollment_password(node_name=match.group(1))
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_post_certificate_enrollment_password")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, json.dumps({"enrollment_password": password}) if status == calvinresponse.OK else None,
+                           status=status)
+
+    #Only authorized users, e.g.,an admin, should be allowed to query certificate enrollment passwords
+    # from the CA runtime
+    @authentication_decorator
+    def handle_edit_certificate_enrollment_password(self, handle, connection, match, data, hdr):
+        """Post a challenge password for node_name"""
+        try:
+            password = self.node.certificate_authority.set_enrollment_password(node_name=match.group(1), password=data['enrollment_password'])
+            status = calvinresponse.OK
+        except:
+            _log.exception("handle_post_certificate_enrollment_password")
+            status = calvinresponse.INTERNAL_ERROR
+        self.send_response(handle, connection, None, status=status)
 
     @authentication_decorator
     def handle_get_authentication_users_db(self, handle, connection, match, data, hdr):

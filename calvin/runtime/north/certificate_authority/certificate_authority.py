@@ -54,11 +54,11 @@ class CertificateAuthority(object):
             _log.info("Missing or incomplete security config, e={}".format(e))
             self.ca = None
 
-    def sign_csr_request(self, data):
+    def sign_csr_request(self, encr_csr):
         """Decrypt the CSR, verify challenge password and  the  in the data."""
-        _log.debug("sign_csr_request, data={}".format(data))
+        _log.debug("sign_csr_request, data={}".format(encr_csr))
         #Decrypt encrypted CSR with CAs private key
-        csr = self.ca.decrypt_encrypted_csr(encrypted_enrollment_request=data['csr'])
+        csr = self.ca.decrypt_encrypted_csr(encrypted_enrollment_request=encr_csr)
         csr_path = self.ca.store_csr_with_enrollment_password(csr)
         cert_path = self.ca.sign_csr(csr_path)
         try:
@@ -68,3 +68,12 @@ class CertificateAuthority(object):
         except:
             _log.error("Failed to open certitificate file")
             return "Failure"
+
+    def get_enrollment_password(self, node_name):
+        _log.debug("sign_csr_request, node_name={}".format(node_name))
+        return self.ca.cert_enrollment_add_new_runtime(node_name)
+
+    def set_enrollment_password(self, node_name, password):
+        _log.debug("sign_csr_request, node_name={}  password={}".format(node_name, password))
+        return self.ca.cert_enrollment_add_new_runtime(node_name, password)
+

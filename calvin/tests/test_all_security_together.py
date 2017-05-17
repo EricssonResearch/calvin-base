@@ -224,23 +224,18 @@ class TestSecurity(unittest.TestCase):
         #Let's use the admin user0 for request_handler 
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
 
+        #####################
+        # Runtime 0: Certificate authority, authentication server, authorization server.
+        #####################
         #Generate credentials, create CSR, sign with CA and import cert for all runtimes
         enrollment_passwords=[]
-        for rt_attribute in rt_attributes_cpy:
-            attributes=AttributeResolver(rt_attribute)
-            node_name = attributes.get_node_name_as_str()
-            nodeid = calvinuuid.uuid("")
-            #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
-            if "testNode0" in node_name or "testNode1" in node_name:
-                ca.add_new_authentication_server(node_name)
-                ca.add_new_authorization_server(node_name)
-            enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
-            enrollment_passwords.append(enrollment_password)
-            runtime=runtime_credentials.RuntimeCredentials(node_name,
-                                                           domain=domain_name,
-                                                           security_dir=credentials_testdir,
-                                                           nodeid=nodeid,
-                                                           enrollment_password=enrollment_password)
+        attributes=AttributeResolver(rt_attributes_cpy[0])
+        node_name = attributes.get_node_name_as_str()
+        #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
+        ca.add_new_authentication_server(node_name)
+        ca.add_new_authorization_server(node_name)
+        #Just add an empty item for maintaining the same length for the list
+        enrollment_passwords.append("")
 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
@@ -253,8 +248,6 @@ class TestSecurity(unittest.TestCase):
 
         # Runtime 0: Certificate authority, authentication server, authorization server.
         rt0_conf = copy.deepcopy(rt_conf)
-#        rt0_conf.set('global','storage_type','local')
-        rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
         rt0_conf.set('security', 'control_interface_security', "tls")
         rt0_conf.set('security','certificate_authority','True')
         rt0_conf.set("security", "security_conf", {
@@ -271,6 +264,41 @@ class TestSecurity(unittest.TestCase):
                         }
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
+
+        #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
+        for i in range(0, 1):
+            _log.info("Starting runtime {}".format(i))
+            try:
+                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
+                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+                if outfile == logfile:
+                    outfile = None
+            except:
+                logfile = None
+                outfile = None
+            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
+                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                       configfile="/tmp/calvin500{}.conf".format(i))
+            rt.append(RT("https://{}:502{}".format(hostname,i)))
+        #Depending on the hardware, it may take up to 15 seconds for rt0 to hash the passwords in the users_db file, so wait a bit
+        time.sleep(5)
+
+        #####################
+        #Other runtimes:
+        #####################
+        for i in range(1, NBR_OF_RUNTIMES):
+#        for rt_attribute in rt_attributes_cpy:
+            attributes=AttributeResolver(rt_attributes_cpy[i])
+            node_name = attributes.get_node_name_as_str()
+            #Alt 1
+#            enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
+            #Alt 2
+#            enrollment_password = request_handler.get_enrollment_password(rt[0], node_name)
+            #Alt 3
+            enrollment_password = "abrakadabra123456789"
+            request_handler.set_enrollment_password(rt[0], node_name, enrollment_password)
+
+            enrollment_passwords.append(enrollment_password)
 
         # Other runtimes: external authentication, external authorization.
         rt_conf.set("security", "security_conf", {
@@ -305,23 +333,6 @@ class TestSecurity(unittest.TestCase):
 #        rt3_conf.save("/tmp/calvin5003.conf")
 
 
-        #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
-        for i in range(0, 1):
-            _log.info("Starting runtime {}".format(i))
-            try:
-                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
-                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-                if outfile == logfile:
-                    outfile = None
-            except:
-                logfile = None
-                outfile = None
-            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
-                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                       configfile="/tmp/calvin500{}.conf".format(i))
-            rt.append(RT("https://{}:502{}".format(hostname,i)))
-        #It takes 4.5 seconds for rt0 to hash the passwords in the users_db file, so wait for that to be done
-        time.sleep(5)
         #Start the other runtimes
         for i in range(1, NBR_OF_RUNTIMES):
             _log.info("Starting runtime {}".format(i))
