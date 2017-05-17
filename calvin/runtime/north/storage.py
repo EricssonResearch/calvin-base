@@ -523,8 +523,24 @@ class Storage(object):
         self._add_node_index(node)
         # Store all actors on this node in storage
         GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
-        # If node is an authorization server, store information about it in storage
+        # If node is an authentication server, store information about it in storage
         _sec_conf = _conf.get('security', 'security_conf')
+        if _sec_conf and 'authentication' in _sec_conf:
+            if ('accept_external_requests' in _sec_conf['authentication'] and
+                    _sec_conf['authentication']['accept_external_requests'] ):
+                _log.debug("Node is an authentication server accepting external requests, list it in storage")
+                #Add node to list of authentication servers accepting external clients
+                self.add_index(['external_authentication_server'], node.id,
+                               root_prefix_level=1, cb=cb)
+                #Add node to list of authentication servers
+                self.add_index(['authentication_server'], node.id,
+                               root_prefix_level=1, cb=cb)
+            elif ('procedure' in _sec_conf['authentication'] and
+                        _sec_conf['authentication']['procedure']=='local' ):
+                _log.debug("Node is a local authentication server NOT accepting external requests, there is no reason to store that information in storage")
+            else:
+                _log.debug("Node is NOT an authentication server")
+        # If node is an authorization server, store information about it in storage
         if _sec_conf and 'authorization' in _sec_conf:
             if ('accept_external_requests' in _sec_conf['authorization'] and
                     _sec_conf['authorization']['accept_external_requests'] ):

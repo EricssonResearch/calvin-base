@@ -45,7 +45,7 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 homefolder = get_home()
-credentials_testdir = os.path.join(homefolder, ".calvin","test_automatic_authorization_registration")
+credentials_testdir = os.path.join(homefolder, ".calvin","test_automatic_authenticatio_registration_dir")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
 runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
@@ -198,7 +198,7 @@ class TestSecurity(unittest.TestCase):
         ca.export_ca_cert(runtimes_truststore)
         #Define the runtime attributes
         for i in range(NBR_OF_RUNTIMES):
-             purpose = 'CA-authserver-authzserver' if i==0 else ""
+             purpose = 'authserver' if i==0 else ""
              node_name ={'organization': org_name,
                          'purpose':purpose,
                          'name': 'testNode{}'.format(i)}
@@ -233,7 +233,7 @@ class TestSecurity(unittest.TestCase):
             nodeid = calvinuuid.uuid("")
             #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
             if "testNode0" in node_name:
-                ca.add_new_authorization_server(node_name)
+                ca.add_new_authentication_server(node_name)
             enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
             enrollment_passwords.append(enrollment_password)
             runtime=runtime_credentials.RuntimeCredentials(node_name,
@@ -268,11 +268,6 @@ class TestSecurity(unittest.TestCase):
                             "procedure": "local",
                             "identity_provider_path": identity_provider_path,
                             "accept_external_requests": True
-                        },
-                        "authorization": {
-                            "procedure": "local",
-                            "policy_storage_path": policy_storage_path,
-                            "accept_external_requests": True
                         }
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
@@ -283,13 +278,7 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set("security", "security_conf", {
                         "comment": "External authentication, external authorization",
                         "authentication": {
-                            "procedure": "external",
-                            "server_uuid": runtimes[0].node_id
-                        },
-                        "authorization": {
                             "procedure": "external"
-#                            "procedure": "external",
-#                            "server_uuid": runtimes[0].node_id
                         }
                     })
 

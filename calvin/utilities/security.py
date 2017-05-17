@@ -218,7 +218,7 @@ class Security(object):
         and includes timestamps and information about sender and receiver.
         """
         try:
-            auth_server_id = self.sec_conf['authentication']['server_uuid']
+            auth_server_id = self.node.authentication.auth_server_id
             payload = {
                 "iss": self.node.id,
                 "aud": auth_server_id,

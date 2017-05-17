@@ -343,6 +343,7 @@ class Node(object):
                             authorization_check=False, callback=CalvinCB(migrated, actor_id=actor.id))
 
     def _storage_started_cb(self, *args, **kwargs):
+        self.authentication.find_authentication_server()
         self.authorization.register_node()
 
 def setup_logging(filename):

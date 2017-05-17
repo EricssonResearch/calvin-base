@@ -200,6 +200,7 @@ class CA():
         self.config = ConfigParser.SafeConfigParser()
         self.config.optionxform = str
         self.enrollment_challenge_db = {}
+        self.allowed_authentication_servers = None
         self.allowed_authorization_servers = None
         os.umask(0077)
         self.domain = domain
@@ -775,6 +776,40 @@ class CA():
         except Exception as exc:
             _log.exception("Failed to create/update Certificate Enrollment Authority password database")
             raise
+
+    def add_new_authentication_server(self, node_name):
+        if not self.allowed_authentication_servers:
+            self._load_allowed_authentication_server_list()
+        self.allowed_authentication_servers.append(node_name)
+        self._update_allowed_authentication_server_file()
+
+    def _load_allowed_authentication_server_list(self):
+        _log.debug("_load_allowed_authentication_server_list")
+        auth_list_path = os.path.join(self.configuration["CA_default"]["dir"],"allowed_auth_list.json")
+        try:
+            with open(auth_list_path,'r') as f:
+                self.allowed_authentication_servers = f.read().splitlines()
+        except Exception as exc:
+            _log.debug("Failed to load allowed authentication server list, create empty list")
+            self.allowed_authentication_servers = []
+
+    def _update_allowed_authentication_server_file(self):
+        auth_list_path = os.path.join(self.configuration["CA_default"]["dir"],"allowed_auth_list.json")
+        try:
+            with open(auth_list_path,'w') as f:
+                for item in self.allowed_authentication_servers:
+                    f.write("%s\n" % item)
+        except Exception as exc:
+            _log.exception("Failed to create/update allowed authentication runtime list")
+            raise
+
+    def runtime_in_allowed_authentication_server_list(self, node_name):
+        if not self.allowed_authentication_servers:
+            self._load_allowed_authentication_server_list()
+        if node_name in self.allowed_authentication_servers:
+            return True
+        else:
+            return False
 
     def add_new_authorization_server(self, node_name):
         if not self.allowed_authorization_servers:

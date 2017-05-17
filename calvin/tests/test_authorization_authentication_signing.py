@@ -199,7 +199,7 @@ class TestSecurity(unittest.TestCase):
         ca.export_ca_cert(runtimes_truststore)
         #Define the runtime attributes
         for i in range(NBR_OF_RUNTIMES):
-             purpose = 'authzserver' if i==0 else ""
+             purpose = 'CA-authserver-authzserver' if i==0 else ""
              node_name ={'organization': org_name,
                          'purpose':purpose,
                          'name': 'testNode{}'.format(i)}

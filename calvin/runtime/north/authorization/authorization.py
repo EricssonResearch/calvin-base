@@ -108,8 +108,8 @@ class Authorization(object):
                         _log.debug("register_node: usage of local authorization server selected\n\tself.node={}".format(self.node))
                         self.pdp.register_node(self.node.id, self.node.attributes.get_indexed_public_with_keys())
                 else:
-                    _log.error("Please configure a authorization procedure")
-                    raise("Please configure a authorization procedure")
+                    _log.error("Please configure an authorization procedure")
+                    raise("Please configure an authorization procedure")
 
             except Exception as e:
                 _log.error("Node could not be registered for authorization - %s" % str(e))
@@ -160,10 +160,10 @@ class Authorization(object):
                 _log.error("Failed to verify the authorization servers certificate from storage, err={}".format(err))
                 raise
         if not "authzserver" in certificate.cert_CN(certstr):
-            _log.error("The authorization server IS NOT certified by the CA as an authorization server, let's try another one.")
+            _log.error("The runtime IS NOT certified by the CA as an authorization server, let's try another one.")
             self._register_node_cb(key=authz_list_key, value=authz_list)
         else:
-            _log.info("The authorization server IS certified by the CA as an authorization server")
+            _log.info("The runtime IS certified by the CA as an authorization server")
             self.register_node_external()
 
 

@@ -198,7 +198,7 @@ class TestSecurity(unittest.TestCase):
         ca.export_ca_cert(runtimes_truststore)
         #Define the runtime attributes
         for i in range(NBR_OF_RUNTIMES):
-             purpose = 'authzserver' if i==0 else ""
+             purpose = 'CA-authserver-authzserver' if i==0 else ""
              node_name ={'organization': org_name,
                          'purpose':purpose,
                          'name': 'testNode{}'.format(i)}
@@ -215,7 +215,6 @@ class TestSecurity(unittest.TestCase):
              rt_attributes.append(rt_attribute)
         rt_attributes_cpy = deepcopy(rt_attributes)
 
-        runtimes=[]
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
                                                          security_dir=credentials_testdir)
@@ -233,6 +232,7 @@ class TestSecurity(unittest.TestCase):
             nodeid = calvinuuid.uuid("")
             #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
             if "testNode0" in node_name or "testNode1" in node_name:
+                ca.add_new_authentication_server(node_name)
                 ca.add_new_authorization_server(node_name)
             enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
             enrollment_passwords.append(enrollment_password)
@@ -241,7 +241,6 @@ class TestSecurity(unittest.TestCase):
                                                            security_dir=credentials_testdir,
                                                            nodeid=nodeid,
                                                            enrollment_password=enrollment_password)
-            runtimes.append(runtime)
 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
@@ -273,17 +272,14 @@ class TestSecurity(unittest.TestCase):
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
 
-        # Runtime 1: local authentication, signature verification, local authorization.
+        # Other runtimes: external authentication, external authorization.
         rt_conf.set("security", "security_conf", {
                         "comment": "External authentication, external authorization",
                         "authentication": {
-                            "procedure": "external",
-                            "server_uuid": runtimes[0].node_id
+                            "procedure": "external"
                         },
                         "authorization": {
                             "procedure": "external"
-#                            "procedure": "external",
-#                            "server_uuid": runtimes[0].node_id
                         }
                     })
 
