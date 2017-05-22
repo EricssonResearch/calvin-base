@@ -32,6 +32,7 @@ _MODULES = {'async': ['DelayedCall', 'run_ioloop', 'stop_ioloop'],
             'defer': [],
             'threads': [],
             'server_connection': ['ServerProtocolFactory', 'LineProtocol', 'RawDataProtocol'],
+            'sse_event_source': ['EventSource'],
             'client_connection': ['ClientProtocolFactory'],
             'http_client': ['HTTPClient']}
 
