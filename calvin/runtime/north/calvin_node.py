@@ -22,6 +22,7 @@ import trace
 import logging
 
 from calvin.calvinsys import Sys as CalvinSys
+from calvin.runtime.north.calvinsys import calvinsys
 
 from calvin.runtime.north import actormanager
 from calvin.runtime.north import replicationmanager
@@ -115,6 +116,7 @@ class Node(object):
         self.sched = _scheduler(self, self.am, self.monitor)
         self.async_msg_ids = {}
         self._calvinsys = CalvinSys(self)
+        self._sys = calvinsys(self)
 
         # Default will multicast and listen on all interfaces
         # TODO: be able to specify the interfaces
@@ -206,6 +208,10 @@ class Node(object):
         # @TODO: Write node capabilities to storage
         return self._calvinsys
 
+    def get_calvinsys(self):
+        """Return the calvinsys instance"""
+        return self._sys
+
     #
     # Event loop
     #
@@ -269,7 +275,7 @@ class Node(object):
         for actor in actors:
             self.am.destroy(actor.id)
                 # and die - hopefully, things should clean up nicely within reasonable time
-        
+
         def poll_deleted(retry):
             if self.am.actors:
                 _log.info("{} actors remaining, rechecking in {} secs".format(len(self.am.actors)))

@@ -293,6 +293,7 @@ class Actor(object):
         self._managed = set(('_id', '_name', '_has_started', '_deployment_requirements', '_signature', '_subject_attributes', '_migration_info', "_port_property_capabilities", "_replication_data"))
         self._has_started = False
         self._calvinsys = None
+        self.calvinsys = None
         self._using = {}
         # self.control = calvincontrol.get_calvincontrol()
         # self.metering = metering.get_metering()
@@ -333,7 +334,7 @@ class Actor(object):
         if not self._has_started:
             self.will_start()
             self._has_started = True
-        
+
     def will_start(self):
         """Override in actor subclass if actions need to be taken before starting."""
         pass

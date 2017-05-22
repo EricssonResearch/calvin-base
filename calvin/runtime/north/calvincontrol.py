@@ -931,7 +931,7 @@ class CalvinControl(object):
                 )
             except Exception as exc:
                 _log.exception("Failed to check security policy, exc={}".format(exc))
-                return _handle_policy_decision(access_decision=False, arguments=arguments, org_cb=org_cb, issue_tracker=issue_tracker) 
+                return _handle_policy_decision(access_decision=False, arguments=arguments, org_cb=org_cb, issue_tracker=issue_tracker)
 
         def _handle_policy_decision(access_decision, arguments=None, org_cb=None, issue_tracker=None):
             _log.debug("CalvinControl::_handle_policy_decision:\n\tauthorization_decision={}\n\targuments={}\n\ttorg_cb={}".format(access_decision, arguments, org_cb))
@@ -1256,7 +1256,7 @@ class CalvinControl(object):
     def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
         """ Get capabilities from this node
         """
-        self.send_response(handle, connection, json.dumps(self.node._calvinsys.list_capabilities()))
+        self.send_response(handle, connection, json.dumps(self.node._calvinsys.list_capabilities() + self.node.get_calvinsys().list_capabilities()))
 
     def handle_peer_setup(self, handle, connection, match, data, hdr):
         _log.analyze(self.node.id, "+", data)
@@ -1689,10 +1689,10 @@ class CalvinControl(object):
             stop_method = self.node.stop_with_migration
         else: # Clean up
             stop_method = self.node.stop_with_cleanup
-        
+
         async.DelayedCall(.2, stop_method)
         self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
-        
+
 
     @authentication_decorator
     def handle_disconnect(self, handle, connection, match, data, hdr):

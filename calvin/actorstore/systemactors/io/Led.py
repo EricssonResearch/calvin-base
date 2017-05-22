@@ -14,38 +14,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, condition
 
-class Button(Actor):
+
+class Led(Actor):
+
     """
-    Handle a button and trigger on state changes.
-
-    Output:
-      state : Button state 1=pressed, 0=not pressed
+    Set state of a LED (Light Emitting Diode)
+    Input:
+      state : 1/0 for on/off
     """
 
-    @manage(include = ["text"])
-    def init(self, text="Button"):
-        self.button = None
-        self.text = text
+    def init(self):
+        self.led = None
         self.setup()
 
     def setup(self):
-        self.button = self.calvinsys.open("io.button", text=self.text)
+        self.led = self.calvinsys.open("io.led")
 
     def will_migrate(self):
-        self.calvinsys.close(self.button)
+        self.calvinsys.close(self.led)
 
     def will_end(self):
-        self.calvinsys.close(self.button)
+        self.calvinsys.close(self.led)
 
     def did_migrate(self):
         self.setup()
 
-    @stateguard(lambda self: self.button and self.calvinsys.can_read(self.button))
-    @condition([], ["state"])
-    def trigger(self):
-        return (self.calvinsys.read(self.button),)
+    @condition(action_input=("state",))
+    def set_state(self, state):
+        self.calvinsys.write(self.led, state)
 
-    action_priority = (trigger, )
-    requires = ['io.button']
+    action_priority = (set_state, )
+    requires = ["io.led"]

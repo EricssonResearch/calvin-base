@@ -29,6 +29,9 @@ class DummyNode:
     def calvinsys(self):
         return None
 
+    def get_calvinsys(self):
+        return None
+
 class _DummyRepSet:
     def __init__(self):
         self.id = calvinuuid.uuid("")

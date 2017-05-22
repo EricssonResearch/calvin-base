@@ -117,6 +117,7 @@ class ActorManager(object):
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
             raise(e)
         a._calvinsys = self.node.calvinsys()
+        a.calvinsys = self.node.get_calvinsys()
         if isinstance(access_decision, tuple):
             # Authorization checks needed if access_decision is a tuple.
             a.set_authorization_checks(access_decision[1])
@@ -275,14 +276,14 @@ class ActorManager(object):
         """Check requirements and security policy for actor."""
         # Check if node has the capabilities required by the actor.
         for req in requirements:
-            if not self.node.calvinsys().has_capability(req):
+            if not self.node.calvinsys().has_capability(req) and not self.node.get_calvinsys().has_capability(req):
                 raise Exception("Actor requires %s" % req)
         if security_enabled():
             # Check if access is permitted for the actor by the security policy.
             # Will continue directly with callback if authorization is not enabled.
             security.check_security_policy(callback, actor_id=actor_id, requires=['runtime'] + requirements,
                                             element_type="actor",
-                                            element_value=signer, 
+                                            element_value=signer,
                                             decision_from_migration=decision_from_migration)
         else:
             callback()
@@ -359,7 +360,7 @@ class ActorManager(object):
         if 'state' in kwargs:
             # Retry another node
             self.node.proto.actor_new(
-                node_id, 
+                node_id,
                 CalvinCB(self._robust_migrate_cb, actor_id=actor_id, node_ids=node_ids, callback=callback),
                 kwargs.get('actor_type', None), kwargs.get('state', None), kwargs.get('ports', None))
         else:

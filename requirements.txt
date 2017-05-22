@@ -15,3 +15,4 @@ PyJWT==1.4.0
 ndg-httpsclient==0.4.2
 pyasn1==0.1.9
 pystache==0.5.4
+jsonschema==2.6.0

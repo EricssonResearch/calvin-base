@@ -586,6 +586,8 @@ class Storage(object):
         try:
             for c in node._calvinsys.list_capabilities():
                 self.add_index(['node', 'capabilities', c], node.id, root_prefix_level=3)
+            for c in node.get_calvinsys().list_capabilities():
+                self.add_index(['node', 'capabilities', c], node.id, root_prefix_level=3)
         except:
             _log.debug("Add node capabilities failed", exc_info=True)
             pass
