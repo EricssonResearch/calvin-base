@@ -24,22 +24,17 @@ class SSEHandler(object):
     def __init__(self, node, actor):
         super(SSEHandler, self).__init__()
         self.node   = node
-        self.server = None
+        self.eventsource = None
         self._actor = actor
 
     def start(self, port):
-        print "START", port
-        self.server = sse_event_source.EventSource(port)
-        # return self.server
+        self.eventsource = sse_event_source.EventSource(port)
 
     def stop(self):
-        print "STOP", self
-        # self.server.stop()
+        self.eventsource.stop()
 
     def broadcast(self, payload):
-        # print "BROADCAST", self.server._eventsource, payload
-        self.server.broadcast(payload)
-
+        self.eventsource.broadcast(payload)
 
 def register(node, actor):
     """
