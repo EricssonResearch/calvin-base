@@ -1,0 +1,4 @@
+src : io.Switch()
+snk : io.Print()
+
+src.state > snk.token
