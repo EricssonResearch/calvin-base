@@ -4,34 +4,48 @@ from twisted.internet import reactor
 
 class SimpleSSE(resource.Resource):
     isLeaf = True
-    connections = []
+    client_ids = {}
 
     def responseCallback(self, err, request):
         request.finish
         print('Connection was either disconnected/error from: ' + str(request))
-        self.connections.remove(request)
+        keylist = [k for k,v in client_ids.iteritems() if v == request]
+        for key in keylist:
+            client_ids.pop(key)
+
+    def _validate_connection(self, postpath):
+        if len(postpath) is not 2:
+            return None
+        if postpath[0] != "client_id" or postpath[1] == "":
+            return None
+        return postpath[1]
 
     def render_GET(self, request):
+        client_id = self._validate_connection(request.postpath)
+        if not client_id:
+            request.setResponseCode(400)
+            return "Bad Request\n"
+
         request.setHeader('Content-Type',
                           'text/event-stream; charset=utf-8')
         request.setHeader("Access-Control-Allow-Origin", "*")
         request.write("")
         request.notifyFinish().addErrback(self.responseCallback, request)
-        self.connections.append(request)
-        return server.NOT_DONE_YET  # 1. Persist the connection
+        self.client_ids[client_id] = request
+        return server.NOT_DONE_YET
 
     def _send(self, request, msg):
         fmt_msg = "data: {}\r\n".format(msg)
         request.write(fmt_msg + '\r\n')
 
     def send(self, client_id, msg):
-        if client_id < 0 or client_id >= len(connections):
+        if client_id not in client_ids:
             print "No such client"
             return
-        self._send(connections[client_id], msg)
+        self._send(client_ids[client_id], msg)
 
     def broadcast(self, msg):
-        for request in self.connections:
+        for request in self.client_ids.values():
             self._send(request=request, msg=msg)
 
 class EventSource(object):
@@ -44,8 +58,8 @@ class EventSource(object):
     def stop(self):
         print "FIXME: Implement STOP"
 
-    def broadcast(self, msg="Hello, World!"):
+    def broadcast(self, msg):
         self._eventsource.broadcast(msg)
 
-    def send(self, client_id, msg="Hello, World!"):
+    def send(self, client_id, msg):
         self._eventsource.send(client_id, msg)

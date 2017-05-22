@@ -31,8 +31,9 @@ class EventSource(Actor):
       token : a token to be sent to clients
     """
 
-    @manage([])
-    def init(self):
+    @manage(['port'])
+    def init(self, port):
+        self.port = port
         self.setup()
 
     def did_migrate(self):
@@ -50,12 +51,11 @@ class EventSource(Actor):
     def setup(self):
         self.use('calvinsys.network.ssehandler', shorthand='sse')
         self.publisher = self['sse']
-        self.publisher.start(8082)
+        self.publisher.start(self.port)
 
     @condition(action_input=["token"])
     def broadcast(self, tok):
         s = json.dumps(tok)
-        print "ACTION!", self.publisher, s
         self.publisher.broadcast(s)
 
     action_priority = (broadcast, )
