@@ -26,6 +26,7 @@ class Switch(Actor):
 
     @manage([])
     def init(self):
+<<<<<<< 8be16876ec5436d62b9013877eb74d46a66834bf
         self.switch = None
         self.setup()
         # self.use("calvinsys.io.switch", shorthand="switch")
