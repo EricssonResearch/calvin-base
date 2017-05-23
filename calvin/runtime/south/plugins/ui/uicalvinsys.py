@@ -3,7 +3,6 @@ _sensor_callbacks = {}
 _sensor_states = {}
 
 def register_sensor(actor_id, callback):
-    print "REGISTER", actor_id
     if callback:
         _sensor_callbacks[actor_id] = callback
     else:
@@ -15,7 +14,6 @@ def register_sensor(actor_id, callback):
 def update(data):
     actor_id = data.get('client_id')
     state = data.get('state')
-    print "Update", actor_id, data
     if actor_id in _sensor_callbacks:
         _sensor_callbacks[actor_id](state)
         return 200

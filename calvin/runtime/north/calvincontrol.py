@@ -192,7 +192,6 @@ class CalvinControl(object):
                 msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
                 self.tunnel_client.send(msg)
 
-
     #
     # Logging hooks
     #
