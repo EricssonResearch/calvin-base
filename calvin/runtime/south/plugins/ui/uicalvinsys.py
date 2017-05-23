@@ -1,3 +1,5 @@
+from calvin.requests import calvinresponse
+
 
 _sensor_callbacks = {}
 _sensor_states = {}
@@ -16,8 +18,8 @@ def update(data):
     state = data.get('state')
     if actor_id in _sensor_callbacks:
         _sensor_callbacks[actor_id](state)
-        return 200
+        return calvinresponse.OK
     if actor_id in _sensor_states:
         _sensor_states[actor_id] = state
-        return 200
-    return 404
+        return calvinresponse.OK
+    return calvinresponse.NOT_FOUND
