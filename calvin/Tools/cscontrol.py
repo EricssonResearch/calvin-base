@@ -25,9 +25,9 @@ _log = get_logger(__name__)
 _request_handler = None
 
 
-def get_request_handler():
+def get_request_handler(verify=None):
     from calvin.requests.request_handler import RequestHandler
-    return _request_handler if _request_handler else RequestHandler()
+    return _request_handler if _request_handler else RequestHandler(verify=verify)
 
 
 def control_id(args):
@@ -64,6 +64,7 @@ def requirements_file(path):
 
 
 def control_deploy(args):
+    import os
     response = None
     reqs = requirements_file(args.reqs) if args.reqs else None
     if args.signer:
@@ -82,9 +83,22 @@ def control_deploy(args):
             content = Security.verify_signature_get_files(args.script.name, skip_file=True)
             if content:
                 content['file'] = source_text
+    if args.security_dir:
+        security_dir=args.security_dir
+    else:
+        security_dir=None
+    if "https" in args.node:
+        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
+                                                         security_dir=security_dir)
+        #   The following is less than optimal if multiple CA certs exist
+        ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
+    else:
+        ca_cert_path = None
     try:
-        response = get_request_handler().deploy_application(args.node, args.script.name, source_text, reqs,
-                                            credentials=credentials_, content=content, check=args.check)
+        req_handler = get_request_handler(verify=ca_cert_path)
+        req_handler.set_credentials(credentials_)
+        response = req_handler.deploy_application(args.node, args.script.name, source_text, reqs,
+                                            content=content, check=args.check)
     except Exception as e:
         print e
     return response
@@ -198,6 +212,9 @@ def parse_args():
                            help='Supply credentials to run program under '
                                 'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
                            dest='credentials', default=None)
+    cmd_deploy.add_argument('--security_dir', metavar='<security_dir>', type=str,
+                           help='Path to the runtimes credentials dir if not using the default location',
+                           dest='security_dir', default=None)
 
     cmd_deploy.add_argument('--sign-org', metavar='<signer>', type=str,
                            help='Sign the app before deploy, using this code signing organization name supplied',

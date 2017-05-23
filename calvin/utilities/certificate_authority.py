@@ -254,6 +254,7 @@ class CA():
         out = self.configuration["CA_default"]["certificate"]
 
         password_file = os.path.join(private, "ca_password")
+        enrollment_challenge_db_file = os.path.join(private, "enrollment_challenge_db.json")
 
         os.umask(0077)
         try:
@@ -283,10 +284,16 @@ class CA():
         # store it in the password file
         password = self.generate_password(20)
         try:
+            with open(enrollment_challenge_db_file,'w') as fd:
+                fd.write("{}")
+        except Exception as err:
+            _log.error("Failed to creat CA enrollment_challenge_db file")
+            raise
+        try:
             with open(password_file,'w') as fd:
                 fd.write(password)
         except Exception as err:
-            _log.err("Failed to write CA password to file")
+            _log.error("Failed to write CA password to file")
             raise
         # Generate keys and CA certificate
         log = subprocess.Popen(["openssl", "req",

@@ -1891,7 +1891,6 @@ class CalvinControl(object):
     @authentication_decorator
     def handle_edit_authentication_users_db(self, handle, connection, match, data, hdr):
         """Edit users database"""
-        # TODO: need some kind of authentication for policy management
         if 'users_db'in data:
             try:
     #            self.node.authentication.arp.update_users_db(data, match.group(1))
