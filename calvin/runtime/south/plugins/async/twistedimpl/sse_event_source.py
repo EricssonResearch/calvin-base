@@ -1,9 +1,11 @@
 from twisted.web import server, resource
 from twisted.internet import reactor
+import json
 
 
 class SimpleSSE(resource.Resource):
     isLeaf = True
+    # FIXME: Rename connnections
     client_ids = {}
 
     def responseCallback(self, err, request):
@@ -34,19 +36,19 @@ class SimpleSSE(resource.Resource):
         self.client_ids[client_id] = request
         return server.NOT_DONE_YET
 
-    def _send(self, request, msg):
-        fmt_msg = "data: {}\r\n".format(msg)
+    def _send(self, request, data):
+        fmt_msg = "data: {}\r\n".format(json.dumps(data))
         request.write(fmt_msg + '\r\n')
 
-    def send(self, client_id, msg):
-        if client_id not in client_ids:
+    def send(self, client_id, data):
+        if client_id not in self.client_ids:
             print "No such client"
             return
-        self._send(client_ids[client_id], msg)
+        self._send(client_ids[client_id], data)
 
-    def broadcast(self, msg):
+    def broadcast(self, data):
         for request in self.client_ids.values():
-            self._send(request=request, msg=msg)
+            self._send(request, data)
 
 class EventSource(object):
     """docstring for EventSource"""
@@ -58,8 +60,8 @@ class EventSource(object):
     def stop(self):
         print "FIXME: Implement STOP"
 
-    def broadcast(self, msg):
-        self._eventsource.broadcast(msg)
+    def broadcast(self, data):
+        self._eventsource.broadcast(data)
 
-    def send(self, client_id, msg):
-        self._eventsource.send(client_id, msg)
+    def send(self, client_id, data):
+        self._eventsource.send(client_id, data)
