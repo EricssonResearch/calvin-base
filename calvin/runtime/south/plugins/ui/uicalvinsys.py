@@ -16,7 +16,6 @@ def register_sensor(actor_id, callback):
         _sensor_states[actor_id] = {}
 
 def register_actuator(actor_id):
-    print "ui.calvinsys::register_actuator", actor_id
     _actuators.append(actor_id)
 
 # FIXME: Rename update_actor
