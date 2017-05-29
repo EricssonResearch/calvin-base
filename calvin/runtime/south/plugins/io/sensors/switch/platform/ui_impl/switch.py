@@ -27,5 +27,5 @@ class Switch(base_switch.SwitchBase):
     """
     def __init__(self, node, actor, switch_callback):
         super(Switch, self).__init__(node, actor, switch_callback)
-        ui.register_sensor(actor._id, switch_callback)
+        ui.register_sensor(actor, switch_callback)
 

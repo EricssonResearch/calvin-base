@@ -27,10 +27,10 @@ class LED(base_led.LEDBase):
     """
     def __init__(self, node, actor):
         super(LED, self).__init__(node, actor)
-        ui.register_actuator(actor._id)
+        ui.register_actuator(actor)
 
 
     def set_state(self, state):
-        ui.update_ui(self._actor._id, state)
+        ui.update_ui(self._actor, state)
 
 
