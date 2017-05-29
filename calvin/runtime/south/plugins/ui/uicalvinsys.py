@@ -59,6 +59,7 @@ def update(data):
     if actor_id in _sensor_states:
         _sensor_states[actor_id] = state
         return calvinresponse.OK
+    return calvinresponse.NOT_FOUND
 
 
 def update_ui(actor, data):
