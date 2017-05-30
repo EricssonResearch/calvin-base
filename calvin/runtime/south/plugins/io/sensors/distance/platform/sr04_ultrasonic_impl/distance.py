@@ -28,7 +28,7 @@ class Distance(base_distance.DistanceBase):
     """
         SR04 Ultrasonic distance sensor
     """
-    def __init__(self, node, data_callback):
+    def __init__(self, node, actor, data_callback):
         super(Distance, self).__init__(node, actor, data_callback)
         self._running = False
         self.distance = None
