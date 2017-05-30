@@ -41,6 +41,10 @@ class Distance(Actor):
     def did_migrate(self):
         self.setup()
 
+    def will_end(self):
+        self['distance'].stop()
+
+
     @stateguard(lambda self: self['distance'].has_data())
     @condition([], ['meters'])
     def measure(self):
