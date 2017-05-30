@@ -28,7 +28,7 @@ class Distance(base_distance.DistanceBase):
     def __init__(self, node, actor, data_callback):
         super(Distance, self).__init__(node, actor, data_callback)
         self.periodic = None
-        ui_def = {"image":"Distance", "controls":[{"sensor":True,  "type":"float", "min":0.0, "max":4.0}]}
+        ui_def = {"image":"Distance", "controls":[{"sensor":True,  "type":"float", "min":0.0, "max":4.0, "default":4.0}]}
         # Don't register this as a callback sensor since we use periodic callbacks
         ui.register_sensor(actor, None, ui_def=ui_def)
 

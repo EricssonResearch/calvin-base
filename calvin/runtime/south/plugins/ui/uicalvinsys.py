@@ -15,8 +15,7 @@ _default_ui_def = {"image":"", "controls":[{"sensor":False, "type":"boolean"}]}
 
 def add_ui_actuator(actor, ui_def):
     if ui_def is None:
-        ui_def = _default_ui_def.copy()
-        ui_def['image'] = "default_actuator"
+        ui_def = {"image":"KY-016", "controls":[{"sensor":False, "type":"boolean", "default":False}]}
     _ui_definitions[actor._type] = ui_def
 
     print ui_definitions()
@@ -24,9 +23,7 @@ def add_ui_actuator(actor, ui_def):
 
 def add_ui_sensor(actor, ui_def):
     if ui_def is None:
-        ui_def = _default_ui_def.copy()
-        ui_def['image'] = "default_sensor"
-        ui_def['controls'][0]['sensor'] = True
+        ui_def = {"image":"KY-004", "controls":[{"sensor":True, "type":"boolean", "default":False}]}
     _ui_definitions[actor._type] = ui_def
 
     print ui_definitions()
@@ -36,7 +33,11 @@ def register_sensor(actor, callback, ui_def=None):
     if callback:
         _sensor_callbacks[actor._id] = callback
     else:
-        _sensor_states[actor._id] = {}
+        try:
+            default = ui_def['controls'][0]['default']
+        except:
+            default = 0
+        _sensor_states[actor._id] = default;
     add_ui_sensor(actor, ui_def);
 
 
@@ -50,6 +51,7 @@ def ui_definitions():
 
 
 # FIXME: Rename update_actor
+# Sensors
 def update(data):
     actor_id = data.get('client_id')
     state = data.get('state')
@@ -61,7 +63,7 @@ def update(data):
         return calvinresponse.OK
     return calvinresponse.NOT_FOUND
 
-
+# Actuators
 def update_ui(actor, data):
     if actor._id in _actuators:
         _eventsource.broadcast({"client_id":actor._id, "state":data})
