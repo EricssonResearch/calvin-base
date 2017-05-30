@@ -21,48 +21,48 @@ from calvin.runtime.south.plugins.io.sensors.environmental import base_environme
 Read 1-wire temperature sensor. Needs w1-gpio and w1-therm modules:
     modprobe w1-gpio
     modprobe w1-therm
-    
+
     Do not forget to edit /boot/config.txt
         dtoverlay=w1-gpio
 """
-    
+
 class Environmental(base_environmental.EnvironmentalBase):
 
     """
     w1temp temperature sensor
     """
 
-    def __init__(self):
-        super(Environmental, self).__init__()
+    def __init__(self, node, actor):
+        super(Environmental, self).__init__(node, actor)
         self._base_dir = '/sys/bus/w1/devices/'
         self._device_folder = glob.glob(self._base_dir + '28*')[0]
         self._device_file = self._device_folder + '/w1_slave'
         self._temperature = None
-        
+
     def _read_temp_raw(self):
         try:
             with open(self._device_file, 'r') as fp:
                 return fp.readlines()
         except:
             return None
-        
+
     def _read_temp(self):
         lines = self._read_temp_raw()
         if not lines:
-            return 
+            return
         if lines and lines[0].strip()[-3:] != 'YES':
             # Nothing to read, will try later
             return
 
         equals_pos = lines[1].find('t=')
-    
+
         if equals_pos != -1:
             temp_string = lines[1][equals_pos + 2:]
             self._temperature = float(temp_string) / 1000.0
             # Round to nearest half-degree
             self._temperature = round(2*self._temperature, 0)/2.0
-        
+
     def get_temperature(self):
         self._read_temp()
         return self._temperature
-            
+

@@ -36,8 +36,8 @@ class Environmental(base_environmental.EnvironmentalBase):
     """
     Faked implementation of Environmental
     """
-    def __init__(self):
-        super(base_environmental.EnvironmentalBase, self).__init__()
+    def __init__(self, node, actor):
+        super(Environmental, self).__init__(node, actor)
         self._temp = 21.5
         self._humi = 62.5
         self._pres = 1.015

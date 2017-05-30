@@ -19,18 +19,18 @@ from calvin.runtime.south.plugins.io.sensors.environmental import base_environme
 
 
 class SenseHatResourceHandler(object):
-    
+
     sense_hat = SenseHat()
 
     def __init__(self):
         pass
-    
+
     def get_temperature(self):
         return self.sense_hat.get_temperature()
-        
+
     def get_humidity(self):
         return self.sense_hat.get_humidity()
-        
+
     def get_pressure(self):
         return self.sense_hat.get_pressure()
 
@@ -41,7 +41,8 @@ class Environmental(base_environmental.EnvironmentalBase):
     Raspberry Pi Sense HAT environmental sensors
     """
 
-    def __init__(self):
+    def __init__(self, node, actor):
+        super(Environmental, self).__init__(node, actor)
         self.sense = SenseHatResourceHandler()
 
     def get_temperature(self):

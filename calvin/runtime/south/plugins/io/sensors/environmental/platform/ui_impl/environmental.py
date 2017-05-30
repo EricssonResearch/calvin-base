@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,31 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from calvin.runtime.south.plugins.io.sensors.environmental import base_environmental
+import calvin.runtime.south.plugins.ui.uicalvinsys as ui
 
-class EnvironmentalBase(object):
 
+class Environmental(base_environmental.EnvironmentalBase):
     """
-    Base class for environmental sensor
+    UI implementation of Environmental temperature
     """
     def __init__(self, node, actor):
-        super(EnvironmentalBase, self).__init__()
-        self._node = node
-        self._actor = actor
+        super(Environmental, self).__init__(node, actor)
+        ui_def = {"image":"KY-013", "controls":[{"sensor":True,  "type":"float", "min":-20.0, "max":80.0, "default":20.0}]}
+        ui.register_sensor(actor, None, ui_def=ui_def)
 
     def get_temperature(self):
-        """
-        returns: float with current temperature in degress Celsius
-        """
-        raise NotImplementedError()
-
-    def get_humidity(self):
-        """
-        returns: float with percentage of relative humidity
-        """
-        raise NotImplementedError()
-
-    def get_pressure(self):
-        """
-        returns: float with pressure in millibars
-        """
-        raise NotImplementedError()
+        return ui.sensor_state(self._actor)
