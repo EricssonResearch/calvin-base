@@ -19,6 +19,7 @@ class DistanceBase(object):
     def __init__(self, node, actor, distance_callback):
         super(DistanceBase, self).__init__()
         self._node = node
+        self._actor = actor
         self._new_measurement = distance_callback
 
     def start(self, frequency):
