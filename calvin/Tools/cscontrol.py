@@ -31,12 +31,14 @@ def get_request_handler(verify=None):
 
 
 def control_id(args):
-    return get_request_handler().get_node_id(args.node)
+    req_handler= handle_security_arguments(args)
+    return req_handler.get_node_id(args.node)
 
 
 def get_node_info(control_uri, node_id):
+    req_handler= handle_security_arguments(args)
     try:
-        return get_request_handler().get_node(control_uri, node_id)
+        return req_handler.get_node(control_uri, node_id)
     except:
         raise Exception("No node with id {} found".format(node_id))
 
@@ -62,27 +64,14 @@ def requirements_file(path):
         return {}
     return reqs
 
-
-def control_deploy(args):
+def handle_security_arguments(args):
     import os
-    response = None
-    reqs = requirements_file(args.reqs) if args.reqs else None
-    if args.signer:
-        conf = certificate.Config(configfile=None, domain=args.signer, readonly=True)
-        certificate.sign_file(conf, args.script.name)
-    source_text = args.script.read()
-    credentials_ = None
-    content = None
     if args.credentials:
         try:
             credentials_ = json.loads(args.credentials)
         except Exception as e:
             print "Credentials not JSON:\n", e
-            return -1
-        if credentials_:
-            content = Security.verify_signature_get_files(args.script.name, skip_file=True)
-            if content:
-                content['file'] = source_text
+            return None,-1
     if args.security_dir:
         security_dir=args.security_dir
     else:
@@ -94,9 +83,25 @@ def control_deploy(args):
         ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
     else:
         ca_cert_path = None
+    req_handler = get_request_handler(verify=ca_cert_path)
+    req_handler.set_credentials(credentials_)
+    return req_handler
+
+def control_deploy(args):
+    response = None
+    reqs = requirements_file(args.reqs) if args.reqs else None
+    if args.signer:
+        conf = certificate.Config(configfile=None, domain=args.signer, readonly=True)
+        certificate.sign_file(conf, args.script.name)
+    source_text = args.script.read()
+    credentials_ = None
+    content = None
+    if args.credentials:
+        content = Security.verify_signature_get_files(args.script.name, skip_file=True)
+        if content:
+            content['file'] = source_text
+    req_handler= handle_security_arguments(args)
     try:
-        req_handler = get_request_handler(verify=ca_cert_path)
-        req_handler.set_credentials(credentials_)
         response = req_handler.deploy_application(args.node, args.script.name, source_text, reqs,
                                             content=content, check=args.check)
     except Exception as e:
@@ -105,53 +110,56 @@ def control_deploy(args):
 
 
 def control_actors(args):
+    req_handler= handle_security_arguments(args)
     if args.cmd == 'list':
-        return get_request_handler().get_actors(args.node)
+        return req_handler.get_actors(args.node)
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No actor id given")
-        return get_request_handler().get_actor(args.node, args.id)
+        return req_handler.get_actor(args.node, args.id)
     elif args.cmd == 'delete':
         if not args.id:
             raise Exception("No actor id given")
-        return get_request_handler().delete_actor(args.node, args.id)
+        return req_handler.delete_actor(args.node, args.id)
     elif args.cmd == 'migrate':
         if not args.id or not args.peer_node:
             raise Exception("No actor or peer given")
-        return get_request_handler().migrate(args.node, args.id, args.peer_node)
+        return req_handler.migrate(args.node, args.id, args.peer_node)
 
 
 def control_applications(args):
+    req_handler= handle_security_arguments(args)
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No application id given")
-        return get_request_handler().get_application(args.node, args.id)
+        return req_handler.get_application(args.node, args.id)
     elif args.cmd == 'list':
-        return get_request_handler().get_applications(args.node)
+        return req_handler.get_applications(args.node)
     elif args.cmd == 'delete':
         if not args.id:
             raise Exception("No application id given")
-        return get_request_handler().delete_application(args.node, args.id)
+        return req_handler.delete_application(args.node, args.id)
     elif args.cmd == 'migrate':
         if not args.id:
             raise Exception("No application id given")
         deploy_info = requirements_file(args.reqs) if args.reqs else None
-        return get_request_handler().migrate_app_use_req(rt=args.node, application_id=args.id, deploy_info=deploy_info)
+        return req_handler.migrate_app_use_req(rt=args.node, application_id=args.id, deploy_info=deploy_info)
 
 
 def control_nodes(args):
     from requests.exceptions import ConnectionError
+    req_handler= handle_security_arguments(args)
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No node id given")
-        return get_request_handler().get_node(args.node, args.id)
+        return req_handler.get_node(args.node, args.id)
     elif args.cmd == 'list':
-        return get_request_handler().get_nodes(args.node)
+        return req_handler.get_nodes(args.node)
     elif args.cmd == 'add':
-        return get_request_handler().peer_setup(args.node, *(args.peerlist + [ args.id ]))
+        return req_handler.peer_setup(args.node, *(args.peerlist + [ args.id ]))
     elif args.cmd == 'stop':
         try:
-            return get_request_handler().quit(args.node)
+            return req_handler.quit(args.node)
         except ConnectionError:
             # If the connection goes down before response that is OK
             return None
@@ -160,20 +168,20 @@ def control_nodes(args):
 def control_storage(args):
     from calvin.utilities.attribute_resolver import format_index_string
     import json
-    request_handler = get_request_handler()
+    req_handler= handle_security_arguments(args)
     if args.cmd == 'get_index':
         try:
             index = json.loads(args.index)
         except:
             raise Exception("Malformed JSON index string:\n%s" % args.index)
         formated_index = format_index_string(index)
-        return request_handler.get_index(args.node, formated_index)
+        return req_handler.get_index(args.node, formated_index)
     elif args.cmd == 'raw_get_index':
         try:
             index = json.loads(args.index)
         except:
             raise Exception("Malformed JSON index string:\n%s" % args.index)
-        return request_handler.get_index(args.node, index)
+        return req_handler.get_index(args.node, index)
 
 
 def parse_args():
@@ -182,6 +190,13 @@ def parse_args():
     argparser = argparse.ArgumentParser(description=long_desc)
     argparser.add_argument('node', metavar="<control uri>",
                            help="control uri of node")
+    argparser.add_argument('--credentials', metavar='<credentials>', type=str,
+                           help='Supply credentials to run program under '
+                                'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
+                           dest='credentials', default=None)
+    argparser.add_argument('--security_dir', metavar='<security_dir>', type=str,
+                           help='Path to the runtimes credentials dir if not using the default location',
+                           dest='security_dir', default=None)
     cmdparsers = argparser.add_subparsers()
 
     # parser for id cmd
@@ -208,14 +223,6 @@ def parse_args():
     cmd_deploy.add_argument('-c', '--no-check', dest='check', action='store_false', default=True,
                            help='Don\'t verify if actors or components are correct, ' +
                                 'allows deployment of actors not known on the node')
-    cmd_deploy.add_argument('--credentials', metavar='<credentials>', type=str,
-                           help='Supply credentials to run program under '
-                                'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
-                           dest='credentials', default=None)
-    cmd_deploy.add_argument('--security_dir', metavar='<security_dir>', type=str,
-                           help='Path to the runtimes credentials dir if not using the default location',
-                           dest='security_dir', default=None)
-
     cmd_deploy.add_argument('--sign-org', metavar='<signer>', type=str,
                            help='Sign the app before deploy, using this code signing organization name supplied',
                            dest='signer', default=None)
