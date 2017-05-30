@@ -26,23 +26,23 @@ class Distance(object):
     def __init__(self, node, actor):
         self._node = node
         self._actor = actor
-        self._distance = distance.Distance(node, self._new_measurement)
+        self._distance = distance.Distance(node, actor, self._new_measurement)
         self._has_data = False
-        
+
     def _new_measurement(self, measurement):
         self._measurement = measurement
         self._has_data = True
         self._node.sched.trigger_loop(actor_ids=[self._actor])
-        
+
     def start(self, frequency):
         self._distance.start(frequency)
-    
+
     def stop(self):
         self._distance.stop()
-        
+
     def has_data(self):
         return self._has_data
-        
+
     def read(self):
         if self._has_data:
             self._has_data = False

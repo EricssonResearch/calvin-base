@@ -29,14 +29,14 @@ class Distance(base_distance.DistanceBase):
         SR04 Ultrasonic distance sensor
     """
     def __init__(self, node, data_callback):
-        super(Distance, self).__init__(node, data_callback)        
+        super(Distance, self).__init__(node, actor, data_callback)
         self._running = False
         self.distance = None
         self._node = node
         self._new_measurement = data_callback
         self.t_0 = time()
         self.retry = None
-        
+
         config = self._node.attributes.get_private("/hardware/sr04_ultrasonic")
         trig_pin = config.get('trig_pin', None)
         echo_pin = config.get('echo_pin', None)
@@ -44,7 +44,7 @@ class Distance(base_distance.DistanceBase):
 
         self.trig_pin = gpiopin.GPIOPin(None, trig_pin, "o", None)
         self.echo_pin = gpiopin.GPIOPin(self._echo_callback, echo_pin, "i", None)
-  
+
     def start(self, frequency=0.5):
         self._frequency = frequency
         try :
@@ -55,20 +55,20 @@ class Distance(base_distance.DistanceBase):
             #                      callback=self._echo_callback)
         except Exception as e:
             _log.error("Could not setup event detect: %r" % (e, ))
-            
+
         # Start measuring
         self._next_measurement()
 
     def cb_error(self, *args, **kwargs):
         _log.error("%r: %r" % (args, kwargs))
-    
-    
+
+
     def _setup_next(self):
         if self.retry and self.retry.active():
             # retry in progress, skip
             return
         self.retry = async.DelayedCall(1/self._frequency, self._next_measurement)
-        
+
     def _next_measurement(self):
         # self.in_progress = async.DelayedCall(self._delay, self._measure)
         self.in_progress = threads.defer_to_thread(self._measure)
@@ -90,8 +90,8 @@ class Distance(base_distance.DistanceBase):
         self.distance = self.distance / 100.0 # m
         async.call_from_thread(self._new_measurement, self.distance)
         async.call_from_thread(self._setup_next)
-        
-        
+
+
     def stop(self):
         if self._running :
             if self.retry and self.retry.iactive() :

@@ -15,11 +15,19 @@
 # limitations under the License.
 
 
-class DistanceBase(object):
-    def __init__(self, node, actor, distance_callback):
-        super(DistanceBase, self).__init__()
-        self._node = node
-        self._new_measurement = distance_callback
+from calvin.runtime.south.plugins.io.sensors.distance import base_distance
+import calvin.runtime.south.plugins.ui.uicalvinsys as ui
+
+
+class Distance(base_distance.DistanceBase):
+
+    """
+        Virtual distance sensor
+    """
+    def __init__(self, node, actor, data_callback):
+        super(Distance, self).__init__(node, actor, data_callback)
+        ui_def = {"image":"Distance", "controls":[{"sensor":True,  "type":"float", "min":0.0, "max":4.0}]}
+        ui.register_sensor(actor, data_callback, ui_def=ui_def)
 
     def start(self, frequency):
         pass
