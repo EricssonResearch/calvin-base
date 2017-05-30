@@ -16,6 +16,7 @@
 
 
 from calvin.runtime.south.plugins.io.sensors.distance import base_distance
+from calvin.runtime.south.plugins.async import async
 import calvin.runtime.south.plugins.ui.uicalvinsys as ui
 
 
@@ -26,11 +27,26 @@ class Distance(base_distance.DistanceBase):
     """
     def __init__(self, node, actor, data_callback):
         super(Distance, self).__init__(node, actor, data_callback)
+        self.periodic = None
         ui_def = {"image":"Distance", "controls":[{"sensor":True,  "type":"float", "min":0.0, "max":4.0}]}
-        ui.register_sensor(actor, data_callback, ui_def=ui_def)
+        # Don't register this as a callback sensor since we use periodic callbacks
+        ui.register_sensor(actor, None, ui_def=ui_def)
+
+    def _periodic_callback(self):
+        value = ui.sensor_state(self._actor)
+        self._new_measurement(value)
+        # Reload timer
+        self.periodic = async.DelayedCall(self.delay, self._periodic_callback)
 
     def start(self, frequency):
-        pass
+        # Args: delay, dc_callback, *args, **kwargs
+        try:
+            self.delay = 1.0/frequency
+        except ZeroDivisionError:
+            self.delay = 1.0
+        self.periodic = async.DelayedCall(self.delay, self._periodic_callback)
 
     def stop(self):
-        pass
+        if self.periodic is None:
+            return
+        self.periodic.cancel()
