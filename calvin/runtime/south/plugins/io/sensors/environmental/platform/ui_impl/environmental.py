@@ -24,7 +24,7 @@ class Environmental(base_environmental.EnvironmentalBase):
     """
     def __init__(self, node, actor):
         super(Environmental, self).__init__(node, actor)
-        ui_def = {"image":"KY-013", "controls":[{"sensor":True,  "type":"float", "min":-20.0, "max":80.0, "default":20.0}]}
+        ui_def = {"image":"KY-013", "control":{"sensor":True, "type":"float", "min":-20.0, "max":80.0, "default":20.0}}
         ui.register_sensor(actor, None, ui_def=ui_def)
 
     def get_temperature(self):
