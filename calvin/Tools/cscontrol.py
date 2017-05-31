@@ -73,11 +73,9 @@ def handle_security_arguments(args):
     if "https" in args.node:
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
                                                          security_dir=security_dir)
-        #   The following is less than optimal if multiple CA certs exist
-        ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
     else:
-        ca_cert_path = None
-    req_handler = get_request_handler(verify=ca_cert_path)
+        truststore_dir = None
+    req_handler = get_request_handler(verify=truststore_dir)
     if args.credentials:
         try:
             credentials_ = json.loads(args.credentials)

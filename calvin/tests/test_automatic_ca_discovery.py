@@ -207,9 +207,7 @@ class TestSecurity(unittest.TestCase):
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
                                                          security_dir=credentials_testdir)
-        #   The following is less than optimal if multiple CA certs exist
-        ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
-        request_handler = RequestHandler(verify=ca_cert_path)
+        request_handler = RequestHandler(verify=truststore_dir)
         #Generate credentials, create CSR, sign with CA and import cert for all runtimes
         enrollment_passwords=[]
         for rt_attribute in rt_attributes_cpy:

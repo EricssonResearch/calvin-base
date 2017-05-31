@@ -220,9 +220,7 @@ class TestSecurity(unittest.TestCase):
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
                                                          security_dir=credentials_testdir)
-        #   The following is less than optimal if multiple CA certs exist
-        ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
-        request_handler = RequestHandler(verify=ca_cert_path)
+        request_handler = RequestHandler(verify=truststore_dir)
         #Let's use the admin user0 for request_handler 
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
 
