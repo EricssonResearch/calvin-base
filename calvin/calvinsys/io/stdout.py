@@ -32,7 +32,7 @@ class StandardOut(object):
             stdout_config = self._node.attributes.get_private("/io/stdout")
         else :
             stdout_config = None
-        self.stdout = stdout.StandardOut(stdout_config)
+        self.stdout = stdout.StandardOut(node, actor, stdout_config)
 
     def enable(self):
         """
@@ -45,7 +45,7 @@ class StandardOut(object):
         stop stdout
         """
         self.stdout.disable()
-        
+
     def write(self, text):
         """
         write text to stdout
@@ -57,7 +57,7 @@ class StandardOut(object):
         write text to stdout, add newline
         """
         self.stdout.writeln(text)
-        
+
 def register(node=None, actor=None):
     """
         Called when the system object is first created.

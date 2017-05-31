@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 Ericsson AB
+# Copyright (c) 2015 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,45 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from calvin.runtime.south.plugins.io.stdout import base_stdout
+import calvin.runtime.south.plugins.ui.uicalvinsys as ui
 
-class BaseStandardOut(object):
+
+class StandardOut(base_stdout.BaseStandardOut):
 
     """
-    Base class for stdout
+        Virtual console
     """
-
     def __init__(self, node, actor, config):
-        super(BaseStandardOut, self).__init__()
-        self._node = node
-        self._actor = actor
-        self.config = config
-
-    def enable(self):
-        """
-        Enable stdout
-        """
-        pass
-
-    def disable(self):
-        """
-        Disable stdout
-        """
-        pass
+        super(StandardOut, self).__init__(node, actor, config)
+        ui_def = {"image":"Console", "control":{"sensor":False, "type":"console"}}
+        ui.register_actuator(actor, ui_def=ui_def)
 
     def write(self, text):
-        """
-        Write text to stdout
-        """
-        raise NotImplementedError()
+        ui.update_ui(self._actor, text)
 
     def writeln(self, text):
-        """
-        Write text followed by newline to stdout
-        """
-        raise NotImplementedError()
+        self.write(text +  "\n")
 
-    def clear(self):
-        """
-        Clear display
-        """
-        pass
+
