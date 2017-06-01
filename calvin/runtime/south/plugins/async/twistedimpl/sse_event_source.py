@@ -5,15 +5,13 @@ import json
 
 class SimpleSSE(resource.Resource):
     isLeaf = True
-    # FIXME: Rename connnections
-    client_ids = {}
+    connections = {}
 
-    def responseCallback(self, err, request):
-        request.finish
-        print('Connection was either disconnected/error from: ' + str(request))
-        keylist = [k for k,v in client_ids.iteritems() if v == request]
+    def responseCallback(self, err, connection):
+        connection.finish
+        keylist = [k for k,v in connections.iteritems() if v == connection]
         for key in keylist:
-            client_ids.pop(key)
+            connections.pop(key)
 
     def _validate_connection(self, postpath):
         if len(postpath) is not 2:
@@ -28,27 +26,24 @@ class SimpleSSE(resource.Resource):
             request.setResponseCode(400)
             return "Bad Request\n"
 
-        request.setHeader('Content-Type',
-                          'text/event-stream; charset=utf-8')
+        request.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
         request.setHeader("Access-Control-Allow-Origin", "*")
         request.write("")
         request.notifyFinish().addErrback(self.responseCallback, request)
-        self.client_ids[client_id] = request
+        self.connections[client_id] = request
         return server.NOT_DONE_YET
 
-    def _send(self, request, data):
+    def _send(self, connection, data):
         fmt_msg = "data: {}\r\n".format(json.dumps(data))
-        request.write(fmt_msg + '\r\n')
+        connection.write(fmt_msg + '\r\n')
 
     def send(self, client_id, data):
-        if client_id not in self.client_ids:
-            print "No such client"
-            return
-        self._send(client_ids[client_id], data)
+        if client_id in self.connections:
+            self._send(connections[client_id], data)
 
     def broadcast(self, data):
-        for request in self.client_ids.values():
-            self._send(request, data)
+        for connection in self.connections.values():
+            self._send(connection, data)
 
 class EventSource(object):
     """docstring for EventSource"""
