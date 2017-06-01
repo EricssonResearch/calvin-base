@@ -1,7 +1,10 @@
 from calvin.runtime.south.plugins.async import sse_event_source as sse
 from calvin.requests import calvinresponse
 
-_eventsource = sse.EventSource(port=7777)
+try:
+    _eventsource = sse.EventSource(port=7777)
+except:
+    _eventsource = None
 
 
 _sensor_callbacks = {}
@@ -65,7 +68,7 @@ def update(data):
 
 # Actuators
 def update_ui(actor, data):
-    if actor._id in _actuators:
+    if _eventsource and actor._id in _actuators:
         _eventsource.broadcast({"client_id":actor._id, "state":data})
         return calvinresponse.OK
     return calvinresponse.NOT_FOUND
