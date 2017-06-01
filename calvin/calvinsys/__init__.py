@@ -48,8 +48,9 @@ class Sys(object):
 
         try:
             self.modules[modulename]['module'] = importlib.import_module(self.modules[modulename]['name'])
+            _log.info("Loaded module '{}'".format(modulename))
         except Exception as e:
-            _log.info("Module '%s' not available: %s" % (modulename, e))
+            _log.debug("Module '%s' not available: %s" % (modulename, e))
             self.modules[modulename]['error'] = e
 
     def use_requirement(self, actor, modulename):
