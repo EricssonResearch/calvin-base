@@ -80,20 +80,11 @@ def test_get_calvincontrol_returns_xxx():
     ("POST /storage/abc123 HTTP/1", "abc123", "handle_post_storage"),
     ("OPTIONS /abc123 HTTP/1", None, "handle_options")
 ])
+
 def test_routes_correctly(url, match, handler):
-    with patch.object(CalvinControl, handler) as func:
-        control = calvincontrol()
-
-        control.route_request(1, 2, url, 3, {})
-        assert func.called
-        args, kwargs = func.call_args
-        assert args[0] == 1
-        assert args[1] == 2
-        if match:
-            assert args[2].group(1) == match
-        assert args[3] == {}
-        assert args[4] == 3
-
+    control = CalvinControl()
+    handler = control._handler_for_route(url)
+    assert handler is not None
 
 def test_send_response():
     control = CalvinControl()

@@ -30,93 +30,23 @@ from calvin.runtime.north.plugins.port import DISCONNECT
 from urlparse import urlparse
 from calvin.requests import calvinresponse
 from calvin.utilities.security import Security, security_enabled
-from calvin.actorstore.store import DocumentationStore
 from calvin.utilities import calvinuuid
 from calvin.utilities.issuetracker import IssueTracker
+#
+# Dynamically build selected set of APIs
+#
+from control_apis import routes
+from control_apis import documentation_api
+from control_apis import logging_api
+from control_apis import metering_api
+from control_apis import registry_api
+
 _log = get_logger(__name__)
 
 uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
-# Base
-re_get_base_doc = re.compile(r"GET /\sHTTP/1")
-
 control_api_doc = ""
 
-control_api_doc += \
-    """
-    GET /actor_doc {path}
-    Get documentation in 'raw' format for actor or module at {path}
-    Path is formatted as '/{module}/{submodule}/ ... /{actor}'.
-    If {path} is empty return top-level documentation.
-    See DocumentStore help_raw() for details on data format.
-    Response status code: OK
-    Response: dictionary with documentation
-"""
-re_get_actor_doc = re.compile(r"GET /actor_doc(\S*)\sHTTP/1")
-
-control_api_doc += \
-    """
-    POST /log
-    Register for log events and set actor and event filter.
-    Body:
-    {
-        'user_id': <user_id>     # Optional user id
-        'actors': [<actor-id>],  # Actors to log, empty list for all
-        'events': [<event_type>] # Event types to log: actor_firing, action_result,
-                                                       actor_new, actor_destroy, actor_migrate,
-                                                       application_new, application_destroy
-    }
-    Response status code: OK or BAD_REQUEST
-    Response:
-    {
-        'user_id': <user_id>,
-        'epoch_year': <the year the epoch starts at Jan 1 00:00, e.g. 1970>
-    }
-"""
-re_post_log = re.compile(r"POST /log\sHTTP/1")
-
-control_api_doc += \
-    """
-    DELETE /log/{user-id}
-    Unregister for trace data
-    Response status code: OK or NOT_FOUND
-"""
-re_delete_log = re.compile(r"DELETE /log/(TRACE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /log/{user-id}
-    Get streamed log events
-    Response status code: OK or NOT_FOUND
-    Content-Type: text/event-stream
-    data:
-    {
-        'timestamp': <timestamp>,
-        'node_id': <node_id>,
-        'type': <event_type>, # event types: actor_fire, actor_new, actor_destroy, actor_migrate, application_new, application_destroy
-        'actor_id',           # included in: actor_fire, actor_new, actor_destroy, actor_migrate
-        'actor_name',         # included in: actor_new
-        'actor_is_shadow'     # included in: actor_new
-        'action_method',      # included in: actor_fire
-        'consumed',           # included in: actor_fire
-        'produced'            # included in: actor_fire
-        'action_result'       # included in: actor_fire
-        'actor_type',         # included in: actor_new
-        'dest_node_id',       # included in: actor_migrate
-        'application_name',   # included in: application_new
-        'application_id'      # included in: application, application_destroy
-    }
-"""
-re_get_log = re.compile(r"GET /log/(TRACE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /id
-    Get id of this calvin node
-    Response status code: OK
-    Response: node-id
-"""
-re_get_node_id = re.compile(r"GET /id\sHTTP/1")
 
 control_api_doc += \
     """
@@ -139,31 +69,12 @@ re_get_nodes = re.compile(r"GET /nodes\sHTTP/1")
 
 control_api_doc += \
     """
-    GET /node/{node-id}
-    Get information on node node-id
-    Response status code: OK or NOT_FOUND
-    Response:
-    {
-        "attributes": {...},
-        "control_uri": "http(s)://<address>:<controlport>",
-        "uri": "calvinip://<address>:<port>"
-    }
+    GET /id
+    Get id of this calvin node
+    Response status code: OK
+    Response: node-id
 """
-re_get_node = re.compile(r"GET /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
-
-control_api_doc += \
-    """
-    POST /node/{node-id}/attributes/indexed_public
-    Set indexed_public attributes on node with node-id
-    Body:
-    {
-        "node_name": {"organization": <organization>, "organizationalUnit": <organizationalUnit>, "purpose": <purpose>, "group": <group>, "name": <name>},
-        "owner": {"organization": <organization>, "organizationalUnit": <organizationalUnit>, "role": <role>, "personOrGroup": <personOrGroup>},
-        "address": {"country": <country>, "stateOrProvince": <stateOrProvince>, "locality": <locality>, "street": <street>, "streetNumber": <streetNumber>, "building": <building>, "floor": <floor>, "room": <room>}
-    }
-    Response status code: OK, UNAUTHORIZED or INTERNAL_ERROR
-"""
-re_post_node_attribute_indexed_public = re.compile(r"POST /node/(NODE_" + uuid_re + "|" + uuid_re + ")/attributes/indexed_public\sHTTP/1")
+re_get_node_id = re.compile(r"GET /id\sHTTP/1")
 
 control_api_doc += \
     """
@@ -184,19 +95,6 @@ control_api_doc += \
 """
 re_get_applications = re.compile(r"GET /applications\sHTTP/1")
 
-control_api_doc += \
-    """
-    GET /application/{application-id}
-    Get information on application application-id
-    Response status code: OK or NOT_FOUND
-    Response:
-    {
-         "origin_node_id": <node id>,
-         "actors": <list of actor ids>
-         "name": <name or id of this application>
-    }
-"""
-re_get_application = re.compile(r"GET /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
     """
@@ -231,21 +129,6 @@ control_api_doc += \
 """
 re_get_actors = re.compile(r"GET /actors\sHTTP/1")
 
-control_api_doc += \
-    """
-    GET /actor/{actor-id}
-    Get information on actor
-    Response status code: OK or NOT_FOUND
-    Response:
-    {
-        "inports": list inports
-        "node_id": <node-id>,
-        "type": <actor type>,
-        "name": <actor name>,
-        "outports": list of outports
-    }
-"""
-re_get_actor = re.compile(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
     """
@@ -297,14 +180,6 @@ control_api_doc += \
 """
 re_post_actor_disable = re.compile(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/disable\sHTTP/1")
 
-# control_api_doc += \
-"""
-    GET /actor/{actor-id}/port/{port-id}
-    Get information on port {port-id} of actor {actor-id}
-    Response status code: OK or NOT_FOUND
-"""
-re_get_port = re.compile(
-    r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
 
 control_api_doc += \
     """
@@ -482,165 +357,6 @@ control_api_doc += \
 """
 re_delete_node = re.compile(r"DELETE /node(?:/(now|migrate|clean))?\sHTTP/1")
 
-control_api_doc += \
-    """
-    POST /meter
-    Register for metering information
-    Body:
-    {
-        "user_id": <user-id> optional user id
-    }
-    Response status code: OK or BAD_REQUEST
-    Response:
-    {
-        "user_id": <user-id>,
-        "timeout": <seconds data is kept>,
-        "epoch_year": <the year the epoch starts at Jan 1 00:00, e.g. 1970>
-    }
-"""
-re_post_meter = re.compile(r"POST /meter\sHTTP/1")
-
-control_api_doc += \
-    """
-    DELETE /meter/{user-id}
-    Unregister for metering information
-    Response status code: OK or NOT_FOUND
-"""
-re_delete_meter = re.compile(r"DELETE /meter/(METERING_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /meter/{user-id}/timed
-    Get timed metering information
-    Response status code: OK or NOT_FOUND
-    Response:
-    {
-        <actor-id>:
-            [
-                [<seconds since epoch>, <name of action>],
-                ...
-            ],
-            ...
-    }
-"""
-re_get_timed_meter = re.compile(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/timed\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /meter/{user-id}/aggregated
-    Get aggregated metering information
-    Response status code: OK or NOT_FOUND
-    Response:
-    {
-        'activity':
-        {
-            <actor-id>:
-            {
-                <action-name>: <total fire count>,
-                ...
-            },
-            ...
-        },
-        'time':
-        {
-            <actor-id>: [<start time of counter>, <last modification time>],
-            ...
-        }
-    }
-"""
-re_get_aggregated_meter = re.compile(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/aggregated\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /meter/{user-id}/metainfo
-    Get metering meta information on actors
-    Response status code: OK or NOT_FOUND
-    Response:
-    {
-        <actor-id>:
-        {
-            <action-name>:
-            {
-                'inports': {
-                    <port-name> : <number of tokens per firing>,
-                    ...
-                           },
-                'outports': {
-                    <port-name> : <number of tokens per firing>,
-                    ...
-                           }
-            },
-            ...
-        }
-    }
-"""
-re_get_metainfo_meter = re.compile(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/metainfo\sHTTP/1")
-
-control_api_doc += \
-    """
-    POST /index/{key}
-    Store value under index key
-    Body:
-    {
-        "value": <string>
-    }
-    Response status code: OK or INTERNAL_ERROR
-    Response: none
-"""
-re_post_index = re.compile(r"POST /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
-
-control_api_doc += \
-    """
-    DELETE /index/{key}
-    Remove value from index key
-    Body:
-    {
-        "value": <string>
-    }
-    Response status code: OK or INTERNAL_ERROR
-    Response: none
-"""
-re_delete_index = re.compile(r"DELETE /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /index/{key}
-    Fetch values under index key
-    Response status code: OK or NOT_FOUND
-    Response: {"result": <list of strings>}
-"""
-re_get_index = re.compile(r"GET /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /storage/{prefix-key}
-    Fetch value under prefix-key
-    Response status code: OK or NOT_FOUND
-    Response: {"result": <value>}
-"""
-re_get_storage = re.compile(r"GET /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /dumpstorage
-    Dump storage to temporary file in /tmp when available
-    Response status code: OK
-    Response: none
-"""
-re_dump_storage = re.compile(r"GET /dumpstorage\sHTTP/1")
-
-control_api_doc += \
-    """
-    POST /storage/{prefix-key}
-    Store value under prefix-key
-    Body:
-    {
-        "value": <string>
-    }
-    Response status code: OK or INTERNAL_ERROR
-    Response: none
-"""
-re_post_storage = re.compile(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 
 control_api_doc += \
     """
@@ -800,39 +516,10 @@ def get_calvincontrol():
     return _calvincontrol
 
 
-class Logger(object):
-
-    """ Log object
-    """
-
-    def __init__(self, actors, events):
-        self.handle = None
-        self.connection = None
-        self.actors = actors
-        self.events = events
-
-    def set_connection(self, handle, connection):
-        self.handle = handle
-        self.connection = connection
-
-
 class CalvinControl(object):
 
     """ A HTTP REST API for calvin nodes
     """
-
-    LOG_ACTOR_FIRING = 0
-    LOG_ACTION_RESULT = 1
-    LOG_ACTOR_NEW = 2
-    LOG_ACTOR_DESTROY = 3
-    LOG_ACTOR_MIGRATE = 4
-    LOG_APPLICATION_NEW = 5
-    LOG_APPLICATION_DESTROY = 6
-    LOG_LINK_CONNECTED = 7
-    LOG_LINK_DISCONNECTED = 8
-    LOG_ACTOR_REPLICATE = 9
-    LOG_ACTOR_DEREPLICATE = 10
-    LOG_LOG_MESSAGE = 11
 
     def __init__(self):
         self.node = None
@@ -849,29 +536,29 @@ class CalvinControl(object):
 
         # Set routes for requests
         self.routes = [
-            (re_get_base_doc, self.handle_get_base_doc),
-            (re_get_actor_doc, self.handle_get_actor_doc),
-            (re_post_log, self.handle_post_log),
-            (re_delete_log, self.handle_delete_log),
-            (re_get_log, self.handle_get_log),
+            # (re_get_base_doc, self.handle_get_base_doc),
+            # (re_get_actor_doc, self.handle_get_actor_doc),
+            # (re_post_log, self.handle_post_log),
+            # (re_delete_log, self.handle_delete_log),
+            # (re_get_log, self.handle_get_log),
             (re_get_node_id, self.handle_get_node_id),
             (re_get_node_capabilities, self.handle_get_node_capabilities),
             (re_get_nodes, self.handle_get_nodes),
-            (re_get_node, self.handle_get_node),
-            (re_post_node_attribute_indexed_public, self.handle_post_node_attribute_indexed_public),
+            # (re_get_node, self.handle_get_node),
+            # (re_post_node_attribute_indexed_public, self.handle_post_node_attribute_indexed_public),
             (re_post_peer_setup, self.handle_peer_setup),
             (re_get_applications, self.handle_get_applications),
-            (re_get_application, self.handle_get_application),
+            # (re_get_application, self.handle_get_application),
             (re_del_application, self.handle_del_application),
             (re_post_new_actor, self.handle_new_actor),
             (re_get_actors, self.handle_get_actors),
-            (re_get_actor, self.handle_get_actor),
+            # (re_get_actor, self.handle_get_actor),
             (re_del_actor, self.handle_del_actor),
             (re_actor_report, self.handle_actor_report),
             (re_post_actor_migrate, self.handle_actor_migrate),
             (re_post_actor_disable, self.handle_actor_disable),
             (re_post_actor_replicate, self.handle_actor_replicate),
-            (re_get_port, self.handle_get_port),
+            # (re_get_port, self.handle_get_port),
             (re_get_port_state, self.handle_get_port_state),
             (re_post_connect, self.handle_connect),
             (re_set_port_property, self.handle_set_port_property),
@@ -879,17 +566,17 @@ class CalvinControl(object):
             (re_post_application_migrate, self.handle_post_application_migrate),
             (re_delete_node, self.handle_quit),
             (re_post_disconnect, self.handle_disconnect),
-            (re_post_meter, self.handle_post_meter),
-            (re_delete_meter, self.handle_delete_meter),
-            (re_get_timed_meter, self.handle_get_timed_meter),
-            (re_get_aggregated_meter, self.handle_get_aggregated_meter),
-            (re_get_metainfo_meter, self.handle_get_metainfo_meter),
-            (re_post_index, self.handle_post_index),
-            (re_delete_index, self.handle_delete_index),
-            (re_get_index, self.handle_get_index),
-            (re_get_storage, self.handle_get_storage),
-            (re_dump_storage, self.handle_dump_storage),
-            (re_post_storage, self.handle_post_storage),
+            # (re_post_meter, self.handle_post_meter),
+            # (re_delete_meter, self.handle_delete_meter),
+            # (re_get_timed_meter, self.handle_get_timed_meter),
+            # (re_get_aggregated_meter, self.handle_get_aggregated_meter),
+            # (re_get_metainfo_meter, self.handle_get_metainfo_meter),
+            # (re_post_index, self.handle_post_index),
+            # (re_delete_index, self.handle_delete_index),
+            # (re_get_index, self.handle_get_index),
+            # (re_get_storage, self.handle_get_storage),
+            # (re_dump_storage, self.handle_dump_storage),
+            # (re_post_storage, self.handle_post_storage),
             (re_post_certificate_signing_request,self.handle_post_certificate_signing_request),
             (re_edit_certificate_enrollment_password, self.handle_edit_certificate_enrollment_password),
             (re_get_certificate_enrollment_password, self.handle_get_certificate_enrollment_password),
@@ -904,6 +591,9 @@ class CalvinControl(object):
             (re_del_authorization_policy, self.handle_del_authorization_policy),
             (re_options, self.handle_options)
         ]
+
+        dynamic_routes = routes.install_handlers(self)
+        self.routes.extend(dynamic_routes)
 
     def authentication_decorator(func):
         def _exit_with_error(issue_tracker):
@@ -1038,6 +728,14 @@ class CalvinControl(object):
                 command, headers, data = connection.data_get()
                 self.route_request(handle, connection, command, headers, data)
 
+    def _handler_for_route(self, command):
+        for re_route, handler in self.routes:
+            match_object = re_route.match(command)
+            if match_object:
+                # FIXME: Return capture groups instead
+                return handler, match_object
+        return None, None
+
     def route_request(self, handle, connection, command, headers, data):
         if self.node.quitting:
             # Answer internal error on all requests while quitting, assume client can handle that
@@ -1046,19 +744,14 @@ class CalvinControl(object):
             return
         try:
             issuetracker = IssueTracker()
-            found = False
-            for route in self.routes:
-                match = route[0].match(command)
-                if match:
-                    credentials = None
-                    if data:
-                        data = json.loads(data)
-                    _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
-                    route[1](handle, connection, match, data, headers)
-                    found = True
-                    break
-
-            if not found:
+            handler, match = self._handler_for_route(command)
+            if handler:
+                credentials = None
+                if data:
+                    data = json.loads(data)
+                _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
+                handler(handle, connection, match, data, headers)
+            else:
                 _log.error("No route found for: %s\n%s" % (command, data))
                 self.send_response(handle, connection, None, status=404)
         except Exception as e:
@@ -1105,146 +798,6 @@ class CalvinControl(object):
                 msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
                 self.tunnel_client.send(msg)
 
-    def storage_cb(self, key, value, handle, connection):
-        missing = value is None or value is False
-        self.send_response(handle, connection, None if missing else json.dumps(value),
-                           status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
-
-    @authentication_decorator
-    def handle_get_base_doc(self, handle, connection, match, data, hdr):
-        """ Query get all docs
-        """
-
-        lines = control_api_doc.split("\n")
-
-        want_json = 'accept' in hdr and hdr['accept'] == "application/json"
-
-        if not want_json:
-            data = """
-            <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-            <html>
-            <title>Calvin control API</title>
-            <body>
-            <xmp style="display:none;">"""
-
-            block = []
-            for line in lines:
-                if not line and block:
-                    data += '- __' + block.pop(1).strip().replace('_', '\_') + '__' + "\n"
-                    data += "```\n" + "\n".join(s for s in block) + "\n```\n"
-                    block =  []
-                elif line:
-                    # same block
-                    block.append(line)
-            data += """
-            </xmp>
-            <script src="//strapdownjs.com/v/0.2/strapdown.js"></script>
-            </body>
-            </html>
-            """
-            self.send_response(handle, connection, data, status=200, content_type="Content-Type: text/HTML")
-        else:
-            data = []
-            block = []
-            for line in lines:
-                if not line and block:
-                    item = {'title': block.pop(1).strip().replace('_', '\_').strip()}
-                    item['doc_rows'] = [ a.strip() for a in block ]
-                    data.append(item)
-                    block =  []
-                elif line:
-                    # same block
-                    block.append(line)
-
-            self.send_response(handle, connection, json.dumps(data), status=200)
-
-    @authentication_decorator
-    def handle_get_actor_doc(self, handle, connection, match, data, hdr):
-        """ Query ActorStore for documentation
-        """
-        path = match.group(1)
-        what = '.'.join(path.strip('/').split('/'))
-        ds = DocumentationStore()
-        what = None if not what else what
-        data = ds.help_raw(what)
-        self.send_response(handle, connection, data)
-
-    @authentication_decorator
-    def handle_post_log(self, handle, connection, match, data, hdr):
-        """ Create log session
-        """
-        status = calvinresponse.OK
-        actors = []
-        events = []
-
-        if data and 'user_id' in data:
-            user_id = data['user_id']
-        else:
-            user_id = calvinuuid.uuid("TRACE")
-
-        if user_id not in self.loggers:
-            if 'actors' in data and data['actors']:
-                actors = data['actors']
-            if 'events' in data:
-                events = []
-                for event in data['events']:
-                    if event == 'actor_firing':
-                        events.append(self.LOG_ACTOR_FIRING)
-                    elif event == 'action_result':
-                        events.append(self.LOG_ACTION_RESULT)
-                    elif event == 'actor_new':
-                        events.append(self.LOG_ACTOR_NEW)
-                    elif event == 'actor_destroy':
-                        events.append(self.LOG_ACTOR_DESTROY)
-                    elif event == 'actor_migrate':
-                        events.append(self.LOG_ACTOR_MIGRATE)
-                    elif event == 'actor_replicate':
-                        events.append(self.LOG_ACTOR_REPLICATE)
-                    elif event == 'actor_dereplicate':
-                        events.append(self.LOG_ACTOR_DEREPLICATE)
-                    elif event == 'application_new':
-                        events.append(self.LOG_APPLICATION_NEW)
-                    elif event == 'application_destroy':
-                        events.append(self.LOG_APPLICATION_DESTROY)
-                    elif event == 'link_connected':
-                        events.append(self.LOG_LINK_CONNECTED)
-                    elif event == 'link_disconnected':
-                        events.append(self.LOG_LINK_DISCONNECTED)
-                    elif event == 'log_message':
-                        events.append(self.LOG_LOG_MESSAGE)
-                    else:
-                        status = calvinresponse.BAD_REQUEST
-                        break
-            if status == calvinresponse.OK:
-                self.loggers[user_id] = Logger(actors=actors, events=events)
-        else:
-            status = calvinresponse.BAD_REQUEST
-
-        self.send_response(handle, connection,
-                           json.dumps({'user_id': user_id, 'epoch_year': time.gmtime(0).tm_year})
-                           if status == calvinresponse.OK else None,
-                           status=status)
-
-    @authentication_decorator
-    def handle_delete_log(self, handle, connection, match, data, hdr):
-        """ Delete log session
-        """
-        if match.group(1) in self.loggers:
-            del self.loggers[match.group(1)]
-            status = calvinresponse.OK
-        else:
-            status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection, None, status=status)
-
-    @authentication_decorator
-    def handle_get_log(self, handle, connection, match, data, hdr):
-        """ Get log stream
-        """
-        if match.group(1) in self.loggers:
-            self.loggers[match.group(1)].set_connection(handle, connection)
-            self.send_streamheader(handle, connection)
-        else:
-            self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
 
     #Can't be access controlled, as it is needed to find authorization server
 #    @authentication_decorator
@@ -1277,60 +830,11 @@ class CalvinControl(object):
         self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
 
     @authentication_decorator
-    def handle_get_node(self, handle, connection, match, data, hdr):
-        """ Get node information from id
-        """
-        self.node.storage.get_node(match.group(1), CalvinCB(
-            func=self.storage_cb, handle=handle, connection=connection))
-
-    def handle_post_node_attribute_indexed_public_cb(self, key, value, handle, connection, attributes):
-        try:
-            indexed_public = []
-            for attr in attributes.items():
-                indexed_string = format_index_string(attr)
-                indexed_public.append(indexed_string)
-                self.node.storage.add_index(indexed_string, key)
-            value['attributes']['indexed_public'] = indexed_public
-            self.node.storage.set(prefix="node-", key=key, value=value,
-                cb=CalvinCB(func=self.storage_cb, handle=handle, connection=connection))
-        except Exception as e:
-            _log.error("Failed to update node %s", e)
-            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
-
-    @authentication_decorator
-    def handle_post_node_attribute_indexed_public(self, handle, connection, match, data, hdr):
-        """ Update node information
-        """
-        try:
-            if match.group(1) == self.node.id:
-                if self.node.runtime_credentials is None or self.node.runtime_credentials.domain is None:
-                    self.node.storage.remove_node_index(self.node)
-                    self.node.attributes.set_indexed_public(data)
-                    self.node_name = self.node.attributes.get_node_name_as_str()
-                    self.node.storage.add_node(self.node, CalvinCB(
-                        func=self.storage_cb, handle=handle, connection=connection))
-                else:
-                    self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
-            else:
-                self.node.storage.get_node(match.group(1), CalvinCB(
-                    func=self.handle_post_node_attribute_indexed_public_cb, handle=handle, connection=connection, attributes=data))
-        except Exception as e:
-            _log.error("Failed to update node %s", e)
-            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
-
-    @authentication_decorator
     def handle_get_applications(self, handle, connection, match, data, hdr):
         """ Get applications
         """
         self.send_response(
             handle, connection, json.dumps(self.node.app_manager.list_applications()))
-
-    @authentication_decorator
-    def handle_get_application(self, handle, connection, match, data, hdr):
-        """ Get application from id
-        """
-        self.node.storage.get_application(match.group(1), CalvinCB(
-            func=self.storage_cb, handle=handle, connection=connection))
 
     @authentication_decorator
     def handle_del_application(self, handle, connection, match, data, hdr):
@@ -1371,13 +875,6 @@ class CalvinControl(object):
         actors = self.node.am.list_actors()
         self.send_response(
             handle, connection, json.dumps(actors))
-
-    @authentication_decorator
-    def handle_get_actor(self, handle, connection, match, data, hdr):
-        """ Get actor from id
-        """
-        self.node.storage.get_actor(match.group(1), CalvinCB(
-            func=self.storage_cb, handle=handle, connection=connection))
 
     @authentication_decorator
     def handle_del_actor(self, handle, connection, match, data, hdr):
@@ -1485,13 +982,6 @@ class CalvinControl(object):
 
     def handle_actor_replicate_cb(self, handle, connection, status):
         self.send_response(handle, connection, json.dumps(status.data), status=status.status)
-
-#    @authentication_decorator
-    def handle_get_port(self, handle, connection, match, data, hdr):
-        """ Get port from id
-        """
-        self.node.storage.get_port(match.group(2), CalvinCB(
-            func=self.storage_cb, handle=handle, connection=connection))
 
     @authentication_decorator
     def handle_get_port_state(self, handle, connection, match, data, hdr):
@@ -1720,122 +1210,6 @@ class CalvinControl(object):
         _log.analyze(self.node.id, "+ DISCONNECTED", {'status': status.status}, tb=True)
         self.send_response(handle, connection, None, status=status.status)
 
-    @authentication_decorator
-    def handle_post_meter(self, handle, connection, match, data, hdr):
-        try:
-            user_id = self.metering.register(data['user_id'] if data and 'user_id' in data else None)
-            timeout = self.metering.timeout
-            status = calvinresponse.OK
-        except:
-            _log.exception("handle_post_meter")
-            status = calvinresponse.BAD_REQUEST
-        self.send_response(handle, connection, json.dumps({ 'user_id': user_id,
-                                                            'timeout': timeout,
-                                                            'epoch_year': time.gmtime(0).tm_year})
-                            if status == calvinresponse.OK else None, status=status)
-
-    @authentication_decorator
-    def handle_delete_meter(self, handle, connection, match, data, hdr):
-        try:
-            self.metering.unregister(match.group(1))
-            status = calvinresponse.OK
-        except:
-            _log.exception("handle_delete_meter")
-            status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection, None, status=status)
-
-    @authentication_decorator
-    def handle_get_timed_meter(self, handle, connection, match, data, hdr):
-        try:
-            data = self.metering.get_timed_meter(match.group(1))
-            status = calvinresponse.OK
-        except:
-            _log.exception("handle_get_timed_meter")
-            status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection,
-            json.dumps(data) if status == calvinresponse.OK else None, status=status)
-
-    @authentication_decorator
-    def handle_get_aggregated_meter(self, handle, connection, match, data, hdr):
-        try:
-            data = self.metering.get_aggregated_meter(match.group(1))
-            status = calvinresponse.OK
-        except:
-            _log.exception("handle_get_aggregated_meter")
-            status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection,
-            json.dumps(data) if status == calvinresponse.OK else None, status=status)
-
-    @authentication_decorator
-    def handle_get_metainfo_meter(self, handle, connection, match, data, hdr):
-        try:
-            data = self.metering.get_actors_info(match.group(1))
-            status = calvinresponse.OK
-        except:
-            _log.exception("handle_get_metainfo_meter")
-            status = calvinresponse.NOT_FOUND
-        self.send_response(handle, connection,
-            json.dumps(data) if status == calvinresponse.OK else None, status=status)
-
-    @authentication_decorator
-    def handle_post_index(self, handle, connection, match, data, hdr):
-        """ Add to index
-        """
-        self.node.storage.add_index(
-            match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
-
-    @authentication_decorator
-    def handle_delete_index(self, handle, connection, match, data, hdr):
-        """ Remove from index
-        """
-        self.node.storage.remove_index(
-            match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
-
-    #Can't be access controlled, as it is needed to find authorization server
-#    @authentication_decorator
-    def handle_get_index(self, handle, connection, match, data, hdr):
-        """ Get from index
-        """
-        self.node.storage.get_index(
-            match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
-
-    def index_cb(self, handle, connection, *args, **kwargs):
-        """ Index operation response
-        """
-        _log.debug("index cb (in control) %s, %s" % (args, kwargs))
-        if 'value' in kwargs:
-            value = kwargs['value']
-        else:
-            value = None
-        self.send_response(handle, connection, None,
-                           status=calvinresponse.INTERNAL_ERROR if value is None else calvinresponse.OK)
-
-    def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
-        """ Index operation response
-        """
-        _log.debug("get index cb (in control) %s, %s" % (key, value))
-        self.send_response(handle, connection, None if value is None else json.dumps({'result': value}),
-                           status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
-
-    @authentication_decorator
-    def handle_post_storage(self, handle, connection, match, data, hdr):
-        """ Store in storage
-        """
-        self.node.storage.set("", match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
-
-    @authentication_decorator
-    def handle_get_storage(self, handle, connection, match, data, hdr):
-        """ Get from storage
-        """
-        self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
-
-    @authentication_decorator
-    def handle_dump_storage(self, handle, connection, match, data, hdr):
-        """ Get from storage
-        """
-        name = self.node.storage.dump()
-        self.send_response(handle, connection, json.dumps(name), status=calvinresponse.OK)
-
     # No authentication decorator, this is called by the runtimes when deployed
     # without a certificate
     def handle_post_certificate_signing_request(self, handle, connection, match, data, hdr):
@@ -1988,270 +1362,41 @@ class CalvinControl(object):
             status = calvinresponse.INTERNAL_ERROR
         self.send_response(handle, connection, None, status=status)
 
+    #
+    # Logging hooks
+    #
     def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_consumed, production):
-        """ Trace actor firing
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_ACTOR_FIRING in logger.events:
-                if not logger.actors or actor_id in logger.actors:
-                    data = {}
-                    data['timestamp'] = time.time()
-                    data['node_id'] = self.node.id
-                    data['type'] = 'actor_fire'
-                    data['actor_id'] = actor_id
-                    data['action_method'] = action_method
-                    data['produced'] = tokens_produced
-                    data['consumed'] = tokens_consumed
-                    if self.LOG_ACTION_RESULT in logger.events:
-                        data['action_result'] = production
-                    if logger.connection is not None:
-                        if not logger.connection.connection_lost:
-                            logger.connection.send("data: %s\n\n" % json.dumps(data))
-                        else:
-                            disconnected.append(user_id)
-                    elif self.tunnel_client is not None and logger.handle is not None:
-                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                        self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_actor_new(self, actor_id, actor_name, actor_type, is_shadow):
-        """ Trace actor new
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_ACTOR_NEW in logger.events:
-                if not logger.actors or actor_id in logger.actors:
-                    data = {}
-                    data['timestamp'] = time.time()
-                    data['node_id'] = self.node.id
-                    data['type'] = 'actor_new'
-                    data['actor_id'] = actor_id
-                    data['actor_name'] = actor_name
-                    data['actor_type'] = actor_type
-                    data['is_shadow'] = is_shadow
-                    if logger.connection is not None:
-                        if not logger.connection.connection_lost:
-                            logger.connection.send("data: %s\n\n" % json.dumps(data))
-                        else:
-                            disconnected.append(user_id)
-                    elif self.tunnel_client is not None and logger.handle is not None:
-                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                        self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_actor_destroy(self, actor_id):
-        """ Trace actor destroy
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_ACTOR_DESTROY in logger.events:
-                if not logger.actors or actor_id in logger.actors:
-                    data = {}
-                    data['timestamp'] = time.time()
-                    data['node_id'] = self.node.id
-                    data['type'] = 'actor_destroy'
-                    data['actor_id'] = actor_id
-                    if logger.connection is not None:
-                        if not logger.connection.connection_lost:
-                            logger.connection.send("data: %s\n\n" % json.dumps(data))
-                        else:
-                            disconnected.append(user_id)
-                    elif self.tunnel_client is not None and logger.handle is not None:
-                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                        self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_actor_migrate(self, actor_id, dest_node_id):
-        """ Trace actor migrate
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_ACTOR_MIGRATE in logger.events:
-                if not logger.actors or actor_id in logger.actors:
-                    data = {}
-                    data['timestamp'] = time.time()
-                    data['node_id'] = self.node.id
-                    data['type'] = 'actor_migrate'
-                    data['actor_id'] = actor_id
-                    data['dest_node_id'] = dest_node_id
-                    if logger.connection is not None:
-                        if not logger.connection.connection_lost:
-                            logger.connection.send("data: %s\n\n" % json.dumps(data))
-                        else:
-                            disconnected.append(user_id)
-                    elif self.tunnel_client is not None and logger.handle is not None:
-                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                        self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_actor_replicate(self, actor_id, replica_actor_id, replication_id, dest_node_id):
-        """ Trace actor replication
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_ACTOR_REPLICATE in logger.events:
-                if not logger.actors or actor_id in logger.actors:
-                    data = {}
-                    data['timestamp'] = time.time()
-                    data['node_id'] = self.node.id
-                    data['type'] = 'actor_replicate'
-                    data['actor_id'] = actor_id
-                    data['dest_node_id'] = dest_node_id
-                    data['replication_id'] = replication_id
-                    data['replica_actor_id'] = replica_actor_id
-                    if logger.connection is not None:
-                        if not logger.connection.connection_lost:
-                            logger.connection.send("data: %s\n\n" % json.dumps(data))
-                        else:
-                            disconnected.append(user_id)
-                    elif self.tunnel_client is not None and logger.handle is not None:
-                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                        self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_actor_dereplicate(self, actor_id, replica_actor_id, replication_id):
-        """ Trace actor dereplication
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_ACTOR_DEREPLICATE in logger.events:
-                if not logger.actors or actor_id in logger.actors:
-                    data = {}
-                    data['timestamp'] = time.time()
-                    data['node_id'] = self.node.id
-                    data['type'] = 'actor_dereplicate'
-                    data['actor_id'] = actor_id
-                    data['replication_id'] = replication_id
-                    data['replica_actor_id'] = replica_actor_id
-                    if logger.connection is not None:
-                        if not logger.connection.connection_lost:
-                            logger.connection.send("data: %s\n\n" % json.dumps(data))
-                        else:
-                            disconnected.append(user_id)
-                    elif self.tunnel_client is not None and logger.handle is not None:
-                        msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                        self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_application_new(self, application_id, application_name):
-        """ Trace application new
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_APPLICATION_NEW in logger.events:
-                data = {}
-                data['timestamp'] = time.time()
-                data['node_id'] = self.node.id
-                data['type'] = 'application_new'
-                data['application_id'] = application_id
-                data['application_name'] = application_name
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_application_destroy(self, application_id):
-        """ Trace application destroy
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_APPLICATION_DESTROY in logger.events:
-                data = {}
-                data['timestamp'] = time.time()
-                data['node_id'] = self.node.id
-                data['type'] = 'application_destroy'
-                data['application_id'] = application_id
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_link_connected(self, peer_id, uri):
-        """ Trace node connect
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_LINK_CONNECTED in logger.events:
-                data = {}
-                data['timestamp'] = time.time()
-                data['node_id'] = self.node.id
-                data['type'] = 'link_connected'
-                data['peer_id'] = peer_id
-                data['uri'] = uri
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
-
+        pass
 
     def log_link_disconnected(self, peer_id):
-        """ Trace node connect
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_LINK_DISCONNECTED in logger.events:
-                data = {}
-                data['timestamp'] = time.time()
-                data['node_id'] = self.node.id
-                data['type'] = 'link_disconnected'
-                data['peer_id'] = peer_id
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     def log_log_message(self, message):
-        """ Log message that is displayed at listener
-        """
-        disconnected = []
-        for user_id, logger in self.loggers.iteritems():
-            if not logger.events or self.LOG_LOG_MESSAGE in logger.events:
-                data = {}
-                data['timestamp'] = time.time()
-                data['node_id'] = self.node.id
-                data['type'] = 'log_message'
-                data['msg'] = message
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
-        for user_id in disconnected:
-            del self.loggers[user_id]
+        pass
 
     @authentication_decorator
     def handle_options(self, handle, connection, match, data, hdr):
