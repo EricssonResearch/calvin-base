@@ -84,7 +84,6 @@ def handle_security_arguments(args):
             req_handler.set_credentials(credentials_)
         except Exception as e:
             print "Credentials not JSON:\n", e
-            return None,-1
     return req_handler
 
 def control_deploy(args):
