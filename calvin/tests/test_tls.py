@@ -129,9 +129,9 @@ class TestSecurity(unittest.TestCase):
             print "Failed to remove old tesdir, err={}".format(err)
             pass
         try:
-            os.mkdir(credentials_testdir)
-            os.mkdir(runtimesdir)
-            os.mkdir(runtimes_truststore)
+            os.makedirs(credentials_testdir)
+            os.makedirs(runtimesdir)
+            os.makedirs(runtimes_truststore)
         except Exception as err:
             _log.error("Failed to create test folder structure, err={}".format(err))
             print "Failed to create test folder structure, err={}".format(err)
