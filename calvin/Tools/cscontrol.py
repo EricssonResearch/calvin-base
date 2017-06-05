@@ -66,12 +66,6 @@ def requirements_file(path):
 
 def handle_security_arguments(args):
     import os
-    if args.credentials:
-        try:
-            credentials_ = json.loads(args.credentials)
-        except Exception as e:
-            print "Credentials not JSON:\n", e
-            return None,-1
     if args.security_dir:
         security_dir=args.security_dir
     else:
@@ -84,7 +78,13 @@ def handle_security_arguments(args):
     else:
         ca_cert_path = None
     req_handler = get_request_handler(verify=ca_cert_path)
-    req_handler.set_credentials(credentials_)
+    if args.credentials:
+        try:
+            credentials_ = json.loads(args.credentials)
+            req_handler.set_credentials(credentials_)
+        except Exception as e:
+            print "Credentials not JSON:\n", e
+            return None,-1
     return req_handler
 
 def control_deploy(args):
