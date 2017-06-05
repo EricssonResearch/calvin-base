@@ -37,6 +37,7 @@ from calvin.utilities.issuetracker import IssueTracker
 #
 from control_apis import routes
 from control_apis import security_api
+from control_apis import runtime_api
 from control_apis import documentation_api
 from control_apis import logging_api
 from control_apis import metering_api
@@ -47,45 +48,6 @@ _log = get_logger(__name__)
 uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
 control_api_doc = ""
-
-
-control_api_doc += \
-    """
-    GET /capabilities
-    Get capabilities of this calvin node
-    Response status code: OK
-    Response: list of capabilities
-"""
-re_get_node_capabilities = re.compile(r"GET /capabilities\sHTTP/1")
-
-
-control_api_doc += \
-    """
-    GET /nodes
-    List nodes in network (excluding self) known to self
-    Response status code: OK
-    Response: List of node-ids
-"""
-re_get_nodes = re.compile(r"GET /nodes\sHTTP/1")
-
-control_api_doc += \
-    """
-    GET /id
-    Get id of this calvin node
-    Response status code: OK
-    Response: node-id
-"""
-re_get_node_id = re.compile(r"GET /id\sHTTP/1")
-
-control_api_doc += \
-    """
-    POST /peer_setup
-    Add calvin nodes to network
-    Body: {"peers: ["calvinip://<address>:<port>", ...] }
-    Response status code: OK or SERVICE_UNAVAILABLE
-    Response: {<peer control uri>: [<peer node id>, <per peer status>], ...}
-"""
-re_post_peer_setup = re.compile(r"POST /peer_setup\sHTTP/1")
 
 control_api_doc += \
     """
@@ -346,28 +308,6 @@ control_api_doc += \
 """
 re_post_disconnect = re.compile(r"POST /disconnect\sHTTP/1")
 
-control_api_doc += \
-    """
-    DELETE /node{/now|/migrate|/clean}
-    Stop (this) calvin node
-     now: stop the runtime without handling actors on the runtime
-     migrate: migrate any actors before stopping the runtime
-     clean: stop & destroy all actors before stopping [default]
-    Response status code: ACCEPTED
-    Response: none
-"""
-re_delete_node = re.compile(r"DELETE /node(?:/(now|migrate|clean))?\sHTTP/1")
-
-
-control_api_doc += \
-    """
-    OPTIONS /url
-    Request for information about the communication options available on url
-    Response status code: OK
-    Response: Available communication options
-"""
-# re_options = re.compile(r"OPTIONS /[0-9a-z/-_.]*\sHTTP/1.1")
-re_options = re.compile(r"OPTIONS /[^\s]*\sHTTP/1")
 
 _calvincontrol = None
 
@@ -406,12 +346,12 @@ class CalvinControl(object):
             # (re_post_log, self.handle_post_log),
             # (re_delete_log, self.handle_delete_log),
             # (re_get_log, self.handle_get_log),
-            (re_get_node_id, self.handle_get_node_id),
-            (re_get_node_capabilities, self.handle_get_node_capabilities),
-            (re_get_nodes, self.handle_get_nodes),
+            # (re_get_node_id, self.handle_get_node_id),
+            # (re_get_node_capabilities, self.handle_get_node_capabilities),
+            # (re_get_nodes, self.handle_get_nodes),
             # (re_get_node, self.handle_get_node),
             # (re_post_node_attribute_indexed_public, self.handle_post_node_attribute_indexed_public),
-            (re_post_peer_setup, self.handle_peer_setup),
+            # (re_post_peer_setup, self.handle_peer_setup),
             (re_get_applications, self.handle_get_applications),
             # (re_get_application, self.handle_get_application),
             (re_del_application, self.handle_del_application),
@@ -429,7 +369,7 @@ class CalvinControl(object):
             (re_set_port_property, self.handle_set_port_property),
             (re_post_deploy, self.handle_deploy),
             (re_post_application_migrate, self.handle_post_application_migrate),
-            (re_delete_node, self.handle_quit),
+            # (re_delete_node, self.handle_quit),
             (re_post_disconnect, self.handle_disconnect),
             # (re_post_meter, self.handle_post_meter),
             # (re_delete_meter, self.handle_delete_meter),
@@ -454,7 +394,7 @@ class CalvinControl(object):
             # (re_get_authorization_policy, self.handle_get_authorization_policy),
             # (re_edit_authorization_policy, self.handle_edit_authorization_policy),
             # (re_del_authorization_policy, self.handle_del_authorization_policy),
-            (re_options, self.handle_options)
+            # (re_options, self.handle_options)
         ]
 
         dynamic_routes = routes.install_handlers(self)
@@ -663,36 +603,6 @@ class CalvinControl(object):
                 msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
                 self.tunnel_client.send(msg)
 
-
-    #Can't be access controlled, as it is needed to find authorization server
-#    @authentication_decorator
-    def handle_get_node_id(self, handle, connection, match, data, hdr):
-        """ Get node id from this node
-        """
-        self.send_response(handle, connection, json.dumps({'id': self.node.id}))
-
-    def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
-        """ Get capabilities from this node
-        """
-        self.send_response(handle, connection, json.dumps(self.node._calvinsys.list_capabilities() + self.node.get_calvinsys().list_capabilities()))
-
-    def handle_peer_setup(self, handle, connection, match, data, hdr):
-        _log.analyze(self.node.id, "+", data)
-        self.node.peersetup(data['peers'], cb=CalvinCB(self.handle_peer_setup_cb, handle, connection))
-
-    def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=None):
-        _log.analyze(self.node.id, "+", status.encode())
-        if peer_node_ids:
-            data = json.dumps({k: (v[0], v[1].status) for k, v in peer_node_ids.items()})
-        else:
-            data = None
-        self.send_response(handle, connection, data, status=status.status)
-
-    @authentication_decorator
-    def handle_get_nodes(self, handle, connection, match, data, hdr):
-        """ Get active nodes
-        """
-        self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
 
     @authentication_decorator
     def handle_get_applications(self, handle, connection, match, data, hdr):
@@ -1038,17 +948,6 @@ class CalvinControl(object):
         _log.analyze(self.node.id, "+ MIGRATED", {'status': status.status})
         self.send_response(handle, connection, None, status=status.status)
 
-    @authentication_decorator
-    def handle_quit(self, handle, connection, match, data, hdr):
-        if match.group(1) == "now":
-            stop_method = self.node.stop
-        elif match.group(1) == "migrate":
-            stop_method = self.node.stop_with_migration
-        else: # Clean up
-            stop_method = self.node.stop_with_cleanup
-
-        async.DelayedCall(.2, stop_method)
-        self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
 
     @authentication_decorator
@@ -1114,29 +1013,6 @@ class CalvinControl(object):
     def log_log_message(self, message):
         pass
 
-    @authentication_decorator
-    def handle_options(self, handle, connection, match, data, hdr):
-        """ Handle HTTP OPTIONS requests
-        """
-        response = "HTTP/1.1 200 OK\n"
-
-        """ Copy the content of Access-Control-Request-Headers to the response
-        """
-        if 'access-control-request-headers' in hdr:
-            response += "Access-Control-Allow-Headers: " + \
-                        hdr['access-control-request-headers'] + "\n"
-
-        response += "Content-Length: 0\n" \
-                    "Access-Control-Allow-Origin: *\n" \
-                    "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" \
-                    "Content-Type: *\n" \
-                    "\n\r\n"
-
-        if connection is None:
-            msg = {"cmd": "httpresp", "msgid": handle, "header": response, "data": None}
-            self.tunnel_client.send(msg)
-        else:
-            connection.send(response)
 
 
 class CalvinControlTunnelServer(object):
