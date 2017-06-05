@@ -2,7 +2,7 @@ import json
 from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.south.plugins.async import server_connection, async
+from calvin.runtime.south.plugins.async import async
 from routes import handler, register
 
 _log = get_logger(__name__)
