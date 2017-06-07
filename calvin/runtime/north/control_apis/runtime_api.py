@@ -4,6 +4,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import async
 from routes import handler, register
+from authentication import authentication_decorator
 
 _log = get_logger(__name__)
 
@@ -53,7 +54,7 @@ def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=No
     self.send_response(handle, connection, data, status=status.status)
 
 
-# @authentication_decorator
+@authentication_decorator
 @handler(r"GET /nodes\sHTTP/1")
 def handle_get_nodes(self, handle, connection, match, data, hdr):
     """
@@ -65,7 +66,7 @@ def handle_get_nodes(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
 
 
-# @authentication_decorator
+@authentication_decorator
 @handler(r"DELETE /node(?:/(now|migrate|clean))?\sHTTP/1")
 def handle_quit(self, handle, connection, match, data, hdr):
     """
@@ -89,7 +90,7 @@ def handle_quit(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
 
-# @authentication_decorator
+@authentication_decorator
 @handler(r"OPTIONS /[^\s]*\sHTTP/1")
 def handle_options(self, handle, connection, match, data, hdr):
     """

@@ -36,3 +36,4 @@ def install_handlers(target):
         if f in _routes:
             routes.append((re.compile(_routes[f]), getattr(target, f.__name__)))
     return routes
+
