@@ -313,8 +313,8 @@ def log_log_message(self, message):
         del self.loggers[user_id]
 
 
-@authentication_decorator
 @handler(r"POST /log\sHTTP/1")
+@authentication_decorator
 def handle_post_log(self, handle, connection, match, data, hdr):
     """
     POST /log
@@ -386,8 +386,8 @@ def handle_post_log(self, handle, connection, match, data, hdr):
                        if status == calvinresponse.OK else None,
                        status=status)
 
-@authentication_decorator
 @handler(r"DELETE /log/(TRACE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_delete_log(self, handle, connection, match, data, hdr):
     """
     DELETE /log/{user-id}
@@ -402,8 +402,8 @@ def handle_delete_log(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None, status=status)
 
-@authentication_decorator
 @handler(r"GET /log/(TRACE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_get_log(self, handle, connection, match, data, hdr):
     """
     GET /log/{user-id}

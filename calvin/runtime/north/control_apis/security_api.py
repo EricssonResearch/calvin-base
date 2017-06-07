@@ -28,8 +28,8 @@ def handle_post_certificate_signing_request(self, handle, connection, match, dat
 
 #Only authorized users, e.g.,an admin, should be allowed to query certificate enrollment passwords
 # from the CA runtime
-@authentication_decorator
 @handler(r"GET /certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@authentication_decorator
 def handle_get_certificate_enrollment_password(self, handle, connection, match, data, hdr):
     """
     GET /certiticate_authority/certificate_enrollment_password/{node_name}
@@ -50,8 +50,8 @@ def handle_get_certificate_enrollment_password(self, handle, connection, match, 
 
 #Only authorized users, e.g.,an admin, should be allowed to query certificate enrollment passwords
 # from the CA runtime
-@authentication_decorator
 @handler(r"PUT /certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@authentication_decorator
 def handle_edit_certificate_enrollment_password(self, handle, connection, match, data, hdr):
     """
     PUT /certiticate_authority/certificate_enrollment_password/{node_name}
@@ -72,8 +72,8 @@ def handle_edit_certificate_enrollment_password(self, handle, connection, match,
     self.send_response(handle, connection, None, status=status)
 
 
-@authentication_decorator
 @handler(r"GET /authentication/users_db\sHTTP/1")
+@authentication_decorator
 def handle_get_authentication_users_db(self, handle, connection, match, data, hdr):
     """
     GET /authentication/users_db
@@ -99,8 +99,8 @@ def handle_get_authentication_users_db(self, handle, connection, match, data, hd
                        status=status)
 
 
-@authentication_decorator
 @handler(r"PUT /authentication/users_db\sHTTP/1")
+@authentication_decorator
 def handle_edit_authentication_users_db(self, handle, connection, match, data, hdr):
     """
     PUT /authentication/users_db
@@ -126,8 +126,8 @@ def handle_edit_authentication_users_db(self, handle, connection, match, data, h
     self.send_response(handle, connection, None, status=status)
 
 
-@authentication_decorator
 @handler(r"GET /authentication/groups_db\sHTTP/1")
+@authentication_decorator
 def handle_get_authentication_groups_db(self, handle, connection, match, data, hdr):
     """
     GET /authentication/groups_db
@@ -145,8 +145,8 @@ def handle_get_authentication_groups_db(self, handle, connection, match, data, h
     pass
 
 
-@authentication_decorator
 @handler(r"PUT /authentication/groups_db\sHTTP/1")
+@authentication_decorator
 def handle_edit_authentication_groups_db(self, handle, connection, match, data, hdr):
     """
     PUT /authentication/groups_db
@@ -159,8 +159,8 @@ def handle_edit_authentication_groups_db(self, handle, connection, match, data, 
     pass
 
 
-@authentication_decorator
 @handler(r"POST /authorization/policies\sHTTP/1")
+@authentication_decorator
 def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
     """
     POST /authorization/policies
@@ -181,8 +181,8 @@ def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
                        status=status)
 
 
-@authentication_decorator
 @handler(r"GET /authorization/policies\sHTTP/1")
+@authentication_decorator
 def handle_get_authorization_policies(self, handle, connection, match, data, hdr):
     """
     GET /authorization/policies
@@ -206,8 +206,8 @@ def handle_get_authorization_policies(self, handle, connection, match, data, hdr
                        status=status)
 
 
-@authentication_decorator
 @handler(r"GET /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
     """
     GET /authorization/policies/{policy-id}
@@ -228,8 +228,8 @@ def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
                        status=status)
 
 
-@authentication_decorator
 @handler(r"PUT /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_edit_authorization_policy(self, handle, connection, match, data, hdr):
     """
     PUT /authorization/policies/{policy-id}
@@ -251,8 +251,8 @@ def handle_edit_authorization_policy(self, handle, connection, match, data, hdr)
     self.send_response(handle, connection, None, status=status)
 
 
-@authentication_decorator
 @handler(r"DELETE /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_del_authorization_policy(self, handle, connection, match, data, hdr):
     """
     DELETE /authorization/policies/{policy-id}

@@ -13,8 +13,8 @@ from authentication import authentication_decorator
 
 _log = get_logger(__name__)
 
-@authentication_decorator
 @handler(r"GET /applications\sHTTP/1")
+@authentication_decorator
 def handle_get_applications(self, handle, connection, match, data, hdr):
     """
     GET /applications
@@ -25,8 +25,8 @@ def handle_get_applications(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(self.node.app_manager.list_applications()))
 
 
-@authentication_decorator
 @handler(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_del_application(self, handle, connection, match, data, hdr):
     """
     DELETE /application/{application-id}
@@ -50,8 +50,8 @@ def handle_del_application_cb(self, handle, connection, status=None):
     self.send_response(handle, connection, data, status=status.status)
 
 
-@authentication_decorator
 @handler(r"POST /actor\sHTTP/1")
+@authentication_decorator
 def handle_new_actor(self, handle, connection, match, data, hdr):
     """
     POST /actor
@@ -76,8 +76,8 @@ def handle_new_actor(self, handle, connection, match, data, hdr):
         handle, connection, None if actor_id is None else json.dumps({'actor_id': actor_id}), status=status)
 
 
-@authentication_decorator
 @handler(r"GET /actors\sHTTP/1")
+@authentication_decorator
 def handle_get_actors(self, handle, connection, match, data, hdr):
     """
     GET /actors
@@ -90,8 +90,8 @@ def handle_get_actors(self, handle, connection, match, data, hdr):
         handle, connection, json.dumps(actors))
 
 
-@authentication_decorator
 @handler(r"DELETE /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_del_actor(self, handle, connection, match, data, hdr):
     """
     DELETE /actor/{actor-id}
@@ -108,9 +108,9 @@ def handle_del_actor(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=status)
 
 
-@authentication_decorator
 # FIXME: The regex cannot possibly be correct?
 @handler(r"(?:GET|POST) /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report\sHTTP/1")
+@authentication_decorator
 def handle_actor_report(self, handle, connection, match, data, hdr):
     """
     GET /actor/{actor-id}/report
@@ -129,8 +129,8 @@ def handle_actor_report(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None if report is None else json.dumps(report), status=status)
 
 
-@authentication_decorator
 @handler(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
+@authentication_decorator
 def handle_actor_migrate(self, handle, connection, match, data, hdr):
     """
     POST /actor/{actor-id}/migrate
@@ -182,8 +182,8 @@ def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
     self.send_response(handle, connection, None, status=status.status)
 
 
-@authentication_decorator
 @handler(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/disable\sHTTP/1")
+@authentication_decorator
 def handle_actor_disable(self, handle, connection, match, data, hdr):
     """
     POST /actor/{actor-id}/disable
@@ -199,8 +199,8 @@ def handle_actor_disable(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status)
 
 
-@authentication_decorator
 @handler(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/replicate\sHTTP/1")
+@authentication_decorator
 def handle_actor_replicate(self, handle, connection, match, data, hdr):
     """
     POST /actor/{actor-id}/replicate
@@ -245,8 +245,8 @@ def handle_actor_replicate_cb(self, handle, connection, status):
     self.send_response(handle, connection, json.dumps(status.data), status=status.status)
 
 
-@authentication_decorator
 @handler(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")/state\sHTTP/1")
+@authentication_decorator
 def handle_get_port_state(self, handle, connection, match, data, hdr):
     """
     GET /actor/{actor-id}/port/{port-id}/state
@@ -262,8 +262,8 @@ def handle_get_port_state(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(state), status)
 
 
-@authentication_decorator
 @handler(r"POST /connect\sHTTP/1")
+@authentication_decorator
 def handle_connect(self, handle, connection, match, data, hdr):
     """
     POST /connect
@@ -306,8 +306,8 @@ def handle_connect_cb(self, handle, connection, **kwargs):
     _log.debug("Handle connect finnished")
 
 
-@authentication_decorator
 @handler(r"POST /set_port_property\sHTTP/1")
+@authentication_decorator
 def handle_set_port_property(self, handle, connection, match, data, hdr):
     """
     POST /set_port_property
@@ -346,8 +346,8 @@ def handle_set_port_property(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=status.status)
 
 
-@authentication_decorator
 @handler(r"POST /deploy\sHTTP/1")
+@authentication_decorator
 def handle_deploy(self, handle, connection, match, data, hdr):
     """
     POST /deploy
@@ -527,8 +527,8 @@ def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
         self.send_response(handle, connection, None, status=status.status)
 
 
-@authentication_decorator
 @handler(r"POST /application/(APP_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
+@authentication_decorator
 def handle_post_application_migrate(self, handle, connection, match, data, hdr):
     """
     POST /application/{application-id}/migrate
@@ -566,8 +566,8 @@ def handle_post_application_migrate_cb(self, handle, connection, status, **kwarg
     self.send_response(handle, connection, None, status=status.status)
 
 
-@authentication_decorator
 @handler(r"POST /disconnect\sHTTP/1")
+@authentication_decorator
 def handle_disconnect(self, handle, connection, match, data, hdr):
     """
     POST /disconnect

@@ -7,8 +7,8 @@ from authentication import authentication_decorator
 
 _log = get_logger(__name__)
 
-@authentication_decorator
 @handler(r"POST /meter\sHTTP/1")
+@authentication_decorator
 def handle_post_meter(self, handle, connection, match, data, hdr):
     """
     POST /meter
@@ -37,8 +37,8 @@ def handle_post_meter(self, handle, connection, match, data, hdr):
                                                         'epoch_year': time.gmtime(0).tm_year})
                         if status == calvinresponse.OK else None, status=status)
 
-@authentication_decorator
 @handler(r"DELETE /meter/(METERING_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_delete_meter(self, handle, connection, match, data, hdr):
     """
     DELETE /meter/{user-id}
@@ -53,8 +53,8 @@ def handle_delete_meter(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None, status=status)
 
-@authentication_decorator
 @handler(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/timed\sHTTP/1")
+@authentication_decorator
 def handle_get_timed_meter(self, handle, connection, match, data, hdr):
     """
     GET /meter/{user-id}/timed
@@ -79,8 +79,8 @@ def handle_get_timed_meter(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection,
         json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
-@authentication_decorator
 @handler(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/aggregated\sHTTP/1")
+@authentication_decorator
 def handle_get_aggregated_meter(self, handle, connection, match, data, hdr):
     """
     GET /meter/{user-id}/aggregated
@@ -113,8 +113,8 @@ def handle_get_aggregated_meter(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection,
         json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
-@authentication_decorator
 @handler(r"GET /meter/(METERING_" + uuid_re + "|" + uuid_re + ")/metainfo\sHTTP/1")
+@authentication_decorator
 def handle_get_metainfo_meter(self, handle, connection, match, data, hdr):
     """
     GET /meter/{user-id}/metainfo

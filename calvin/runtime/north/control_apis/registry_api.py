@@ -7,8 +7,8 @@ from authentication import authentication_decorator
 
 _log = get_logger(__name__)
 
-@authentication_decorator
 @handler(r"POST /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@authentication_decorator
 def handle_post_index(self, handle, connection, match, data, hdr):
     """
     POST /index/{key}
@@ -23,8 +23,8 @@ def handle_post_index(self, handle, connection, match, data, hdr):
     self.node.storage.add_index(
         match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
 
-@authentication_decorator
 @handler(r"DELETE /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@authentication_decorator
 def handle_delete_index(self, handle, connection, match, data, hdr):
     """
     DELETE /index/{key}
@@ -74,8 +74,8 @@ def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
                        status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
 
 
-@authentication_decorator
 @handler(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@authentication_decorator
 def handle_post_storage(self, handle, connection, match, data, hdr):
     """
     POST /storage/{prefix-key}
@@ -90,8 +90,8 @@ def handle_post_storage(self, handle, connection, match, data, hdr):
     self.node.storage.set("", match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
 
 
-@authentication_decorator
 @handler(r"GET /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@authentication_decorator
 def handle_get_storage(self, handle, connection, match, data, hdr):
     """
     GET /storage/{prefix-key}
@@ -102,8 +102,8 @@ def handle_get_storage(self, handle, connection, match, data, hdr):
     self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
 
 
-@authentication_decorator
 @handler(r"GET /dumpstorage\sHTTP/1")
+@authentication_decorator
 def handle_dump_storage(self, handle, connection, match, data, hdr):
     """
     GET /dumpstorage
@@ -133,8 +133,8 @@ def handle_post_node_attribute_indexed_public_cb(self, key, value, handle, conne
         _log.error("Failed to update node %s", e)
         self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
 
-@authentication_decorator
 @handler(r"POST /node/(NODE_" + uuid_re + "|" + uuid_re + ")/attributes/indexed_public\sHTTP/1")
+@authentication_decorator
 def handle_post_node_attribute_indexed_public(self, handle, connection, match, data, hdr):
     """
     POST /node/{node-id}/attributes/indexed_public
@@ -174,8 +174,8 @@ def storage_cb(self, key, value, handle, connection):
                        status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
 
 
-@authentication_decorator
 @handler(r"GET /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_get_node(self, handle, connection, match, data, hdr):
     """
     GET /node/{node-id}
@@ -192,8 +192,8 @@ def handle_get_node(self, handle, connection, match, data, hdr):
         func=self.storage_cb, handle=handle, connection=connection))
 
 
-@authentication_decorator
 @handler(r"GET /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_get_application(self, handle, connection, match, data, hdr):
     """
     GET /application/{application-id}
@@ -211,8 +211,8 @@ def handle_get_application(self, handle, connection, match, data, hdr):
         func=self.storage_cb, handle=handle, connection=connection))
 
 
-@authentication_decorator
 @handler(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@authentication_decorator
 def handle_get_actor(self, handle, connection, match, data, hdr):
     """
     GET /actor/{actor-id}

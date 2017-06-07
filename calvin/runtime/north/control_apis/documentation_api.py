@@ -3,8 +3,8 @@ from calvin.actorstore.store import DocumentationStore
 from routes import handler, docs
 from authentication import authentication_decorator
 
-@authentication_decorator
 @handler(r"GET /\sHTTP/1")
+@authentication_decorator
 def handle_get_base_doc(self, handle, connection, match, data, hdr):
     """
     GET /
@@ -59,8 +59,8 @@ def handle_get_base_doc(self, handle, connection, match, data, hdr):
 
         self.send_response(handle, connection, json.dumps(data), status=200)
 
-@authentication_decorator
 @handler(r"GET /actor_doc(\S*)\sHTTP/1")
+@authentication_decorator
 def handle_get_actor_doc(self, handle, connection, match, data, hdr):
     """
     GET /actor_doc {path}

@@ -54,8 +54,8 @@ def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=No
     self.send_response(handle, connection, data, status=status.status)
 
 
-@authentication_decorator
 @handler(r"GET /nodes\sHTTP/1")
+@authentication_decorator
 def handle_get_nodes(self, handle, connection, match, data, hdr):
     """
     GET /nodes
@@ -66,8 +66,8 @@ def handle_get_nodes(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
 
 
-@authentication_decorator
 @handler(r"DELETE /node(?:/(now|migrate|clean))?\sHTTP/1")
+@authentication_decorator
 def handle_quit(self, handle, connection, match, data, hdr):
     """
     DELETE /node{/now|/migrate|/clean}
@@ -90,8 +90,8 @@ def handle_quit(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
 
-@authentication_decorator
 @handler(r"OPTIONS /[^\s]*\sHTTP/1")
+@authentication_decorator
 def handle_options(self, handle, connection, match, data, hdr):
     """
     OPTIONS /url
