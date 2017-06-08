@@ -17,6 +17,7 @@
 import wrapt
 import functools
 import time
+from jsonschema import validate
 from calvin.utilities import calvinuuid
 from calvin.utilities.security import Security
 from calvin.actor import actorport
@@ -31,6 +32,7 @@ from calvin.runtime.south.plugins.async import async
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.csparser.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
+from calvin.runtime.north.calvinsys import get_calvinsys, CalvinSys
 
 _log = get_logger(__name__)
 
@@ -195,6 +197,55 @@ def _implements_state(obj):
     return hasattr(obj, 'state') and callable(getattr(obj, 'state')) and \
         hasattr(obj, 'set_state') and callable(getattr(obj, 'set_state'))
 
+class calvinsys(object):
+
+    """
+    Calvinsys interface exposed to actors
+    """
+
+    @staticmethod
+    def open(actor, name, **kwargs):
+        return get_calvinsys().open(name, actor, **kwargs)
+
+    @staticmethod
+    def can_write(obj):
+        data = obj.can_write()
+        try:
+            validate(data, obj.can_write_schema)
+        except Exception as e:
+            _log.exception("Failed to validate schema, exception={}".format(e))
+        return data
+
+    @staticmethod
+    def write(obj, data):
+        try:
+            validate(data, obj.write_schema)
+            obj.write(data)
+        except Exception as e:
+            _log.exception("Failed to validate schema, exception={}".format(e))
+
+    @staticmethod
+    def can_read(obj):
+        data = obj.can_read()
+        try:
+            validate(data, obj.can_read_schema)
+        except Exception as e:
+            _log.exception("Failed to validate schema, exception={}".format(e))
+        return data
+
+    @staticmethod
+    def read(obj):
+        data = obj.read()
+        try:
+            validate(data, obj.read_schema)
+        except Exception as e:
+            _log.exception("Failed to validate schema, exception={}".format(e))
+        return data
+
+    @staticmethod
+    def close(obj):
+        obj.close()
+        get_calvinsys().remove(obj)
 
 class Actor(object):
 

@@ -20,11 +20,11 @@ _log = calvinlogger.get_logger(__name__)
 
 class BaseCalvinsysObject(object):
 
-    def __init__(self, calvinsys, name):
+    def __init__(self, calvinsys, name, actor):
         super(BaseCalvinsysObject, self).__init__()
         self.calvinsys = calvinsys
         self.name = name
-        self.write_handlers = {}
+        self.actor = actor
 
     def init(self, **kwargs):
         """
@@ -81,4 +81,4 @@ class BaseCalvinsysObject(object):
         """
         Trigger the scheduler
         """
-        self.calvinsys.scheduler_wakeup()
+        self.calvinsys.scheduler_wakeup(self.actor)

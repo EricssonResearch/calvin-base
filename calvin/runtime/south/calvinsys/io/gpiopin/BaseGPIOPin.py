@@ -76,7 +76,3 @@ class BaseGPIOPin(base_calvinsys_object.BaseCalvinsysObject):
         "minimum": 0,
         "maximum": 1
     }
-
-    def __init__(self, name, calvinsys):
-        self.name = name
-        self.calvinsys = calvinsys

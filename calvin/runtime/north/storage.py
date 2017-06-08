@@ -26,6 +26,7 @@ from calvin.utilities import calvinconfig
 from calvin.actorstore.store import GlobalStore
 from calvin.utilities.security import Security, security_enabled
 from calvin.utilities import dynops
+from calvin.runtime.north.calvinsys import get_calvinsys, CalvinSys
 import re
 
 _log = calvinlogger.get_logger(__name__)
@@ -586,7 +587,7 @@ class Storage(object):
         try:
             for c in node._calvinsys.list_capabilities():
                 self.add_index(['node', 'capabilities', c], node.id, root_prefix_level=3)
-            for c in node.get_calvinsys().list_capabilities():
+            for c in get_calvinsys().list_capabilities():
                 self.add_index(['node', 'capabilities', c], node.id, root_prefix_level=3)
         except:
             _log.debug("Add node capabilities failed", exc_info=True)

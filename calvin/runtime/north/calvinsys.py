@@ -22,26 +22,47 @@ from calvin.utilities import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
+_calvinsys = None
 
-class calvinsys(object):
+def get_calvinsys():
+    """ Returns the calvinsys singleton"""
+    global _calvinsys
+    if _calvinsys is None:
+        _calvinsys = CalvinSys()
+    return _calvinsys
+
+class CalvinSys(object):
 
     """
     Handles calvinsys objects.
     """
 
-    def __init__(self, node):
-        self._node = node
+    def __init__(self):
+        self._node = None
         self.capabilities = {}
         self.objects = []
+
+    def init(self, node):
+        """
+        Get and setup capabilities from config
+        """
+        self._node = node
         capabilities = _conf.get('calvinsys', 'capabilities') or []
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
-
         for capability in capabilities:
             if capability['name'] not in blacklist:
-                self.capabilities[capability['name']] = {'name': capability['name'], 'path': capability['module'], 'attributes': capability['attributes'], 'module': None}
+                self.capabilities[capability['name']] = {
+                    'name': capability['name'],
+                    'path': capability['module'],
+                    'attributes': capability['attributes'],
+                    'module': None
+                }
                 _log.info("Capability '%s' registered with module '%s'" % (capability['name'], capability['module']))
 
-    def open(self, name, **kwargs):
+    def open(self, name, actor, **kwargs):
+        """
+        Open a capability and return corresponding object
+        """
         capability = self.capabilities.get(name, None)
         if capability is None:
             raise Exception("No such capability '%s'", name)
@@ -55,54 +76,18 @@ class calvinsys(object):
         pyclass = getattr(pymodule, class_name[1])
         if not pyclass:
             raise Exception("No entry %s in %s" % (name, capability['path']))
-
-        obj = pyclass(calvinsys=self, name=name)
+        obj = pyclass(calvinsys=self, name=name, actor=actor)
         data = dict(capability['attributes'], **kwargs)
         validate(data, obj.init_schema)
         obj.init(**data)
         self.objects.append(obj)
         return obj
 
-    def validate_data(self, data, schema):
-        try:
-            validate(data, schema)
-            return True
-        except:
-            return False
-
-    def can_write(self, obj):
-        data = obj.can_write()
-        if self.validate_data(data, obj.can_write_schema):
-            return data
-        else:
-            _log.error("Calvinsys object '%s' has no schema for '%s'" % (obj.name, data))
-
-    def write(self, obj, data):
-        if self.validate_data(data, obj.write_schema):
-            obj.write(data)
-        else:
-            _log.error("Calvinsys object '%s' has no schema for '%s'" % (obj.name, data))
-
-    def can_read(self, obj):
-        data = obj.can_read()
-        if self.validate_data(data, obj.can_read_schema):
-            return data
-        else:
-            _log.error("Calvinsys object '%s' has no schema for '%s'" % (obj.name, data))
-
-    def read(self, obj):
-        data = obj.read()
-        if self.validate_data(data, obj.read_schema):
-            return data
-        else:
-            _log.error("Calvinsys object '%s' has no schema for '%s'" % (obj.name, data))
-
-    def close(self, obj):
-        obj.close()
-        self.objects.remove(obj)
-
-    def scheduler_wakeup(self):
-        self._node.sched.trigger_loop()
+    def scheduler_wakeup(self, actor):
+        """
+        Trigger scheduler
+        """
+        self._node.sched.trigger_loop(actor_ids=[actor.id])
 
     def has_capability(self, requirement):
         """
@@ -117,5 +102,8 @@ class calvinsys(object):
         """
         return self.capabilities.keys()
 
-    def get_node(self):
-        return self._node
+    def remove(self, obj):
+        """
+        Remove object
+        """
+        self.objects.remove(obj)

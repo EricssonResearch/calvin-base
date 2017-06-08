@@ -17,7 +17,7 @@
 from calvin.runtime.south.calvinsys.io.gpiopin import BaseGPIOPin
 import RPi.GPIO as GPIO
 
-class GPIOPin(BaseGPIOPin.BaseGPIOPin):
+class RPiGPIOPin(BaseGPIOPin.BaseGPIOPin):
     """
     Calvinsys object handling a general-purpose input/output pin using the RPi.GPIO package
     """
@@ -85,4 +85,5 @@ class GPIOPin(BaseGPIOPin.BaseGPIOPin):
         return value
 
     def close(self):
+        self.direction = ""
         GPIO.cleanup(self.pin)

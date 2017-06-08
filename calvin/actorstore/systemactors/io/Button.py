@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Button(Actor):
     """
@@ -31,21 +31,21 @@ class Button(Actor):
         self.setup()
 
     def setup(self):
-        self.button = self.calvinsys.open("io.button", text=self.text)
+        self.button = calvinsys.open(self, "io.button", text=self.text)
 
     def will_migrate(self):
-        self.calvinsys.close(self.button)
+        calvinsys.close(self.button)
 
     def will_end(self):
-        self.calvinsys.close(self.button)
+        calvinsys.close(self.button)
 
     def did_migrate(self):
         self.setup()
 
-    @stateguard(lambda self: self.button and self.calvinsys.can_read(self.button))
+    @stateguard(lambda self: self.button and calvinsys.can_read(self.button))
     @condition([], ["state"])
     def trigger(self):
-        return (self.calvinsys.read(self.button),)
+        return (calvinsys.read(self.button),)
 
     action_priority = (trigger, )
     requires = ['io.button']

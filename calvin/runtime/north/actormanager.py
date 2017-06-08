@@ -25,6 +25,7 @@ import calvin.requests.calvinresponse as response
 from calvin.utilities.security import Security, security_enabled
 from calvin.actor.actor import ShadowActor
 from calvin.runtime.north.plugins.port import DISCONNECT
+from calvin.runtime.north.calvinsys import get_calvinsys, CalvinSys
 
 
 _log = get_logger(__name__)
@@ -117,7 +118,6 @@ class ActorManager(object):
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
             raise(e)
         a._calvinsys = self.node.calvinsys()
-        a.calvinsys = self.node.get_calvinsys()
         if isinstance(access_decision, tuple):
             # Authorization checks needed if access_decision is a tuple.
             a.set_authorization_checks(access_decision[1])
@@ -276,7 +276,7 @@ class ActorManager(object):
         """Check requirements and security policy for actor."""
         # Check if node has the capabilities required by the actor.
         for req in requirements:
-            if not self.node.calvinsys().has_capability(req) and not self.node.get_calvinsys().has_capability(req):
+            if not self.node.calvinsys().has_capability(req) and not get_calvinsys().has_capability(req):
                 raise Exception("Actor requires %s" % req)
         if security_enabled():
             # Check if access is permitted for the actor by the security policy.

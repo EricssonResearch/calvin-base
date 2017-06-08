@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, condition
+from calvin.actor.actor import Actor, condition, stateguard, calvinsys
 
 
 class Led(Actor):
@@ -30,20 +30,21 @@ class Led(Actor):
         self.setup()
 
     def setup(self):
-        self.led = self.calvinsys.open("io.led")
+        self.led = calvinsys.open(self, "io.led")
 
     def will_migrate(self):
-        self.calvinsys.close(self.led)
+        calvinsys.close(self.led)
 
     def will_end(self):
-        self.calvinsys.close(self.led)
+        calvinsys.close(self.led)
 
     def did_migrate(self):
         self.setup()
 
+    @stateguard(lambda self: self.led and calvinsys.can_write(self.led))
     @condition(action_input=("state",))
     def set_state(self, state):
-        self.calvinsys.write(self.led, state)
+        calvinsys.write(self.led, state)
 
     action_priority = (set_state, )
     requires = ["io.led"]
