@@ -34,7 +34,7 @@ class RPiGPIOPin(BaseGPIOPin.BaseGPIOPin):
                 elif pull == "DOWN":
                     GPIO.setup(pin, GPIO.IN, GPIO.PUD_DOWN)
                 else:
-                    raise("Uknown pull configuration")
+                    raise Exception("Uknown pull configuration")
             else:
                 GPIO.setup(pin, GPIO.IN)
 
@@ -46,7 +46,7 @@ class RPiGPIOPin(BaseGPIOPin.BaseGPIOPin):
                 elif edge == "BOTH":
                     GPIO.add_event_detect(self.pin, GPIO.BOTH, callback=self.edge_cb, bouncetime=bouncetime)
                 else:
-                    raise("Unknown edge configuration")
+                    raise Exception("Unknown edge configuration")
         elif direction == "OUT":
             GPIO.setup(pin, GPIO.OUT)
         else:
