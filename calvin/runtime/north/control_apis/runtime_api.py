@@ -5,6 +5,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import async
 from routes import handler, register
 from authentication import authentication_decorator
+from calvin.runtime.north.calvinsys import get_calvinsys
 
 _log = get_logger(__name__)
 
@@ -29,7 +30,7 @@ def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
     Response status code: OK
     Response: list of capabilities
     """
-    self.send_response(handle, connection, json.dumps(self.node._calvinsys.list_capabilities() + self.node.get_calvinsys().list_capabilities()))
+    self.send_response(handle, connection, json.dumps(self.node._calvinsys.list_capabilities() + get_calvinsys().list_capabilities()))
 
 
 @handler(r"POST /peer_setup\sHTTP/1")

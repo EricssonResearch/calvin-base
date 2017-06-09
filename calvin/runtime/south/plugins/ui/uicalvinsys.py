@@ -14,23 +14,15 @@ _actuators = []
 
 _ui_definitions = {}
 
-_default_ui_def = {"image":"", "controls":[{"sensor":False, "type":"boolean"}]}
-
 def add_ui_actuator(actor, ui_def):
     if ui_def is None:
         ui_def = {"image":"KY-016", "control":{"sensor":False, "type":"boolean", "default":False}}
     _ui_definitions[actor._type] = ui_def
 
-    print ui_definitions()
-
-
 def add_ui_sensor(actor, ui_def):
     if ui_def is None:
         ui_def = {"image":"KY-004", "control":{"sensor":True, "type":"boolean", "default":False}}
     _ui_definitions[actor._type] = ui_def
-
-    print ui_definitions()
-
 
 def register_sensor(actor, callback, ui_def=None):
     if callback:

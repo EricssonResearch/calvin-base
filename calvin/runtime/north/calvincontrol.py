@@ -36,6 +36,7 @@ from control_apis import documentation_api
 from control_apis import logging_api
 from control_apis import metering_api
 from control_apis import registry_api
+from control_apis import uicalvinsys_api
 
 _log = get_logger(__name__)
 
