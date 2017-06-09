@@ -48,10 +48,21 @@ def register_actuator(actor, ui_def=None):
     _actuators.append(actor._id)
     add_ui_actuator(actor, ui_def);
 
-
 def ui_definitions():
     return _ui_definitions
 
+#
+# Track/update state
+#
+def _default_state(actor):
+    try:
+        state = _ui_definitions[actor._type]['control']['default']
+    except:
+        state = 0
+    return state
+
+def sensor_state(actor):
+    return _sensor_states.get(actor._id, _default_state(actor))
 
 # FIXME: Rename update_actor
 # Sensors

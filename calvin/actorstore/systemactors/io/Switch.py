@@ -14,31 +14,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Switch(Actor):
     """
     Creates a on/off switch.
 
     Output:
-      state : true/false according to switch state
+      state : 0/1 according to switch state
     """
 
     @manage([])
     def init(self):
-        self.use("calvinsys.io.switch", shorthand="switch")
+        self.switch = None
+        self.setup()
+        # self.use("calvinsys.io.switch", shorthand="switch")
+
+    def setup(self):
+        self.switch = calvinsys.open(self, "io.switch")
 
     def will_migrate(self):
-        print "FIXME: migrate button"
-        pass
-        # self.button.destroy()
+        calvinsys.close(self.switch)
 
-    @stateguard(lambda self: self["switch"] and self["switch"].has_data())
+    def did_migrate(self):
+        self.setup()
+
+    def will_end(self):
+        calvinsys.close(self.switch)
+
+    @stateguard(lambda self: self.switch and calvinsys.can_read(self.switch))
     @condition([], ["state"])
     def action(self):
-        return (self["switch"].state(),)
+        state = calvinsys.read(self.switch)
+        return (state,)
 
     action_priority = (action, )
-    requires = ['calvinsys.io.switch']
-
+    requires = ['io.switch']
 
