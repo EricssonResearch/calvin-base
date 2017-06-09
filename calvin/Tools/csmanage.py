@@ -588,7 +588,7 @@ def manage_runtime_do_it_all(args):
                                                      enrollment_password=enrollment_password)
     ca_cert = rt_cred.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
     #Encrypt CSR with CAs public key (to protect enrollment password)
-    rsa_encrypted_csr_path = rt_cred.get_encrypted_csr_path()
+    rsa_encrypted_csr_path = rt_cred.get_encrypted_csr_path(ca.commonName)
     #Decrypt encrypted CSR with CAs private key
     csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request_path=rsa_encrypted_csr_path)
     csr_path = ca.store_csr_with_enrollment_password(csr)

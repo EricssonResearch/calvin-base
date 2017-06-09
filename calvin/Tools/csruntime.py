@@ -267,7 +267,7 @@ def runtime_certificate(rt_attributes):
     ca_control_uri = _conf.get("security","ca_control_uri")
     domain_name = _conf.get("security","domain_name")
     storage_type = _conf.get("global","storage_type")
-    enrollment_password = _conf.get("security","enrollment_password")
+    enrollment_passwords = _conf.get("security","enrollment_password")
     is_ca =_conf.get("security","certificate_authority")
     if domain_name:
         _log.debug("Runtime security enabled (i.e., domain is configured)")
@@ -279,7 +279,7 @@ def runtime_certificate(rt_attributes):
         runtime = runtime_credentials.RuntimeCredentials(node_name, domain_name,
                                                        security_dir=security_dir,
                                                        nodeid=nodeid,
-                                                       enrollment_password=enrollment_password)
+                                                       enrollment_password=enrollment_passwords)
         certpath, cert, certstr = runtime.get_own_cert()
         if not cert:
             csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
@@ -292,13 +292,9 @@ def runtime_certificate(rt_attributes):
 
             else:
                 _log.debug("No runtime certicificate can be found, send CSR to CA")
-                ca_cert_str = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
-                #Encrypt CSR with CAs public key (to protect enrollment password)
-                rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert_str)
                 truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
                                                                  security_dir=security_dir)
-                ca_cert_path = os.path.join(truststore_dir, os.listdir(truststore_dir)[0])
-                request_handler = RequestHandler(verify=ca_cert_path)
+                request_handler = RequestHandler(verify=truststore_dir)
                 ca_control_uri = _conf.get('security','certificate_authority_control_uri')
                 ca_control_uris = []
                 if ca_control_uri:
@@ -323,7 +319,7 @@ def runtime_certificate(rt_attributes):
                                     "the CA control uri must be configured in the calvin configuration ")
                 cert_available=False
                 # Loop through all CA:s that responded until hopefully one signs our CSR
-                # Potential improvement would  be to have domain name in response and only try
+                # Potential improvement would be to have domain name in response and only try
                 # appropriate CAs
                 i=0
                 while not cert_available and i<len(ca_control_uris):

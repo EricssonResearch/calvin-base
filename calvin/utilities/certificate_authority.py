@@ -488,6 +488,7 @@ class CA():
 
         private = self.configuration["CA_default"]["private_dir"]
         password_file = os.path.join(private, "ca_password")
+        _log.info("ca_cert={}".format(private))
         try:
             with open(self.configuration["CA_default"]["private_key"], 'r') as fd:
                 private_key = fd.read()
@@ -496,10 +497,14 @@ class CA():
         except EnvironmentError as err:
             _log.exception("Failed to read private key or password")
             raise
-        plaintext = certificate.decrypt_object_with_RSA(private_key=private_key,
-                                            password=password,
-                                            encrypted_object=encrypted_enrollment_request
-                                           )
+        try:
+            plaintext = certificate.decrypt_object_with_RSA(private_key=private_key,
+                                                password=password,
+                                                encrypted_object=encrypted_enrollment_request
+                                               )
+        except Exception as err:
+            _log.exception("decrypt_encrypted_csr: Failed to decrypt encrypted CSR, err={}".format(err))
+            raise
         return plaintext
 
     def store_csr(self, csr):
@@ -601,10 +606,12 @@ class CA():
                 if not self.runtime_in_allowed_authorization_server_list(common_name):
                     _log.error("The runtime is not allowed to operate as an authorization server."
                                     "To be applicable, the runtime name must be listed in the"
-                                    "security->certificate_authority->authorization_servers configuration for the CA runtime")
+                                    "allowed_authz_list.json white list file for the CA runtime."
+                                    "\nUsed runtime commonName={}".format(common_name))
                     raise Exception("The runtime is not allowed to operate as an authorization server."
                                     "To be applicable, the runtime name must be listed in the"
-                                    "security->certificate_authority->authorization_servers configuration for the CA runtime")
+                                    "allowed_authz_list.json white list file for the CA runtime."
+                                    "\nUsed runtime commonName={}".format(common_name))
 
             #Validate challenge password, skip this if the node is a CA
             if not is_ca: 

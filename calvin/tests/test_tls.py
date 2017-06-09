@@ -137,14 +137,21 @@ class TestSecurity(unittest.TestCase):
             print "Failed to create test folder structure, err={}".format(err)
             raise
 
-        _log.info("Trying to create a new test domain configuration.")
+        _log.info("Trying to create a new test domain configuration. Create many CAs to ensure runtime can handle several CA certificates")
         try:
             ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
+            ca1 = certificate_authority.CA(domain=domain_name+" 1", commonName="testdomainCA1", security_dir=credentials_testdir)
+            ca2 = certificate_authority.CA(domain=domain_name+" 2", commonName="testdomainCA2", security_dir=credentials_testdir)
+            ca3 = certificate_authority.CA(domain=domain_name+" 3", commonName="testdomainCA3", security_dir=credentials_testdir)
         except Exception as err:
             _log.error("Failed to create CA, err={}".format(err))
 
         _log.info("Copy CA cert into truststore of runtimes folder")
         ca.export_ca_cert(runtimes_truststore)
+        ca1.export_ca_cert(runtimes_truststore)
+        ca2.export_ca_cert(runtimes_truststore)
+        ca3.export_ca_cert(runtimes_truststore)
+        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
         node_names = []
         rt_attributes=[]
         for i in range(6):
@@ -178,13 +185,12 @@ class TestSecurity(unittest.TestCase):
                                                            domain=domain_name,
                                                            security_dir=credentials_testdir,
                                                            nodeid=nodeid,
-                                                           enrollment_password=enrollment_password)
+                                                           enrollment_password={ca.commonName : enrollment_password})
             runtimes.append(runtime)
-            ca_cert = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
+            ca_cert = runtime.get_trusted_CA_cert_from_CN(certificate.TRUSTSTORE_TRANSPORT, "testdomain CA")
             csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            #Encrypt CSR with CAs public key (to protect enrollment password)
-            rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert)
             #Decrypt encrypted CSR with CAs private key
+            rsa_encrypted_csr = runtime.get_encrypted_csr(ca.commonName)
             csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
             csr_path = ca.store_csr_with_enrollment_password(csr)
             cert_path = ca.sign_csr(csr_path)

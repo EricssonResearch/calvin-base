@@ -223,7 +223,10 @@ class RuntimeCredentials():
                 raise
         self.cert_name = self.get_own_cert_name()
         if enrollment_password:
-            self.cert_enrollment_encrypt_csr()
+            _log.info("enrollment_passwords={}".format(enrollment_password))
+            #Loop through all configured CAs and create encrypted CSRs for them all
+            for ca_cn, passw in enrollment_password.iteritems():
+                self.cert_enrollment_encrypt_csr(ca_common_name=ca_cn)
 
     def get_own_credentials_path(self):
         """Return the full path of the node's own certificate"""
@@ -384,10 +387,23 @@ class RuntimeCredentials():
         private_key = self.get_private_key()
         return runtime_cert_chain + private_key
 
-    def get_encrypted_csr_path(self):
+    def get_encrypted_csr(self, ca_common_name):
+        import json
         """Return the path to the csr for the runtime"""
         _log.debug("get_encrypted_csr_path: my_node_name={}".format(self.node_name))
-        return os.path.join(self.runtime_dir, "{}.csr.encrypted".format(self.node_name))
+        path = self.get_encrypted_csr_path(ca_common_name)
+        try:
+            with open(path, 'r') as fd:
+                result = json.load(fd)
+        except Exception as err:
+            _log.error("Failed to read encrypted CSR, path={}, err={}".format(path, err))
+            raise
+        return result
+
+    def get_encrypted_csr_path(self, ca_common_name):
+        """Return the path to the csr for the runtime"""
+        _log.debug("get_encrypted_csr_path: my_node_name={}".format(self.node_name))
+        return os.path.join(self.runtime_dir, "{}.csr.{}.encrypted".format(self.node_name, ca_common_name))
 
     def get_csr_path(self):
         """Return the path to the csr for the runtime"""
@@ -751,13 +767,16 @@ class RuntimeCredentials():
         _log.debug("get_trust_store_path: type={}".format(type))
         return certificate.get_truststore_path(type, security_dir=self.security_dir)
 
+    def get_trusted_CA_cert_from_CN(self, type, common_name):
+        _log.info("get_trusted_CA_cert_from_CN")
+        return certificate.get_trusted_CA_cert_from_CN(type, common_name, security_dir=self.security_dir)
+
 
     def remove_runtime(self):
         shutil.rmtree(self.runtime_dir,ignore_errors=True)
 
 
-
-    def cert_enrollment_encrypt_csr(self, csr_path=None, ca_cert_str=None):
+    def cert_enrollment_encrypt_csr(self, csr_path=None, ca_common_name=None, ca_cert_str=None):
         """
         """
         import json
@@ -768,7 +787,13 @@ class RuntimeCredentials():
 #        _log.debug("cert_enrollment_encrypt_csr:\n\tcsr_path={}, cert={}".format(csr_path, cert))
         #TODO: support multiple CA certs
         try:
-            ca_cert = self.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
+            if ca_common_name:
+                ca_cert = self.get_trusted_CA_cert_from_CN(certificate.TRUSTSTORE_TRANSPORT, ca_common_name)
+            elif ca_cert_str:
+                ca_cert = ca_cert_str
+                ca_common_name = certificate.cert_CN(certstring=ca_cert_str) 
+            else:
+                raise Exception("Please supply either the CommonName of the CA, or the certificate of the CA")
             if not ca_cert:
                 _log.error("Truststore empty, please configure runtime with  a trusted CA cert")
                 raise Exception("Truststore empty, please configure runtime with  a trusted CA cert")
@@ -783,11 +808,10 @@ class RuntimeCredentials():
             _log.exception("Failed to load unencrypted CSR, err={}".format(err))
             raise
 
-        plaintext = {'csr':csr, 'challenge_password':self.enrollment_password}
+        plaintext = {'csr':csr, 'challenge_password':self.enrollment_password[ca_common_name]}
         encrypted_csr = certificate.encrypt_object_with_RSA(ca_cert, json.dumps(plaintext),unencrypted_data=self.node_name)
         try:
-            filename = "{}.csr".format(self.node_name)
-            encrypted_filepath = csr_path + ".encrypted"
+            encrypted_filepath = csr_path + ".{}.encrypted".format(ca_common_name)
             with open(encrypted_filepath, 'w') as fd:
                 json.dump(encrypted_csr, fd)
         except Exception as err:

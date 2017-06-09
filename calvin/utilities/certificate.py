@@ -311,6 +311,20 @@ def store_trusted_root_cert(cert_file, type, security_dir=None):
     return
 
 
+def get_trusted_CA_cert_from_CN(type, common_name, security_dir=None):
+    _log.info("get_trust_store_path: type={}".format(type))
+    truststore_path = get_truststore_path(type, security_dir=security_dir)
+    ca_cert_path = os.path.join(truststore_path, common_name+".pem")
+    print ca_cert_path
+    if not os.path.isfile(ca_cert_path):
+        return None
+    try:
+        with open(ca_cert_path,'r') as fd:
+            certstr = fd.read()
+    except Exception as err:
+        _log.exception("Failed when trying to read the CA cert, err={}".format(err))
+        raise Exception("Failed when trying to read the CA cert")
+    return certstr
 
 def get_security_credentials_path(security_dir=None):
     """Return the path to the folder with all security credentials"""
@@ -394,13 +408,14 @@ def get_truststore(type, security_dir=None):
         truststore_path = get_truststore_path(type, security_dir=security_dir)
         ca_files = [f for f in os.listdir(truststore_path) if not f.startswith('.')]
         for file_name in ca_files:
-            filepath = os.path.join(truststore_path, file_name)
-            with open(filepath, 'rb') as f:
-                cert_str = f.read()
-                ca_cert_list_str.append(cert_str)
-                ca_cert_x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_str)
-                ca_cert_list_x509.append(ca_cert_x509)
-                truststore.add_cert(ca_cert_x509)
+            if file_name.endswith(".pem"):
+                filepath = os.path.join(truststore_path, file_name)
+                with open(filepath, 'rb') as f:
+                    cert_str = f.read()
+                    ca_cert_list_str.append(cert_str)
+                    ca_cert_x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_str)
+                    ca_cert_list_x509.append(ca_cert_x509)
+                    truststore.add_cert(ca_cert_x509)
     except Exception as err:
         _log.exception("Failed to load truststore = %s",err)
         raise
@@ -426,29 +441,47 @@ def export_cert(certpath, path):
     -path: directory where the cert will be exported to
     """
 
-    try:
-        certificate_hash = cert_hash(certpath=certpath)
-    except:
-        _log.exception("Failed to get certificate hash")
-        raise Exception("Failed to get certificate hash")
-    i=0
-    filename_exist=True
-    #if filename collides with another certificate, increase last number
-    #E.g., if two certificates get same has, the first file is name <cert_hash>.0
-    # and the second <cert_hash>.1
     if not os.path.isdir(path):
         os.makedirs(path)
-    while filename_exist:
-        out_file = os.path.join(path, certificate_hash+"."+`i`)
-        if os.path.isfile(out_file):
-            i += 1
-        else:
-            filename_exist=False
+    #If the file exist, overwrite it
+    out_file = os.path.join(path, cert_CN(certpath=certpath) + ".pem")
     shutil.copyfile(certpath, out_file)
     return out_file
 
+def c_rehash(type, security_dir=None):
+    """
+    Copy the certificate giving it the name that can be stored in
+    trustStore for verification of signatures.
+    file is the out file
+    -certpath: path of the certificate to be exported
+    -path: directory where the cert will be exported to
+    """
+    ts_strlist, ts_opensslist, openssl_ts_object = get_truststore(type=type, security_dir=security_dir)
+    path = get_truststore_path(type=type, security_dir=security_dir)
+    for filename in os.listdir(path):
+        if filename.endswith(".pem"):
+            try:
+                certificate_hash = cert_hash(certpath=os.path.join(path, filename))
+            except Exception as err:
+                print "Failed to get certificate hash, err={}".format(err)
+                _log.exception("Failed to get certificate hash, err={}".format(err))
+                raise Exception("Failed to get certificate hash")
+        i=0
+        filename_exist=True
+        #if filename collides with another certificate, increase last number
+        #E.g., if two certificates get same has, the first file is name <cert_hash>.0
+        # and the second <cert_hash>.1
+        while filename_exist:
+            out_file = os.path.join(path, certificate_hash+"."+`i`)
+            if os.path.isfile(out_file):
+                i += 1
+            else:
+                filename_exist=False
+        os.symlink(filename, out_file)
+    return
 
-def wrap_object_with_symmetric_key(plaintext):
+
+def _wrap_object_with_symmetric_key(plaintext):
     import json
     import base64
     from cryptography.hazmat.primitives import padding
@@ -470,7 +503,7 @@ def wrap_object_with_symmetric_key(plaintext):
     wrapped_object= {'ciphertext': base64.b64encode(ciphertext), 'symmetric_key':base64.b64encode(key), 'iv':base64.b64encode(iv)}
     return wrapped_object
 
-def unwrap_object_with_symmetric_key(wrapped_object):
+def _unwrap_object_with_symmetric_key(wrapped_object):
     import json
     import base64
     from cryptography.hazmat.primitives import padding
@@ -479,13 +512,21 @@ def unwrap_object_with_symmetric_key(wrapped_object):
 
     backend = default_backend()
     #Decode base64
-    key = base64.b64decode(wrapped_object['symmetric_key'])
-    iv =  base64.b64decode(wrapped_object['iv'])
-    ciphertext =  base64.b64decode(wrapped_object['ciphertext'])
+    try:
+        key = base64.b64decode(wrapped_object['symmetric_key'])
+        iv =  base64.b64decode(wrapped_object['iv'])
+        ciphertext =  base64.b64decode(wrapped_object['ciphertext'])
+    except Exception as err:
+        _log.error("Failed to decode base64 encoding of key, IV or ciphertext, err={}".format(err))
+        raise
     #Decrypt
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
-    decryptor = cipher.decryptor()
-    padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    try:
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
+        decryptor = cipher.decryptor()
+        padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    except Exception as err:
+        _log.error("_unwrap_object_with_symmetric_key: Failed to decrypt, err={}".format(err))
+        raise
     #Remove padding
     unpadder = padding.PKCS7(128).unpadder()
     plaintext = unpadder.update(padded_plaintext)
@@ -507,7 +548,7 @@ def encrypt_object_with_RSA(certificate, plaintext, unencrypted_data=None):
     from cryptography.hazmat.primitives import hashes
 
     #Wrap plaintext with a symmetric key
-    wrapped_object = wrap_object_with_symmetric_key(plaintext)
+    wrapped_object = _wrap_object_with_symmetric_key(plaintext)
     #Extract public key from certificate
     cert = x509.load_pem_x509_certificate(certificate, default_backend())
     message = wrapped_object['symmetric_key']
@@ -552,15 +593,19 @@ def decrypt_object_with_RSA(private_key, password, encrypted_object):
         _log.error("No ciphertext in encrypted object, encrypted_object={}".format(encrypted_object))
         return None
     #Decrypt symmetric key
-    wrapped_object['symmetric_key'] = _private_key.decrypt(
-        base64.b64decode(encrypted_object['encrypted_symmetric_key']),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                            algorithm=hashes.SHA1(),
-                            label=None
+    try:
+        wrapped_object['symmetric_key'] = _private_key.decrypt(
+            base64.b64decode(encrypted_object['encrypted_symmetric_key']),
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                                algorithm=hashes.SHA1(),
+                                label=None
+                )
             )
-        )
+    except Exception as err:
+        _log.error("decrypt_object_with_RSA: Failed to decrypt, err={} \n{}".format(err, base64.b64decode(encrypted_object['encrypted_symmetric_key'])))
+        raise
     #Unwrap the plaintext using symmetric cryptography
-    plaintext = unwrap_object_with_symmetric_key(wrapped_object)
+    plaintext = _unwrap_object_with_symmetric_key(wrapped_object)
     return plaintext
 

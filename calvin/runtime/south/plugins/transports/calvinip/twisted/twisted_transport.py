@@ -53,19 +53,20 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
         callbacks = {'connected': [CalvinCB(self._connected)]}
         tcp_f = TCPServerFactory(callbacks)
         runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
+        trusted_ca_certs = []
         if runtime_to_runtime_security=="tls":
             _log.debug("TwistedCalvinServer with TLS chosen")
             try:
                 self._runtime_credentials = runtime_credentials.RuntimeCredentials(self._node_name)
                 ca_cert_list_str, ca_cert_list_x509, truststore =certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
-                #TODO: figure out how to set more than one root cert in twisted truststore
-                twisted_trusted_ca_cert = ssl.Certificate.loadPEM(ca_cert_list_str[0])
+                for ca_cert in ca_cert_list_str:
+                    trusted_ca_certs.append(ssl.Certificate.loadPEM(ca_cert))
                 server_credentials_data = self._runtime_credentials.get_runtime_credentials()
                 server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
             except Exception as err:
                 _log.exception("Server failed to load credentials, err={}".format(err))
             try:
-                self._tcp_server = reactor.listenSSL(self._port, tcp_f, server_credentials.options(twisted_trusted_ca_cert), interface=self._iface)
+                self._tcp_server = reactor.listenSSL(self._port, tcp_f, server_credentials.options(*trusted_ca_certs), interface=self._iface)
             except Exception as err:
                 _log.exception("Server failed listenSSL, err={}".format(err))
         else:
@@ -179,6 +180,8 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
             self._proto.sendString(data)
 
     def join(self):
+        from twisted.internet._sslverify import OpenSSLCertificateAuthorities
+        from OpenSSL import crypto
         if self._proto:
             raise Exception("Already connected")
 
@@ -193,11 +196,13 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
         runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
         if runtime_to_runtime_security=="tls":
             _log.debug("TwistedCalvinTransport with TLS chosen")
+            trusted_ca_certs = []
             try:
                 self._runtime_credentials = runtime_credentials.RuntimeCredentials(self._node_name)
                 ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
-                #TODO: figure out how to set more than one root cert in twisted truststore
-                twisted_trusted_ca_cert = ssl.Certificate.loadPEM(ca_cert_list_str[0])
+                for ca_cert in ca_cert_list_str:
+                    trusted_ca_certs.append(crypto.load_certificate(crypto.FILETYPE_PEM, ca_cert))
+                ca_certs = OpenSSLCertificateAuthorities(trusted_ca_certs)
                 client_credentials_data =self._runtime_credentials.get_runtime_credentials()
                 client_credentials = ssl.PrivateCertificate.loadPEM(client_credentials_data)
             except Exception as err:
@@ -205,8 +210,8 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
                 raise
             try:
                 options = ssl.optionsForClientTLS(self._server_node_name,
-                                                   twisted_trusted_ca_cert,
-                                                   client_credentials)
+                                                   trustRoot=ca_certs,
+                                                   clientCertificate=client_credentials)
             except Exception as err:
                 _log.error("TwistedCalvinTransport: Failed to create optionsForClientTLS "
                                 "\n\terr={}"
