@@ -190,9 +190,11 @@ class TestSecurity(unittest.TestCase):
 
         print "Export Code Signers certificate to the truststore for code signing"
         out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
+        certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=credentials_testdir)
 
         print "Trying to create a new test domain configuration."
         ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
+        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
 #
         print "Copy CA cert into truststore of runtimes folder"
         ca.export_ca_cert(runtimes_truststore)
@@ -231,6 +233,7 @@ class TestSecurity(unittest.TestCase):
             nodeid = calvinuuid.uuid("")
             #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
             if "testNode0" in node_name:
+                ca.add_new_authentication_server(node_name)
                 ca.add_new_authorization_server(node_name)
             enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
             enrollment_passwords.append(enrollment_password)
@@ -242,24 +245,20 @@ class TestSecurity(unittest.TestCase):
             runtimes.append(runtime)
             ca_cert = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
             csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            #Encrypt CSR with CAs public key (to protect enrollment password)
-            rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert)
             #Decrypt encrypted CSR with CAs private key
+            rsa_encrypted_csr = runtime.get_encrypted_csr()
             csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
             csr_path = ca.store_csr_with_enrollment_password(csr)
             cert_path = ca.sign_csr(csr_path)
             runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
 
         rt_conf = copy.deepcopy(_conf)
-        rt_conf.set('security', 'domain_name', domain_name)
-        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
 
         # Runtime 0: Certificate authority, authentication server, authorization server, proxy storage server.
         rt0_conf = copy.deepcopy(rt_conf)
         rt0_conf.set('global','storage_type','local')
-        rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
         rt0_conf.set("security", "security_conf", {
                         "comment": "Certificate Authority",
                         "authentication": {
@@ -292,7 +291,6 @@ class TestSecurity(unittest.TestCase):
                     })
 
         for i in range(1, NBR_OF_RUNTIMES):
-            rt_conf.set('security','enrollment_password',enrollment_passwords[i])
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
         #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start

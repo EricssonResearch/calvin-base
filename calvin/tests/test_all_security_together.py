@@ -190,12 +190,15 @@ class TestSecurity(unittest.TestCase):
 
         print "Export Code Signers certificate to the truststore for code signing"
         out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
+        certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=credentials_testdir)
 
         print "Trying to create a new test domain configuration."
         ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
 #
         print "Copy CA cert into truststore of runtimes folder"
         ca.export_ca_cert(runtimes_truststore)
+        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
+
         #Define the runtime attributes
         for i in range(NBR_OF_RUNTIMES):
              purpose = 'CA-authserver-authzserver' if i==0 else ""
@@ -238,8 +241,6 @@ class TestSecurity(unittest.TestCase):
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
         rt_conf.set('security', 'control_interface_security', "tls")
-        rt_conf.set('security', 'domain_name', domain_name)
-        rt_conf.set('security', 'certificate_authority_control_uri',"https://%s:5020" % hostname )
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
         rt_conf.set('global', 'storage_type', "securedht")
@@ -247,18 +248,21 @@ class TestSecurity(unittest.TestCase):
         # Runtime 0: Certificate authority, authentication server, authorization server.
         rt0_conf = copy.deepcopy(rt_conf)
         rt0_conf.set('security', 'control_interface_security', "tls")
-        rt0_conf.set('security','certificate_authority','True')
+        rt0_conf.set('security','certificate_authority',{
+                        'domain_name':domain_name,
+                        'is_ca':'True'
+                    })
         rt0_conf.set("security", "security_conf", {
                         "comment": "Certificate Authority",
                         "authentication": {
                             "procedure": "local",
                             "identity_provider_path": identity_provider_path,
-                            "accept_external_requests": True
+                            "accept_external_requests": "True"
                         },
                         "authorization": {
                             "procedure": "local",
                             "policy_storage_path": policy_storage_path,
-                            "accept_external_requests": True
+                            "accept_external_requests": "True"
                         }
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
@@ -279,7 +283,7 @@ class TestSecurity(unittest.TestCase):
                        configfile="/tmp/calvin500{}.conf".format(i))
             rt.append(RT("https://{}:502{}".format(hostname,i)))
         #Depending on the hardware, it may take up to 15 seconds for rt0 to hash the passwords in the users_db file, so wait a bit
-        time.sleep(5)
+        time.sleep(8)
 
         #####################
         #Other runtimes:
@@ -310,7 +314,12 @@ class TestSecurity(unittest.TestCase):
                     })
 
         for i in range(1, NBR_OF_RUNTIMES):
-            rt_conf.set('security','enrollment_password',enrollment_passwords[i])
+            rt_conf.set('security','certificate_authority',{
+                            'domain_name':domain_name,
+                            'is_ca':'False',
+                            'ca_control_uri':"https://%s:5020" % hostname,
+                            'enrollment_password':enrollment_passwords[i]
+                        })
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
 #        # Runtime 3: external authentication (RADIUS).

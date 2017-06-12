@@ -157,7 +157,8 @@ class AutoDHTServer(StorageBase):
         domain = _conf.get("security", "domain_name")
         is_ca = False
         try:
-            if _conf.get("security", "certificate_authority") == "True":
+            _ca_conf = _conf.get("security", "certificate_authority")
+            if "is_ca" in _ca_conf and _ca_conf["is_ca"] == "True":
                 is_ca = True
         except:
             is_ca = False

@@ -127,6 +127,12 @@ class CalvinConfig(object):
         }
         return default
 
+    def sections(self):
+        return self.config.keys()
+
+    def has_section(self, section):
+        return section in self.config
+
     def add_section(self, section):
         """Add a named section"""
         self.config.setdefault(section.lower(), {})
@@ -139,6 +145,17 @@ class CalvinConfig(object):
             v = default
         return v
 
+    def get_section(self, section):
+        """Get value of option in named section, if section is None 'global' section is implied."""
+        try:
+            _section = section.lower()
+            return self.config[_section]
+        except KeyError:
+            _log.debug("Option {} does not exist".format(_section))
+        except Exception as e:
+            _log.error("Error reading option {}: {}".format(_section, e))
+            return None
+
     def get(self, section, option):
         """Get value of option in named section, if section is None 'global' section is implied."""
         try:
@@ -146,7 +163,7 @@ class CalvinConfig(object):
             _option = option.lower()
             return self.config[_section][_option]
         except KeyError:
-            _log.debug("Option {}.{} not exist".format(_section, _option ))
+            _log.debug("Option {}.{} does not exist".format(_section, _option ))
         except Exception as e:
             _log.error("Error reading option {}.{}: {}".format(_section, _option, e))
             return None

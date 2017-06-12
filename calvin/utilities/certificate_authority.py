@@ -205,7 +205,7 @@ class CA():
         os.umask(0077)
         self.domain = domain
         _log.debug("CA init")
-        security_path = _conf.get("security", "security_dir")
+        self.security_dir = _conf.get("security", "security_dir")
         if security_dir:
             self.configfile = os.path.join(security_dir, domain, "openssl.conf")
         elif security_path:
@@ -612,6 +612,16 @@ class CA():
                                     "To be applicable, the runtime name must be listed in the"
                                     "allowed_authz_list.json white list file for the CA runtime."
                                     "\nUsed runtime commonName={}".format(common_name))
+            if "authserver" in common_name:
+                if not self.runtime_in_allowed_authentication_server_list(common_name):
+                    _log.error("The runtime is not allowed to operate as an authentication server."
+                                    "To be applicable, the runtime name must be listed in the"
+                                    "allowed_auth_list.json white list file for the CA runtime."
+                                    "\nUsed runtime commonName={}".format(common_name))
+                    raise Exception("The runtime is not allowed to operate as an authentication server."
+                                    "To be applicable, the runtime name must be listed in the"
+                                    "allowed_auth_list.json white list file for the CA runtime."
+                                    "\nUsed runtime commonName={}".format(common_name))
 
             #Validate challenge password, skip this if the node is a CA
             if not is_ca: 
@@ -650,7 +660,6 @@ class CA():
                    -out $certs/runtime.pem
                    -passin file:$private_dir/ca_password
         """
-        _log.debug("sign_csr")
         try:
             csrx509 = self.validate_csr(request, is_ca)
         except:
@@ -747,12 +756,15 @@ class CA():
     def get_ca_conf(self):
         """Return path to openssl.conf for the CA"""
         _log.debug("get_ca_conf")
-        is_ca = _conf.get("security","certificate_authority")
+        try:
+            _ca_conf = _conf.get("security", "certificate_authority")
+            is_ca = _ca_conf["is_ca"]
+            domain_name = _ca_conf["domain_name"]
+        except:
+            is_ca = "False"
         if is_ca=="True":
-            security_dir = _conf.get("security", "security_path")
-            domain_name = _conf.get("security", "domain_name")
-            if security_dir:
-                cert_conf_file = os.path.join(security_dir,domain_name,"openssl.conf")
+            if self.security_dir:
+                cert_conf_file = os.path.join(self.security_dir, domain_name, "openssl.conf")
             else:
                 homefolder = get_home()
                 cert_conf_file = os.path.join(homefolder,"security",domain_name,"openssl.conf")

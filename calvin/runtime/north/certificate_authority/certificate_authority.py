@@ -41,9 +41,10 @@ class CertificateAuthority(object):
         self.node = node
         domain = None
         try:
-            if _conf.get("security","certificate_authority"):
-                _log.debug("__init__  Runtime is a CA")
-                domain = _conf.get("security","domain_name")
+            _ca_conf = _conf.get("security","certificate_authority")
+            if "is_ca" in _ca_conf and _ca_conf["is_ca"]=="True":
+                _log.debug("CertificateAuthority::__init__  Runtime is a CA")
+                domain = _ca_conf["domain_name"]
                 security_dir = _conf.get("security","security_dir")
                 self.ca = CA(domain, security_dir=security_dir)
                 self.ca_server_id = self.node.id

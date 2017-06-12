@@ -162,15 +162,6 @@ class TestSecurity(unittest.TestCase):
         shutil.copy(actor_Sum_path, actor_SumUnsigned_path)
         replace_text_in_file(actor_SumUnsigned_path, "Sum", "SumUnsigned")
 
-        #Create incorrectly signed version of Sum actor
-#        actor_SumFake_path = actor_Sum_path.replace(".py", "Fake.py") 
-#        shutil.copy(actor_Sum_path, actor_SumFake_path)
-#        #Change the class name to SumFake
-#        replace_text_in_file(actor_SumFake_path, "Sum", "SumFake")
-#        cs.sign_file(actor_SumFake_path)
-#        #Now append to the signed file so the signature verification fails
-#        with open(actor_SumFake_path, "a") as fd:
-#                fd.write(" ")
 
         #Create signed version of Sink actor
         orig_actor_Sink_path = os.path.join(orig_actor_store_path,"test","Sink.py")
@@ -188,6 +179,7 @@ class TestSecurity(unittest.TestCase):
 #
         print "Copy CA cert into truststore of runtimes folder"
         ca.export_ca_cert(runtimes_truststore)
+        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
         #Define the runtime attributes
         for i in range(NBR_OF_RUNTIMES):
              node_name ={'organization': 'org.testexample', 'name': 'testNode{}'.format(i)}
@@ -216,15 +208,8 @@ class TestSecurity(unittest.TestCase):
             nodeid = calvinuuid.uuid("")
             enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
             enrollment_passwords.append(enrollment_password)
-            runtime=runtime_credentials.RuntimeCredentials(node_name,
-                                                           domain=domain_name,
-                                                           security_dir=credentials_testdir,
-                                                           nodeid=nodeid,
-                                                           enrollment_password=enrollment_password)
-            runtimes.append(runtime)
 
         rt_conf = copy.deepcopy(_conf)
-        rt_conf.set('security', 'domain_name', domain_name)
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
         rt_conf.set('security', 'control_interface_security', "tls")
@@ -232,12 +217,19 @@ class TestSecurity(unittest.TestCase):
 
         # Runtime 0: Certificate authority.
         rt0_conf = copy.deepcopy(rt_conf)
-        rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
-        rt0_conf.set('security','certificate_authority','True')
+        rt0_conf.set('security','certificate_authority',{
+                    'domain_name':domain_name,
+                    'is_ca':'True'
+                    })
         rt0_conf.save("/tmp/calvin5000.conf")
 
         for i in range(1, NBR_OF_RUNTIMES):
-            rt_conf.set('security','enrollment_password',enrollment_passwords[i])
+            rt_conf.set('security','certificate_authority',
+                        {
+                            'domain_name':domain_name,
+                            'is_ca':'False',
+                            'enrollment_password': enrollment_passwords[i]
+                        })
             rt_conf.save("/tmp/calvin{}.conf".format(5000+i))
 
         #Start all runtimes
@@ -263,11 +255,7 @@ class TestSecurity(unittest.TestCase):
                      )
             rt.append(RT("https://{}:{}".format(hostname,5020+i)))
             time.sleep(0.3)
-        time.sleep(15)
-        _log.info("------------------------------------------------")
-        for i in range(NBR_OF_RUNTIMES):
-            _log.info("rt[{}] = {}".format(i,  runtimes[i].node_id))
-        _log.info("------------------------------------------------")
+        time.sleep(10)
 
         request.addfinalizer(self.teardown)
 

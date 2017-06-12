@@ -46,7 +46,7 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 homefolder = get_home()
-credentials_testdir = os.path.join(homefolder, ".calvin","test_tls_dir")
+credentials_testdir = os.path.join(homefolder, ".calvin","test_tls")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
 #runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
@@ -185,12 +185,11 @@ class TestSecurity(unittest.TestCase):
                                                            domain=domain_name,
                                                            security_dir=credentials_testdir,
                                                            nodeid=nodeid,
-                                                           enrollment_password={ca.commonName : enrollment_password})
+                                                           enrollment_password= enrollment_password)
             runtimes.append(runtime)
-            ca_cert = runtime.get_trusted_CA_cert_from_CN(certificate.TRUSTSTORE_TRANSPORT, "testdomain CA")
             csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
             #Decrypt encrypted CSR with CAs private key
-            rsa_encrypted_csr = runtime.get_encrypted_csr(ca.commonName)
+            rsa_encrypted_csr = runtime.get_encrypted_csr()
             csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
             csr_path = ca.store_csr_with_enrollment_password(csr)
             cert_path = ca.sign_csr(csr_path)
@@ -199,7 +198,6 @@ class TestSecurity(unittest.TestCase):
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
         rt_conf.set('security', 'control_interface_security', "tls")
-        rt_conf.set('security', 'domain_name', domain_name)
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt0_conf = copy.deepcopy(rt_conf)
         rt_conf.set('global','storage_type','proxy')
@@ -208,28 +206,36 @@ class TestSecurity(unittest.TestCase):
         # Runtime 0: local authentication, signature verification, local authorization.
         # Primarily acts as Certificate Authority for the domain
         rt0_conf.set('global','storage_type','local')
+        rt0_conf.set('security','certificate_authority',{
+            'domain_name':domain_name,
+            'is_ca':'True'
+            })
         rt0_conf.save("/tmp/calvin5000.conf")
 
         # Runtime 1: local authentication, signature verification, local authorization.
         rt1_conf = copy.deepcopy(rt_conf)
+        rt1_conf.set('security','certificate_authority',{
+            'domain_name':domain_name,
+            'is_ca':'False'
+            })
         rt1_conf.save("/tmp/calvin5001.conf")
 
         # Runtime 2: local authentication, signature verification, local authorization.
         # Can also act as authorization server for other runtimes.
         # Other street compared to the other runtimes
-        rt2_conf = copy.deepcopy(rt_conf)
+        rt2_conf = copy.deepcopy(rt1_conf)
         rt2_conf.save("/tmp/calvin5002.conf")
 
         # Runtime 3: external authentication (RADIUS), signature verification, local authorization.
-        rt3_conf = copy.deepcopy(rt_conf)
+        rt3_conf = copy.deepcopy(rt1_conf)
         rt3_conf.save("/tmp/calvin5003.conf")
 
         # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
-        rt4_conf = copy.deepcopy(rt_conf)
+        rt4_conf = copy.deepcopy(rt1_conf)
         rt4_conf.save("/tmp/calvin5004.conf")
 
         # Runtime 5: external authentication (runtime 1), signature verification, local authorization.
-        rt5_conf = copy.deepcopy(rt_conf)
+        rt5_conf = copy.deepcopy(rt1_conf)
         rt5_conf.save("/tmp/calvin5005.conf")
 
         #Start all runtimes

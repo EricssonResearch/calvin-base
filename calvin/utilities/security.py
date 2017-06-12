@@ -50,7 +50,8 @@ _log = get_logger(__name__)
 TIMEOUT=5
 
 try:
-    _domain = _conf.get("security", "domain_name")
+    _ca_conf = _conf.get("security", "certificate_authority")
+    domain = _ca_conf["domain_name"]
 except:
     domain = None
 

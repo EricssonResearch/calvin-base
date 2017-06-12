@@ -263,89 +263,97 @@ def runtime_certificate(rt_attributes):
     global _conf
     global _log
     _conf = calvinconfig.get()
-    security_dir = _conf.get("security","security_dir")
-    ca_control_uri = _conf.get("security","ca_control_uri")
-    domain_name = _conf.get("security","domain_name")
-    storage_type = _conf.get("global","storage_type")
-    enrollment_passwords = _conf.get("security","enrollment_password")
-    is_ca =_conf.get("security","certificate_authority")
-    if domain_name:
-        _log.debug("Runtime security enabled (i.e., domain is configured)")
-        #AttributeResolver tranforms the attributes, so make a deepcopy instead
-        rt_attributes_cpy = copy.deepcopy(rt_attributes)
-        attributes = AttributeResolver(rt_attributes_cpy)
-        node_name = attributes.get_node_name_as_str()
-        nodeid = calvinuuid.uuid("")
-        runtime = runtime_credentials.RuntimeCredentials(node_name, domain_name,
-                                                       security_dir=security_dir,
-                                                       nodeid=nodeid,
-                                                       enrollment_password=enrollment_passwords)
-        certpath, cert, certstr = runtime.get_own_cert()
-        if not cert:
-            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            if is_ca == "True":
-                _log.debug("No runtime certificate, but node is a CA, just sign csr, domain={}".format(domain_name))
-                ca = certificate_authority.CA(domain=domain_name,
-                                              security_dir=security_dir)
-                cert_path = ca.sign_csr(csr_path, is_ca=True)
-                runtime.store_own_cert(certpath=cert_path, security_dir=security_dir)
-
-            else:
-                _log.debug("No runtime certicificate can be found, send CSR to CA")
-                truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
-                                                                 security_dir=security_dir)
-                request_handler = RequestHandler(verify=truststore_dir)
-                ca_control_uri = _conf.get('security','certificate_authority_control_uri')
-                ca_control_uris = []
-                if ca_control_uri:
-                    _log.debug("CA control_uri in config={}".format(ca_control_uri))
-                    ca_control_uris.append(ca_control_uri)
-                elif storage_type in ["dht","securedht"]:
-                    _log.debug("Find CA via SSDP")
-                    responses = discover()
-                    if not responses:
-                        _log.error("No responses received")
-                    for response in responses:
-                        cmd, headers = parse_http_response(response)
-                        if 'location' in headers:
-                            ca_control_uri, ca_node_id = headers['location'].split('/node/')
-                            ca_control_uri = ca_control_uri.replace("http","https")
-                            ca_control_uris.append(ca_control_uri)
-                            _log.debug("CA control_uri={}, node_id={}".format(ca_control_uri, ca_node_id))
-                else:
-                    _log.error("There is no runtime certificate. For automatic certificate enrollment using proxy storage,"
-                                    "the CA control uri must be configured in the calvin configuration ")
-                    raise Exception("There is no runtime certificate. For automatic certificate enrollment using proxy storage,"
-                                    "the CA control uri must be configured in the calvin configuration ")
-                cert_available=False
-                # Loop through all CA:s that responded until hopefully one signs our CSR
-                # Potential improvement would be to have domain name in response and only try
-                # appropriate CAs
-                i=0
-                while not cert_available and i<len(ca_control_uris):
-                    certstr=None
-                    #Repeatedly (maximum 10 attempts) send CSR to CA until a certificate is returned (this to remove the requirement of the CA 
-                    #node to be be the first node to start)
-                    j=0
-                    while not certstr and j<10:
-                        try:
-                            certstr = request_handler.sign_csr_request(ca_control_uris[i], rsa_encrypted_csr)['certificate']
-                        except requests.exceptions.RequestException as err:
-                            time_to_sleep = 1 + j*j*j
-                            _log.debug("RequestException, CSR not accepted or CA not up and running yet, sleep {} seconds and try again, err={}".format(time_to_sleep, err))
-                            time.sleep(time_to_sleep)
-                            j=j+1
-                            pass
-                        else:
-                            cert_available = True
-                    i = i+1
-                #TODO: check that everything is ok with signed cert, e.g., check that the CA domain
-                # matches the expected and that the CA cert is trusted
-                runtime.store_own_cert(certstring=certstr, security_dir=security_dir)
-        else:
-            _log.debug("Runtime certificate available")
-    else:
+    if not _conf.get_section("security"):
+        #If the security section is empty, no securty features are enabled and certificates aren't needed
         _log.debug("No runtime security enabled")
+    else:
+        _log.debug("Some security features are enabled, let's make sure certificates are in place")
+        _ca_conf = _conf.get("security","certificate_authority")
+        security_dir = _conf.get("security","security_dir")
+        storage_type = _conf.get("global","storage_type")
+        if _ca_conf:
+            try:
+                ca_ctrl_uri = _ca_conf["ca_control_uri"] if "ca_control_uri" in _ca_conf else None
+                domain_name = _ca_conf["domain_name"] if "domain_name" in _ca_conf else None
+                is_ca = _ca_conf["is_ca"] if "is_ca" in _ca_conf else None
+                enrollment_password =  _ca_conf["enrollment_password"] if "enrollment_password" in _ca_conf else None
+            except Exception as err:
+                _log.error("runtime_certificate: Failed to parse security configuration in calvin.conf, err={}".format(err))
+                raise
+            #AttributeResolver tranforms the attributes, so make a deepcopy instead
+            rt_attributes_cpy = copy.deepcopy(rt_attributes)
+            attributes = AttributeResolver(rt_attributes_cpy)
+            node_name = attributes.get_node_name_as_str()
+            nodeid = calvinuuid.uuid("")
+            runtime = runtime_credentials.RuntimeCredentials(node_name, domain_name,
+                                                           security_dir=security_dir,
+                                                           nodeid=nodeid,
+                                                           enrollment_password=enrollment_password)
+            certpath, cert, certstr = runtime.get_own_cert()
+            if not cert:
+                csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
+                if is_ca == "True":
+                    _log.debug("No runtime certificate, but node is a CA, just sign csr, domain={}".format(domain_name))
+                    ca = certificate_authority.CA(domain=domain_name,
+                                                  security_dir=security_dir)
+                    cert_path = ca.sign_csr(csr_path, is_ca=True)
+                    runtime.store_own_cert(certpath=cert_path, security_dir=security_dir)
+
+                else:
+                    _log.debug("No runtime certicificate can be found, send CSR to CA")
+                    truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
+                                                                     security_dir=security_dir)
+                    request_handler = RequestHandler(verify=truststore_dir)
+                    ca_control_uris = []
+                    #TODO: add support for multiple CA control uris
+                    if ca_ctrl_uri:
+                        _log.debug("CA control_uri in config={}".format(ca_ctrl_uri))
+                        ca_control_uris.append(ca_ctrl_uri)
+                    elif storage_type in ["dht","securedht"]:
+                        _log.debug("Find CA via SSDP")
+                        responses = discover()
+                        if not responses:
+                            _log.error("No responses received")
+                        for response in responses:
+                            cmd, headers = parse_http_response(response)
+                            if 'location' in headers:
+                                ca_control_uri, ca_node_id = headers['location'].split('/node/')
+                                ca_control_uri = ca_control_uri.replace("http","https")
+                                ca_control_uris.append(ca_control_uri)
+                                _log.debug("CA control_uri={}, node_id={}".format(ca_control_uri, ca_node_id))
+                    else:
+                        _log.error("There is no runtime certificate. For automatic certificate enrollment using proxy storage,"
+                                        "the CA control uri must be configured in the calvin configuration ")
+                        raise Exception("There is no runtime certificate. For automatic certificate enrollment using proxy storage,"
+                                        "the CA control uri must be configured in the calvin configuration ")
+                    cert_available=False
+                    # Loop through all CA:s that responded until hopefully one signs our CSR
+                    # Potential improvement would be to have domain name in response and only try
+                    # appropriate CAs
+                    i=0
+                    while not cert_available and i<len(ca_control_uris):
+                        certstr=None
+                        #Repeatedly (maximum 10 attempts) send CSR to CA until a certificate is returned (this to remove the requirement of the CA 
+                        #node to be be the first node to start)
+                        rsa_encrypted_csr = runtime.get_encrypted_csr()
+                        j=0
+                        while not certstr and j<10:
+                            try:
+                                certstr = request_handler.sign_csr_request(ca_control_uris[i], rsa_encrypted_csr)['certificate']
+                            except requests.exceptions.RequestException as err:
+                                time_to_sleep = 1 + j*j*j
+                                _log.debug("RequestException, CSR not accepted or CA not up and running yet, sleep {} seconds and try again, err={}".format(time_to_sleep, err))
+                                time.sleep(time_to_sleep)
+                                j=j+1
+                                pass
+                            else:
+                                cert_available = True
+                        i = i+1
+                    #TODO: check that everything is ok with signed cert, e.g., check that the CA domain
+                    # matches the expected and that the CA cert is trusted
+                    runtime.store_own_cert(certstring=certstr, security_dir=security_dir)
+            else:
+                _log.debug("Runtime certificate available")
 
 
 def main():

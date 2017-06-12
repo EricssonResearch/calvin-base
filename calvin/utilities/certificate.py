@@ -251,11 +251,11 @@ def get_public_key_from_certpath(certpath):
         with open(certpath, 'rb') as fd:
             certstring = fd.read()
     except Exception as err:
-        _log.debug("Certificate path {} cannot be opened, err={}".format(certpath, err))
+        _log.error("Certificate path {} cannot be opened, err={}".format(certpath, err))
     try:
         return get_public_key_from_certstr(certstring)
     except Exception as err:
-        _log.debug("Error when trying to extract public key, err={}".format(err))
+        _log.error("Error when trying to extract public key, err={}".format(err))
 
 def get_public_key_from_certstr(certstring):
     certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstring)
@@ -275,54 +275,52 @@ def get_public_key(certificate):
     # return OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, certificate.get_pubkey())
 
 
-def store_trusted_root_cert(cert_file, type, security_dir=None):
-    """
-    Copy the certificate giving it the name that can be stored in
-    trustStore for verification of signatures.
-    file is the out file
+    def store_trusted_root_cert(cert_file, type, security_dir=None):
+        """
+        Copy the certificate giving it the name that can be stored in
+        trustStore for verification of signatures.
+        file is the out file
 
-    """
-    commonName = cert_CN(certpath=cert_file)
-    runtimes_dir = get_runtimes_credentials_path(security_dir=security_dir)
-    if type not in [TRUSTSTORE_TRANSPORT,TRUSTSTORE_SIGN]:
-        _log.exception("Incorrect value for type")
-        raise Exception("Incorrect value for type")
-    store_dir = os.path.join(runtimes_dir, type)
-    if not os.path.isdir(store_dir):
-        os.makedirs(store_dir)
-    try:
-        certificate_hash = cert_hash(certpath=cert_file)
-    except:
-        _log.exception("Failed to get certificate hash")
-        raise Exception("Failed to get certificate hash")
-    #if filename collides with another certificate, increase last number
-    #E.g., if two certificates get same hasih, the first file is name <cert_hash>.0
-    # and the second <cert_hash>.1
-    i=0
-    filename_exist=True
-    while filename_exist:
-        out_file = os.path.join(store_dir, certificate_hash+"."+`i`)
-        if os.path.isfile(out_file):
-            i += 1
-        else:
-            filename_exist=False
+        """
+        commonName = cert_CN(certpath=cert_file)
+        runtimes_dir = get_runtimes_credentials_path(security_dir=security_dir)
+        if type not in [TRUSTSTORE_TRANSPORT,TRUSTSTORE_SIGN]:
+            _log.error("Incorrect value for type")
+            raise Exception("Incorrect value for type")
+        store_dir = os.path.join(runtimes_dir, type)
+        if not os.path.isdir(store_dir):
+            os.makedirs(store_dir)
+        try:
+            certificate_hash = cert_hash(certpath=cert_file)
+        except:
+            _log.error("Failed to get certificate hash")
+            raise Exception("Failed to get certificate hash")
+        #if filename collides with another certificate, increase last number
+        #E.g., if two certificates get same hasih, the first file is name <cert_hash>.0
+        # and the second <cert_hash>.1
+        i=0
+        filename_exist=True
+        while filename_exist:
+            out_file = os.path.join(store_dir, certificate_hash+"."+`i`)
+            if os.path.isfile(out_file):
+                i += 1
+            else:
+                filename_exist=False
 
-    shutil.copy(cert_file, store_dir)
-    return
+        shutil.copy(cert_file, store_dir)
+        return
 
 
-def get_trusted_CA_cert_from_CN(type, common_name, security_dir=None):
-    _log.info("get_trust_store_path: type={}".format(type))
+def get_trusted_CA_cert(type, domain_name, security_dir=None):
     truststore_path = get_truststore_path(type, security_dir=security_dir)
-    ca_cert_path = os.path.join(truststore_path, common_name+".pem")
-    print ca_cert_path
+    ca_cert_path = os.path.join(truststore_path, domain_name+".pem")
     if not os.path.isfile(ca_cert_path):
         return None
     try:
         with open(ca_cert_path,'r') as fd:
             certstr = fd.read()
     except Exception as err:
-        _log.exception("Failed when trying to read the CA cert, err={}".format(err))
+        _log.error("Failed when trying to read the CA cert, err={}".format(err))
         raise Exception("Failed when trying to read the CA cert")
     return certstr
 
@@ -331,13 +329,10 @@ def get_security_credentials_path(security_dir=None):
 #    _log.debug("get_security_credentials_path, security_dir={}".format(security_dir))
     security_dir_in_conf = _conf.get("security", "security_dir")
     if security_dir:
-        _log.debug("get_security_credentials_path: security_dir supplied, security_dir={}".format(security_dir))
         return security_dir
     elif security_dir_in_conf:
-        _log.debug("get_security_credentials_path: security_path in calvin.conf:%s" % security_dir_in_conf)
         return security_dir_in_conf
     else:
-        _log.debug("use default path")
         homefolder = get_home()
         return os.path.join(homefolder, ".calvin", "security")
 
@@ -361,7 +356,6 @@ def load_cert(cert_file):
     Raise IOError if the file is missing.
     Raise OpenSSL.crypto.Error on OpenSSL errors.
     """
-    _log.debug("load_cert: cert_file=%s" % cert_file)
     with open(cert_file, 'r') as cert_fd:
         certdata = cert_fd.read()
     return load_certdata(certdata)
@@ -417,7 +411,7 @@ def get_truststore(type, security_dir=None):
                     ca_cert_list_x509.append(ca_cert_x509)
                     truststore.add_cert(ca_cert_x509)
     except Exception as err:
-        _log.exception("Failed to load truststore = %s",err)
+        _log.error("Failed to load truststore = %s",err)
         raise
     return ca_cert_list_str, ca_cert_list_x509, truststore
 
@@ -444,7 +438,7 @@ def export_cert(certpath, path):
     if not os.path.isdir(path):
         os.makedirs(path)
     #If the file exist, overwrite it
-    out_file = os.path.join(path, cert_CN(certpath=certpath) + ".pem")
+    out_file = os.path.join(path, cert_O(certpath=certpath) + ".pem")
     shutil.copyfile(certpath, out_file)
     return out_file
 
@@ -464,7 +458,7 @@ def c_rehash(type, security_dir=None):
                 certificate_hash = cert_hash(certpath=os.path.join(path, filename))
             except Exception as err:
                 print "Failed to get certificate hash, err={}".format(err)
-                _log.exception("Failed to get certificate hash, err={}".format(err))
+                _log.error("Failed to get certificate hash, err={}".format(err))
                 raise Exception("Failed to get certificate hash")
         i=0
         filename_exist=True

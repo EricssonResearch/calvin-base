@@ -188,6 +188,7 @@ class TestSecurity(unittest.TestCase):
 #
         print "Copy CA cert into truststore of runtimes folder"
         ca.export_ca_cert(runtimes_truststore)
+        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
         #Define the runtime attributes
         for i in range(NBR_OF_RUNTIMES):
              node_name ={'organization': 'org.testexample', 'name': 'testNode{}'.format(i)}
@@ -224,9 +225,8 @@ class TestSecurity(unittest.TestCase):
             runtimes.append(runtime)
             ca_cert = runtime.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
             csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            #Encrypt CSR with CAs public key (to protect enrollment password)
-            rsa_encrypted_csr = runtime.cert_enrollment_encrypt_csr(csr_path, ca_cert)
             #Decrypt encrypted CSR with CAs private key
+            rsa_encrypted_csr = runtime.get_encrypted_csr()
             csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
             csr_path = ca.store_csr_with_enrollment_password(csr)
             cert_path = ca.sign_csr(csr_path)
@@ -240,7 +240,9 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('global', 'storage_type', "dht")
 
         for i in range(NBR_OF_RUNTIMES):
-            rt_conf.set('security','enrollment_password',enrollment_passwords[i])
+            rt_conf.set('security','certificate_authority',{
+                'domain_name':domain_name
+            })
             rt_conf.save("/tmp/calvin{}.conf".format(5000+i))
 
         #Start all runtimes
