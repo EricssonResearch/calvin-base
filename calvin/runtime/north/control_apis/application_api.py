@@ -561,10 +561,10 @@ def handle_post_application_migrate(self, handle, connection, match, data, hdr):
         _log.exception("App migration failed")
         self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
 
+@register
 def handle_post_application_migrate_cb(self, handle, connection, status, **kwargs):
     _log.analyze(self.node.id, "+ MIGRATED", {'status': status.status})
     self.send_response(handle, connection, None, status=status.status)
-
 
 @handler(r"POST /disconnect\sHTTP/1")
 @authentication_decorator
