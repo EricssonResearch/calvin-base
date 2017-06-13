@@ -30,7 +30,7 @@ class Led(Actor):
         self.setup()
 
     def setup(self):
-        self.led = calvinsys.open(self, "io.led")
+        self.led = calvinsys.open(self, "calvinsys.io.led")
 
     def will_migrate(self):
         calvinsys.close(self.led)
@@ -47,4 +47,4 @@ class Led(Actor):
         calvinsys.write(self.led, state)
 
     action_priority = (set_state, )
-    requires = ["io.led"]
+    requires = ["calvinsys.io.led"]

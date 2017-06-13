@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinsys
 
 
 class Temperature(Actor):
@@ -33,7 +33,7 @@ class Temperature(Actor):
         self.setup()
 
     def setup(self):
-        self.use("calvinsys.sensors.environmental", shorthand="temp")
+        temp = calvinsys.open(self, "calvinsys.sensors.temperature")
 
     def will_migrate(self):
         pass
@@ -43,10 +43,8 @@ class Temperature(Actor):
 
     @condition(['measure'], ['centigrade'])
     def measure(self, _):
-        temperature = self['temp'].get_temperature()
+        temperature = calvinsys.read(self)
         return (temperature,)
 
     action_priority = (measure,)
-    requires =  ['calvinsys.sensors.environmental']
-
-
+    requires =  ['calvinsys.sensors.temperature']
