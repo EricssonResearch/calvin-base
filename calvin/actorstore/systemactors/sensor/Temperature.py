@@ -19,7 +19,7 @@ from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
- class Temperature(Actor):
+class Temperature(Actor):
  
     """
     Measure temperature. Takes the frequency of measurements, in Hz, as input.
