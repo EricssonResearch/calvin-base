@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2017 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,37 +14,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, condition, stateguard, calvinsys
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
-
-class Led(Actor):
-
+class TiltSwitch(Actor):
     """
-    Set state of a LED (Light Emitting Diode)
-    Input:
-      state : 1/0 for on/off
+    React to changes in a TiltSwitch.
+
+    Output:
+      open : state true=closed, false=open
     """
 
+    @manage(include=[])
     def init(self):
-        self.led = None
         self.setup()
 
     def setup(self):
-        self.led = calvinsys.open(self, "calvinsys.io.led")
+        self.switch = calvinsys.open(self, "io.tiltswitch")
 
     def will_migrate(self):
-        calvinsys.close(self.led)
+        calvinsys.close(self.switch)
+        self.switch = None
 
     def will_end(self):
-        calvinsys.close(self.led)
+        if self.switch:
+            calvinsys.close(self.switch)
 
     def did_migrate(self):
         self.setup()
 
-    @stateguard(lambda self: self.led and calvinsys.can_write(self.led))
-    @condition(action_input=("state",))
-    def set_state(self, state):
-        calvinsys.write(self.led, state)
+    @stateguard(lambda self: calvinsys.can_read(self.switch))
+    @condition([], ["open"])
+    def state_change(self):
+        value = calvinsys.read(self.switch)
+        return (True if value else False,)
 
-    action_priority = (set_state, )
-    requires = ["calvinsys.io.led"]
+    action_priority = (state_change, )
+    requires = ['io.tiltswitch']

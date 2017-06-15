@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2017 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
+from calvin.utilities.calvinlogger import get_logger
 
+_log = get_logger(__name__)
 
 class Distance(Actor):
 
@@ -23,7 +25,7 @@ class Distance(Actor):
     Measure distance. Takes the frequency of measurements, in Hz, as input.
 
     Outputs:
-        meters : Measured distance, in meters
+        meters : distance, in meters
     """
 
     @manage(['frequency'])
@@ -32,26 +34,40 @@ class Distance(Actor):
         self.setup()
 
     def setup(self):
-        self.use("calvinsys.sensors.distance", shorthand="distance")
-        self['distance'].start(self.frequency)
+        _log.info("setup")
+        self._distance = calvinsys.open(self, "io.distance")
+        self._timer = calvinsys.open(self, "sys.timer.repeating")
+        calvinsys.write(self._timer, 1.0/self.frequency)
 
     def will_migrate(self):
-        self['distance'].stop()
+        calvinsys.close(self._distance)
+        calvinsys.close(self._timer)
+        self._distance = None
+        self._timer = None
 
     def did_migrate(self):
         self.setup()
 
     def will_end(self):
-        self['distance'].stop()
+        if self._distance:
+            calvinsys.close(self._distance)
+        if self._timer :
+            calvinsys.close(self._timer)
 
-
-    @stateguard(lambda self: self['distance'].has_data())
+    @stateguard(lambda self: calvinsys.can_read(self._distance))
     @condition([], ['meters'])
-    def measure(self):
-        distance = self['distance'].read()
-        return (distance,)
+    def read_measurement(self):
+        distance = calvinsys.read(self._distance)
+        return (distance/1000.0,)
+        
+    @stateguard(lambda self: calvinsys.can_read(self._timer) and calvinsys.can_write(self._distance))
+    @condition([], [])
+    def start_measurement(self):
+        calvinsys.read(self._timer)
+        calvinsys.write(self._distance, True)
+    
 
-    action_priority = (measure,)
-    requires =  ['calvinsys.sensors.distance']
+    action_priority = (read_measurement, start_measurement)
+    requires =  ['io.distance', 'sys.timer.repeating']
 
 

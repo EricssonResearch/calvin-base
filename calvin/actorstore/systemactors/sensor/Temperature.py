@@ -13,38 +13,57 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+ 
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
+from calvin.utilities.calvinlogger import get_logger
 
-from calvin.actor.actor import Actor, manage, condition, calvinsys
+_log = get_logger(__name__)
 
-
-class Temperature(Actor):
-
+ class Temperature(Actor):
+ 
     """
-    Read temperature when told to
+    Measure temperature. Takes the frequency of measurements, in Hz, as input.
 
-    Inputs:
-        measure: Triggers a temperature reading
     Outputs:
-        centigrade: The measured temperature in centigrade
+        centigrade :  temperature, in centigrade
     """
 
-    @manage([])
-    def init(self):
+    @manage(['frequency'])
+    def init(self, frequency):
+        self.frequency = frequency
         self.setup()
-
+ 
     def setup(self):
-        temp = calvinsys.open(self, "calvinsys.sensors.temperature")
-
+        self._temperature = calvinsys.open(self, "io.temperature")
+        self.use("calvinsys.events.timer", shorthand="timer")
+        self._timer = self['timer'].once(0)
+ 
     def will_migrate(self):
-        pass
-
+        calvinsys.close(self._temperatire)
+        self._temperature = None
+ 
     def did_migrate(self):
         self.setup()
+ 
+    def will_end(self):
+        if self._temperature:
+            calvinsys.close(self._temperature)
 
-    @condition(['measure'], ['centigrade'])
-    def measure(self, _):
-        temperature = calvinsys.read(self)
+    @stateguard(lambda self: calvinsys.can_read(self._temperature))
+    @condition([], ['centigrade'])
+    def read_measurement(self):
+        temperature = calvinsys.read(self._temperature)
+        self._timer = self['timer'].once(1.0/self.frequency)
         return (temperature,)
-
-    action_priority = (measure,)
-    requires =  ['calvinsys.sensors.temperature']
+        
+    @stateguard(lambda self: self._timer.triggered and calvinsys.can_write(self._temperature))
+    @condition([], [])
+    def start_measurement(self):
+        self._timer.ack()
+        calvinsys.write(self._temperature, True)
+    
+ 
+    action_priority = (read_measurement, start_measurement)
+    requires =  ['io.temperature', 'calvinsys.events.timer']
+ 
+ 

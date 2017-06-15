@@ -1,0 +1,4 @@
+temperature : sensor.Temperature(frequency=1)
+out : io.Print()
+
+temperature.centigrade > out.token

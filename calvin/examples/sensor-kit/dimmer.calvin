@@ -1,0 +1,7 @@
+led : io.PWM()
+bright : math.Random(lower=0, upper=100)
+tick : std.Trigger(data=true, tick=1.0)
+
+tick.data > bright.trigger
+bright.integer > led.dutycycle
+

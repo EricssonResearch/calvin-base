@@ -1,0 +1,4 @@
+distance : sensor.Distance(frequency=5)
+out : io.Print()
+
+distance.meters > out.token

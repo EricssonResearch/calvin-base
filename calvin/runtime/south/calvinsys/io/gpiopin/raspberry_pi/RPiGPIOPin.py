@@ -22,7 +22,7 @@ class RPiGPIOPin(BaseGPIOPin.BaseGPIOPin):
     Calvinsys object handling a general-purpose input/output pin using the RPi.GPIO package
     """
     def init(self, pin, direction, pull=None, edge=None, bouncetime=None, **kwargs):
-        self.value = None
+        self.values = []
         self.pin = pin
         self.direction = direction
         self.edge = edge
@@ -54,9 +54,10 @@ class RPiGPIOPin(BaseGPIOPin.BaseGPIOPin):
 
     def edge_cb(self, channel):
         if GPIO.input(self.pin) is GPIO.LOW:
-            self.value = 0
+            value = 0
         else:
-            self.value = 1
+            value = 1
+        self.values.append(value)
         self.scheduler_wakeup()
 
     def can_write(self):
@@ -72,14 +73,13 @@ class RPiGPIOPin(BaseGPIOPin.BaseGPIOPin):
         if self.direction == "IN":
             if self.edge is None:
                 return True
-            if self.value is not None:
+            if self.values :
                 return True
         return False
 
     def read(self):
-        if self.value is not None:
-            value = self.value
-            self.value = None
+        if self.values :
+            value = self.values.pop(0)
         else:
             value = 0 if GPIO.input(self.pin) is GPIO.LOW else 1
         return value

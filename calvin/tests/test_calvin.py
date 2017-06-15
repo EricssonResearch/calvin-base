@@ -2811,7 +2811,7 @@ class TestConstantifyOnPort(CalvinTestBase):
                 id.token > .out
             }
 
-            tick : std.Trigger(data="tick", tick=1.0)
+            tick : std.Trigger(data="tick", tick=0.1)
             ticker : Ticker()
             test : test.Sink(store_tokens=1, quiet=1)
 

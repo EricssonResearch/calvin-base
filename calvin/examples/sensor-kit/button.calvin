@@ -1,0 +1,4 @@
+in : io.Button()
+out : io.Print()
+
+in.state > out.token

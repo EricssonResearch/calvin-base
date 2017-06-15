@@ -1,0 +1,7 @@
+button : io.Button()
+light: io.Light()
+out : io.Print()
+
+button.state > light.on
+button.state > out.token
+

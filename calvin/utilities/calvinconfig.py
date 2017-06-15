@@ -110,7 +110,20 @@ class CalvinConfig(object):
                 'comment': 'Experimental settings',
             },
             'security': {},
-            'calvinsys': {},
+            'calvinsys': {
+                "capabilities": [
+                    {
+                        "name":  "sys.timer.once",
+                        "module": "sys.timer.Timer",
+                        "attributes": {}
+                    }, 
+                    {
+                        "name":  "sys.timer.repeating",
+                        "module": "sys.timer.Timer",
+                        "attributes": {"repeats": True }
+                    }
+              ]
+             }
         }
         return default
 

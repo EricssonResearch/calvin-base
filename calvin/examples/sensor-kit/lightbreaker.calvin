@@ -1,0 +1,6 @@
+in : sensor.KnockSensor()
+out : io.Print()
+led : io.Light()
+
+in.open > out.token
+in.open > led.on

@@ -16,7 +16,6 @@
 # limitations under the License.
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.utilities.utils import enum
 
 class BaseGPIOPin(base_calvinsys_object.BaseCalvinsysObject):
     """
@@ -52,7 +51,7 @@ class BaseGPIOPin(base_calvinsys_object.BaseCalvinsysObject):
         "required": ["pin", "direction"],
         "description": "Initialize pin"
     }
-
+    
     can_write_schema = {
         "description": "Returns True if data can be written, otherwise False",
         "type": "boolean"

@@ -1,0 +1,3 @@
+buzzer: io.Buzzer()
+
+50 > buzzer.volume

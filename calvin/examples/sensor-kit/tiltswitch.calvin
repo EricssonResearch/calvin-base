@@ -1,0 +1,6 @@
+in : sensor.TiltSwitch()
+out : io.Print()
+led : io.Led()
+
+in.open > out.token
+in.open > led.on

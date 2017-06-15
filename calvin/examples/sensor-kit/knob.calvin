@@ -1,0 +1,17 @@
+in : io.Knob()
+old : flow.Init(data=50)
+mul : math.Compute(op="*")
+add : math.Compute(op="+")
+out : io.Print()
+dimmer : io.PWM()
+
+in.direction > mul.a
+5 > mul.b
+
+mul.result > add.a
+old.out > add.b
+
+add.result > old.in
+add.result > out.token
+add.result > dimmer.dutycycle
+
