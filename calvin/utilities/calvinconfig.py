@@ -113,12 +113,12 @@ class CalvinConfig(object):
             'calvinsys': {
                 "capabilities": [
                     {
-                        "name":  "sys.timer.once",
+                        "name":  "calvinsys.sys.timer.once",
                         "module": "sys.timer.Timer",
                         "attributes": {}
                     }, 
                     {
-                        "name":  "sys.timer.repeating",
+                        "name":  "calvinsys.sys.timer.repeating",
                         "module": "sys.timer.Timer",
                         "attributes": {"repeats": True }
                     }

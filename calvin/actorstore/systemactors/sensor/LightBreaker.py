@@ -16,9 +16,9 @@
 
 from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
-class TiltSwitch(Actor):
+class LightBreaker(Actor):
     """
-    React to changes in a TiltSwitch.
+    React to changes in a sensor.
 
     Output:
       open : state true=closed, false=open
@@ -29,24 +29,24 @@ class TiltSwitch(Actor):
         self.setup()
 
     def setup(self):
-        self.switch = calvinsys.open(self, "io.tiltswitch")
+        self.sensor = calvinsys.open(self, "calvinsys.io.lightbreaker")
 
     def will_migrate(self):
-        calvinsys.close(self.switch)
-        self.switch = None
+        calvinsys.close(self.sensor)
+        self.sensor = None
 
     def will_end(self):
-        if self.switch:
-            calvinsys.close(self.switch)
+        if self.sensor:
+            calvinsys.close(self.sensor)
 
     def did_migrate(self):
         self.setup()
 
-    @stateguard(lambda self: calvinsys.can_read(self.switch))
+    @stateguard(lambda self: calvinsys.can_read(self.sensor))
     @condition([], ["open"])
     def state_change(self):
-        value = calvinsys.read(self.switch)
+        value = calvinsys.read(self.sensor)
         return (True if value else False,)
 
     action_priority = (state_change, )
-    requires = ['io.tiltswitch']
+    requires = ['calvinsys.io.lightbreaker']

@@ -33,7 +33,7 @@ class Trigger(Actor):
         self.setup()
 
     def setup(self):
-        self._timer = calvinsys.open(self, "sys.timer.repeating")
+        self._timer = calvinsys.open(self, "calvinsys.sys.timer.repeating")
 
     def start(self):
         calvinsys.write(self._timer, self.tick)
@@ -61,4 +61,4 @@ class Trigger(Actor):
         return (self.data, )
 
     action_priority = (start_timer, trigger)
-    requires = ['sys.timer.repeating']
+    requires = ['calvinsys.sys.timer.repeating']

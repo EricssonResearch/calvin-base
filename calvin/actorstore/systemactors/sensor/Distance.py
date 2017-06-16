@@ -35,8 +35,8 @@ class Distance(Actor):
 
     def setup(self):
         _log.info("setup")
-        self._distance = calvinsys.open(self, "io.distance")
-        self._timer = calvinsys.open(self, "sys.timer.repeating")
+        self._distance = calvinsys.open(self, "calvinsys.io.distance")
+        self._timer = calvinsys.open(self, "calvinsys.sys.timer.repeating")
         calvinsys.write(self._timer, 1.0/self.frequency)
 
     def will_migrate(self):
@@ -68,6 +68,6 @@ class Distance(Actor):
     
 
     action_priority = (read_measurement, start_measurement)
-    requires =  ['io.distance', 'sys.timer.repeating']
+    requires =  ['calvinsys.io.distance', 'calvinsys.sys.timer.repeating']
 
 

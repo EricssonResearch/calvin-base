@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2017 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,38 +16,37 @@
 
 from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
-class Switch(Actor):
+class TiltSwitch(Actor):
     """
-    Creates a on/off switch.
+    React to changes in a TiltSwitch.
 
     Output:
-      state : 0/1 according to switch state
+      open : state true=closed, false=open
     """
 
-    @manage([])
+    @manage(include=[])
     def init(self):
-        self.switch = None
         self.setup()
-        # self.use("calvinsys.io.switch", shorthand="switch")
 
     def setup(self):
-        self.switch = calvinsys.open(self, "calvinsys.io.switch")
+        self.switch = calvinsys.open(self, "calvinsys.io.tiltswitch")
 
     def will_migrate(self):
         calvinsys.close(self.switch)
+        self.switch = None
+
+    def will_end(self):
+        if self.switch:
+            calvinsys.close(self.switch)
 
     def did_migrate(self):
         self.setup()
 
-    def will_end(self):
-        calvinsys.close(self.switch)
+    @stateguard(lambda self: calvinsys.can_read(self.switch))
+    @condition([], ["open"])
+    def state_change(self):
+        value = calvinsys.read(self.switch)
+        return (True if value else False,)
 
-    @stateguard(lambda self: self.switch and calvinsys.can_read(self.switch))
-    @condition([], ["state"])
-    def action(self):
-        state = calvinsys.read(self.switch)
-        return (state,)
-
-    action_priority = (action, )
-    requires = ['calvinsys.io.switch']
-
+    action_priority = (state_change, )
+    requires = ['calvinsys.io.tiltswitch']

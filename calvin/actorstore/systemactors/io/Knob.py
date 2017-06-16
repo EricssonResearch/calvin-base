@@ -31,7 +31,7 @@ class Knob(Actor):
         self.setup()
         
     def setup(self):
-        self._knob = calvinsys.open(self, "io.knob")
+        self._knob = calvinsys.open(self, "calvinsys.io.knob")
 
     def will_migrate(self):
         calvinsys.close(self._knob)
@@ -44,10 +44,10 @@ class Knob(Actor):
     def did_migrate(self):
         self.setup()
 
-    @stateguard(lambda self: self._knob and calvinsys.can_read(self._knob))
+    @stateguard(lambda self: calvinsys.can_read(self._knob))
     @condition([], ["direction"])
     def trigger(self):
         return (calvinsys.read(self._knob),)
 
     action_priority = (trigger, )
-    requires = ['io.knob']
+    requires = ['calvinsys.io.knob']
