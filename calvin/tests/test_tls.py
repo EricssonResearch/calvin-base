@@ -34,7 +34,7 @@ from calvin.utilities.utils import get_home
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities import calvinuuid
 from calvin.runtime.north.authentication.authentication_retrieval_point import FileAuthenticationRetrievalPoint
-
+from . import helpers
 import os
 import json
 import copy
@@ -49,16 +49,9 @@ homefolder = get_home()
 credentials_testdir = os.path.join(homefolder, ".calvin","test_tls")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
-#runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
-#code_signer_name="test_signer"
-#identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
-#policy_storage_path = os.path.join(security_testdir, "policies")
-#orig_actor_store_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'actorstore','systemactors'))
-#actor_store_path = os.path.join(credentials_testdir, "store")
 orig_application_store_path = os.path.join(security_testdir, "scripts")
-#application_store_path = os.path.join(credentials_testdir, "scripts")
 
 hostname=None
 rt=[]
@@ -66,27 +59,6 @@ rt_attributes=[]
 request_handler=None
 storage_verified=False
 
-def replace_text_in_file(file_path, text_to_be_replaced, text_to_insert):
-    # Read in the file
-    filedata = None
-    with open(file_path, 'r') as file :
-          filedata = file.read()
-
-    # Replace the target string
-    filedata = filedata.replace(text_to_be_replaced, text_to_insert)
-
-    # Write the file out again
-    with open(file_path, 'w') as file:
-        file.write(filedata)
-
-def fetch_and_log_runtime_actors():
-    global rt
-    # Verify that actors exist like this
-    actors=[]
-    for runtime in rt:
-        actors.append(request_handler.get_actors(runtime))
-    _log.info("\n\trt0 actors={}\n\trt1 actors={}\n\trt2 actors={}\n\trt3 actors={}\n\trt4 actors={}\n\trt5 actors={}".format(actors[0], actors[1], actors[2], actors[3], actors[4], actors[5]))
-    return actors
 
 @pytest.mark.slow
 class TestSecurity(unittest.TestCase):
@@ -376,7 +348,6 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed to deploy script")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of script, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         #Log actor ids:
         _log.info("Actors id:s:\n\tsrc id={}\n\tsum={}\n\tsnk={}".format(result['actor_map']['test_script:src'],
@@ -386,7 +357,7 @@ class TestSecurity(unittest.TestCase):
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -410,9 +381,8 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to send first migration request to runtime 2, err={}".format(err))
             raise
-        time.sleep(3)
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -435,9 +405,8 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to send second migration requestfrom runtime 2, err={}".format(err))
             raise
-        time.sleep(3)
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise

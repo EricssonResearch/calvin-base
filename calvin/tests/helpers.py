@@ -499,3 +499,22 @@ def sign_files_for_security_tests(credentials_testdir):
     out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
     certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=credentials_testdir)
 
+def fetch_and_log_runtime_actors(rt, request_handler):
+    # Verify that actors exist like this
+    actors=[]
+    #Use admins credentials to access the control interface
+    request_handler.set_credentials({"user": "user0", "password": "pass0"})
+    for runtime in rt:
+        for i in range(1, 30):
+            try:
+                actors_rt = request_handler.get_actors(runtime)
+                actors.append(actors_rt)
+                break
+            except:
+                time.sleep(0.2)
+                _log.error("Request handler failed to get actors, sleep and try again, attempt={}".format(i))
+                continue
+    for i in range(0, len(rt)):
+        _log.info("\n\trt{} actors={}".format(i, actors[i]))
+    return actors
+

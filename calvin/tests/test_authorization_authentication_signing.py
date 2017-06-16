@@ -77,31 +77,6 @@ rt_attributes=[]
 request_handler=None
 storage_verified=False
 
-def replace_text_in_file(file_path, text_to_be_replaced, text_to_insert):
-    # Read in the file
-    filedata = None
-    with open(file_path, 'r') as file :
-          filedata = file.read()
-
-    # Replace the target string
-    filedata = filedata.replace(text_to_be_replaced, text_to_insert)
-
-    # Write the file out again
-    with open(file_path, 'w') as file:
-        file.write(filedata)
-
-def fetch_and_log_runtime_actors():
-    import pprint
-    global rt
-    # Verify that actors exist like this
-    actors=[]
-    #Use admins credentials to access the control interface
-    request_handler.set_credentials({"user": "user0", "password": "pass0"})
-    for runtime in rt:
-        actors.append(request_handler.get_actors(runtime))
-    for i in range(0,NBR_OF_RUNTIMES):
-        _log.info("\n\trt{} actors={}".format(i, actors[i]))
-    return actors
 
 @pytest.mark.slow
 class TestSecurity(unittest.TestCase):
@@ -401,11 +376,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -415,7 +389,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
         actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
         _log.info("actual={}".format(actual))
-        assert len(actual) > 5
+        assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
 
@@ -478,11 +452,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_correctlySignedApp_incorrectlySignedActor")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctlySignedApp_incorrectlySignedActor, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -529,11 +502,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_unsignedApp_signedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_unsignedApp_signedActors, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -542,7 +514,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors[1]
 
         actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
-        assert len(actual) > 5
+        assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
 
@@ -573,11 +545,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -586,7 +557,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[1]
 
         actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
-        assert len(actual) > 5
+        assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
 
@@ -618,11 +589,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -663,11 +633,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_unsignedApp_signedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_unsignedApp_signedActors, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -676,7 +645,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors[0]
 
         actual = request_handler.report(rt[0], result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
-        assert len(actual) > 5
+        assert len(actual) > 2
 
         request_handler.delete_application(rt[0], result['application_id'])
 
@@ -707,11 +676,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_unsignedApp_signedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_unsignedApp_signedActors, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -720,7 +688,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors[1]
 
         actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
-        assert len(actual) > 5
+        assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
 
@@ -751,11 +719,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this (all of them should have migrated to rt[2])
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -764,7 +731,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[2]
 
         actual = request_handler.report(rt[2], result['actor_map']['test_security1_correctly_signed:snk'])
-        assert len(actual) > 5
+        assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
 
@@ -948,11 +915,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -962,7 +928,7 @@ class TestSecurity(unittest.TestCase):
 
         time.sleep(1)
         actual = request_handler.report(rt[0], result['actor_map']['test_security1_correctly_signed:snk'])
-        assert len(actual) > 5
+        assert len(actual) > 2
 
         request_handler.delete_application(rt[0], result['application_id']) 
 
@@ -995,11 +961,10 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed security verification of app test_security1_correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-        time.sleep(2)
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -1009,7 +974,7 @@ class TestSecurity(unittest.TestCase):
 
         time.sleep(1)
         actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
-        assert len(actual) > 5
+        assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id']) 
 
@@ -1043,11 +1008,10 @@ class TestSecurity(unittest.TestCase):
 #                raise Exception("Failed security verification of app test_security1_correctly_signed")
 #            _log.exception("Test deploy failed")
 #            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
-#        time.sleep(2)
 #
 #        # Verify that actors exist like this
 #        try:
-#            actors = fetch_and_log_runtime_actors()
+#            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
 #        except Exception as err:
 #            _log.error("Failed to get actors from runtimes, err={}".format(err))
 #            raise
@@ -1057,6 +1021,6 @@ class TestSecurity(unittest.TestCase):
 #        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[3]
 #
 #        actual = request_handler.report(rt[3], result['actor_map']['test_security1_correctly_signed:snk'])
-#        assert len(actual) > 5
+#        assert len(actual) > 2
 #
 #        request_handler.delete_application(rt[3], result['application_id'])

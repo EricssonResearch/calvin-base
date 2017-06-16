@@ -76,31 +76,6 @@ rt_attributes=[]
 request_handler=None
 storage_verified=False
 
-def replace_text_in_file(file_path, text_to_be_replaced, text_to_insert):
-    # Read in the file
-    filedata = None
-    with open(file_path, 'r') as file :
-          filedata = file.read()
-
-    # Replace the target string
-    filedata = filedata.replace(text_to_be_replaced, text_to_insert)
-
-    # Write the file out again
-    with open(file_path, 'w') as file:
-        file.write(filedata)
-
-def fetch_and_log_runtime_actors():
-    import pprint
-    global rt
-    # Verify that actors exist like this
-    actors=[]
-    #Use admins credentials to access the control interface
-    request_handler.set_credentials({"user": "user0", "password": "pass0"})
-    for runtime in rt:
-        actors.append(request_handler.get_actors(runtime))
-    for i in range(0,NBR_OF_RUNTIMES):
-        _log.info("\n\trt{} actors={}".format(i, actors[i]))
-    return actors
 
 @pytest.mark.slow
 class TestSecurity(unittest.TestCase):
@@ -332,7 +307,6 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed to deploy test_security1_unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app test_security1_unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
-        time.sleep(2)
         #Log actor ids:
         _log.info("Actors id:s:\n\tsrc id={}\n\tsum={}\n\tsnk={}".format(result['actor_map']['test_security1_unsignedApp_unsignedActors:src'],
                                                                         result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'],
@@ -341,7 +315,7 @@ class TestSecurity(unittest.TestCase):
 
         # Verify that actors exist like this
         try:
-            actors = fetch_and_log_runtime_actors()
+            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -356,61 +330,6 @@ class TestSecurity(unittest.TestCase):
             raise
         _log.info("actual={}".format(actual))
         assert len(actual) > 5
-
-        #Migrate snk actor to rt1
-        time.sleep(2)
-        _log.info("Let's migrate actor {} from runtime {}(rt0) to runtime {}(rt1)".format(rt0_id, result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'], rt1_id))
-        try:
-            request_handler.migrate(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'], rt1_id)
-        except Exception as err:
-            _log.error("Failed to send first migration request to runtime 0, err={}".format(err))
-            raise
-        time.sleep(3)
-        try:
-            actors = fetch_and_log_runtime_actors()
-        except Exception as err:
-            _log.error("Failed to get actors from runtimes, err={}".format(err))
-            raise
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[1]
-        time.sleep(1)
-        try:
-            actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
-        except Exception as err:
-            _log.error("Failed to report snk values from runtime 1, err={}".format(err))
-            raise
-        _log.info("actual={}".format(actual))
-        assert len(actual) > 3
-
-        #Migrate src actor to rt3
-        time.sleep(1)
-        try:
-            request_handler.migrate(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:src'], rt1_id)
-        except Exception as err:
-            _log.error("Failed to send second migration requestfrom runtime 0, err={}".format(err))
-            raise
-        time.sleep(3)
-        try:
-            actors = fetch_and_log_runtime_actors()
-        except Exception as err:
-            _log.error("Failed to get actors from runtimes, err={}".format(err))
-            raise
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors[1]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[1]
-        time.sleep(1)
-        try:
-            actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
-        except Exception as err:
-            _log.error("Failed to report snk values from runtime 1, err={}".format(err))
-            raise
-        _log.info("actual={}".format(actual))
-        assert len(actual) > 3
-        _log.info("\n\t----------------------------"
-                  "\n\tTotal time to verify storage is {} seconds"
-                  "\n\tTotal time of entire (including storage verification) is {} seconds"
-                  "\n\t----------------------------".format(time_to_verify_storaget, time.time()-start))
 
         time.sleep(1)
         request_handler.delete_application(rt[0], result['application_id'])
