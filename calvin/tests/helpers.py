@@ -402,3 +402,100 @@ def teardown_test_type(test_type, runtimes, request_handler):
             p.terminate()
             time.sleep(1)
 
+def sign_files_for_security_tests(credentials_testdir):
+    from calvin.utilities import code_signer
+    from calvin.utilities.utils import get_home
+    from calvin.utilities import certificate
+    import shutil
+    def replace_text_in_file(file_path, text_to_be_replaced, text_to_insert):
+        # Read in the file
+        filedata = None
+        with open(file_path, 'r') as file :
+              filedata = file.read()
+
+        # Replace the target string
+        filedata = filedata.replace(text_to_be_replaced, text_to_insert)
+
+        # Write the file out again
+        with open(file_path, 'w') as file:
+            file.write(filedata)
+
+    homefolder = get_home()
+    runtimesdir = os.path.join(credentials_testdir,"runtimes")
+    runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
+    orig_testdir = os.path.join(os.path.dirname(__file__), "security_test")
+    orig_actor_store_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'actorstore','systemactors'))
+    actor_store_path = os.path.join(credentials_testdir, "store")
+    orig_application_store_path = os.path.join(orig_testdir, "scripts")
+    application_store_path = os.path.join(credentials_testdir, "scripts")
+    print "Create test folders"
+    try:
+        os.makedirs(actor_store_path)
+        os.makedirs(os.path.join(actor_store_path,"test"))
+        shutil.copy(os.path.join(orig_actor_store_path,"test","__init__.py"), os.path.join(actor_store_path,"test","__init__.py"))
+        os.makedirs(os.path.join(actor_store_path,"std"))
+        shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
+        shutil.copytree(orig_application_store_path, application_store_path)
+    except Exception as err:
+        _log.error("Failed to create test folder structure, err={}".format(err))
+        print "Failed to create test folder structure, err={}".format(err)
+        raise
+
+    print "Trying to create a new test application/actor signer."
+    cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
+
+    #Create signed version of CountTimer actor
+    orig_actor_CountTimer_path = os.path.join(orig_actor_store_path,"std","CountTimer.py")
+    actor_CountTimer_path = os.path.join(actor_store_path,"std","CountTimer.py")
+    shutil.copy(orig_actor_CountTimer_path, actor_CountTimer_path)
+    cs.sign_file(actor_CountTimer_path)
+
+    #Create unsigned version of CountTimer actor
+    actor_CountTimerUnsigned_path = actor_CountTimer_path.replace(".py", "Unsigned.py") 
+    shutil.copy(actor_CountTimer_path, actor_CountTimerUnsigned_path)
+    replace_text_in_file(actor_CountTimerUnsigned_path, "CountTimer", "CountTimerUnsigned")
+
+    #Create signed version of Sum actor
+    orig_actor_Sum_path = os.path.join(orig_actor_store_path,"std","Sum.py")
+    actor_Sum_path = os.path.join(actor_store_path,"std","Sum.py")
+    shutil.copy(orig_actor_Sum_path, actor_Sum_path)
+    cs.sign_file(actor_Sum_path)
+
+    #Create unsigned version of Sum actor
+    actor_SumUnsigned_path = actor_Sum_path.replace(".py", "Unsigned.py") 
+    shutil.copy(actor_Sum_path, actor_SumUnsigned_path)
+    replace_text_in_file(actor_SumUnsigned_path, "Sum", "SumUnsigned")
+
+    #Create incorrectly signed version of Sum actor
+    actor_SumFake_path = actor_Sum_path.replace(".py", "Fake.py") 
+    shutil.copy(actor_Sum_path, actor_SumFake_path)
+    #Change the class name to SumFake
+    replace_text_in_file(actor_SumFake_path, "Sum", "SumFake")
+    cs.sign_file(actor_SumFake_path)
+    #Now append to the signed file so the signature verification fails
+    with open(actor_SumFake_path, "a") as fd:
+            fd.write(" ")
+
+    #Create signed version of Sink actor
+    orig_actor_Sink_path = os.path.join(orig_actor_store_path,"test","Sink.py")
+    actor_Sink_path = os.path.join(actor_store_path,"test","Sink.py")
+    shutil.copy(orig_actor_Sink_path, actor_Sink_path)
+    cs.sign_file(actor_Sink_path)
+
+    #Create unsigned version of Sink actor
+    actor_SinkUnsigned_path = actor_Sink_path.replace(".py", "Unsigned.py") 
+    shutil.copy(actor_Sink_path, actor_SinkUnsigned_path)
+    replace_text_in_file(actor_SinkUnsigned_path, "Sink", "SinkUnsigned")
+
+    #Sign applications
+    cs.sign_file(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+    cs.sign_file(os.path.join(application_store_path, "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
+    cs.sign_file(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"))
+    #Now append to the signed file so the signature verification fails
+    with open(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"), "a") as fd:
+            fd.write(" ")
+
+    print "Export Code Signers certificate to the truststore for code signing"
+    out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
+    certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=credentials_testdir)
+

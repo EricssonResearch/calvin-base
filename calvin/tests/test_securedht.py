@@ -34,6 +34,7 @@ from calvin.utilities.utils import get_home
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities import calvinuuid
 from calvin.runtime.north.authentication.authentication_retrieval_point import FileAuthenticationRetrievalPoint
+from . import helpers
 
 import os
 import json
@@ -118,70 +119,12 @@ class TestSecurity(unittest.TestCase):
             print "Failed to remove old tesdir, err={}".format(err)
             pass
         try:
-            os.makedirs(credentials_testdir)
-            os.makedirs(runtimesdir)
-            os.makedirs(runtimes_truststore)
-            os.makedirs(runtimes_truststore_signing_path)
-            os.makedirs(actor_store_path)
-            os.makedirs(os.path.join(actor_store_path,"test"))
-            shutil.copy(os.path.join(orig_actor_store_path,"test","__init__.py"), os.path.join(actor_store_path,"test","__init__.py"))
-            os.makedirs(os.path.join(actor_store_path,"std"))
-            shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
-            shutil.copytree(orig_application_store_path, application_store_path)
-            filelist = [ f for f in os.listdir(application_store_path) if f.endswith(".sign.93d58fef") ]
-            for f in filelist:
-                    os.remove(os.path.join(application_store_path,f))
             shutil.copytree(os.path.join(security_testdir,"identity_provider"),identity_provider_path)
         except Exception as err:
             _log.error("Failed to create test folder structure, err={}".format(err))
             print "Failed to create test folder structure, err={}".format(err)
             raise
-
-        print "Trying to create a new test application/actor signer."
-        cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
-
-        #Create signed version of CountTimer actor
-        orig_actor_CountTimer_path = os.path.join(orig_actor_store_path,"std","CountTimer.py")
-        actor_CountTimer_path = os.path.join(actor_store_path,"std","CountTimer.py")
-        shutil.copy(orig_actor_CountTimer_path, actor_CountTimer_path)
-#        cs.sign_file(actor_CountTimer_path)
-
-        #Create unsigned version of CountTimer actor
-        actor_CountTimerUnsigned_path = actor_CountTimer_path.replace(".py", "Unsigned.py") 
-        shutil.copy(actor_CountTimer_path, actor_CountTimerUnsigned_path)
-        replace_text_in_file(actor_CountTimerUnsigned_path, "CountTimer", "CountTimerUnsigned")
-
-        #Create signed version of Sum actor
-        orig_actor_Sum_path = os.path.join(orig_actor_store_path,"std","Sum.py")
-        actor_Sum_path = os.path.join(actor_store_path,"std","Sum.py")
-        shutil.copy(orig_actor_Sum_path, actor_Sum_path)
-#        cs.sign_file(actor_Sum_path)
-
-        #Create unsigned version of Sum actor
-        actor_SumUnsigned_path = actor_Sum_path.replace(".py", "Unsigned.py") 
-        shutil.copy(actor_Sum_path, actor_SumUnsigned_path)
-        replace_text_in_file(actor_SumUnsigned_path, "Sum", "SumUnsigned")
-
-        #Create incorrectly signed version of Sum actor
-#        actor_SumFake_path = actor_Sum_path.replace(".py", "Fake.py") 
-#        shutil.copy(actor_Sum_path, actor_SumFake_path)
-#        #Change the class name to SumFake
-#        replace_text_in_file(actor_SumFake_path, "Sum", "SumFake")
-#        cs.sign_file(actor_SumFake_path)
-#        #Now append to the signed file so the signature verification fails
-#        with open(actor_SumFake_path, "a") as fd:
-#                fd.write(" ")
-
-        #Create signed version of Sink actor
-        orig_actor_Sink_path = os.path.join(orig_actor_store_path,"test","Sink.py")
-        actor_Sink_path = os.path.join(actor_store_path,"test","Sink.py")
-        shutil.copy(orig_actor_Sink_path, actor_Sink_path)
-#        cs.sign_file(actor_Sink_path)
-
-        #Create unsigned version of Sink actor
-        actor_SinkUnsigned_path = actor_Sink_path.replace(".py", "Unsigned.py") 
-        shutil.copy(actor_Sink_path, actor_SinkUnsigned_path)
-        replace_text_in_file(actor_SinkUnsigned_path, "Sink", "SinkUnsigned")
+        helpers.sign_files_for_security_tests(credentials_testdir)
 
         print "Trying to create a new test domain configuration."
         ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
