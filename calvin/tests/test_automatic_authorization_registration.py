@@ -218,6 +218,7 @@ class TestSecurity(unittest.TestCase):
                        loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                        configfile="/tmp/calvin500{}.conf".format(i))
             rt.append(RT("http://{}:502{}".format(hostname,i)))
+            rt[0].attributes=rt_attributes[0]
         #It takes 4,5 seconds for rt0 to hash the passwords in the users_db file, so wait for that to be done
         time.sleep(5)
         #Start the other runtimes
@@ -236,6 +237,7 @@ class TestSecurity(unittest.TestCase):
                        configfile="/tmp/calvin500{}.conf".format(i))
 #            rt.append(RT("https://{}:502{}".format(hostname, i)))
             rt.append(RT("http://{}:502{}".format(hostname,i)))
+            rt[i].attributes=rt_attributes[i]
             time.sleep(0.1)
         request.addfinalizer(self.teardown)
 
@@ -261,59 +263,6 @@ class TestSecurity(unittest.TestCase):
             os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
         time.sleep(0.2)
 
-    def verify_storage(self):
-        global rt
-        global request_handler
-        global storage_verified
-        if not storage_verified:
-            _log.info("Let's verify storage, rt={}".format(rt))
-            rt_id=[None]*NBR_OF_RUNTIMES
-            failed = True
-            # Try 30 times waiting for control API to be up and running
-            for i in range(30):
-                try:
-                    for j in range(NBR_OF_RUNTIMES):
-                        rt_id[j] = rt_id[j] or request_handler.get_node_id(rt[j])
-                    failed = False
-                    break
-                except Exception as err:
-                    _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(j, err))
-                    time.sleep(0.5)
-            assert not failed
-            for id in rt_id:
-                assert id
-            _log.info("RUNTIMES:{}".format(rt_id))
-            _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
-            failed = True
-            # Try 100 times waiting for storage to be connected
-            for i in range(100):
-                _log.info("-----------------Round {}-----------------".format(i))
-                count=[0]*NBR_OF_RUNTIMES
-                try:
-                    caps=[0] * NBR_OF_RUNTIMES
-                    #Loop through all runtimes to ask them which runtimes they node with calvisys.native.python-json
-                    for j in range(NBR_OF_RUNTIMES):
-                        caps[j] = request_handler.get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
-                        #Add the known nodes to statistics of how many nodes store keys from that node
-                        for k in range(NBR_OF_RUNTIMES):
-                            count[k] = count[k] + caps[j].count(rt_id[k])
-                    _log.info("rt_ids={}\n\tcount={}".format(rt_id, count))
-                    for k in range(NBR_OF_RUNTIMES):
-                        _log.info("caps{}={}".format(k, caps[k]))
-                    #Keys should have spread to atleast 5 other runtimes (or all if there are fewer than 5 runtimes)
-                    if all(x>=min(5, NBR_OF_RUNTIMES) for x in count):
-                        failed = False
-                        break
-                    else:
-                        time.sleep(0.2)
-                except Exception as err:
-                    _log.error("exception from request_handler.get_index, err={}".format(err))
-                    time.sleep(0.1)
-            assert not failed
-            storage_verified=True
-        else:
-            _log.info("Storage has already been verified")
-
 ###################################
 #   Signature related tests
 ###################################
@@ -326,7 +275,7 @@ class TestSecurity(unittest.TestCase):
         global security_testdir
 
         try:
-            self.verify_storage()
+            helpers.security_verify_storage(rt, request_handler)
         except Exception as err:
             _log.error("Failed storage verification, err={}".format(err))
             raise

@@ -184,6 +184,7 @@ class TestSecurity(unittest.TestCase):
                         dht_network_filter=test_name
                      )
             rt.append(RT("http://{}:{}".format(hostname,5020+i)))
+            rt[i].attributes=rt_attributes[i]
             time.sleep(0.2)
         time.sleep(2)
         _log.info("------------------------------------------------")
@@ -212,74 +213,6 @@ class TestSecurity(unittest.TestCase):
             os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
         time.sleep(0.2)
 
-
-    def verify_storage(self):
-        global rt
-        global request_handler
-        global storage_verified
-        _log.info("storage_verified={}".format(storage_verified))
-        if not storage_verified:
-            _log.info("Let's verify storage, rt={}".format(rt))
-            rt_id=[None]*NBR_OF_RUNTIMES
-            failed = True
-            # Try 30 times waiting for control API to be up and running
-            for i in range(30):
-                try:
-                    for j in range(NBR_OF_RUNTIMES):
-                        rt_id[j] = rt_id[j] or request_handler.get_node_id(rt[j])
-                    failed = False
-                    break
-                except Exception as err:
-                    _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(j, err))
-                    time.sleep(0.5)
-            assert not failed
-            for id in rt_id:
-                assert id
-            _log.info("RUNTIMES:{}".format(rt_id))
-            _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
-             # Try 100 times waiting for storage to be connected
-            failed = True
-            for i in range(100):
-                _log.info("-----------------Round {}-----------------".format(i))
-                count=[0]*NBR_OF_RUNTIMES
-                try:
-                    caps=[0] * NBR_OF_RUNTIMES
-                    #Loop through all runtimes to ask them which runtimes they node with calvisys.native.python-json
-                    for j in range(NBR_OF_RUNTIMES):
-                        caps[j] = request_handler.get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
-                        #Add the known nodes to statistics of how many nodes store keys from that node
-                        for k in range(NBR_OF_RUNTIMES):
-                            count[k] = count[k] + caps[j].count(rt_id[k])
-                    _log.info("rt_ids={}\n\tcount={}".format(rt_id, count))
-                    for k in range(NBR_OF_RUNTIMES):
-                        _log.info("caps{}={}".format(k, caps[k]))
-                    #Keys should have spread to atleast 5 other runtimes (or all if there are fewer than 5 runtimes)
-                    if all(x>=min(5, NBR_OF_RUNTIMES) for x in count):
-                        failed = False
-                        break
-                    else:
-                        time.sleep(0.2)
-                except Exception as err:
-                    _log.error("exception from request_handler.get_index, err={}".format(err))
-                    time.sleep(0.1)
-            assert not failed
-            try:
-                #Loop through all runtimes and make sure they can lookup all other runtimes
-                for runtime in rt:
-                    for rt_attribute in rt_attributes:
-                        node_name = rt_attribute['indexed_public']['node_name']
-                        response = request_handler.get_index(runtime, format_index_string(['node_name', node_name]))
-                        _log.info("\tresponse={}".format(response))
-                        assert(response)
-                storage_verified = True
-            except Exception as err:
-                _log.error("Exception when trying to lookup index={} from rt={},  err={}".format(format_index_string(['node_name', node_name]), runtime.control_uri, err))
-                raise
-        else:
-            _log.info("Storage has already been verified")
-
-
-
 ###################################
 #   Policy related tests
 ###################################
@@ -292,7 +225,7 @@ class TestSecurity(unittest.TestCase):
         global security_testdir
         start = time.time()
         try:
-            self.verify_storage()
+            helpers.security_verify_storage(rt, request_handler)
         except Exception as err:
             _log.error("Failed storage verification, err={}".format(err))
             raise

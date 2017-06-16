@@ -518,3 +518,62 @@ def fetch_and_log_runtime_actors(rt, request_handler):
         _log.info("\n\trt{} actors={}".format(i, actors[i]))
     return actors
 
+def security_verify_storage(rt, request_handler):
+    _log.info("Let's verify storage, rt={}".format(rt))
+    rt_id=[None]*len(rt)
+    # Try 30 times waiting for control API to be up and running
+    for j in range(len(rt)):
+        failed = True
+        for i in range(100):
+            try:
+                rt_id[j] = request_handler.get_node_id(rt[j])
+                failed = False
+                break
+            except Exception as err:
+                _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(j, err))
+                time.sleep(0.5)
+    assert not failed
+    for id in rt_id:
+        assert id
+    _log.info("RUNTIMES:{}".format(rt_id))
+    _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
+     # Try 100 times waiting for storage to be connected
+    failed = True
+    for i in range(100):
+        _log.info("-----------------Round {}-----------------".format(i))
+        count=[0]*len(rt)
+        try:
+            caps=[0] * len(rt)
+            #Loop through all runtimes to ask them which runtimes they node with calvisys.native.python-json
+            for j in range(len(rt)):
+                caps[j] = request_handler.get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
+                #Add the known nodes to statistics of how many nodes store keys from that node
+                for k in range(len(rt)):
+                    count[k] = count[k] + caps[j].count(rt_id[k])
+            _log.info("rt_ids={}\n\tcount={}".format(rt_id, count))
+            for k in range(len(rt)):
+                _log.info("caps{}={}".format(k, caps[k]))
+            #Keys should have spread to atleast 5 other runtimes (or all if there are fewer than 5 runtimes)
+            if all(x>=min(5, len(rt)) for x in count):
+                failed = False
+                break
+            else:
+                time.sleep(0.2)
+        except Exception as err:
+            _log.error("exception from request_handler.get_index, err={}".format(err))
+            time.sleep(0.1)
+    assert not failed
+    try:
+        #Loop through all runtimes and make sure they can lookup all other runtimes
+        for runtime1 in rt:
+            for runtime2 in rt:
+                node_name = runtime2.attributes['indexed_public']['node_name']
+                response = request_handler.get_index(runtime1, format_index_string(['node_name', node_name]))
+                _log.info("\tresponse={}".format(response))
+                assert(response)
+        storage_verified = True
+    except Exception as err:
+        _log.error("Exception when trying to lookup index={} from rt={},  err={}".format(format_index_string(['node_name', node_name]), runtime.control_uri, err))
+        raise
+    return True
+
