@@ -29,7 +29,7 @@ class PIGPIOSR04(BaseSR04.BaseSR04):
     def init(self, echo_pin, trigger_pin, **kwargs):
         self._echo_pin = echo_pin
         self._trigger_pin = trigger_pin
-        
+
         self._gpio = pigpio.pi()
         self._gpio.set_mode(self._trigger_pin, pigpio.OUTPUT)
         self._gpio.set_mode(self._echo_pin, pigpio.INPUT)
@@ -45,7 +45,7 @@ class PIGPIOSR04(BaseSR04.BaseSR04):
         self._elapsed = pigpio.tickDiff(self._t0, tick)
         self._detection.cancel()
         async.call_from_thread(self.scheduler_wakeup)
-        
+
 
     def can_write(self):
         return self._detection is None
@@ -61,15 +61,16 @@ class PIGPIOSR04(BaseSR04.BaseSR04):
 
     def can_read(self):
         return self._elapsed is not None
-        
+
     def read(self):
         # distance is (elapsed us) * (speed of sound in mm/usec, 0.343)/2
         distance = self._elapsed*0.343/2 # not great accuracy
         self._elapsed = None
         self._detection = None
-        return distance
+        # Return value in meters rather than mm
+        return distance/1000.0
 
-        
+
     def close(self):
         del self._gpio
         self._gpio = None

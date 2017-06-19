@@ -58,14 +58,14 @@ class Distance(Actor):
     @condition([], ['meters'])
     def read_measurement(self):
         distance = calvinsys.read(self._distance)
-        return (distance/1000.0,)
-        
+        return (distance,)
+
     @stateguard(lambda self: calvinsys.can_read(self._timer) and calvinsys.can_write(self._distance))
     @condition([], [])
     def start_measurement(self):
         calvinsys.read(self._timer)
         calvinsys.write(self._distance, True)
-    
+
 
     action_priority = (read_measurement, start_measurement)
     requires =  ['calvinsys.io.distance', 'calvinsys.sys.timer.repeating']
