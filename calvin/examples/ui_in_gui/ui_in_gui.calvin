@@ -1,4 +1,6 @@
-src : io.Switch()
-snk : io.Print()
+switch : io.Switch()
+light : io.Light()
+print : io.Print()
 
-src.state > snk.token
+switch.state > print.token
+switch.state > light.on
