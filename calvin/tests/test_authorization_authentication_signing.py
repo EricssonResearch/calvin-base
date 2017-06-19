@@ -48,12 +48,9 @@ _conf = calvinconfig.get()
 homefolder = get_home()
 credentials_testdir = os.path.join(homefolder, ".calvin","test_authorization_authentication_dir")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
-runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
-runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
 code_signer_name="test_signer"
-org_name='org.testexample'
 orig_identity_provider_path = os.path.join(security_testdir,"identity_provider")
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
@@ -73,7 +70,6 @@ except:
     hostname = socket.gethostname()
 
 rt=[]
-rt_attributes=[]
 request_handler=None
 storage_verified=False
 
@@ -87,7 +83,6 @@ class TestSecurity(unittest.TestCase):
         from conftest import _config_pytest
         import fileinput
         global rt
-        global rt_attributes
         global request_handler
         try:
             shutil.rmtree(credentials_testdir)
@@ -97,71 +92,17 @@ class TestSecurity(unittest.TestCase):
         try:
             shutil.copytree(orig_identity_provider_path, identity_provider_path)
         except Exception as err:
-            _log.error("Failed to create test folder structure, err={}".format(err))
-            print "Failed to create test folder structure, err={}".format(err)
+            _log.error("Failed to copy the identity provider files, err={}".format(err))
             raise
-        helpers.sign_files_for_security_tests(credentials_testdir)
+        actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
+        runtimes, rt_attributes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
-        print "Trying to create a new test domain configuration."
-        ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
-#
-        print "Copy CA cert into truststore of runtimes folder"
-        ca.export_ca_cert(runtimes_truststore)
-        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
-        #Define the runtime attributes
-        for i in range(NBR_OF_RUNTIMES):
-             purpose = 'CA-authserver-authzserver' if i==0 else ""
-             node_name ={'organization': org_name,
-                         'purpose':purpose,
-                         'name': 'testNode{}'.format(i)}
-             owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
-             address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
-             rt_attribute=  {
-                                'indexed_public':
-                                {
-                                    'owner':owner,
-                                    'node_name':node_name,
-                                    'address':address
-                                }
-                            }
-             rt_attributes.append(rt_attribute)
-        rt_attributes_cpy = deepcopy(rt_attributes)
-
-        runtimes=[]
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
                                                          security_dir=credentials_testdir)
         request_handler = RequestHandler(verify=truststore_dir)
-        #Let's use the admin user0 for request_handler 
+        #Let's use the admin user0 for request_handler
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-
-        #Generate credentials, create CSR, sign with CA and import cert for all runtimes
-        enrollment_passwords=[]
-        for rt_attribute in rt_attributes_cpy:
-            attributes=AttributeResolver(rt_attribute)
-            node_name = attributes.get_node_name_as_str()
-            nodeid = calvinuuid.uuid("")
-            #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
-            if "testNode0" in node_name:
-                ca.add_new_authentication_server(node_name)
-                ca.add_new_authorization_server(node_name)
-            enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
-            enrollment_passwords.append(enrollment_password)
-            runtime=runtime_credentials.RuntimeCredentials(node_name,
-                                                           domain=domain_name,
-#                                                           hostnames=["elxahyc5lz1","elxahyc5lz1.localdomain"],
-                                                           security_dir=credentials_testdir,
-                                                           nodeid=nodeid,
-                                                           enrollment_password=enrollment_password)
-            runtimes.append(runtime)
-            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            #Decrypt encrypted CSR with CAs private key
-            rsa_encrypted_csr = runtime.get_encrypted_csr()
-            csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
-            csr_path = ca.store_csr_with_enrollment_password(csr)
-            cert_path = ca.sign_csr(csr_path)
-            runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
-
 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'security_dir', credentials_testdir)
@@ -170,7 +111,6 @@ class TestSecurity(unittest.TestCase):
         # Runtime 0: Certificate authority, authentication server, authorization server.
         rt0_conf = copy.deepcopy(rt_conf)
         rt0_conf.set('global','storage_type','local')
-        rt0_conf.set('security','enrollment_password',enrollment_passwords[0])
         rt0_conf.set('security','certificate_authority',{
             'domain_name':domain_name,
             'is_ca':'True'
@@ -212,7 +152,6 @@ class TestSecurity(unittest.TestCase):
                     })
 
         for i in range(1, NBR_OF_RUNTIMES):
-            rt_conf.set('security','enrollment_password',enrollment_passwords[i])
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
 #        # Runtime 3: external authentication (RADIUS).
@@ -234,24 +173,24 @@ class TestSecurity(unittest.TestCase):
 
 
         #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
-        for i in range(0, 1):
-            _log.info("Starting runtime {}".format(i))
-            try:
-                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
-                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-                if outfile == logfile:
-                    outfile = None
-            except:
-                logfile = None
+        _log.info("Starting runtime {}".format(i))
+        try:
+            logfile = _config_pytest.getoption("logfile")+"5000"
+            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+            if outfile == logfile:
                 outfile = None
-            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
-                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                       configfile="/tmp/calvin500{}.conf".format(i))
-#            rt.append(RT("https://{}:502{}".format(hostname, i)))
-            rt.append(RT("http://{}:502{}".format(hostname,i)))
-            rt[0].attributes=rt_attributes[0]
-        #It takes 4,5 seconds for rt0 to hash the passwords in the users_db file, so wait for that to be done
-        time.sleep(5)
+        except:
+            logfile = None
+            outfile = None
+        csruntime(hostname, port=5000, controlport=5020, attr=rt_attributes[0],
+                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                   configfile="/tmp/calvin5000.conf")
+        rt.append(RT("http://{}:5020".format(hostname)))
+        rt[0].attributes=rt_attributes[0]
+
+        #Wait for runtime 0 to be up and running
+        helpers.wait_for_runtime(request_handler, rt[0])
+
         #Start the other runtimes
         for i in range(1, NBR_OF_RUNTIMES):
             _log.info(" Starting runtime {}".format(i))
@@ -266,7 +205,6 @@ class TestSecurity(unittest.TestCase):
             csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
                        loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                        configfile="/tmp/calvin500{}.conf".format(i))
-#            rt.append(RT("https://{}:502{}".format(hostname, i)))
             rt.append(RT("http://{}:502{}".format(hostname,i)))
             rt[i].attributes=rt_attributes[i]
             time.sleep(0.1)
@@ -275,8 +213,6 @@ class TestSecurity(unittest.TestCase):
 
     def teardown(self):
         _log.info("-----------------teardown----------------------")
-        global rt
-        global request_handler
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
         for i in range(1, NBR_OF_RUNTIMES):
             _log.info("kill runtime {}".format(i))
@@ -301,9 +237,6 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_CorrectlySignedApp_CorrectlySignedActors(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
         if not storage_verified:
             try:
@@ -347,11 +280,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_IncorrectlySignedApp(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -379,11 +308,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -432,11 +357,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_Permit_UnsignedApp_SignedActors(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -477,11 +398,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_Permit_UnsignedApp_Unsigned_Actor(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -522,11 +439,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_Deny_SignedApp_SignedActor_UnallowedRequirement(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -569,11 +482,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_Local_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -614,11 +523,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_External_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -659,11 +564,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_Migration_When_Denied(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -709,11 +610,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_Control_Interface_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -741,11 +638,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_Add_User(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -799,11 +692,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_UnallowedUser(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -831,11 +720,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_NEGATIVE_IncorrectPassword(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -863,11 +748,7 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_Local_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
-
         if not storage_verified:
             try:
                 storage_verified = helpers.security_verify_storage(rt, request_handler)
@@ -911,9 +792,6 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_External_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
         if not storage_verified:
             try:

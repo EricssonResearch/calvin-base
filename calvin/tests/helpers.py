@@ -498,6 +498,7 @@ def sign_files_for_security_tests(credentials_testdir):
     print "Export Code Signers certificate to the truststore for code signing"
     out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
     certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=credentials_testdir)
+    return actor_store_path, application_store_path
 
 def fetch_and_log_runtime_actors(rt, request_handler):
     # Verify that actors exist like this
@@ -528,9 +529,9 @@ def security_verify_storage(rt, request_handler):
             try:
                 rt_id[j] = request_handler.get_node_id(rt[j])
                 failed = False
-                break
+                break 
             except Exception as err:
-                _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(j, err))
+                _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(i, err))
                 time.sleep(0.5)
     assert not failed
     for id in rt_id:
@@ -576,4 +577,89 @@ def security_verify_storage(rt, request_handler):
         _log.error("Exception when trying to lookup index={} from rt={},  err={}".format(format_index_string(['node_name', node_name]), runtime.control_uri, err))
         raise
     return True
+
+def create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
+    from copy import deepcopy
+    from calvin.utilities import certificate
+    from calvin.utilities import certificate_authority
+    from calvin.utilities.attribute_resolver import AttributeResolver
+    from calvin.utilities import calvinuuid
+    from calvin.utilities import runtime_credentials
+    runtimesdir = os.path.join(credentials_testdir,"runtimes")
+    runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
+    print "Trying to create a new test domain configuration."
+    ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
+
+    print "Copy CA cert into truststore of runtimes folder"
+    ca.export_ca_cert(runtimes_truststore)
+    certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
+    #Define the runtime attributes
+    rt_attributes = runtime_attributes(NBR_OF_RUNTIMES, domain_name)
+    rt_attributes_cpy = deepcopy(rt_attributes)
+
+    #Generate credentials, create CSR, sign with CA and import cert for all runtimes
+    runtimes=[]
+    enrollment_passwords=[]
+    for rt_attribute in rt_attributes_cpy:
+        attributes=AttributeResolver(rt_attribute)
+        node_name = attributes.get_node_name_as_str()
+        nodeid = calvinuuid.uuid("")
+        #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
+        if "testNode0" in node_name:
+            ca.add_new_authentication_server(node_name)
+            ca.add_new_authorization_server(node_name)
+        enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
+        enrollment_passwords.append(enrollment_password)
+        runtime=runtime_credentials.RuntimeCredentials(node_name,
+                                                       domain=domain_name,
+#                                                           hostnames=["elxahyc5lz1","elxahyc5lz1.localdomain"],
+                                                       security_dir=credentials_testdir,
+                                                       nodeid=nodeid,
+                                                       enrollment_password=enrollment_password)
+        runtimes.append(runtime)
+        csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
+        #Decrypt encrypted CSR with CAs private key
+        rsa_encrypted_csr = runtime.get_encrypted_csr()
+        csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
+        csr_path = ca.store_csr_with_enrollment_password(csr)
+        cert_path = ca.sign_csr(csr_path)
+        runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
+    return runtimes, rt_attributes
+
+def runtime_attributes(NBR_OF_RUNTIMES, domain_name):
+    #Define the runtime attributes
+    rt_attributes=[]
+    org_name='org.testexample'
+    domain_name="test_security_domain"
+    for i in range(NBR_OF_RUNTIMES):
+         purpose = 'CA-authserver-authzserver' if i==0 else ""
+         node_name ={'organization': org_name,
+                     'purpose':purpose,
+                     'name': 'testNode{}'.format(i)}
+         owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
+         address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
+         rt_attribute=  {
+                            'indexed_public':
+                            {
+                                'owner':owner,
+                                'node_name':node_name,
+                                'address':address
+                            }
+                        }
+         rt_attributes.append(rt_attribute)
+    return rt_attributes
+
+
+def wait_for_runtime(request_handler, rt):
+    failed=True
+    for i in range(100):
+        try:
+            rt_id = request_handler.get_node_id(rt)
+            failed = False
+            break
+        except Exception as err:
+            _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(i, err))
+            time.sleep(0.5)
+    if failed:
+        raise Exception("Failed to contact rt")
 

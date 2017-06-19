@@ -54,6 +54,7 @@ domain_name="test_security_domain"
 orig_application_store_path = os.path.join(security_testdir, "scripts")
 
 hostname=None
+NBR_OF_RUNTIMES=4
 rt=[]
 rt_attributes=[]
 request_handler=None
@@ -111,7 +112,6 @@ class TestSecurity(unittest.TestCase):
 
         _log.info("Trying to create a new test domain configuration. Create many CAs to ensure runtime can handle several CA certificates")
         try:
-            ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
             ca1 = certificate_authority.CA(domain=domain_name+" 1", commonName="testdomainCA1", security_dir=credentials_testdir)
             ca2 = certificate_authority.CA(domain=domain_name+" 2", commonName="testdomainCA2", security_dir=credentials_testdir)
             ca3 = certificate_authority.CA(domain=domain_name+" 3", commonName="testdomainCA3", security_dir=credentials_testdir)
@@ -119,61 +119,22 @@ class TestSecurity(unittest.TestCase):
             _log.error("Failed to create CA, err={}".format(err))
 
         _log.info("Copy CA cert into truststore of runtimes folder")
-        ca.export_ca_cert(runtimes_truststore)
         ca1.export_ca_cert(runtimes_truststore)
         ca2.export_ca_cert(runtimes_truststore)
         ca3.export_ca_cert(runtimes_truststore)
-        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
-        node_names = []
-        rt_attributes=[]
-        for i in range(6):
-            node_name ={'organization': 'org.testexample', 'name': 'testNode{}'.format(i)}
-            owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
-            address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
-            rt_attribute={'indexed_public':
-                            {'owner':owner,
-                             'node_name':node_name,
-                             'address':address
-                            }
-                         }
-            rt_attributes.append(rt_attribute)
-        rt_attributes_cpy = deepcopy(rt_attributes)
-        runtimes=[]
+
+        actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
+        runtimes, rt_attributes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
                                                          security_dir=credentials_testdir)
         request_handler = RequestHandler(verify=truststore_dir)
-
-        #Generate credentials, create CSR, sign with CA and import cert for all runtimes
-        enrollment_passwords=[]
-        for rt_attribute in rt_attributes_cpy:
-            _log.info("rt_attribute={}".format(rt_attribute))
-            attributes=AttributeResolver(rt_attribute)
-            node_name = attributes.get_node_name_as_str()
-            nodeid = calvinuuid.uuid("")
-            enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
-            enrollment_passwords.append(enrollment_password)
-            runtime=runtime_credentials.RuntimeCredentials(node_name,
-                                                           domain=domain_name,
-                                                           security_dir=credentials_testdir,
-                                                           nodeid=nodeid,
-                                                           enrollment_password= enrollment_password)
-            runtimes.append(runtime)
-            csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-            #Decrypt encrypted CSR with CAs private key
-            rsa_encrypted_csr = runtime.get_encrypted_csr()
-            csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
-            csr_path = ca.store_csr_with_enrollment_password(csr)
-            cert_path = ca.sign_csr(csr_path)
-            runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
         rt_conf.set('security', 'control_interface_security', "tls")
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt0_conf = copy.deepcopy(rt_conf)
-        rt_conf.set('global','storage_type','proxy')
-        rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % hostname )
 
         # Runtime 0: local authentication, signature verification, local authorization.
         # Primarily acts as Certificate Authority for the domain
@@ -185,30 +146,15 @@ class TestSecurity(unittest.TestCase):
         rt0_conf.save("/tmp/calvin5000.conf")
 
         # Runtime 1: local authentication, signature verification, local authorization.
-        rt1_conf = copy.deepcopy(rt_conf)
-        rt1_conf.set('security','certificate_authority',{
+        rt_conf.set('global','storage_type','proxy')
+        rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % hostname )
+        rt_conf.set('security','certificate_authority',{
             'domain_name':domain_name,
             'is_ca':'False'
             })
-        rt1_conf.save("/tmp/calvin5001.conf")
 
-        # Runtime 2: local authentication, signature verification, local authorization.
-        # Can also act as authorization server for other runtimes.
-        # Other street compared to the other runtimes
-        rt2_conf = copy.deepcopy(rt1_conf)
-        rt2_conf.save("/tmp/calvin5002.conf")
-
-        # Runtime 3: external authentication (RADIUS), signature verification, local authorization.
-        rt3_conf = copy.deepcopy(rt1_conf)
-        rt3_conf.save("/tmp/calvin5003.conf")
-
-        # Runtime 4: local authentication, signature verification, external authorization (runtime 2).
-        rt4_conf = copy.deepcopy(rt1_conf)
-        rt4_conf.save("/tmp/calvin5004.conf")
-
-        # Runtime 5: external authentication (runtime 1), signature verification, local authorization.
-        rt5_conf = copy.deepcopy(rt1_conf)
-        rt5_conf.save("/tmp/calvin5005.conf")
+        for i in range(1, NBR_OF_RUNTIMES):
+            rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
         #Start all runtimes
         for i in range(len(rt_attributes)):
@@ -225,9 +171,8 @@ class TestSecurity(unittest.TestCase):
                        loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                        configfile="/tmp/calvin500{}.conf".format(i))
             rt.append(RT("https://{}:502{}".format(hostname, i)))
-            # Wait to be sure that all runtimes has started
-            time.sleep(1)
-        time.sleep(2)
+            rt[i].attributes=rt_attributes[i]
+            rt[i].id=runtimes[i].node_id
 
         request.addfinalizer(self.teardown)
 
@@ -246,67 +191,6 @@ class TestSecurity(unittest.TestCase):
             os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
         time.sleep(0.2)
 
-    def verify_storage(self):
-        global rt
-        global request_handler
-        global storage_verified
-        _log.info("storage_verified={}".format(storage_verified))
-        if not storage_verified:
-            _log.info("Let's verify storage, rt={}".format(rt))
-            rt_id=[None]*len(rt)
-            failed = True
-            # Try 30 times waiting for control API to be up and running
-            for i in range(30):
-                try:
-                    for j in range(len(rt)):
-                        rt_id[j] = rt_id[j] or request_handler.get_node_id(rt[j])
-                    failed = False
-                    break
-                except Exception as err:
-                    _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(j, err))
-                    time.sleep(0.1)
-            assert not failed
-            for id in rt_id:
-                assert id
-            _log.info("RUNTIMES:{}".format(rt_id))
-            _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
-            failed = True
-            # Try 10 times waiting for storage to be connected
-            for i in range(10):
-                _log.info("-----------------Round {}-----------------".format(i))
-                count=[0]*len(rt)
-                try:
-                    caps=[0] * len(rt)
-                    for j in range(len(rt)):
-                        caps[j] = request_handler.get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
-                        for k in range(len(rt)):
-                            count[k] = count[k] + caps[j].count(rt_id[k])
-                    _log.info("\n\trt_ids={}\n\tcount={}\n\tcaps0={}\n\tcaps1={}\n\tcaps2={}\n\tcaps3={}\n\tcaps4={}\n\tcaps5={}".format(rt_id, count, caps[0], caps[1], caps[2], caps[3], caps[4], caps[5]))
-                    if all(x>=4 for x in count):
-                        failed = False
-                        break
-                    else:
-                        time.sleep(0.2)
-                except Exception as err:
-                    _log.error("exception from request_handler.get_index, err={}".format(err))
-                    time.sleep(0.1)
-            assert not failed
-
-            #Loop through all runtimes and check that they can lookup the nodename of all other runtimes
-            try:
-                for runtime in rt:
-                    for rt_attribute in rt_attributes:
-                        node_name = rt_attribute['indexed_public']['node_name']
-                        _log.debug("get_index node_name={} from rt={}".format(node_name, runtime))
-                        response = request_handler.get_index(runtime, format_index_string(['node_name', node_name]))
-                        _log.info("\tresponse={}".format(response))
-                        assert(response)
-                storage_verified = True
-            except Exception as err:
-                _log.error("Exception err={}".format(err))
-                raise
-        else:
-            _log.info("Storage has already been verified")
 
 ###################################
 #   Signature related tests
@@ -315,25 +199,13 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_deploy_and_migrate(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
-        try:
-            rt0_id = request_handler.get_node_id(rt[0])
-            rt1_id = request_handler.get_node_id(rt[1])
-            rt2_id = request_handler.get_node_id(rt[2])
-            rt3_id = request_handler.get_node_id(rt[3])
-            rt4_id = request_handler.get_node_id(rt[4])
-            rt5_id = request_handler.get_node_id(rt[5])
-        except Exception as err:
-            _log.error("Failed to fetch runtime ids, err={}".format(err))
-            raise
-        time.sleep(1)
-        try:
-            self.verify_storage()
-        except Exception as err:
-            _log.error("Failed storage verification, err={}".format(err))
-            raise
+        global storage_verified
+        if not storage_verified:
+            try:
+                storage_verified = helpers.security_verify_storage(rt, request_handler)
+            except Exception as err:
+                _log.error("Failed storage verification, err={}".format(err))
+                raise
         result = {}
         try:
             content = Security.verify_signature_get_files(os.path.join(orig_application_store_path, "test_security1_correctly_signed.calvin"))
@@ -375,9 +247,9 @@ class TestSecurity(unittest.TestCase):
 
         #Migrate snk actor to rt1
         time.sleep(2)
-        _log.info("Let's migrate actor {} from runtime {}(rt2) to runtime {}(rt1)".format(rt2_id, result['actor_map']['test_script:snk'], rt1_id))
+        _log.info("Let's migrate actor {} from runtime {}(rt2) to runtime {}(rt1)".format(rt[2].id, result['actor_map']['test_script:snk'], rt[1].id))
         try:
-            request_handler.migrate(rt[2], result['actor_map']['test_script:snk'], rt1_id)
+            request_handler.migrate(rt[2], result['actor_map']['test_script:snk'], rt[1].id)
         except Exception as err:
             _log.error("Failed to send first migration request to runtime 2, err={}".format(err))
             raise
@@ -401,7 +273,7 @@ class TestSecurity(unittest.TestCase):
         #Migrate src actor to rt3
         time.sleep(1)
         try:
-            request_handler.migrate(rt[2], result['actor_map']['test_script:src'], rt3_id)
+            request_handler.migrate(rt[2], result['actor_map']['test_script:src'], rt[3].id)
         except Exception as err:
             _log.error("Failed to send second migration requestfrom runtime 2, err={}".format(err))
             raise

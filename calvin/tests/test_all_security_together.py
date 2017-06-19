@@ -49,18 +49,14 @@ homefolder = get_home()
 credentials_testdir = os.path.join(homefolder, ".calvin","test_all_security_together_dir")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
-runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
 domain_name="test_security_domain"
-code_signer_name="test_signer"
 org_name='org.testexample'
 orig_identity_provider_path = os.path.join(security_testdir,"identity_provider")
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
-orig_actor_store_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'actorstore','systemactors'))
-actor_store_path = os.path.join(credentials_testdir, "store")
-orig_application_store_path = os.path.join(security_testdir, "scripts")
-application_store_path = os.path.join(credentials_testdir, "scripts")
+actor_store_path = ""
+application_store_path = ""
 
 NBR_OF_RUNTIMES=3
 
@@ -88,6 +84,8 @@ class TestSecurity(unittest.TestCase):
         global rt
         global rt_attributes
         global request_handler
+        global actor_store_path
+        global application_store_path
         try:
             shutil.rmtree(credentials_testdir)
         except Exception as err:
@@ -99,7 +97,7 @@ class TestSecurity(unittest.TestCase):
             _log.error("Failed to create test folder structure, err={}".format(err))
             print "Failed to create test folder structure, err={}".format(err)
             raise
-        helpers.sign_files_for_security_tests(credentials_testdir)
+        actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
 
         print "Trying to create a new test domain configuration."
         ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
@@ -301,9 +299,6 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def testSecurity_POSITIVE_CorrectlySignedApp_CorrectlySignedActors(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
         global storage_verified
         if not storage_verified:
             try:
