@@ -506,7 +506,7 @@ def fetch_and_log_runtime_actors(rt, request_handler):
     #Use admins credentials to access the control interface
     request_handler.set_credentials({"user": "user0", "password": "pass0"})
     for runtime in rt:
-        for i in range(1, 30):
+        for i in range(30):
             try:
                 actors_rt = request_handler.get_actors(runtime)
                 actors.append(actors_rt)
@@ -515,14 +515,25 @@ def fetch_and_log_runtime_actors(rt, request_handler):
                 time.sleep(0.2)
                 _log.error("Request handler failed to get actors, sleep and try again, attempt={}".format(i))
                 continue
-    for i in range(0, len(rt)):
+    for i in range(len(rt)):
         _log.info("\n\trt{} actors={}".format(i, actors[i]))
     return actors
 
 def security_verify_storage(rt, request_handler):
+    def get_index(rt, index):
+        for i in range(100):
+            try:
+                result = request_handler.get_index(rt, index)
+                return result
+            except Exception as err:
+                _log.error("security_verify_storage::get_index Failed get_index, attempt={}".format(i))
+                time.sleep(0.5)
+                continue
+        raise Exception("security_verify_storage::get_index  Failed to get index")
+
     _log.info("Let's verify storage, rt={}".format(rt))
     rt_id=[None]*len(rt)
-    # Try 30 times waiting for control API to be up and running
+    # Wait for control API to be up and running
     for j in range(len(rt)):
         failed = True
         for i in range(100):
@@ -537,7 +548,6 @@ def security_verify_storage(rt, request_handler):
     for id in rt_id:
         assert id
     _log.info("RUNTIMES:{}".format(rt_id))
-    _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
      # Try 100 times waiting for storage to be connected
     failed = True
     for i in range(100):
@@ -545,9 +555,9 @@ def security_verify_storage(rt, request_handler):
         count=[0]*len(rt)
         try:
             caps=[0] * len(rt)
-            #Loop through all runtimes to ask them which runtimes they node with calvisys.native.python-json
+            #Loop through all runtimes to ask them which runtimes nodes they know with with calvisys.native.python-json
             for j in range(len(rt)):
-                caps[j] = request_handler.get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
+                caps[j] = get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
                 #Add the known nodes to statistics of how many nodes store keys from that node
                 for k in range(len(rt)):
                     count[k] = count[k] + caps[j].count(rt_id[k])
@@ -569,22 +579,34 @@ def security_verify_storage(rt, request_handler):
         for runtime1 in rt:
             for runtime2 in rt:
                 node_name = runtime2.attributes['indexed_public']['node_name']
-                response = request_handler.get_index(runtime1, format_index_string(['node_name', node_name]))
+                response = get_index(runtime1, format_index_string(['node_name', node_name]))
                 _log.info("\tresponse={}".format(response))
                 assert(response)
         storage_verified = True
     except Exception as err:
-        _log.error("Exception when trying to lookup index={} from rt={},  err={}".format(format_index_string(['node_name', node_name]), runtime.control_uri, err))
+        _log.error("Exception when trying to lookup index={} from rt={},  err={}".format(format_index_string(['node_name', node_name]), runtime2.control_uri, err))
         raise
     return True
 
+def create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
+    runtimes, ca = _create_CA_and_rehash(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
+    return runtimes
+
+
+def create_CA_and_get_enrollment_passwords(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
+    runtimes, ca = _create_CA_and_rehash(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
+    get_enrollment_passwords(runtimes, method="ca", ca=ca)
+    return runtimes
+
 def create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
-    from copy import deepcopy
+    runtimes, ca = _create_CA_and_rehash(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
+    get_enrollment_passwords(runtimes, method="ca", ca=ca)
+    _generate_certiticates(ca, runtimes, domain_name, credentials_testdir)
+    return runtimes
+
+def _create_CA_and_rehash(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
     from calvin.utilities import certificate
     from calvin.utilities import certificate_authority
-    from calvin.utilities.attribute_resolver import AttributeResolver
-    from calvin.utilities import calvinuuid
-    from calvin.utilities import runtime_credentials
     runtimesdir = os.path.join(credentials_testdir,"runtimes")
     runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
     print "Trying to create a new test domain configuration."
@@ -593,30 +615,72 @@ def create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_O
     print "Copy CA cert into truststore of runtimes folder"
     ca.export_ca_cert(runtimes_truststore)
     certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
-    #Define the runtime attributes
-    rt_attributes = runtime_attributes(NBR_OF_RUNTIMES, domain_name)
-    rt_attributes_cpy = deepcopy(rt_attributes)
-
-    #Generate credentials, create CSR, sign with CA and import cert for all runtimes
     runtimes=[]
-    enrollment_passwords=[]
-    for rt_attribute in rt_attributes_cpy:
-        attributes=AttributeResolver(rt_attribute)
-        node_name = attributes.get_node_name_as_str()
-        nodeid = calvinuuid.uuid("")
-        #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
+    for i in range(NBR_OF_RUNTIMES):
+        runtimes.append({})
+    #Define the runtime attributes
+    _runtime_attributes(domain_name, runtimes)
+    _get_node_names(runtimes)
+    for i in range(NBR_OF_RUNTIMES):
+        node_name = runtimes[i]["node_name"]
         if "testNode0" in node_name:
             ca.add_new_authentication_server(node_name)
             ca.add_new_authorization_server(node_name)
-        enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
-        enrollment_passwords.append(enrollment_password)
+    return runtimes, ca
+
+def _get_node_names(runtimes):
+    from calvin.utilities.attribute_resolver import AttributeResolver
+    from calvin.utilities import calvinuuid
+    from copy import deepcopy
+    for i in range(len(runtimes)):
+        rt_attribute = deepcopy(runtimes[i]["attributes"])
+        attributes=AttributeResolver(rt_attribute)
+        runtimes[i]["node_name"] = attributes.get_node_name_as_str()
+        runtimes[i]["id"]= calvinuuid.uuid("")
+
+
+def get_enrollment_passwords(runtimes, method="ca", rt=None, request_handler=None, ca=None):
+    #Set/get enrollment for the other runtimes:
+    for i in range(len(runtimes)):
+        node_name = runtimes[i]["node_name"]
+        if method=="ca" and ca:
+            runtimes[i]["enrollment_password"] = ca.cert_enrollment_add_new_runtime(node_name)
+        elif method=="controlapi_get" and rt:
+            for j in range(100):
+                try:
+                    enrollment_password = request_handler.get_enrollment_password(rt[0], node_name)
+                    runtimes[i]["enrollment_password"] = enrollment_password
+                    break
+                except:
+                    _log.error("Set enrollment password, still no reply from CA, i={} j={}".format(i, j))
+                    time.sleep(0.5)
+                    continue
+        elif method=="controlapi_set":
+            enrollment_password = "abrakadabra123456789"
+            runtimes[i]["enrollment_password"] = enrollment_password
+            for j in range(1, 100):
+                try:
+                    request_handler.set_enrollment_password(rt[0], node_name, enrollment_password)
+                    runtimes[i]["enrollment_password"] = enrollment_password
+                    break
+                except:
+                    _log.error("Set enrollment password, still no reply from CA, i={} j={}".format(i, j))
+                    time.sleep(0.5)
+                    continue
+        else:
+            raise Exception("get_enrollment_passwords: incorrect arguments")
+
+def _generate_certiticates(ca, runtimes, domain_name, credentials_testdir):
+    from calvin.utilities import runtime_credentials
+    for i in range(len(runtimes)):
+        node_name = runtimes[i]["node_name"]
         runtime=runtime_credentials.RuntimeCredentials(node_name,
                                                        domain=domain_name,
 #                                                           hostnames=["elxahyc5lz1","elxahyc5lz1.localdomain"],
                                                        security_dir=credentials_testdir,
-                                                       nodeid=nodeid,
-                                                       enrollment_password=enrollment_password)
-        runtimes.append(runtime)
+                                                       nodeid=runtimes[i]["id"],
+                                                       enrollment_password=runtimes[i]["enrollment_password"])
+        runtimes[i]["credentials"]= runtime
         csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
         #Decrypt encrypted CSR with CAs private key
         rsa_encrypted_csr = runtime.get_encrypted_csr()
@@ -624,21 +688,22 @@ def create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_O
         csr_path = ca.store_csr_with_enrollment_password(csr)
         cert_path = ca.sign_csr(csr_path)
         runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
-    return runtimes, rt_attributes
 
-def runtime_attributes(NBR_OF_RUNTIMES, domain_name):
+
+def _runtime_attributes(domain_name, runtimes):
     #Define the runtime attributes
-    rt_attributes=[]
     org_name='org.testexample'
     domain_name="test_security_domain"
-    for i in range(NBR_OF_RUNTIMES):
-         purpose = 'CA-authserver-authzserver' if i==0 else ""
-         node_name ={'organization': org_name,
+    for i in range(len(runtimes)):
+        print i," "
+        purpose = 'CA-authserver-authzserver' if i==0 else ""
+        node_name ={'organization': org_name,
                      'purpose':purpose,
                      'name': 'testNode{}'.format(i)}
-         owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
-         address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
-         rt_attribute=  {
+        print node_name
+        owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
+        address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
+        runtimes[i]["attributes"] = {
                             'indexed_public':
                             {
                                 'owner':owner,
@@ -646,9 +711,6 @@ def runtime_attributes(NBR_OF_RUNTIMES, domain_name):
                                 'address':address
                             }
                         }
-         rt_attributes.append(rt_attribute)
-    return rt_attributes
-
 
 def wait_for_runtime(request_handler, rt):
     failed=True
@@ -662,4 +724,90 @@ def wait_for_runtime(request_handler, rt):
             time.sleep(0.5)
     if failed:
         raise Exception("Failed to contact rt")
+
+def start_runtime0(runtimes, rt, hostname, request_handler, tls=False, enroll_passwords=False):
+    from calvin.Tools.csruntime import csruntime
+    from conftest import _config_pytest
+    #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
+    _log.info("Starting runtime 0")
+    try:
+        logfile = _config_pytest.getoption("logfile")+"5000"
+        outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+        if outfile == logfile:
+            outfile = None
+    except:
+        logfile = None
+        outfile = None
+    csruntime(hostname, port=5000, controlport=5020, attr=runtimes[0]["attributes"],
+               loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+               configfile="/tmp/calvin5000.conf")
+    uri = "https://{}:5020".format(hostname) if tls==True else "http://{}:5020".format(hostname)
+    rt.append(RT(uri))
+    rt[0].attributes=runtimes[0]["attributes"]
+
+    #Wait for runtime 0 to be up and running
+    wait_for_runtime(request_handler, rt[0])
+
+def start_other_runtimes(runtimes, rt, hostname, request_handler, tls=False):
+    from calvin.Tools.csruntime import csruntime
+    from conftest import _config_pytest
+    #Start the other runtimes
+    for i in range(1, len(runtimes)):
+        _log.info("Starting runtime {}".format(i))
+        try:
+            logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
+            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
+            if outfile == logfile:
+                outfile = None
+        except:
+            logfile = None
+            outfile = None
+        csruntime(hostname, port=5000+i, controlport=5020+i, attr=runtimes[i]["attributes"],
+                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
+                   configfile="/tmp/calvin500{}.conf".format(i))
+        uri = "https://{}:502{}".format(hostname, i) if tls==True else "http://{}:502{}".format(hostname, i)
+        rt.append(RT(uri))
+        rt[i].attributes=runtimes[i]["attributes"]
+        time.sleep(0.1)
+
+def start_all_runtimes(runtimes, hostname, request_handler, tls=False):
+    rt=[]
+    start_runtime0(runtimes, rt, hostname, request_handler, tls=tls)
+    start_other_runtimes(runtimes, rt, hostname, request_handler, tls=tls)
+    return rt
+
+def teardown_slow(rt, request_handler, hostname):
+    request_handler.set_credentials({"user": "user0", "password": "pass0"})
+    for i in range(1, len(rt)):
+        _log.info("kill runtime {}".format(i))
+        try:
+            request_handler.quit(rt[i])
+        except Exception:
+            _log.error("Failed quit for node {}".format(i))
+    # Kill Auth/Authz node last since the other nodes need it for authorization
+    # of the kill requests
+    time.sleep(2)
+    try:
+        request_handler.quit(rt[0])
+    except Exception:
+        _log.error("Failed quit for node 0")
+    time.sleep(0.2)
+    for p in multiprocessing.active_children():
+        p.terminate()
+    # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
+    for i in range(len(rt)):
+        os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
+    time.sleep(0.2)
+
+def teardown(rt, request_handler, hostname):
+    request_handler.set_credentials({"user": "user0", "password": "pass0"})
+    for runtime in rt:
+        request_handler.quit(runtime)
+    time.sleep(0.2)
+    for p in multiprocessing.active_children():
+        p.terminate()
+    # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
+    for i in range(len(rt)):
+        os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
+    time.sleep(0.2)
 

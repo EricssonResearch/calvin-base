@@ -95,7 +95,7 @@ class TestSecurity(unittest.TestCase):
             _log.error("Failed to copy the identity provider files, err={}".format(err))
             raise
         actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
-        runtimes, rt_attributes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
+        runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
@@ -143,11 +143,11 @@ class TestSecurity(unittest.TestCase):
                         "comment": "External authentication, external authorization",
                         "authentication": {
                             "procedure": "external",
-                            "server_uuid": runtimes[0].node_id
+                            "server_uuid": runtimes[0]["id"]
                         },
                         "authorization": {
                             "procedure": "external",
-                            "server_uuid": runtimes[0].node_id
+                            "server_uuid": runtimes[0]["id"]
                         }
                     })
 
@@ -171,64 +171,12 @@ class TestSecurity(unittest.TestCase):
 #                    })
 #        rt3_conf.save("/tmp/calvin5003.conf")
 
-
-        #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
-        _log.info("Starting runtime {}".format(i))
-        try:
-            logfile = _config_pytest.getoption("logfile")+"5000"
-            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-            if outfile == logfile:
-                outfile = None
-        except:
-            logfile = None
-            outfile = None
-        csruntime(hostname, port=5000, controlport=5020, attr=rt_attributes[0],
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5000.conf")
-        rt.append(RT("http://{}:5020".format(hostname)))
-        rt[0].attributes=rt_attributes[0]
-
-        #Wait for runtime 0 to be up and running
-        helpers.wait_for_runtime(request_handler, rt[0])
-
-        #Start the other runtimes
-        for i in range(1, NBR_OF_RUNTIMES):
-            _log.info(" Starting runtime {}".format(i))
-            try:
-                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
-                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-                if outfile == logfile:
-                    outfile = None
-            except:
-                logfile = None
-                outfile = None
-            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
-                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                       configfile="/tmp/calvin500{}.conf".format(i))
-            rt.append(RT("http://{}:502{}".format(hostname,i)))
-            rt[i].attributes=rt_attributes[i]
-            time.sleep(0.1)
+        rt = helpers.start_all_runtimes(runtimes, hostname, request_handler)
         request.addfinalizer(self.teardown)
 
 
     def teardown(self):
-        _log.info("-----------------teardown----------------------")
-        request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        for i in range(1, NBR_OF_RUNTIMES):
-            _log.info("kill runtime {}".format(i))
-            request_handler.quit(rt[i])
-        # Kill storage node last since the othernodes might be a need to lookup 
-        # certificates (if they have not contacted the authentication server previously)
-        # to actually kill the node
-        time.sleep(1)
-        request_handler.quit(rt[0])
-        time.sleep(0.2)
-        for p in multiprocessing.active_children():
-            p.terminate()
-        # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
-        for i in range(NBR_OF_RUNTIMES):
-            os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
-        time.sleep(0.2)
+        helpers.teardown_slow(rt, request_handler, hostname)
 
 ###################################
 #   Signature related tests

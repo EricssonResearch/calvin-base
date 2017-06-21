@@ -124,7 +124,7 @@ class TestSecurity(unittest.TestCase):
         ca3.export_ca_cert(runtimes_truststore)
 
         actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
-        runtimes, rt_attributes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
+        runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
                                                          security_dir=credentials_testdir)
@@ -156,47 +156,18 @@ class TestSecurity(unittest.TestCase):
         for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
-        #Start all runtimes
-        for i in range(len(rt_attributes)):
-            _log.info("Starting runtime {}".format(i))
-            try:
-                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
-                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-                if outfile == logfile:
-                    outfile = None
-            except:
-                logfile = None
-                outfile = None
-            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
-                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                       configfile="/tmp/calvin500{}.conf".format(i))
-            rt.append(RT("https://{}:502{}".format(hostname, i)))
-            rt[i].attributes=rt_attributes[i]
-            rt[i].id=runtimes[i].node_id
-
+        rt = helpers.start_all_runtimes(runtimes, hostname, request_handler, tls=True)
         request.addfinalizer(self.teardown)
 
 
     def teardown(self):
-        global hostname
-        global rt
-        global request_handler
-        for runtime in rt:
-            request_handler.quit(runtime)
-        time.sleep(0.2)
-        for p in multiprocessing.active_children():
-            p.terminate()
-        # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
-        for i in range(len(rt_attributes)):
-            os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
-        time.sleep(0.2)
+        helpers.teardown(rt, request_handler, hostname)
 
 
 ###################################
 #   Signature related tests
 ###################################
 
-    @pytest.mark.slow
     def testSecurity_deploy_and_migrate(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
@@ -244,55 +215,6 @@ class TestSecurity(unittest.TestCase):
             raise
         _log.info("actual={}".format(actual))
         assert len(actual) > 5
-
-        #Migrate snk actor to rt1
-        time.sleep(2)
-        _log.info("Let's migrate actor {} from runtime {}(rt2) to runtime {}(rt1)".format(rt[2].id, result['actor_map']['test_script:snk'], rt[1].id))
-        try:
-            request_handler.migrate(rt[2], result['actor_map']['test_script:snk'], rt[1].id)
-        except Exception as err:
-            _log.error("Failed to send first migration request to runtime 2, err={}".format(err))
-            raise
-        try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
-        except Exception as err:
-            _log.error("Failed to get actors from runtimes, err={}".format(err))
-            raise
-        assert result['actor_map']['test_script:src'] in actors[2]
-        assert result['actor_map']['test_script:sum'] in actors[2]
-        assert result['actor_map']['test_script:snk'] in actors[1]
-        time.sleep(1)
-        try:
-            actual = request_handler.report(rt[1], result['actor_map']['test_script:snk'])
-        except Exception as err:
-            _log.error("Failed to report snk values from runtime 1, err={}".format(err))
-            raise
-        _log.info("actual={}".format(actual))
-        assert len(actual) > 3
-
-        #Migrate src actor to rt3
-        time.sleep(1)
-        try:
-            request_handler.migrate(rt[2], result['actor_map']['test_script:src'], rt[3].id)
-        except Exception as err:
-            _log.error("Failed to send second migration requestfrom runtime 2, err={}".format(err))
-            raise
-        try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
-        except Exception as err:
-            _log.error("Failed to get actors from runtimes, err={}".format(err))
-            raise
-        assert result['actor_map']['test_script:src'] in actors[3]
-        assert result['actor_map']['test_script:sum'] in actors[2]
-        assert result['actor_map']['test_script:snk'] in actors[1]
-        time.sleep(1)
-        try:
-            actual = request_handler.report(rt[1], result['actor_map']['test_script:snk'])
-        except Exception as err:
-            _log.error("Failed to report snk values from runtime 1, err={}".format(err))
-            raise
-        _log.info("actual={}".format(actual))
-        assert len(actual) > 3
 
         time.sleep(1)
         request_handler.delete_application(rt[2], result['application_id'])

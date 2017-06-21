@@ -98,32 +98,7 @@ class TestSecurity(unittest.TestCase):
             print "Failed to create test folder structure, err={}".format(err)
             raise
         actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
-
-        print "Trying to create a new test domain configuration."
-        ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
-#
-        print "Copy CA cert into truststore of runtimes folder"
-        ca.export_ca_cert(runtimes_truststore)
-        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
-
-        #Define the runtime attributes
-        for i in range(NBR_OF_RUNTIMES):
-            purpose = 'CA-authserver-authzserver' if i==0 else ""
-            node_name ={'organization': org_name,
-                         'purpose':purpose,
-                         'name': 'testNode{}'.format(i)}
-            owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
-            address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
-            rt_attribute=  {
-                                'indexed_public':
-                                {
-                                    'owner':owner,
-                                    'node_name':node_name,
-                                    'address':address
-                                }
-                            }
-            rt_attributes.append(rt_attribute)
-        rt_attributes_cpy = deepcopy(rt_attributes)
+        runtimes = helpers.create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
@@ -131,19 +106,6 @@ class TestSecurity(unittest.TestCase):
         request_handler = RequestHandler(verify=truststore_dir)
         #Let's use the admin user0 for request_handler 
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-
-        #####################
-        # Runtime 0: Certificate authority, authentication server, authorization server.
-        #####################
-        #Generate credentials, create CSR, sign with CA and import cert for all runtimes
-        enrollment_passwords=[]
-        attributes=AttributeResolver(rt_attributes_cpy[0])
-        node_name = attributes.get_node_name_as_str()
-        #rt0 need authzserver extension to it's node name, which needs to be certified by the CA
-        ca.add_new_authentication_server(node_name)
-        ca.add_new_authorization_server(node_name)
-        #Just add an empty item for maintaining the same length for the list
-        enrollment_passwords.append("")
 
         rt_conf = copy.deepcopy(_conf)
         rt_conf.set('security', 'runtime_to_runtime_security', "tls")
@@ -154,13 +116,12 @@ class TestSecurity(unittest.TestCase):
 
         # Runtime 0: Certificate authority, authentication server, authorization server.
         rt0_conf = copy.deepcopy(rt_conf)
-        rt0_conf.set('security', 'control_interface_security', "tls")
         rt0_conf.set('security','certificate_authority',{
                         'domain_name':domain_name,
                         'is_ca':'True'
                     })
         rt0_conf.set("security", "security_conf", {
-                        "comment": "Certificate Authority",
+                        "comment": "Authorization-,Authentication service accepting external requests",
                         "authentication": {
                             "procedure": "local",
                             "identity_provider_path": identity_provider_path,
@@ -173,45 +134,8 @@ class TestSecurity(unittest.TestCase):
                         }
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
-
-        #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
-        _log.info("Starting runtime 0")
-        try:
-            logfile = _config_pytest.getoption("logfile")+"5000"
-            outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-            if outfile == logfile:
-                outfile = None
-        except:
-            logfile = None
-            outfile = None
-        csruntime(hostname, port=5000, controlport=5020, attr=rt_attributes[0],
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin5000.conf")
-        rt.append(RT("https://{}:5020".format(hostname)))
-        rt[0].attributes=rt_attributes[0]
-
-        #####################
-        #Other runtimes:
-        #####################
-        for i in range(1, NBR_OF_RUNTIMES):
-            attributes=AttributeResolver(rt_attributes_cpy[i])
-            node_name = attributes.get_node_name_as_str()
-            #Alt 1
-#            enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
-            #Alt 2
-#            enrollment_password = request_handler.get_enrollment_password(rt[0], node_name)
-            #Alt 3
-            enrollment_password = "abrakadabra123456789"
-            enrollment_passwords.append(enrollment_password)
-            for j in range(1, 100):
-                try:
-                    request_handler.set_enrollment_password(rt[0], node_name, enrollment_password)
-                    break
-                except:
-                    _log.error("Set enrollment password, still no reply from CA, i={} j={}".format(i, j))
-                    time.sleep(0.5)
-                    continue
-
+        helpers.start_runtime0(runtimes, rt, hostname, request_handler, tls=True)
+        helpers.get_enrollment_passwords(runtimes, method="controlapi_set", rt=rt, request_handler=request_handler)
         # Other runtimes: external authentication, external authorization.
         rt_conf.set("security", "security_conf", {
                         "comment": "External authentication, external authorization",
@@ -228,7 +152,7 @@ class TestSecurity(unittest.TestCase):
                             'domain_name':domain_name,
                             'is_ca':'False',
                             'ca_control_uri':"https://%s:5020" % hostname,
-                            'enrollment_password':enrollment_passwords[i]
+                            'enrollment_password':runtimes[i]["enrollment_password"]
                         })
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
@@ -249,47 +173,12 @@ class TestSecurity(unittest.TestCase):
 #                    })
 #        rt3_conf.save("/tmp/calvin5003.conf")
 
-
-        #Start the other runtimes
-        for i in range(1, NBR_OF_RUNTIMES):
-            _log.info("Starting runtime {}".format(i))
-            try:
-                logfile = _config_pytest.getoption("logfile")+"500{}".format(i)
-                outfile = os.path.join(os.path.dirname(logfile), os.path.basename(logfile).replace("log", "out"))
-                if outfile == logfile:
-                    outfile = None
-            except:
-                logfile = None
-                outfile = None
-            csruntime(hostname, port=5000+i, controlport=5020+i, attr=rt_attributes[i],
-                       loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                       configfile="/tmp/calvin500{}.conf".format(i))
-            rt.append(RT("https://{}:502{}".format(hostname,i)))
-            rt[i].attributes=rt_attributes[i]
-            time.sleep(0.1)
+        helpers.start_other_runtimes(runtimes, rt, hostname, request_handler, tls=True)
         request.addfinalizer(self.teardown)
 
 
     def teardown(self):
-        _log.info("-----------------teardown----------------------")
-        global rt
-        global request_handler
-        request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        for i in range(1, NBR_OF_RUNTIMES):
-            _log.info("kill runtime {}".format(i))
-            request_handler.quit(rt[i])
-        # Kill storage node last since the othernodes might be a need to lookup 
-        # certificates (if they have not contacted the authentication server previously)
-        # to actually kill the node
-        time.sleep(1)
-        request_handler.quit(rt[0])
-        time.sleep(0.2)
-        for p in multiprocessing.active_children():
-            p.terminate()
-        # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
-        for i in range(NBR_OF_RUNTIMES):
-            os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
-        time.sleep(0.2)
+        helpers.teardown_slow(rt, request_handler, hostname)
 
 
 ###################################
