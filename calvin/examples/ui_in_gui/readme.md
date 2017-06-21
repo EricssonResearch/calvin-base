@@ -5,8 +5,11 @@ When using a Calvin runtime together with the web-based GUI, it is possible to u
 - io.Print
 - io.Log
 - io.Switch
+- io.Button
 - io.TiltSwitch
 - io.Light
+- io.Buzzer
+- io.PWM
 - sensor.LightBreaker
 - sensor.Temperature
 - sensor.Distance
