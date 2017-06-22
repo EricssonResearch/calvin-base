@@ -34,10 +34,14 @@ class Button(Actor):
         self.button = calvinsys.open(self, "calvinsys.io.button", text=self.text)
 
     def will_migrate(self):
-        calvinsys.close(self.button)
+        if self.button:
+            calvinsys.close(self.button)
+            self.button = None
 
     def will_end(self):
-        calvinsys.close(self.button)
+        if self.button:
+            calvinsys.close(self.button)
+            self.button = None
 
     def did_migrate(self):
         self.setup()
