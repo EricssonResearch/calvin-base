@@ -1,5 +1,5 @@
 void : flow.Void()
-msg  : flow.Init(data="This is a test, using an application built in calvin <https://github.com/EricssonResearch/calvin-base> to tweet.")
+msg  : flow.Init(data="This is a test, using a calvin application <https://github.com/EricssonResearch/calvin-base> to tweet.")
 out  : web.Twitter()
 
 void.void > msg.in

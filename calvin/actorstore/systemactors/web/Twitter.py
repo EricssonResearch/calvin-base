@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinsys, stateguard
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -26,7 +26,7 @@ class Twitter(Actor):
     Post incoming tokens (text) as twitter status
 
     Input:
-      status : A string
+      status : A text (with a maximum length)
     """
 
     @manage([])
@@ -37,12 +37,22 @@ class Twitter(Actor):
         self.setup()
  
     def setup(self):
-        self.use('calvinsys.web.twitter', shorthand='twitter')
+        self._twit = calvinsys.open(self, "calvinsys.web.twitter.post")
 
+    def teardown(self):
+        calvinsys.close(self._twit)
+        
+    def will_migrate(self):
+        self.teardown()
+    
+    def will_end(self):
+        self.teardown()
+        
+    @stateguard(lambda self: self._twit and calvinsys.can_write(self._twit))
     @condition(action_input=['status'])
     def post_update(self, status):
-        self['twitter'].post_update(status)
+        calvinsys.write(self._twit, status)
         
 
     action_priority = (post_update,)
-    requires = ['calvinsys.web.twitter']
+    requires = ['calvinsys.web.twitter.post']
