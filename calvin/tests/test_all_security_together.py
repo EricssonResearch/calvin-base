@@ -74,6 +74,7 @@ request_handler=None
 storage_verified=False
 
 @pytest.mark.slow
+@pytest.mark.essential
 class TestSecurity(unittest.TestCase):
 
     @pytest.fixture(autouse=True, scope="class")
@@ -186,6 +187,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_CorrectlySignedApp_CorrectlySignedActors(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
@@ -229,6 +231,7 @@ class TestSecurity(unittest.TestCase):
 
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_NEGATIVE_IncorrectlySignedApp(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -259,6 +262,7 @@ class TestSecurity(unittest.TestCase):
         raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -309,6 +313,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_Permit_UnsignedApp_SignedActors(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -353,6 +358,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[1], result['application_id'])
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_Permit_UnsignedApp_Unsigned_Actor(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -397,6 +403,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[1], result['application_id'])
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_NEGATIVE_Deny_SignedApp_SignedActor_UnallowedRequirement(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -442,6 +449,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[2], result['application_id'])
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_Local_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -486,6 +494,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[0], result['application_id'])
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_External_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -530,6 +539,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[1], result['application_id'])
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_Migration_When_Denied(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -579,6 +589,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_NEGATIVE_Control_Interface_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -614,6 +625,7 @@ class TestSecurity(unittest.TestCase):
         raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_Add_User(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -671,6 +683,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_NEGATIVE_UnallowedUser(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -702,6 +715,7 @@ class TestSecurity(unittest.TestCase):
         raise Exception("Deployment of app test_security1_correctly_signed did not fail for security reasons")  
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_NEGATIVE_IncorrectPassword(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -733,6 +747,7 @@ class TestSecurity(unittest.TestCase):
         raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")  
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_Local_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -773,13 +788,14 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[0]
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[0]
 
-        time.sleep(1)
+        time.sleep(0.1)
         actual = request_handler.report(rt[0], result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 2
 
         request_handler.delete_application(rt[0], result['application_id']) 
 
     @pytest.mark.slow
+    @pytest.mark.essential
     def testSecurity_POSITIVE_External_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
@@ -820,7 +836,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[1]
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[1]
 
-        time.sleep(1)
+        time.sleep(0.1)
         actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 2
 

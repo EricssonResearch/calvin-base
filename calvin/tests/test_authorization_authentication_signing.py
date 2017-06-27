@@ -731,7 +731,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[0]
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[0]
 
-        time.sleep(1)
+        time.sleep(0.1)
         actual = request_handler.report(rt[0], result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 2
 
@@ -775,7 +775,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[1]
         assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[1]
 
-        time.sleep(1)
+        time.sleep(0.1)
         actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
         assert len(actual) > 2
 
