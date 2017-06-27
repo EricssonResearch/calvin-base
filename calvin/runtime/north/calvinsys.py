@@ -106,4 +106,7 @@ class CalvinSys(object):
         """
         Remove object
         """
-        self.objects.remove(obj)
+        try:
+            self.objects.remove(obj)
+        except ValueError:
+            _log.debug("Object does not exist")
