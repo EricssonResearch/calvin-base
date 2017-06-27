@@ -605,14 +605,14 @@ class TestSecurity(unittest.TestCase):
                 raise
         if users_db:
             #TODO: seem more efficient to have a dictionary instead of a list of users
-            users_db['user7']={"username": "user7",
-                                        "attributes": {
-                                                        "age": "77", 
-                                                        "last_name": "Gretasdottir",
-                                                        "first_name": "Greta",
-                                                        "address": "Mobilvagen 1"
-                                                    }, 
-                                        "password": "pass7"}
+            users_db['user7']={ "username": "user7",
+                                "attributes": {
+                                    "age": "77", 
+                                    "last_name": "Gretasdottir",
+                                    "first_name": "Greta",
+                                    "address": "Mobilvagen 1"
+                                },
+                                "password": "pass7"}
         else:
             raise Exception("users_db not in result or users_db not in result[users_db]")
         #PUT the update database to the authentication server

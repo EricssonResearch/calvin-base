@@ -208,8 +208,6 @@ class CA():
         self.security_dir = _conf.get("security", "security_dir")
         if security_dir:
             self.configfile = os.path.join(security_dir, domain, "openssl.conf")
-        elif security_path:
-            self.configfile = os.path.join(security_path, domain, "openssl.conf")
         else:
             homefolder = get_home()
             self.configfile = os.path.join(homefolder, ".calvin",

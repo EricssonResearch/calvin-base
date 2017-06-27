@@ -229,7 +229,7 @@ def parse_args():
     ########################################################################################
     # parser for runtime cmds
     ########################################################################################
-    runtime_commands = ['create', 'export', 'import', 'trust', 'do_it_all', 'encrypt_csr']
+    runtime_commands = ['create', 'export', 'import', 'trust', 'do_it_all', 'encrypt_csr', 'c_rehash']
 
     runtime_parser = cmdparsers.add_parser('runtime', help='manage runtime certificates and keys')
     runtime_parser = runtime_parser.add_subparsers(help='sub-command help', dest='runtime_subparser_name')
@@ -334,6 +334,19 @@ def parse_args():
                            help='security directory, defaults to ~/.calvin/security')
 
     cmd_runtime_encrypt_csr.set_defaults(func=manage_runtime_encrypt_csr_with_enrollment_password)
+
+    ##############################
+    # parser for runtime c_rehash cmd
+    ##############################
+    cmd_runtime_c_rehash = runtime_parser.add_parser('c_rehash', help='Create symbolic links to trusted certificates')
+    #required arguments
+    cmd_runtime_c_rehash.add_argument('type', metavar='<type>', type=str,
+                           help='Type of trust store to rehash, supported are {CA, CS}')
+    #optional arguments
+    cmd_runtime_c_rehash.add_argument('--dir', metavar='<directory>', type=str, default="",
+                           help='security directory, defaults to ~/.calvin/security')
+
+    cmd_runtime_c_rehash.set_defaults(func=manage_runtime_c_rehash)
 
 
 
@@ -546,7 +559,6 @@ def manage_runtime_trust(args):
         certificate.store_trusted_root_cert(args.cacert, "truststore_for_signing", security_dir=args.dir)
 
 def manage_runtime_encrypt_csr_with_enrollment_password(args):
-    print "vi ar inne i manage_runtime_encrypt_csr_with_enrollment_password"
     if not args.node_name:
         raise Exception("No node name supplied")
     if not args.enrollment_password:
@@ -561,6 +573,14 @@ def manage_runtime_encrypt_csr_with_enrollment_password(args):
         raise
     encr_csr_path = rt_cred.get_encrypted_csr_path()
     print "encr_csr_path_start<{}>encr_csr_path_stop".format(encr_csr_path)
+
+def manage_runtime_c_rehash(args):
+    if args.type=="CA":
+        certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=args.dir)
+    elif args.type=="CS":
+        certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=args.dir)
+    else:
+        print "Error, only type={CA, CS} are suppored"
 
 def manage_runtime_do_it_all(args):
     if not args.attr:
