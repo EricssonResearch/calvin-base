@@ -1,0 +1,6 @@
+void : flow.Void()
+msg  : flow.Init(data="This is a test, using a calvin application <https://github.com/EricssonResearch/calvin-base> to push message to a pushbullet channel.")
+out  : web.Pushbullet(title="There, there")
+
+void.void > msg.in
+msg.out   > out.message
