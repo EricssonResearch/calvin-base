@@ -27,13 +27,13 @@ class Buzzer(Actor):
 
     @manage(["volume"])
     def init(self):
-        self._volume = None
+        self.volume = None
         self.setup()
 
     def setup(self):
         self.buzzer = calvinsys.open(self, "calvinsys.io.buzzer")
-        if self._volume and calvinsys.can_write(self.buzzer):
-            calvinsys.write(self.buzzer, self._volume)
+        if self.volume and calvinsys.can_write(self.buzzer):
+            calvinsys.write(self.buzzer, self.volume)
 
     def will_migrate(self):
         calvinsys.close(self.buzzer)
@@ -52,12 +52,12 @@ class Buzzer(Actor):
             vol = int(volume)
             if vol < 0 : vol = 0
             if vol > 100: vol = 100
-            self._volume = vol
+            self.volume = vol
         except Exception:
-            self._volume = 0
+            self.volume = 0
             
         if calvinsys.can_write(self.buzzer):
-            calvinsys.write(self.buzzer, self._volume)
+            calvinsys.write(self.buzzer, self.volume)
 
     action_priority = (set_volume, )
     requires = ["calvinsys.io.buzzer"]

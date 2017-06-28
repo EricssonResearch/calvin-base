@@ -27,13 +27,13 @@ class PWM(Actor):
 
     @manage(["dutycycle"])
     def init(self):
-        self._dutycycle = None
+        self.dutycycle = None
         self.setup()
 
     def setup(self):
         self.pwm = calvinsys.open(self, "calvinsys.io.pwm")
-        if self._dutycycle and calvinsys.can_write(self.pwm):
-            calvinsys.write(self.pwm, self._dutycycle)
+        if self.dutycycle and calvinsys.can_write(self.pwm):
+            calvinsys.write(self.pwm, self.dutycycle)
 
     def will_migrate(self):
         calvinsys.close(self.pwm)
@@ -52,12 +52,12 @@ class PWM(Actor):
             dc = int(dutycycle)
             if dc < 0 : dc = 0
             if dc > 100: dc = 100
-            self._dutycycle = dc
+            self.dutycycle = dc
         except Exception:
-            self._dutycycle = 0
+            self.dutycycle = 0
             
         if calvinsys.can_write(self.pwm):
-            calvinsys.write(self.pwm, self._dutycycle)
+            calvinsys.write(self.pwm, self.dutycycle)
 
     action_priority = (set_dutycycle, )
     requires = ["calvinsys.io.pwm"]
