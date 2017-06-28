@@ -114,10 +114,11 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('security', 'control_interface_security', "tls")
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
-        rt_conf.set('global', 'storage_type', "securedht")
+#        rt_conf.set('global', 'storage_type', "securedht")
 
         # Runtime 0: Certificate authority, authentication server, authorization server.
         rt0_conf = copy.deepcopy(rt_conf)
+        rt0_conf.set('global','storage_type','local')
         rt0_conf.set('security','certificate_authority',{
                         'domain_name':domain_name,
                         'is_ca':'True'
@@ -139,6 +140,8 @@ class TestSecurity(unittest.TestCase):
         helpers.start_runtime0(runtimes, rt, hostname, request_handler, tls=True)
         helpers.get_enrollment_passwords(runtimes, method="controlapi_set", rt=rt, request_handler=request_handler)
         # Other runtimes: external authentication, external authorization.
+        rt_conf.set('global','storage_type','proxy')
+        rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % hostname )
         rt_conf.set("security", "security_conf", {
                         "comment": "External authentication, external authorization",
                         "authentication": {
@@ -206,9 +209,6 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
             result = helpers.deploy_signed_application(request_handler, rt[1], "correctly_signed", content) 
-#            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
-#                        content=content,
-#                        check=True)
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
@@ -242,15 +242,10 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "incorrectly_signed", content['file'], 
-                        content=content,
-                        check=True)
+            result = helpers.deploy_signed_application_that_should_fail(request_handler, rt[1], "incorrectly_signed", content) 
         except Exception as e:
-            if e.message.startswith("401"):
-                # We were blocked, as we should
-                return
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
-        raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
+        return
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -270,9 +265,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "correctlySignedApp_incorrectlySignedActor", content['file'], 
-                    credentials={domain_name:{"user": "user1", "password": "pass1"}}, content=content,
-                        check=True)
+            result = helpers.deploy_signed_application(request_handler, rt[1], "correctlySignedApp_incorrectlySignedActor", content) 
         except Exception as e:
             _log.debug(str(e))
             if e.message.startswith("401"):
@@ -318,9 +311,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
-            result = request_handler.deploy_application(rt[1], "unsignedApp_signedActors", content['file'], 
-                        content=content,
-                        check=True)
+            result = helpers.deploy_signed_application(request_handler, rt[1], "unsignedApp_signedActors", content) 
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
@@ -427,9 +418,7 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
-            result = request_handler.deploy_application(rt[0], "unsignedApp_signedActors", content['file'], 
-                        content=content,
-                        check=True)
+            result = helpers.deploy_signed_application(request_handler, rt[0], "unsignedApp_signedActors", content) 
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
@@ -463,9 +452,6 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
             result = helpers.deploy_signed_application(request_handler, rt[1], "unsignedApp_signedActors", content) 
-#            result = request_handler.deploy_application(rt[1], "unsignedApp_signedActors", content['file'], 
-#                        content=content,
-#                        check=True)
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
@@ -499,9 +485,6 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user4", "password": "pass4"})
             result = helpers.deploy_signed_application(request_handler, rt[1], "correctly_signed", content) 
-#            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
-#                        content=content,
-#                        check=True)
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
@@ -549,19 +532,11 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user6", "password": "pass6"})
-            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'],
-                                                        content=content,
-                                                        check=True,
-                                                        timeout=15.0)
-        except Timeout as err:
-            _log.error("Timeout while trying to deploy application, err={}".format(err))
-            raise
+            result = helpers.deploy_signed_application_that_should_fail(request_handler, rt[1], "correctly_signed", content) 
         except Exception as e:
-            if e.message.startswith("401"):
-                # We were blocked, as we should
-                return
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
-        raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
+            raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
+        return
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -620,15 +595,11 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user_not_allowed", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
-                        content=content,
-                        check=True)
+            result = helpers.deploy_signed_application_that_should_fail(request_handler, rt[1], "correctly_signed", content) 
         except Exception as e:
-            if e.message.startswith("401"):
-                # We were blocked, as we should
-                return
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
-        raise Exception("Deployment of app correctly_signed did not fail for security reasons")  
+            raise Exception("Deployment of app correctly_signed did not fail for security reasons")
+        return
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -648,15 +619,11 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "incorrect_password"})
-            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
-                        content=content,
-                        check=True)
+            result = helpers.deploy_signed_application_that_should_fail(request_handler, rt[1], "incorrectly_signed", content) 
         except Exception as e:
-            if e.message.startswith("401"):
-                # We were blocked, as we should
-                return
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
-        raise Exception("Deployment of app correctly_signed, did not fail for security reasons")  
+            raise Exception("Deployment of app correctly_signed, did not fail for security reasons")  
+        return
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -677,9 +644,6 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user5", "password": "pass5"})
             result = helpers.deploy_signed_application(request_handler, rt[0], "correctly_signed", content) 
-#            result = request_handler.deploy_application(rt[0], "correctly_signed", content['file'], 
-#                        content=content,
-#                        check=True)
         except Exception as e:
             if isinstance(e, Timeout):
                 raise Exception("Can't connect to runtime 0.\n\te={}".format(e))
@@ -715,9 +679,6 @@ class TestSecurity(unittest.TestCase):
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user5", "password": "pass5"})
             result = helpers.deploy_signed_application(request_handler, rt[1], "correctly_signed", content) 
-#            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
-#                        content=content,
-#                        check=True)
         except Exception as e:
             if isinstance(e, Timeout):
                 raise Exception("Can't connect to runtime 5.\n\te={}".format(e))

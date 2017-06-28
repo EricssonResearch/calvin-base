@@ -115,7 +115,26 @@ def deploy_signed_application(request_handler, rt, name, content, retries=10):
     """
     from functools import partial
     return retry(retries, partial(request_handler.deploy_application, rt, name, content['file'], content=content, check=True), lambda _: True, "Failed to deploy application")
-    
+
+def deploy_signed_application_that_should_fail(request_handler, rt, name, content, retries=10):
+    """
+    Deploys app associated w/ deployer and then tries to verify its
+    presence in registry (for all runtimes).
+    """
+    delay = 0.1
+    retry = 0
+    result = None
+    while retry < retries:
+        try:
+            result = request_handler.deploy_application(rt, name, content['file'], content=content, check=True)
+        except Exception as e:
+            if e.message.startswith("401"):
+                return
+        delay = min(2, delay * 1.5); retry += 1
+        time.sleep(delay)
+        _log.info("Deployment failed, but not due to security reasons, %d retries" % (retry))
+    raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
+
 
 def delete_app(request_handler, runtime, app_id, check_actor_ids=None, retries=10):
     """
@@ -517,15 +536,6 @@ def fetch_and_log_runtime_actors(rt, request_handler):
     for runtime in rt:
         actors_rt = retry(20, partial(request_handler.get_actors, runtime), lambda _: True, "Failed to get actors")
         actors.append(actors_rt)
-#        for i in range(30):
-#            try:
-#                actors_rt = request_handler.get_actors(runtime)
-#                actors.append(actors_rt)
-#                break
-#            except:
-#                time.sleep(0.2)
-#                _log.debug("Request handler failed to get actors, sleep and try again, attempt={}".format(i))
-#                continue
     for i in range(len(rt)):
         _log.info("\n\trt{} actors={}".format(i, actors[i]))
     return actors
@@ -544,7 +554,7 @@ def security_verify_storage(rt, request_handler):
     def test():
         count=[0]*len(rt)
         caps =[0]*len(rt)
-        #Loop through all runtimes to ask them which runtimes nodes they know with with calvisys.native.python-json
+        #Loop through all runtimes to ask them which runtimes nodes they know with calvisys.native.python-json
         for j in range(len(rt)):
             caps[j] = retry(30, partial(request_handler.get_index, rt[j], index), lambda _: True, "Failed to get index")['result']
             #Add the known nodes to statistics of how many nodes store keys from that node
@@ -561,7 +571,6 @@ def security_verify_storage(rt, request_handler):
             node_name = runtime2.attributes['indexed_public']['node_name']
             index = format_index_string(['node_name', node_name])
             retry(10, partial(request_handler.get_index, runtime1, index), lambda _: True, "Failed to get index")
-#            response = get_index(runtime1, format_index_string(['node_name', node_name]))
     return True
 
 def create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
@@ -689,17 +698,8 @@ def _runtime_attributes(domain_name, runtimes):
                         }
 
 def wait_for_runtime(request_handler, rt):
-    failed=True
-    for i in range(100):
-        try:
-            rt_id = request_handler.get_node_id(rt)
-            failed = False
-            break
-        except Exception as err:
-            _log.debug("request handler failed getting node_id from runtime, attempt={}, err={}".format(i, err))
-            time.sleep(0.5)
-    if failed:
-        raise Exception("Failed to contact rt")
+    from functools import partial
+    rt_id = retry(100, partial(request_handler.get_node_id, rt), lambda _: True, "Failed to get node id")
 
 def start_runtime0(runtimes, rt, hostname, request_handler, tls=False, enroll_passwords=False):
     from calvin.Tools.csruntime import csruntime
@@ -738,9 +738,14 @@ def start_other_runtimes(runtimes, rt, hostname, request_handler, tls=False):
         except:
             logfile = None
             outfile = None
-        csruntime(hostname, port=5000+i, controlport=5020+i, attr=runtimes[i]["attributes"],
-                   loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
-                   configfile="/tmp/calvin500{}.conf".format(i))
+        csruntime(hostname,
+                  port=5000+i,
+                  controlport=5020+i,
+                  attr=runtimes[i]["attributes"],
+                  loglevel=_config_pytest.getoption("loglevel"),
+                  logfile=logfile,
+                  outfile=outfile,
+                  configfile="/tmp/calvin500{}.conf".format(i))
         uri = "https://{}:502{}".format(hostname, i) if tls==True else "http://{}:502{}".format(hostname, i)
         rt.append(RT(uri))
         rt[i].attributes=runtimes[i]["attributes"]
