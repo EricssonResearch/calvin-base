@@ -107,6 +107,14 @@ def deploy_app(request_handler, deployer, runtimes, retries=10):
         return True
 
     return retry(retries, check_application, lambda r: r, "Application not found on all peers")
+
+def deploy_signed_application(request_handler, rt, name, content, retries=10):
+    """
+    Deploys app associated w/ deployer and then tries to verify its
+    presence in registry (for all runtimes).
+    """
+    from functools import partial
+    return retry(retries, partial(request_handler.deploy_application, rt, name, content['file'], content=content, check=True), lambda _: True, "Failed to deploy application")
     
 
 def delete_app(request_handler, runtime, app_id, check_actor_ids=None, retries=10):
@@ -488,11 +496,11 @@ def sign_files_for_security_tests(credentials_testdir):
     replace_text_in_file(actor_SinkUnsigned_path, "Sink", "SinkUnsigned")
 
     #Sign applications
-    cs.sign_file(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
-    cs.sign_file(os.path.join(application_store_path, "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
-    cs.sign_file(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"))
+    cs.sign_file(os.path.join(application_store_path, "correctly_signed.calvin"))
+    cs.sign_file(os.path.join(application_store_path, "correctlySignedApp_incorrectlySignedActor.calvin"))
+    cs.sign_file(os.path.join(application_store_path, "incorrectly_signed.calvin"))
     #Now append to the signed file so the signature verification fails
-    with open(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"), "a") as fd:
+    with open(os.path.join(application_store_path, "incorrectly_signed.calvin"), "a") as fd:
             fd.write(" ")
 
     print "Export Code Signers certificate to the truststore for code signing"
@@ -501,91 +509,59 @@ def sign_files_for_security_tests(credentials_testdir):
     return actor_store_path, application_store_path
 
 def fetch_and_log_runtime_actors(rt, request_handler):
+    from functools import partial
     # Verify that actors exist like this
     actors=[]
     #Use admins credentials to access the control interface
     request_handler.set_credentials({"user": "user0", "password": "pass0"})
     for runtime in rt:
-        for i in range(30):
-            try:
-                actors_rt = request_handler.get_actors(runtime)
-                actors.append(actors_rt)
-                break
-            except:
-                time.sleep(0.2)
-                _log.error("Request handler failed to get actors, sleep and try again, attempt={}".format(i))
-                continue
+        actors_rt = retry(20, partial(request_handler.get_actors, runtime), lambda _: True, "Failed to get actors")
+        actors.append(actors_rt)
+#        for i in range(30):
+#            try:
+#                actors_rt = request_handler.get_actors(runtime)
+#                actors.append(actors_rt)
+#                break
+#            except:
+#                time.sleep(0.2)
+#                _log.debug("Request handler failed to get actors, sleep and try again, attempt={}".format(i))
+#                continue
     for i in range(len(rt)):
         _log.info("\n\trt{} actors={}".format(i, actors[i]))
     return actors
 
 def security_verify_storage(rt, request_handler):
-    def get_index(rt, index):
-        for i in range(100):
-            try:
-                result = request_handler.get_index(rt, index)
-                return result
-            except Exception as err:
-                _log.error("security_verify_storage::get_index Failed get_index, attempt={}".format(i))
-                time.sleep(0.5)
-                continue
-        raise Exception("security_verify_storage::get_index  Failed to get index")
-
+    from functools import partial
     _log.info("Let's verify storage, rt={}".format(rt))
     rt_id=[None]*len(rt)
     # Wait for control API to be up and running
     for j in range(len(rt)):
-        failed = True
-        for i in range(100):
-            try:
-                rt_id[j] = request_handler.get_node_id(rt[j])
-                failed = False
-                break 
-            except Exception as err:
-                _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(i, err))
-                time.sleep(0.5)
-    assert not failed
-    for id in rt_id:
-        assert id
+        rt_id[j] = retry(30, partial(request_handler.get_node_id, rt[j]), lambda _: True, "Failed to get node id")
     _log.info("RUNTIMES:{}".format(rt_id))
-     # Try 100 times waiting for storage to be connected
+    # Wait for storage to be connected
+    index = "node/capabilities/calvinsys.native.python-json" 
     failed = True
-    for i in range(100):
-        _log.info("-----------------Round {}-----------------".format(i))
+    def test():
         count=[0]*len(rt)
-        try:
-            caps=[0] * len(rt)
-            #Loop through all runtimes to ask them which runtimes nodes they know with with calvisys.native.python-json
-            for j in range(len(rt)):
-                caps[j] = get_index(rt[j], "node/capabilities/calvinsys.native.python-json")['result']
-                #Add the known nodes to statistics of how many nodes store keys from that node
-                for k in range(len(rt)):
-                    count[k] = count[k] + caps[j].count(rt_id[k])
-            _log.info("rt_ids={}\n\tcount={}".format(rt_id, count))
+        caps =[0]*len(rt)
+        #Loop through all runtimes to ask them which runtimes nodes they know with with calvisys.native.python-json
+        for j in range(len(rt)):
+            caps[j] = retry(30, partial(request_handler.get_index, rt[j], index), lambda _: True, "Failed to get index")['result']
+            #Add the known nodes to statistics of how many nodes store keys from that node
             for k in range(len(rt)):
-                _log.info("caps{}={}".format(k, caps[k]))
-            #Keys should have spread to atleast 5 other runtimes (or all if there are fewer than 5 runtimes)
-            if all(x>=min(5, len(rt)) for x in count):
-                failed = False
-                break
-            else:
-                time.sleep(0.2)
-        except Exception as err:
-            _log.error("exception from request_handler.get_index, err={}".format(err))
-            time.sleep(0.1)
-    assert not failed
-    try:
-        #Loop through all runtimes and make sure they can lookup all other runtimes
-        for runtime1 in rt:
-            for runtime2 in rt:
-                node_name = runtime2.attributes['indexed_public']['node_name']
-                response = get_index(runtime1, format_index_string(['node_name', node_name]))
-                _log.info("\tresponse={}".format(response))
-                assert(response)
-        storage_verified = True
-    except Exception as err:
-        _log.error("Exception when trying to lookup index={} from rt={},  err={}".format(format_index_string(['node_name', node_name]), runtime2.control_uri, err))
-        raise
+                count[k] = count[k] + caps[j].count(rt_id[k])
+        _log.info("rt_ids={}\n\tcount={}".format(rt_id, count))
+        return count
+
+    criterion = lambda count: (x >=min(5, len(rt)) for x in count)
+    retry(30, test, criterion, "Storage has not spread as it should")
+    #Loop through all runtimes and make sure they can lookup all other runtimes
+    for runtime1 in rt:
+        for runtime2 in rt:
+            node_name = runtime2.attributes['indexed_public']['node_name']
+            index = format_index_string(['node_name', node_name])
+            retry(10, partial(request_handler.get_index, runtime1, index), lambda _: True, "Failed to get index")
+#            response = get_index(runtime1, format_index_string(['node_name', node_name]))
     return True
 
 def create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
@@ -720,7 +696,7 @@ def wait_for_runtime(request_handler, rt):
             failed = False
             break
         except Exception as err:
-            _log.error("request handler failed getting node_id from runtime, attempt={}, err={}".format(i, err))
+            _log.debug("request handler failed getting node_id from runtime, attempt={}, err={}".format(i, err))
             time.sleep(0.5)
     if failed:
         raise Exception("Failed to contact rt")
