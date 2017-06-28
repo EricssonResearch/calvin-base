@@ -1,1 +1,1 @@
-pushbullet.py
+git+https://github.com/randomchars/pushbullet.py
