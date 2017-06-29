@@ -1,3 +1,4 @@
+import json
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
@@ -14,7 +15,7 @@ def set_proxy_config_cb(key, value, will_sleep, link, callback):
     if will_sleep:
         link.set_peer_insleep()
 
-def set_proxy_config(peer_id, name, capabilities, port_property_capability, will_sleep, link, storage, callback, attributes):
+def set_proxy_config(peer_id, capabilities, port_property_capability, will_sleep, link, storage, callback, attributes):
     """
     Store node
     """
@@ -25,25 +26,25 @@ def set_proxy_config(peer_id, name, capabilities, port_property_capability, will
             storage.add_index(['node', 'capabilities', c], peer_id, root_prefix_level=3)
     except:
         _log.error("Failed to set capabilities")
-    
-    if not attributes:
-        attributes = AttributeResolver({"indexed_public": {"node_name": {"name": name}}})
-    else:
+
+    public = None
+    indexed_public = None
+
+    if attributes is not None:
+        attributes = json.loads(attributes)
         attributes = AttributeResolver(attributes)
-    indexes = attributes.get_indexed_public()
-    try:
+        indexes = attributes.get_indexed_public()
         for index in indexes:
             storage.add_index(index, peer_id)
-    except:
-        _log.error("Failed to add node index")
-    
+        public = attributes.get_public()
+        indexed_public = attributes.get_indexed_public(as_list=False)
+
     storage.set(prefix="node-", key=peer_id,
                 value={"proxy": storage.node.id,
                 "uris": None,
                 "control_uris": None,
                 "authz_server": None, # Set correct value
                 "sleeping": will_sleep,
-                "attributes": {'public': attributes.get_public(),
-                'indexed_public': attributes.get_indexed_public(as_list=False)}},
+                "attributes": {'public': public,
+                'indexed_public': indexed_public}},
                 cb=CalvinCB(set_proxy_config_cb, will_sleep=will_sleep, link=link, callback=callback))
-    

@@ -283,7 +283,6 @@ class CalvinProto(CalvinCBClass):
         if "will_sleep" not in payload:
             payload["will_sleep"] = False
         proxyconfig.set_proxy_config(payload['from_rt_uuid'],
-            payload['name'],
             payload['capabilities'],
             payload['port_property_capability'],
             payload['will_sleep'],
