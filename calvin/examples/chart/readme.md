@@ -14,7 +14,7 @@ Google Chart API.
 
 Install dependencies using:
 
-    § pip install -r requirements
+    § pip install -r requirements.txt
 
 
 ### Calvin configuration
@@ -32,8 +32,29 @@ the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/c
 
 ## Running
 A lot of the charactericts for each chart can be set at initiation through the
-`chart_parameters`in each script. Have a look at the examples for some inspiration
-of how to initiate different charts.
+`chart_parameters`in each script.
+
+    /////////////////////////////////////////////////
+    //              Chart definitions              //
+    /////////////////////////////////////////////////
+    define CHART_PARAMETERS = {"chart_title": ["More parameters", "3AB8E1", 24],
+                               "chart_bar": [20, 30],
+                               "chart_size": [600, 450],
+                               "chart_scale": [0, 1000],
+                               "chart_color": ["72BCD4"],
+                               "chart_grid": [0, 10, 1, 1],
+                               "chart_line": [4,3,0],
+                               "chart_margin": [100, 100, 75, 100],
+                               "chart_fill": [["c", "lg", 45, "white", 0, "EFEFEF", 0.75]["bg", "lg", 45, "EFEFEF", 0, "CDCDCD", 0.75]]
+                               "axes_type": "xxyy",
+                               "axes_label": [[1, "Time"], [3, "Value"]],
+                               "axes_range": [2, 0, 1000, 250],
+                               "axes_style": [[1, "3AB8E1", 14],[3, "3AB8E1", 14]]}
+
+Have a look at the examples for some inspiration of how to initiate different
+charts. If the examples isn't enough, the functions for setting the parameters
+in [chart.py](https://github.com/EricssonResearch/calvin-base/blob/develop/calvin/runtime/south/plugins/charts/google_charts_impl/chart.py)
+will hopefully be of help.
 
 Run one of the following commands from within the directory the `calvin.conf`
 file is placed:
@@ -49,6 +70,24 @@ example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORA
 to the command:
 
     $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive nice_looking.calvin
+
+
+## Other examples
+
+In the command above `nice_looking.calvin` is the name of the script to run but
+other examples are also available. Change `nice_looking.calvin` to run another
+example:
+
+- `dynamic_hbar.calvin`
+- `dynamic_line.calvin`
+- `dynamic_vbar.calvin`
+- `meter.calvin`
+- `static_hbar.calvin`
+- `static_vbar.calvin`
+
+
+In addition an example for sending charts over a websocket are available in the [websocket](./websocket)
+directory.
 
 
 ## Additional documentation
