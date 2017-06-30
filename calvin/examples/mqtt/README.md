@@ -36,12 +36,17 @@ placed. To run the scripts, execute the following commands:
 
 ### Subscribing device
 
-    $ csruntime --host localhost --keep-alive mqtt_sub_test.calvin
+    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive mqtt_sub_test.calvin
 
 ### Publishing device
 
 Run the following command:
 
-    $ csruntime --host localhost --keep-alive mqtt_pub_test.calvin
+    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive mqtt_pub_test.calvin
 
 
+## DHT
+
+Calvin's internal registry is not strictly needed when running this small example,
+it has therefor been turned off. To turn it on and run the application with DHT
+remove `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"` from the commands.

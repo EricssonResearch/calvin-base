@@ -26,17 +26,14 @@ Install dependencies using:
 
 ## Running
 
-Run the script with one of the following commands:
-
-### With DHT
-
-    $ csruntime --host localhost opcua-subscribe.calvin
-
-
-### Without DHT
-
-Calvin's internal registry is not strictly needed when running this small
-example. To turn it off and run the application locally add
-`CALVIN_GLOBAL_STORAGE_TYPE=\"local\"` to the command:
+Run the script with the following command:
 
     $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost opcua-subscribe.calvin
+
+## DHT
+
+Calvin's internal registry is not strictly needed when running this small example,
+it has therefor been turned off. To turn it on and run the application with DHT
+instead, remove `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"` from the command. I.e:
+
+    $ csruntime --host localhost opcua-subscribe.calvin

@@ -38,9 +38,6 @@ the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/c
 
 Run one of the following commands from within the directory the `calvin.conf` file is placed:
 
-### With DHT
-
-    § csruntime --host localhost --keep-alive webchart.calvin
 
 ### Without DHT
 
@@ -49,3 +46,9 @@ example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORA
 to the command:
 
     $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive webchart.calvin
+
+
+### With DHT
+
+    § csruntime --host localhost --keep-alive webchart.calvin
+

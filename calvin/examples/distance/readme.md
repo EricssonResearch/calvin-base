@@ -39,17 +39,19 @@ the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/c
 
 ## Running
 
-Run one of the following commands from within the directory the `calvin.conf` file is placed:
+Run the following command from within the directory the `calvin.conf`
+file is placed:
 
-### With DHT
+    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive distance.calvin --attr-file gpio-pins.json
+
+## DHT
+
+Calvin's internal registry is not strictly needed when running this small example,
+it has therefor been turned off. To turn it on and run the application with DHT
+instead, remove `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"` from the command. I.e:
 
     $ csruntime --host localhost --keep-alive distance.calvin --attr-file gpio-pins.json
 
-### Without DHT
 
-Calvin's internal registry is not strictly needed when running this small
-example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"`
-to the command:
 
-    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive distance.calvin --attr-file gpio-pins.json
 

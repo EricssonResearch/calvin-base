@@ -42,8 +42,10 @@ the directory the `calvin.conf` file is placed.
 
 ## Running
 
-Start a Calvin runtime on the Raspberry Pi and deploy `rcswitch.calvin` with one
-of the commands below:
+Start a Calvin runtime on the Raspberry Pi and deploy `rcswitch.calvin` with the
+follwing command from within the directory the `calvin.conf` file is placed:
+
+    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive rcswitch.calvin
 
 - When the script is up and running, use the pushbutton to control the remote power
 socket. The devices must be paired the first time the script is run, this is done
@@ -51,17 +53,10 @@ by pressing the connect button on the power outlet and then pressing the button
 connected to the Raspberry Pi so that data is sent to the power outlet.
 
 
-### With DHT
+## DHT
+
+Calvin's internal registry is not strictly needed when running this small example,
+it has therefor been turned off. To turn it on and run the application with DHT
+instead, remove `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"` from the command. I.e:
 
     $ csruntime --host localhost --keep-alive rcswitch.calvin
-
-### Without DHT
-
-Calvin's internal registry is not strictly needed when running this small
-example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"`
-to the command:
-
-    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive rcswitch.calvin
-
-
-

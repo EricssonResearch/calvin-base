@@ -56,20 +56,18 @@ charts. If the examples isn't enough, the functions for setting the parameters
 in [chart.py](https://github.com/EricssonResearch/calvin-base/blob/develop/calvin/runtime/south/plugins/charts/google_charts_impl/chart.py)
 will hopefully be of help.
 
-Run one of the following commands from within the directory the `calvin.conf`
+Run the following command from within the directory the `calvin.conf`
 file is placed:
 
-### With DHT
-
-    § csruntime --host localhost --keep-alive nice_looking.calvin
-
-### Without DHT
-
-Calvin's internal registry is not strictly needed when running this small
-example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"`
-to the command:
-
     $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive nice_looking.calvin
+
+## DHT
+
+Calvin's internal registry is not strictly needed when running this small example,
+it has therefor been turned off. To turn it on and run the application with DHT
+instead, remove `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"` from the command. I.e:
+
+    $ csruntime --host localhost --keep-alive nice_looking.calvin
 
 
 ## Other examples

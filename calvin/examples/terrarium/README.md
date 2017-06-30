@@ -61,23 +61,21 @@ the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/c
 
 Run one of the following commands from within the directory the `calvin.conf` file is placed:
 
-### With DHT
-
-    with twitter output:
-    $ csruntime --host localhost --keep-alive monitor-tweet.calvin --attr-file twitter_credentials.json
-
-    or, without twitter output:
-    § csruntime --host localhost --keep-alive monitor-print.calvin
-
-### Without DHT
-
-Calvin's internal registry is not strictly needed when running this small
-example. To turn it off and run the application locally add `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"`
-to the command:
-
     with twitter output:
     $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive monitor-tweet.calvin --attr-file twitter_credentials.json
 
     or, without twitter output:
     § CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost --keep-alive monitor-print.calvin
 
+
+## DHT
+
+Calvin's internal registry is not strictly needed when running this small example,
+it has therefor been turned off. To turn it on and run the application with DHT
+instead, remove `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"` from the command. I.e:
+
+    with twitter output:
+    $ csruntime --host localhost --keep-alive monitor-tweet.calvin --attr-file twitter_credentials.json
+
+    or, without twitter output:
+    § csruntime --host localhost --keep-alive monitor-print.calvin
