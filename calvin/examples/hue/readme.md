@@ -14,14 +14,18 @@ controls a Philips Hue lamp.
 ### Installation
 
 Before running this example, make sure the Philips Hue is available via the API.
-See [Philips Hue](https://www.developers.meethue.com/documentation/getting-started)
-for details.
+Follow the steps in [Philips Hue Getting started](https://www.developers.meethue.com/documentation/getting-started)
+to get information about:
+- __address__ (_the bridges ip address_)
+- __username__ (_this will be a randomly generated username that the bridge creates for you_)
+- __lightno__ (_the id of the lamp_)
 
-In the `FlashingStopLight.calvin` the line:
+Now, in the `FlashingStopLight.calvin`, update the line:
 
     flash : FlashStopLight(address="philips-hue", username="username", lightno=1, interval=2.0)
 
-to reflect your setup - i.e. __address__, __username__, __lightno__ should all be according to your configuration.
+to reflect your setup - i.e. __address__, __username__, __lightno__ should all be according to
+your configuration.
 
 
 ## Running

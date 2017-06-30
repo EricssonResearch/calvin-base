@@ -18,8 +18,8 @@ Edit the file `gpio-pins.json` to reflect your pin assignment (if it differs
 from the one specified in the file). The default pin-settings used in this
 example are (in BCM-mode)
 
-    Trig: 23
-    Echo: 24
+    "echo_pin": 24,
+    "trig_pin": 23
 
 - Vcc needs +5v (pin 2).
 - For ground, any ground pin works of course. I like pin 6 myself.
