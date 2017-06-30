@@ -1,0 +1,6 @@
+tick : std.Trigger(tick=1.0, data="{\"this\": \"is a test\"}")
+fromstring : json.FromString()
+out : io.Print()
+
+tick.data > fromstring.string
+fromstring.data > out.token

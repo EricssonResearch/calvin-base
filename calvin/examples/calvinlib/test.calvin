@@ -1,0 +1,7 @@
+tostring : json.ToString()
+fromstring : json.FromString()
+out : io.Print()
+
+{"hello": "this is a test", "section": 2.3 } > tostring.data
+tostring.string > fromstring.string
+fromstring.data > out.token

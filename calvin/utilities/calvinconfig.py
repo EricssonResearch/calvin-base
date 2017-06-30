@@ -118,11 +118,23 @@ class CalvinConfig(object):
                         "attributes": {}
                     }, 
                     {
-                        "name":  "calvinsys.sys.timer.repeating",
+                        "name":  "sys.timer.repeating",
                         "module": "sys.timer.Timer",
                         "attributes": {"repeats": True }
                     }
               ]
+             },
+             'calvinlib': {
+                 "capabilities": [
+                     {
+                         "name" : "json",
+                         "module": "jsonlib.Json"
+                     },
+                     {
+                         "name": "base64",
+                         "module": "base64lib.Base64"
+                     }
+                 ]
              }
         }
         return default
