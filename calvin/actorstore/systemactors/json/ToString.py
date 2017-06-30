@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinlib
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
@@ -45,14 +45,15 @@ class ToString(Actor):
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.native.python-json', shorthand="json")
+        self.json = calvinlib.use("json")
+
 
     @condition(['data'], ['string'])
     def dump(self, value):
-        return (self['json'].dumps(value),)
+        return (self.json.tostring(value),)
 
     action_priority = (dump,)
-    requires = ['calvinsys.native.python-json']
+    requires = ['json']
 
     test_set = [
         {

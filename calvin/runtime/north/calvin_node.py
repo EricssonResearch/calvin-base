@@ -23,6 +23,7 @@ import logging
 
 from calvin.calvinsys import Sys as CalvinSys
 from calvin.runtime.north.calvinsys import get_calvinsys
+from calvin.runtime.north.calvinlib import get_calvinlib
 
 import calvin.runtime.south.plugins.ui.uicalvinsys
 from calvin.runtime.north import actormanager
@@ -119,6 +120,8 @@ class Node(object):
         self._calvinsys = CalvinSys(self)
         calvinsys = get_calvinsys()
         calvinsys.init(self)
+        calvinlib = get_calvinlib()
+        calvinlib.init(self)
 
         # Default will multicast and listen on all interfaces
         # TODO: be able to specify the interfaces

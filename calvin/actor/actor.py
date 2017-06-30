@@ -19,7 +19,6 @@ import functools
 import time
 from jsonschema import validate
 from calvin.utilities import calvinuuid
-from calvin.utilities.security import Security
 from calvin.actor import actorport
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import enum
@@ -32,7 +31,8 @@ from calvin.runtime.south.plugins.async import async
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.csparser.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
-from calvin.runtime.north.calvinsys import get_calvinsys, CalvinSys
+from calvin.runtime.north.calvinsys import get_calvinsys
+from calvin.runtime.north.calvinlib import get_calvinlib
 
 _log = get_logger(__name__)
 
@@ -246,6 +246,20 @@ class calvinsys(object):
     def close(obj):
         obj.close()
         get_calvinsys().remove(obj)
+
+class calvinlib(object):
+
+    """
+    CalvinLib interface exposed to actors
+    """
+
+    @staticmethod
+    def use(name, **kwargs):
+        return get_calvinlib().use(name, **kwargs)
+
+    @staticmethod
+    def dispose(obj):
+        get_calvinlib().remove(obj)
 
 class Actor(object):
 
