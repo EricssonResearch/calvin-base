@@ -261,6 +261,8 @@ class calvinlib(object):
 
     @staticmethod
     def dispose(obj):
+        return get_calvinlib().dispose(name, **kwargs)
+        
 class Actor(object):
 
     """
