@@ -44,14 +44,15 @@ setup(name='calvin',
           'wrapt>=1.10.2',
           'pyserial>=3.0.1',
           'netifaces>=0.10.4',
-          'pyOpenSSL>=0.15.1',
+          'pyOpenSSL==0.15.1',
           'cryptography>1.0.0,<1.3.0',
           'passlib>=1.6.5',
           'PyJWT>=1.4.0',
           'service-identity>=16.0.0',
           'ndg-httpsclient>=0.4.2',
           'pyasn1>=0.1.9',
-          'pystache>=0.5.4'
+          'pystache>=0.5.4',
+          'jsonschema>=2.6.0'
       ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
