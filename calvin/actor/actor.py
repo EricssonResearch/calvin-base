@@ -36,8 +36,6 @@ from calvin.runtime.north.calvinlib import get_calvinlib
 
 _log = get_logger(__name__)
 
-_log = get_logger(__name__)
-
 
 # Tests in test_manage_decorator.py
 def manage(include=None, exclude=None):
@@ -261,8 +259,8 @@ class calvinlib(object):
 
     @staticmethod
     def dispose(obj):
-        return get_calvinlib().dispose(name, **kwargs)
-        
+        get_calvinlib().remove(obj)
+
 class Actor(object):
 
     """
