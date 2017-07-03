@@ -238,7 +238,14 @@ def setup_calvinlib():
     lib.set("json", MockJson())
     lib.set("base64", MockBase64())
     lib.set("copy", MockCopy())
-    
+
+def teardown_calvinlib():
+    import calvin.runtime.north.calvinlib as calvinlib
+    from calvin.runtime.north.calvinlib import TESTING
+    calvinlib.TESTING=False
+    del calvinlib._calvinlib
+    calvinlib._calvinlib=None
+
 class ActorTester(object):
 
     def __init__(self):
@@ -432,6 +439,8 @@ def test_actors(actor="", show=False, path=None):
         raise Exception("%d actor(s) had errors" % (len(results['errors']), ))
     if results['fail']:
         raise Exception("%d actor(s) failed tests" % (len(results['fail']),))
+        
+    teardown_calvinlib()
 
 
 if __name__ == '__main__':
