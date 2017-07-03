@@ -16,9 +16,11 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
-from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
-from copy import copy
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+from calvin.runtime.north.calvin_token import  ExceptionToken
+from calvin.utilities.calvinlogger import get_actor_logger
+
+_log = get_actor_logger(__name__)
 
 class Items(Actor):
 
@@ -38,6 +40,20 @@ class Items(Actor):
     def init(self):
         self.data = []
         self.has_data = False
+        print("Setting up")
+        self.setup()
+
+    def setup(self):
+        self.copy = calvinlib.use("copy")
+
+    def did_migrate(self):
+        self.setup()
+        
+    def will_migrate(self):
+        calvinlib.dispose(self.copy)
+        
+    def will_end(self):
+        calvinlib.dispose(self.copy)
 
     @stateguard(lambda self: not self.has_data)
     @condition(['list'], [])
@@ -50,10 +66,10 @@ class Items(Actor):
             # Empty list => no output
             return
         try:
-            self.data = copy(data)
+            self.data = self.copy.copy(data)
             self.has_data = True
-        except:
-            pass
+        except Exception as e:
+            _log.info("An error occurred: {}".format(e))
 
     @stateguard(lambda self: self.has_data)
     @condition([], ['item'])
@@ -66,6 +82,8 @@ class Items(Actor):
 
 
     action_priority = (produce_item, consume_list)
+
+    requires = ['copy']
 
     test_args = []
     test_kwargs = {}
