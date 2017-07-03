@@ -24,12 +24,19 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 _calvinlib = None
 
+TESTING=False
+
 def get_calvinlib():
     """ Returns the calvinlib singleton"""
     global _calvinlib
+    global TESTING
+    if _calvinlib is None and TESTING:
+        _calvinlib = MockCalvinLib()
+        
     if _calvinlib is None:
         _calvinlib = CalvinLib()
     return _calvinlib
+
 
 class CalvinLib(object):
 
@@ -105,3 +112,22 @@ class CalvinLib(object):
             self.objects.remove(obj)
         except ValueError:
             _log.debug("Object does not exist")
+
+class MockCalvinLib(CalvinLib):
+    def __init__(self):
+        self._caps = {}
+        
+    def set(self, cap, obj):
+        self._caps[cap] = obj
+    
+    def has_capability(self, req):
+        return req in self._caps
+    
+    def list_capabilities(self):
+        return self._caps.keys()
+        
+    def use(self, cap, **kwargs):
+        return self._caps[cap]
+        
+    def remove(self, obj):
+        pass

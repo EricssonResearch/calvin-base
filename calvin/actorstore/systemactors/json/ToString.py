@@ -34,7 +34,7 @@ class ToString(Actor):
     """
 
     def exception_handler(self, action, args):
-        return (self['json'].dumps(self.default),)
+        return (self.json.tostring(self.default),)
 
     @manage(['default'])
     def init(self, exception_output=None):

@@ -196,7 +196,6 @@ requirements = \
         'calvinsys.events.timer': CalvinSysTimerMock()
     }
 
-
 class CalvinSysMock(dict):
     def use_requirement(self, actor, requirement):
         print actor
@@ -210,6 +209,36 @@ class CalvinSysMock(dict):
             raise Exception("Test framework does not know how to handle requirement '%s'" % (requirement,))
 
 
+def setup_calvinlib():
+    class MockJson(object):
+
+        def fromstring(self, string):
+            from json import loads
+            return loads(string)
+        def tostring(self, data):
+            from json import dumps
+            return dumps(data)
+            
+    class MockBase64(object):
+        def encode(self, data):
+            from base64 import b64encode
+            return b64encode(data)
+        def decode(self, string):
+            from base64 import b64decode
+            return b64decode(string)
+            
+    class MockCopy(object):
+        def copy(self, data):
+            from copy import copy
+            return copy(data)
+    import calvin.runtime.north.calvinlib as calvinlib
+    calvinlib.TESTING=True
+    from calvin.runtime.north.calvinlib import get_calvinlib
+    lib = get_calvinlib()
+    lib.set("json", MockJson())
+    lib.set("base64", MockBase64())
+    lib.set("copy", MockCopy())
+    
 class ActorTester(object):
 
     def __init__(self):
@@ -219,6 +248,7 @@ class ActorTester(object):
         self.components = {}
         self.id = "ActorTester"
         self.metering = metering.set_metering(metering.Metering(self))
+        setup_calvinlib()
 
     def collect_actors(self, actor):
         actors = [m + '.' + a for m in self.store.modules() for a in self.store.actors(m)]
