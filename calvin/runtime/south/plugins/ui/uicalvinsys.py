@@ -1,4 +1,4 @@
-t from calvin.runtime.south.plugins.async import sse_event_source as sse
+from calvin.runtime.south.plugins.async import sse_event_source as sse
 from calvin.requests import calvinresponse
 
 try:
