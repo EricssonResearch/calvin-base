@@ -31,7 +31,7 @@ class PWM(Actor):
         self.setup()
 
     def setup(self):
-        self.pwm = calvinsys.open(self, "calvinsys.io.pwm")
+        self.pwm = calvinsys.open(self, "io.pwm")
         if self.dutycycle and calvinsys.can_write(self.pwm):
             calvinsys.write(self.pwm, self.dutycycle)
 
@@ -60,4 +60,4 @@ class PWM(Actor):
             calvinsys.write(self.pwm, self.dutycycle)
 
     action_priority = (set_dutycycle, )
-    requires = ["calvinsys.io.pwm"]
+    requires = ["io.pwm"]

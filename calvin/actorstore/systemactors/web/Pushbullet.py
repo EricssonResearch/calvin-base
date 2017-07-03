@@ -38,7 +38,7 @@ class Pushbullet(Actor):
         self.setup()
  
     def setup(self):
-        self._pb = calvinsys.open(self, "calvinsys.web.pushbullet.channel.post")
+        self._pb = calvinsys.open(self, "web.pushbullet.channel.post")
 
     def teardown(self):
         calvinsys.close(self._pb)
@@ -56,4 +56,4 @@ class Pushbullet(Actor):
         
 
     action_priority = (post_update,)
-    requires = ['calvinsys.web.pushbullet.channel.post']
+    requires = ['web.pushbullet.channel.post']

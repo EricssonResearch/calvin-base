@@ -29,7 +29,7 @@ class TiltSwitch(Actor):
         self.setup()
 
     def setup(self):
-        self.switch = calvinsys.open(self, "calvinsys.io.tiltswitch")
+        self.switch = calvinsys.open(self, "io.tiltswitch")
 
     def will_migrate(self):
         calvinsys.close(self.switch)
@@ -49,4 +49,4 @@ class TiltSwitch(Actor):
         return (True if value else False,)
 
     action_priority = (state_change, )
-    requires = ['calvinsys.io.tiltswitch']
+    requires = ['io.tiltswitch']

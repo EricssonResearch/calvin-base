@@ -31,7 +31,7 @@ class Knob(Actor):
         self.setup()
         
     def setup(self):
-        self._knob = calvinsys.open(self, "calvinsys.io.knob")
+        self._knob = calvinsys.open(self, "io.knob")
 
     def will_migrate(self):
         calvinsys.close(self._knob)
@@ -50,4 +50,4 @@ class Knob(Actor):
         return (calvinsys.read(self._knob),)
 
     action_priority = (trigger, )
-    requires = ['calvinsys.io.knob']
+    requires = ['io.knob']

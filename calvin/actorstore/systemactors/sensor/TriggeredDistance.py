@@ -36,7 +36,7 @@ class TriggeredDistance(Actor):
         self.setup()
 
     def setup(self):
-        self._distance = calvinsys.open(self, "calvinsys.io.distance")
+        self._distance = calvinsys.open(self, "io.distance")
 
     def teardown(self):
         if self._distance:
@@ -65,6 +65,6 @@ class TriggeredDistance(Actor):
 
 
     action_priority = (read_measurement, start_measurement)
-    requires =  ['calvinsys.io.distance']
+    requires =  ['io.distance']
 
 

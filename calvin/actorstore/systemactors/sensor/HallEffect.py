@@ -29,7 +29,7 @@ class HallEffect(Actor):
         self.setup()
 
     def setup(self):
-        self.sensor = calvinsys.open(self, "calvinsys.io.hallswitch")
+        self.sensor = calvinsys.open(self, "io.hallswitch")
 
     def will_migrate(self):
         calvinsys.close(self.sensor)
@@ -49,4 +49,4 @@ class HallEffect(Actor):
         return (True if value else False,)
 
     action_priority = (state_change, )
-    requires = ['calvinsys.io.hallswitch']
+    requires = ['io.hallswitch']

@@ -29,7 +29,7 @@ class LightBreaker(Actor):
         self.setup()
 
     def setup(self):
-        self.sensor = calvinsys.open(self, "calvinsys.io.lightbreaker")
+        self.sensor = calvinsys.open(self, "io.lightbreaker")
 
     def will_migrate(self):
         calvinsys.close(self.sensor)
@@ -49,4 +49,4 @@ class LightBreaker(Actor):
         return (True if value else False,)
 
     action_priority = (state_change, )
-    requires = ['calvinsys.io.lightbreaker']
+    requires = ['io.lightbreaker']

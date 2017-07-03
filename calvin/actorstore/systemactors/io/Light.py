@@ -30,7 +30,7 @@ class Light(Actor):
         self.setup()
 
     def setup(self):
-        self.light = calvinsys.open(self, "calvinsys.io.light")
+        self.light = calvinsys.open(self, "io.light")
 
     def will_migrate(self):
         calvinsys.close(self.light)
@@ -49,4 +49,4 @@ class Light(Actor):
         calvinsys.write(self.light, 1 if state else 0)
 
     action_priority = (set_state, )
-    requires = ["calvinsys.io.light"]
+    requires = ["io.light"]

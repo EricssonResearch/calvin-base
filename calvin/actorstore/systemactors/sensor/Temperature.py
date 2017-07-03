@@ -34,7 +34,7 @@ class Temperature(Actor):
         self.setup()
 
     def setup(self):
-        self._temperature = calvinsys.open(self, "calvinsys.io.temperature")
+        self._temperature = calvinsys.open(self, "io.temperature")
         self.use("calvinsys.events.timer", shorthand="timer")
         self._timer = self['timer'].once(0)
 
@@ -64,6 +64,6 @@ class Temperature(Actor):
 
 
     action_priority = (read_measurement, start_measurement)
-    requires =  ['calvinsys.io.temperature', 'calvinsys.events.timer']
+    requires =  ['io.temperature', 'calvinsys.events.timer']
 
 

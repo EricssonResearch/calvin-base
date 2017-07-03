@@ -31,7 +31,7 @@ class Buzzer(Actor):
         self.setup()
 
     def setup(self):
-        self.buzzer = calvinsys.open(self, "calvinsys.io.buzzer")
+        self.buzzer = calvinsys.open(self, "io.buzzer")
         if self.volume and calvinsys.can_write(self.buzzer):
             calvinsys.write(self.buzzer, self.volume)
 
@@ -60,4 +60,4 @@ class Buzzer(Actor):
             calvinsys.write(self.buzzer, self.volume)
 
     action_priority = (set_volume, )
-    requires = ["calvinsys.io.buzzer"]
+    requires = ["io.buzzer"]

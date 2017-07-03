@@ -31,7 +31,7 @@ class Button(Actor):
         self.setup()
 
     def setup(self):
-        self.button = calvinsys.open(self, "calvinsys.io.button", text=self.text)
+        self.button = calvinsys.open(self, "io.button", text=self.text)
 
     def will_migrate(self):
         calvinsys.close(self.button)
@@ -48,4 +48,4 @@ class Button(Actor):
         return (calvinsys.read(self.button),)
 
     action_priority = (trigger, )
-    requires = ['calvinsys.io.button']
+    requires = ['io.button']

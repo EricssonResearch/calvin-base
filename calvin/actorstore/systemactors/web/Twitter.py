@@ -37,7 +37,7 @@ class Twitter(Actor):
         self.setup()
  
     def setup(self):
-        self._twit = calvinsys.open(self, "calvinsys.web.twitter.post")
+        self._twit = calvinsys.open(self, "web.twitter.post")
 
     def teardown(self):
         calvinsys.close(self._twit)
@@ -55,4 +55,4 @@ class Twitter(Actor):
         
 
     action_priority = (post_update,)
-    requires = ['calvinsys.web.twitter.post']
+    requires = ['web.twitter.post']

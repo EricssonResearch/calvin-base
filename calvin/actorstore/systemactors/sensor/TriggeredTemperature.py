@@ -36,7 +36,7 @@ class TriggeredTemperature(Actor):
         self.setup()
 
     def setup(self):
-        self._temperature = calvinsys.open(self, "calvinsys.io.temperature")
+        self._temperature = calvinsys.open(self, "io.temperature")
 
     def teardown(self):
         if self._temperature:
@@ -65,6 +65,6 @@ class TriggeredTemperature(Actor):
 
 
     action_priority = (read_measurement, start_measurement)
-    requires =  ['calvinsys.io.temperature']
+    requires =  ['io.temperature']
 
 

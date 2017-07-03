@@ -28,10 +28,9 @@ class Switch(Actor):
     def init(self):
         self.switch = None
         self.setup()
-        # self.use("calvinsys.io.switch", shorthand="switch")
 
     def setup(self):
-        self.switch = calvinsys.open(self, "calvinsys.io.switch")
+        self.switch = calvinsys.open(self, "io.switch")
 
     def will_migrate(self):
         calvinsys.close(self.switch)
@@ -49,5 +48,5 @@ class Switch(Actor):
         return (state,)
 
     action_priority = (action, )
-    requires = ['calvinsys.io.switch']
+    requires = ['io.switch']
 

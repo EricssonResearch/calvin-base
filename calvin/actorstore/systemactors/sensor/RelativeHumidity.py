@@ -34,7 +34,7 @@ class RelativeHumidity(Actor):
         self.setup()
 
     def setup(self):
-        self.relhum = calvinsys.open(self, 'calvinsys.io.humidity')
+        self.relhum = calvinsys.open(self, 'io.humidity')
 
     def will_migrate(self):
         calvinsys.close(self.relhum)
@@ -58,5 +58,5 @@ class RelativeHumidity(Actor):
         return (humidity,)
 
     action_priority = (deliver, measure,)
-    requires =  ['calvinsys.io.humidity']
+    requires =  ['io.humidity']
 
