@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
-from copy import copy
+from calvin.actor.actor import Actor, manage, condition, calvinlib
+
 
 class SampleHold(Actor):
     """
@@ -34,13 +34,26 @@ class SampleHold(Actor):
     @manage(['held', 'immutable'])
     def init(self, default=None):
         self.set_current(default)
+        self.setup()
+        
+    def setup(self):
+        self.copy = calvinlib.use("copy")
+        
+    def did_migrate(self):
+        self.setup()
+        
+    def will_migrate(self):
+        calvinlib.dispose(self.copy)
+        
+    def will_end(self):
+        calvinlib.dispose(self.copy)
 
     def current(self):
-        return self.held if self.immutable else copy(self.held)
+        return self.held if self.immutable else self.copy.copy(self.held)
 
     def set_current(self, tok):
         self.immutable = bool(type(tok) is list or type(tok))
-        self.held = tok if self.immutable else copy(tok)
+        self.held = tok if self.immutable else self.copy.copy(tok)
 
     @condition(['sample', 'in'], ['out'])
     def action(self, sample, tok):
@@ -50,6 +63,8 @@ class SampleHold(Actor):
 
     action_priority = (action,)
 
+    requires = ['copy']
+    
     test_args = [-1]
 
     test_set = [

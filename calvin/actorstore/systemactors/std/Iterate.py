@@ -16,9 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
-from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
-from copy import copy
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 
 class Iterate(Actor):
 
@@ -37,13 +35,25 @@ class Iterate(Actor):
       index: index of item (or key if input is dictionary)
     """
 
-
     @manage(['data', 'has_data', 'index'])
     def init(self):
         self.data = None
         self.has_data = False
         self.index = 0
+        self.setup()
+        
+    def setup(self):
+        self.copy = calvinlib.use("copy")
 
+    def will_end(self):
+        calvinlib.dispose(self.copy)
+        
+    def will_migrate(self):
+        calvinlib.dispose(self.copy)
+        
+    def did_migrate(self):
+        self.setup()
+        
     @stateguard(lambda self: not self.has_data)
     @condition(['token'], [])
     def consume(self, data):
@@ -52,7 +62,7 @@ class Iterate(Actor):
             self.data = None
         else:
             mutable = bool(type(data) is list or type(data) is dict)
-            self.data = copy(data) if mutable else data
+            self.data = self.copy.copy(data) if mutable else data
         self.has_data = True
         self.index = 0
         
@@ -97,9 +107,10 @@ class Iterate(Actor):
         self.has_data = False
         return (res, 0)
 
-
     action_priority = (produce_listitem, produce_dictitem, produce_stringitem, produce_plainitem, consume)
 
+    requires = ['copy']
+    
     test_args = []
     test_kwargs = {}
 

@@ -133,6 +133,10 @@ class CalvinConfig(object):
                      {
                          "name": "base64",
                          "module": "base64lib.Base64"
+                     },
+                     {
+                         "name": "copy",
+                         "module": "datalib.Copy"
                      }
                  ]
              }
