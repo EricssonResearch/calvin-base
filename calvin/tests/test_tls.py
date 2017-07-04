@@ -179,7 +179,7 @@ class TestSecurity(unittest.TestCase):
                 raise
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(orig_application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(orig_application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({domain_name:{"user": "user3", "password": "pass3"}})

@@ -195,18 +195,18 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_correctly_signed")
+                raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -214,11 +214,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[1]
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[1]
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[1]
+        assert result['actor_map']['correctly_signed:src'] in actors[1]
+        assert result['actor_map']['correctly_signed:sum'] in actors[1]
+        assert result['actor_map']['correctly_signed:snk'] in actors[1]
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['correctly_signed:snk'])
         _log.info("actual={}".format(actual))
         assert len(actual) > 2
 
@@ -238,11 +238,11 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_incorrectly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "incorrectly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "test_security1_incorrectly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "incorrectly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -251,7 +251,7 @@ class TestSecurity(unittest.TestCase):
                 return
             _log.exception("Test deploy failed for non security reasons")
 
-        raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")
+        raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
 
     @pytest.mark.slow
     def testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor(self):
@@ -266,19 +266,19 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctlySignedApp_incorrectlySignedActor.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctlySignedApp_incorrectlySignedActor.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "test_security1_correctlySignedApp_incorrectlySignedActor", content['file'], 
+            result = request_handler.deploy_application(rt[1], "correctlySignedApp_incorrectlySignedActor", content['file'], 
                     credentials={domain_name:{"user": "user1", "password": "pass1"}}, content=content,
                         check=True)
         except Exception as e:
             _log.debug(str(e))
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_correctlySignedApp_incorrectlySignedActor")
+                raise Exception("Failed security verification of app correctlySignedApp_incorrectlySignedActor")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_correctlySignedApp_incorrectlySignedActor, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app correctlySignedApp_incorrectlySignedActor, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -286,11 +286,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:src'] in actors[1]
-        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:sum'] in actors[1]
-        assert result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'] in actors[1]
+        assert result['actor_map']['correctlySignedApp_incorrectlySignedActor:src'] in actors[1]
+        assert result['actor_map']['correctlySignedApp_incorrectlySignedActor:sum'] in actors[1]
+        assert result['actor_map']['correctlySignedApp_incorrectlySignedActor:snk'] in actors[1]
 
-        actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctlySignedApp_incorrectlySignedActor:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['correctlySignedApp_incorrectlySignedActor:snk'])
         _log.info("actual={}".format(actual))
         assert len(actual) == 0  # Means that the incorrectly signed actor was not accepted
 
@@ -315,18 +315,18 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_signedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "unsignedApp_signedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
-            result = request_handler.deploy_application(rt[1], "test_security1_unsignedApp_signedActors", content['file'], 
+            result = request_handler.deploy_application(rt[1], "unsignedApp_signedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_unsignedApp_signedActors")
+                raise Exception("Failed security verification of app unsignedApp_signedActors")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_unsignedApp_signedActors, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app unsignedApp_signedActors, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -334,11 +334,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors[1]
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors[1]
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors[1]
+        assert result['actor_map']['unsignedApp_signedActors:src'] in actors[1]
+        assert result['actor_map']['unsignedApp_signedActors:sum'] in actors[1]
+        assert result['actor_map']['unsignedApp_signedActors:snk'] in actors[1]
 
-        actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['unsignedApp_signedActors:snk'])
         assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
@@ -356,18 +356,18 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_unsignedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "unsignedApp_unsignedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user3", "password": "pass3"})
-            result = request_handler.deploy_application(rt[1], "test_security1_unsignedApp_unsignedActors", content['file'], 
+            result = request_handler.deploy_application(rt[1], "unsignedApp_unsignedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_unsignedApp_unsignedActors")
+                raise Exception("Failed security verification of app unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -375,11 +375,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors[1]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors[1]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[1]
+        assert result['actor_map']['unsignedApp_unsignedActors:src'] in actors[1]
+        assert result['actor_map']['unsignedApp_unsignedActors:sum'] in actors[1]
+        assert result['actor_map']['unsignedApp_unsignedActors:snk'] in actors[1]
 
-        actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['unsignedApp_unsignedActors:snk'])
         assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
@@ -397,19 +397,19 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(rt[2], "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[2], "correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             _log.debug(str(e))
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_correctly_signed")
+                raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -417,11 +417,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[2]
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[2]
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[2]
+        assert result['actor_map']['correctly_signed:src'] in actors[2]
+        assert result['actor_map']['correctly_signed:sum'] in actors[2]
+        assert result['actor_map']['correctly_signed:snk'] in actors[2]
 
-        actual = request_handler.report(rt[2], result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[2], result['actor_map']['correctly_signed:snk'])
         _log.debug("actual={}".format(actual))
         assert len(actual) == 0  # Means that the actor with unallowed requirements was not accepted
 
@@ -440,18 +440,18 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_signedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "unsignedApp_signedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
-            result = request_handler.deploy_application(rt[0], "test_security1_unsignedApp_signedActors", content['file'], 
+            result = request_handler.deploy_application(rt[0], "unsignedApp_signedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_unsignedApp_signedActors")
+                raise Exception("Failed security verification of app unsignedApp_signedActors")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_unsignedApp_signedActors, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app unsignedApp_signedActors, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -459,11 +459,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors[0]
+        assert result['actor_map']['unsignedApp_signedActors:src'] in actors[0]
+        assert result['actor_map']['unsignedApp_signedActors:sum'] in actors[0]
+        assert result['actor_map']['unsignedApp_signedActors:snk'] in actors[0]
 
-        actual = request_handler.report(rt[0], result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
+        actual = request_handler.report(rt[0], result['actor_map']['unsignedApp_signedActors:snk'])
         assert len(actual) > 2
 
         request_handler.delete_application(rt[0], result['application_id'])
@@ -481,18 +481,18 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_signedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "unsignedApp_signedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
-            result = request_handler.deploy_application(rt[1], "test_security1_unsignedApp_signedActors", content['file'], 
+            result = request_handler.deploy_application(rt[1], "unsignedApp_signedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_unsignedApp_signedActors")
+                raise Exception("Failed security verification of app unsignedApp_signedActors")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_unsignedApp_signedActors, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app unsignedApp_signedActors, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -500,11 +500,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:src'] in actors[1]
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:sum'] in actors[1]
-        assert result['actor_map']['test_security1_unsignedApp_signedActors:snk'] in actors[1]
+        assert result['actor_map']['unsignedApp_signedActors:src'] in actors[1]
+        assert result['actor_map']['unsignedApp_signedActors:sum'] in actors[1]
+        assert result['actor_map']['unsignedApp_signedActors:snk'] in actors[1]
 
-        actual = request_handler.report(rt[1], result['actor_map']['test_security1_unsignedApp_signedActors:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['unsignedApp_signedActors:snk'])
         assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
@@ -522,18 +522,18 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user4", "password": "pass4"})
-            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_correctly_signed")
+                raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this (all of them should have migrated to rt[2])
         try:
@@ -541,11 +541,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[2]
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[2]
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[2]
+        assert result['actor_map']['correctly_signed:src'] in actors[2]
+        assert result['actor_map']['correctly_signed:sum'] in actors[2]
+        assert result['actor_map']['correctly_signed:snk'] in actors[2]
 
-        actual = request_handler.report(rt[2], result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[2], result['actor_map']['correctly_signed:snk'])
         assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id'])
@@ -568,11 +568,11 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user6", "password": "pass6"})
-            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'],
+            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'],
                         content=content,
                         check=True)
         except Exception as e:
@@ -581,7 +581,7 @@ class TestSecurity(unittest.TestCase):
                 return
             _log.exception("Test deploy failed for non security reasons")
 
-        raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")
+        raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
 
     @pytest.mark.slow
     def testSecurity_POSITIVE_Add_User(self):
@@ -650,11 +650,11 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user_not_allowed", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -663,7 +663,7 @@ class TestSecurity(unittest.TestCase):
                 return
             _log.exception("Test deploy failed for non security reasons")
 
-        raise Exception("Deployment of app test_security1_correctly_signed did not fail for security reasons")  
+        raise Exception("Deployment of app correctly_signed did not fail for security reasons")  
 
     @pytest.mark.slow
     def testSecurity_NEGATIVE_IncorrectPassword(self):
@@ -678,11 +678,11 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "incorrect_password"})
-            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -691,7 +691,7 @@ class TestSecurity(unittest.TestCase):
                 return
             _log.exception("Test deploy failed for non security reasons")
 
-        raise Exception("Deployment of app test_security1_correctly_signed, did not fail for security reasons")  
+        raise Exception("Deployment of app correctly_signed, did not fail for security reasons")  
 
     @pytest.mark.slow
     def testSecurity_POSITIVE_Local_Authentication(self):
@@ -706,20 +706,20 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user5", "password": "pass5"})
-            result = request_handler.deploy_application(rt[0], "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[0], "correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if isinstance(e, Timeout):
                 raise Exception("Can't connect to runtime 0.\n\te={}".format(e))
             elif e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_correctly_signed")
+                raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -727,12 +727,12 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[0]
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[0]
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[0]
+        assert result['actor_map']['correctly_signed:src'] in actors[0]
+        assert result['actor_map']['correctly_signed:sum'] in actors[0]
+        assert result['actor_map']['correctly_signed:snk'] in actors[0]
 
         time.sleep(0.1)
-        actual = request_handler.report(rt[0], result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[0], result['actor_map']['correctly_signed:snk'])
         assert len(actual) > 2
 
         request_handler.delete_application(rt[0], result['application_id']) 
@@ -750,20 +750,20 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user5", "password": "pass5"})
-            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if isinstance(e, Timeout):
                 raise Exception("Can't connect to runtime 5.\n\te={}".format(e))
             elif e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_correctly_signed")
+                raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -771,12 +771,12 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[1]
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[1]
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[1]
+        assert result['actor_map']['correctly_signed:src'] in actors[1]
+        assert result['actor_map']['correctly_signed:sum'] in actors[1]
+        assert result['actor_map']['correctly_signed:snk'] in actors[1]
 
         time.sleep(0.1)
-        actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['correctly_signed:snk'])
         assert len(actual) > 2
 
         request_handler.delete_application(rt[1], result['application_id']) 
@@ -799,20 +799,20 @@ class TestSecurity(unittest.TestCase):
 #
 #        result = {}
 #        try:
-#            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+#            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
 #            if not content:
 #                raise Exception("Failed finding script, signature and cert, stopping here")
 #            request_handler.set_credentials({"user": "user5", "password": "pass5"})
-#            result = request_handler.deploy_application(rt[3], "test_security1_correctly_signed", content['file'], 
+#            result = request_handler.deploy_application(rt[3], "correctly_signed", content['file'], 
 #                        content=content,
 #                        check=True)
 #        except Exception as e:
 #            if isinstance(e, Timeout):
 #                raise Exception("Can't connect to RADIUS server. Have you started a RADIUS server?")
 #            elif e.message.startswith("401"):
-#                raise Exception("Failed security verification of app test_security1_correctly_signed")
+#                raise Exception("Failed security verification of app correctly_signed")
 #            _log.exception("Test deploy failed")
-#            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+#            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
 #
 #        # Verify that actors exist like this
 #        try:
@@ -821,11 +821,11 @@ class TestSecurity(unittest.TestCase):
 #            _log.error("Failed to get actors from runtimes, err={}".format(err))
 #            raise
 #        actors = fetch_and_log_runtime_actors()
-#        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[3]
-#        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[3]
-#        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[3]
+#        assert result['actor_map']['correctly_signed:src'] in actors[3]
+#        assert result['actor_map']['correctly_signed:sum'] in actors[3]
+#        assert result['actor_map']['correctly_signed:snk'] in actors[3]
 #
-#        actual = request_handler.report(rt[3], result['actor_map']['test_security1_correctly_signed:snk'])
+#        actual = request_handler.report(rt[3], result['actor_map']['correctly_signed:snk'])
 #        assert len(actual) > 2
 #
 #        request_handler.delete_application(rt[3], result['application_id'])

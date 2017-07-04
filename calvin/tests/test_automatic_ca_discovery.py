@@ -159,22 +159,22 @@ class TestSecurity(unittest.TestCase):
             raise
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_unsignedApp_unsignedActors.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "unsignedApp_unsignedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user3", "password": "pass3"})
-            result = request_handler.deploy_application(rt[0], "test_security1_unsignedApp_unsignedActors", content['file'], 
+            result = request_handler.deploy_application(rt[0], "unsignedApp_unsignedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed to deploy test_security1_unsignedApp_unsignedActors")
+                raise Exception("Failed to deploy unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
         #Log actor ids:
-        _log.info("Actors id:s:\n\tsrc id={}\n\tsum={}\n\tsnk={}".format(result['actor_map']['test_security1_unsignedApp_unsignedActors:src'],
-                                                                        result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'],
-                                                                        result['actor_map']['test_security1_unsignedApp_unsignedActors:snk']))
+        _log.info("Actors id:s:\n\tsrc id={}\n\tsum={}\n\tsnk={}".format(result['actor_map']['unsignedApp_unsignedActors:src'],
+                                                                        result['actor_map']['unsignedApp_unsignedActors:sum'],
+                                                                        result['actor_map']['unsignedApp_unsignedActors:snk']))
 
 
         # Verify that actors exist like this
@@ -183,12 +183,12 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:src'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:sum'] in actors[0]
-        assert result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'] in actors[0]
+        assert result['actor_map']['unsignedApp_unsignedActors:src'] in actors[0]
+        assert result['actor_map']['unsignedApp_unsignedActors:sum'] in actors[0]
+        assert result['actor_map']['unsignedApp_unsignedActors:snk'] in actors[0]
         time.sleep(1)
         try:
-            actual = request_handler.report(rt[0], result['actor_map']['test_security1_unsignedApp_unsignedActors:snk'])
+            actual = request_handler.report(rt[0], result['actor_map']['unsignedApp_unsignedActors:snk'])
         except Exception as err:
             _log.error("Failed to report from runtime 0, err={}".format(err))
             raise

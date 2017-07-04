@@ -165,18 +165,18 @@ class TestSecurity(unittest.TestCase):
 
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "test_security1_correctly_signed.calvin"))
+            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "test_security1_correctly_signed", content['file'], 
+            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
             if e.message.startswith("401"):
-                raise Exception("Failed security verification of app test_security1_correctly_signed")
+                raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app test_security1_correctly_signed, no use to verify if requirements fulfilled")
+            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
@@ -184,11 +184,11 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['test_security1_correctly_signed:src'] in actors[1]
-        assert result['actor_map']['test_security1_correctly_signed:sum'] in actors[1]
-        assert result['actor_map']['test_security1_correctly_signed:snk'] in actors[1]
+        assert result['actor_map']['correctly_signed:src'] in actors[1]
+        assert result['actor_map']['correctly_signed:sum'] in actors[1]
+        assert result['actor_map']['correctly_signed:snk'] in actors[1]
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        actual = request_handler.report(rt[1], result['actor_map']['test_security1_correctly_signed:snk'])
+        actual = request_handler.report(rt[1], result['actor_map']['correctly_signed:snk'])
         print "actual=", actual
         assert len(actual) > 2
 
