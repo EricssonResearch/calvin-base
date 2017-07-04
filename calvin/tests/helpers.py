@@ -663,7 +663,7 @@ def _generate_certiticates(ca, runtimes, domain_name, credentials_testdir):
         csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
         csr_path = ca.store_csr_with_enrollment_password(csr)
         cert_path = ca.sign_csr(csr_path)
-        runtime.store_own_cert(certpath=cert_path, security_dir=credentials_testdir)
+        runtime.store_own_cert(certpath=cert_path)
 
 
 def _runtime_attributes(domain_name, runtimes):

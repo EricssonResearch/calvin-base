@@ -150,7 +150,7 @@ class RuntimeCredentials():
         #Create generic runtimes folder and trust store folders
         self.security_dir=security_dir
         self.truststore_for_transport=None
-        runtimes_dir = certificate.get_runtimes_credentials_path(security_dir=security_dir)
+        runtimes_dir = certificate.get_runtimes_credentials_path(security_dir=self.security_dir)
         if not os.path.isdir(runtimes_dir):
             try:
                 os.makedirs(runtimes_dir)
@@ -350,7 +350,7 @@ class RuntimeCredentials():
 
 #    def _compare_certificate_with_config():
 
-    def get_domain(self, domain=None, security_dir=None):
+    def get_domain(self, domain=None):
         """Return the node's own certificate name without file extension"""
         _log.debug("get_domain")
         try:
@@ -478,7 +478,7 @@ class RuntimeCredentials():
             _log.error("The certificate can not be found")
             callback(certstring=None)
 
-    def verify_certificate(self, cert_str, type):
+    def verify_certificate(self, cert_str, type, store_cert=False):
 #        _log.debug("verify_certificate:\n\tcert_str={}\n\ttype={}".format(cert_str, type))
         try:
             cert = certificate.verify_certificate(type, cert_str, security_dir=self.security_dir)
@@ -673,7 +673,7 @@ class RuntimeCredentials():
 
 
 
-    def store_own_cert(self, certstring=None, certpath=None, security_dir=None):
+    def store_own_cert(self, certstring=None, certpath=None):
         """
         Store the signed runtime certificate
         in the "mine" folder
@@ -808,7 +808,6 @@ class RuntimeCredentials():
         return encrypted_csr
 
     def sign_data(self, data):
-        _log.debug("Hakan sign_data, data={}".format(data))
         from OpenSSL import crypto
         from cryptography.hazmat.backends import default_backend
         from cryptography.hazmat.primitives import hashes

@@ -613,7 +613,7 @@ def manage_runtime_do_it_all(args):
     csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request_path=rsa_encrypted_csr_path)
     csr_path = ca.store_csr_with_enrollment_password(csr)
     cert_path = ca.sign_csr(csr_path)
-    print "\ncertificate stored at: {}\n".format(rt_cred.store_own_cert(certpath=cert_path, security_dir=args.dir))
+    print "\ncertificate stored at: {}\n".format(rt_cred.store_own_cert(certpath=cert_path))
 
 def main():
     args = parse_args()

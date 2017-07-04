@@ -297,7 +297,7 @@ def runtime_certificate(rt_attributes):
                     ca = certificate_authority.CA(domain=domain_name,
                                                   security_dir=security_dir)
                     cert_path = ca.sign_csr(csr_path, is_ca=True)
-                    runtime.store_own_cert(certpath=cert_path, security_dir=security_dir)
+                    runtime.store_own_cert(certpath=cert_path)
 
                 else:
                     _log.debug("No runtime certicificate can be found, send CSR to CA")
@@ -351,7 +351,7 @@ def runtime_certificate(rt_attributes):
                         i = i+1
                     #TODO: check that everything is ok with signed cert, e.g., check that the CA domain
                     # matches the expected and that the CA cert is trusted
-                    runtime.store_own_cert(certstring=certstr, security_dir=security_dir)
+                    runtime.store_own_cert(certstring=certstr)
             else:
                 _log.debug("Runtime certificate available")
 
