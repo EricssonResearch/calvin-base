@@ -111,34 +111,29 @@ class CalvinConfig(object):
             },
             'security': {},
             'calvinsys': {
-                "capabilities": [
-                    {
-                        "name":  "calvinsys.sys.timer.once",
+                "capabilities": {
+                    "sys.timer.once": {
                         "module": "sys.timer.Timer",
                         "attributes": {}
-                    }, 
-                    {
-                        "name":  "sys.timer.repeating",
+                    },
+                    "sys.timer.repeating": {
                         "module": "sys.timer.Timer",
                         "attributes": {"repeats": True }
                     }
-              ]
+                }
              },
              'calvinlib': {
-                 "capabilities": [
-                     {
-                         "name" : "json",
+                 "capabilities": {
+                     "json": {
                          "module": "jsonlib.Json"
                      },
-                     {
-                         "name": "base64",
+                     "base64": {
                          "module": "base64lib.Base64"
                      },
-                     {
-                         "name": "copy",
+                     "copy": {
                          "module": "datalib.Copy"
                      }
-                 ]
+                 }
              }
         }
         return default

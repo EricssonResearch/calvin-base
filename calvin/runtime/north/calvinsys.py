@@ -47,17 +47,16 @@ class CalvinSys(object):
         Get and setup capabilities from config
         """
         self._node = node
-        capabilities = _conf.get('calvinsys', 'capabilities') or []
+        capabilities = _conf.get('calvinsys', 'capabilities') or {}
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
-        for capability in capabilities:
-            if capability['name'] not in blacklist:
-                self.capabilities[capability['name']] = {
-                    'name': capability['name'],
-                    'path': capability['module'],
-                    'attributes': capability['attributes'],
-                    'module': None
-                }
-                _log.info("Capability '%s' registered with module '%s'" % (capability['name'], capability['module']))
+        for capability in blacklist:
+            _ = capabilities.pop(capability, None)
+        for key, value in capabilities.iteritems():
+            module = value['module']
+            value['path'] = module
+            value['module'] = None
+            _log.info("Capability '%s' registered with module '%s'" % (key, module))
+        self.capabilities = capabilities
 
     def open(self, name, actor, **kwargs):
         """

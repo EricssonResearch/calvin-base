@@ -32,7 +32,7 @@ def get_calvinlib():
     global TESTING
     if _calvinlib is None and TESTING:
         _calvinlib = MockCalvinLib()
-        
+
     if _calvinlib is None:
         _calvinlib = CalvinLib()
     return _calvinlib
@@ -54,17 +54,17 @@ class CalvinLib(object):
         Get and setup capabilities from config
         """
         self._node = node
-        capabilities = _conf.get('calvinlib', 'capabilities') or []
+        capabilities = _conf.get('calvinlib', 'capabilities') or {}
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
-        for capability in capabilities:
-            if capability['name'] not in blacklist:
-                self.capabilities[capability['name']] = {
-                    'name': capability['name'],
-                    'path': capability['module'],
-                    'attributes': capability.get('attributes', {}),
-                    'module': None
-                }
-                _log.info("Capability '%s' registered with module '%s'" % (capability['name'], capability['module']))
+        for capability in blacklist:
+            _ = capabilities.pop(capability, None)
+        for key, value in capabilities.iteritems():
+            module = value['module']
+            value['path'] = module
+            value['module'] = None
+            _log.info("Capability '%s' registered with module '%s'" % (key, module))
+        self.capabilities = capabilities
+
 
     def use(self, name, **kwargs):
         """
@@ -116,18 +116,18 @@ class CalvinLib(object):
 class MockCalvinLib(CalvinLib):
     def __init__(self):
         self._caps = {}
-        
+
     def set(self, cap, obj):
         self._caps[cap] = obj
-    
+
     def has_capability(self, req):
         return req in self._caps
-    
+
     def list_capabilities(self):
         return self._caps.keys()
-        
+
     def use(self, cap, **kwargs):
         return self._caps[cap]
-        
+
     def remove(self, obj):
         pass
