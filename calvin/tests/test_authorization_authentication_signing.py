@@ -183,7 +183,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_CorrectlySignedApp_CorrectlySignedActors(self):
+    def testPositive_CorrectlySignedApp_CorrectlySignedActors(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -226,7 +226,7 @@ class TestSecurity(unittest.TestCase):
 
 
     @pytest.mark.slow
-    def testSecurity_NEGATIVE_IncorrectlySignedApp(self):
+    def testNegative_IncorrectlySignedApp(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -254,7 +254,7 @@ class TestSecurity(unittest.TestCase):
         raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
 
     @pytest.mark.slow
-    def testSecurity_NEGATIVE_CorrectlySignedApp_IncorrectlySignedActor(self):
+    def testNegative_CorrectlySignedApp_IncorrectlySignedActor(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -303,7 +303,7 @@ class TestSecurity(unittest.TestCase):
 
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_Permit_UnsignedApp_SignedActors(self):
+    def testPositive_Permit_UnsignedApp_SignedActors(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -344,7 +344,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[1], result['application_id'])
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_Permit_UnsignedApp_Unsigned_Actor(self):
+    def testPositive_Permit_UnsignedApp_Unsigned_Actor(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -385,7 +385,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[1], result['application_id'])
 
     @pytest.mark.slow
-    def testSecurity_NEGATIVE_Deny_SignedApp_SignedActor_UnallowedRequirement(self):
+    def testNegative_Deny_SignedApp_SignedActor_UnallowedRequirement(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -428,7 +428,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[2], result['application_id'])
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_Local_Authorization(self):
+    def testPositive_Local_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -469,7 +469,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[0], result['application_id'])
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_External_Authorization(self):
+    def testPositive_External_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -510,7 +510,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[1], result['application_id'])
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_Migration_When_Denied(self):
+    def testPositive_Migration_When_Denied(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -556,7 +556,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
-    def testSecurity_NEGATIVE_Control_Interface_Authorization(self):
+    def testNegative_Control_Interface_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -584,7 +584,7 @@ class TestSecurity(unittest.TestCase):
         raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_Add_User(self):
+    def testPositive_Add_User(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -638,7 +638,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
-    def testSecurity_NEGATIVE_UnallowedUser(self):
+    def testNegative_UnallowedUser(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -666,7 +666,7 @@ class TestSecurity(unittest.TestCase):
         raise Exception("Deployment of app correctly_signed did not fail for security reasons")  
 
     @pytest.mark.slow
-    def testSecurity_NEGATIVE_IncorrectPassword(self):
+    def testNegative_IncorrectPassword(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -694,7 +694,7 @@ class TestSecurity(unittest.TestCase):
         raise Exception("Deployment of app correctly_signed, did not fail for security reasons")  
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_Local_Authentication(self):
+    def testPositive_Local_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -738,7 +738,7 @@ class TestSecurity(unittest.TestCase):
         request_handler.delete_application(rt[0], result['application_id']) 
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_External_Authentication(self):
+    def testPositive_External_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:
@@ -783,7 +783,7 @@ class TestSecurity(unittest.TestCase):
 
 #    @pytest.mark.xfail
 #    @pytest.mark.slow
-#    def testSecurity_POSITIVE_RADIUS_Authentication(self):
+#    def testPositive_RADIUS_Authentication(self):
 #        _log.analyze("TESTRUN", "+", {})
 #        global rt
 #        global request_handler

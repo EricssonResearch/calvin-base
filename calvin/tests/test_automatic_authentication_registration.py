@@ -151,7 +151,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
-    def testSecurity_POSITIVE_CorrectlySignedApp_CorrectlySignedActors(self):
+    def testPositive_CorrectlySignedApp_CorrectlySignedActors(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
         global request_handler

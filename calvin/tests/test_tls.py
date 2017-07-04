@@ -168,7 +168,7 @@ class TestSecurity(unittest.TestCase):
 #   Signature related tests
 ###################################
 
-    def testSecurity_deploy_and_migrate(self):
+    def test_deploy_and_migrate_with_tls(self):
         _log.analyze("TESTRUN", "+", {})
         global storage_verified
         if not storage_verified:

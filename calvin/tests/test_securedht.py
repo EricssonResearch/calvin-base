@@ -123,7 +123,7 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     @pytest.mark.slow
-    def testSecurity_deploy_and_migrate(self):
+    def test_deploy_and_migrate_with_securedht(self):
         _log.analyze("TESTRUN", "+", {})
         global rt
         global request_handler
