@@ -71,7 +71,15 @@ def cert_key_from_id(id):
 
 
 def dhtid_from_certstring(cert_str):
-    nodeid = certificate.cert_DN_Qualifier(certstring=cert_str)
+    _log.info("Hakan kommer hit 1")
+    try:
+        nodeid = certificate.cert_DN_Qualifier(certstring=cert_str)
+    except Exception as e:
+        _log.error("Failed to get DN Qualifier"
+                   "cert_str={}"
+                   "e={}".format(cert_str, e))
+        raise
+    _log.info("Hakan men inte hit")
     return dhtid_from_nodeid(nodeid) 
 
 def dhtidhex_from_certstring(cert_str):
@@ -1207,11 +1215,13 @@ class KademliaProtocolAppend(KademliaProtocol):
             raise Exception("payload_to_be_signed: Method chosen not supported")
 
     def sign_data(self, payload):
+        _log.info("Hakan sign_data 1")
         try:
             signature = self.runtime_credentials.sign_data(payload)
         except Exception as err:
             _log.error("Failed to sign data, err={}".format(err))
             raise
+        _log.info("Hakan sign_data 2")
         return signature
 
     #TODO: rename as it is not a RPC method

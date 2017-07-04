@@ -653,19 +653,12 @@ class RuntimeCredentials():
         """Return the public key from certificate"""
 #        _log.debug("get_public_key")
         certpath, cert, certstr = self.get_own_cert()
-#        try:
-#            cert_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
-#        except Exception as err:
-#            _log.error("Failed to dump certificate, err={}".format(err))
-#            raise
         try:
             cert = load_pem_x509_certificate(certstr, default_backend())
         except Exception as err:
             _log.error("Failed to load X509 certificate from PEM, err={}".format(err))
             raise
         return cert.public_key()
-        # The following line can replace the two lines above in pyOpenSSL version 16.0.0 (unreleased):
-        # return OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, certificate.get_pubkey())
 
 
     def store_trusted_root_cert(self, cert_file, trusted_root):
@@ -815,15 +808,35 @@ class RuntimeCredentials():
         return encrypted_csr
 
     def sign_data(self, data):
-#        _log.debug("sign_data, data={}".format(data))
+        _log.debug("Hakan sign_data, data={}".format(data))
         from OpenSSL import crypto
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import dsa, rsa
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.hazmat.primitives.serialization import load_pem_private_key
         private_key_str = self.get_private_key()
+#       The pyOpenSSL sign operation seems broken and corrupts memory, atleast for EC, so let's use
+#       the cryptography package instead
+#        try:
+#            private_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+#                                                        private_key_str, '')
+#            signature = OpenSSL.crypto.sign(private_key,
+#                                            data,
+#                                            "sha256")
+#        except Exception as err:
+#            _log.error("Failed to sign data, err={}".format(err))
+#            raise
         try:
-            private_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
-                                                        private_key_str, '')
-            signature = OpenSSL.crypto.sign(private_key,
-                                            data,
-                                            "sha256")
+            private_key = load_pem_private_key(private_key_str, password=None, backend=default_backend())
+            if isinstance(private_key, ec.EllipticCurvePrivateKey):
+                signature = private_key.sign(data, ec.ECDSA(hashes.SHA256()))
+            elif isinstance(private_key, rsa.RSAPrivateKey):
+                signature = sign_with_rsa_key(private_key, message)
+            elif isinstance(private_key, dsa.DSAPrivateKey):
+                signature = sign_with_dsa_key(private_key, message)
+            else:
+                raise TypeError
         except Exception as err:
             _log.error("Failed to sign data, err={}".format(err))
             raise
