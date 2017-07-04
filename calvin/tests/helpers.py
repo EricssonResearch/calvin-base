@@ -625,33 +625,24 @@ def _get_node_names(runtimes):
 
 
 def get_enrollment_passwords(runtimes, method="ca", rt=None, request_handler=None, ca=None):
+    from functools import partial
     #Set/get enrollment for the other runtimes:
     for i in range(len(runtimes)):
         node_name = runtimes[i]["node_name"]
         if method=="ca" and ca:
             runtimes[i]["enrollment_password"] = ca.cert_enrollment_add_new_runtime(node_name)
         elif method=="controlapi_get" and rt:
-            for j in range(100):
-                try:
-                    enrollment_password = request_handler.get_enrollment_password(rt[0], node_name)
-                    runtimes[i]["enrollment_password"] = enrollment_password
-                    break
-                except:
-                    _log.error("Set enrollment password, still no reply from CA, i={} j={}".format(i, j))
-                    time.sleep(0.5)
-                    continue
+            enrollment_password = retry(10,
+                                        partial(request_handler.get_enrollment_password, rt[0], node_name),
+                                        lambda _: True, "Failed to get enrollment password")
+            runtimes[i]["enrollment_password"] = enrollment_password
         elif method=="controlapi_set":
             enrollment_password = "abrakadabra123456789"
             runtimes[i]["enrollment_password"] = enrollment_password
-            for j in range(1, 100):
-                try:
-                    request_handler.set_enrollment_password(rt[0], node_name, enrollment_password)
-                    runtimes[i]["enrollment_password"] = enrollment_password
-                    break
-                except:
-                    _log.error("Set enrollment password, still no reply from CA, i={} j={}".format(i, j))
-                    time.sleep(0.5)
-                    continue
+            retry(  10,
+                    partial(request_handler.set_enrollment_password, rt[0], node_name, enrollment_password),
+                    lambda _: True, "Failed to get enrollment password")
+            runtimes[i]["enrollment_password"] = enrollment_password
         else:
             raise Exception("get_enrollment_passwords: incorrect arguments")
 
