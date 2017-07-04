@@ -27,11 +27,11 @@ _log = get_logger(__name__)
 class DHT11(BaseDHT11):
     """
     Calvinsys object handling DHT11 temperature and humidity sensor
+    The temparature readout is not used.
     """
     def init(self, pin, **kwargs):
         self._pin = pin
         self._in_progress = False
-        self._temperature = None
         self._humidity = None
         self._gpio = pigpio.pi()
         self._gpio.set_pull_up_down(self._pin, pigpio.PUD_OFF)
@@ -87,19 +87,16 @@ class DHT11(BaseDHT11):
         chksum = int(longbin[32:40], 2)
         bytesum = rhint + tint
         # print "RH={}.{}, T={}.{}, CS={}, BS={}, OK={}".format(rhint, 0, tint, 0, chksum, bytesum, chksum == bytesum)
-        self._temperature = tint
         self._humidity = rhint
 
     def can_read(self):
-        return self._temperature is not None and self._humidity is not None
+        return self._humidity is not None
 
     def read(self):
         self._in_progress = False
-        temperature = self._temperature
         humidity = self._humidity
-        self._temperature = None
         self._humidity = None
-        return [temperature, humidity]
+        return humidity
 
     def close(self):
         if self._read_data_handle:

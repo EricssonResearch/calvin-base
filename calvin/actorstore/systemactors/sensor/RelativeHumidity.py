@@ -20,7 +20,7 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class RelativeHumidity(Actor):
 
     """
-    Read Relative Humidity when told to
+    Read Relative Humidity when told to.
 
     Inputs:
         measure: Triggers a temperature reading
@@ -53,8 +53,7 @@ class RelativeHumidity(Actor):
     @stateguard(lambda self: self.relhum and calvinsys.can_read(self.relhum))
     @condition([], ['percent'])
     def deliver(self):
-        _, humidity = calvinsys.read(self.relhum)
-        # FIXME: Compute relative humidity
+        humidity = calvinsys.read(self.relhum)
         return (humidity,)
 
     action_priority = (deliver, measure,)
