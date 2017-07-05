@@ -196,6 +196,12 @@ class CalvinConfig(object):
 
         _section[_option] = value + [ v for v in _section[_option] if v not in value ]
 
+    def update(self, section, option, value):
+        """Set value of option in named section"""
+        _section = self.config[section.lower()]
+        _section[option.lower()].update(value)
+
+
     def set_config(self, config):
         """Set complete config"""
         for section in config:
@@ -263,7 +269,10 @@ class CalvinConfig(object):
             for option, value in delta_config[section].iteritems():
                 if option.lower() == 'comment':
                     continue
-                operation = self.append if type(value) is list else self.set
+                operation = {
+                    list:self.append,
+                    dict:self.update
+                }.get(type(value), self.set) # self.append if type(value) is list else self.set
                 operation(section, option, value)
 
     def install_location(self):
