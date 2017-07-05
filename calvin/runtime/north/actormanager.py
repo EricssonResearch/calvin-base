@@ -25,8 +25,8 @@ import calvin.requests.calvinresponse as response
 from calvin.utilities.security import Security, security_enabled
 from calvin.actor.actor import ShadowActor
 from calvin.runtime.north.plugins.port import DISCONNECT
-from calvin.runtime.north.calvinsys import get_calvinsys, CalvinSys
-from calvin.runtime.north.calvinlib import get_calvinlib, CalvinLib
+from calvin.runtime.north.calvinsys import get_calvinsys
+from calvin.runtime.north.calvinlib import get_calvinlib
 
 
 _log = get_logger(__name__)
@@ -272,22 +272,10 @@ class ActorManager(object):
             raise Exception("Not known actor type: %s" % actor_type)
         return (actor_def, signer)
 
-
     def check_requirements_and_sec_policy(self, requirements, security=None, actor_id=None,
-                                          signer=None, decision_from_migration=None, callback=None):
-        """Check requirements and security policy for actor."""
-        # Check if node has the capabilities required by the actor.
-        try:
-            return self._check_requirements_and_sec_policy(requirements=requirements, security=security, actor_id=actor_id,
-                                              signer=signer, decision_from_migration=decision_from_migration, callback=callback)
-        except Exception as e:
-            _log.error("I don't think this should ever happen: {}".format(e))
-
-    def _check_requirements_and_sec_policy(self, requirements, security=None, actor_id=None,
                                           signer=None, decision_from_migration=None, callback=None):
         for req in requirements:
             if not self.node.calvinsys().has_capability(req) and not get_calvinsys().has_capability(req) and not get_calvinlib().has_capability(req):
-                _log.info("Missing requirement {}".format(req))
                 raise Exception("Actor requires %s" % req)
         if security_enabled():
             # Check if access is permitted for the actor by the security policy.
