@@ -28,7 +28,7 @@ class TriggeredSoilMoisture(Actor):
         level :  moisture level, in percent
     """
 
-    @manage([])
+    @manage(exclude=['level'])
     def init(self):
         self.setup()
 
@@ -53,5 +53,5 @@ class TriggeredSoilMoisture(Actor):
         level = calvinsys.read(self.level)
         return (level,)
 
-    action_priority = (read_measurement)
+    action_priority = (read_measurement, )
     requires =  ['io.soilmoisture']
