@@ -851,7 +851,7 @@ class RuntimeCredentials():
             raise
         return signature
 
-    def verify_signed_data_from_certname(self,  signature, data, type, certname):
+    def verify_signed_data_from_certname(self, certname, signature, data, type):
         from OpenSSL import crypto
 #        _log.debug("verify_signed_data_from_certname:\n\tsigned_data={}\n\ttype={}\n\tcertname={}".format(signed_data, type, certname))
         if type not in ["mine","others"]:
