@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 
 class ClassicDelay(Actor):
@@ -29,20 +29,19 @@ class ClassicDelay(Actor):
     @manage(['delay', 'started'])
     def init(self, delay=0.1):
         self.delay = delay
-        self.timer = None
         self.started = False
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.events.timer', shorthand='timer')
+        self._timer = calvinsys.open(self, "sys.timer.repeating")
 
     def start(self):
-        self.timer = self['timer'].repeat(self.delay)
+        calvinsys.write(self._timer, self.delay)
         self.started = True
 
     def will_migrate(self):
-        if self.timer:
-            self.timer.cancel()
+        if self._timer:
+            calvinsys.close(self._timer)
 
     def did_migrate(self):
         self.setup()
@@ -55,11 +54,11 @@ class ClassicDelay(Actor):
         self.start()
         return (token, )
 
-    @stateguard(lambda self: self.timer and self.timer.triggered)
+    @stateguard(lambda self: self._timer and calvinsys.can_read(self._timer))
     @condition(['token'], ['token'])
     def passthrough(self, token):
-        self.timer.ack()
+        calvinsys.read(self._timer)
         return (token, )
 
     action_priority = (start_timer, passthrough)
-    requires = ['calvinsys.events.timer']
+    requires = ['sys.timer.repeating']
