@@ -36,7 +36,7 @@ class BaseCalvinlibObject(object):
 
     def dispose(self):
         """
-        Close object
+        Dispose of object
         """
         # Usually nothing to do here
         pass

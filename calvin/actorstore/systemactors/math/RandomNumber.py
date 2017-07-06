@@ -15,19 +15,19 @@
 # limitations under the License.
 
 from calvin.utilities.calvinlogger import get_actor_logger
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinlib
 
 _log = get_actor_logger(__name__)
 
 
-class Random(Actor):
+class RandomNumber(Actor):
     """
-    Produce random integer in range [lower ... upper-1]
+    Produce random number (floating point) in range [lower ... upper)
 
     Inputs:
       trigger : Any token
     Outputs:
-      integer : Random integer in range [lower ... upper-1]
+      number : Random number in range [lower ... upper)
     """
 
     @manage(['lower', 'upper'])
@@ -38,15 +38,15 @@ class Random(Actor):
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.math.rng', shorthand="random")
+        self.rng = calvinlib.use("math.random")
 
     def did_migrate(self):
         self.setup()
 
-    @condition(action_input=['trigger'], action_output=['integer'])
+    @condition(action_input=['trigger'], action_output=['number'])
     def action(self, trigger):
-        return (self['random'].randrange(self.lower, self.upper), )
+        return self.rng.random_number(lower=self.lower, upper=self.upper), 
 
     action_priority = (action, )
 
-    requires = ['calvinsys.math.rng']
+    requires = ['math.random']

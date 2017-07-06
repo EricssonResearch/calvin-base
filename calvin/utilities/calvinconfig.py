@@ -124,6 +124,10 @@ class CalvinConfig(object):
              },
              'calvinlib': {
                  "capabilities": {
+                     "math.random": {
+                         "module": "mathlib.Random",
+                         "attributes": {"seed": 10}
+                     },
                      "json": {
                          "module": "jsonlib.Json"
                      },
