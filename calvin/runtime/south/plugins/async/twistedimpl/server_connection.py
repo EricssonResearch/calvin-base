@@ -39,7 +39,7 @@ def reactor_listen(node_name, factory, host, port):
         try:
             # TODO: figure out how to set more than one root cert in twisted truststore
             runtime_cred = runtime_credentials.RuntimeCredentials(node_name)
-            server_credentials_data = runtime_cred.get_runtime_credentials()
+            server_credentials_data = runtime_cred.get_credentials()
             server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
         except Exception as err:
             _log.error("Failed to fetch server credentials, err={}".format(err))

@@ -61,7 +61,7 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
                 ca_cert_list_str, ca_cert_list_x509, truststore =certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
                 for ca_cert in ca_cert_list_str:
                     trusted_ca_certs.append(ssl.Certificate.loadPEM(ca_cert))
-                server_credentials_data = self._runtime_credentials.get_runtime_credentials()
+                server_credentials_data = self._runtime_credentials.get_credentials()
                 server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
             except Exception as err:
                 _log.exception("Server failed to load credentials, err={}".format(err))
@@ -203,7 +203,7 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
                 for ca_cert in ca_cert_list_str:
                     trusted_ca_certs.append(crypto.load_certificate(crypto.FILETYPE_PEM, ca_cert))
                 ca_certs = OpenSSLCertificateAuthorities(trusted_ca_certs)
-                client_credentials_data =self._runtime_credentials.get_runtime_credentials()
+                client_credentials_data =self._runtime_credentials.get_credentials()
                 client_credentials = ssl.PrivateCertificate.loadPEM(client_credentials_data)
             except Exception as err:
                 _log.error("TwistedCalvinTransport: Failed to load client credentials, err={}".format(err))

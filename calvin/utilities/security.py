@@ -79,7 +79,7 @@ def encode_jwt(payload, node):
     """Encode JSON Web Token"""
     _log.debug("encode_jwt:\n\tpayload={}".format(payload))
     if node.runtime_credentials:
-        private_key = node.runtime_credentials.get_private_key(node.node_name)
+        private_key = node.runtime_credentials.get_private_key()
     else:
         _log.error("Node has no runtime credentials, cannot sign JWT")
     # Create a JSON Web Token signed using the node's Elliptic Curve private key.
@@ -119,7 +119,7 @@ def _decode_jwt_cb(certstring, token, node, actor_id=None, callback=None):
 class Security(object):
 
     def __init__(self, node):
-        _log.debug("_init_, node={}".format(node))
+#        _log.debug("_init_, node={}".format(node))
         self.sec_conf = _conf.get("security","security_conf")
         self.node = node
         self.subject_attributes = {}
@@ -134,7 +134,7 @@ class Security(object):
 
     def set_subject_attributes(self, subject_attributes):
         """Set subject attributes."""
-        _log.debug("set_subject_attributes: subject_attributes = %s" % subject_attributes)
+#        _log.debug("set_subject_attributes: subject_attributes = %s" % subject_attributes)
         if not isinstance(subject_attributes, dict):
             _log.error("set_subject_attributes: subject_attributest should be dictionary")
             return False
@@ -142,12 +142,12 @@ class Security(object):
 
     def get_subject_attributes(self):
         """Return a dictionary with all authenticated subject attributes."""
-        _log.debug("get_subject_attributes, self.subject_attributes={}".format(self.subject_attributes))
+#        _log.debug("get_subject_attributes, self.subject_attributes={}".format(self.subject_attributes))
         return self.subject_attributes.copy()
 
     def authenticate_subject(self, credentials, callback=None):
         """Authenticate subject using the authentication procedure specified in config."""
-        _log.debug("Security: authenticate_subject: \n\tcredentials={}".format(credentials))
+#        _log.debug("Security: authenticate_subject: \n\tcredentials={}".format(credentials))
         request = {}
         if not security_enabled():
             _log.debug("Security: no security enabled")
@@ -261,7 +261,7 @@ class Security(object):
             self._return_authentication_decision(False, [], callback)
 
     def _handle_authentication_response_jwt_decoded_cb(self, decoded, callback):
-        _log.debug("_handle_authentication_jwt_decoded_cb:\n\tdecoded={}\n\tcallback={}".format(decoded, callback))
+#        _log.debug("_handle_authentication_jwt_decoded_cb:\n\tdecoded={}\n\tcallback={}".format(decoded, callback))
         authentication_response = decoded['response']
         self._return_authentication_decision(authentication_response['decision'],
                                             authentication_response['subject_attributes'],
@@ -269,7 +269,7 @@ class Security(object):
                                             authentication_response.get("obligations", []))
 
     def _handle_local_authentication_response(self, auth_response, callback):
-        _log.debug("_handle_local_authentication_response:\n\tauth_response={}\n\tcallback={}".format(auth_response, callback))
+#        _log.debug("_handle_local_authentication_response:\n\tauth_response={}\n\tcallback={}".format(auth_response, callback))
         try:
             self._return_authentication_decision(auth_response['decision'],
                                                  auth_response['subject_attributes'],
@@ -296,7 +296,7 @@ class Security(object):
     def check_security_policy(self, callback, element_type, actor_id=None, requires=None, element_value=None, decision_from_migration=None):
         """Check if access is permitted by the security policy."""
         # Can't use id for application since it is not assigned when the policy is checked.
-        _log.debug("check_security_policy, element_type={}".format(element_type))
+#        _log.debug("check_security_policy, element_type={}".format(element_type))
         element_dict={}
         if self.sec_conf and 'authorization' in self.sec_conf and 'procedure' in self.sec_conf['authorization']:
             if element_type in ['application', 'actor']:
@@ -310,7 +310,7 @@ class Security(object):
 
     def get_authorization_decision(self, callback, actor_id=None, requires=None, element_dict=None, decision_from_migration=None):
         """Get authorization decision using the authorization procedure specified in config."""
-        _log.debug("Security: get_authorization_decision:\n\tcallback={}\n\tactor_id={}\n\trequires={}\n\telement_dict={}\n\tdecision_from_migration={}".format(callback, actor_id, requires, element_dict, decision_from_migration))
+#        _log.debug("Security: get_authorization_decision:\n\tcallback={}\n\tactor_id={}\n\trequires={}\n\telement_dict={}\n\tdecision_from_migration={}".format(callback, actor_id, requires, element_dict, decision_from_migration))
         if decision_from_migration:
             try:
                 _log.debug("Authorization decision from migration")
@@ -409,7 +409,7 @@ class Security(object):
             self._return_authorization_decision("indeterminate", [], callback)
 
     def _handle_authorization_response(self, reply, callback, actor_id=None):
-        _log.debug("_handle_authorization_response\n\treply={}\n\tcallback={}\n\tactor_id={}".format(reply, callback, actor_id))
+#        _log.debug("_handle_authorization_response\n\treply={}\n\tcallback={}\n\tactor_id={}".format(reply, callback, actor_id))
         if reply.status != 200:
             _log.error("Security: authorization server error - %s" % reply)
             self._return_authorization_decision("indeterminate", [], callback)
@@ -425,14 +425,14 @@ class Security(object):
             self._return_authorization_decision("indeterminate", [], callback)
 
     def _handle_authorization_response_jwt_decoded_cb(self, decoded, callback):
-        _log.debug("_handle_authorization_response_jwt_decoded_cb:\n\tdecoded={}\n\tcallback={}".format(decoded, callback))
+#        _log.debug("_handle_authorization_response_jwt_decoded_cb:\n\tdecoded={}\n\tcallback={}".format(decoded, callback))
         authorization_response = decoded['response']
         self._return_authorization_decision(authorization_response['decision'],
                                             authorization_response.get("obligations", []),
                                             callback)
 
     def _handle_local_authorization_response(self, authz_response, callback):
-        _log.debug("_handle_local_authorization_response:\n\tauthz_response={}\n\tcallback={}".format(authz_response, callback))
+#        _log.debug("_handle_local_authorization_response:\n\tauthz_response={}\n\tcallback={}".format(authz_response, callback))
         try:
             self._return_authorization_decision(authz_response['decision'],
                                                 authz_response.get("obligations", []), callback)
@@ -442,7 +442,7 @@ class Security(object):
 
     def authorization_runtime_search(self, actor_id, actorstore_signature, callback):
         """Search for runtime where the authorization decision for the actor is 'permit'."""
-        _log.debug("authorization_runtime_search:\n\tactor_id={}\n\tactorstore_signature={}\n\tcallback={}".format(actor_id, actorstore_signature, callback))
+#       _log.debug("authorization_runtime_search:\n\tactor_id={}\n\tactorstore_signature={}\n\tcallback={}".format(actor_id, actorstore_signature, callback))
         #Search for runtimes supporting the actor with appropriate actorstore_signature
         r = ReqMatch(self.node,
                      callback=CalvinCB(self._authorization_server_search,
@@ -452,7 +452,7 @@ class Security(object):
         r.match_for_actor(actor_id)
 
     def _authorization_server_search(self, possible_placements, actor_id, actorstore_signature, callback, status=None):
-        _log.debug("_authorization_server_search:\n\tpossible_placements={}\n\tactor_id={}\n\tactorstore_signature={}\n\tcallback={}".format(possible_placements, actor_id, actorstore_signature, callback))
+ #       _log.debug("_authorization_server_search:\n\tpossible_placements={}\n\tactor_id={}\n\tactorstore_signature={}\n\tcallback={}".format(possible_placements, actor_id, actorstore_signature, callback))
         if not possible_placements:
             callback(None)
             return
@@ -466,14 +466,14 @@ class Security(object):
 
     def _send_authorization_runtime_search(self, key, value, counter, actor_id, actorstore_signature,
                                            possible_placements, callback):
-        _log.debug("_send_authorization_runtime_search:\n\tkey={}\n\tvalue={}\n\tcounter={}\n\tactor_id={}\
-                   \n\tactorstore_signature={}\n\tpossible_placements={}\n\tcallback={}".format(key,\
-                                           value,\
-                                           counter,
-                                           actor_id,
-                                           actorstore_signature,
-                                           possible_placements,
-                                           callback))
+#        _log.debug("_send_authorization_runtime_search:\n\tkey={}\n\tvalue={}\n\tcounter={}\n\tactor_id={}\
+#                   \n\tactorstore_signature={}\n\tpossible_placements={}\n\tcallback={}".format(key,\
+#                                           value,\
+#                                           counter,
+#                                           actor_id,
+#                                           actorstore_signature,
+#                                           possible_placements,
+#                                           callback))
         if not value:
             callback(None)
             return
@@ -510,7 +510,7 @@ class Security(object):
     def _handle_authorization_runtime_search_response(self, reply, key, value, counter, actor_id,
                                                       actorstore_signature, possible_placements,
                                                       callback):
-        _log.debug("_handle_authorization_runtime_search_response:\n\treply={}\n\tkey={}\n\tvalue={}\n\tcounter={}\n\tactor_id={}\n\tactorstore_signature={}\n\tpossible_placements={}\n\tcallback={}".format(reply,key,value,counter,actor_id,actorstore_signature,possible_placements,callback))
+#        _log.debug("_handle_authorization_runtime_search_response:\n\treply={}\n\tkey={}\n\tvalue={}\n\tcounter={}\n\tactor_id={}\n\tactorstore_signature={}\n\tpossible_placements={}\n\tcallback={}".format(reply,key,value,counter,actor_id,actorstore_signature,possible_placements,callback))
         if reply.status != 200 or reply.data["node_id"] is None:
             counter += 1
             if counter < len(possible_placements):
@@ -574,7 +574,7 @@ class Security(object):
 
         A tuple (verified True/False, signer) is returned.
         """
-        _log.debug("verify_signature_content: flag={} , content={}".format(flag, content))
+#        _log.debug("verify_signature_content: flag={} , content={}".format(flag, content))
         if not self.sec_conf:
             _log.debug("verify_signature_content: no signature verification required: %s" % content['file'])
             return (True, None)
@@ -601,12 +601,15 @@ class Security(object):
                 #TODO: remove signature_trust_store dependency
                 trusted_cert_path = os.path.join(self.truststore_for_signing, cert_hash + ".0")
                 with open(trusted_cert_path, 'rt') as f:
-                    trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
+                    certstr=f.read()
+                    trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstr)
                     try:
+#                        # Verify signature
+                        certificate.verify_signature(certificate.TRUSTSTORE_SIGN,
+                                                     content['file'],
+                                                     signature, certstr,
+                                                     security_dir=certificate.get_security_credentials_path())
                         signer = [trusted_cert.get_issuer().CN]  # The Common Name field for the issuer
-                        # Verify signature
-                        OpenSSL.crypto.verify(trusted_cert, signature, content['file'], 'sha256')
-                        _log.debug("verify_signature_content: signature correct")
                         return (True, signer)
                     except Exception as e:
                         _log.error("OpenSSL verification error, err={}".format(e), exc_info=True)

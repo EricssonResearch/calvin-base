@@ -155,7 +155,7 @@ class TestDHT(object):
             assert get_value == "morot"
             print("Node with port {} got right value: {}".format(servers[0].dht_server.port.getHost().port, get_value))
             for i in range(0, amount_of_servers):
-                name_dir = rt_credentials[i].get_own_credentials_path()
+                name_dir = rt_credentials[i].get_credentials_path()
                 filenames = os.listdir(os.path.join(name_dir, "others"))
                 print("Node with port {} has {} certificates in store".format(servers[i].dht_server.port.getHost().port, len(filenames)))
 
