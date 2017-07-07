@@ -462,8 +462,8 @@ class TestReplication(CalvinTestBase):
     def testMultiPortReplication(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src1    : std.FiniteCounter(start=0)
-            src2    : std.FiniteCounter(start=10000)
+            src1    : test.FiniteCounter(start=0)
+            src2    : test.FiniteCounter(start=10000)
             alt   : flow.Alternate2()
             snk   : test.Sink(store_tokens=1, quiet=1)
             src1.integer(routing="fanout")
@@ -544,8 +544,8 @@ class TestReplication(CalvinTestBase):
     def testMultiActorReplication(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src1    : std.FiniteCounter(start=0)
-            src2    : std.FiniteCounter(start=10000, replicate_mult=true)
+            src1    : test.FiniteCounter(start=0)
+            src2    : test.FiniteCounter(start=10000, replicate_mult=true)
             alt   : flow.Alternate2()
             snk   : test.Sink(store_tokens=1, quiet=1)
             src1.integer(routing="fanout")
@@ -640,7 +640,7 @@ class TestReplication(CalvinTestBase):
     def testScaleOut1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src    : std.FiniteCounter(start=10000, replicate_mult=true)
+            src    : test.FiniteCounter(start=10000, replicate_mult=true)
             mid   : std.Identity()
             snk   : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")

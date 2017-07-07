@@ -2575,7 +2575,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         script = """
         component Count(len) -> seq {
-            src : std.FiniteCounter(start=1, steps=len)
+            src : test.FiniteCounter(start=1, steps=len)
             src.integer > .seq
         }
         src : Count(len=5)
@@ -2601,7 +2601,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         script = """
         define FOO = 5
         component Count(len) -> seq {
-            src : std.FiniteCounter(start=1, steps=len)
+            src : test.FiniteCounter(start=1, steps=len)
             src.integer > .seq
         }
         src : Count(len=FOO)
@@ -2628,7 +2628,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         script = """
         define FOO = 10
         component Count() -> seq {
-         src : std.FiniteCounter(start=1, steps=FOO)
+         src : test.FiniteCounter(start=1, steps=FOO)
          src.integer > .seq
         }
         src : Count()
@@ -3920,8 +3920,8 @@ class TestPortRouting(CalvinTestBase):
     def testCollectOneTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-        src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
-        src2 : std.FiniteCounter(start=1001, steps=100)
+        src1 : test.FiniteCounter(start=1, steps=3, repeat=true)
+        src2 : test.FiniteCounter(start=1001, steps=100)
         expt : exception.ExceptionHandler(replace=true, replacement="exception")
         snk : test.Sink(store_tokens=1, quiet=1)
         exptsnk : test.Sink(store_tokens=1, quiet=1)
@@ -3958,8 +3958,8 @@ class TestPortRouting(CalvinTestBase):
     def testCollectAnyTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-        src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
-        src2 : std.FiniteCounter(start=1001, steps=100)
+        src1 : test.FiniteCounter(start=1, steps=3, repeat=true)
+        src2 : test.FiniteCounter(start=1001, steps=100)
         expt : exception.ExceptionHandler(replace=true, replacement="exception")
         snk : test.Sink(store_tokens=1, quiet=1)
         exptsnk : test.Sink(store_tokens=1, quiet=1)
@@ -3996,8 +3996,8 @@ class TestPortRouting(CalvinTestBase):
     def testCollectAllTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
-        src1 : std.FiniteCounter(start=1, steps=3, repeat=true)
-        src2 : std.FiniteCounter(start=1001, steps=100)
+        src1 : test.FiniteCounter(start=1, steps=3, repeat=true)
+        src2 : test.FiniteCounter(start=1001, steps=100)
         expt : exception.ExceptionHandler(replace=true, replacement="exception")
         snk : test.Sink(store_tokens=1, quiet=1)
         exptsnk : test.Sink(store_tokens=1, quiet=1)
@@ -4535,7 +4535,7 @@ class TestReplication(object):
     def testMultiDereplication(self, rt_order3, nbr_replicas):
         _log.analyze("TESTRUN", "+", {})
         script = r"""
-            src   : std.FiniteCounter(start=1)
+            src   : test.FiniteCounter(start=1)
             proc  : test.TestProcess(eval_str="{data.keys()[0]: data.values()[0] + kwargs[\"base\"]}",
                         replicate_str="state.kwargs[\"base\"] = 10000 * state.replication_count",
                         kwargs={"base": 0}, dump=false)
