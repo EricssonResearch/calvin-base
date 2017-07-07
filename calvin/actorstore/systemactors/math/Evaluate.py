@@ -39,15 +39,10 @@ class Evaluate(Actor):
 
     def setup(self):
         self.math = calvinlib.use('math.arithmetic.eval')
-    
-    def will_migrate(self):
-        calvinlib.dispose(self.math)
-    
+
     def did_migrate(self):
         self.setup()
-        
-    def will_end(self):
-        calvinlib.dispose(self.math)
+
         
     @condition(['x', 'y'], ['result'])
     def compute(self, a, b):

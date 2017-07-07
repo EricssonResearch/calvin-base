@@ -45,11 +45,6 @@ class Iterate(Actor):
     def setup(self):
         self.copy = calvinlib.use("copy")
 
-    def will_end(self):
-        calvinlib.dispose(self.copy)
-        
-    def will_migrate(self):
-        calvinlib.dispose(self.copy)
         
     def did_migrate(self):
         self.setup()

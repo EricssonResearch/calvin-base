@@ -13,9 +13,6 @@ class TestJson(unittest.TestCase):
         self.json = Json.Json(None, None)
         self.json.init()
         
-    def tearDown(self):
-        self.json.dispose()
-        
     def test_encode_ok(self):
         data = {"key": "value"}
         

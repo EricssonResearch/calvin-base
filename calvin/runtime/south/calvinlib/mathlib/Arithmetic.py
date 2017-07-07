@@ -30,10 +30,6 @@ class Arithmetic(base_calvinlib_object.BaseCalvinlibObject):
     init_schema = {
             "description": "Initialize module",
     }
-    
-    dispose_schema = {
-            "description": "Dispose of module",
-    }
 
     relation_schema = {
         "description": "Get corresponding relation: >, <, =, !=, >=, <= (with obvious interpretation.)",
@@ -97,6 +93,3 @@ class Arithmetic(base_calvinlib_object.BaseCalvinlibObject):
             return eval(expr, {}, bindings)
         except Exception as e:
             return str(e)
-        
-    def dispose(self):
-        pass

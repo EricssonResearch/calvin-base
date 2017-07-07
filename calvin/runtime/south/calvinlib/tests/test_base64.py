@@ -13,23 +13,16 @@ class TestBase64(unittest.TestCase):
         self.base64 = Base64.Base64(None, None)
         self.base64.init()
         
-    def tearDown(self):
-        self.base64.dispose()
-        
     def test_encode_ok(self):
         data = b'somebinarydata'
-
         our_b64 = self.base64.encode(data)
-        
         decode = base64.b64decode(our_b64)
         
         self.assertEqual(data, decode)
     
     def test_decode_ok(self):
         data = b'somebinarydata'
-        
         encoded = base64.b64encode(data)
-        
         decoded = self.base64.decode(encoded)
         
         self.assertEqual(data, decoded)

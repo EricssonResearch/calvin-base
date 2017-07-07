@@ -44,11 +44,6 @@ class Compute(Actor):
         self.math = calvinlib.use("math.arithmetic.operator")
         self.op = self.math.operator(op=self.op_string)
 
-    def will_migrate(self):
-        calvinlib.dispose(self.math)
-    
-    def will_end(self):
-        calvinlib.dispose(self.math)
         
     def did_migrate(self):
         self.setup()

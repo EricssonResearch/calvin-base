@@ -29,12 +29,7 @@ class Random(base_calvinlib_object.BaseCalvinlibObject):
                 "seed": { "type": "integer" }
             }
     }
-    
-    dispose_schema = {
-            "description": "Dispose ofRNG",
-    }
-    
-    
+
     random_integer_schema = {
         "description": "return random integer in range [lower, upper)",
         "type": "object",
@@ -64,8 +59,4 @@ class Random(base_calvinlib_object.BaseCalvinlibObject):
 
     def random_number(self, lower, upper):
         return self.rand.uniform(lower, upper)
-    
-    def dispose(self):
-        del self.rand
-        self.rand = None
-        
+

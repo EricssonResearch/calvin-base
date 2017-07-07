@@ -257,9 +257,6 @@ class calvinlib(object):
     def use(name, **kwargs):
         return get_calvinlib().use(name, **kwargs)
 
-    @staticmethod
-    def dispose(obj):
-        get_calvinlib().remove(obj)
 
 class Actor(object):
 

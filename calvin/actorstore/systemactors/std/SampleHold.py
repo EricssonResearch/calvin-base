@@ -41,12 +41,6 @@ class SampleHold(Actor):
         
     def did_migrate(self):
         self.setup()
-        
-    def will_migrate(self):
-        calvinlib.dispose(self.copy)
-        
-    def will_end(self):
-        calvinlib.dispose(self.copy)
 
     def current(self):
         return self.held if self.immutable else self.copy.copy(self.held)
