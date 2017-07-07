@@ -103,4 +103,4 @@ class UDPSender(Actor):
         self.sender = None
 
     action_priority = (control, send)
-    requires = ['calvinsys.network.socketclienthandler', 'calvinsys.native.python-re', 'calvinsys.native.python-json']
+    requires = ['calvinsys.network.socketclienthandler', 'calvinsys.native.python-re']

@@ -37,7 +37,7 @@ class SumCap(Actor):
 
     action_priority = (sum, )
 
-    requires = ["calvinsys.native.python-json"]
+    requires = ["json"]
 
     test_set = [
         {

@@ -549,12 +549,12 @@ def security_verify_storage(rt, request_handler):
         rt_id[j] = retry(30, partial(request_handler.get_node_id, rt[j]), lambda _: True, "Failed to get node id")
     _log.info("RUNTIMES:{}".format(rt_id))
     # Wait for storage to be connected
-    index = "node/capabilities/calvinsys.native.python-json" 
+    index = "node/capabilities/json" 
     failed = True
     def test():
         count=[0]*len(rt)
         caps =[0]*len(rt)
-        #Loop through all runtimes to ask them which runtimes nodes they know with calvisys.native.python-json
+        #Loop through all runtimes to ask them which runtimes nodes they know with json-capabilities
         for j in range(len(rt)):
             caps[j] = retry(30, partial(request_handler.get_index, rt[j], index), lambda _: True, "Failed to get index")['result']
             #Add the known nodes to statistics of how many nodes store keys from that node

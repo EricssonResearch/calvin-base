@@ -15,9 +15,9 @@
 # limitations under the License.
 
 from calvin.actor.actor import Actor, manage, condition, stateguard
-from calvin.utilities.calvinlogger import get_logger
+from calvin.utilities.calvinlogger import get_actor_logger
 
-_log = get_logger(__name__)
+_log = get_actor_logger(__name__)
 
 
 class HTTPPost(Actor):
@@ -46,7 +46,6 @@ class HTTPPost(Actor):
         self.request = None
         self.received_headers = False
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
-        self.use('calvinsys.native.python-json', shorthand='json')
 
     def reset_request(self):
         if self.request:
@@ -91,4 +90,4 @@ class HTTPPost(Actor):
         return ()
 
     action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
-    requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-json']
+    requires = ['calvinsys.network.httpclienthandler']

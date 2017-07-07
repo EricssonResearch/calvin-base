@@ -46,7 +46,6 @@ class HTTPPut(Actor):
         self.request = None
         self.reset_request()
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
-        self.use('calvinsys.native.python-json', shorthand='json')
 
     def reset_request(self):
         if self.request:
@@ -90,4 +89,4 @@ class HTTPPut(Actor):
         return ()
 
     action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
-    requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-json']
+    requires = ['calvinsys.network.httpclienthandler']

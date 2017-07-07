@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -42,7 +42,7 @@ class OpenWeatherMap(Actor):
         self.request = None
         self.reset_request()
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
-        self.use('calvinsys.native.python-json', shorthand="json")
+        self.json = calvinlib.use("json")
         self.use('calvinsys.attribute.private', shorthand="attr")
         # Requires an api key
         self.api_key = self['attr'].get("/web/openweathermap.com/appid")
@@ -86,7 +86,7 @@ class OpenWeatherMap(Actor):
     @condition(action_output=['forecast'])
     def handle_body(self):
         body = self['http'].body(self.request)
-        forecast = self['json'].loads(body)
+        forecast = self.json.fromstring(body)
         forecast = self.filter_weather_data(forecast)
         self.reset_request()
         return (forecast,)
@@ -98,4 +98,4 @@ class OpenWeatherMap(Actor):
         
 
     action_priority = (handle_body, handle_empty_body, handle_headers, new_request)
-    requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-json', "calvinsys.attribute.private"]
+    requires = ['calvinsys.network.httpclienthandler', 'json', "calvinsys.attribute.private"]
