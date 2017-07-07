@@ -122,7 +122,7 @@ component ParamGen() status, data -> params {
     params : request params
   """
 
-  cmp : std.Compare(op="=")
+  cmp : std.Compare(rel="=")
   route : flow.Switch()
   init_params : flow.Init(data={"sha":"develop", "per_page":1})
   pack : PackLatestCommitDate()

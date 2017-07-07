@@ -20,7 +20,7 @@ component PrintFormattedList(item_fmt) list ->  {
 tick : std.Trigger(tick=3600.0, data="http://api.open-notify.org/astros.json")
 iip : flow.Init(data="nothing")
 client : net.HTTPGet()
-cmp : std.Compare(op="=")
+cmp : std.Compare(rel="=")
 sel : flow.Select()
 to_json: json.FromString()
 get_list : json.GetValue()

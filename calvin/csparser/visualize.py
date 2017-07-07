@@ -289,7 +289,7 @@ if __name__ == '__main__':
     source_text = """
     component FilterUnchanged() string -> string {
       iip : flow.Init(data="nothing")
-      cmp : std.Compare(op="=")
+      cmp : std.Compare(rel="=")
       sel : flow.Select()
 
       .string > cmp.a

@@ -1940,7 +1940,7 @@ class TestCompare(CalvinTestBase):
         script = """
             src   : std.Counter()
             const : std.Constant(data=5)
-            pred  : std.Compare(op="<>")
+            pred  : std.Compare(rel="<>")
             snk   : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > pred.a
@@ -1964,7 +1964,7 @@ class TestCompare(CalvinTestBase):
         script = """
             src   : std.Counter()
             const : std.Constant(data=5)
-            pred  : std.Compare(op="=")
+            pred  : std.Compare(rel="=")
             snk   : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > pred.a
@@ -1990,7 +1990,7 @@ class TestCompare(CalvinTestBase):
         script = """
             src   : std.Counter()
             const : std.Constant(data=5)
-            pred  : std.Compare(op=">=")
+            pred  : std.Compare(rel=">=")
             snk   : test.Sink(store_tokens=1, quiet=1)
 
             src.integer > pred.a
@@ -2106,7 +2106,7 @@ class TestDeselect(CalvinTestBase):
             const_5 : std.Constantify(constant=5)
             const_0 : std.Constant(data=0)
             const_1 : std.Constant(data=1)
-            comp    : std.Compare(op="<=")
+            comp    : std.Compare(rel="<=")
             ds      : flow.Deselect()
             snk     : test.Sink(store_tokens=1, quiet=1)
 
@@ -2138,7 +2138,7 @@ class TestDeselect(CalvinTestBase):
             const_5 : std.Constantify(constant=5)
             const_0 : std.Constant(data=0)
             const_1 : std.Constant(data=1)
-            comp    : std.Compare(op="<=")
+            comp    : std.Compare(rel="<=")
             ds      : flow.Deselect()
             snk     : test.Sink(store_tokens=1, quiet=1)
 

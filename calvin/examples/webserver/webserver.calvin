@@ -42,7 +42,7 @@ component DaisyAdapter(status_OK) in, status, work_result, work_status -> work_d
   flow, without further processing.
   """
 
-  status_check : std.Compare(op="=")
+  status_check : std.Compare(rel="=")
   route_input : flow.Select()
   join_status : flow.Collect()
   join_output : flow.Collect()
@@ -143,7 +143,7 @@ component HTTPFileReader() filename -> resource, status {
   read_html : io.FileReader()
   concat : text.LineJoin()
   exception_handler : exception.ExceptionHandler()
-  is_eos : std.Compare(op="=")
+  is_eos : std.Compare(rel="=")
   status_mapper : flow.Deselect()
 
   .filename > read_html.filename
@@ -214,7 +214,7 @@ component HTTPResponseGenerator(response_template) body, status -> out {
   Generate an HTTP response based on body and status.
   """
 
-  check_status : std.Compare(op="=")
+  check_status : std.Compare(rel="=")
   route_body: flow.Switch()
   response : HTTPResponseTemplate(template=response_template)
 
