@@ -14,7 +14,7 @@ line_chart : chart.DynamicLine(chart_param=CHART_PARAMETERS)
 collect : flow.CollectDict(mapping={"chart":&line_chart.img}) // NOTE! tag "chart" must correspond to the img id in index.html
 websocket : net.WSBroadcast(host="localhost", port=8123)
 counter : std.CountTimer(sleep=1)
-random : math.Random(lower=1, upper=100)
+random : math.RandomInteger(lower=1, upper=100)
 
 
 /////////////////////////////////////////////////

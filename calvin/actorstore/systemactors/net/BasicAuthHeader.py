@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-17 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinlib
 
 
 class BasicAuthHeader(Actor):
@@ -37,16 +37,16 @@ class BasicAuthHeader(Actor):
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.native.python-base64', shorthand="base64")
+        self.base64 = calvinlib.use('base64')
 
     @condition(['credential'], ['header'])
     def authorization_header(self, credential):
-        auth = "Basic " + self['base64'].b64encode("%s:%s" % (credential['username'], credential['password']))
+        auth = "Basic " + self.base64.encode("%s:%s" % (credential['username'], credential['password']))
         header = {'Authorization': auth}
         return (header,)
 
     action_priority = (authorization_header,)
-    requires = ['calvinsys.native.python-base64']
+    requires = ['base64']
 
     test_set = [
         {

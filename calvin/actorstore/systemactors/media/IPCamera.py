@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 Ericsson AB
+# Copyright (c) 2016-17 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -42,7 +42,7 @@ class IPCamera(Actor):
         self.request = None
         self.reset_request()
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
-        self.use('calvinsys.native.python-base64', shorthand="base64")
+        self.base64 = calvinlib.use('base64')
         self.use('calvinsys.attribute.private', shorthand="attr")
         # Requires an IP address and user credentials
         # Example:
@@ -65,7 +65,7 @@ class IPCamera(Actor):
     def new_request(self, trigger):
         if trigger:
             url = "http://" + self.ip + "/axis-cgi/jpg/image.cgi"
-            auth = "Basic " + self['base64'].b64encode("%s:%s" % (self.credentials['username'], self.credentials['password']))
+            auth = "Basic " + self.base64.encode("%s:%s" % (self.credentials['username'], self.credentials['password']))
             header = {'Authorization': auth}
             params = {}
             self.request = self['http'].get(url, params, header)
@@ -93,4 +93,4 @@ class IPCamera(Actor):
         
 
     action_priority = (handle_body, handle_empty_body, handle_headers, new_request)
-    requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-base64', "calvinsys.attribute.private"]
+    requires = ['calvinsys.network.httpclienthandler', 'base64', "calvinsys.attribute.private"]

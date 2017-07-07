@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.utilities.calvinlogger import get_actor_logger
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 
 _log = get_actor_logger(__name__)
 
@@ -54,7 +54,7 @@ class DynamicLine(Actor):
     def setup(self):
         self.req_in_progress = []
         self.use("calvinsys.media.image", shorthand="image")
-        self.use('calvinsys.native.python-base64', shorthand="base64")
+        self.base64 = calvinlib.use('base64')
         self.use('calvinsys.charts.chart_handler', shorthand="chart")
         self.chart_api = self['chart'].create_line_chart(self.params)
 
@@ -67,7 +67,7 @@ class DynamicLine(Actor):
         handle = self.req_in_progress.pop(0)
         image = self.chart_api.receive_image(handle)
         img_str = self['image'].to_string(image, "PNG")
-        result = self['base64'].b64encode(img_str)
+        result = self.base64.encode(img_str)
 
         return (result, )
 
@@ -92,4 +92,4 @@ class DynamicLine(Actor):
 
     action_priority = (handle_response, send_request, )
 
-    requires = ['calvinsys.media.image', 'calvinsys.native.python-base64', 'calvinsys.charts.chart_handler']
+    requires = ['calvinsys.media.image', 'base64', 'calvinsys.charts.chart_handler']
