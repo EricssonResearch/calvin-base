@@ -1,6 +1,6 @@
 tick : std.Trigger(data=true, tick=0.5)
-in1 : math.Random(lower=1, upper=7)
-in2 : math.Random(lower=1, upper=7)
+in1 : math.RandomInteger(lower=1, upper=7)
+in2 : math.RandomInteger(lower=1, upper=7)
 
 sum : math.Evaluate(expr="x+y")
 
