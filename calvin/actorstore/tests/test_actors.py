@@ -203,45 +203,42 @@ class CalvinSysMock(dict):
             return requirements[requirement]
         elif requirement.startswith("calvinsys.native"):
             return load_simple_requirement(requirement)
-        elif requirement.startswith("calvinsys.math"):
-            return load_simple_requirement(requirement)
         else:
             raise Exception("Test framework does not know how to handle requirement '%s'" % (requirement,))
 
 
 def setup_calvinlib():
-    class MockJson(object):
-
-        def fromstring(self, string):
-            from json import loads
-            return loads(string)
-        def tostring(self, data):
-            from json import dumps
-            return dumps(data)
-            
-    class MockBase64(object):
-        def encode(self, data):
-            from base64 import b64encode
-            return b64encode(data)
-        def decode(self, string):
-            from base64 import b64decode
-            return b64decode(string)
-            
-    class MockCopy(object):
-        def copy(self, data):
-            from copy import copy
-            return copy(data)
     import calvin.runtime.north.calvinlib as calvinlib
     calvinlib.TESTING=True
     from calvin.runtime.north.calvinlib import get_calvinlib
     lib = get_calvinlib()
-    lib.set("json", MockJson())
-    lib.set("base64", MockBase64())
-    lib.set("copy", MockCopy())
+    lib.init(capabilities={
+                     "math.arithmetic.compare": {
+                         "module": "mathlib.Arithmetic"
+                     },
+                     "math.arithmetic.operator": {
+                         "module": "mathlib.Arithmetic"
+                     },
+                     "math.arithmetic.eval": {
+                         "module": "mathlib.Arithmetic"
+                     },
+                     "math.random": {
+                         "module": "mathlib.Random",
+                         "attributes": {"seed": 10}
+                     },
+                     "json": {
+                         "module": "jsonlib.Json"
+                     },
+                     "base64": {
+                         "module": "base64lib.Base64"
+                     },
+                     "copy": {
+                         "module": "datalib.Copy"
+                     }
+                 })
 
 def teardown_calvinlib():
     import calvin.runtime.north.calvinlib as calvinlib
-    from calvin.runtime.north.calvinlib import TESTING
     calvinlib.TESTING=False
     del calvinlib._calvinlib
     calvinlib._calvinlib=None
