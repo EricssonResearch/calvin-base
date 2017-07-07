@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinlib
 from calvin.utilities.calvinlogger import get_actor_logger
 from calvin.runtime.north.calvin_token import ExceptionToken
 
@@ -38,13 +38,21 @@ class Evaluate(Actor):
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.math.eval', shorthand='eval')
-        self.eval = self['eval'].eval
+        self.math = calvinlib.use('math.arithmetic.eval')
+    
+    def will_migrate(self):
+        calvinlib.dispose(self.math)
+    
+    def did_migrate(self):
+        self.setup()
+        
+    def will_end(self):
+        calvinlib.dispose(self.math)
         
     @condition(['x', 'y'], ['result'])
     def compute(self, a, b):
         if self.expr:
-            result = self.eval(self.expr, {'x':a, 'y':b})
+            result = self.math.eval(self.expr, {'x':a, 'y':b})
         else :
             result = None
         if isinstance(result, basestring):
@@ -70,4 +78,4 @@ class Evaluate(Actor):
 
     ]
 
-    requires = ['calvinsys.math.eval']
+    requires = ['math.arithmetic.eval']

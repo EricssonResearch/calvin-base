@@ -124,9 +124,17 @@ class CalvinConfig(object):
              },
              'calvinlib': {
                  "capabilities": {
+                     "math.arithmetic.compare": {
+                         "module": "mathlib.Arithmetic"
+                     },
+                     "math.arithmetic.operator": {
+                         "module": "mathlib.Arithmetic"
+                     },
+                     "math.arithmetic.eval": {
+                         "module": "mathlib.Arithmetic"
+                     },
                      "math.random": {
-                         "module": "mathlib.Random",
-                         "attributes": {"seed": 10}
+                         "module": "mathlib.Random"
                      },
                      "json": {
                          "module": "jsonlib.Json"

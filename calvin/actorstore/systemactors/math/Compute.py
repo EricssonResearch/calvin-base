@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinlib
 from calvin.utilities.calvinlogger import get_actor_logger
 from calvin.runtime.north.calvin_token import ExceptionToken
 
@@ -41,8 +41,14 @@ class Compute(Actor):
         self.setup()
         
     def setup(self):
-        self.use("calvinsys.math.arithmetic", shorthand="arith")
-        self.op = self["arith"].operation(self.op_string)
+        self.math = calvinlib.use("math.arithmetic.operator")
+        self.op = self.math.operator(op=self.op_string)
+
+    def will_migrate(self):
+        calvinlib.dispose(self.math)
+    
+    def will_end(self):
+        calvinlib.dispose(self.math)
         
     def did_migrate(self):
         self.setup()
@@ -71,7 +77,26 @@ class Compute(Actor):
             'in': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
             'out': {'result': [1, 2, 0, 1]},
         },
-
+        {
+            'setup': [lambda self: self.init('+')],
+            'in': {'a': [1, 2, 3, 4], 'b':[1, 2, 3, 4]},
+            'out': {'result': [2, 4, 6, 8]},
+        },
+        {
+            'setup': [lambda self: self.init('-')],
+            'in': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
+            'out': {'result': [-2, -1, 0, 1]},
+        },
+        {
+            'setup': [lambda self: self.init('/')],
+            'in': {'a': [1, 2, 3, 4], 'b':[1, 2, 3, 4]},
+            'out': {'result': [1, 1, 1, 1]},
+        },
+        {
+            'setup': [lambda self: self.init('div')],
+            'in': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
+            'out': {'result': [0, 0, 1, 1]},
+        }
     ]
 
-    requires = ['calvinsys.math.arithmetic']
+    requires = ['math.arithmetic.operator']

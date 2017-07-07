@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinlib
 from calvin.utilities.calvinlogger import get_actor_logger
 
 
@@ -34,17 +34,17 @@ class Compare(Actor):
     Outputs:
       result : true or false according to result of 'a' REL 'b'
     """
-    @manage(['op'])
-    def init(self, op):
-        self.op = op
+    @manage(['rel'])
+    def init(self, rel):
+        self.rel = rel
         self.setup()
 
     def did_migrate(self):
         self.setup()
 
     def setup(self):
-        self.use("calvinsys.math.compare", shorthand="compare")
-        self.relation = self["compare"].relation(self.op)
+        self.math = calvinlib.use("math.arithmetic.eval")
+        self.relation = self.math.relation(rel=self.rel)
 
     @condition(['a', 'b'], ['result'])
     def test(self, x, y):
@@ -69,4 +69,4 @@ class Compare(Actor):
 
     ]
 
-    requires = ['calvinsys.math.compare']
+    requires = ['math.arithmetic.eval']
