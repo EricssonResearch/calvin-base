@@ -22,6 +22,10 @@ class Base64(base_calvinlib_object.BaseCalvinlibObject):
     Functions for base64 encoding/decoding data.
     """
 
+    init_schema = {
+            "description": "base64 encoding/decoding of data"
+    }
+    
     encode_schema = {
         "description": "base64 encode binary string",
         "type": "string"
