@@ -1,0 +1,6 @@
+trigger : std.Trigger(tick=2, data=["this", "is", "a", "test"])
+items : json.Items()
+out : io.Print()
+
+trigger.data > items.list
+items.item > out.token

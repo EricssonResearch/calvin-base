@@ -1,0 +1,22 @@
+expr1 : math.Evaluate(expr="x+y*10+x-y/2")
+expr2 : math.Compute(op="+")
+cmp : std.Compare(rel=">")
+out : io.Print()
+expr1_out : io.Print()
+expr2_out : io.Print()
+
+start : flow.Init(data=true)
+
+voidport > start.in
+
+start.out > /10/ expr1.x
+start.out > /5/ expr1.y
+
+start.out > /2/ expr2.a
+start.out > /4/ expr2.b
+
+expr1.result > expr1_out.token
+expr1.result > cmp.a
+expr2.result > expr2_out.token
+expr2.result > cmp.b
+cmp.result > out.token

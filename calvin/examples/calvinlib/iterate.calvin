@@ -1,0 +1,8 @@
+trigger : std.Trigger(tick=2, data=["this", "is", "a", "test"])
+items : std.Iterate()
+out_1 : io.Print()
+out_2 : io.Print()
+
+trigger.data > items.token
+items.index > out_1.token
+items.item > out_2.token
