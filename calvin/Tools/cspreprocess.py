@@ -2,6 +2,8 @@ import os
 import re
 from calvin.utilities.issuetracker import IssueTracker
 
+def _expand_path(path):
+    return os.path.abspath(os.path.expanduser(path))
 
 class Preprocessor(object):
     """docstring for Preprocessor"""
@@ -11,19 +13,21 @@ class Preprocessor(object):
     def __init__(self, include_paths=None):
         super(Preprocessor, self).__init__()
         paths = include_paths or []
-        self.include_paths = [os.path.abspath(os.path.expanduser(path)) for path in paths]
+        self.include_paths = [_expand_path(path) for path in paths]
 
     def process(self, source_file, issuetracker=None):
         path = os.path.dirname(source_file)
-        self.path = os.path.abspath(os.path.expanduser(path))
-        self.source_file = os.path.abspath(os.path.expanduser(source_file))
+        self.path = _expand_path(path)
+        self.source_file = _expand_path(source_file)
         self.issuetracker = issuetracker or IssueTracker()
+        self.line_number = 0
         return self._process(), self.issuetracker
 
     def _process(self):
         source_text = self._read_file(self.source_file)
         source_lines = []
         for line in source_text.split("\n"):
+            self.line_number += 1
             match = re.match(self.INCL_REGEX, line)
             if match:
                 include_file = "{}.calvin".format(match.group(1))
@@ -50,7 +54,7 @@ class Preprocessor(object):
             filepath = os.path.join(include_path, filename)
             if os.path.isfile(filepath):
                 return self._read_file(filepath)
-        self.issuetracker.add_error(reason="Could not find file {}.".format(filename), info={})
+        self.issuetracker.add_error(reason="Could not find file {}.".format(filename), info={'line':self.line_number, 'col':0})
         return ""
 
 

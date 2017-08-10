@@ -27,7 +27,6 @@ from calvin.csparser.parser import printable_ir
 def compile_file(filename, ds, ir, credentials=None, include_paths=None):
     pp = Preprocessor(include_paths)
     sourceText, it = pp.process(filename)
-    print sourceText
     if it.error_count > 0:
         return ({}, it)
     appname = appname_from_filename(filename)
@@ -67,7 +66,8 @@ def main():
     argparser.add_argument('--verbose', action='store_true',
                            help='informational output from the compiler')
     argparser.add_argument('-i', '--include', dest='include_paths', action='append', default=[],
-                           help='add search paths for include statements.')
+                           metavar='<include_path>',
+                           help='add search paths for include statements. Use multiple times for multiple include paths.')
     output_type = argparser.add_mutually_exclusive_group()
     output_type.add_argument('--deployscript', action='store_true', default=False,
                            help='generate deployjson file')
@@ -82,8 +82,6 @@ def main():
 
 
     args = argparser.parse_args()
-
-    print args.include_paths
     exit_code = 0
     for result, issuetracker, filename in compile_generator(args.files, args.deployscript, args.intermediate, None, args.include_paths):
         if issuetracker.error_count:
