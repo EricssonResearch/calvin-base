@@ -135,7 +135,7 @@ def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
 def compile_script(scriptfile, credentials):
     _log.debug("Compiling %s ..." % scriptfile)
     from calvin.Tools.cscompiler import compile_file
-    app_info, issuetracker = compile_file(scriptfile, False, credentials)
+    app_info, issuetracker = compile_file(scriptfile, False, False, credentials)
     if issuetracker.error_count:
         fmt = "{type!c}: {reason} {script} {line}:{col}"
         for error in issuetracker.formatted_errors(sort_key='line', custom_format=fmt, script=scriptfile, line=0, col=0):
@@ -333,7 +333,7 @@ def runtime_certificate(rt_attributes):
                     i=0
                     while not cert_available and i<len(ca_control_uris):
                         certstr=None
-                        #Repeatedly (maximum 10 attempts) send CSR to CA until a certificate is returned (this to remove the requirement of the CA 
+                        #Repeatedly (maximum 10 attempts) send CSR to CA until a certificate is returned (this to remove the requirement of the CA
                         #node to be be the first node to start)
                         rsa_encrypted_csr = runtime.get_encrypted_csr()
                         j=0
