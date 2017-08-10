@@ -45,19 +45,17 @@ class CalvinLib(object):
     """
 
     def __init__(self):
-        self._node = None
         self.capabilities = {}
         self.objects = []
 
-    def init(self, node):
+    def init(self):
         """
         Get and setup capabilities from config
         """
-        self._node = node
         capabilities = _conf.get('calvinlib', 'capabilities') or {}
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
         for capability in blacklist:
-            _ = capabilities.pop(capability, None)
+            capabilities.pop(capability, None)
         for key, value in capabilities.iteritems():
             module = value['module']
             value['path'] = module

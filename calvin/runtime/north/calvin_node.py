@@ -121,7 +121,7 @@ class Node(object):
         calvinsys = get_calvinsys()
         calvinsys.init(self)
         calvinlib = get_calvinlib()
-        calvinlib.init(self)
+        calvinlib.init()
 
         # Default will multicast and listen on all interfaces
         # TODO: be able to specify the interfaces
