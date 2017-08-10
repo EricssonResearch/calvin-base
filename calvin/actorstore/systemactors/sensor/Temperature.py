@@ -35,8 +35,8 @@ class Temperature(Actor):
 
     def setup(self):
         self._temperature = calvinsys.open(self, "io.temperature")
-        self.use("calvinsys.events.timer", shorthand="timer")
-        self._timer = self['timer'].once(0)
+        self._timer = calvinsys.open(self, "sys.timer.once")
+        calvinsys.write(self._timer, 0)
 
     def will_migrate(self):
         calvinsys.close(self._temperature)
@@ -46,24 +46,27 @@ class Temperature(Actor):
         self.setup()
 
     def will_end(self):
-        if self._temperature:
-            calvinsys.close(self._temperature)
+        calvinsys.close(self._temperature)
+        calvinsys.close(self._timer)
 
     @stateguard(lambda self: calvinsys.can_read(self._temperature))
     @condition([], ['centigrade'])
     def read_measurement(self):
         temperature = calvinsys.read(self._temperature)
-        self._timer = self['timer'].once(1.0/self.frequency)
+        # reset timer
+        calvinsys.write(self._timer, 1.0/self.frequency) 
         return (temperature,)
 
-    @stateguard(lambda self: self._timer.triggered and calvinsys.can_write(self._temperature))
+    @stateguard(lambda self: calvinsys.can_read(self._timer) and calvinsys.can_write(self._temperature))
     @condition([], [])
     def start_measurement(self):
-        self._timer.ack()
+        # ack timer
+        calvinsys.read(self._timer)
+        # start measurement
         calvinsys.write(self._temperature, True)
 
 
     action_priority = (read_measurement, start_measurement)
-    requires =  ['io.temperature', 'calvinsys.events.timer']
+    requires =  ['io.temperature', 'sys.timer.once']
 
 
