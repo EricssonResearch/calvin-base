@@ -119,7 +119,16 @@ class CalvinConfig(object):
                     "sys.timer.repeating": {
                         "module": "sys.timer.Timer",
                         "attributes": {"repeats": True }
+                    },
+                    "sys.attribute.indexed": {
+                        "module": "sys.attribute.Attribute",
+                        "attributes": { "type": "indexed" }
+                    },
+                    "sys.attribute.public": {
+                        "module": "sys.attribute.Attribute",
+                        "attributes": { "type": "public" }
                     }
+                    
                 }
              },
              'calvinlib': {
