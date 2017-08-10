@@ -1,0 +1,19 @@
+
+
+tick : std.Trigger(data=null, tick=1.0)
+attr: context.PublicAttribute(attribute="some-attribute")
+subattr: context.PublicAttribute(attribute="some-attribute.a-sub-attribute")
+name : context.RuntimeName()
+collect : flow.Collect()
+out : io.Print()
+
+
+tick.data > attr.trigger
+tick.data > subattr.trigger
+tick.data > name.trigger
+
+attr.value > collect.token
+subattr.value > collect.token
+name.value > collect.token
+
+collect.token > out.token

@@ -1,0 +1,16 @@
+{
+  "indexed_public": {
+    "address": {
+      "locality": "London",
+      "country": "GB"
+    },
+    "node_name": {
+      "name": "Thespian"
+    }
+  },
+  "public": {
+    "some-attribute": {
+      "a-sub-attribute": "this is a public value of an attribute"
+    }
+  }
+}
