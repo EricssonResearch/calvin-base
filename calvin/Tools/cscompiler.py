@@ -19,24 +19,28 @@ import os
 import sys
 import json
 import argparse
+from cspreprocess import Preprocessor
 from calvin.csparser.cscompile import compile_script, appname_from_filename
 from calvin.csparser.dscodegen import calvin_dscodegen
 from calvin.csparser.parser import printable_ir
 
-def compile_file(filename, ds, ir, credentials=None):
-    with open(filename, 'r') as source:
-        sourceText = source.read()
-        appname = appname_from_filename(filename)
-        if ds:
-            return calvin_dscodegen(sourceText, appname)
-        elif ir:
-            return printable_ir(sourceText)
-        else:
-            return compile_script(sourceText, appname, credentials=credentials)
+def compile_file(filename, ds, ir, credentials=None, include_paths=None):
+    pp = Preprocessor(include_paths)
+    sourceText, it = pp.process(filename)
+    print sourceText
+    if it.error_count > 0:
+        return ({}, it)
+    appname = appname_from_filename(filename)
+    if ds:
+        return calvin_dscodegen(sourceText, appname)
+    elif ir:
+        return printable_ir(sourceText)
+    else:
+        return compile_script(sourceText, appname, credentials=credentials)
 
-def compile_generator(files, ds, ir):
+def compile_generator(files, ds, ir, credentials, include_paths):
     for filename in files:
-        result, issuetracker = compile_file(filename, ds, ir)
+        result, issuetracker = compile_file(filename, ds, ir, credentials, include_paths)
         yield((result, issuetracker, filename))
 
 
@@ -62,6 +66,8 @@ def main():
                            help='custom format for issue reporting.')
     argparser.add_argument('--verbose', action='store_true',
                            help='informational output from the compiler')
+    argparser.add_argument('-i', '--include', dest='include_paths', action='append', default=[],
+                           help='add search paths for include statements.')
     output_type = argparser.add_mutually_exclusive_group()
     output_type.add_argument('--deployscript', action='store_true', default=False,
                            help='generate deployjson file')
@@ -74,11 +80,12 @@ def main():
                            help='Output file, default is filename.json')
 
 
+
     args = argparser.parse_args()
 
-
+    print args.include_paths
     exit_code = 0
-    for result, issuetracker, filename in compile_generator(args.files, args.deployscript, args.intermediate):
+    for result, issuetracker, filename in compile_generator(args.files, args.deployscript, args.intermediate, None, args.include_paths):
         if issuetracker.error_count:
             for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=filename, line=0, col=0):
                 sys.stderr.write(issue + "\n")
