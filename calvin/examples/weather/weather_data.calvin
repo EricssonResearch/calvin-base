@@ -1,0 +1,29 @@
+
+component PeriodicForecast(city, interval) -> csvrow {
+    tick     : std.Trigger(data=city, tick=interval)
+    service : web.LocationWeather()
+    fmt      : text.Mustache(fmt="{{city}},{{country}},{{weather}},{{temperature}},{{humidity}},{{pressure}}")
+
+    tick.data > service.location
+    service.forecast > fmt.dict
+    fmt.text > .csvrow
+}
+
+
+p1 : PeriodicForecast(city="Ystad", interval=10)
+p2 : PeriodicForecast(city="Kuala Lumpur", interval=15)
+p3 : PeriodicForecast(city="Manchester", interval=5)
+p4 : PeriodicForecast(city="New York", interval=3)
+p5 : PeriodicForecast(city="York", interval=6)
+
+collector : flow.Collect()
+out : io.Print()
+
+p1.csvrow > collector.token
+p2.csvrow > collector.token
+p3.csvrow > collector.token
+p4.csvrow > collector.token
+p5.csvrow > collector.token
+
+collector.token > out.token
+

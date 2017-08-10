@@ -1,5 +1,5 @@
 tick : std.Trigger(data=true, tick=0.5)
-weather  : web.TriggeredWeather(city="New York,US")
+weather  : web.LocalWeather()
 out : io.Print()
 
 tick.data > weather.trigger
