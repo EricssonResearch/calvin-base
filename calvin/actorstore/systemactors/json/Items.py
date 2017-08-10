@@ -40,7 +40,6 @@ class Items(Actor):
     def init(self):
         self.data = []
         self.has_data = False
-        print("Setting up")
         self.setup()
 
     def setup(self):
