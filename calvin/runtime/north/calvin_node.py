@@ -275,7 +275,7 @@ class Node(object):
         # delete all actors
         for actor in actors:
             self.am.destroy(actor.id)
-                # and die - hopefully, things should clean up nicely within reasonable time
+        # and die - hopefully, things should clean up nicely within reasonable time
 
         def poll_deleted(retry):
             if self.am.actors:
