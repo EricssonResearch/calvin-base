@@ -1,0 +1,58 @@
+{
+    "connections": {
+        "testPortlistLiteral:_literal_const_1.token": [
+            "testPortlistLiteral:snk1.token", 
+            "testPortlistLiteral:snk2.token"
+        ]
+    }, 
+    "port_properties": {
+        "testPortlistLiteral:_literal_const_1": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 2
+                }
+            }
+        ], 
+        "testPortlistLiteral:snk2": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "testPortlistLiteral:snk1": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true, 
+    "actors": {
+        "testPortlistLiteral:_literal_const_1": {
+            "args": {
+                "data": 1
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "testPortlistLiteral:snk2": {
+            "args": {}, 
+            "actor_type": "io.Print", 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }, 
+        "testPortlistLiteral:snk1": {
+            "args": {}, 
+            "actor_type": "io.Print", 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }
+    }, 
+    "name": "testPortlistLiteral"
+}

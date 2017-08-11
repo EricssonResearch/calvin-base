@@ -1,0 +1,3 @@
+snk1 : io.Print()
+snk2 : io.Print()
+1 > snk1.token, snk2.token

@@ -176,7 +176,7 @@ class PortlistRewrite(object):
         link.delete()
 
 
-class ImplicitPortRewrite(object):
+class ImplicitOutPortRewrite(object):
     """
     ImplicitPortRewrite takes care of the construct
         <value> > foo.in
@@ -185,9 +185,15 @@ class ImplicitPortRewrite(object):
     Running this cannot not fail and thus cannot cause an issue.
     """
     def __init__(self, issue_tracker):
-        super(ImplicitPortRewrite, self).__init__()
+        super(ImplicitOutPortRewrite, self).__init__()
         self.counter = 0
         self.issue_tracker = issue_tracker
+
+    def _add_actor_and_relink(self, node, actor, port):
+        link = node.parent
+        link.replace_child(node, port)
+        block = link.parent
+        block.add_child(actor)
 
     @visitor.on('node')
     def visit(self, node):
@@ -211,10 +217,31 @@ class ImplicitPortRewrite(object):
         const_actor = ast.Assignment(ident=const_name, actor_type='std.Constant', args=args)
         const_actor.debug_info = node.arg.debug_info
         const_actor_port = ast.OutPort(actor=const_name, port='token')
-        link = node.parent
-        link.replace_child(node, const_actor_port)
-        block = link.parent
-        block.add_child(const_actor)
+        self._add_actor_and_relink(node, const_actor, const_actor_port)
+
+
+class ImplicitInPortRewrite(object):
+    """
+    ImplicitPortRewrite takes care of the construct
+        <value> > foo.in
+    by replacing <value> with a std.Constant(data=<value>) actor.
+
+    Running this cannot not fail and thus cannot cause an issue.
+    """
+    def __init__(self, issue_tracker):
+        super(ImplicitInPortRewrite, self).__init__()
+        self.counter = 0
+        self.issue_tracker = issue_tracker
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if node.is_leaf():
+            return
+        map(self.visit, node.children[:])
 
     @visitor.when(ast.TransformedPort)
     def visit(self, node):
@@ -233,12 +260,29 @@ class ImplicitPortRewrite(object):
 
         link = node.parent
         block = link.parent
-
         block.add_child(transform_actor)
-
         new_link = ast.Link(outport=transform_actor_outport, inport=node.port)
         block.add_child(new_link)
         link.inport = transform_actor_inport
+
+
+class VoidPortRewrite(object):
+    """
+    """
+    def __init__(self, issue_tracker):
+        super(VoidPortRewrite, self).__init__()
+        self.counter = 0
+        self.issue_tracker = issue_tracker
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if node.is_leaf():
+            return
+        map(self.visit, node.children[:])
 
     @visitor.when(ast.Void)
     def visit(self, node):
@@ -961,12 +1005,20 @@ class CodeGen(object):
         rw.visit(self.root)
         self.dump_tree('Portlist Expanded')
 
-
-    def substitute_implicit_ports(self, issue_tracker):
-        # Implicit port rewrite
-        rw = ImplicitPortRewrite(issue_tracker)
+    def substitute_implicit_outports(self, issue_tracker):
+        rw = ImplicitOutPortRewrite(issue_tracker)
         rw.visit(self.root)
-        self.dump_tree('Port Rewrite')
+        self.dump_tree('OutPort Rewrite')
+
+    def substitute_implicit_inports(self, issue_tracker):
+        rw = ImplicitInPortRewrite(issue_tracker)
+        rw.visit(self.root)
+        self.dump_tree('InPort Rewrite')
+
+    def substitute_voidports(self, issue_tracker):
+        rw = VoidPortRewrite(issue_tracker)
+        rw.visit(self.root)
+        self.dump_tree('VoidPort Rewrite')
 
     def resolve_constants(self, issue_tracker):
         rc = ReplaceConstants(issue_tracker)
@@ -998,8 +1050,10 @@ class CodeGen(object):
         gen_app_info.process()
 
     def phase1(self, issue_tracker):
+        self.substitute_implicit_outports(issue_tracker)
         self.expand_portlists(issue_tracker)
-        self.substitute_implicit_ports(issue_tracker)
+        self.substitute_implicit_inports(issue_tracker)
+        self.substitute_voidports(issue_tracker)
         self.resolve_constants(issue_tracker)
         self.consistency_check(issue_tracker)
 
