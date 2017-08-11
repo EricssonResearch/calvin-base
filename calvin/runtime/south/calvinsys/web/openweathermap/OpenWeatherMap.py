@@ -110,11 +110,13 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
         def _no_data(*args, **kwargs):
             self._data = None
             self._in_progress = None
-            
+            self.scheduler_wakeup()
+
         def _new_data(req, **kwargs):
             data = self._filter_data(req.json())
             self._data = data
             self._in_progress = None
+            self.scheduler_wakeup()
 
         if location is None or isinstance(location, bool) :
             # No location given, do we already have one?
@@ -140,6 +142,5 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
     def close(self):
         del self._api_key
         if self._in_progress:
-            self._in_process.cancel()
-            self._in_progress = None
+            self._in_progress.cancel()
         self._data = None
