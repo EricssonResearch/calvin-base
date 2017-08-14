@@ -1,0 +1,4 @@
+tick : std.Trigger(data=null, tick=1.0)
+bell : media.Bell()
+
+tick.data > bell.trigger
