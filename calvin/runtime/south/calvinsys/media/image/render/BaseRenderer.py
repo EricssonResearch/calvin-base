@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
     
