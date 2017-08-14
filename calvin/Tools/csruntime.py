@@ -200,7 +200,8 @@ def dispatch_and_deploy(app_info, wait, uris, control_uri, attr, credentials):
     if timeout:
         process.join(timeout)
         RequestHandler().quit(rt)
-        time.sleep(0.1)
+        # This time has to be long enough for the mainloop to wrap things up, otherwise the program will hang indefinitely
+        time.sleep(1.0)
     else:
         process.join()
 
