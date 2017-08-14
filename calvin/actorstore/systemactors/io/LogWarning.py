@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,37 +16,40 @@
 
 from calvin.actor.actor import Actor, manage, condition, calvinsys, stateguard
 
-class Print(Actor):
+
+class LogWarning(Actor):
     """
-    Print data to standard out of runtime. Note that what constitutes standard out varies.
+    Write data to system log at loglevel "warning"
 
     Input:
-      token : data to write
+      data : data to be logged
     """
 
-    def exception_handler(self, action, args):
-        # Check args to verify that it is EOSToken
-        return action(self, *args)
+    def exception_handler(self, action_function, args):
+        # The action 'log' takes a single token
+        exception_token = args[0]
+        return action_function(self, "Exception '%s'" % (exception_token,))
 
-    @manage(exclude=['stdout'])
+    @manage([])
     def init(self):
         self.setup()
-
+        
     def setup(self):
-        self.stdout = calvinsys.open(self, "io.stdout")
+        self._log = calvinsys.open(self, "log.warning")
 
     def will_migrate(self):
-        calvinsys.close(self.stdout)
-        
+        calvinsys.close(self._log)
+    
     def did_migrate(self):
         self.setup()
 
-    @stateguard(lambda self: calvinsys.can_write(self.stdout))
-    @condition(action_input=['token'])
-    def write(self, data):
-        calvinsys.write(self.stdout, data)
+    @stateguard(lambda self: calvinsys.can_write(self._log))
+    @condition(action_input=['data'])
+    def log(self, data):
+        calvinsys.write(self._log, data)
+        
 
-    action_priority = (write, )
+    action_priority = (log, )
     
-    requires = ['io.stdout']
-    
+    requires = ["log.warning"]
+

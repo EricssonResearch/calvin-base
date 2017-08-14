@@ -127,8 +127,23 @@ class CalvinConfig(object):
                     "sys.attribute.public": {
                         "module": "sys.attribute.Attribute",
                         "attributes": { "type": "public" }
+                    },
+                    "io.stdout": {
+                        "module": "term.StandardOut",
+                        "attributes": {}
+                    },
+                    "log.info": {
+                        "module": "term.Log",
+                        "attributes": { "level": "info"}
+                    },
+                    "log.warning": {
+                        "module": "term.Log",
+                        "attributes": { "level": "warning"}
+                    },
+                    "log.error": {
+                        "module": "term.Log",
+                        "attributes": { "level": "error"}
                     }
-                    
                 }
              },
              'calvinlib': {
