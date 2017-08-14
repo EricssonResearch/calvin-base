@@ -176,7 +176,41 @@ class PortlistRewrite(object):
         link.delete()
 
 
-class ImplicitOutPortRewrite(object):
+class PortRewrite(object):
+    """Baseclass for port rewrite operations"""
+    def __init__(self, issue_tracker):
+        super(PortRewrite, self).__init__()
+        self.issue_tracker = issue_tracker
+        self.counter = 0
+
+    def _make_unique(self, name):
+        self.counter += 1
+        return "_{}_{}".format(name, str(self.counter))
+
+
+    def _add_src_or_snk_and_relink(self, node, actor, port):
+        link = node.parent
+        link.replace_child(node, port)
+        block = link.parent
+        block.add_child(actor)
+
+    def _add_src_and_relink(self, node, actor, port):
+        self._add_src_or_snk_and_relink(node, actor, port)
+
+    def _add_snk_and_relink(self, node, actor, port):
+        self._add_src_or_snk_and_relink(node, actor, port)
+
+    def _add_filter_and_relink(self, node, actor, inport, outport):
+        link = node.parent
+        block = link.parent
+        block.add_child(actor)
+        new_link = ast.Link(outport=outport, inport=node.port)
+        block.add_child(new_link)
+        link.inport = inport
+
+
+
+class ImplicitOutPortRewrite(PortRewrite):
     """
     ImplicitPortRewrite takes care of the construct
         <value> > foo.in
@@ -184,17 +218,6 @@ class ImplicitOutPortRewrite(object):
 
     Running this cannot not fail and thus cannot cause an issue.
     """
-    def __init__(self, issue_tracker):
-        super(ImplicitOutPortRewrite, self).__init__()
-        self.counter = 0
-        self.issue_tracker = issue_tracker
-
-    def _add_actor_and_relink(self, node, actor, port):
-        link = node.parent
-        link.replace_child(node, port)
-        block = link.parent
-        block.add_child(actor)
-
     @visitor.on('node')
     def visit(self, node):
         pass
@@ -212,26 +235,17 @@ class ImplicitOutPortRewrite(object):
             const_name = node.label.ident
         else:
             # Create a unique name if not given by label
-            self.counter += 1
-            const_name = '_literal_const_'+str(self.counter)
+            const_name = self._make_unique('literal_const')
+
         const_actor = ast.Assignment(ident=const_name, actor_type='std.Constant', args=args)
         const_actor.debug_info = node.arg.debug_info
         const_actor_port = ast.OutPort(actor=const_name, port='token')
-        self._add_actor_and_relink(node, const_actor, const_actor_port)
+        self._add_src_and_relink(node, const_actor, const_actor_port)
 
 
-class ImplicitInPortRewrite(object):
+class ImplicitInPortRewrite(PortRewrite):
     """
-    ImplicitPortRewrite takes care of the construct
-        <value> > foo.in
-    by replacing <value> with a std.Constant(data=<value>) actor.
-
-    Running this cannot not fail and thus cannot cause an issue.
     """
-    def __init__(self, issue_tracker):
-        super(ImplicitInPortRewrite, self).__init__()
-        self.counter = 0
-        self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
@@ -251,28 +265,18 @@ class ImplicitInPortRewrite(object):
             transform_name = node.label.ident
         else:
             # Create a unique name if not given by label
-            self.counter += 1
-            transform_name = '_transform_'+str(self.counter)
+            transform_name = self._make_unique('transform')
         transform_actor = ast.Assignment(ident=transform_name, actor_type='std.Constantify', args=args)
         transform_actor.debug_info = node.value.debug_info
         transform_actor_outport = ast.OutPort(actor=transform_name, port='out')
         transform_actor_inport = ast.InPort(actor=transform_name, port='in')
 
-        link = node.parent
-        block = link.parent
-        block.add_child(transform_actor)
-        new_link = ast.Link(outport=transform_actor_outport, inport=node.port)
-        block.add_child(new_link)
-        link.inport = transform_actor_inport
+        self._add_filter_and_relink(node, transform_actor, transform_actor_inport, transform_actor_outport)
 
 
-class VoidPortRewrite(object):
+class VoidPortRewrite(PortRewrite):
     """
     """
-    def __init__(self, issue_tracker):
-        super(VoidPortRewrite, self).__init__()
-        self.counter = 0
-        self.issue_tracker = issue_tracker
 
     @visitor.on('node')
     def visit(self, node):
@@ -296,14 +300,12 @@ class VoidPortRewrite(object):
             actor_type='flow.Terminator'
             port_class = ast.InPort
 
-        self.counter += 1
-        actor_name = '_void_'+str(self.counter)
+        actor_name = self._make_unique('void')
         void_actor = ast.Assignment(ident=actor_name, actor_type=actor_type)
+        void_actor.debug_info = node.debug_info
         void_actor_port = port_class(actor=actor_name, port='void')
-        link = node.parent
-        link.replace_child(node, void_actor_port)
-        block = link.parent
-        block.add_child(void_actor)
+
+        self._add_src_or_snk_and_relink(node, void_actor, void_actor_port)
 
 
 class RestoreParents(object):
@@ -330,7 +332,7 @@ class CollectPortProperties(object):
     def __init__(self, issue_tracker):
         super(CollectPortProperties, self).__init__()
         self.issue_tracker = issue_tracker
-        
+
     @visitor.on('node')
     def visit(self, node):
         pass
@@ -339,8 +341,8 @@ class CollectPortProperties(object):
     def visit(self, node):
         if node.is_leaf():
             return
-        map(self.visit, node.children[:]) 
-        
+        map(self.visit, node.children[:])
+
     @visitor.when(ast.Assignment)
     def visit(self, node):
         if not node.metadata['is_known']:
@@ -358,7 +360,7 @@ class CollectPortProperties(object):
             for ident, value in pp.items():
                 port_property.add_property(ident, value)
             node.parent.add_child(port_property)
-        
+
 
 class Expander(object):
     """
@@ -1055,7 +1057,7 @@ class CodeGen(object):
         cpp = CollectPortProperties(issue_tracker)
         cpp.visit(self.root)
         self.dump_tree('Collected port properties')
-        
+
     def expand_components(self, issue_tracker, verify):
         expander = Expander(issue_tracker)
         expander.process(self.root, verify)
