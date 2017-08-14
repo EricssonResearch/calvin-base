@@ -279,6 +279,28 @@ class TransformedPort(Node):
         self.label = kwargs.get('label')
 
 
+class ImplicitPort(Node):
+    """docstring for ImplicitPortNode"""
+    def __init__(self, **kwargs):
+        super(ImplicitPort, self).__init__(**kwargs)
+        self.add_child(kwargs.get('arg'))
+        self.add_child(kwargs.get('label'))
+
+    @property
+    def arg(self):
+        return self.children[0]
+
+    @arg.setter
+    def arg(self, value):
+        value.parent = self
+        self.arg.parent = None
+        self.children[0] = value
+
+    @property
+    def label(self):
+        return self.children[1]
+
+
 # FIXME: Abstract
 class Port(Node):
     """docstring for LinkNode"""
@@ -314,27 +336,6 @@ class OutPort(Port):
     """docstring for LinkNode"""
     def __init__(self, **kwargs):
         super(OutPort, self).__init__(**kwargs)
-
-class ImplicitPort(Node):
-    """docstring for ImplicitPortNode"""
-    def __init__(self, **kwargs):
-        super(ImplicitPort, self).__init__(**kwargs)
-        self.add_child(kwargs.get('arg'))
-        self.add_child(kwargs.get('label'))
-
-    @property
-    def arg(self):
-        return self.children[0]
-
-    @arg.setter
-    def arg(self, value):
-        value.parent = self
-        self.arg.parent = None
-        self.children[0] = value
-
-    @property
-    def label(self):
-        return self.children[1]
 
 class InternalPort(Port):
     """docstring for InternalPortNode"""

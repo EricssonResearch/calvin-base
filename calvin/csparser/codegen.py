@@ -1078,17 +1078,27 @@ class CodeGen(object):
         gen_app_info.process()
 
     def phase1(self, issue_tracker):
+        # Change all ImplicitPort objects into std.Constant actors and relink
         self.substitute_implicit_outports(issue_tracker)
+        # Break up list of inports into individual Link objects
         self.expand_portlists(issue_tracker)
+        # Change all TransformedPort objects into std.Constantify actors and relink
         self.substitute_implicit_inports(issue_tracker)
+        # Change all VoidPort objects into flow.Void/flow.Terminate actors and link
         self.substitute_voidports(issue_tracker)
+        # Replace all constant objects with their values
         self.resolve_constants(issue_tracker)
+        # Check graph consistency (e.g. missing connections etc.)
         self.consistency_check(issue_tracker)
 
     def phase2(self, issue_tracker, verify):
+        # Replace Component objects with a clone of the component graph
         self.expand_components(issue_tracker, verify)
+        # ?
         self.collect_port_properties(issue_tracker)
+        # Replace hierachy with namespace for all objects
         self.flatten(issue_tracker)
+        # ?
         self.consolidate(issue_tracker)
 
     def generate_code(self, issue_tracker, verify):
