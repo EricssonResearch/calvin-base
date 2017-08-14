@@ -1,0 +1,8 @@
+tick : std.Trigger(data=true, tick=1)
+cam : media.ImageSource()
+detect: media.FaceCounter()
+sink : io.Print()
+
+tick.data > cam.trigger
+cam.image > detect.b64image
+detect.objects > sink.token

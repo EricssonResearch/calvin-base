@@ -1,0 +1,8 @@
+tick : std.Trigger(data=true, tick=1)
+cam : media.ImageSource()
+detect: media.FaceFinder()
+sink : media.ImageSink()
+
+tick.data > cam.trigger
+cam.image > detect.b64image
+detect.b64image > sink.b64image
