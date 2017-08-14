@@ -1,0 +1,6 @@
+tick : std.Trigger(data=true, tick=5)
+cam : media.ImageSource()
+sink : media.ImageSink()
+
+tick.data > cam.trigger
+cam.image > sink.b64image

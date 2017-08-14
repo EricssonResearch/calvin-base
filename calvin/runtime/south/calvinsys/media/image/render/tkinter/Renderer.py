@@ -19,32 +19,17 @@ from PIL import ImageTk, Image
 import Tkinter as tkinter
 import StringIO
 import base64
-from calvin.runtime.south.plugins.async import async, threads
+from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.calvinsys import base_calvinsys_object
+from calvin.runtime.south.calvinsys.media.image.render import BaseRenderer
 
 _log = get_logger(__name__)
 
     
-class RenderImage(base_calvinsys_object.BaseCalvinsysObject):
+class Renderer(BaseRenderer.BaseRenderer):
     """
-    RenderImage - Render given (base64 encoded) image in some way
+        Renderer implementation based on Tkinter and Python Imaging Library (PIL)
     """
-
-    init_schema = {
-        "type": "object",
-        "description": "Set up renderer"
-    }
-    
-    can_write_schema = {
-        "description": "True it is possible to render a new image",
-        "type": "boolean"
-    }
-
-    write_schema = {
-        "description": "Set next image to render",
-        "type": "string"
-    }
 
     def init(self):
         self._render_in_progress = False
