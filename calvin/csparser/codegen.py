@@ -325,6 +325,40 @@ class RestoreParents(object):
         map(self.visit, node.children[:])
         self.stack.pop()
 
+class CollectPortProperties(object):
+    """docstring for RestoreParents"""
+    def __init__(self, issue_tracker):
+        super(CollectPortProperties, self).__init__()
+        self.issue_tracker = issue_tracker
+        
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if node.is_leaf():
+            return
+        map(self.visit, node.children[:]) 
+        
+    @visitor.when(ast.Assignment)
+    def visit(self, node):
+        if not node.metadata['is_known']:
+            return
+        # Collect actor-declared port properties
+        for port, pp in  node.metadata['input_properties'].items():
+            name = node.ident
+            port_property = ast.PortProperty(actor=name, port=port, direction="in", debug_info=node.debug_info)
+            for ident, value in pp.items():
+                port_property.add_property(ident, value)
+            node.parent.add_child(port_property)
+        for port, pp in  node.metadata['output_properties'].items():
+            name = node.ident
+            port_property = ast.PortProperty(actor=name, port=port, direction="out", debug_info=node.debug_info)
+            for ident, value in pp.items():
+                port_property.add_property(ident, value)
+            node.parent.add_child(port_property)
+        
 
 class Expander(object):
     """
@@ -356,19 +390,6 @@ class Expander(object):
         if not node.metadata:
             node.metadata = _lookup(node, self.issue_tracker)
         if node.metadata['is_known'] and node.metadata['type'] == 'actor':
-            # Transfer actor declared port properties here so that they can be consolidated and validated
-            for port, pp in  node.metadata['input_properties'].items():
-                name = node.ident
-                port_property = ast.PortProperty(actor=name, port=port, direction="in", debug_info=node.debug_info)
-                for ident, value in pp.items():
-                    port_property.add_property(ident, value)
-                node.parent.add_child(port_property)
-            for port, pp in  node.metadata['output_properties'].items():
-                name = node.ident
-                port_property = ast.PortProperty(actor=name, port=port, direction="out", debug_info=node.debug_info)
-                for ident, value in pp.items():
-                    port_property.add_property(ident, value)
-                node.parent.add_child(port_property)
             # Nothing more to do
             return
         if not node.metadata['is_known']:
@@ -1030,6 +1051,11 @@ class CodeGen(object):
         cc.process(self.root)
         self.dump_tree('Consistency Check')
 
+    def collect_port_properties(self, issue_tracker):
+        cpp = CollectPortProperties(issue_tracker)
+        cpp.visit(self.root)
+        self.dump_tree('Collected port properties')
+        
     def expand_components(self, issue_tracker, verify):
         expander = Expander(issue_tracker)
         expander.process(self.root, verify)
@@ -1059,6 +1085,7 @@ class CodeGen(object):
 
     def phase2(self, issue_tracker, verify):
         self.expand_components(issue_tracker, verify)
+        self.collect_port_properties(issue_tracker)
         self.flatten(issue_tracker)
         self.consolidate(issue_tracker)
 
