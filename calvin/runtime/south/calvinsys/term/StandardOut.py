@@ -40,7 +40,7 @@ class StandardOut(base_calvinsys_object.BaseCalvinsysObject):
 
     write_schema = {
         "description": "Write data to standard out",
-        "type": ["boolean", "integer", "number", "string", "array", "object"]
+        "type": ["boolean", "integer", "number", "string", "array", "object", "null"]
     }
 
     def init(self, prefix=None, **kwargs):
@@ -49,8 +49,11 @@ class StandardOut(base_calvinsys_object.BaseCalvinsysObject):
     def can_write(self):
         return True
 
-    def write(self, string):
+    def write(self, data=None):
+        msg = ""
         if self._prefix:
-            string = "{}: {}".format(self._prefix, string)
-        print("{}".format(string))
+            msg = "{}".format(self._prefix)
+        if data:
+            msg = "{} : {}".format(msg, data)
+        print("{}".format(msg))
 
