@@ -68,6 +68,10 @@ class Node(object):
             self.children.remove(child)
             child.parent = None
 
+    def remove_children(self, children):
+        for child in children:
+            self.remove_child(child)
+
     def delete(self):
         if not self.parent:
             raise Exception("Can't remove root node {}".format(self))
@@ -300,13 +304,19 @@ class ImplicitPort(Node):
     def label(self):
         return self.children[1]
 
+class PortList(Node):
+    """docstring for LinkNode"""
+    def __init__(self, **kwargs):
+        super(PortList, self).__init__(**kwargs)
 
 # FIXME: Abstract
 class Port(Node):
-    """docstring for LinkNode"""
+    """
+    Port have properties: actor, port, tag
+    Port propeties are stored as children
+    """
     def __init__(self, **kwargs):
         super(Port, self).__init__(**kwargs)
-        self.children = None
         self.actor = kwargs.get('actor')
         self.port = kwargs.get('port')
         self.tag = kwargs.get('tag')
@@ -321,11 +331,6 @@ class Port(Node):
                                                 hex(id(self)), self.debug_info)
         else:
             return "{} {}.{}".format(self.__class__.__name__, str(self.actor), self.port)
-
-class PortList(Node):
-    """docstring for LinkNode"""
-    def __init__(self, **kwargs):
-        super(PortList, self).__init__(**kwargs)
 
 class InPort(Port):
     """docstring for LinkNode"""
