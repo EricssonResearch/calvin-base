@@ -642,6 +642,69 @@ class Flatten(object):
         self.stack.pop()
 
 
+
+class CoalesceProperties(object):
+    """
+    Add the nbr_peers property for all ports, generating a number of
+    """
+    def __init__(self, issue_tracker):
+        super(CoalesceProperties, self).__init__()
+        self.issue_tracker = issue_tracker
+
+    def process(self, root):
+        self.counter = {}
+        self.port_properties = {}
+        self.visit(root)
+        props = []
+        for key, pp in self.port_properties.iteritems():
+            pp.add_child(ast.NamedArg(ident=ast.Id(ident="nbr_peers"), arg=ast.Value(value=self.counter[key])))
+            props.append(pp)
+        root.add_children(props)
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children[:])
+
+    @visitor.when(ast.Link)
+    def visit(self, link):
+        # Count incomming and outgoing links between ports
+        name = (link.inport.actor, link.inport.port, "in")
+        self.port_properties.setdefault(name, ast.PortProperty(actor=link.inport.actor, port=link.inport.port, direction="in"))
+        self.counter[name] = self.counter.get(name, 0) + 1
+
+        name = (link.outport.actor, link.outport.port, "out")
+        self.port_properties.setdefault(name, ast.PortProperty(actor=link.outport.actor, port=link.outport.port, direction="out"))
+        self.counter[name] = self.counter.get(name, 0) + 1
+
+        map(self.visit, link.children[:])
+
+    @visitor.when(ast.InPort)
+    def visit(self, node):
+        if not node.children:
+            return
+        node_port_properties = node.children
+        name = (node.actor, node.port, "in")
+        pp = self.port_properties[name]
+        for npp in node_port_properties:
+            pp.add_children(npp.children)
+
+    @visitor.when(ast.OutPort)
+    def visit(self, node):
+        if not node.children:
+            return
+        node_port_properties = node.children
+        name = (node.actor, node.port, "out")
+        pp = self.port_properties[name]
+        for npp in node_port_properties:
+            pp.add_children(npp.children)
+
+
+
 class ConsolidatePortProperty(object):
     """
     Consolidates port properties by removing duplicates and
@@ -1167,7 +1230,9 @@ class CodeGen(object):
         self.dump_tree('FLATTENED')
 
     def consolidate(self, issue_tracker):
-        consolidate = ConsolidatePortProperty(issue_tracker)
+        # consolidate = ConsolidatePortProperty(issue_tracker)
+        # consolidate.process(self.root)
+        consolidate = CoalesceProperties(issue_tracker)
         consolidate.process(self.root)
         self.dump_tree('CONSOLIDATED')
 
