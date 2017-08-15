@@ -692,6 +692,7 @@ class CoalesceProperties(object):
         pp = self.port_properties[name]
         for npp in node_port_properties:
             pp.add_children(npp.children)
+        node.remove_children(node_port_properties)
 
     @visitor.when(ast.OutPort)
     def visit(self, node):
@@ -702,6 +703,7 @@ class CoalesceProperties(object):
         pp = self.port_properties[name]
         for npp in node_port_properties:
             pp.add_children(npp.children)
+        node.remove_children(node_port_properties)
 
 
 
