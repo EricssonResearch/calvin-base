@@ -818,7 +818,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         i.token(routing="round-robin")
         """
         result, errors, warnings = self.parse('inline', script)
-        self.assertEqual(len(errors), 2)
+        self.assertEqual(len(errors), 1)
 
     def testAmbigousPortProperty2(self):
         script = r"""
