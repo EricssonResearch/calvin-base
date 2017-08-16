@@ -150,7 +150,7 @@ temperature.centigrade &gt; out.token
 }</code></pre>
 <p>Usage example:</p>
 <pre><code>trigger : std.Trigger(tick=1, data=true)
-hum : sensor.RelativeHumidity()
+hum : sensor.TriggeredRelativeHumidity()
 print : io.Print()
 
 trigger.data &gt; hum.measure

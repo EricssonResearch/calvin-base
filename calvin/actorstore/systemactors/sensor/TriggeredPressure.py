@@ -35,23 +35,23 @@ class TriggeredPressure(Actor):
     def setup(self):
         self.level = calvinsys.open(self, "io.pressure")
 
-    def teardown(self):
-        calvinsys.close(self.level)
-
-    def will_migrate(self):
-        self.teardown()
-
     def did_migrate(self):
         self.setup()
 
     def will_end(self):
-        self.teardown()
+        calvinsys.close(self.level)
+
+    
+    @stateguard(lambda self: calvinsys.can_write(self.level))
+    @condition(['trigger'], [])
+    def trigger_measurement(self, _):
+        calvinsys.write(self.level, True)
 
     @stateguard(lambda self: calvinsys.can_read(self.level))
-    @condition(['trigger'], ['pressure'])
+    @condition([], ['pressure'])
     def read_measurement(self):
         level = calvinsys.read(self.level)
         return (level,)
 
-    action_priority = (read_measurement, )
+    action_priority = (read_measurement, trigger_measurement)
     requires =  ['io.pressure']

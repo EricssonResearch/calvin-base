@@ -47,11 +47,16 @@ class TriggeredSoilMoisture(Actor):
     def will_end(self):
         self.teardown()
 
+    @stateguard(lambda self: calvinsys.can_write(self.level))
+    @condition(['trigger'], [])
+    def trigger_measurement(self, _):
+        calvinsys.write(self.level, True)
+
     @stateguard(lambda self: calvinsys.can_read(self.level))
-    @condition(['trigger'], ['level'])
+    @condition([], ['level'])
     def read_measurement(self):
         level = calvinsys.read(self.level)
         return (level,)
 
-    action_priority = (read_measurement, )
+    action_priority = (read_measurement, trigger_measurement)
     requires =  ['io.soilmoisture']

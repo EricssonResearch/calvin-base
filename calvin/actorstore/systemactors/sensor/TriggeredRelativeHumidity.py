@@ -17,7 +17,7 @@
 from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 
-class RelativeHumidity(Actor):
+class TriggeredRelativeHumidity(Actor):
 
     """
     Read Relative Humidity when told to.
@@ -36,21 +36,18 @@ class RelativeHumidity(Actor):
     def setup(self):
         self.relhum = calvinsys.open(self, 'io.humidity')
 
-    def will_migrate(self):
-        calvinsys.close(self.relhum)
-
     def did_migrate(self):
         self.setup()
 
     def will_end(self):
         calvinsys.close(self.relhum)
 
-    @stateguard(lambda self: self.relhum and calvinsys.can_write(self.relhum))
+    @stateguard(lambda self: calvinsys.can_write(self.relhum))
     @condition(['measure'], [])
     def measure(self, _):
         calvinsys.write(self.relhum, True)
 
-    @stateguard(lambda self: self.relhum and calvinsys.can_read(self.relhum))
+    @stateguard(lambda self: calvinsys.can_read(self.relhum))
     @condition([], ['percent'])
     def deliver(self):
         humidity = calvinsys.read(self.relhum)

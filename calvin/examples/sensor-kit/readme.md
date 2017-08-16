@@ -230,7 +230,7 @@ Usage example:
 
 ```
 trigger : std.Trigger(tick=1, data=true)
-hum : sensor.RelativeHumidity()
+hum : sensor.TriggeredRelativeHumidity()
 print : io.Print()
 
 trigger.data > hum.measure
