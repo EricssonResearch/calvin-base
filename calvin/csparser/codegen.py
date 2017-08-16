@@ -789,6 +789,82 @@ class MergePortProperties(object):
             prioritized = _merge_two(prioritized, merger)
         return prioritized
 
+class CheckPortProperties(object):
+    """
+    Merge port properties that have been set in various places
+
+    FIXME: Order is important, IMHO an _intrinsic_ property, i.e. defined by actor
+           should have preceedence over externally set properties, and likewise
+           a property defined inside a component should have preceedence over
+           externally set properties.
+    FIXME: Assuming for now that order of PortProperty's children complies with the above
+    """
+    def __init__(self, issue_tracker):
+        super(CheckPortProperties, self).__init__()
+        self.issue_tracker = issue_tracker
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children[:])
+
+    @visitor.when(ast.PortProperty)
+    def visit(self, node):
+        for p in node.children[:]:
+            self.check_property(p)
+
+    def check_property(self, prop):
+        p_name = prop.ident.ident
+        p_value = prop.arg.value if isinstance(prop.arg.value, (list, tuple)) else [prop.arg.value]
+        # print p_name, p_value
+        # Check that the property type is allowed
+        if p_name not in port_property_data:
+            reason = "Port property {} is unknown".format(p_name)
+            self.issue_tracker.add_error(reason, prop)
+            return
+        ppdata = port_property_data[p_name]
+        for value in p_value:
+            if ppdata['type'] == "category":
+                if value not in ppdata['values']:
+                    reason = "Port property {} can only have values {}".format(p_name, ", ".join(ppdata['values'].keys()))
+                    self.issue_tracker.add_error(reason, prop)
+                    continue
+                if prop.parent.direction not in ppdata['values'][value]['direction']:
+                    reason = "Port property {}={} is only for {} ports".format(p_name, value, ppdata['values'][value]['direction'])
+                    self.issue_tracker.add_error(reason, prop)
+                    continue
+            if ppdata['type'] == 'scalar':
+                if not isinstance(value, numbers.Number):
+                    reason = "Port property {} can only have scalar values".format(p_name)
+                    self.issue_tracker.add_error(reason, prop)
+                    continue
+            if ppdata['type'] == 'string':
+                if not isinstance(value, basestring):
+                    reason = "Port property {} can only have string values".format(p_name)
+                    self.issue_tracker.add_error(reason, prop)
+                    continue
+
+            if p_name == 'nbr_peers' and value > 1 and prop.parent.direction == 'in':
+                # Verify that inports with multiple connections have a routing property for multipeers
+                res = query(prop.parent, kind=ast.Id, attributes={'ident': 'routing'})
+                if not res:
+                    reason = "Input port {}.{} with multiple connections must have a routing port property.".format(prop.parent.actor, prop.parent.port)
+                    self.issue_tracker.add_error(reason, prop)
+                    continue
+                routings = res[0].parent.arg.value
+                if not isinstance(routings, (list, tuple)):
+                    routings = [routings]
+                valid_routings = [routing for routing in routings if port_property_data['routing']['values'][routing].get('multipeer', False)]
+                # FIXME: Issue warning if valid len(valid_routings) < len(routings)
+                routings = valid_routings[0] if len(valid_routings) == 1 else valid_routings
+                if not valid_routings:
+                    reason = "Input port {}.{} with multiple connections must have a routing port property.".format(prop.parent.actor, prop.parent.port)
+                    self.issue_tracker.add_error(reason, prop)
+                    continue
 
 
 class ConsolidatePortProperty(object):
@@ -1327,6 +1403,10 @@ class CodeGen(object):
         mp.visit(self.root)
         self.dump_tree('Merged properties')
 
+    def check_properties(self, issue_tracker):
+        CheckPortProperties
+        cp = CheckPortProperties(issue_tracker)
+        cp.visit(self.root)
 
     def generate_code_from_ast(self, issue_tracker):
         gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
@@ -1356,6 +1436,7 @@ class CodeGen(object):
         # ?
         self.consolidate(issue_tracker)
         self.merge_properties(issue_tracker)
+        self.check_properties(issue_tracker)
 
     def generate_code(self, issue_tracker, verify):
         self.phase1(issue_tracker)
