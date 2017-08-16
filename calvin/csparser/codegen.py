@@ -698,24 +698,21 @@ class CoalesceProperties(object):
     def visit(self, node):
         if not node.children:
             return
-        node_port_properties = node.children
         name = (node.actor, node.port, "in")
         pp = self.port_properties[name]
-        for npp in node_port_properties:
+        for npp in node.children[:]:
             pp.add_children(npp.children)
-        node.remove_children(node_port_properties)
+            node.remove_child(npp)
 
     @visitor.when(ast.OutPort)
     def visit(self, node):
         if not node.children:
             return
-        node_port_properties = node.children
         name = (node.actor, node.port, "out")
         pp = self.port_properties[name]
-        for npp in node_port_properties:
+        for npp in node.children[:]:
             pp.add_children(npp.children)
-        node.remove_children(node_port_properties)
-
+            node.remove_child(npp)
 
 
 class ConsolidatePortProperty(object):
