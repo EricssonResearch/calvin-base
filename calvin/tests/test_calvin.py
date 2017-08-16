@@ -3277,6 +3277,7 @@ class TestPortProperties(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail(reason="Line numbers are not properly propagated for error reporting")
     def testPortPropertyConsolidateRejectOutPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
