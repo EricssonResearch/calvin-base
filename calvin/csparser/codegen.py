@@ -481,6 +481,8 @@ class Flatten(object):
     """
     Flattens a block by wrapping everything in the block's namespace
     and propagating arguments before removing the block
+    N.B. This visits blocks depth-first and must start in a block node
+         or a node whose only child is a block.
     """
     def __init__(self, issue_tracker):
         self.stack = []
@@ -515,6 +517,10 @@ class Flatten(object):
 
     @visitor.when(ast.Port)
     def visit(self, node):
+        # Only promote once. List self.seen is reset when expanding a block
+        if node in self.seen:
+            return
+        self.seen.append(node)
         if node.actor:
             node.actor = self.stack[-1] + ':' + node.actor
         else:
@@ -643,6 +649,7 @@ class Flatten(object):
 
         # Promote ports and assignments (handled by visitors)
         non_blocks = [x for x in node.children if type(x) is not ast.Block]
+        self.seen = []
         map(self.visit, non_blocks)
 
         # Raise promoted children to outer level
