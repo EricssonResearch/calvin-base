@@ -387,6 +387,7 @@ class CollectPortProperties(object):
             p = query_res[0]
             port_property = ast.PortProperty(actor=name, port=port, direction="in", debug_info=node.debug_info)
             for ident, value in pp.items():
+                # FIXME: Is add_property the right method to use here?
                 port_property.add_property(ident, value)
             p.add_child(port_property)
 
@@ -401,6 +402,7 @@ class CollectPortProperties(object):
             p = query_res[0]
             port_property = ast.PortProperty(actor=name, port=port, direction="out", debug_info=node.debug_info)
             for ident, value in pp.items():
+                # FIXME: Is add_property the right method to use here?
                 port_property.add_property(ident, value)
             p.add_child(port_property)
 
@@ -672,7 +674,7 @@ class CoalesceProperties(object):
 
     @visitor.when(ast.Link)
     def visit(self, link):
-        # Count incomming and outgoing links between ports
+        # Create port properties and compute number of connections for each port
         name = (link.inport.actor, link.inport.port, "in")
         self.port_properties.setdefault(name, ast.PortProperty(actor=link.inport.actor, port=link.inport.port, direction="in"))
         self.counter[name] = self.counter.get(name, 0) + 1
