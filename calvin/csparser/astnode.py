@@ -172,10 +172,12 @@ class PortProperty(Node):
         self.direction = kwargs.get('direction')
         self.add_children(kwargs.get('args', {}))
 
+    # FIXME: Remove. Not needed with new codegen implementation
     def is_same_port(self, other):
         return (self.actor == other.actor and self.port == other.port and
             not (self.direction is not None and other.direction is not None and self.direction != other.direction))
 
+    # FIXME: Move functionality to codegen
     def consolidate(self, other):
         """
         This method consolidates two port properties into one.
@@ -218,6 +220,7 @@ class PortProperty(Node):
             other.remove_child(prop)
             self.add_child(prop)
 
+    # FIXME: Get rid of this method?
     def add_property(self, ident, arg):
         my_properties = [p for p in self.children if p.ident.ident == ident]
         if my_properties:
