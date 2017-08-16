@@ -715,6 +715,78 @@ class CoalesceProperties(object):
             node.remove_child(npp)
 
 
+class MergePortProperties(object):
+    """
+    Merge port properties that have been set in various places
+
+    FIXME: Order is important, IMHO an _intrinsic_ property, i.e. defined by actor
+           should have preceedence over externally set properties, and likewise
+           a property defined inside a component should have preceedence over
+           externally set properties.
+    FIXME: Assuming for now that order of PortProperty's children complies with the above
+    """
+    def __init__(self, issue_tracker):
+        super(MergePortProperties, self).__init__()
+        self.issue_tracker = issue_tracker
+
+    @visitor.on('node')
+    def visit(self, node):
+        pass
+
+    @visitor.when(ast.Node)
+    def visit(self, node):
+        if not node.is_leaf():
+            map(self.visit, node.children[:])
+
+    @visitor.when(ast.PortProperty)
+    def visit(self, node):
+        props = {}
+        for p in node.children[:]:
+            props.setdefault(p.ident.ident, []).append(p)
+        for p, mergelist in props.iteritems():
+            if len(mergelist) < 2:
+                # Uncontested
+                continue
+            # Detach properties from node
+            node.remove_children(mergelist)
+            # Merge list of properties targeting the same port
+            merged = self.merge_properties(mergelist)
+            # Add the resulting, single, merged property to node
+            node.add_child(merged)
+
+    def merge_properties(self, mergelist):
+        prioritized = mergelist[0]
+        for merger in mergelist[1:]:
+            prioritized = self._merge_two(prioritized, merger)
+        return prioritized
+
+    def _merge_two(self, left, right):
+        lval = left.arg.value
+        rval = right.arg.value
+        if lval == rval:
+            # Identical properties
+            return left
+        lval_is_scalar = not isinstance(lval, (tuple, list))
+        rval_is_scalar = not isinstance(rval, (tuple, list))
+        if lval_is_scalar and rval_is_scalar:
+            # Both are scalar or string => left is prioritized (see class docs)
+            return left
+        # Make sure lval and rval are both lists
+        if lval_is_scalar:
+            lval = [lval]
+        if rval_is_scalar:
+            rval = [rval]
+        # Make ordered subset, possibly empty
+        merged_val = [item for item in lval if item in rval]
+        if not merged_val:
+            # Generate errors for each port property targeting this port
+            reason = "Can't handle conflicting properties without common alternatives"
+            for node in mergelist:
+                self.issue_tracker.add_error(reason, node)
+        left.arg.value = merged_val
+        return left
+
+
 class ConsolidatePortProperty(object):
     """
     Consolidates port properties by removing duplicates and
@@ -1246,6 +1318,12 @@ class CodeGen(object):
         consolidate.process(self.root)
         self.dump_tree('Coalesced')
 
+    def merge_properties(self, issue_tracker):
+        mp = MergePortProperties(issue_tracker)
+        mp.visit(self.root)
+        self.dump_tree('Merged properties')
+
+
     def generate_code_from_ast(self, issue_tracker):
         gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
         gen_app_info.process()
@@ -1273,6 +1351,7 @@ class CodeGen(object):
         self.flatten(issue_tracker)
         # ?
         self.consolidate(issue_tracker)
+        self.merge_properties(issue_tracker)
 
     def generate_code(self, issue_tracker, verify):
         self.phase1(issue_tracker)
