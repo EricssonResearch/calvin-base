@@ -360,7 +360,7 @@ class CollectPortProperties(object):
             if not node.direction or node.direction == "in":
                 ips += query(block, kind=ast.InternalInPort, maxdepth=2, attributes={'port':node.port})
             if not node.direction or node.direction == "out":
-                ips = query(block, kind=ast.InternalOutPort, maxdepth=2, attributes={'port':node.port})
+                ips += query(block, kind=ast.InternalOutPort, maxdepth=2, attributes={'port':node.port})
             if len(ips) != 1:
                 raise Exception("Ambiugous port names not resolved")
             port = ips[0]
