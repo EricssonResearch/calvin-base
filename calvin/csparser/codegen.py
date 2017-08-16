@@ -328,7 +328,14 @@ class RestoreParents(object):
         self.stack.pop()
 
 class CollectPortProperties(object):
-    """docstring for RestoreParents"""
+    """
+    Collect actor-declared port properties and PortProperty statements and make the port properties
+    children of their respective ports.
+    The rationale for this is that we don't need to handle namespace propagation etc. for the port properties
+    since they will piggy-back on the port that the properties relate to.
+    N.B. A consequence of this is that until the port properties have been coalesced (extracted
+    from the port) after the tree is flattened the (name, port, direction) combo is not updated.
+    """
     def __init__(self, issue_tracker):
         super(CollectPortProperties, self).__init__()
         self.issue_tracker = issue_tracker
@@ -345,7 +352,7 @@ class CollectPortProperties(object):
 
     @visitor.when(ast.PortProperty)
     def visit(self, node):
-        print "PortProperty statement:", node
+        # Collect explicit PortProperty statements and make them children of their respective ports
         block = node.parent
         if node.actor is None:
             # This works because any ambiguity in port names have been detected in check_consistency in a previous step
@@ -375,7 +382,7 @@ class CollectPortProperties(object):
     def visit(self, node):
         if not node.metadata['is_known']:
             return
-        # Collect actor-declared port properties
+        # Collect actor-declared port properties and make them children of their respective ports
         for port, pp in  node.metadata['input_properties'].items():
             name = node.ident
             root = node.parent
@@ -384,12 +391,13 @@ class CollectPortProperties(object):
                 # Silently let this pass to be handled during consistency check
                 continue
                 # raise Exception("Port {}.{} not found".format(name, port))
-            p = query_res[0]
+            destination_port = query_res[0]
             port_property = ast.PortProperty(actor=name, port=port, direction="in", debug_info=node.debug_info)
             for ident, value in pp.items():
                 # FIXME: Is add_property the right method to use here?
-                port_property.add_property(ident, value)
-            p.add_child(port_property)
+                prop = ast.NamedArg(ident=ast.Id(ident=ident), arg=ast.Value(value=value))
+                port_property.add_child(prop)
+            destination_port.add_child(port_property)
 
         for port, pp in  node.metadata['output_properties'].items():
             name = node.ident
@@ -399,12 +407,13 @@ class CollectPortProperties(object):
                 # Silently let this pass to be handled during consistency check
                 continue
                 # raise Exception("Port {}.{} not found".format(name, port))
-            p = query_res[0]
+            destination_port = query_res[0]
             port_property = ast.PortProperty(actor=name, port=port, direction="out", debug_info=node.debug_info)
             for ident, value in pp.items():
                 # FIXME: Is add_property the right method to use here?
-                port_property.add_property(ident, value)
-            p.add_child(port_property)
+                prop = ast.NamedArg(ident=ast.Id(ident=ident), arg=ast.Value(value=value))
+                port_property.add_child(prop)
+            destination_port.add_child(port_property)
 
 
 class Expander(object):
@@ -1238,7 +1247,7 @@ class CodeGen(object):
         # consolidate.process(self.root)
         consolidate = CoalesceProperties(issue_tracker)
         consolidate.process(self.root)
-        self.dump_tree('CONSOLIDATED')
+        self.dump_tree('Coalesced')
 
     def generate_code_from_ast(self, issue_tracker):
         gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
