@@ -85,6 +85,14 @@ def compare(dut, ref):
         # print "Comparing {} and {}".format(dut, ref)
         assert dut == ref
 
+# See https://stackoverflow.com/a/25851972
+def ordered(obj):
+    if isinstance(obj, dict):
+        return sorted((k, ordered(v)) for k, v in obj.items())
+    if isinstance(obj, list):
+        return sorted(ordered(x) for x in obj)
+    else:
+        return obj
 
 test_list = [os.path.basename(x)[:-7] for x in glob.glob("{}/*.calvin".format(absolute_filename('codegen')))]
 
@@ -92,11 +100,10 @@ test_list = [os.path.basename(x)[:-7] for x in glob.glob("{}/*.calvin".format(ab
 def testCalvinScriptCodegen(test):
     code, it, ref = cs_codegen(test)
     assert it.error_count == 0
-    assert code == ref
+    compare(ordered(code), ordered(ref))
 
 @pytest.mark.parametrize("test", test_list)
 def testCalvinScriptDeploygen(test):
     code, it, ref = ds_codegen(test)
     assert it.error_count == 0
-    # assert code == ref
-    compare(code, ref)
+    compare(ordered(code), ordered(ref))
