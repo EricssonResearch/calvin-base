@@ -526,11 +526,6 @@ class Flatten(object):
         else:
             node.actor = self.stack[-1]
 
-    # @visitor.when(ast.PortProperty)
-    # def visit(self, node):
-    #     if node.actor is not None:
-    #         node.actor = self.stack[-1] + ':' + node.actor
-
     @visitor.when(ast.Block)
     def visit(self, node):
         # Recurse into blocks first
