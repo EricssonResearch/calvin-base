@@ -121,14 +121,14 @@ class BraceFormatter(object):
     #         self.result.append("{})".format(self._indentation()))
     #     self._visit(node, preorder=f, postorder=g)
     #
-    # @visitor.when(ast.Id)
-    # def visit(self, node):
-    #     self.result.append("{}( {} {} )".format(self._indentation(), node, node.ident))
-    #
-    # @visitor.when(ast.Value)
-    # def visit(self, node):
-    #     self.result.append("{}( {} {} )".format(self._indentation(), node, node.value))
-    #
+    @visitor.when(ast.Id)
+    def visit(self, node):
+        self.result.append("{}( {} {} )".format(self._indentation(), node.__class__.__name__, node.ident))
+
+    @visitor.when(ast.Value)
+    def visit(self, node):
+        self.result.append("{}( {} {} )".format(self._indentation(), node.__class__.__name__, node.value))
+
     # @visitor.when(ast.Assignment)
     # def visit(self, node):
     #     def f(node):
@@ -177,6 +177,16 @@ class BraceFormatter(object):
     def visit(self, node):
         def f(node):
             self.result.append("{}( {} {}".format(self._indentation(), node.__class__.__name__, node.name))
+            self.indent += 1
+        def g(node):
+            self.indent -= 1
+            self.result.append("{})".format(self._indentation()))
+        self._visit(node, preorder=f, postorder=g)
+
+    @visitor.when(ast.PortProperty)
+    def visit(self, node):
+        def f(node):
+            self.result.append("{}( {} {}.{}[{}]".format(self._indentation(), node.__class__.__name__, node.actor, node.port, node.direction))
             self.indent += 1
         def g(node):
             self.indent -= 1
