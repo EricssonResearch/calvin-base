@@ -51,9 +51,12 @@ class StandardOut(base_calvinsys_object.BaseCalvinsysObject):
 
     def write(self, data=None):
         msg = ""
-        if self._prefix:
+        if data and self._prefix:
+            msg = "{}: {}".format(self._prefix, data)
+        elif data:
+            msg = "{}".format(data)
+            pass
+        elif self._prefix:
             msg = "{}".format(self._prefix)
-        if data:
-            msg = "{} : {}".format(msg, data)
-        print("{}".format(msg))
+        print(msg)
 
