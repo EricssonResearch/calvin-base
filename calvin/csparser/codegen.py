@@ -757,36 +757,38 @@ class MergePortProperties(object):
             node.add_child(merged)
 
     def merge_properties(self, mergelist):
+
+        def _merge_two(left, right):
+            lval = left.arg.value
+            rval = right.arg.value
+            if lval == rval:
+                # Identical properties
+                return left
+            lval_is_scalar = not isinstance(lval, (tuple, list))
+            rval_is_scalar = not isinstance(rval, (tuple, list))
+            if lval_is_scalar and rval_is_scalar:
+                # Both are non-iterables => left is prioritized (see class docs)
+                return left
+            # Make sure lval and rval are both lists
+            if lval_is_scalar:
+                lval = [lval]
+            if rval_is_scalar:
+                rval = [rval]
+            # Make ordered subset, possibly empty
+            merged_val = [item for item in lval if item in rval]
+            if not merged_val:
+                # Generate errors for each port property targeting this port
+                reason = "Can't handle conflicting properties without common alternatives"
+                for node in mergelist:
+                    self.issue_tracker.add_error(reason, node)
+            left.arg.value = merged_val
+            return left
+
         prioritized = mergelist[0]
         for merger in mergelist[1:]:
-            prioritized = self._merge_two(prioritized, merger)
+            prioritized = _merge_two(prioritized, merger)
         return prioritized
 
-    def _merge_two(self, left, right):
-        lval = left.arg.value
-        rval = right.arg.value
-        if lval == rval:
-            # Identical properties
-            return left
-        lval_is_scalar = not isinstance(lval, (tuple, list))
-        rval_is_scalar = not isinstance(rval, (tuple, list))
-        if lval_is_scalar and rval_is_scalar:
-            # Both are non-iterables => left is prioritized (see class docs)
-            return left
-        # Make sure lval and rval are both lists
-        if lval_is_scalar:
-            lval = [lval]
-        if rval_is_scalar:
-            rval = [rval]
-        # Make ordered subset, possibly empty
-        merged_val = [item for item in lval if item in rval]
-        if not merged_val:
-            # Generate errors for each port property targeting this port
-            reason = "Can't handle conflicting properties without common alternatives"
-            for node in mergelist:
-                self.issue_tracker.add_error(reason, node)
-        left.arg.value = merged_val
-        return left
 
 
 class ConsolidatePortProperty(object):
