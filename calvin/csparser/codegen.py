@@ -769,7 +769,7 @@ class MergePortProperties(object):
         lval_is_scalar = not isinstance(lval, (tuple, list))
         rval_is_scalar = not isinstance(rval, (tuple, list))
         if lval_is_scalar and rval_is_scalar:
-            # Both are scalar or string => left is prioritized (see class docs)
+            # Both are non-iterables => left is prioritized (see class docs)
             return left
         # Make sure lval and rval are both lists
         if lval_is_scalar:
