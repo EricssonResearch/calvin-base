@@ -139,6 +139,17 @@ class CalvinTestBase(unittest.TestCase):
         assert actual
         assert reduce(lambda a, b: a and b[0] == b[1], zip(expected, actual), True)
 
+    def get_port_property(self, app_info, actor, port, direction, key):
+        """Access port properties in a robust way since order might change between parser revisions"""
+        # Get list of port properties
+        props = app_info['port_properties'][actor]
+        for p in props:
+            found = p['direction'] == direction and p['port'] == port
+            if not found:
+                continue
+            return p['properties'][key]
+        raise KeyError("Property '{}' not present.".format(key))
+
     def compile_script(self, script, name):
         # Instead of rewriting tests after compiler.compile_script changed
         # from returning app_info, errors, warnings to app_info, issuetracker
@@ -2890,8 +2901,7 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing'] == 'round-robin')
+        assert (self. get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
@@ -2937,19 +2947,16 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src'][0]
         assert (app_info['port_properties']['testScript:src'][0]['port'] ==
                 'integer')
-        assert (app_info['port_properties']['testScript:src'][0]
-                    ['properties']['routing'] == 'round-robin')
+        assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
 
         assert 'port' in app_info['port_properties']['testScript:snk1:compsnk'][0]
         assert (app_info['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testScript:snk1:compsnk'][0]
-                    ['properties']['test1'] == 'dummy1')
+        assert (self.get_port_property(app_info, 'testScript:snk1:compsnk', 'token', 'in', 'test1') == 'dummy1')
         assert 'port' in app_info['port_properties']['testScript:snk2:compsnk'][0]
         assert (app_info['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testScript:snk2:compsnk'][0]
-                    ['properties']['test1'] == 'dummy2')
+        assert (self.get_port_property(app_info, 'testScript:snk2:compsnk', 'token', 'in', 'test1') == 'dummy2')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -2994,8 +3001,7 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing'] == 'round-robin')
+        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
@@ -3040,19 +3046,16 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src'][0]
         assert (app_info['port_properties']['testScript:src'][0]['port'] ==
                 'integer')
-        assert (app_info['port_properties']['testScript:src'][0]
-                    ['properties']['routing'] == 'round-robin')
+        assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
 
         assert 'port' in app_info['port_properties']['testScript:snk1:compsnk'][0]
         assert (app_info['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testScript:snk1:compsnk'][0]
-                    ['properties']['test1'] == 'dummyx')
+        assert (self.get_port_property(app_info, 'testScript:snk1:compsnk', 'token', 'in', 'test1') == 'dummyx')
         assert 'port' in app_info['port_properties']['testScript:snk2:compsnk'][0]
         assert (app_info['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testScript:snk2:compsnk'][0]
-                    ['properties']['test1'] == 'dummyx')
+        assert (self.get_port_property(app_info, 'testScript:snk2:compsnk', 'token', 'in', 'test1') == 'dummyx')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3098,19 +3101,16 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing'] == 'round-robin')
+        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
 
         assert 'port' in app_info['port_properties']['testScript:snk1'][0]
         assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test1'] == 'dummyx')
+        assert (self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test1') == 'dummyx')
         assert 'port' in app_info['port_properties']['testScript:snk2'][0]
         assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['test1'] == 'dummyx')
+        assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test1') == 'dummyx')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3155,8 +3155,7 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src'][0]
         assert (app_info['port_properties']['testScript:src'][0]['port'] ==
                 'integer')
-        assert (app_info['port_properties']['testScript:src'][0]
-                    ['properties']['routing'] == 'round-robin')
+        assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3201,10 +3200,8 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing'][0] == 'round-robin')
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing'][1] == 'random')
+        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[0] == 'round-robin')
+        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[1] == 'random')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3251,10 +3248,8 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert len(app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing']) == 1
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing'][0] == 'round-robin')
+        assert len(self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')) == 1
+        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[0] == 'round-robin')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3324,10 +3319,8 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src'][0]
         assert (app_info['port_properties']['testScript:src'][0]['port'] ==
                 'integer')
-        assert len(app_info['port_properties']['testScript:src'][0]
-                    ['properties']['routing']) == 2
-        assert (app_info['port_properties']['testScript:src'][0]
-                    ['properties']['routing'][0] == 'round-robin')
+        assert len(self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing')) == 2
+        assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing')[0] == 'round-robin')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3375,29 +3368,21 @@ class TestPortProperties(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]
-                    ['properties']['routing'] == 'round-robin')
+        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
 
         assert 'port' in app_info['port_properties']['testScript:snk1'][0]
         assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
                 'token')
-        assert len(app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test1']) == 2
-        assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test1'][0] == 'dummyz')
-        assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test1'][1] == 'dummyy')
-        assert (app_info['port_properties']['testScript:snk1'][0]
-                    ['properties']['test2'] == 'dummyi')
+        assert len(self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test1')) == 2
+        assert (self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test1')[0] == 'dummyz')
+        assert (self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test1')[1] == 'dummyy')
+        assert (self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test2') == 'dummyi')
         assert 'port' in app_info['port_properties']['testScript:snk2'][0]
         assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
                 'token')
-        assert len(app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['test1']) == 1
-        assert (app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['test1'][0] == 'dummyy')
-        assert (app_info['port_properties']['testScript:snk2'][0]
-                    ['properties']['test2'] == 'dummyi')
+        assert len(self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test1')) == 1
+        assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test1')[0] == 'dummyy')
+        assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test2') == 'dummyi')
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3442,8 +3427,7 @@ class TestCollectPort(CalvinTestBase):
         assert 'port' in app_info['port_properties']['testCollectPort:snk'][0]
         assert (app_info['port_properties']['testCollectPort:snk'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testCollectPort:snk'][0]
-                    ['properties']['nbr_peers'] == 2)
+        assert (self.get_port_property(app_info, 'testCollectPort:snk', 'token', 'in', 'nbr_peers') == 2)
 
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3490,10 +3474,8 @@ class TestCollectPort(CalvinTestBase):
                 'token')
         assert (app_info['port_properties']['testCollectPort:duo:id2'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testCollectPort:duo:id1'][0]
-                    ['properties']['nbr_peers'] == 2)
-        assert (app_info['port_properties']['testCollectPort:duo:id2'][0]
-                    ['properties']['nbr_peers'] == 2)
+        assert (self.get_port_property(app_info, 'testCollectPort:duo:id1', 'token', 'in', 'nbr_peers') == 2)
+        assert (self.get_port_property(app_info, 'testCollectPort:duo:id2', 'token', 'in', 'nbr_peers') == 2)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
@@ -3540,10 +3522,8 @@ class TestCollectPort(CalvinTestBase):
                 'token')
         assert (app_info['port_properties']['testCollectPort:snk2'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testCollectPort:snk1'][0]
-                    ['properties']['nbr_peers'] == 2)
-        assert (app_info['port_properties']['testCollectPort:snk2'][0]
-                    ['properties']['nbr_peers'] == 2)
+        assert (self.get_port_property(app_info, 'testCollectPort:snk1', 'token', 'in', 'nbr_peers') == 2)
+        assert (self.get_port_property(app_info, 'testCollectPort:snk2', 'token', 'in', 'nbr_peers') == 2)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
@@ -3575,8 +3555,7 @@ class TestCollectPort(CalvinTestBase):
         assert len(errors) == 0
         assert (app_info['port_properties']['testCollectPort:snk'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testCollectPort:snk'][0]
-                    ['properties']['nbr_peers'] == 2)
+        assert (self.get_port_property(app_info, 'testCollectPort:snk', 'token', 'in', 'nbr_peers') == 2)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
