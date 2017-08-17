@@ -361,8 +361,14 @@ class CollectPortProperties(object):
                 ips += query(block, kind=ast.InternalInPort, maxdepth=2, attributes={'port':node.port})
             if not node.direction or node.direction == "out":
                 ips += query(block, kind=ast.InternalOutPort, maxdepth=2, attributes={'port':node.port})
-            if len(ips) != 1:
-                raise Exception("Ambiugous port names not resolved")
+            # If len(ips) == 0 then there is no port with such a name => error should have been reported earlier
+            # Since there is no port to attach the property to, drop the node and continue
+            if not ips:
+                node.delete() # remove from tree
+                return
+            # If len(ips) > 1 then there are multiple ports connected which is OK as long there is not a mix of inports and outports
+            # which should have been detected earlier => error should have been reported earlier.
+            # Since it is enough to attach the the property to one port instance, grab the first port instance.
             port = ips[0]
             node.delete() # remove from tree
             port.add_child(node)
@@ -373,6 +379,14 @@ class CollectPortProperties(object):
                 ips += query(block, kind=ast.InPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
             if not node.direction or node.direction == "out":
                 ips += query(block, kind=ast.OutPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
+            # If len(ips) == 0 then there is no port with such a name => error should have been reported earlier
+            # Since there is no port to attach the property to, drop the node and continue
+            if not ips:
+                node.delete() # remove from tree
+                return
+            # If len(ips) > 1 then there are multiple ports connected which is OK as long there is not a mix of inports and outports
+            # which should have been detected earlier => error should have been reported earlier.
+            # Since it is enough to attach the the property to one port instance, grab the first port instance.
             port = ips[0]
             node.delete() # remove from tree
             port.add_child(node)
@@ -1236,9 +1250,9 @@ class CodeGen(object):
         self.dump_tree('Merged properties')
 
     def check_properties(self, issue_tracker):
-        CheckPortProperties
         cp = CheckPortProperties(issue_tracker)
         cp.visit(self.root)
+        self.dump_tree('Checked properties')
 
     def generate_code_from_ast(self, issue_tracker):
         gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
