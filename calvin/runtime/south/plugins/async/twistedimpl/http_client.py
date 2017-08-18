@@ -94,9 +94,11 @@ def encode_headers(headers):
 def encode_body(data):
     if not data:
         return None
-    if not isinstance(data, str):
+    if not isinstance(data, basestring):
         return None
-    return FileBodyProducer(StringIO(data))
+    ascii_data = data.encode('ascii', 'ignore')
+    print "ascii_data=",ascii_data
+    return FileBodyProducer(StringIO(ascii_data))
 
 
 class BodyReader(Protocol):
@@ -150,7 +152,9 @@ class HTTPClient(CalvinCBClass):
     def request(self, command, url, params, headers, data):
         url += encode_params(params)
         twisted_headers = encode_headers(headers)
+	print "ENglund, pre-body:",data
         body = encode_body(data)
+	print "ENglund, post-body:",body
         deferred = self._agent.request(command, url, headers=twisted_headers, bodyProducer=body)
         request = HTTPRequest()
         deferred.addCallback(self._receive_headers, request)

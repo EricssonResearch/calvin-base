@@ -1,0 +1,14 @@
+trigger : std.Trigger(data=1, tick=10)
+camera : media.Camera()
+screen : media.ImageRenderer()
+trigger.data  > camera.trigger
+camera.image > screen.image
+
+
+
+
+#trigger : std.Trigger(data=1, tick=10)
+#camera : media.Camera()
+#screen : io.StandardOut()
+#trigger.data  > camera.trigger
+#camera.image > screen.token

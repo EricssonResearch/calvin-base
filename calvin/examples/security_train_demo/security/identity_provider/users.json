@@ -1,0 +1,50 @@
+{
+    "users_db": [
+	{
+        "username": "user1",
+	    "attributes": {
+	    	"first_name": "Anders",
+            "last_name": "Andersson",
+            "groups":["passenger"]
+	    }, 
+	    "password": "$pbkdf2-sha256$200000$FAKg1BqDkNI6J2QsRUip1Q$2DfZLQd5WWTQd6808vKGBbmsuX32LzptdYEoEMcpsOU"
+	}, {
+	    "username": "user2",
+	    "attributes": {
+		    "age": "22",
+		    "last_name": "Beritsdotter",
+		    "first_name": "Berit",
+		    "address": "Sabelgranden 7",
+		    "groups": ["conductor", "Lund"]
+  	    },
+	    "password": "$pbkdf2-sha256$200000$ZQxByDkHQChF6J0zxvi/1w$xBpJQ4IctZ0gx9FiuIV3LrOqpas/7NwJjBSl1K2rgJ8"
+	}, {
+	    "username": "user3",
+	    "attributes": {
+		    "age": "33", 
+		    "last_name": "Carlsson",
+		    "first_name": "Carl",
+		    "groups": ["conductor", "Stockholm"]
+	    },
+	    "password": "$pbkdf2-sha256$200000$JESIUYrx/r9Xak1pbU0JQQ$B8lN.SsmtZRRGXCMOyPLHsz41NTBMklITy9zWiMSbVo"
+	}, {
+	    "username": "user4", 
+	    "attributes": {
+		    "age": "44",
+		    "last_name": "Davidsson",
+		    "first_name": "David",
+		    "groups": ["train_driver", "Lund"]
+	    }, 
+	    "password": "$pbkdf2-sha256$200000$FgJAqJXS2jtHaM2ZU2oNAQ$lBpfOT9Fj41z5GipQT9Ku/72Lb/GQgfJchdw86dYAX0"
+	}, {
+	    "username": "user5",
+	    "attributes": {
+		    "age": "55",
+		    "last_name": "Elinsdotter",
+		    "first_name": "Elin",
+		    "groups": ["train_driver", "Stockholm"]
+	    },
+	    "password": "$pbkdf2-sha256$200000$aw3hXGttzXlvjVFKaU0pBQ$7JWRXy94Bsr1HV/Z8t1iHGCYcRvDzm9lMGog2j2rWw0"
+	}
+    ]
+}

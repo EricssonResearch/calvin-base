@@ -1,0 +1,25 @@
+{
+    "description": "Allow unsigned applications for anyone with a SJ user account",
+    "rule_combining": "permit_overrides", 
+    "target": {
+        "subject": {
+            "application_signer": ["__unsigned__"] 
+        }
+    }, 
+    "rules": [
+        {
+            "id": "application_signer_rule",
+            "description":"Permit if policy target matches", 
+            "effect": "permit",
+            "condition":{
+                "function":"and",
+                "attributes":[
+                    {
+                        "function":"equal",
+                        "attributes":["attr:subject:organization",["SJ"]]
+                    }
+                ]
+            }
+        }
+    ] 
+}

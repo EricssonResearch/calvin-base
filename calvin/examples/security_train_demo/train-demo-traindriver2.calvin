@@ -1,0 +1,199 @@
+#deploy info
+define CONTROL_URI = "control_uri"
+#define SCRIPT = "src : std.CountTimer()\nsnk : io.StandardOut()\nsrc.integer > snk.token\n"
+define SCRIPT = "cameraTrigger : std.Trigger(data=0.22, tick=1)\n"
+"camera : media.Camera()\n"
+"cameraDisplay : media.ImageRenderer()\n"
+"infoBoardTrigger : std.Trigger(tick=1, data=\"Cargo train.NEW_LINEKeep off tracks!\")\n"
+"infoBoard : io.Display()\nsensorTimer : std.CountTimer(sleep=5)\nsensor :sensor.Environmental()\n"
+"sensorDisplay : io.Display()\n"
+"cameraTrigger.data > camera.trigger\n"
+"camera.image > cameraDisplay.image\n"
+"sensorTimer.integer > sensor.trigger\n"
+"sensor.data > sensorDisplay.text\n"
+"infoBoardTrigger.data > infoBoard.text"
+#define SCRIPTFILE="train.calvin"
+define APPNAME = "train_demo_conductor1"
+#deploy info
+
+### Components ###
+# Components
+component CalvinDeployer(control_uri) name, script, deploy_info -> app_info {
+    sec_credentials:std.Constant(data={"SJ":{"username":"user5","password":"pass5"}})
+    controlpath: std.Constant(data=control_uri)    
+    controluri: io.FileReader()
+    deploy: calvin.CalvinDeployerA()
+    post: net.HTTPPost()
+
+    dbg1: io.Print()
+    dbg2: io.Print()
+
+    sec_credentials.token > deploy.sec_credentials
+    .name > deploy.name
+    .script > deploy.script
+    .deploy_info > deploy.deploy_info
+    deploy.app_info > .app_info
+
+    controlpath.token > dbg1.token
+    controluri.out > dbg2.token
+
+    controlpath.token > controluri.filename
+    controluri.out > deploy.control_uri
+
+    deploy.URL > post.URL
+    deploy.params > post.params
+    deploy.header > post.header
+    deploy.data > post.data
+
+    post.status > deploy.status
+    post.header > deploy.header
+    post.data > deploy.data
+}
+
+component CalvinMigrater(control_uri, deploy_info) app_id, key -> done {
+    controlpath: std.Constant(data=control_uri)
+    controluri: io.FileReader()
+    migrate: calvin.CalvinMigraterA(deploy_info=deploy_info)
+    post: net.HTTPPost()
+
+    .app_id > migrate.app_id
+    .key > migrate.key
+    migrate.done > .done
+
+    controlpath.token > controluri.filename
+    controluri.out > migrate.control_uri
+
+    migrate.URL > post.URL
+    migrate.params > post.params
+    migrate.header > post.header
+    migrate.data > post.data
+
+    post.status > migrate.status
+    post.header > migrate.header
+    post.data > migrate.data
+}
+
+### Actor instances ###
+#script file
+file: std.Constant(data=SCRIPT)
+
+#deploy info
+deploy_info: std.Constant(data=
+{
+    "requirements":
+    {
+        "cameraTrigger":[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]},"type":"+"}],
+        "camera":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]},"type":"+"}],
+        "cameraDisplay":[{"op": "node_attr_match", "kwargs":{"index":["node_name", {"organization":"SJ","name": "ELX"}]},"type":"+"}],
+        "infoBoardTrigger":[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_InfoBoard"}]},"type":"+"}],
+        "infoBoard":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_InfoBoard"}]},"type":"+"}],
+        "sensorTimer":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]},"type":"+"}],
+        "sensor":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]},"type":"+"}],
+        "sensorDisplay":[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]},"type":"+"}]
+    }
+})
+
+# name
+name: std.Constant(data=APPNAME)
+
+#rt control
+deploy: CalvinDeployer(control_uri=CONTROL_URI)
+migrate: CalvinMigrater(control_uri=CONTROL_URI, deploy_info=
+{
+   "stationLund":
+   {
+        "requirements":
+        {
+	    "cameraTrigger":[{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]}, "type": "+"}],
+	    "camera":       [{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]}, "type": "+"}],
+	    "infoBoardTrigger":[{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_InfoBoard"}]}, "type": "+"}],
+	    "infoBoard":    [{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_InfoBoard"}]}, "type": "+"}],
+	    "sensorTimer":  [{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]}, "type": "+"}],
+	    "sensorDisplay":[{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]}, "type": "+"}],
+            "sensor":       [{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_Camera_Sensehat"}]}, "type": "+"}]
+        }
+    },
+    "stationStockholm":
+    {
+        "requirements":
+        {
+	    "cameraTrigger":[{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_Camera_Sensehat"}]}, "type": "+"}],
+	    "camera":       [{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_Camera_Sensehat"}]}, "type": "+"}],
+	    "infoBoardTrigger":[{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_InfoBoard"}]}, "type": "+"}],
+	    "infoBoard":    [{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_InfoBoard"}]}, "type": "+"}],
+	    "sensorTimer":  [{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_Camera_Sensehat"}]}, "type": "+"}],
+	    "sensorDisplay":[{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_Camera_Sensehat"}]}, "type": "+"}],
+            "sensor":       [{"op": "node_attr_match","kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_Camera_Sensehat"}]}, "type": "+"}]
+        }
+    }
+})
+
+
+
+### Debug ###
+dbgLund: io.Print()
+dbgStockholm: io.Print()
+dbgDeploy: io.Print()
+dbgMigrate: io.Print()
+
+#RFID stuff
+nothing : std.Void()
+dataConst: std.Constant(data="data", n=-1)
+RFIDConst: std.Constant(data=53072129, n=-1)
+
+readerLund : sensor.RFIDReader()
+jsonLund: json.GetValue()
+compareLund: std.Compare(op="=")
+selLund: std.Select()
+snkLundConst: std.Constant(data="stationLund", n=-1)
+sinkLund: std.Terminator()
+
+readerStockholm : sensor.RFIDReader()
+jsonStockholm: json.GetValue()
+compareStockholm: std.Compare(op="=")
+selStockholm: std.Select()
+snkStockholmConst: std.Constant(data="stationStockholm", n=-1)
+sinkStockholm: std.Terminator()
+
+join: std.Join()
+
+servo:io.TrainTrackSwitch()
+
+
+## Connections ##
+nothing.void > readerLund.data
+readerLund.data > jsonLund.container
+dataConst.token > jsonLund.key
+RFIDConst.token > compareLund.a
+jsonLund.value > compareLund.b
+compareLund.result > selLund.select
+snkLundConst.token > selLund.data
+selLund.case_false > sinkLund.void
+
+nothing.void > readerStockholm.data
+readerStockholm.data > jsonStockholm.container
+dataConst.token > jsonStockholm.key
+RFIDConst.token > compareStockholm.a
+jsonStockholm.value > compareStockholm.b
+compareStockholm.result > selStockholm.select
+snkStockholmConst.token > selStockholm.data
+selStockholm.case_false > sinkStockholm.void
+
+selLund.case_true > servo.switch
+selLund.case_true > join.token_1
+selStockholm.case_true > join.token_2
+selLund.case_true > dbgLund.token
+selStockholm.case_true > dbgStockholm.token
+
+
+# deploy
+file.token > deploy.script
+name.token > deploy.name
+deploy_info.token > deploy.deploy_info
+deploy.app_info > dbgDeploy.token
+
+# migrate
+deploy.app_info > migrate.app_id
+migrate.done > dbgMigrate.token
+join.token > migrate.key
+

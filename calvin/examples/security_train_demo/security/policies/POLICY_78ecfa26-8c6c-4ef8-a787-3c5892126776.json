@@ -1,0 +1,32 @@
+{
+    "description": "Users with attribute inforboard are allowed to send information to the information board on the stations. Actors signed by Adafruit allowed.",
+    "rule_combining": "permit_overrides", 
+    "target":{
+        "subject":{
+            "actor_signer":["AdafruitCS"]
+        },
+        "action":{
+            "requires":["runtime","calvinsys.io.display"]
+        }
+    },
+    "rules": [
+        {
+            "id": "display rule",
+            "description":"Permit if policy target matches", 
+            "effect": "permit",
+            "condition":{
+                "function":"and",
+                "attributes":[
+                    {
+                        "function":"equal",
+                        "attributes":["attr:subject:sensors",["infoboard"]]
+                    },
+                    {
+                        "function":"equal",
+                        "attributes":["attr:subject:sensors",["infoboard"]]
+                    }
+                ]
+            }
+        }
+    ] 
+}

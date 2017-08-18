@@ -1,0 +1,29 @@
+{
+    "requirements": {
+        "file":
+                [{"op": "node_attr_match", 
+                  "kwargs": {"index": ["node_name", {"name": "Sthlm_RFID"}]},
+                  "type":"+"
+                  }],
+        "deploy_info":
+                [{"op": "node_attr_match", 
+                  "kwargs": {"index": ["node_name", {"name": "Sthlm_RFID"}]},
+                  "type":"+"
+                  }],
+        "name":
+                [{"op": "node_attr_match", 
+                  "kwargs": {"index": ["node_name", {"name": "Sthlm_RFID"}]},
+                  "type":"+"
+                  }],
+        "deploy":
+                [{"op": "node_attr_match", 
+                  "kwargs": {"index": ["node_name", {"name": "Sthlm_RFID"}]},
+                  "type":"+"
+                  }],
+        "dbgDeploy":
+                [{"op": "node_attr_match", 
+                  "kwargs": {"index": ["node_name", {"name": "Sthlm_RFID"}]},
+                  "type":"+"
+                  }]
+        }
+}

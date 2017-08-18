@@ -1,0 +1,30 @@
+{
+    "requirements": {
+        "file": 	    [{"op": "node_attr_match", "kwargs": {"index":["node_name", {"organization":"SJ","name": "ELX"}]}, "type":"+"}],
+        "deploy_info":      [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "ELX"}]}, "type":"+"}],
+        "name":             [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "ELX"}]}, "type":"+"}],
+        "deploy":      	    [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "ELX"}]}, "type":"+"}],
+        "migrate":          [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Servo"}]}, "type":"+"}],
+        "dbgLund":          [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_RFID"}]}, "type":"+"}],
+        "dbgStockholm":     [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_RFID"}]}, "type":"+"}],
+        "dbgDeploy":        [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "ELX"}]}, "type":"+"}],
+        "dbgMigrate":       [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "ELX"}]}, "type":"+"}],
+        "nothing":          [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "ELX"}]}, "type":"+"}],
+        "dataConst":        [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Servo"}]}, "type":"+"}],
+        "RFIDConst":        [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Servo"}]}, "type":"+"}],
+        "readerLund":       [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_RFID"}]}, "type":"+"}],
+        "jsonLund":         [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_RFID"}]}, "type":"+"}],
+        "compareLund":      [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_RFID"}]}, "type":"+"}],
+        "selLund":          [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_RFID"}]}, "type":"+"}],
+        "snkLundConst":     [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_RFID"}]}, "type":"+"}],
+        "sinkLund":         [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Lund_RFID"}]}, "type":"+"}],
+        "readerStockholm":  [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_RFID"}]}, "type":"+"}],
+        "jsonStockholm":    [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_RFID"}]}, "type":"+"}],
+        "compareStockholm": [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_RFID"}]}, "type":"+"}],
+        "selStockholm":     [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_RFID"}]}, "type":"+"}],
+        "snkStockholmConst":     [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_RFID"}]}, "type":"+"}],
+        "sinkStockholm":     [{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"organization":"SJ","name": "Sthlm_RFID"}]}, "type":"+"}],
+        "join":             [{"op": "node_attr_match", "kwargs": {"index":["node_name", {"organization":"SJ","name": "Lund_RFID"}]}, "type":"+"}],
+        "servo":             [{"op": "node_attr_match", "kwargs": {"index":["node_name", {"organization":"SJ","name": "Servo"}]}, "type":"+"}]
+	}
+}

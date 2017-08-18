@@ -1,0 +1,6 @@
+/* Actors */
+src : std.CountTimer(sleep=1)
+display : io.Display()
+/* Connections */
+src.integer > display.text
+

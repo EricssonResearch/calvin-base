@@ -54,7 +54,7 @@ class RFIDReader(Actor):
         self.active_uid_string = None
         self.active_type = None
         self.latest_activity = now()
-        self.timeout = 2.0
+        self.timeout = 0.5
 
     def did_migrate(self):
         self.setup()
@@ -79,7 +79,7 @@ class RFIDReader(Actor):
             else :
                 self._state = "reset"
         else :
-            self.timeout_timer = self['timer'].once(0.5)
+            self.timeout_timer = self['timer'].once(0.01)
         
         
     @stateguard(lambda self: self._state == "card present")
@@ -110,7 +110,7 @@ class RFIDReader(Actor):
             result["data"] = value
             result["status"] = True
             result["timestamp"] = str(now())
-            self.timeout_timer = self['timer'].repeat(0.5)
+            self.timeout_timer = self['timer'].repeat(0.05)
             self._state = "check card"
         else :
             _log.info("could not read card %r" % (self.active_uid,))

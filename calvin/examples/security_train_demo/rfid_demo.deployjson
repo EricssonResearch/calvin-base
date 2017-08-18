@@ -1,0 +1,14 @@
+{
+    "requirements": {
+        "dbgLund":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "nothing":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "readerLund":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "jsonLund":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "compareLund":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "selLund":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "dataConst":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "messageConst":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "RFIDConst":	[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}],
+        "sink":		[{"op": "node_attr_match", "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},"type":"+"}]
+    }
+}

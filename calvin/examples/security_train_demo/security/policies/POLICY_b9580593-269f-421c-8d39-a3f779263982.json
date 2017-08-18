@@ -1,0 +1,28 @@
+{
+    "description": "Acess to Servo are given to users with attribute servomotor. Actors signed by Ericsson allowed.",
+    "rule_combining": "permit_overrides", 
+    "target":{
+        "subject":{
+            "actor_signer":["EricssonCS"]
+        },
+        "action":{
+            "requires":["runtime","calvinsys.io.servomotor"]
+        }
+    },
+    "rules": [
+        {
+            "id": "servo rule",
+            "description":"Permit if policy target matches", 
+            "effect": "permit",
+            "condition":{
+                "function":"and",
+                "attributes":[
+                    {
+                        "function":"equal",
+                        "attributes":["attr:subject:sensors",["servomotor"]]
+                    }
+                ]
+            }
+        }
+    ] 
+}
