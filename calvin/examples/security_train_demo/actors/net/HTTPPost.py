@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
-from calvin.utilities.calvinlogger import get_logger
+from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.utilities.calvinlogger import get_actor_logger
 
-_log = get_logger(__name__)
+_log = get_actor_logger(__name__)
 
 
 class HTTPPost(Actor):
@@ -46,31 +46,48 @@ class HTTPPost(Actor):
         self.request = None
         self.received_headers = False
         self.use('calvinsys.network.httpclienthandler', shorthand='http')
-        self.use('calvinsys.native.python-json', shorthand='json')
 
+    def reset_request(self):
+        if self.request:
+            self['http'].finalize(self.request)
+            self.request = None
+        self.received_headers = False
+        
+    @stateguard(lambda self: not self.request)
     @condition(action_input=['URL', 'params', 'header', 'data'])
-    @guard(lambda self, url, params, header, data: self.request is None)
     def new_request(self, url, params, header, data):
         url = url.encode('ascii', 'ignore')
+        data = data.encode('ascii', 'ignore')
         self.request = self['http'].post(url, params, header, data)
-        return ActionResult()
+        
 
+    @stateguard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     @condition(action_output=['status', 'header'])
-    @guard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     def handle_headers(self):
         self.received_headers = True
         status = self['http'].status(self.request)
         headers = self['http'].headers(self.request)
-        return ActionResult(production=(status, headers))
+        return (status, headers)
 
+    @stateguard(lambda self: self.received_headers and self['http'].received_body(self.request))
     @condition(action_output=['data'])
-    @guard(lambda self: self.received_headers and self['http'].received_body(self.request))
     def handle_body(self):
         body = self['http'].body(self.request)
-        self.received_headers = False
-        self['http'].finalize(self.request)
-        self.request = None
-        return ActionResult(production=(body,))
+        self.reset_request()
+        return (body,)
 
-    action_priority = (handle_body, handle_headers, new_request)
-    requires = ['calvinsys.network.httpclienthandler', 'calvinsys.native.python-json']
+    @stateguard(lambda self: self.received_headers and self['http'].received_empty_body(self.request))
+    @condition()
+    def handle_empty_body(self):
+        self.reset_request()
+        return ()
+
+    @stateguard(lambda actor: actor.request and actor['http'].received_error(actor.request))
+    @condition()
+    def handle_error(self):
+        _log.warning("There was an error handling the request")
+        self.reset_request()
+        return ()
+
+    action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
+    requires = ['calvinsys.network.httpclienthandler']

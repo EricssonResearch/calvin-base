@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, manage, condition, calvinlib
 from calvin.utilities.calvinlogger import get_actor_logger
 
 
@@ -24,43 +23,32 @@ _log = get_actor_logger(__name__)
 
 class Compare(Actor):
     """
-    Perform a OP b where OP is the comparison operator passed as (a string) argument.
+    Perform a REL b where REL is a comparison relation passed as (a string) argument.
 
-    Allowed values for OP are:
+    Allowed values for REL are:
     =, <, >, <=, >=, !=
 
     Inputs:
       a : a token
       b : a token
     Outputs:
-      result : true or false according to result of 'a' OP 'b'
+      result : true or false according to result of 'a' REL 'b'
     """
-    @manage(['relation'])
-    def init(self, op):
-        self.relation = op
+    @manage(['rel'])
+    def init(self, rel):
+        self.rel = rel
         self.setup()
-
-    def setup(self):
-        try:
-            self.op = {
-                '<': operator.lt,
-                '<=': operator.le,
-                '=': operator.eq,
-                '!=': operator.ne,
-                '>=': operator.ge,
-                '>': operator.gt,
-            }[self.relation]
-        except KeyError:
-            _log.warning('Invalid operator %s, will always produce FALSE as result' % str(self.relation))
-            self.op = None
 
     def did_migrate(self):
         self.setup()
 
+    def setup(self):
+        self.math = calvinlib.use("math.arithmetic.eval")
+        self.relation = self.math.relation(rel=self.rel)
+
     @condition(['a', 'b'], ['result'])
-    def test(self, a, b):
-        res = bool(self.op(a, b)) if self.op else False
-        return ActionResult(production=(res, ))
+    def test(self, x, y):
+        return (bool(self.relation(x, y)), )
 
 
     action_priority = ( test, )
@@ -81,3 +69,4 @@ class Compare(Actor):
 
     ]
 
+    requires = ['math.arithmetic.eval']

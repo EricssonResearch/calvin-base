@@ -17,27 +17,26 @@
 from calvin.actor.actor import Actor, manage, condition
 
 
-class Constant(Actor):
+class Terminator(Actor):
     """
-    Send predetermined data on output. Never ending sequence.
-    Outputs:
-      token : Some data
+    Acts like a true sink.
+
+    This behaviour is useful if an actor produces outputs that will never be used
+    in a particular application. Because of how the runtime works, all output
+    ports must be connected before the application can run, so leaving a port
+    unconnected is not an option.
+
+    Inputs:
+      void : A port that will consume tokens
     """
-    @manage(['data'])
-    def init(self, data):
-        self.data = data
+    @manage()
+    def init(self):
+        pass
 
-    @condition([], ['token'])
-    def send_it(self):
-        return (self.data,)
+    @condition(['void'], [])
+    def null(self, input):
+        pass
 
-    action_priority = (send_it, )
 
-    test_args = (42,)
+    action_priority = (null, )
 
-    test_set = [
-        {
-            'in': {},
-            'out': {'token': [42]}
-        } for i in range(3)
-    ]

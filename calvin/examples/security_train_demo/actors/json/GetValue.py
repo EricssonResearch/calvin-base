@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
@@ -37,30 +37,35 @@ class GetValue(Actor):
       value: value for the key/index/list
     """
 
-    def exception_handler(self, action, args, context):
-        return ActionResult(production=(ExceptionToken(),))
+    def exception_handler(self, action, args):
+        return (ExceptionToken(),)
 
     @manage()
     def init(self):
         pass
 
-    def _type_mismatch(self, container, key):
+    def _check_type_mismatch(self, container, key):
         t_cont = type(container)
         t_key = type(key)
-        return (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
+        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
+        if mismatch:
+            raise Exception()
 
-    @condition(['container', 'key'], ['value'])
-    def get_value(self, data, key):
+    def _get_value(self, data, key):
         keylist = key if type(key) is list else [key]
         try:
             res = data
             for key in keylist:
-                if self._type_mismatch(res, key):
-                    raise Exception()
+                self._check_type_mismatch(res, key)
                 res = res[key]
         except Exception as e:
-            res = 53072129
-        return ActionResult(production=(res, ))
+            res = ExceptionToken()
+        return res
+
+    @condition(['container', 'key'], ['value'])
+    def get_value(self, data, key):
+        res = self._get_value(data, key)
+        return (res, )
 
     action_priority = (get_value, )
 

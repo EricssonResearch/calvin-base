@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 
 class Trigger(Actor):
@@ -33,32 +33,32 @@ class Trigger(Actor):
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.events.timer', shorthand='timer')
+        self._timer = calvinsys.open(self, "sys.timer.repeating")
 
     def start(self):
-        self.timer = self['timer'].repeat(self.tick)
+        calvinsys.write(self._timer, self.tick)
         self.started = True
 
     def will_migrate(self):
-        if self.timer:
-            self.timer.cancel()
+        if self._timer:
+            calvinsys.close(self._timer)
 
     def did_migrate(self):
         self.setup()
         if self.started:
             self.start()
 
+    @stateguard(lambda self: not self.started)
     @condition([], ['data'])
-    @guard(lambda self: not self.started)
     def start_timer(self):
         self.start()
-        return ActionResult(production=(self.data, ))
+        return (self.data, )
 
+    @stateguard(lambda self: calvinsys.can_read(self._timer))
     @condition([], ['data'])
-    @guard(lambda self: self.timer and self.timer.triggered)
     def trigger(self):
-        self.timer.ack()
-        return ActionResult(production=(self.data, ))
+        self._timer.read()
+        return (self.data, )
 
     action_priority = (start_timer, trigger)
-    requires = ['calvinsys.events.timer']
+    requires = ['sys.timer.repeating']

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import sys
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, manage, condition, stateguard
 
 class CountTimer(Actor):
 
@@ -27,10 +27,11 @@ class CountTimer(Actor):
     """
 
     @manage(exclude=['timer'])
-    def init(self, sleep=0.1, steps=sys.maxint):
-        self.count = 0
+    def init(self, sleep=0.1, start=1, steps=sys.maxint):
+        self.start = start
+        self.count = start
         self.sleep = sleep
-        self.steps = steps
+        self.steps = steps + start
         self.setup()
 
     def setup(self):
@@ -61,8 +62,8 @@ class CountTimer(Actor):
     # The counting action, first 3 use non periodic for testing purpose
     # need guard with triggered() since the actor might be fired for other
     # reasons
+    @stateguard(timer_trigger_stepwise)
     @condition(action_output=('integer',))
-    @guard(timer_trigger_stepwise)
     def step_no_periodic(self):
         self.timer.ack()
         if self.count == 2:
@@ -71,29 +72,31 @@ class CountTimer(Actor):
         else:
             self.timer = self['timer'].once(self.sleep)
         self.count += 1
-        return ActionResult(production=(self.count, ))
+        return (self.count - 1, )
 
     # The counting action, handle periodic timer events hence no need to setup repeatedly
     # need guard with triggered() since the actor might be fired for other
     # reasons
+    @stateguard(timer_trigger_repeat)
     @condition(action_output=('integer',))
-    @guard(timer_trigger_repeat)
     def step_periodic(self):
         self.timer.ack()
         self.count += 1
-        return ActionResult(production=(self.count, ))
+        return (self.count - 1, )
 
     # The stopping action, need guard with raised() since the actor might be
     # fired for other reasons
+    @stateguard(timer_trigger_stopped)
     @condition()
-    @guard(timer_trigger_stopped)
     def stop(self):
         self.timer.ack()
         self.timer.cancel()
-        return ActionResult()
+        
 
-    def report(self):
-        return self.count
+    def report(self, **kwargs):
+        if kwargs.get("stopped", False):
+            self.timer.cancel()
+        return self.count - self.start
 
     action_priority = (step_no_periodic, step_periodic, stop)
     requires = ['calvinsys.events.timer']
