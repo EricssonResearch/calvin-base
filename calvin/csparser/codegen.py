@@ -531,6 +531,23 @@ class Flatten(object):
 
         # Replace and delete links (manipulates children)
 
+        def _relink(l1, l2):
+            # 4. Retrieve the links involved
+            l0_l1_link = l1.parent
+            l0 = l0_l1_link.outport
+            l2_l3_link = l2.parent
+            l3 = l2_l3_link.inport
+            # 5. Create the new link
+            l0_l3_link = ast.Link(outport=l0, inport=l3)
+            # 6. Mark it for addition
+            produced.append(l0_l3_link)
+            # 7. Mark the old links for removal
+            consumed.add(l0_l1_link)
+            consumed.add(l2_l3_link)
+            # 8. Transfer port properties
+            l0.add_children(l2.children)
+            l3.add_children(l1.children)
+
         # Block expansion of link and properties over component inports
         # =============================================================
         #
@@ -568,27 +585,8 @@ class Flatten(object):
         # 3. Find counterparts (L1) for each L2
         for l2 in l2_list:
             l1_list = query(node, kind=ast.InPort, attributes={'actor':l2.actor, 'port':l2.port})
-            if not l1_list:
-                continue
             for l1 in l1_list:
-                # 4. Retrieve the links involved
-                l0_l1_link = l1.parent
-                l0 = l0_l1_link.outport
-                l2_l3_link = l2.parent
-                l3 = l2_l3_link.inport
-                # 5. Create the new link
-                l0_l3_link = ast.Link(outport=l0, inport=l3)
-                # 6. Mark it for addition
-                produced.append(l0_l3_link)
-                # 7. Mark the old links for removal
-                consumed.add(l0_l1_link)
-                consumed.add(l2_l3_link)
-                # 8. Transfer port properties
-                l0.add_children(l2.children)
-                l3.add_children(l1.children)
-        # 9. Modify the tree
-        node.remove_children(consumed)
-        node.add_children(produced)
+                _relink(l1, l2)
 
         # Block expansion of link and properties over component outports
         # ==============================================================
@@ -608,32 +606,14 @@ class Flatten(object):
         #
         # (L0 [P0], L1 [P1]) + (L2 [P2], L3 [P3]) => (L0 [P0, P2], L3 [P1, P3])
 
-        # 1. Accounting
-        consumed = set()
-        produced = []
         # 2. Locate InternalInPorts objects (L1)
         l1_list = query(node, kind=ast.InternalInPort, maxdepth=2)
         # 3. Find counterparts (L2) for each L1
         for l1 in l1_list:
             l2_list = query(node, kind=ast.OutPort, attributes={'actor':l1.actor, 'port':l1.port})
-            if not l2_list:
-                continue
             for l2 in l2_list:
-                # 4. Retrieve the links involved
-                l0_l1_link = l1.parent
-                l0 = l0_l1_link.outport
-                l2_l3_link = l2.parent
-                l3 = l2_l3_link.inport
-                # 5. Create the new link
-                l0_l3_link = ast.Link(outport=l0, inport=l3)
-                # 6. Mark it for addition
-                produced.append(l0_l3_link)
-                # 7. Mark the old links for removal
-                consumed.add(l0_l1_link)
-                consumed.add(l2_l3_link)
-                # 8. Transfer port properties
-                l0.add_children(l2.children)
-                l3.add_children(l1.children)
+                _relink(l1, l2)
+
         # 9. Modify the tree
         node.remove_children(consumed)
         node.add_children(produced)
@@ -649,7 +629,6 @@ class Flatten(object):
         # Delete this node
         node.delete()
         self.stack.pop()
-
 
 
 class CoalesceProperties(object):
