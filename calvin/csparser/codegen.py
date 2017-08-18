@@ -673,19 +673,16 @@ class CoalesceProperties(object):
 
     @visitor.when(ast.InPort)
     def visit(self, node):
-        if not node.children:
-            return
-        name = (node.actor, node.port, "in")
-        pp = self.port_properties[name]
-        for npp in node.children[:]:
-            pp.add_children(npp.children)
-            node.remove_child(npp)
+        self._coalsesce_properties_for_port(node, "in")
 
     @visitor.when(ast.OutPort)
     def visit(self, node):
+        self._coalsesce_properties_for_port(node, "out")
+
+    def _coalsesce_properties_for_port(self, node, direction):
         if not node.children:
             return
-        name = (node.actor, node.port, "out")
+        name = (node.actor, node.port, direction)
         pp = self.port_properties[name]
         for npp in node.children[:]:
             pp.add_children(npp.children)
