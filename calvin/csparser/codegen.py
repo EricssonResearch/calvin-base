@@ -354,77 +354,59 @@ class CollectPortProperties(object):
     def visit(self, node):
         # Collect explicit PortProperty statements and make them children of their respective ports
         block = node.parent
+        ports = []
         if node.actor is None:
             # This works because any ambiguity in port names have been detected in check_consistency in a previous step
-            ips = []
             if not node.direction or node.direction == "in":
-                ips += query(block, kind=ast.InternalInPort, maxdepth=2, attributes={'port':node.port})
+                ports += query(block, kind=ast.InternalInPort, maxdepth=2, attributes={'port':node.port})
             if not node.direction or node.direction == "out":
-                ips += query(block, kind=ast.InternalOutPort, maxdepth=2, attributes={'port':node.port})
-            # If len(ips) == 0 then there is no port with such a name => error should have been reported earlier
-            # Since there is no port to attach the property to, drop the node and continue
-            if not ips:
-                node.delete() # remove from tree
-                return
-            # If len(ips) > 1 then there are multiple ports connected which is OK as long there is not a mix of inports and outports
-            # which should have been detected earlier => error should have been reported earlier.
-            # Since it is enough to attach the the property to one port instance, grab the first port instance.
-            port = ips[0]
-            node.delete() # remove from tree
-            port.add_child(node)
+                ports += query(block, kind=ast.InternalOutPort, maxdepth=2, attributes={'port':node.port})
         else:
             # This works because any ambiguity in port names have been detected in check_consistency in a previous step
-            ips = []
             if not node.direction or node.direction == "in":
-                ips += query(block, kind=ast.InPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
+                ports += query(block, kind=ast.InPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
             if not node.direction or node.direction == "out":
-                ips += query(block, kind=ast.OutPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
-            # If len(ips) == 0 then there is no port with such a name => error should have been reported earlier
+                ports += query(block, kind=ast.OutPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
+        self._transfer_property(node, ports)
+
+    def _transfer_property(self, node, portlist):
+            # If len(portlist) == 0 then there is no port with such a name => error should have been reported earlier
             # Since there is no port to attach the property to, drop the node and continue
-            if not ips:
+            if not portlist:
                 node.delete() # remove from tree
                 return
-            # If len(ips) > 1 then there are multiple ports connected which is OK as long there is not a mix of inports and outports
+            # If len(portlist) > 1 then there are multiple ports connected which is OK as long there is not a mix of inports and outports
             # which should have been detected earlier => error should have been reported earlier.
             # Since it is enough to attach the the property to one port instance, grab the first port instance.
-            port = ips[0]
+            port = portlist[0]
             node.delete() # remove from tree
             port.add_child(node)
-
 
     @visitor.when(ast.Assignment)
     def visit(self, node):
         if not node.metadata['is_known']:
             return
         # Collect actor-declared port properties and make them children of their respective ports
+            name = node.ident
         for port, pp in  node.metadata['input_properties'].items():
-            name = node.ident
-            root = node.parent
             query_res = query(node.parent, kind=ast.InPort, maxdepth=2, attributes={'actor':name, 'port':port})
-            if len(query_res) < 1:
-                # Silently let this pass to be handled during consistency check
-                continue
-                # raise Exception("Port {}.{} not found".format(name, port))
-            destination_port = query_res[0]
-            port_property = ast.PortProperty(actor=name, port=port, direction="in", debug_info=node.debug_info)
-            for ident, value in pp.items():
-                # FIXME: Is add_property the right method to use here?
-                prop = ast.NamedArg(ident=ast.Id(ident=ident), arg=ast.Value(value=value))
-                port_property.add_child(prop)
-            destination_port.add_child(port_property)
-
+            self._transfer_actor_properties(node, name, port, query_res, pp)
         for port, pp in  node.metadata['output_properties'].items():
-            name = node.ident
-            root = node.parent
             query_res = query(node.parent, kind=ast.OutPort, maxdepth=2, attributes={'actor':name, 'port':port})
-            if len(query_res) < 1:
+            self._transfer_actor_properties(node, name, port, query_res, pp)
+
+    def _transfer_actor_properties(self, node, actor, port, portlist, properties):
+        if not portlist:
+            # The portlist is empty => there is a bug in the script
                 # Silently let this pass to be handled during consistency check
-                continue
-                # raise Exception("Port {}.{} not found".format(name, port))
-            destination_port = query_res[0]
-            port_property = ast.PortProperty(actor=name, port=port, direction="out", debug_info=node.debug_info)
-            for ident, value in pp.items():
-                # FIXME: Is add_property the right method to use here?
+            return
+        destination_port = portlist[0]
+        direction = 'in' if type(destination_port) is ast.InPort else 'out'
+        # Create a new port property object and stuff the actor properties into it
+        # FIXME: Actor argument shouldn't matter, since it will be taken from the port after flattening the tree,
+        #        but it setting it a generic string causes errors. Need to find out why.
+        port_property = ast.PortProperty(actor=actor, port=port, direction=direction, debug_info=node.debug_info)
+        for ident, value in properties.items():
                 prop = ast.NamedArg(ident=ast.Id(ident=ident), arg=ast.Value(value=value))
                 port_property.add_child(prop)
             destination_port.add_child(port_property)
