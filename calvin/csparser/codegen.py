@@ -387,7 +387,7 @@ class CollectPortProperties(object):
         if not node.metadata['is_known']:
             return
         # Collect actor-declared port properties and make them children of their respective ports
-            name = node.ident
+        name = node.ident
         for port, pp in  node.metadata['input_properties'].items():
             query_res = query(node.parent, kind=ast.InPort, maxdepth=2, attributes={'actor':name, 'port':port})
             self._transfer_actor_properties(node, name, port, query_res, pp)
@@ -398,7 +398,7 @@ class CollectPortProperties(object):
     def _transfer_actor_properties(self, node, actor, port, portlist, properties):
         if not portlist:
             # The portlist is empty => there is a bug in the script
-                # Silently let this pass to be handled during consistency check
+            # Silently let this pass to be handled during consistency check
             return
         destination_port = portlist[0]
         direction = 'in' if type(destination_port) is ast.InPort else 'out'
@@ -407,9 +407,9 @@ class CollectPortProperties(object):
         #        but it setting it a generic string causes errors. Need to find out why.
         port_property = ast.PortProperty(actor=actor, port=port, direction=direction, debug_info=node.debug_info)
         for ident, value in properties.items():
-                prop = ast.NamedArg(ident=ast.Id(ident=ident), arg=ast.Value(value=value))
-                port_property.add_child(prop)
-            destination_port.add_child(port_property)
+            prop = ast.NamedArg(ident=ast.Id(ident=ident), arg=ast.Value(value=value))
+            port_property.add_child(prop)
+        destination_port.add_child(port_property)
 
 
 class Expander(object):
@@ -1090,7 +1090,7 @@ class ConsistencyCheck(object):
     @visitor.when(ast.PortProperty)
     def visit(self, node):
         block = node.parent
-        print "FIXME: If direction present but redundant, make sure it is correct wrt port"
+        # FIXME: If direction present but redundant, make sure it is correct wrt port
         if node.actor is None:
             iip = query(block, kind=ast.InternalInPort, maxdepth=2, attributes={'port':node.port})
             iop = query(block, kind=ast.InternalOutPort, maxdepth=2, attributes={'port':node.port})
@@ -1116,7 +1116,7 @@ class ConsistencyCheck(object):
 
 class CodeGen(object):
 
-    verbose = True
+    verbose = False
     verbose_nodes = False
 
     """
@@ -1195,9 +1195,7 @@ class CodeGen(object):
         flattener.process(self.root)
         self.dump_tree('FLATTENED')
 
-    def consolidate(self, issue_tracker):
-        # consolidate = ConsolidatePortProperty(issue_tracker)
-        # consolidate.process(self.root)
+    def coalesce_properties(self, issue_tracker):
         consolidate = CoalesceProperties(issue_tracker)
         consolidate.process(self.root)
         self.dump_tree('Coalesced')
@@ -1233,12 +1231,13 @@ class CodeGen(object):
     def phase2(self, issue_tracker, verify):
         # Replace Component objects with a clone of the component graph
         self.expand_components(issue_tracker, verify)
-        # ?
+        # Move port properties from actors and PortProperty statements into ports
         self.collect_port_properties(issue_tracker)
         # Replace hierachy with namespace for all objects
         self.flatten(issue_tracker)
-        # ?
-        self.consolidate(issue_tracker)
+        # Retrieve the port properties from the ports (now with correctly namespaced actor names)
+        self.coalesce_properties(issue_tracker)
+        # Merge possibly conflicting port properties, remove redundant properties
         self.merge_properties(issue_tracker)
         self.check_properties(issue_tracker)
 
