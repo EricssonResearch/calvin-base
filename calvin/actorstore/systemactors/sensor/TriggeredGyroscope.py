@@ -59,4 +59,4 @@ class TriggeredGyroscope(Actor):
         return (level,)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires =  ['sensor.gyroscope']
+    requires =  ['io.gyroscope']
