@@ -1,0 +1,6 @@
+{
+    "requirements": {
+        "src": [{"op":"node_attr_match","kwargs":{"index":["node_name",{"organization":"SJ", "name":"Lund_InfoBoard"}]},"type": "+"}], 
+        "display":[{"op":"node_attr_match","kwargs":{"index":["node_name",{"organization": "SJ","name":"Lund_InfoBoard"}]},"type": "+"}] 
+    }
+}

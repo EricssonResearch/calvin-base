@@ -59,18 +59,20 @@ class RFIDHandler(base_rfid.RFIDHandlerBase):
             return 0x04
 
     def read_value(self, picc_type):
-        block_address = self._picc_type_to_block_address(picc_type)            
-        status, data = self._reader.MFRC522_Read(block_address)
-        if status != RFIDHandler.OK :
-            return status, 0
-        #It worked, return result and remove request
+        try:
+            block_address = self._picc_type_to_block_address(picc_type)            
+            status, data = self._reader.MFRC522_Read(block_address)
+            if status != RFIDHandler.OK :
+                return status, 0
+            #It worked, return result and remove request
         
-        value = 0
-        value += data[0] << 24
-        value += data[1] << 16
-        value += data[2] << 8
-        value += data[3]
-        
+            value = 0
+            value += data[0] << 24
+            value += data[1] << 16
+            value += data[2] << 8
+            value += data[3]
+        except :
+            return RFIDHandler.ERROR, 0
         return RFIDHandler.OK, value
         
     def write_value(self, picc_type, value):        

@@ -1,0 +1,31 @@
+{
+    "description": "Acess to Sensehats are given to users with attribute environmental. Actors signed by Adafruit allowed.",
+    "rule_combining": "permit_overrides", 
+    "target":{
+        "subject":{
+            "actor_signer":["AdafruitCS"]
+        },
+        "action":{
+            "requires":["runtime","calvinsys.sensors.environmental","calvinsys.io.display"]
+        },
+        "resource":{
+            "node_name.name":["Lund_Camera_Sensehat","Sthlm_Camera_Sensehat"]
+        }
+    },
+    "rules": [
+        {
+            "id": "environmental rule",
+            "description":"Permit if policy target matches", 
+            "effect": "permit",
+            "condition":{
+                "function":"and",
+                "attributes":[
+                    {
+                        "function":"equal",
+                        "attributes":["attr:subject:sensors",["environmental"]]
+                    }
+                ]
+            }
+        }
+    ] 
+}

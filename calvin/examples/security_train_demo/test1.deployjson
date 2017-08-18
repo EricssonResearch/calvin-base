@@ -1,0 +1,8 @@
+{
+    "groups": {"firstgroup": ["src", "snk"]},
+    "requirements": {
+        "src": [{"op": "node_attr_match","kwargs":{"index":["node_name",{"organization":"SJ", "name": "Lund_Camera_Sensehat"}]},"type": "+"}], 
+        "sensor": [{"op": "node_attr_match","kwargs":{"index":["node_name",{"organization":"SJ", "name": "Lund_Camera_Sensehat"}]},"type": "+"}], 
+        "display": [{"op": "node_attr_match","kwargs":{"index":["node_name",{"organization": "SJ", "name":"Lund_Camera_Sensehat"}]},"type": "+"}] 
+    }
+}

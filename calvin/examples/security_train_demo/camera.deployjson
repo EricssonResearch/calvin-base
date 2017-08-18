@@ -1,0 +1,22 @@
+{
+    "requirements": {
+        "trigger":[
+	{
+		"op": "node_attr_match", 
+                "kwargs": {"index": ["node_name", {"name": "Lund_Camera_Sensehat"}]},
+                "type":"+"
+	}],
+        "camera":[
+	{
+		"op": "node_attr_match", 
+                "kwargs": {"index": ["node_name", {"name": "Lund_Camera_Sensehat"}]},
+                "type":"+"
+	}],
+        "screen":[
+	{
+		"op": "node_attr_match", 
+                "kwargs": {"index": ["node_name", {"name": "ELX"}]},
+                "type":"+"
+	}]
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "description": "Access to RFID readers are give to everyone with attribute rfid. Only actors signed by Adafruit allowed ",
+    "rule_combining": "permit_overrides", 
+    "target":{
+        "subject":{
+            "actor_signer":["AdafruitCS"]
+        },
+        "action":{
+            "requires":["runtime","calvinsys.sensors.rfid","calvinsys.events.timer"]
+        }
+    },
+    "rules": [
+        {
+            "id": "rfid rule",
+            "description":"Permit if policy target matches", 
+            "effect": "permit",
+            "condition":{
+                "function":"and",
+                "attributes":[
+                    {
+                        "function":"equal",
+                        "attributes":["attr:subject:sensors",["rfid"]]
+                    }
+                ]
+            }
+        }
+    ] 
+}

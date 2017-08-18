@@ -1,0 +1,21 @@
+{
+    "train_driver": {
+        "organization":["SJ"],
+        "sensors":["environmental","rfid","camerahandler","infoboard","servomotor"]
+    },
+    "conductor": { 
+        "organization":["SJ"],
+        "sensors":["environmental","rfid","camerahandler"]
+    },
+    "passenger": { 
+        "organization":["SJ"],
+        "sensors":["environmental","rfid"]
+    },
+    "Lund":{
+        "locality":["Lund"]
+    },
+    "Stockholm":{
+        "locality":["Stockholm"]
+    }
+
+}

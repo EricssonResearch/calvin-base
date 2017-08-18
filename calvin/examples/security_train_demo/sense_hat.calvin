@@ -1,0 +1,8 @@
+/* Actors */
+src : std.CountTimer(sleep=10)
+sensor : sensor.Environmental()
+display : io.Display()
+
+/* Connections */
+src.integer > sensor.trigger
+sensor.data > display.text

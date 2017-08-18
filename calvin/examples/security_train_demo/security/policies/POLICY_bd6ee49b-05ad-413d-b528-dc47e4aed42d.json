@@ -1,0 +1,28 @@
+{
+    "description": "Everyone with SJ association gets access to non hardware resources for actors signed by Ericsson",
+    "rule_combining": "permit_overrides", 
+    "target":{
+        "subject":{
+            "actor_signer":["EricssonCS"]
+        },
+        "action":{
+            "requires":["runtime","calvinsys.events.timer","calvinsys.media.image","calvinsys.native.python-base64","calvinsys.native.python-json","calvinsys.network.httpclienthandler","calvinsys.io.filehandler","calvinsys.io.servomotor"]
+        }
+    },
+    "rules": [
+        {
+            "id": "non HW rule",
+            "description":"Permit if policy target matches", 
+            "effect": "permit",
+            "condition":{
+                "function":"and",
+                "attributes":[
+                    {
+                        "function":"equal",
+                        "attributes":["attr:subject:organization",["SJ"]]
+                    }
+                ]
+            }
+        }
+    ] 
+}

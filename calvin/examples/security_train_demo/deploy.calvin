@@ -1,0 +1,74 @@
+define CONTROL_URI = "control_uri"
+define SCRIPT = "src : std.CountTimer()\nsnk : io.StandardOut()\nsrc.integer > snk.token\n"
+define APPNAME = "train_demo"
+
+### Components ###
+# Components
+component CalvinDeployer(control_uri) name, script, deploy_info -> app_info {
+    controlpath: std.Constant(data=control_uri)    
+    controluri: io.FileReader()
+    deploy: calvin.CalvinDeployerA()
+    post: net.HTTPPost()
+
+    dbg1: io.Print()
+    dbg2: io.Print()
+
+    .name > deploy.name
+    .script > deploy.script
+    .deploy_info > deploy.deploy_info
+    deploy.app_info > .app_info
+
+    controlpath.token > dbg1.token
+    controluri.out > dbg2.token
+
+    controlpath.token > controluri.filename
+    controluri.out > deploy.control_uri
+
+    deploy.URL > post.URL
+    deploy.params > post.params
+    deploy.header > post.header
+    deploy.data > post.data
+
+    post.status > deploy.status
+    post.header > deploy.header
+    post.data > deploy.data
+}
+
+
+### Actor instances ###
+#script file
+file: std.Constant(data=SCRIPT)
+#deploy info
+deploy_info: std.Constant(data=
+                        {"requirements":
+                            {"src":
+                                [{"op": "node_attr_match",
+                                 "kwargs": {"index": ["node_name", {"name": "Sthlm_RFID"}]},
+                                 "type": "+"
+                                 }],
+                            "snk":
+                                [{"op": "node_attr_match",
+                                 "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},
+                                 "type": "+"
+                                 }]
+                            }
+                        })
+
+# name
+name: std.Constant(data=APPNAME)
+
+#rt control
+deploy: CalvinDeployer(control_uri=CONTROL_URI)
+
+### Structure ###
+dbgDeploy: io.Print()
+
+
+# deploy
+file.token > deploy.script
+name.token > deploy.name
+deploy_info.token > deploy.deploy_info
+deploy.app_info > dbgDeploy.token
+
+
+
