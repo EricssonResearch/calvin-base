@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
@@ -44,35 +44,35 @@ class FileReader(Actor):
         self.file = None
         self.use(requirement='calvinsys.io.filehandler', shorthand='file')
 
+    @stateguard(lambda self: not self.file)
     @condition(['filename'], [])
-    @guard(lambda self, filename: not self.file)
     def open_file(self, filename):
         try:
             self.file = self['file'].open(filename, "r")
         except:
             self.file = None
             self.file_not_found = True
-        return ActionResult()
+        
 
+    @stateguard(lambda self: self.file_not_found)
     @condition([], ['out'])
-    @guard(lambda self: self.file_not_found)
     def file_not_found(self):
         token = ExceptionToken(value="File not found")
         self.file_not_found = False  # Only report once
-        return ActionResult(production=(token, ))
+        return (token, )
 
+    @stateguard(lambda self: self.file and self.file.has_data())
     @condition([], ['out'])
-    @guard(lambda self: self.file and self.file.has_data())
     def readline(self):
         line = self.file.read_line()
-        return ActionResult(production=(line, ))
+        return (line, )
 
+    @stateguard(lambda self: self.file and self.file.eof())
     @condition([], ['out'])
-    @guard(lambda self: self.file and self.file.eof())
     def eof(self):
         self['file'].close(self.file)
         self.file = None
-        return ActionResult(production=(EOSToken(), ))
+        return (EOSToken(), )
 
     action_priority = (open_file, file_not_found, readline, eof)
     requires =  ['calvinsys.io.filehandler']
