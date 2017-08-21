@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition, guard
+from calvin.actor.actor import Actor, manage, condition, guard
 from calvin.runtime.north.calvin_token import ExceptionToken
 
 import json
@@ -50,11 +50,9 @@ class CalvinDeployerA(Actor):
     def new_control_uri(self, control_uri):
         if control_uri:
             self.control_uri = control_uri
-        return ActionResult()
 
     def exception_handler(self, action, args, context):
         # Ignore any exceptions
-        return ActionResult()
 
     @condition(['name', 'script', 'deploy_info','sec_credentials'], ['URL', 'data', 'params', 'header'])
     @guard(lambda self, name, script, deploy_info, sec_credentials: self.control_uri is not None)
@@ -64,7 +62,7 @@ class CalvinDeployerA(Actor):
         body = self['json'].dumps({'script': script, 'name': name,
                                     'deploy_info':deploy_info, 'check': False, 
                                     'sec_credentials':sec_credentials})
-        return ActionResult(production=(self.control_uri + "/deploy", body, {}, {}))
+        return (production=(self.control_uri + "/deploy", body, {}, {}))
 
     @condition(['status', 'header', 'data'], ['app_info'])
     def deployed(self, status, header, data):
@@ -75,7 +73,7 @@ class CalvinDeployerA(Actor):
         if status < 200 or status >= 300:
             # Failed deployed
             response = ExceptionToken(value=status)
-        return ActionResult(production=(response,))
+        return (production=(response,))
 
     action_priority = (deployed, deploy, new_control_uri)
     requires =  ['calvinsys.native.python-json']

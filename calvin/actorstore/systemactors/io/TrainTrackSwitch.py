@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition
+from calvin.actor.actor import Actor, condition
 
 
 class TrainTrackSwitch(Actor):
@@ -42,7 +42,6 @@ class TrainTrackSwitch(Actor):
         else:
             self.servo.set_angle(75)
             self.track = 0
-        return ActionResult()
 
     action_priority = (set_track, )
     requires = ["calvinsys.io.servomotor"]

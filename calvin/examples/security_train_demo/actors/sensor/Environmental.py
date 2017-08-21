@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition
+from calvin.actor.actor import Actor, condition
 
 
 class Environmental(Actor):
@@ -40,7 +40,7 @@ class Environmental(Actor):
     @condition(action_input=["trigger"], action_output=["data"])
     def get_data(self, input):
         data = " %s C " % (int(self.sensor.get_temperature()),)
-        return ActionResult(production=(data, ))
+        return (production=(data, ))
 
     action_priority = (get_data, )
     requires = ["calvinsys.sensors.environmental"]
