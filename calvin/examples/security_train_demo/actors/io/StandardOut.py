@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, manage, condition
+from calvin.actor.actor import Actor, manage, condition
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -52,7 +52,6 @@ class StandardOut(Actor):
         if self.store_tokens:
             self.tokens.append(token)
         self.logger("%s<%s>: %s" % (self.__class__.__name__, self.id, str(token).strip()))
-        return ActionResult()
 
     action_priority = (log, )
 

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, ActionResult, condition
+from calvin.actor.actor import Actor, condition
 
 
 class Display(Actor):
@@ -41,7 +41,6 @@ class Display(Actor):
     @condition(action_input=["text"])
     def show_text(self, text):
         self.display.show_text(str(text))
-        return ActionResult()
 
     action_priority = (show_text, )
     requires = ["calvinsys.io.display"]
