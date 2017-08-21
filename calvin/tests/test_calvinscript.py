@@ -844,5 +844,26 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)
 
+    def testComponentToComponent1(self):
+        script = r"""
+        component InComp() in -> {
+            out : io.Print()
+            .in > out.token
+        }
+
+        component OutComp() -> out {
+            trig : std.Trigger(data="No data", tick=1.0)
+            trig.data > .out
+        }
+
+        out_comp : OutComp()
+        in_comp : InComp()
+
+        out_comp.out > in_comp.in
+        """
+        result, errors, warnings = self.parse('inline', script)
+        for e in errors:
+            print e['reason']
+        self.assertEqual(len(errors), 0)
 
 
