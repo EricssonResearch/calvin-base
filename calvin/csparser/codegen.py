@@ -542,8 +542,8 @@ class Flatten(object):
             # 6. Mark it for addition
             produced.append(l0_l3_link)
             # 7. Mark the old links for removal
-            consumed.add(l0_l1_link)
-            consumed.add(l2_l3_link)
+            consumed.append(l0_l1_link)
+            consumed.append(l2_l3_link)
             # 8. Transfer port properties
             l0.add_children(l2.children)
             l3.add_children(l1.children)
@@ -578,7 +578,7 @@ class Flatten(object):
         #
 
         # 1. Accounting
-        consumed = set()
+        consumed = []
         produced = []
         # 2. Locate InternalOutPort objects (L2)
         l2_list = query(node, kind=ast.InternalOutPort, maxdepth=2)
@@ -587,6 +587,10 @@ class Flatten(object):
             l1_list = query(node, kind=ast.InPort, attributes={'actor':l2.actor, 'port':l2.port})
             for l1 in l1_list:
                 _relink(l1, l2)
+
+        # 9. Modify the tree
+        node.remove_children(consumed)
+        node.add_children(produced)
 
         # Block expansion of link and properties over component outports
         # ==============================================================
@@ -606,6 +610,9 @@ class Flatten(object):
         #
         # (L0 [P0], L1 [P1]) + (L2 [P2], L3 [P3]) => (L0 [P0, P2], L3 [P1, P3])
 
+        # 1. Accounting
+        consumed = []
+        produced = []
         # 2. Locate InternalInPorts objects (L1)
         l1_list = query(node, kind=ast.InternalInPort, maxdepth=2)
         # 3. Find counterparts (L2) for each L1
