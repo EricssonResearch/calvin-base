@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, guard
+from calvin.actor.actor import Actor, manage, condition
 from calvin.runtime.north.calvin_token import ExceptionToken
 
 import json
@@ -53,16 +53,16 @@ class CalvinDeployerA(Actor):
 
     def exception_handler(self, action, args, context):
         # Ignore any exceptions
+        pass
 
     @condition(['name', 'script', 'deploy_info','sec_credentials'], ['URL', 'data', 'params', 'header'])
-    @guard(lambda self, name, script, deploy_info, sec_credentials: self.control_uri is not None)
     def deploy(self, name, script, deploy_info, sec_credentials):
         print "name:%s     script:%s    sec_credentials:%s "% (name, script, sec_credentials)
 #        body = self['json'].dumps({'script': script, 'name': name, 'deploy_info':deploy_info, 'check': False})
         body = self['json'].dumps({'script': script, 'name': name,
                                     'deploy_info':deploy_info, 'check': False, 
                                     'sec_credentials':sec_credentials})
-        return (production=(self.control_uri + "/deploy", body, {}, {}))
+        return (self.control_uri + "/deploy", body, {}, {})
 
     @condition(['status', 'header', 'data'], ['app_info'])
     def deployed(self, status, header, data):
@@ -73,7 +73,7 @@ class CalvinDeployerA(Actor):
         if status < 200 or status >= 300:
             # Failed deployed
             response = ExceptionToken(value=status)
-        return (production=(response,))
+        return (response,)
 
     action_priority = (deployed, deploy, new_control_uri)
     requires =  ['calvinsys.native.python-json']
