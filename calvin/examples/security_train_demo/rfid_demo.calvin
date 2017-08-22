@@ -1,15 +1,15 @@
 
 #RFID stuff
 dbgLund: io.Print()
-nothing : std.Void()
+nothing : flow.Void()
 readerLund : sensor.RFIDReader()
 jsonLund: json.GetValue()
-compareLund: std.Compare(op="=")
-selLund: std.Select()
-dataConst: std.Constant(data="data", n=-1)
-messageConst:std.Constant(data="Train is passing RFID reader 1", n=-1)
-RFIDConst: std.Constant(data=53072129, n=-1)
-sink: std.Terminator()
+compareLund: std.Compare(rel="=")
+selLund: flow.Select()
+dataConst: std.Constant(data="data")
+messageConst:std.Constant(data="Train is passing RFID reader 1")
+RFIDConst: std.Constant(data=53072129)
+sink: flow.Terminator()
 
 nothing.void > readerLund.data
 readerLund.data > jsonLund.container
