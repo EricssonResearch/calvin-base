@@ -60,3 +60,6 @@ class StandardOut(base_calvinsys_object.BaseCalvinsysObject):
             msg = "{}".format(self._prefix)
         print(msg)
 
+    def close(self):
+        pass
+
