@@ -61,3 +61,4 @@ class StandardOut(base_calvinsys_object.BaseCalvinsysObject):
 
     def close(self):
         pass
+
