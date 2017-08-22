@@ -40,7 +40,7 @@ class Environmental(Actor):
     @condition(action_input=["trigger"], action_output=["data"])
     def get_data(self, input):
         data = " %s C " % (int(self.sensor.get_temperature()),)
-        return (production=(data, ))
+        return (data, )
 
     action_priority = (get_data, )
     requires = ["calvinsys.sensors.environmental"]

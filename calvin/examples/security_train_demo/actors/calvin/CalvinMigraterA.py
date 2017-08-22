@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, guard
+from calvin.actor.actor import Actor, manage, condition
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
@@ -56,6 +56,7 @@ class CalvinMigraterA(Actor):
 
     def exception_handler(self, action, args, context):
         # Ignore any exceptions
+        pass
 
     @condition(['app_id'], [])
     def got_app_id(self, app_id):
@@ -77,25 +78,23 @@ class CalvinMigraterA(Actor):
         return key in self.deploy_info
 
     @condition(['key'], ['URL', 'data', 'params', 'header'])
-    @guard(guard_migrate)
     def migrate(self, key):
         self.last_keys.append(key)
         _log.info("MIGRATE %s\n%s" % (self.control_uri + "/application/" + self.app_id + "/migrate", self.deploy_info[key]))
-        return (production=(self.control_uri + "/application/" + self.app_id + "/migrate",
-                                        self.deploy_info[key], {}, {}))
+        return (self.control_uri + "/application/" + self.app_id + "/migrate",
+                                        self.deploy_info[key], {}, {})
 
     @condition(['key'], ['done'])
-    @guard(lambda self, key: key not in self.deploy_info)
     def wrong_key(self, key):
         _log.info("MIGRATE WRONG KEY %s" % key)
-        return (production=([key, False],))
+        return ([key, False],)
 
     @condition(['status', 'header', 'data'], ['done'])
     def migrated(self, status, header, data):
         response = status >= 200 and status < 300
         key = self.last_keys.pop(0)
         _log.info("MIGRATED %s response %d" % (key, status))
-        return (production=([key, response],))
+        return ([key, response],)
 
     action_priority = (migrate, migrated, wrong_key, got_app_id, new_control_uri)
     requires =  ['calvinsys.native.python-json']
