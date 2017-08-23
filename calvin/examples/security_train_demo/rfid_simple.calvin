@@ -1,0 +1,10 @@
+
+#RFID stuff
+dbgLund: io.Print()
+nothing : flow.Void()
+readerLund : sensor.RFIDReader()
+
+nothing.void > readerLund.data
+readerLund.data > dbgLund.token
+
+ 
