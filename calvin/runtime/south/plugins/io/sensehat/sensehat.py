@@ -43,7 +43,6 @@ class SenseHat(object):
         d = threads.defer_to_thread(self._sensehat.get_temperature)
         d.addBoth(cb)
         
-        
     def read_humidity(self, cb):
         d = threads.defer_to_thread(self._sensehat.get_humidity)
         d.addBoth(cb)
