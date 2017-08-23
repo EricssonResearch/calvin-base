@@ -86,7 +86,8 @@ class SenseHatDisplay(base_calvinsys_object.BaseCalvinsysObject):
     def write(self, data=None):
         def done(*args, **kwargs):
             self._can_write = True
-        
+            self.scheduler.wakeup()
+
         self._can_write = False
         msg = ""
         if data and self._prefix:

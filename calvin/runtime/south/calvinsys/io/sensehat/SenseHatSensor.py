@@ -88,7 +88,8 @@ class SenseHatSensor(base_calvinsys_object.BaseCalvinsysObject):
                 _log.warning("Failed reading '{}' from sensehat: {}".format(self._sensor, value))
                 self._value = None
             self._can_read = True
-                
+            self.scheduler.wakeup()
+
         {
             "temperature": self._sensehat.read_temperature,
             "pressure": self._sensehat.read_pressure,
