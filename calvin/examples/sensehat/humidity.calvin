@@ -1,0 +1,6 @@
+trigger : std.Trigger(tick=1, data=true)
+hum : sensor.TriggeredRelativeHumidity()
+print : io.Print()
+
+trigger.data > hum.measure
+hum.percent > print.token

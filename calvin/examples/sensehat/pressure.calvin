@@ -1,0 +1,6 @@
+tick : std.Trigger(data=true, tick=5)
+sensor : sensor.TriggeredPressure()
+out : io.Print()
+
+tick.data > sensor.trigger
+sensor.pressure > out.token

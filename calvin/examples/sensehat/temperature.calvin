@@ -1,0 +1,6 @@
+tick : std.Trigger(data=true, tick=1.0)
+temperature : sensor.TriggeredTemperature()
+out : io.Print()
+
+tick.data > temperature.trigger
+temperature.centigrade > out.token
