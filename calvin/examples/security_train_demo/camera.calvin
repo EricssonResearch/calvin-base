@@ -8,8 +8,8 @@
 
 
 
-trigger : std.Trigger(data="true", tick=10)
+trigger : std.Trigger(data=true, tick=1)
 camera : media.Camera()
-screen : io.StandardOut()
+screen : io.Print()
 trigger.data  > camera.trigger
 camera.image > screen.token

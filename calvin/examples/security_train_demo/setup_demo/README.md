@@ -51,7 +51,10 @@ MFRC522: `sudo pip install -e git+<https://github.com/olaan/MFRC522-Python#egg=m
 
 `sudo pip install pycam`
 if that does not work, try:
-`sudo apt-get install python-picamere`
+`sudo apt-get install python-picamera`
+
+Install opencv
+`sudo apt-get install -y python-pygame python-opencv`
 
 #OpenCV on runtime to show video stream (python-sense-hat does not exist for ELX)
 
