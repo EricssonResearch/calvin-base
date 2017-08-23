@@ -1,6 +1,6 @@
 /* Actors */
 src : std.CountTimer(sleep=10)
-sensor : sensor.Environmental()
+sensor : sensor.Temperature()
 display : io.Display()
 
 /* Connections */

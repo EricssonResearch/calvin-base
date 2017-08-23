@@ -110,7 +110,7 @@ Access in browswer `http://192.168.1.131:8000`
 
 #Debugging errors
 
-`csruntime -n 192.168.1.138 -p 5000 -c 5001 --attr-file runtime_attributes/ELX.json --loglevel DEBUG --loglevel calvin.runtime.north.scheduler:ERROR  --loglevel calvin.calvin.runtime.north.storage:ERROR --loglevel calvin.calvin.runtime.south.plugins.transports.calvinip.twisted.twisted_transport --logfile log.txt`
+`csruntime -n 192.168.1.138 -p 5000 -c 5001 --attr-file runtime_attributes/ELX.json --loglevel DEBUG --loglevel calvin.runtime.north.scheduler:ERROR  --loglevel calvin.calvin.runtime.north.storage:ERROR --loglevel calvin.calvin.runtime.south.plugins.transports.calvinip.twisted.twisted_transport:ERROR --logfile log.txt`
 
 #deploy script:
  
