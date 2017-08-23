@@ -16,7 +16,6 @@
 
 """
         Abstraction for the diffrent frameworks that can be used by the system.
-
 """
 
 import os
@@ -46,4 +45,4 @@ if _FW_PATH is not None:
             import_path = _FW_PATH.replace("/", ".")
             module_obj = __import__("%s.%s" % (import_path, module), globals=globals(), fromlist=[''])
             globals()[module] = module_obj
-            __all__.append(module_obj)
+__all__.append(module_obj)
