@@ -29,7 +29,7 @@ class ImageSink(Actor):
       b64image: base64 encoded jpg
     """
 
-    @manage([])
+    @manage(exclude=["_sink"])
     def init(self):
         self.setup()
 

@@ -31,7 +31,7 @@ class ImageSource(Actor):
       image: generated image
     """
 
-    @manage([])
+    @manage(exclude=["_cam"])
     def init(self):
         self.setup()
 
