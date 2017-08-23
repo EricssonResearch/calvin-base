@@ -53,7 +53,6 @@ class SenseHat(object):
         d.addBoth(cb)
     
     def show_message(self, msg, cb):
-        _log.info("displaying message: '{}'".format(msg))
         d = threads.defer_to_thread(self._sensehat.show_message, text_string=msg, text_colour=self._textcolor, 
             back_colour=self._backgroundcolor)
         d.addBoth(cb)
