@@ -39,6 +39,7 @@ class RecTimer(Actor):
         self.timer.cancel()
 
     def did_migrate(self):
+        self.use('calvinsys.events.timer', shorthand='timer')
         self.setup()
 
     @stateguard(lambda self: self.timer and self.timer.triggered)
