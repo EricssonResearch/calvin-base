@@ -39,9 +39,9 @@ See <http://helloraspberrypi.blogspot.se/2015/10/raspberry-pi-2-mfrc522-python-t
 
 `$ sudo raspi-config`, advanced options -> enable SPI
 
-SPI: `sudo pip install -e git+<https://github.com/lthiery/SPI-Py#egg=SPI-Py-1.0>`
-
-MFRC522: `sudo pip install -e git+<https://github.com/olaan/MFRC522-Python#egg=mfrc522>`
+`sudo -H pip install RPi.GPIO`
+`sudo -H pip install -e git+https://github.com/lthiery/SPI-Py#egg=SPI-Py-1.0`
+`sudo -H pip install -e git+https://github.com/olaan/MFRC522-Python#egg=mfrc522`
 
 # adafruit 16*2 LCD runtime setup (without plate)
 
@@ -59,6 +59,10 @@ Install opencv
 #OpenCV on runtime to show video stream (python-sense-hat does not exist for ELX)
 
 `sudo apt-get install -y --no-install-recommends gcc g++ python2.7 python-dev libffi-dev libssl-dev python-smbus wget ca-certificates git python-sense-hat python-pygame python-opencv`
+
+# Download calvin
+
+`git clone https://github.com/EricssonResearch/calvin-base.git`
 
 # Calvin configuration files
 
@@ -90,32 +94,34 @@ Access in browswer `http://192.168.1.131:8000`
 `sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/infoboard/calvin.conf csruntime -n 192.168.0.115 -p 5011 -c 5031 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Lund_InfoBoard.json`
 
 -Lund_Camera:
-`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/camera/calvin.conf csruntime -n 192.168.0.112 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Lund_Camera.json`
+`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/camera/calvin.conf csruntime -n 192.168.0.132 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Lund_Camera.json`
 
 -Lund_Sensehat:
 `sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/sensehat/calvin.conf csruntime -n 192.168.0.112 -p 5011 -c 5031 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Lund_Sensehat.json`
 
 -Lund_RFID:
-`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/rfid/calvin.conf csruntime -n 192.168.0.115 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Lund_RFID.json`
+`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/rfid/calvin.conf csruntime -n 192.168.0.116 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Lund_RFID.json`
+
+-Servo:
+`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/servo/calvin.conf csruntime -n 192.168.0.100 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Servo.json`
 
 -Sthlm_InfoBoard:
 `sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/infoboard/calvin.conf csruntime -n 192.168.0.107 -p 5011 -c 5031 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_InfoBoard.json`
 
 -Sthlm_Camera:
-`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/camera/calvin.conf csruntime -n 192.168.1.101 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_Camera.json`
+`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/camera/calvin.conf csruntime -n 192.168.1.130 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_Camera.json`
 
 -Sthlm_Sensehat:
-`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/sensehat/calvin.conf csruntime -n 192.168.1.101 -p 5011 -c 5031 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_Sensehat.json`
+`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/sensehat/calvin.conf csruntime -n 192.168.1.130 -p 5011 -c 5031 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_Sensehat.json`
 
 -Sthlm_RFID:
-`sudo -H sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/rfid/calvin.conf csruntime -n 192.168.0.107 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_RFID.json`
+`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/rfid/calvin.conf csruntime -n 192.168.0.145 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_RFID.json`
 
--Servo:
-`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/servo/calvin.conf csruntime -n 192.168.0.122 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Servo.json`
+
 
 #Debugging errors
 
-`csruntime -n 192.168.1.138 -p 5000 -c 5001 --attr-file runtime_attributes/ELX.json --loglevel DEBUG --loglevel calvin.runtime.north.scheduler:ERROR  --loglevel calvin.calvin.runtime.north.storage:ERROR --loglevel calvin.calvin.runtime.south.plugins.transports.calvinip.twisted.twisted_transport:ERROR --logfile log.txt`
+`--loglevel DEBUG --loglevel calvin.runtime.north.scheduler:ERROR  --loglevel calvin.calvin.runtime.north.storage:ERROR --loglevel calvin.calvin.runtime.south.plugins.transports.calvinip.twisted.twisted_transport:ERROR --logfile log.txt`
 
 #deploy script:
  

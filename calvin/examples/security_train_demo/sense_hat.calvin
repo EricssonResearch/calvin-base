@@ -1,8 +1,6 @@
 /* Actors */
-src : std.CountTimer(sleep=10)
-sensor : sensor.Temperature()
+sensor : sensor.Temperature(frequency=1)
 display : io.Display()
 
 /* Connections */
-src.integer > sensor.trigger
-sensor.data > display.text
+sensor.centigrade > display.text
