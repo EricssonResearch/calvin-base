@@ -60,6 +60,10 @@ Install opencv
 
 `sudo apt-get install -y --no-install-recommends gcc g++ python2.7 python-dev libffi-dev libssl-dev python-smbus wget ca-certificates git python-sense-hat python-pygame python-opencv`
 
+# Servo
+
+`sudo pip install adafruit-pca9685`
+
 # Download calvin
 
 `git clone https://github.com/EricssonResearch/calvin-base.git`
