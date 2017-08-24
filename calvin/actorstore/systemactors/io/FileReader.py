@@ -74,6 +74,9 @@ class FileReader(Actor):
         self.file = None
         return (EOSToken(), )
 
+    def did_migrate(self):
+        self.init()
+
     action_priority = (open_file, file_not_found, readline, eof)
     requires =  ['calvinsys.io.filehandler']
 

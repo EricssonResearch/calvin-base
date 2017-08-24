@@ -57,11 +57,12 @@ class FileWriter(Actor):
             data: data
     """
 
-    @manage(['basename', 'counter'])
+    @manage(['basename', 'counter', 'suffix'])
     def init(self, basename, suffix=""):
         self.basename = basename
         self.suffix = suffix
         self.counter = 0
+        self.file = None
         self.setup()
 
     def setup(self):
@@ -78,12 +79,16 @@ class FileWriter(Actor):
     @condition(action_input=['data'])
     def openf(self, data):
         self.setup()
-        self.file.write_line(data)
+        self.file.write_line(data.encode('utf-8'))
 
     @stateguard(lambda self: self.file)
     @condition(action_input=['data'])
     def writef(self, data):
-        self.file.write_line(data)
+        self.file.write_line(data.encode('utf-8'))
+
+    def did_migrate(self):
+        self.file = None
+        self.setup()
 
     action_priority = (writef, openf)
     requires = ['calvinsys.io.filehandler']
