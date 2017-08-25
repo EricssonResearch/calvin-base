@@ -1,6 +1,7 @@
 /* Actors */
-src : std.CountTimer(sleep=1)
+#src : std.CountTimer(sleep=1)
+src: std.Trigger(tick=1, data="Cargo train.NEW_LINEKeep off tracks!")
 display : io.Display()
 /* Connections */
-src.integer > display.text
+src.data > display.text
 
