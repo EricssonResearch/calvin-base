@@ -1,28 +1,23 @@
-define CONTROL_URI = "control_uri"
+define CONTROL_URI = "http://192.168.0.132:5001"
 define SCRIPT = "src : std.CountTimer()\nsnk : io.StandardOut()\nsrc.integer > snk.token\n"
 define APPNAME = "train_demo"
 
 ### Components ###
 # Components
+/*The component depoys an application specified by the name, script and deploy_info.*/
 component CalvinDeployer(control_uri) name, script, deploy_info -> app_info {
-    controlpath: std.Constant(data=control_uri)    
-    controluri: io.FileReader()
+    sec_credentials:std.Constant(data={})
+    controlpath: std.Constant(data=control_uri)
     deploy: calvin.CalvinDeployerA()
     post: net.HTTPPost()
 
-    dbg1: io.Print()
-    dbg2: io.Print()
-
+    sec_credentials.token > deploy.sec_credentials
     .name > deploy.name
     .script > deploy.script
     .deploy_info > deploy.deploy_info
     deploy.app_info > .app_info
 
-    controlpath.token > dbg1.token
-    controluri.out > dbg2.token
-
-    controlpath.token > controluri.filename
-    controluri.out > deploy.control_uri
+    controlpath.token > deploy.control_uri
 
     deploy.URL > post.URL
     deploy.params > post.params
@@ -34,21 +29,20 @@ component CalvinDeployer(control_uri) name, script, deploy_info -> app_info {
     post.data > deploy.data
 }
 
-
 ### Actor instances ###
 #script file
-file: std.Constant(data=SCRIPT)
+script: flow.Init(data=SCRIPT)
 #deploy info
 deploy_info: std.Constant(data=
                         {"requirements":
                             {"src":
                                 [{"op": "node_attr_match",
-                                 "kwargs": {"index": ["node_name", {"name": "Sthlm_RFID"}]},
+                                 "kwargs": {"index": ["node_name", {"name": "Lund_RFID", "organization":"SJ"}]},
                                  "type": "+"
                                  }],
                             "snk":
                                 [{"op": "node_attr_match",
-                                 "kwargs": {"index": ["node_name", {"name": "Lund_RFID"}]},
+                                 "kwargs": {"index": ["node_name", {"name": "Lund_RFID", "organization":"SJ"}]},
                                  "type": "+"
                                  }]
                             }
@@ -61,14 +55,13 @@ name: std.Constant(data=APPNAME)
 deploy: CalvinDeployer(control_uri=CONTROL_URI)
 
 ### Structure ###
-dbgDeploy: io.Print()
-
 
 # deploy
-file.token > deploy.script
+voidport > script.in
+script.out > deploy.script
 name.token > deploy.name
 deploy_info.token > deploy.deploy_info
-deploy.app_info > dbgDeploy.token
+deploy.app_info > voidport
 
 
 

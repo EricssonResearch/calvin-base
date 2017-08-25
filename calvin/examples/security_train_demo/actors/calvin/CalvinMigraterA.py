@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
@@ -43,8 +44,8 @@ class CalvinMigraterA(Actor):
     @manage([])
     def init(self, deploy_info, control_uri=None):
         self.control_uri = control_uri
-        self.use(requirement='calvinsys.native.python-json', shorthand='json')
-        self.deploy_info = {a: self['json'].dumps({'deploy_info': d, "move": False}) for a, d in deploy_info.iteritems()}
+        self.json = calvinlib.use("json")
+        self.deploy_info = {a: self.json.tostring({'deploy_info': d, "move": False}) for a, d in deploy_info.iteritems()}
         self.app_id = None
         self.last_keys = []
 
@@ -86,4 +87,4 @@ class CalvinMigraterA(Actor):
         return ([key, response],)
 
     action_priority = (migrate, migrated, got_app_id, new_control_uri)
-    requires =  ['calvinsys.native.python-json']
+    requires =  ['json']
