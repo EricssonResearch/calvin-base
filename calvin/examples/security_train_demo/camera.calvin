@@ -1,15 +1,7 @@
-#trigger : std.Trigger(data=true, tick=10)
-#camera : media.Camera()
-#screen : media.ImageRenderer()
+tick : std.Trigger(data=true, tick=1)
+cam : media.ImageSource()
+sink : media.ImageSink()
 
-#trigger.data  > camera.trigger
-#camera.image > screen.image
+tick.data > cam.trigger
+cam.image > sink.b64image
 
-
-
-
-trigger : std.Trigger(data=true, tick=1)
-camera : media.Camera()
-screen : io.Print()
-trigger.data  > camera.trigger
-camera.image > screen.token
