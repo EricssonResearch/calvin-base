@@ -113,10 +113,10 @@ Access in browswer `http://192.168.1.131:8000`
 `sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/infoboard/calvin.conf csruntime -n 192.168.0.120 -p 5011 -c 5031 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_InfoBoard.json`
 
 -Sthlm_Camera:
-`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/camera/calvin.conf csruntime -n 192.168.1.106 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_Camera.json`
+`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/camera/calvin.conf csruntime -n 192.168.0.106 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_Camera.json`
 
 -Sthlm_Sensehat:
-`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/sensehat/calvin.conf csruntime -n 192.168.1.106 -p 5011 -c 5031 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_Sensehat.json`
+`sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/sensehat/calvin.conf csruntime -n 192.168.0.106 -p 5011 -c 5031 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_Sensehat.json`
 
 -Sthlm_RFID:
 `sudo -H CALVIN_CONFIG_PATH=/home/pi/calvin-base/calvin/examples/security_train_demo/configs/rfid/calvin.conf csruntime -n 192.168.0.121 -p 5010 -c 5030 --attr-file /home/pi/calvin-base/calvin/examples/security_train_demo/runtime_attributes/Sthlm_RFID.json`
