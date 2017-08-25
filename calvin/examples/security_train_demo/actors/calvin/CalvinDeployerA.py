@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+
 from calvin.runtime.north.calvin_token import ExceptionToken
 
 import json
@@ -44,7 +45,7 @@ class CalvinDeployerA(Actor):
     @manage([])
     def init(self, control_uri=None):
         self.control_uri = control_uri
-        self.use(requirement='calvinsys.native.python-json', shorthand='json')
+        self.json = calvinlib.use("json")
 
     @condition(['control_uri'], [])
     def new_control_uri(self, control_uri):
@@ -59,8 +60,7 @@ class CalvinDeployerA(Actor):
     @condition(['name', 'script', 'deploy_info','sec_credentials'], ['URL', 'data', 'params', 'header'])
     def deploy(self, name, script, deploy_info, sec_credentials):
         print "name:%s     script:%s    sec_credentials:%s "% (name, script, sec_credentials)
-#        body = self['json'].dumps({'script': script, 'name': name, 'deploy_info':deploy_info, 'check': False})
-        body = self['json'].dumps({'script': script, 'name': name,
+        body = self.json.tostring({'script': script, 'name': name,
                                     'deploy_info':deploy_info, 'check': False,
                                     'sec_credentials':sec_credentials})
         return (self.control_uri + "/deploy", body, {}, {})
@@ -68,7 +68,7 @@ class CalvinDeployerA(Actor):
     @condition(['status', 'header', 'data'], ['app_info'])
     def deployed(self, status, header, data):
         try:
-            response = self['json'].loads(data)
+            response = self.json.fromstring(data)
         except:
             response = None
         if status < 200 or status >= 300:
@@ -77,4 +77,4 @@ class CalvinDeployerA(Actor):
         return (response,)
 
     action_priority = (deployed, deploy, new_control_uri)
-    requires =  ['calvinsys.native.python-json']
+    requires =  ['json']
