@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import ExceptionToken
 
 import json
@@ -51,16 +51,17 @@ class CalvinDeployerA(Actor):
         if control_uri:
             self.control_uri = control_uri
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         # Ignore any exceptions
         pass
 
+    @stateguard(lambda self: self.control_uri is not None)
     @condition(['name', 'script', 'deploy_info','sec_credentials'], ['URL', 'data', 'params', 'header'])
     def deploy(self, name, script, deploy_info, sec_credentials):
         print "name:%s     script:%s    sec_credentials:%s "% (name, script, sec_credentials)
 #        body = self['json'].dumps({'script': script, 'name': name, 'deploy_info':deploy_info, 'check': False})
         body = self['json'].dumps({'script': script, 'name': name,
-                                    'deploy_info':deploy_info, 'check': False, 
+                                    'deploy_info':deploy_info, 'check': False,
                                     'sec_credentials':sec_credentials})
         return (self.control_uri + "/deploy", body, {}, {})
 

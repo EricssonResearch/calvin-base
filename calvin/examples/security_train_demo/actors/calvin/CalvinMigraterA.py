@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
@@ -32,7 +32,6 @@ class CalvinMigraterA(Actor):
       key : key to activate a predefined deploy info
       status: Connected from HTTPPost Actor
       header: Connected from HTTPPost Actor
-      data : Connected from HTTPPost Actor
     Outputs:
       done : (key, True/False)
       URL : Connected to HTTPPost Actor
@@ -54,7 +53,7 @@ class CalvinMigraterA(Actor):
         if control_uri:
             self.control_uri = control_uri
 
-    def exception_handler(self, action, args, context):
+    def exception_handler(self, action, args):
         # Ignore any exceptions
         pass
 
@@ -71,30 +70,20 @@ class CalvinMigraterA(Actor):
         elif app_id is None:
             self.app_id = None
         # Just continue waiting for valid app id if not correctly formatted
-
-    def guard_migrate(self, key):
-        if self.app_id is None or self.control_uri is None:
-            return False
-        return key in self.deploy_info
-
+    @stateguard(lambda self: self.app_id is not None and self.control_uri is not None)
     @condition(['key'], ['URL', 'data', 'params', 'header'])
     def migrate(self, key):
         self.last_keys.append(key)
         _log.info("MIGRATE %s\n%s" % (self.control_uri + "/application/" + self.app_id + "/migrate", self.deploy_info[key]))
         return (self.control_uri + "/application/" + self.app_id + "/migrate",
-                                        self.deploy_info[key], {}, {})
+                                        self.deploy_info[key], {}, {"Content-type": "text/json"})
 
-    @condition(['key'], ['done'])
-    def wrong_key(self, key):
-        _log.info("MIGRATE WRONG KEY %s" % key)
-        return ([key, False],)
-
-    @condition(['status', 'header', 'data'], ['done'])
-    def migrated(self, status, header, data):
+    @condition(['status', 'header'], ['done'])
+    def migrated(self, status, header):
         response = status >= 200 and status < 300
         key = self.last_keys.pop(0)
-        _log.info("MIGRATED %s response %d" % (key, status))
+        _log.info("MIGRATED %s response %d, response: %s" % (key, status, response))
         return ([key, response],)
 
-    action_priority = (migrate, migrated, wrong_key, got_app_id, new_control_uri)
+    action_priority = (migrate, migrated, got_app_id, new_control_uri)
     requires =  ['calvinsys.native.python-json']
