@@ -90,7 +90,7 @@ def placement(out_iter, kwargs, final, capability_nodes):
         out_iter.final()
         return
     else:
-        capability = "".join(capability_nodes[0].partition('calvinsys.')[1:])
+        capability = capability_nodes[0].rpartition('/')[2]
         kwargs['capabilities'].setdefault(capability, []).append(capability_nodes[1])
 
     _log.debug("shadow_match:placement EVALUATE %s" % kwargs)
