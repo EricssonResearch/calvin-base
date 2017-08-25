@@ -1,7 +1,6 @@
 
 #RFID stuff
 dbgLund: io.Print()
-nothing : flow.Void()
 readerLund : sensor.RFIDReader()
 jsonLund: json.GetValue()
 compareLund: std.Compare(rel="=")
@@ -11,7 +10,7 @@ messageConst:std.Constant(data="Train is passing RFID reader 1")
 RFIDConst: std.Constant(data=53072129)
 sink: flow.Terminator()
 
-nothing.void > readerLund.data
+voidport > readerLund.data
 readerLund.data > jsonLund.container
 dataConst.token > jsonLund.key
 RFIDConst.token > compareLund.a
