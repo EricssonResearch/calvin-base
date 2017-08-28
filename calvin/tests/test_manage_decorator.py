@@ -85,6 +85,11 @@ class ManageTests(unittest.TestCase):
         manage(exclude=['id'])(self.d.init)()
         assert 'id' in self.d._managed
 
+    def test10(self):
+        manage(include=[])(self.d.init)()
+        assert self.d._managed == set(('id', 'name'))
+
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -57,8 +57,8 @@ def manage(include=None, exclude=None):
     if include and type(include) is not list or exclude and type(exclude) is not list:
         raise Exception("@manage decorator: Must use list as argument")
 
-    include = set(include) if include else set()
-    exclude = set(exclude) if exclude else set()
+    include_set = set(include) if include else set()
+    exclude_set = set(exclude) if exclude else set()
 
     # Using wrapt since we need to preserve the signature of the wrapped signature.
     # See http://wrapt.readthedocs.org/en/latest/index.html
@@ -66,14 +66,14 @@ def manage(include=None, exclude=None):
     @wrapt.decorator
     def wrapper(wrapped, instance, args, kwargs):
         # Exclude the instance variables added by superclasses
-        exclude.update(instance.__dict__)
+        exclude_set.update(instance.__dict__)
         x = wrapped(*args, **kwargs)
-        if not include:
+        if include is None:
             # include set not given, so construct the implicit include set
-            include.update(instance.__dict__)
-            include.remove('_managed')
-            include.difference_update(exclude)
-        instance._managed.update(include)
+            include_set.update(instance.__dict__)
+            include_set.remove('_managed')
+            include_set.difference_update(exclude_set)
+        instance._managed.update(include_set)
         return x
     return wrapper
 
