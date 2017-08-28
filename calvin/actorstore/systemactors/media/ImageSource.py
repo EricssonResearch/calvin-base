@@ -28,7 +28,7 @@ class ImageSource(Actor):
     Inputs:
       trigger: anything
     Outputs:
-      image: generated image
+      b64image: generated image
     """
 
     @manage(exclude=["_cam"])
@@ -45,7 +45,7 @@ class ImageSource(Actor):
         calvinsys.close(self._cam)
 
     @stateguard(lambda self: calvinsys.can_read(self._cam))
-    @condition(action_output=['image'])
+    @condition(action_output=['b64image'])
     def send_image(self):
         image = calvinsys.read(self._cam)
         return (image, )
