@@ -185,6 +185,7 @@ class CalvinProto(CalvinCBClass):
             # functions that should be called. Either permanent here
             # or using the callback_register method.
             'PROXY_CONFIG': [CalvinCB(self.proxy_config_handler)],
+            'SLEEP_REQUEST': [CalvinCB(self.proxy_sleep_request_handler)],
             'ACTOR_NEW': [CalvinCB(self.actor_new_handler)],
             'ACTOR_MIGRATE': [CalvinCB(self.actor_migrate_handler)],
             'APP_DESTROY': [CalvinCB(self.app_destroy_handler)],
@@ -280,17 +281,23 @@ class CalvinProto(CalvinCBClass):
     def proxy_config_handler(self, payload):
         """ Configure a node using this node as a proxyconfig
         """
-        if "will_sleep" not in payload:
-            payload["will_sleep"] = False
         proxyconfig.set_proxy_config(payload['from_rt_uuid'],
             payload['capabilities'],
             payload['port_property_capability'],
-            payload['will_sleep'],
             self.network.link_get(payload['from_rt_uuid']),
             self.node.storage,
             CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
                 callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})),
             payload.get('attributes'))
+
+    def proxy_sleep_request_handler(self, payload):
+        """ Handle node requesting sleep mode
+        """
+        proxyconfig.handle_sleep_request(payload['from_rt_uuid'],
+            self.network.link_get(payload['from_rt_uuid']),
+            payload['seconds_to_sleep'],
+            CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
+                callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
 
     #### ACTORS ####
 
