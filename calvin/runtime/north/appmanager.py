@@ -131,7 +131,7 @@ class Application(object):
         name = self.component_name(actor_name) or actor_name
         name = name.split(':', 1)[1] if self.ns else name
         return self.deploy_info['requirements'][name] if (self.deploy_info and 'requirements' in self.deploy_info
-                                                            and name in self.deploy_info['requirements']) else None
+                                                            and name in self.deploy_info['requirements']) else []
 
 
 class AppManager(object):
@@ -519,7 +519,7 @@ class AppManager(object):
         app._migrated_actors = {a: None for a in app.actors}
         for actor_id, actor_name in app.actors.iteritems():
             req = app.get_req(actor_name)
-            if req is None:
+            if not req:
                 _log.analyze(self._node.id, "+ NO REQ", {'actor_id': actor_id, 'actor_name': actor_name})
                 # No requirement then leave as is.
                 self._migrated_cb(response.CalvinResponse(True), app, actor_id, cb)
