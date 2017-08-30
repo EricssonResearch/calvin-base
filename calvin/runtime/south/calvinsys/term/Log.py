@@ -71,3 +71,5 @@ class Log(base_calvinsys_object.BaseCalvinsysObject):
             msg = data
         self._log("{}".format(msg))
 
+    def close(self):
+        pass
