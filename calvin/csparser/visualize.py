@@ -228,6 +228,25 @@ class DotRenderer(BaseRenderer):
             self.suppress = False
             return ''
 
+    def _comment_out(self, node, order):
+        if order == 'preorder':
+            # self.suppress = True
+            return '\n/*\n'
+        if order == 'inorder':
+            return ''
+        if order == 'postorder':
+            # self.suppress = False
+            return '\n*/\n'
+
+    def Group(self, node, order):
+        return self._comment_out(node, order)
+
+    def RuleDefinition(self, node, order):
+        return self._comment_out(node, order)
+
+    def RuleApply(self, node, order):
+        return self._comment_out(node, order)
+
 
 class Visualize(object):
    """docstring for VizPrinter"""
