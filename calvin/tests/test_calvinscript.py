@@ -866,4 +866,25 @@ class CalvinScriptCheckerTest(CalvinTestBase):
             print e['reason']
         self.assertEqual(len(errors), 0)
 
+    def testCompToCompWithFanoutFromInternalInport(self):
+        script = r"""
+        component Left() -> out {
+            src : std.Trigger(tick=1, data=true)
+            src.data > .out
+        }
+        component Right() in ->  {
+            a : io.Print()
+            b : io.Print()
+            .in > a.token, b.token
+        }
+        src : Left()
+        snk : Right()
+        src.out > snk.in
+        """
+        result, errors, warnings = self.parse('inline', script)
+        for e in errors:
+            print e['reason']
+        self.assertEqual(len(errors), 0)
+
+
 
