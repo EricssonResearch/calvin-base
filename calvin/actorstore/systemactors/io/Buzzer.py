@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, calvinsys
+from calvin.actor.actor import Actor, manage, condition, calvinsys, stateguard
 
 
 class Buzzer(Actor):
@@ -22,22 +22,15 @@ class Buzzer(Actor):
     """
     Buzz
     Input:
-      volume : 0-100 (%)
+      on : true/false for on/off
     """
 
-    @manage(["volume"])
+    @manage([])
     def init(self):
-        self.volume = None
         self.setup()
 
     def setup(self):
         self.buzzer = calvinsys.open(self, "io.buzzer")
-        if self.volume and calvinsys.can_write(self.buzzer):
-            calvinsys.write(self.buzzer, self.volume)
-
-    def will_migrate(self):
-        calvinsys.close(self.buzzer)
-        self.buzzer = None
 
     def will_end(self):
         if self.buzzer :
@@ -46,18 +39,10 @@ class Buzzer(Actor):
     def did_migrate(self):
         self.setup()
 
-    @condition(["volume"], [])
-    def set_volume(self, volume):
-        try:
-            vol = int(volume)
-            if vol < 0 : vol = 0
-            if vol > 100: vol = 100
-            self.volume = vol
-        except Exception:
-            self.volume = 0
-            
-        if calvinsys.can_write(self.buzzer):
-            calvinsys.write(self.buzzer, self.volume)
+    @stateguard(lambda actor: calvinsys.can_write(actor.buzzer))
+    @condition(["on"], [])
+    def turn_on_off(self, on):
+        calvinsys.write(self.buzzer, bool(on))
 
-    action_priority = (set_volume, )
+    action_priority = (turn_on_off, )
     requires = ["io.buzzer"]
