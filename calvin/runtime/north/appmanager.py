@@ -120,18 +120,27 @@ class Application(object):
                 else:
                     self.components[component] = [name]
 
-    def component_name(self, name):
-        l = (len(self.ns)+1) if self.ns else 0
-        if name.find(':',l)> -1:
-            return ':'.join(name.split(':')[0:(2 if self.ns else 1)])
-        else:
-            return None
 
     def get_req(self, actor_name):
-        name = self.component_name(actor_name) or actor_name
-        name = name.split(':', 1)[1] if self.ns else name
-        return self.deploy_info['requirements'][name] if (self.deploy_info and 'requirements' in self.deploy_info
-                                                            and name in self.deploy_info['requirements']) else []
+        """
+        Start searching from the most specific requirement,
+        then advance higher up in the component hierarchy until a requirement is found.
+        """
+        # N.B. self.ns should always exist (= script name)
+        # Check for existence of deploy info
+        if not self.deploy_info or 'requirements' not in self.deploy_info:
+            print "Application::get_req({}) -> [] NO INFO".format(actor_name)
+            return []
+        # Trim of script name
+        _, name = actor_name.split(':', 1)
+        parts = name.split(':')
+        req = []
+        while parts and not req:
+            current = ':'.join(parts)
+            req = self.deploy_info['requirements'].get(current, [])
+            parts = parts[:-1]
+        print "Application::get_req({}) -> ".format(actor_name), req
+        return req
 
 
 class AppManager(object):
@@ -602,18 +611,28 @@ class Deployer(object):
                 else:
                     self.components[component] = [name]
 
-    def component_name(self, name):
-        l = (len(self.ns)+1) if self.ns else 0
-        if name.find(':',l)> -1:
-            return ':'.join(name.split(':')[0:(2 if self.ns else 1)])
-        else:
-            return None
 
     def get_req(self, actor_name):
-        name = self.component_name(actor_name) or actor_name
-        name = name.split(':', 1)[1] if self.ns else name
-        return self.deploy_info['requirements'][name] if (self.deploy_info and 'requirements' in self.deploy_info
-                                                            and name in self.deploy_info['requirements']) else []
+        """
+        Start searching from the most specific requirement,
+        then advance higher up in the component hierarchy until a requirement is found.
+        """
+        # N.B. self.ns should always exist (= script name)
+        # Check for existence of deploy info
+        if not self.deploy_info or 'requirements' not in self.deploy_info:
+            print "Deployer::get_req({}) -> [] NO INFO".format(actor_name)
+            return []
+        # Trim of script name
+        _, name = actor_name.split(':', 1)
+        parts = name.split(':')
+        req = []
+        while parts and not req:
+            current = ':'.join(parts)
+            req = self.deploy_info['requirements'].get(current, [])
+            parts = parts[:-1]
+        print "Deployer::get_req({}) -> ".format(actor_name), req
+        return req
+
 
     def lookup_and_verify(self, actor_name, info, cb=None):
         """
