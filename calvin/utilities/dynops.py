@@ -17,36 +17,31 @@
 import random
 
 from calvin.utilities.calvinlogger import get_logger
+
 _log = get_logger(__name__)
 
+
 class PauseIteration(Exception):
-    def __init__(self):
-        super(PauseIteration, self).__init__()
+    pass
+
 
 class FailedElement(Exception):
     """ Used as an element indicating a failure
     """
-    def __init__(self):
-        super(FailedElement, self).__init__()
-
     def __str__(self):
         return "FailedElement"
+
 
 class FinalElement(Exception):
     """ Used as an element indicating reached end, only used during special circumstances
     """
-    def __init__(self):
-        super(FinalElement, self).__init__()
-
     def __str__(self):
         return "FinalElement"
+
 
 class InfiniteElement(Exception):
     """ Used as an element indicating that the set drawn from is infinite
     """
-    def __init__(self):
-        super(InfiniteElement, self).__init__()
-
     def __str__(self):
         return "InfiniteElement"
 
@@ -56,7 +51,7 @@ class DynOps(object):
     Dynamic operations built around hiraki of iterables.
     Leafs typically async operations filling in values from responses.
     Root and down are lazy evaluated.
-    
+
     This should be used as an iterable, but with the extra exception
     PauseIteration which indicate that the iterable is not finsihed but
     waiting for dynamic filled in elements at leafs. Set a callback
@@ -70,10 +65,25 @@ class DynOps(object):
         self.infinite_sent = False
         self.cb_args = []
         self.cb_kwargs = {}
-        self.name = ""
+        self._name = ""
+
+    @property
+    def name(self):
+        return "<{}>".format(self._name) if self._name else ""
+
+    @property
+    def inf(self):
+        return "<Inf>" if self.infinite_set else ""
+
+    @property
+    def func_name(self):
+        return self.func.__name__
+
+    def final_sign(self, final):
+        return "#" if final else "-"
 
     def set_name(self, name):
-        self.name = name
+        self._name = name
         # To enable setting name inline return self, i.e. it = DynOps(..).set_name("name")
         return self
 
@@ -83,7 +93,7 @@ class DynOps(object):
         self._trigger = trigger
 
     def miss_cb_str(self):
-        return "" if self._trigger else "<NoCB>" 
+        return "" if self._trigger else "<NoCB>"
 
     def trig(self):
         _log.debug("%s TRIG BEGIN" % (self.__str__()))
@@ -176,9 +186,8 @@ class Union(DynOps):
             for line in sub.splitlines():
                 s += "\n\t" + line
             s += ", "
-        return "Union%s%s%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "",
-                                    "<Inf>" if self.infinite_set else "",
-                                    "#" if self.final else "-", self.miss_cb_str(), s[:-2])
+        return "Union%s%s%s%s(%s\n)" % (self.name, self.inf, self.final_sign(self.final), self.miss_cb_str(), s[:-2])
+
 
 class Intersection(DynOps):
     """ A Dynamic Operations Intersection set operation
@@ -207,54 +216,68 @@ class Intersection(DynOps):
             e = self.candidates.pop()
             self.set.add(e)
             return e
+
         while True:
-            active = False
-            for v in self.iters:
-                if not self.final[id(v)]:
-                    try:
-                        n = v.next()
-                        if isinstance(n, InfiniteElement):
-                            self.infs[id(v)] = True
-                            self.final[id(v)] = True
-                        self.drawn[id(v)].add(n)
-                        active = True
-                    except PauseIteration:
-                        pass
-                    except StopIteration:
-                        self.final[id(v)] = True
+            active = self._iterate_values()
+
             if all(self.infs.values()):
-                self.infinite_set = True
-                if self.infinite_sent:
-                    _log.debug("%s INFINITE STOP" % self.__str__())
-                    raise StopIteration
-                else:
-                    _log.debug("%s INFINITE SEND" % self.__str__())
-                    self.infinite_sent = True
-                    # FIXME Need to trig?
-                    #self.trig()
-                    return InfiniteElement
-                
-            # Current seen intersection
-            self.candidates.update(set.intersection(*[self.drawn[id(v)] for v in self.iters if not self.infs[id(v)]]))
-            _log.debug("Intersection%s%s%s candidates: %s drawn: %s infs: %s"  % (("<" + self.name + ">") if self.name else "",
-                                           "<Inf>" if self.infinite_set else "",
-                                           "#" if self._final else "-", self.candidates, self.drawn.values(), self.infs.values()))
-            # remove from individual iterables
-            for v in self.drawn.values():
-                v.difference_update(self.candidates)
-            # Remove previously seen
-            self.candidates.difference_update(self.set)
+                return self._all_is_infinite()
+
+            self._update_intersection()
+
             if self.candidates:
                 e = self.candidates.pop()
                 self.set.add(e)
                 return e
             if not active or all(self.final.values()):
                 break
+
         if all([self.final[id(v)] for v in self.iters]):
             self._final = True
             raise StopIteration
         else:
             raise PauseIteration
+
+    def _iterate_values(self):
+        active = False
+        for v in self.iters:
+            if not self.final[id(v)]:
+                try:
+                    n = v.next()
+                    if isinstance(n, InfiniteElement):
+                        self.infs[id(v)] = True
+                        self.final[id(v)] = True
+                    self.drawn[id(v)].add(n)
+                    active = True
+                except PauseIteration:
+                    pass
+                except StopIteration:
+                    self.final[id(v)] = True
+
+        return active
+
+    def _all_is_infinite(self):
+        self.infinite_set = True
+        if self.infinite_sent:
+            _log.debug("%s INFINITE STOP" % self.__str__())
+            raise StopIteration
+
+        _log.debug("%s INFINITE SEND" % self.__str__())
+        self.infinite_sent = True
+        # FIXME Need to trig?
+        #self.trig()
+        return InfiniteElement
+
+    def _update_intersection(self):
+        # Current seen intersection
+        self.candidates.update(set.intersection(*[self.drawn[id(v)] for v in self.iters if not self.infs[id(v)]]))
+        _log.debug("Intersection{}{}{} candidates: {} drawn: {} infs: {}".format(
+            self.name, self.inf, self.final_sign(self._final), self.candidates, self.drawn.values(), self.infs.values()))
+        # remove from individual iterables
+        for v in self.drawn.values():
+            v.difference_update(self.candidates)
+        # Remove previously seen
+        self.candidates.difference_update(self.set)
 
     def __str__(self):
         s = ""
@@ -263,9 +286,8 @@ class Intersection(DynOps):
             for line in sub.splitlines():
                 s += "\n\t" + line
             s += ", "
-        return "Intersection%s%s%s%s(%s\n) out=%s, candidates=%s" % (("<" + self.name + ">") if self.name else "",
-                                           "<Inf>" if self.infinite_set else "",
-                                           "#" if self._final else "-", self.miss_cb_str(), s[:-2], self.set, self.candidates)
+        return "Intersection{}{}{}{}({}\n) out={}, candidates={}".format(
+            self.name, self.inf, self.final_sign(self._final), self.miss_cb_str(), s[:-2], self.set, self.candidates)
 
 
 class Difference(DynOps):
@@ -290,19 +312,29 @@ class Difference(DynOps):
     def op(self):
         _log.debug("%s.next()" % self.__str__())
         if self.zero_set:
-            _log.debug("%s.next() REMOVE INFINITE" % self.__str__())
-            raise StopIteration
+            self._remove_infinite()
         if all(self.final.values()):
-            _log.debug("%s.next() REMOVE THESE %s" % (self.__str__(), str(self.remove)))
-            # All remove values obtained just filter first
-            # The first's exception are exposed
-            while True:
-                n = self.first.next()
-                _log.debug("%s.next() = %s" % (self.__str__(), str(n)))
-                if n not in self.remove:
-                    self.remove.add(n)  # Enforce set behaviour 
-                    _log.debug("%s.next() ACTUAL = %s" % (self.__str__(), str(n)))
-                    return n
+            return self._remove()
+
+        return self._iterate_values()
+
+    def _remove_infinite(self):
+        _log.debug("%s.next() REMOVE INFINITE" % self.__str__())
+        raise StopIteration
+
+    def _remove(self):
+        _log.debug("%s.next() REMOVE THESE %s" % (self.__str__(), str(self.remove)))
+        # All remove values obtained just filter first
+        # The first's exception are exposed
+        while True:
+            n = self.first.next()
+            _log.debug("%s.next() = %s" % (self.__str__(), str(n)))
+            if n not in self.remove:
+                self.remove.add(n)  # Enforce set behaviour
+                _log.debug("%s.next() ACTUAL = %s" % (self.__str__(), str(n)))
+                return n
+
+    def _iterate_values(self):
         paused = False
         for v in self.iters:
             try:
@@ -312,6 +344,7 @@ class Difference(DynOps):
                 paused = True
             except StopIteration:
                 self.final[id(v)] = True
+
         if paused:
             raise PauseIteration
         else:
@@ -329,9 +362,8 @@ class Difference(DynOps):
         sub = self.first.__str__()
         for line in sub.splitlines():
             f += "\n\t" + line
-        return "Difference%s%s%s(first=%s, %s\n)" % (("<" + self.name + ">") if self.name else "", "<Inf>" if self.infinite_set else "", 
-                                               f, self.miss_cb_str(), s[:-2])
-        
+        return "Difference{}{}{}(first={}, {}\n)".format(self.name, self.inf, f, self.miss_cb_str(), s[:-2])
+
 
 class Map(DynOps):
     """ A Dynamic Operations Map operation
@@ -339,13 +371,13 @@ class Map(DynOps):
         When 'eager' kwarg is True it will calculate candidate values directly instead of lazyily
         The map function must take the output List dynamic iterable as first argument
         The second argument is a persistent dictionary (populated from the kwargs supplied when creating Map)
-        The third argument is a list of booleans if respective iterable have reached the end, 
+        The third argument is a list of booleans if respective iterable have reached the end,
             any such iterable will have None elements
         The following params are *args or the exact same number of arguments as iterables supplied.
         The map function is allowed to raise StopIteration which will prematurely end the iteration.
     """
     @staticmethod
-    def identity(out_iter, kwargs,final, *elems):
+    def identity(out_iter, kwargs, final, *elems):
         if len(elems) > 1:
             out_iter.extend([tuple(*elems)])
         else:
@@ -393,75 +425,89 @@ class Map(DynOps):
     def _op(self, eager=False):
         self.during_next = True
         while True:
-            active = False
-            for v in self.iters:
-                if not self.final[id(v)]:
-                    try:
-                        _log.debug("Map%s(func=%s) Next iter: %s" % (("<" + self.name + ">") if self.name else "", self.func.__name__, str(v)))
-                        e = v.next()
-                        _log.debug("Map%s(func=%s) Next in: %s" % (("<" + self.name + ">") if self.name else "", self.func.__name__, e))
-                        self.drawn[id(v)].append(e)
-                        active = True
-                    except PauseIteration:
-                        pass
-                    except StopIteration:
-                        self.final[id(v)] = True
-                    except Exception as e:
-                        _log.exception("Map function failed")
-                        raise e
+            active = self._iter_values()
+
             try:
                 l = min([len(self.drawn[id(i)]) for i in self.iters if not self.final[id(i)]])
             except ValueError:
                 l = 0
-            _log.debug("Map%s(func=%s) Loop: %d, Final:%s" % (("<" + self.name + ">") if self.name else "", self.func.__name__, l, self.final.values()))
-            # Execute map function l times
-            for i in range(l):
-                try:
-                    self.func(self.out_iter, self.kwargs, [self.final[id(i)] for i in self.iters],
-                              *[None if self.final[id(i)] else self.drawn[id(i)].pop(0) for i in self.iters])
-                except PauseIteration:
-                    break
-                except StopIteration:
-                    self.final = {id(k): True for k in self.iters}
-                except Exception as e:
-                    _log.exception("Map function failed")
-                    raise e
-            # If no more elements to apply map on, then one final map execution to allow the map function to finalize
+            _log.debug("Map{}(func={}) Loop: {}, Final:{}".format(self.name, self.func_name, l, self.final.values()))
+
+            self._execute_map(l)
             if all(self.final.values()):
-                try:
-                    self.func(self.out_iter, self.kwargs, self.final.values(),
-                              *([None]*len(self.iters)))
-                except PauseIteration:
-                    pass
-                except StopIteration:
-                    pass
-                except Exception as e:
-                    _log.exception("Map function failed")
-                    raise e
+                # If no more elements to apply map on, then one final map execution to allow the map function to
+                # finalize
+                self._reexecute_map()
+
             # If lazy break out of while True with the return value (or exception) otherwise break when no progress
             if not eager:
-                _log.debug("Map%s(func=%s) TRY OUT %s" % (("<" + self.name + ">") if self.name else "", 
-                                                         self.func.__name__, self.out_iter))
-                try:
-                    e = self.out_iter.next()
-                except StopIteration:
-                    _log.debug("Map%s(func=%s) GOT STOP" % (("<" + self.name + ">") if self.name else "", 
-                                                         self.func.__name__))
-                    self.during_next = False
-                    raise StopIteration
-                except PauseIteration:
-                    _log.debug("Map%s(func=%s) GOT PAUSE" % (("<" + self.name + ">") if self.name else "", 
-                                                         self.func.__name__))
-                    self.during_next = False
-                    raise PauseIteration
-                _log.debug("Map%s(func=%s) GOT OUT %s" % (("<" + self.name + ">") if self.name else "", 
-                                                         self.func.__name__, e))
-                self.during_next = False
-                return e
+                return self._try_out()
+
             if not active or all(self.final.values()):
                 # Reach here only when eager, any exception will do to break loop in trig method
                 self.during_next = False
                 raise Exception()
+
+    def _iter_values(self):
+        active = False
+        for v in self.iters:
+            if not self.final[id(v)]:
+                try:
+                    _log.debug("Map{}(func={}) Next iter: {}".format(self.name, self.func_name, str(v)))
+                    e = v.next()
+                    _log.debug("Map{}(func={}) Next in: {}".format(self.name, self.func_name, e))
+                    self.drawn[id(v)].append(e)
+                    active = True
+                except PauseIteration:
+                    pass
+                except StopIteration:
+                    self.final[id(v)] = True
+                except Exception as e:
+                    _log.exception("Map function failed")
+                    raise e
+        return active
+
+    def _execute_map(self, length):
+        # Execute map function l times
+        for i in range(length):
+            try:
+                self.func(self.out_iter, self.kwargs, [self.final[id(i)] for i in self.iters],
+                          *[None if self.final[id(i)] else self.drawn[id(i)].pop(0) for i in self.iters])
+            except PauseIteration:
+                break
+            except StopIteration:
+                self.final = {id(k): True for k in self.iters}
+            except Exception as e:
+                _log.exception("Map function failed")
+                raise e
+
+    def _reexecute_map(self):
+        try:
+            self.func(self.out_iter, self.kwargs, self.final.values(),
+                      *([None] * len(self.iters)))
+        except PauseIteration:
+            pass
+        except StopIteration:
+            pass
+        except Exception as e:
+            _log.exception("Map function failed")
+            raise e
+
+    def _try_out(self):
+        _log.debug("Map%s(func=%s) TRY OUT %s" % (self.name, self.func_name, self.out_iter))
+        try:
+            e = self.out_iter.next()
+        except StopIteration:
+            _log.debug("Map%s(func=%s) GOT STOP" % (self.name, self.func_name))
+            self.during_next = False
+            raise StopIteration
+        except PauseIteration:
+            _log.debug("Map%s(func=%s) GOT PAUSE" % (self.name, self.func_name))
+            self.during_next = False
+            raise PauseIteration
+        _log.debug("Map%s(func=%s) GOT OUT %s" % (self.name, self.func_name, e))
+        self.during_next = False
+        return e
 
     def op(self):
         self.during_next = True
@@ -481,14 +527,14 @@ class Map(DynOps):
             for line in sub.splitlines():
                 s += "\n\t" + line
             s += ", "
-        return "Map%s%s%s(func=%s, %s\n) out=%s" % (("<" + self.name + ">") if self.name else "",
-                                        "#" if self.out_iter._final else "-", self.miss_cb_str(),
-                                        self.func.__name__, s[:-2], self.out_iter.__str__())
+        return "Map%s%s%s(func=%s, %s\n) out=%s" % (self.name, self.final_sign(self.out_iter._final),
+                                                    self.miss_cb_str(), self.func_name, s[:-2],
+                                                    self.out_iter.__str__())
 
 
 class Chain(DynOps):
     """ A Dynamic Operations Chain iterable operation
-        
+
     """
 
     def __init__(self, it):
@@ -501,34 +547,34 @@ class Chain(DynOps):
 
     def op(self):
         try:
-            _log.debug("Chain%s.next() Try %s" % (("<" + self.name + ">") if self.name else "", str(self.elem_it)))
+            _log.debug("Chain%s.next() Try %s" % (self.name, str(self.elem_it)))
             e = self.elem_it.next()
-            _log.debug("Chain%s.next()=%s" % ((("<" + self.name + ">") if self.name else "", str(e))))
+            _log.debug("Chain%s.next()=%s" % (self.name, str(e)))
             return e
         except StopIteration:
-            _log.debug("Chain%s.next() ELEM ITER STOP %s" % (("<" + self.name + ">") if self.name else "", str(self.elem_it)))
+            _log.debug("Chain%s.next() ELEM ITER STOP %s" % (self.name, str(self.elem_it)))
             try:
                 self.elem_it = self.it.next()
             except StopIteration:
-                _log.debug("Chain%s.next() ITER STOP %s" % (("<" + self.name + ">") if self.name else "", str(self.it)))
+                _log.debug("Chain%s.next() ITER STOP %s" % (self.name, str(self.it)))
                 raise StopIteration
             except PauseIteration:
-                _log.debug("Chain%s.next() ITER PAUSE %s" % (("<" + self.name + ">") if self.name else "", str(self.it)))
+                _log.debug("Chain%s.next() ITER PAUSE %s" % (self.name, str(self.it)))
                 raise PauseIteration
             except Exception as e:
-                _log.debug("Chain%s.next() ITER OTHER EXCEPTION %s" % (("<" + self.name + ">") if self.name else "", str(self.it)), exc_info=True)
+                _log.debug("Chain%s.next() ITER OTHER EXCEPTION %s" % (self.name, str(self.it)), exc_info=True)
                 raise e
-            _log.debug("Chain%s.next() New iterator %s" % (("<" + self.name + ">") if self.name else "", str(self.elem_it)))
+            _log.debug("Chain%s.next() New iterator %s" % (self.name, str(self.elem_it)))
             # when not exception try to take next from the latest list
             return self.op()
-
 
     def __str__(self):
         f = ""
         sub = self.it.__str__()
         for line in sub.splitlines():
             f += "\n\t" + line
-        return "Chain%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", self.miss_cb_str(), f)
+        return "Chain%s%s(%s\n)" % (self.name, self.miss_cb_str(), f)
+
 
 class Collect(DynOps):
     """ A Dynamic Operations Collect iterable operation
@@ -578,13 +624,12 @@ class Collect(DynOps):
                 continue
         raise PauseIteration
 
-
     def __str__(self):
         f = ""
         sub = self.it.__str__()
         for line in sub.splitlines():
             f += "\n\t" + line
-        return "Collect%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", self.miss_cb_str(), f)
+        return "Collect%s%s(%s\n)" % (self.name, self.miss_cb_str(), f)
 
 
 class List(DynOps):
@@ -631,8 +676,8 @@ class List(DynOps):
             self.trig()
 
     def auto_final(self, max_length):
-        _log.debug("%s:auto_final max:%d index:%d final:%s trigger:%s" % (self.__str__(), 
-                        max_length, self.index, str(self._final), str(self._trigger)))
+        _log.debug("%s:auto_final max:%d index:%d final:%s trigger:%s" % (
+            self.__str__(), max_length, self.index, str(self._final), str(self._trigger)))
         self.max_length = max_length
         if self.index >= self.max_length:
             self.final()
@@ -661,15 +706,14 @@ class List(DynOps):
             sub = i.__str__()
             p = True
             for line in sub.splitlines():
-                s += "\n\t-> " if c==self.index and p else "\n\t   "
+                s += "\n\t-> " if c == self.index and p else "\n\t   "
                 p = False
                 s += line
             s += ", "
             c += 1
         s = s[:-2]
-        s += ">>>" if c==self.index else ""
-        return "List%s%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", "#" if self._final else "-", 
-                                    self.miss_cb_str(), s)
+        s += ">>>" if c == self.index else ""
+        return "List%s%s%s(%s\n)" % (self.name, self.final_sign(self._final), self.miss_cb_str(), s)
 
 
 class Infinite(DynOps):
@@ -683,7 +727,7 @@ class Infinite(DynOps):
         raise StopIteration
 
     def __str__(self):
-        return "Infinite%s%s()" % (("<" + self.name + ">") if self.name else "", self.miss_cb_str(), )
+        return "Infinite%s%s()" % (self.name, self.miss_cb_str())
 
 import pprint
 if __name__ == '__main__':
@@ -697,6 +741,7 @@ if __name__ == '__main__':
             print "Paused"
 
     l1 = List()
+
     def map_func(it, kwargs, final, *iters):
         if all(final):
             it.final()
@@ -708,7 +753,7 @@ if __name__ == '__main__':
     d = Map(map_func, l1, eager=True, bias=100)
     d.set_cb(gotit)
     l1.append(1)
-    l1.extend([4,5,10,2,3])
+    l1.extend([4, 5, 10, 2, 3])
     l1.final()
 
     """
