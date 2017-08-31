@@ -59,9 +59,7 @@ class BaseGPIOPin(base_calvinsys_object.BaseCalvinsysObject):
 
     write_schema = {
         "description": "Set pin state, 0/1 for state low/high",
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 1
+        "enum": [0, False, 1, True]
     }
 
     can_read_schema = {
