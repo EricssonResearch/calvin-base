@@ -113,7 +113,7 @@ class DynOps(object):
                 self.infinite_sent = True
                 # FIXME Need to trig?
                 #self.trig()
-                return InfiniteElement
+                return InfiniteElement()
         return self.op()
 
     def __next__(self):
@@ -232,8 +232,8 @@ class Intersection(DynOps):
                     self.infinite_sent = True
                     # FIXME Need to trig?
                     #self.trig()
-                    return InfiniteElement
-                
+                    return InfiniteElement()
+
             # Current seen intersection
             self.candidates.update(set.intersection(*[self.drawn[id(v)] for v in self.iters if not self.infs[id(v)]]))
             _log.debug("Intersection%s%s%s candidates: %s drawn: %s infs: %s"  % (("<" + self.name + ">") if self.name else "",
