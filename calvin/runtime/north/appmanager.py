@@ -129,7 +129,7 @@ class Application(object):
         # N.B. self.ns should always exist (= script name)
         # Check for existence of deploy info
         if not self.deploy_info or 'requirements' not in self.deploy_info:
-            print "Application::get_req({}) -> [] NO INFO".format(actor_name)
+            # print "Application::get_req({}) -> [] NO INFO".format(actor_name)
             return []
         # Trim of script name
         _, name = actor_name.split(':', 1)
@@ -139,7 +139,7 @@ class Application(object):
             current = ':'.join(parts)
             req = self.deploy_info['requirements'].get(current, [])
             parts = parts[:-1]
-        print "Application::get_req({}) -> ".format(actor_name), req
+        # print "Application::get_req({}) -> ".format(actor_name), req
         return req
 
 
@@ -620,7 +620,7 @@ class Deployer(object):
         # N.B. self.ns should always exist (= script name)
         # Check for existence of deploy info
         if not self.deploy_info or 'requirements' not in self.deploy_info:
-            print "Deployer::get_req({}) -> [] NO INFO".format(actor_name)
+            # print "Deployer::get_req({}) -> [] NO INFO".format(actor_name)
             return []
         # Trim of script name
         _, name = actor_name.split(':', 1)
@@ -630,7 +630,7 @@ class Deployer(object):
             current = ':'.join(parts)
             req = self.deploy_info['requirements'].get(current, [])
             parts = parts[:-1]
-        print "Deployer::get_req({}) -> ".format(actor_name), req
+        # print "Deployer::get_req({}) -> ".format(actor_name), req
         return req
 
 
