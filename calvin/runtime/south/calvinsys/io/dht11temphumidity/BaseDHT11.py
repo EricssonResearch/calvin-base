@@ -46,12 +46,7 @@ class BaseDHT11(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     read_schema = {
-        "description": "Latest reading (tuple of temperature [C] and humidity [%])",
-        "type": "array",
-        "minItems": 2,
-        "maxItems": 2,
-        "items": {
-            "type": "number"
-        }
+        "description": "Latest reading of humidity [%]",
+        "type": "number",
     }
 
