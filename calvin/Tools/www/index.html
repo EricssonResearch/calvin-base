@@ -85,7 +85,7 @@
             <h4 class="modal-title">Connect</h4>
         </div>
         <div class="modal-body">
-            <form>
+            <form onsubmit="connectHandler(); return false;">
                 <label for="connect_uri">Control URI:</label>
                 <br>
                 <input type="text" name="connect_uri" id="connect_uri" size="35" />
@@ -94,7 +94,7 @@
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-primary" onclick="connectHandler()">Connect</button>
+            <button type="submit" class="btn btn-success" onclick="connectHandler()">Connect</button>
         </div>
     </div>
 </div>
@@ -295,7 +295,7 @@
                             <br>
                             <label for="deploy_script">Script:</label>
                             <br>
-                            <textarea name="deploy_script" id="deploy_script" rows="10" style="min-width: 100%"></textarea>
+                            <textarea name="deploy_script" id="deploy_script" rows="30" style="min-width: 100%"></textarea>
                             <br>
                             <label for="script_name">Script name:</label>
                             <br>
@@ -319,8 +319,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="deployHandler()" data-dismiss="modal">Deploy</button>
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button class="btn btn-success" onclick="deployHandler()" data-dismiss="modal">Deploy</button>
+                <button class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
