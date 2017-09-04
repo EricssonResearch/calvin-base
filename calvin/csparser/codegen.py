@@ -496,58 +496,43 @@ class Flatten(object):
         if not node.is_leaf():
             map(self.visit, node.children[:])
 
-    @visitor.when(ast.Assignment)
-    def visit(self, node):
-        node.ident = self.stack[-1] + ':' + node.ident
-        map(self.visit, node.children[:])
-
-    @visitor.when(ast.NamedArg)
-    def visit(self, node):
-        if type(node.arg) is ast.Id:
-            # Get value from grandparent (block)
-            block = node.parent.parent
-            key = node.arg.ident
-            if key in block.args:
-                value = block.args[key]
-                node.replace_child(node.arg, value)
-
-    @visitor.when(ast.Port)
-    def visit(self, node):
-        # Only promote once. List self.seen is reset when expanding a block
-        if node in self.seen:
-            return
-        self.seen.append(node)
-        if node.actor:
-            node.actor = self.stack[-1] + ':' + node.actor
-        else:
-            node.actor = self.stack[-1]
-
     @visitor.when(ast.Block)
     def visit(self, node):
-        # Recurse into blocks first
+        # Recurse into blocks first, putting block's namespace on stack
         self.stack.append(node.namespace)
         blocks = [x for x in node.children if type(x) is ast.Block]
         map(self.visit, blocks)
 
-        # Replace and delete links (manipulates children)
+        # Keep track of nodes to to delete
+        self.consumed = set()
 
-        def _relink(l1, l2):
-            # 4. Retrieve the links involved
-            l0_l1_link = l1.parent
-            l0 = l0_l1_link.outport
-            l2_l3_link = l2.parent
-            l3 = l2_l3_link.inport
-            # 5. Create the new link
-            l0_l3_link = ast.Link(outport=l0, inport=l3)
-            # 6. Mark it for addition
-            produced.append(l0_l3_link)
-            # 7. Mark the old links for removal
-            consumed.append(l0_l1_link)
-            consumed.append(l2_l3_link)
-            # 8. Transfer port properties
-            l0.add_children(l2.children)
-            l3.add_children(l1.children)
+        # Promote ports and assignments, and create links across component borders
+        non_blocks = [x for x in node.children if type(x) is not ast.Block]
+        map(self.visit, non_blocks)
 
+        # Clean up nodes no longer needed
+        for n in self.consumed:
+            n.delete()
+
+        # Move remaining children to containing block
+        node.parent.add_children(node.children)
+
+        # Delete this block and pop the namespace stack
+        node.delete()
+        self.stack.pop()
+
+    @visitor.when(ast.Link)
+    def visit(self, node):
+        # Make sure real ports have been promoted, i.e. have had the block namspace
+        # added to the actor name, before juggling with component internal ports.
+        linktype = (type(node.outport), type(node.inport))
+        if linktype == (ast.InternalOutPort, ast.InPort):
+            map(self.visit, [node.inport, node.outport])
+        else:
+            map(self.visit, [node.outport, node.inport])
+
+    @visitor.when(ast.InternalOutPort)
+    def visit(self, node):
         # Block expansion of link and properties over component inports
         # =============================================================
         #
@@ -575,23 +560,15 @@ class Flatten(object):
         # (ast.OutPort [P0, P2]) x.out > y.in (ast.InPort [P1, P3])
         #
         # (L0 [P0], L1 [P1]) + (L2 [P2], L3 [P3]) => (L0 [P0, P2], L3 [P1, P3])
-        #
+        l2 = node
+        block = node.parent.parent
+        l1_list = query(block.parent, kind=ast.InPort, attributes={'actor':block.namespace, 'port':l2.port})
+        for l1 in l1_list:
+            new_link = self._relink(l1, l2)
+            block.add_child(new_link)
 
-        # 1. Accounting
-        consumed = []
-        produced = []
-        # 2. Locate InternalOutPort objects (L2)
-        l2_list = query(node, kind=ast.InternalOutPort, maxdepth=2)
-        # 3. Find counterparts (L1) for each L2
-        for l2 in l2_list:
-            l1_list = query(node, kind=ast.InPort, attributes={'actor':l2.actor, 'port':l2.port})
-            for l1 in l1_list:
-                _relink(l1, l2)
-
-        # 9. Modify the tree
-        node.remove_children(consumed)
-        node.add_children(produced)
-
+    @visitor.when(ast.InternalInPort)
+    def visit(self, node):
         # Block expansion of link and properties over component outports
         # ==============================================================
         #
@@ -609,33 +586,61 @@ class Flatten(object):
         # (ast.OutPort [P0, P2]) x.out > y.in (ast.InPort [P1, P3])
         #
         # (L0 [P0], L1 [P1]) + (L2 [P2], L3 [P3]) => (L0 [P0, P2], L3 [P1, P3])
+        l1 = node
+        block = node.parent.parent
+        l2_list = query(block.parent, kind=ast.OutPort, attributes={'actor':block.namespace, 'port':l1.port})
+        for l2 in l2_list:
+            new_link = self._relink(l1, l2)
+            block.add_child(new_link)
 
-        # 1. Accounting
-        consumed = []
-        produced = []
-        # 2. Locate InternalInPorts objects (L1)
-        l1_list = query(node, kind=ast.InternalInPort, maxdepth=2)
-        # 3. Find counterparts (L2) for each L1
-        for l1 in l1_list:
-            l2_list = query(node, kind=ast.OutPort, attributes={'actor':l1.actor, 'port':l1.port})
-            for l2 in l2_list:
-                _relink(l1, l2)
+    def _relink(self, l1, l2):
+        # Follow the relinking pattern described above
+        l0_l1_link = l1.parent
+        l0 = l0_l1_link.outport
+        l2_l3_link = l2.parent
+        l3 = l2_l3_link.inport
+        # 5. Create the new link
+        l0_copy = l0.clone()
+        l3_copy = l3.clone()
+        l0_l3_link = ast.Link(outport=l0_copy, inport=l3_copy)
+        # 8. Transfer port properties
+        l0_l3_link.outport.add_children(l2.children)
+        l0_l3_link.inport.add_children(l1.children)
+        # l0_l1_link and l2_l3_link may be referred to multiple times,
+        # but can only be removed once, hence the use of a set here.
+        self.consumed.add(l0_l1_link)
+        self.consumed.add(l2_l3_link)
+        return l0_l3_link
 
-        # 9. Modify the tree
-        node.remove_children(consumed)
-        node.add_children(produced)
+    @visitor.when(ast.Assignment)
+    def visit(self, node):
+        node.ident = self.stack[-1] + ':' + node.ident
+        map(self.visit, node.children[:])
 
-        # Promote ports and assignments (handled by visitors)
-        non_blocks = [x for x in node.children if type(x) is not ast.Block]
-        self.seen = []
-        map(self.visit, non_blocks)
+    @visitor.when(ast.NamedArg)
+    def visit(self, node):
+        if type(node.arg) is ast.Id:
+            # Get value from grandparent (block)
+            block = node.parent.parent
+            key = node.arg.ident
+            if key in block.args:
+                value = block.args[key]
+                node.replace_child(node.arg, value)
 
-        # Raise promoted children to outer level
-        node.parent.add_children(node.children)
+    @visitor.when(ast.InPort)
+    def visit(self, node):
+        self._promote_port(node)
 
-        # Delete this node
-        node.delete()
-        self.stack.pop()
+    @visitor.when(ast.OutPort)
+    def visit(self, node):
+        self._promote_port(node)
+
+    def _promote_port(self, node):
+        if node.actor:
+            node.actor = self.stack[-1] + ':' + node.actor
+        else:
+            node.actor = self.stack[-1]
+
 
 
 class CoalesceProperties(object):
@@ -1325,17 +1330,19 @@ def calvin_components(source_text, names=None):
 
 if __name__ == '__main__':
     from inspect import cleandoc
+    import json
 
     script = 'inline'
-    source_text = \
+    source_text = r"""
     """
-    snk : io.Print()
-    1 > snk.token
-    """
+
     source_text = cleandoc(source_text)
     print source_text
     print
     ai, it = calvin_codegen(source_text, script)
+    print
+    print json.dumps(ai, indent = 4)
+    print
     if it.issue_count == 0:
         print "No issues"
         print ai
