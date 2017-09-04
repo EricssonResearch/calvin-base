@@ -78,11 +78,11 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
         "type": "string"
     }
 
-    def init(self, resolution, label=None, width=None, height=None, **kwargs):
+    def init(self, mode, label=None, width=None, height=None, **kwargs):
         self._in_progress = None
         self._b64image = None
-        resolution = resolution.split("x")
-        self._resolution = (int(resolution[0]), int(resolution[1]))
+        mode = mode.split("x")
+        self._resolution = (int(mode[0]), int(mode[1]))
         if width and height:
             self._rescale = (width, height)
         else :
