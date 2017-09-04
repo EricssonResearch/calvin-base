@@ -88,6 +88,7 @@ class DHT11(BaseDHT11):
         bytesum = rhint + tint
         # print "RH={}.{}, T={}.{}, CS={}, BS={}, OK={}".format(rhint, 0, tint, 0, chksum, bytesum, chksum == bytesum)
         self._humidity = rhint
+        threads.call_from_thread(self.scheduler.wakeup)
 
     def can_read(self):
         return self._humidity is not None
