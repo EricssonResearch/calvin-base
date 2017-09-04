@@ -50,10 +50,10 @@ class TwoLineLCD(object):
 
     def _message(self, line_1, line_2):
         self.lcd.home()
-        self.lcd.message(line_1[:self._columns] + "\n" + line_2[:self._columns])
-        if len(line_1) > self._columns:
+        self.lcd.message(line_1[:self._columns-1] + "\n" + line_2[:self._columns-1])
+        if len(line_1) > self._columns-1:
             line_1 = rotate(line_1)
-        if len(line_2) > self._columns:
+        if len(line_2) > self._columns-1:
             line_2 = rotate(line_2)
 
         self._in_progress = async.DelayedCall(0.5, self._message, line_1, line_2)
@@ -79,7 +79,7 @@ class Display(base_display.DisplayBase):
         self.show_text(text)
 
     def show_text(self, text):
-        lines = text.split("NEW_LINE", 1)
+        lines = text.split("\n", 1)
         if len(lines) == 1:
             line_1 = lines[0]
             line_2 = ""

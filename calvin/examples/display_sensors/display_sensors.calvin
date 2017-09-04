@@ -1,8 +1,14 @@
 /* Actors */
-src : std.CountTimer(sleep=10)
-sensor : sensor.Environmental()
-display : io.Display()
+tick: std.Trigger(data=true, tick=5)
+sensor : sensor.TriggeredTemperature()
+dict : json.SetValue()
+fmt : text.Mustache(fmt="Temperature: {{temp}}C")
+display : io.Print()
 
 /* Connections */
-src.integer > sensor.trigger
-sensor.data > display.text
+tick.data > sensor.trigger
+sensor.centigrade > dict.value
+"temp" > dict.key
+{} > dict.container
+dict.container > fmt.dict
+fmt.text > display.token
