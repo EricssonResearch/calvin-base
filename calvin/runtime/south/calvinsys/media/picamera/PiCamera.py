@@ -55,8 +55,8 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
                 "maxLength": 41
             }
         },
-        "required": ["resolution"],
-        "description": "Set up webcam"
+        "required": ["mode"],
+        "description": "Set up PiCamera"
     }
     
     can_write_schema = {
