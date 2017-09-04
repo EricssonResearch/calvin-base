@@ -22,7 +22,7 @@ from calvin.utilities import calvinconfig
 
 
 # Spec
-_modules = {'dht': {'dht': 'dht_server'}, 'securedht': {'securedht': 'dht_server'}}
+_modules = {'dht': {'dht': 'dht_server'}, 'securedht': {'securedht': 'dht_server'}, 'sql': {'sql': 'sql_client'}}
 
 fw_modules = None
 __all__ = []
