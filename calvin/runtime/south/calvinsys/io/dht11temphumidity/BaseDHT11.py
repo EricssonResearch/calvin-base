@@ -47,6 +47,6 @@ class BaseDHT11(base_calvinsys_object.BaseCalvinsysObject):
 
     read_schema = {
         "description": "Latest reading of humidity [%]",
-        "type": "number",
+        "type": "number"
     }
 
