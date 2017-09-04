@@ -29,17 +29,16 @@ class RecTimer(Actor):
     @manage(['delay'])
     def init(self, delay=0.1):
         self.delay = delay
-        self.use('calvinsys.events.timer', shorthand='timer')
         self.setup()
 
     def setup(self):
+        self.use('calvinsys.events.timer', shorthand='timer')
         self.timer = self['timer'].repeat(self.delay)
 
     def will_migrate(self):
         self.timer.cancel()
 
     def did_migrate(self):
-        self.use('calvinsys.events.timer', shorthand='timer')
         self.setup()
 
     @stateguard(lambda self: self.timer and self.timer.triggered)
@@ -51,7 +50,7 @@ class RecTimer(Actor):
     @condition()
     def clear(self):
         self.timer.ack()
-        
+
 
     action_priority = (flush, clear)
     requires = ['calvinsys.events.timer']

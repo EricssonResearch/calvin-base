@@ -3,9 +3,14 @@
 import pytest
 import unittest
 import os
+import time
 from tempfile import mkstemp
+from calvin.utilities.calvinlogger import get_logger
 from calvin.tests import helpers
 from calvin.requests.request_handler import RequestHandler
+
+_log = get_logger(__name__)
+
 
 class CalvinActorMigrationTestBase(unittest.TestCase):
     """ Base class for test actor migration. Based on CalvinTestBase but without the global variables """
@@ -19,7 +24,7 @@ class CalvinActorMigrationTestBase(unittest.TestCase):
     def wait_for_migration(self, runtime, actors, retries=20):
         retry = 0
         if not isinstance(actors, list):
-            actors = [ actors ]
+            actors = [actors]
         while retry < retries:
             try:
                 current = self.request_handler.get_actors(runtime)
@@ -40,6 +45,7 @@ class CalvinActorMigrationTestBase(unittest.TestCase):
     def migrate(self, source, dest, actor):
         self.request_handler.migrate(source, actor, dest.id)
         self.wait_for_migration(dest, [actor])
+
 
 @pytest.mark.slow
 class TestActorMigration(CalvinActorMigrationTestBase):
@@ -109,7 +115,7 @@ class TestActorMigration(CalvinActorMigrationTestBase):
 
         self.migrate(self.rt1, self.rt2, dut)
 
-        def verify_filesize(filesize, retries = 10):
+        def verify_filesize(filesize, retries=10):
             """
             Auxiliary method to verify that some token was written in file
             """
