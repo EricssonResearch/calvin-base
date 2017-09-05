@@ -101,3 +101,8 @@ class SenseHatSensor(base_calvinsys_object.BaseCalvinsysObject):
         self._can_read = False
         self._can_write = True
         return self._value
+        
+    def close(self):
+        self._can_read = False
+        self._can_write = False
+        self._sensehat = None
