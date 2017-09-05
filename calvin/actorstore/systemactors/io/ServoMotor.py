@@ -29,7 +29,6 @@ class ServoMotor(Actor):
 
     @manage([])
     def init(self):
-        _log.info("init")
         self.setup()
 
     def setup(self):

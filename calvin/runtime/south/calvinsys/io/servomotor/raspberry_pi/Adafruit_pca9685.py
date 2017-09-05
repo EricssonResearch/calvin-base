@@ -40,9 +40,7 @@ class Adafruit_pca9685(BaseServo.BaseServo):
         
         self._servo_min = int(round(self._minimum_pulse / scaling))
         self._servo_max = int(round(self._maximum_pulse / scaling))
-        
-        print("max: {}, min: {}".format(self._servo_max, self._servo_min))
-        
+                
     def can_write(self):
         return self._pwm is not None
     
