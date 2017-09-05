@@ -459,14 +459,11 @@ class Expander(object):
         compdef = node.metadata['definition']
         v = RestoreParents()
         v.visit(compdef)
-        # Clone assignment to clone the arguments
-        # FIXME: Is cloning necessary here, since we construct an arg dict anyway?
-        ca = node.clone()
-        args = ca.children
         # Clone block from component definition
         new = compdef.clone()
         new.namespace = node.ident
         # Add arguments from assignment to block
+        args = node.children
         new.args = {x.ident.ident: x.arg for x in args}
         node.parent.replace_child(node, new)
         # Recurse
@@ -950,7 +947,7 @@ class ReplaceConstants(object):
             return
         if node.arg.ident in self.definitions:
             value = self.definitions[node.arg.ident]
-            node.replace_child(node.arg, value.clone())
+            node.replace_child(node.arg, value)
 
 
 class ConsistencyCheck(object):
