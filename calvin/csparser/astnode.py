@@ -1,5 +1,5 @@
 import inspect
-from copy import deepcopy
+from copy import copy, deepcopy
 from calvin.requests import calvinresponse
 
 
@@ -88,7 +88,7 @@ class Node(object):
         return True
 
     def clone(self):
-        x = deepcopy(self)
+        x = copy(self)
         x.parent = None
         return x
 
@@ -311,6 +311,11 @@ class Block(Node):
         self.namespace = kwargs.get('namespace', '')
         self.args = kwargs.get('args', {})
         self.add_children(kwargs.get('program', []))
+
+    def clone(self):
+        x = deepcopy(self)
+        x.parent = None
+        return x
 
 class Component(Node):
     """docstring for ComponentNode"""
