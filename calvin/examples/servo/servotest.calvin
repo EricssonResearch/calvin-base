@@ -1,0 +1,6 @@
+trigger: std.Trigger(data=true, tick=2.0)
+angle : math.RandomInteger(lower=0, upper=181)
+servo : io.ServoMotor()
+
+trigger.data > angle.trigger
+angle.integer > servo.angle
