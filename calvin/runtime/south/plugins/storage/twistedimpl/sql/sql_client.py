@@ -22,8 +22,10 @@ from calvin.runtime.south.plugins.async import async
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
+from calvin.utilities import calvinconfig
 
 _log = calvinlogger.get_logger(__name__)
+_conf = calvinconfig.get()
 
 ############################
 # TODO Remake the storage API:
@@ -33,9 +35,15 @@ _log = calvinlogger.get_logger(__name__)
 # * index should be exposed directly by storage plugin to allow engine optimizations
 ######################
 
-#FIXME move to config
-#config_kwargs = {'host':'localhost', 'port':3306, 'db':'calvin2', 'user':'root', 'passwd':''}
-config_kwargs = {'db':'calvin2', 'user':'root'}
+# The config kwarg depends on which database python module that is used
+# Here is data for dbmodule="MySQLdb"
+# host, port, db, user and passwd can be set, but if local only user and passwd is needed
+# If other modules use another arg name for db need to fix that here
+# Below defaults assume a password-less root user on local mysql
+config_kwargs = _conf.get('global', 'storage_sql')
+config_kwargs.setdefault('dbmodule', "MySQLdb")
+config_kwargs.setdefault('user', "root")
+config_kwargs.setdefault('db', _conf.get_in_order("dht_network_filter", "ALL").replace("-", "_"))
 
 # Have single values and set-values in seperate tables to allow uniqueness on the right terms, 
 # i.e. key and key+value, respectively. Also support longer valuestr in single value.
@@ -60,11 +68,11 @@ CREATE TABLE {db}.csetvalues (
     valuestr VARCHAR(512),
     UNIQUE KEY keyvalue (id, valuestr),
     FOREIGN KEY (id) REFERENCES {db}.ckeys (id) ON DELETE CASCADE
-);""".format(db=config_kwargs.get('db', 'calvin-test'))
+);""".format(db=config_kwargs['db'])
 
 # Needed to make set two roundtrips since mysql did not like (Err 2014) multi-statement that modified a depedent table
 # Could potentially be made if multi-statement is supported in the dbmodule (now using MySQLdb module)
-QUERY_SET = [q.format(db=config_kwargs.get('db', 'calvin-test')) for q in ["""
+QUERY_SET = [q.format(db=config_kwargs['db']) for q in ["""
 INSERT IGNORE INTO {db}.ckeys (keystr) VALUES('{{keystr}}');
 """, """
 INSERT INTO {db}.cvalues (id, valuestr)
@@ -74,14 +82,14 @@ INSERT INTO {db}.cvalues (id, valuestr)
 
 QUERY_GET = """
 SELECT valuestr FROM {db}.cvalues WHERE id IN (SELECT id FROM {db}.ckeys WHERE keystr='{{keystr}}');
-""".format(db=config_kwargs.get('db', 'calvin-test'))
+""".format(db=config_kwargs['db'])
 
 # Due to value tabels have foreign key for id the values will also be deleted
 QUERY_DELETE = """
 DELETE FROM {db}.ckeys WHERE keystr='{{keystr}}';
-""".format(db=config_kwargs.get('db', 'calvin-test'))
+""".format(db=config_kwargs['db'])
 
-QUERY_APPEND = [q.format(db=config_kwargs.get('db', 'calvin-test')) for q in ["""
+QUERY_APPEND = [q.format(db=config_kwargs['db']) for q in ["""
 INSERT IGNORE INTO {db}.ckeys (keystr) VALUES('{{keystr}}');
 """, """
 INSERT IGNORE INTO {db}.csetvalues (id, valuestr)
@@ -91,12 +99,12 @@ INSERT IGNORE INTO {db}.csetvalues (id, valuestr)
 QUERY_REMOVE = """
 DELETE FROM {db}.csetvalues WHERE
     id IN (SELECT id, '{{valuestr}}' FROM {db}.ckeys WHERE keystr='{{keystr}}') AND valuestr='{{valuestr}}';
-""".format(db=config_kwargs.get('db', 'calvin-test'))
+""".format(db=config_kwargs['db'])
 
 QUERY_GETCONCAT = """
 SELECT valuestr FROM {db}.csetvalues WHERE
     id IN (SELECT id FROM {db}.ckeys WHERE keystr='{{keystr}}');
-""".format(db=config_kwargs.get('db', 'calvin-test'))
+""".format(db=config_kwargs['db'])
 
 class SqlClient(StorageBase):
     """
@@ -108,9 +116,11 @@ class SqlClient(StorageBase):
 
     def start(self, iface='', bootstrap=[], cb=None, name=None, nodeid=None):
         kwargs = copy.copy(config_kwargs)
+        _log.debug("SQL start %s" % str(kwargs))
         kwargs.pop('db', None)
+        dbmodule = kwargs.pop('dbmodule', "MySQLdb")
         # FIXME does this take too long?
-        self.dbpool = adbapi.ConnectionPool("MySQLdb", **kwargs)
+        self.dbpool = adbapi.ConnectionPool(dbmodule, **kwargs)
         if not self.dbpool:
             _log.debug("Failed SQL connection pool")
             if cb is not None:
