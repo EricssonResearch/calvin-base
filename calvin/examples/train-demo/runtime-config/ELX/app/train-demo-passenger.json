@@ -1267,7 +1267,7 @@
         }, 
         "train-demo-passenger:deploy:init": {
             "args": {
-                "data": "http://192.168.0.102:5001"
+                "data": "http://192.168.0.132:5001"
             }, 
             "actor_type": "flow.Init", 
             "signature": "3e308e47a996352b4965a7449eeb84f049b9e0931e5011dd923bad6660e6e002"
@@ -1349,7 +1349,7 @@
         }, 
         "train-demo-passenger:migrate:_literal_const_1": {
             "args": {
-                "data": "http://192.168.0.102:5001"
+                "data": "http://192.168.0.132:5001"
             }, 
             "actor_type": "std.Constant", 
             "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"

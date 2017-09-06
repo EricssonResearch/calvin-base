@@ -1,5 +1,5 @@
 #deploy info
-define CONTROL_URI = "http://192.168.0.102:5001"
+define CONTROL_URI = "http://192.168.0.132:5001"
 define SCRIPT ="cameraTrigger : std.Trigger(data=true, tick=0.1)\ncamera : media.ImageSource()\ncameraDisplay : media.ImageSink()\ninfoBoardTrigger : std.Trigger(tick=3, data=\"Cargo train.\\n Keep off tracks!\")\ninfoBoard : io.Print()\nsensorTrigger : std.Trigger(data=true, tick=3.0)\nsensor: sensor.TriggeredTemperature()\nsensorDisplay : io.Print()\n\ncameraTrigger.data > camera.trigger\ncamera.b64image > cameraDisplay.b64image\nsensorTrigger.data > sensor.trigger\nsensor.centigrade > sensorDisplay.token\ninfoBoardTrigger.data > infoBoard.token\n"
 
 define DEPLOY_STHLM={
