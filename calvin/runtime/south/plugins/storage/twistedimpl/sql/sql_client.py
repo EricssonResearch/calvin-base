@@ -76,6 +76,11 @@ QUERY_GET = """
 SELECT valuestr FROM {db}.cvalues WHERE id IN (SELECT id FROM {db}.ckeys WHERE keystr='{{keystr}}');
 """.format(db=config_kwargs.get('db', 'calvin-test'))
 
+# Due to value tabels have foreign key for id the values will also be deleted
+QUERY_DELETE = """
+DELETE FROM {db}.ckeys WHERE keystr='{{keystr}}';
+""".format(db=config_kwargs.get('db', 'calvin-test'))
+
 QUERY_APPEND = [q.format(db=config_kwargs.get('db', 'calvin-test')) for q in ["""
 INSERT IGNORE INTO {db}.ckeys (keystr) VALUES('{{keystr}}');
 """, """
@@ -140,9 +145,18 @@ class SqlClient(StorageBase):
             Set a key, value pair in the storage
         """
         _log.debug("SQL set %s to %s" % (key, value))
+        if value is None:
+            # This is actually a delete (an actual None would be serialized)
+            _log.debug("SQL delete %s" % (key,))
+            d1 = self.dbpool.runQuery(QUERY_DELETE.format(keystr=key, valuestr=value))
+            d1.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key, value=value),
+                            CalvinCB(self._set_fail_cb, cb=cb, key=key, value=value))
+            return
+
         def _set_value(*args, **kwargs):
             d2 = self.dbpool.runQuery(QUERY_SET[1].format(keystr=key, valuestr=value))
-            d2.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key, value=value), CalvinCB(self._set_fail_cb, cb=cb, key=key, value=value))
+            d2.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key, value=value),
+                            CalvinCB(self._set_fail_cb, cb=cb, key=key, value=value))
         d1 = self.dbpool.runQuery(QUERY_SET[0].format(keystr=key, valuestr=value))
         d1.addCallbacks(_set_value, CalvinCB(self._set_fail_cb, cb=cb, key=key, value=value))
         _log.debug("SQL set %s to %s requested" % (key, value))
@@ -183,9 +197,15 @@ class SqlClient(StorageBase):
         _log.debug("SQL get OK")
         cb = kwargs.pop('cb', None)
         key = kwargs.pop('key', None)
-        _log.debug("SQL get OK %s" % result[0][0])
+        try:
+            r = result[0][0]
+        except:
+            # Empty hence deleted or don't exist (DHT differentiate between these, False and None respectievly)
+            # SQL always give None
+            r = None
+        _log.debug("SQL get OK %s" % r)
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, result[0][0]))
+            async.DelayedCall(0, CalvinCB(cb, key, r))
 
     def _get_fail_cb(self, failure, **kwargs):
         _log.debug("SQL get FAIL")
