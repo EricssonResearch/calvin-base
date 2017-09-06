@@ -1,0 +1,1536 @@
+{
+    "connections": {
+        "train-demo-passenger:migrate:migrate.header": [
+            "train-demo-passenger:migrate:post.header"
+        ], 
+        "train-demo-passenger:servo:init.out": [
+            "train-demo-passenger:servo:compute.b"
+        ], 
+        "train-demo-passenger:migrate:migrate.data": [
+            "train-demo-passenger:migrate:post.data"
+        ], 
+        "train-demo-passenger:selLund.case_true": [
+            "train-demo-passenger:join.token"
+        ], 
+        "train-demo-passenger:migrate:post.data": [
+            "train-demo-passenger:migrate:_void_3.void"
+        ], 
+        "train-demo-passenger:servo:_literal_const_2.token": [
+            "train-demo-passenger:servo:get_data.key"
+        ], 
+        "train-demo-passenger:readerStockholm.data": [
+            "train-demo-passenger:jsonStockholm.container", 
+            "train-demo-passenger:servo:get_data.container", 
+            "train-demo-passenger:dbg:tag.in"
+        ], 
+        "train-demo-passenger:snkLundConst.token": [
+            "train-demo-passenger:selLund.data"
+        ], 
+        "train-demo-passenger:servo:switch.data": [
+            "train-demo-passenger:servo:servo.angle"
+        ], 
+        "train-demo-passenger:migrate:migrate.done": [
+            "train-demo-passenger:term3.void"
+        ], 
+        "train-demo-passenger:servo:check.case_false": [
+            "train-demo-passenger:servo:_void_4.void"
+        ], 
+        "train-demo-passenger:migrate:_literal_const_1.token": [
+            "train-demo-passenger:migrate:migrate.control_uri"
+        ], 
+        "train-demo-passenger:deploy:sec_credentials.out": [
+            "train-demo-passenger:deploy:deploy.sec_credentials"
+        ], 
+        "train-demo-passenger:file.out": [
+            "train-demo-passenger:deploy:deploy.script"
+        ], 
+        "train-demo-passenger:servo:_literal_const_4.token": [
+            "train-demo-passenger:servo:switch.case_true"
+        ], 
+        "train-demo-passenger:deploy:deploy.params": [
+            "train-demo-passenger:deploy:post.params"
+        ], 
+        "train-demo-passenger:deploy:init.out": [
+            "train-demo-passenger:deploy:deploy.control_uri"
+        ], 
+        "train-demo-passenger:join.token": [
+            "train-demo-passenger:migrate:migrate.key"
+        ], 
+        "train-demo-passenger:deploy:deploy.data": [
+            "train-demo-passenger:deploy:post.data"
+        ], 
+        "train-demo-passenger:migrate:migrate.URL": [
+            "train-demo-passenger:migrate:post.URL"
+        ], 
+        "train-demo-passenger:deploy:_void_1.void": [
+            "train-demo-passenger:deploy:sec_credentials.in"
+        ], 
+        "train-demo-passenger:deploy:post.data": [
+            "train-demo-passenger:deploy:deploy.data"
+        ], 
+        "train-demo-passenger:migrate:post.status": [
+            "train-demo-passenger:migrate:migrate.status"
+        ], 
+        "train-demo-passenger:deploy:post.status": [
+            "train-demo-passenger:deploy:deploy.status"
+        ], 
+        "train-demo-passenger:deploy:_void_2.void": [
+            "train-demo-passenger:deploy:init.in"
+        ], 
+        "train-demo-passenger:snkStockholmConst.token": [
+            "train-demo-passenger:selStockholm.data"
+        ], 
+        "train-demo-passenger:name.token": [
+            "train-demo-passenger:deploy:deploy.name"
+        ], 
+        "train-demo-passenger:deploy:deploy.app_info": [
+            "train-demo-passenger:migrate:migrate.app_id"
+        ], 
+        "train-demo-passenger:servo:compute.result": [
+            "train-demo-passenger:servo:init.in", 
+            "train-demo-passenger:servo:bool.token"
+        ], 
+        "train-demo-passenger:servo:check.case_true": [
+            "train-demo-passenger:servo:compute.a"
+        ], 
+        "train-demo-passenger:migrate:migrate.params": [
+            "train-demo-passenger:migrate:post.params"
+        ], 
+        "train-demo-passenger:nothing.void": [
+            "train-demo-passenger:readerLund.data", 
+            "train-demo-passenger:readerStockholm.data", 
+            "train-demo-passenger:file.in", 
+            "train-demo-passenger:deploy_info.in"
+        ], 
+        "train-demo-passenger:servo:_literal_const_3.token": [
+            "train-demo-passenger:servo:check.data"
+        ], 
+        "train-demo-passenger:jsonLund.value": [
+            "train-demo-passenger:compareLund.b"
+        ], 
+        "train-demo-passenger:selStockholm.case_true": [
+            "train-demo-passenger:join.token"
+        ], 
+        "train-demo-passenger:deploy:deploy.header": [
+            "train-demo-passenger:deploy:post.header"
+        ], 
+        "train-demo-passenger:dbg:tag.out": [
+            "train-demo-passenger:dbg:out.token"
+        ], 
+        "train-demo-passenger:compareStockholm.result": [
+            "train-demo-passenger:selStockholm.select"
+        ], 
+        "train-demo-passenger:dataConst.token": [
+            "train-demo-passenger:jsonLund.key", 
+            "train-demo-passenger:jsonStockholm.key"
+        ], 
+        "train-demo-passenger:servo:bool.bool": [
+            "train-demo-passenger:servo:switch.select"
+        ], 
+        "train-demo-passenger:selStockholm.case_false": [
+            "train-demo-passenger:term2.void"
+        ], 
+        "train-demo-passenger:jsonStockholm.value": [
+            "train-demo-passenger:compareStockholm.b"
+        ], 
+        "train-demo-passenger:servo:get_data.value": [
+            "train-demo-passenger:servo:check.select"
+        ], 
+        "train-demo-passenger:deploy:post.header": [
+            "train-demo-passenger:deploy:deploy.header"
+        ], 
+        "train-demo-passenger:deploy:deploy.URL": [
+            "train-demo-passenger:deploy:post.URL"
+        ], 
+        "train-demo-passenger:servo:_literal_const_5.token": [
+            "train-demo-passenger:servo:switch.case_false"
+        ], 
+        "train-demo-passenger:compareLund.result": [
+            "train-demo-passenger:selLund.select"
+        ], 
+        "train-demo-passenger:deploy_info.out": [
+            "train-demo-passenger:deploy:deploy.deploy_info"
+        ], 
+        "train-demo-passenger:readerLund.data": [
+            "train-demo-passenger:jsonLund.container"
+        ], 
+        "train-demo-passenger:RFIDConst.token": [
+            "train-demo-passenger:compareLund.a", 
+            "train-demo-passenger:compareStockholm.a"
+        ], 
+        "train-demo-passenger:selLund.case_false": [
+            "train-demo-passenger:term1.void"
+        ], 
+        "train-demo-passenger:migrate:post.header": [
+            "train-demo-passenger:migrate:migrate.header"
+        ]
+    }, 
+    "port_properties": {
+        "train-demo-passenger:migrate:migrate": [
+            {
+                "direction": "in", 
+                "port": "control_uri", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "done", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "app_id", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "header", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "status", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "params", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "URL", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "header", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "key", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:join": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 2, 
+                    "routing": "collect-unordered"
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:deploy_info": [
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:deploy:deploy": [
+            {
+                "direction": "out", 
+                "port": "URL", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "status", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "deploy_info", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "sec_credentials", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "params", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "app_info", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "header", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "name", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "header", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "script", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "control_uri", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:file": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:deploy:post": [
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "status", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "header", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "URL", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "header", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "params", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:snkLundConst": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:name": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:deploy:init": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:migrate:_void_3": [
+            {
+                "direction": "in", 
+                "port": "void", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:dataConst": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 2
+                }
+            }
+        ], 
+        "train-demo-passenger:dbg:tag": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:check": [
+            {
+                "direction": "out", 
+                "port": "case_true", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "case_false", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "select", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:selLund": [
+            {
+                "direction": "out", 
+                "port": "case_false", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "select", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "case_true", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:jsonLund": [
+            {
+                "direction": "in", 
+                "port": "container", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "key", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "value", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:dbg:out": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:compareLund": [
+            {
+                "direction": "in", 
+                "port": "a", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "result", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "b", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:snkStockholmConst": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:switch": [
+            {
+                "direction": "in", 
+                "port": "select", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "case_true", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "case_false", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:RFIDConst": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 2
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:get_data": [
+            {
+                "direction": "in", 
+                "port": "container", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "key", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "value", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:_void_4": [
+            {
+                "direction": "in", 
+                "port": "void", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:bool": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "bool", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:selStockholm": [
+            {
+                "direction": "in", 
+                "port": "select", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "case_false", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "case_true", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:jsonStockholm": [
+            {
+                "direction": "out", 
+                "port": "value", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "container", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "key", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:term3": [
+            {
+                "direction": "in", 
+                "port": "void", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:term2": [
+            {
+                "direction": "in", 
+                "port": "void", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:term1": [
+            {
+                "direction": "in", 
+                "port": "void", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:migrate:_literal_const_1": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:compute": [
+            {
+                "direction": "in", 
+                "port": "b", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "result", 
+                "properties": {
+                    "nbr_peers": 2
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "a", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:servo": [
+            {
+                "direction": "in", 
+                "port": "angle", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:deploy:_void_1": [
+            {
+                "direction": "out", 
+                "port": "void", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:_literal_const_5": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:deploy:_void_2": [
+            {
+                "direction": "out", 
+                "port": "void", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:readerLund": [
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:migrate:post": [
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "header", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "status", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "header", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "URL", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "params", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:_literal_const_2": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:_literal_const_3": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:_literal_const_4": [
+            {
+                "direction": "out", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:servo:init": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:deploy:sec_credentials": [
+            {
+                "direction": "in", 
+                "port": "in", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "out", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:readerStockholm": [
+            {
+                "direction": "in", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 3
+                }
+            }
+        ], 
+        "train-demo-passenger:compareStockholm": [
+            {
+                "direction": "in", 
+                "port": "a", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "out", 
+                "port": "result", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "b", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "train-demo-passenger:nothing": [
+            {
+                "direction": "out", 
+                "port": "void", 
+                "properties": {
+                    "nbr_peers": 4
+                }
+            }
+        ]
+    }, 
+    "valid": true, 
+    "actors": {
+        "train-demo-passenger:migrate:migrate": {
+            "args": {
+                "deploy_info": {
+                    "stationStockholm": {
+                        "valid": true, 
+                        "requirements": {
+                            "infoBoard": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Lund_InfoBoard"
+                                    }
+                                }
+                            ], 
+                            "infoBoardTrigger": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Lund_InfoBoard"
+                                    }
+                                }
+                            ], 
+                            "cameraDisplay": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "ELX"
+                                    }
+                                }
+                            ], 
+                            "camera": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Lund_Camera_Sensehat"
+                                    }
+                                }
+                            ], 
+                            "cameraTrigger": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Lund_Camera_Sensehat"
+                                    }
+                                }
+                            ], 
+                            "sensorDisplay": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Lund_Camera_Sensehat"
+                                    }
+                                }
+                            ], 
+                            "sensor": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Lund_Camera_Sensehat"
+                                    }
+                                }
+                            ], 
+                            "sensorTrigger": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Lund_Camera_Sensehat"
+                                    }
+                                }
+                            ]
+                        }
+                    }, 
+                    "stationLund": {
+                        "valid": true, 
+                        "requirements": {
+                            "infoBoard": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Sthlm_InfoBoard"
+                                    }
+                                }
+                            ], 
+                            "infoBoardTrigger": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Sthlm_InfoBoard"
+                                    }
+                                }
+                            ], 
+                            "cameraDisplay": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "ELX"
+                                    }
+                                }
+                            ], 
+                            "camera": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Sthlm_Camera_Sensehat"
+                                    }
+                                }
+                            ], 
+                            "cameraTrigger": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Sthlm_Camera_Sensehat"
+                                    }
+                                }
+                            ], 
+                            "sensorDisplay": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Sthlm_Camera_Sensehat"
+                                    }
+                                }
+                            ], 
+                            "sensor": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Sthlm_Camera_Sensehat"
+                                    }
+                                }
+                            ], 
+                            "sensorTrigger": [
+                                {
+                                    "op": "runtime_name", 
+                                    "type": "+", 
+                                    "kwargs": {
+                                        "name": "Sthlm_Camera_Sensehat"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }, 
+            "actor_type": "calvin.CalvinMigraterA", 
+            "signature": "e671fbaa47a4bc35eef5bbabe94f5b5d649b729bb94e58f0bb698f4c56195c03"
+        }, 
+        "train-demo-passenger:selLund": {
+            "args": {}, 
+            "actor_type": "flow.Select", 
+            "signature": "95f965d1cdf97fc1148c0dd763f15ee2822f8a448b965ca387ca983921dda847"
+        }, 
+        "train-demo-passenger:deploy:deploy": {
+            "args": {}, 
+            "actor_type": "calvin.CalvinDeployerA", 
+            "signature": "04ad548d73c2c38a31532705b376cced977ec194bf52df742343e9e860a9336f"
+        }, 
+        "train-demo-passenger:file": {
+            "args": {
+                "data": "cameraTrigger : std.Trigger(data=true, tick=0.5)\ncamera : media.ImageSource()\ncameraDisplay : media.ImageSink()\ninfoBoardTrigger : std.Trigger(tick=3, data=\"Cargo train.\\n Keep off tracks!\")\ninfoBoard : io.Print()\nsensorTrigger : std.Trigger(data=true, tick=3.0)\nsensor: sensor.TriggeredTemperature()\nsensorDisplay : io.Print()\n\ncameraTrigger.data > camera.trigger\ncamera.b64image > cameraDisplay.b64image\nsensorTrigger.data > sensor.trigger\nsensor.centigrade > sensorDisplay.token\ninfoBoardTrigger.data > infoBoard.token\n"
+            }, 
+            "actor_type": "flow.Init", 
+            "signature": "3e308e47a996352b4965a7449eeb84f049b9e0931e5011dd923bad6660e6e002"
+        }, 
+        "train-demo-passenger:deploy:post": {
+            "args": {}, 
+            "actor_type": "net.HTTPPost", 
+            "signature": "51594f52b9c2d375fe535740fa4173db2a3d4c5353843753a511af0f0b8da72a"
+        }, 
+        "train-demo-passenger:snkLundConst": {
+            "args": {
+                "data": "stationLund"
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:name": {
+            "args": {
+                "data": "Railway Information Application"
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:dbg:out": {
+            "args": {}, 
+            "actor_type": "io.Print", 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }, 
+        "train-demo-passenger:migrate:_void_3": {
+            "args": {}, 
+            "actor_type": "flow.Terminator", 
+            "signature": "d020e4a1dc9953df2924eba3ceed61544fff2bd4fab9f602758cce0e8957d522"
+        }, 
+        "train-demo-passenger:dbg:tag": {
+            "args": {
+                "prefix": "readerStockholm: "
+            }, 
+            "actor_type": "text.PrefixString", 
+            "signature": "d91c7a78c035388ef9c8421cb388218e566ecc62a51441c6bfef276d541974f5"
+        }, 
+        "train-demo-passenger:servo:check": {
+            "args": {}, 
+            "actor_type": "flow.Select", 
+            "signature": "95f965d1cdf97fc1148c0dd763f15ee2822f8a448b965ca387ca983921dda847"
+        }, 
+        "train-demo-passenger:join": {
+            "args": {}, 
+            "actor_type": "flow.Collect", 
+            "signature": "e6b5141ac9ddab19cec49d8785f1f3cf4acf763498c721870ff1dcafca119059"
+        }, 
+        "train-demo-passenger:jsonLund": {
+            "args": {}, 
+            "actor_type": "json.GetValue", 
+            "signature": "b5af23ef7594f12cb586ebda67fd1b51b6c437445c67593b37d6dc3b00fc66f7"
+        }, 
+        "train-demo-passenger:deploy:init": {
+            "args": {
+                "data": "http://192.168.0.102:5001"
+            }, 
+            "actor_type": "flow.Init", 
+            "signature": "3e308e47a996352b4965a7449eeb84f049b9e0931e5011dd923bad6660e6e002"
+        }, 
+        "train-demo-passenger:compareLund": {
+            "args": {
+                "rel": "="
+            }, 
+            "actor_type": "std.Compare", 
+            "signature": "ea233444664ef2a929101373002d8fa5d89e91aceae7724fbd5a109e5f874446"
+        }, 
+        "train-demo-passenger:snkStockholmConst": {
+            "args": {
+                "data": "stationStockholm"
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:servo:init": {
+            "args": {
+                "data": 0
+            }, 
+            "actor_type": "flow.Init", 
+            "signature": "3e308e47a996352b4965a7449eeb84f049b9e0931e5011dd923bad6660e6e002"
+        }, 
+        "train-demo-passenger:servo:switch": {
+            "args": {}, 
+            "actor_type": "flow.Deselect", 
+            "signature": "a4f030267249aa9d2498dac1d5f9494b616bfc9d3dfd44760b3b3a9b696ee52b"
+        }, 
+        "train-demo-passenger:servo:get_data": {
+            "args": {}, 
+            "actor_type": "json.GetValue", 
+            "signature": "b5af23ef7594f12cb586ebda67fd1b51b6c437445c67593b37d6dc3b00fc66f7"
+        }, 
+        "train-demo-passenger:servo:_void_4": {
+            "args": {}, 
+            "actor_type": "flow.Terminator", 
+            "signature": "d020e4a1dc9953df2924eba3ceed61544fff2bd4fab9f602758cce0e8957d522"
+        }, 
+        "train-demo-passenger:servo:_literal_const_4": {
+            "args": {
+                "data": 85
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:RFIDConst": {
+            "args": {
+                "data": 53072129
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:selStockholm": {
+            "args": {}, 
+            "actor_type": "flow.Select", 
+            "signature": "95f965d1cdf97fc1148c0dd763f15ee2822f8a448b965ca387ca983921dda847"
+        }, 
+        "train-demo-passenger:jsonStockholm": {
+            "args": {}, 
+            "actor_type": "json.GetValue", 
+            "signature": "b5af23ef7594f12cb586ebda67fd1b51b6c437445c67593b37d6dc3b00fc66f7"
+        }, 
+        "train-demo-passenger:term3": {
+            "args": {}, 
+            "actor_type": "flow.Terminator", 
+            "signature": "d020e4a1dc9953df2924eba3ceed61544fff2bd4fab9f602758cce0e8957d522"
+        }, 
+        "train-demo-passenger:term2": {
+            "args": {}, 
+            "actor_type": "flow.Terminator", 
+            "signature": "d020e4a1dc9953df2924eba3ceed61544fff2bd4fab9f602758cce0e8957d522"
+        }, 
+        "train-demo-passenger:term1": {
+            "args": {}, 
+            "actor_type": "flow.Terminator", 
+            "signature": "d020e4a1dc9953df2924eba3ceed61544fff2bd4fab9f602758cce0e8957d522"
+        }, 
+        "train-demo-passenger:migrate:_literal_const_1": {
+            "args": {
+                "data": "http://192.168.0.102:5001"
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:servo:compute": {
+            "args": {
+                "op": "-"
+            }, 
+            "actor_type": "math.Compute", 
+            "signature": "f4ec7e25966ea42ae92dce98e9941b13c887d7bef4f08255a599f6c8360b2926"
+        }, 
+        "train-demo-passenger:servo:bool": {
+            "args": {}, 
+            "actor_type": "flow.Bool", 
+            "signature": "bb08d2e2cc20741968e8c27886c1d8917382699121e5d303efcfe3ca72ff246a"
+        }, 
+        "train-demo-passenger:servo:servo": {
+            "args": {}, 
+            "actor_type": "io.ServoMotor", 
+            "signature": "1f46527562ea54c685c1a854622ec1e97966b0a5cf04d483674ae6cb6676c0a3"
+        }, 
+        "train-demo-passenger:dataConst": {
+            "args": {
+                "data": "data"
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:servo:_literal_const_5": {
+            "args": {
+                "data": 75
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:deploy:_void_2": {
+            "args": {}, 
+            "actor_type": "flow.Void", 
+            "signature": "3a749ff7e2bc123a6e5870c9a337f72e0025a69bff24de632bd2905f7bf21d00"
+        }, 
+        "train-demo-passenger:readerLund": {
+            "args": {}, 
+            "actor_type": "sensor.RFIDReader", 
+            "signature": "c6d20d15bf5bcd83714d963b4348025fb6882ecd955776bdb78b5598ec115e3f"
+        }, 
+        "train-demo-passenger:migrate:post": {
+            "args": {}, 
+            "actor_type": "net.HTTPPost", 
+            "signature": "51594f52b9c2d375fe535740fa4173db2a3d4c5353843753a511af0f0b8da72a"
+        }, 
+        "train-demo-passenger:servo:_literal_const_2": {
+            "args": {
+                "data": "status"
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:servo:_literal_const_3": {
+            "args": {
+                "data": 1
+            }, 
+            "actor_type": "std.Constant", 
+            "signature": "fbf51915d742024c29847ed828e3d53e34d126a089540b943c8c8b77f9cbe224"
+        }, 
+        "train-demo-passenger:deploy:_void_1": {
+            "args": {}, 
+            "actor_type": "flow.Void", 
+            "signature": "3a749ff7e2bc123a6e5870c9a337f72e0025a69bff24de632bd2905f7bf21d00"
+        }, 
+        "train-demo-passenger:deploy_info": {
+            "args": {
+                "data": {
+                    "valid": true, 
+                    "requirements": {
+                        "infoBoard": [
+                            {
+                                "kwargs": {
+                                    "name": "Lund_InfoBoard"
+                                }, 
+                                "type": "+", 
+                                "op": "runtime_name"
+                            }
+                        ], 
+                        "infoBoardTrigger": [
+                            {
+                                "kwargs": {
+                                    "name": "Lund_InfoBoard"
+                                }, 
+                                "type": "+", 
+                                "op": "runtime_name"
+                            }
+                        ], 
+                        "cameraDisplay": [
+                            {
+                                "kwargs": {
+                                    "name": "ELX"
+                                }, 
+                                "type": "+", 
+                                "op": "runtime_name"
+                            }
+                        ], 
+                        "camera": [
+                            {
+                                "kwargs": {
+                                    "name": "Lund_Camera_Sensehat"
+                                }, 
+                                "type": "+", 
+                                "op": "runtime_name"
+                            }
+                        ], 
+                        "cameraTrigger": [
+                            {
+                                "kwargs": {
+                                    "name": "Lund_Camera_Sensehat"
+                                }, 
+                                "type": "+", 
+                                "op": "runtime_name"
+                            }
+                        ], 
+                        "sensorDisplay": [
+                            {
+                                "kwargs": {
+                                    "name": "Lund_Camera_Sensehat"
+                                }, 
+                                "type": "+", 
+                                "op": "runtime_name"
+                            }
+                        ], 
+                        "sensor": [
+                            {
+                                "kwargs": {
+                                    "name": "Lund_Camera_Sensehat"
+                                }, 
+                                "type": "+", 
+                                "op": "runtime_name"
+                            }
+                        ], 
+                        "sensorTrigger": [
+                            {
+                                "kwargs": {
+                                    "name": "Lund_Camera_Sensehat"
+                                }, 
+                                "type": "+", 
+                                "op": "runtime_name"
+                            }
+                        ]
+                    }
+                }
+            }, 
+            "actor_type": "flow.Init", 
+            "signature": "3e308e47a996352b4965a7449eeb84f049b9e0931e5011dd923bad6660e6e002"
+        }, 
+        "train-demo-passenger:deploy:sec_credentials": {
+            "args": {
+                "data": {
+                    "SJ": {
+                        "username": "user1", 
+                        "password": "pass1"
+                    }
+                }
+            }, 
+            "actor_type": "flow.Init", 
+            "signature": "3e308e47a996352b4965a7449eeb84f049b9e0931e5011dd923bad6660e6e002"
+        }, 
+        "train-demo-passenger:readerStockholm": {
+            "args": {}, 
+            "actor_type": "sensor.RFIDReader", 
+            "signature": "c6d20d15bf5bcd83714d963b4348025fb6882ecd955776bdb78b5598ec115e3f"
+        }, 
+        "train-demo-passenger:compareStockholm": {
+            "args": {
+                "rel": "="
+            }, 
+            "actor_type": "std.Compare", 
+            "signature": "ea233444664ef2a929101373002d8fa5d89e91aceae7724fbd5a109e5f874446"
+        }, 
+        "train-demo-passenger:nothing": {
+            "args": {}, 
+            "actor_type": "flow.Void", 
+            "signature": "3a749ff7e2bc123a6e5870c9a337f72e0025a69bff24de632bd2905f7bf21d00"
+        }
+    }, 
+    "name": "train-demo-passenger"
+}

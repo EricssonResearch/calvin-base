@@ -1,0 +1,22 @@
+cameraTrigger : std.Trigger(data=0.22, tick=1)
+camera : media.ImageSource()
+cameraDisplay : media.ImageSink()
+infoBoardTrigger : std.Trigger(tick=1, data="Cargo train.\n Keep off tracks!")
+infoBoard : io.Print()
+sensorTrigger : std.Trigger(data=true, tick=5.0)
+sensor: sensor.TriggeredTemperature()
+sensorDisplay : io.Print()
+
+cameraTrigger.data > camera.trigger
+camera.b64image > cameraDisplay.b64image
+sensorTrigger.data > sensor.trigger
+sensor.centigrade > sensorDisplay.token
+infoBoardTrigger.data > infoBoard.token
+
+rule lund_cam_sensehat: runtime_name(name="Lund_Camera_Sensehat")
+rule lund_infoboard : runtime_name(name="Lund_InfoBoard")
+rule display : runtime_name(name="ELX")
+
+apply cameraTrigger, camera, sensorTrigger, sensor, sensorDisplay: lund_cam_sensehat
+apply infoBoardTrigger, infoBoard : lund_infoboard
+apply cameraDisplay: display

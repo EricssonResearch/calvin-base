@@ -1,0 +1,160 @@
+{
+    "connections": {
+        "app:cameraTrigger.data": [
+            "app:camera.trigger"
+        ], 
+        "app:sensorTimer.data": [
+            "app:sensor.trigger"
+        ], 
+        "app:camera.b64image": [
+            "app:cameraDisplay.b64image"
+        ], 
+        "app:infoBoardTrigger.data": [
+            "app:infoBoard.token"
+        ], 
+        "app:sensor.centigrade": [
+            "app:sensorDisplay.token"
+        ]
+    }, 
+    "port_properties": {
+        "app:sensorTimer": [
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "app:infoBoardTrigger": [
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "app:sensorDisplay": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "app:cameraDisplay": [
+            {
+                "direction": "in", 
+                "port": "b64image", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "app:sensor": [
+            {
+                "direction": "out", 
+                "port": "centigrade", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "trigger", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "app:camera": [
+            {
+                "direction": "out", 
+                "port": "b64image", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }, 
+            {
+                "direction": "in", 
+                "port": "trigger", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "app:cameraTrigger": [
+            {
+                "direction": "out", 
+                "port": "data", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ], 
+        "app:infoBoard": [
+            {
+                "direction": "in", 
+                "port": "token", 
+                "properties": {
+                    "nbr_peers": 1
+                }
+            }
+        ]
+    }, 
+    "valid": true, 
+    "actors": {
+        "app:sensorTimer": {
+            "args": {
+                "tick": 5.0, 
+                "data": true
+            }, 
+            "actor_type": "std.Trigger", 
+            "signature": "ba09c716dfc88b9fdf447ede4d0ad64ee4ea24c03a7fb1568f24f5b89254b58e"
+        }, 
+        "app:infoBoardTrigger": {
+            "args": {
+                "tick": 1, 
+                "data": "Cargo train.\n Keep off tracks!"
+            }, 
+            "actor_type": "std.Trigger", 
+            "signature": "ba09c716dfc88b9fdf447ede4d0ad64ee4ea24c03a7fb1568f24f5b89254b58e"
+        }, 
+        "app:sensorDisplay": {
+            "args": {}, 
+            "actor_type": "io.Print", 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }, 
+        "app:cameraDisplay": {
+            "args": {}, 
+            "actor_type": "media.ImageSink", 
+            "signature": "a4dda0c10a7073d7f27a96d152ed6371dc012d7db0e92c43570b8773ff9b9fc7"
+        }, 
+        "app:sensor": {
+            "args": {}, 
+            "actor_type": "sensor.TriggeredTemperature", 
+            "signature": "adff639f8e11e480c3c3fbbbcf01691d11615bfa2a6f29cf6bb913c29fe704a2"
+        }, 
+        "app:camera": {
+            "args": {}, 
+            "actor_type": "media.ImageSource", 
+            "signature": "24be25ab36ecd3f14d8ff9616f735cd4b72d826385715156fc2bee84179b87d9"
+        }, 
+        "app:cameraTrigger": {
+            "args": {
+                "tick": 1, 
+                "data": 0.22
+            }, 
+            "actor_type": "std.Trigger", 
+            "signature": "ba09c716dfc88b9fdf447ede4d0ad64ee4ea24c03a7fb1568f24f5b89254b58e"
+        }, 
+        "app:infoBoard": {
+            "args": {}, 
+            "actor_type": "io.Print", 
+            "signature": "84d582e5e5c3a95bf20849693d7758370fc724809ffdcb0a4a5be1e96673ac21"
+        }
+    }, 
+    "name": "app"
+}

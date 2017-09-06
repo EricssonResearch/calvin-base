@@ -1,0 +1,233 @@
+#deploy info
+define CONTROL_URI = "http://192.168.0.102:5001"
+define SCRIPT ="cameraTrigger : std.Trigger(data=true, tick=0.1)\ncamera : media.ImageSource()\ncameraDisplay : media.ImageSink()\ninfoBoardTrigger : std.Trigger(tick=3, data=\"Cargo train.\\n Keep off tracks!\")\ninfoBoard : io.Print()\nsensorTrigger : std.Trigger(data=true, tick=3.0)\nsensor: sensor.TriggeredTemperature()\nsensorDisplay : io.Print()\n\ncameraTrigger.data > camera.trigger\ncamera.b64image > cameraDisplay.b64image\nsensorTrigger.data > sensor.trigger\nsensor.centigrade > sensorDisplay.token\ninfoBoardTrigger.data > infoBoard.token\n"
+
+define DEPLOY_STHLM={
+    "valid": true,
+    "requirements": {
+        "infoBoard": [{"kwargs":{"name":"Sthlm_InfoBoard"},"type":"+","op":"runtime_name"}],
+        "infoBoardTrigger": [{"kwargs":{"name":"Sthlm_InfoBoard"},"type":"+","op":"runtime_name"}],
+        "cameraDisplay": [{"kwargs":{"name":"ELX"},"type":"+","op":"runtime_name"}],
+        "camera": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+        "cameraTrigger": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+        "sensorDisplay": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+        "sensor": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+        "sensorTrigger": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}]
+    }
+}
+
+define DEPLOY_LUND={
+    "valid": true,
+    "requirements": {
+        "infoBoard": [{"kwargs":{"name":"Lund_InfoBoard"},"type":"+","op":"runtime_name"}],
+        "infoBoardTrigger": [{"kwargs":{"name":"Lund_InfoBoard"},"type":"+","op":"runtime_name"}],
+        "cameraDisplay": [{"kwargs":{"name":"ELX"},"type":"+","op":"runtime_name"}],
+        "camera": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+        "cameraTrigger": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+        "sensorDisplay": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+        "sensor": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+        "sensorTrigger": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}]
+    }
+}
+
+define DEPLOY_DICT= {
+   "stationStockholm": {
+        "valid": true,
+        "requirements": {
+            "infoBoard": [{"kwargs":{"name":"Lund_InfoBoard"},"type":"+","op":"runtime_name"}],
+            "infoBoardTrigger": [{"kwargs":{"name":"Lund_InfoBoard"},"type":"+","op":"runtime_name"}],
+            "cameraDisplay": [{"kwargs":{"name":"ELX"},"type":"+","op":"runtime_name"}],
+            "camera": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+            "cameraTrigger": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+            "sensorDisplay": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+            "sensor": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+            "sensorTrigger": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}]
+        }
+    },
+    "stationLund":{
+        "valid": true,
+        "requirements": {
+            "infoBoard": [{"kwargs":{"name":"Sthlm_InfoBoard"},"type":"+","op":"runtime_name"}],
+            "infoBoardTrigger": [{"kwargs":{"name":"Sthlm_InfoBoard"},"type":"+","op":"runtime_name"}],
+            "cameraDisplay": [{"kwargs":{"name":"ELX"},"type":"+","op":"runtime_name"}],
+            "camera": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+            "cameraTrigger": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+            "sensorDisplay": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+            "sensor": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}],
+            "sensorTrigger": [{"kwargs":{"name":"Sthlm_Camera_Sensehat"},"type":"+","op":"runtime_name"}]
+        }
+    }
+}
+
+define APPNAME = "Railway Information Application"
+
+### Components ###
+component CalvinDeployer(control_uri) name, script, deploy_info -> app_info {
+    sec_credentials:flow.Init(data={"SJ":{"username":"user1","password":"pass1"}})
+    deploy: calvin.CalvinDeployerA()
+    post: net.HTTPPost()
+    init : flow.Init(data=control_uri)
+
+    voidport > sec_credentials.in
+    sec_credentials.out > deploy.sec_credentials
+    .name > deploy.name
+    .script > deploy.script
+    .deploy_info > deploy.deploy_info
+    deploy.app_info > .app_info
+
+    voidport > init.in
+    init.out > deploy.control_uri
+
+    deploy.URL > post.URL
+    deploy.params > post.params
+    deploy.header > post.header
+    deploy.data > post.data
+
+    post.status > deploy.status
+    post.header > deploy.header
+    post.data > deploy.data
+}
+
+component CalvinMigrater(control_uri, deploy_info) app_id, key -> done {
+    migrate: calvin.CalvinMigraterA(deploy_info=deploy_info)
+    post: net.HTTPPost()
+
+    .app_id > migrate.app_id
+    .key > migrate.key
+    migrate.done > .done
+
+    control_uri > migrate.control_uri
+
+    migrate.URL > post.URL
+    migrate.params > post.params
+    migrate.header > post.header
+    migrate.data > post.data
+
+    post.status > migrate.status
+    post.header > migrate.header
+    post.data > voidport
+}
+
+component TrackSwitch() switch -> {
+    servo: io.ServoMotor()
+    init : flow.Init(data=0)
+    compute : math.Compute(op="-")
+    switch: flow.Deselect()
+    check : flow.Select()
+    bool : flow.Bool()
+    get_data: json.GetValue()
+
+    .switch > get_data.container
+    "status" > get_data.key
+    get_data.value > check.select
+    1 > check.data
+    check.case_true > compute.a
+    check.case_false > voidport
+    init.out > compute.b
+    compute.result > init.in
+    compute.result > bool.token
+    bool.bool > switch.select
+    90 > switch.case_true
+    70 > switch.case_false
+    switch.data > servo.angle
+}
+
+component DbgPrint(tag) token -> {
+    out : io.Print()
+    tag : text.PrefixString(prefix=tag)
+
+    .token > tag.in
+    tag.out > out.token
+}
+
+### Actor instances ###
+#script file
+file: flow.Init(data=SCRIPT)
+
+#deploy info
+deploy_info: flow.Init(data=DEPLOY_LUND)
+
+# name
+name: std.Constant(data=APPNAME)
+
+#rt control
+deploy: CalvinDeployer(control_uri=CONTROL_URI)
+migrate: CalvinMigrater(control_uri=CONTROL_URI, deploy_info=DEPLOY_DICT)
+
+### Debug ###
+
+
+#RFID stuff
+dataConst: std.Constant(data="data")
+RFIDConst: std.Constant(data=53072129)
+
+readerLund : sensor.RFIDReader()
+jsonLund: json.GetValue()
+compareLund: std.Compare(rel="=")
+selLund: flow.Select()
+snkLundConst: std.Constant(data="stationLund")
+
+readerStockholm : sensor.RFIDReader()
+jsonStockholm: json.GetValue()
+compareStockholm: std.Compare(rel="=")
+selStockholm: flow.Select()
+snkStockholmConst: std.Constant(data="stationStockholm")
+
+join: flow.Collect()
+servo:TrackSwitch()
+
+dbg : DbgPrint(tag="readerStockholm: ")
+
+nothing : flow.Void()
+term1 : flow.Terminator()
+term2 : flow.Terminator()
+term3 : flow.Terminator()
+
+## Connections ##
+nothing.void > readerLund.data
+readerLund.data > jsonLund.container
+dataConst.token > jsonLund.key
+RFIDConst.token > compareLund.a
+jsonLund.value > compareLund.b
+compareLund.result > selLund.select
+snkLundConst.token > selLund.data
+selLund.case_false > term1.void
+
+nothing.void > readerStockholm.data
+readerStockholm.data > jsonStockholm.container
+readerStockholm.data > servo.switch
+readerStockholm.data > dbg.token
+
+dataConst.token > jsonStockholm.key
+RFIDConst.token > compareStockholm.a
+jsonStockholm.value > compareStockholm.b
+compareStockholm.result > selStockholm.select
+snkStockholmConst.token > selStockholm.data
+selStockholm.case_false > term2.void
+
+selLund.case_true > join.token
+selStockholm.case_true > join.token
+
+# deploy
+nothing.void > file.in
+file.out > deploy.script
+name.token > deploy.name
+nothing.void > deploy_info.in
+deploy_info.out > deploy.deploy_info
+
+# migrate
+deploy.app_info > migrate.app_id
+migrate.done > term3.void
+join.token > migrate.key
+
+rule here : runtime_name(name="ELX")
+
+apply readerStockholm: runtime_name(name="Sthlm_RFID")
+apply readerLund: runtime_name(name="Lund_RFID")
+apply servo: runtime_name(name="Sthlm_Switch")
+
+apply dataConst, RFIDConst: here
+apply jsonLund, compareLund, selLund, snkLundConst: here
+apply jsonStockholm, compareStockholm, selStockholm, snkStockholmConst: here
+apply file, join, deploy, migrate, name, deploy_info: here
+apply nothing, term1, term2, dbg: here

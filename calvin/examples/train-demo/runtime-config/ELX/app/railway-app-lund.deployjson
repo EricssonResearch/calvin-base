@@ -1,0 +1,13 @@
+{
+    "valid": true, 
+    "requirements": {
+        "infoBoard": [{"kwargs":{"name":"Lund_InfoBoard"},"type":"+","op":"runtime_name"}], 
+        "infoBoardTrigger": [{"kwargs":{"name":"Lund_InfoBoard"},"type":"+","op":"runtime_name"}], 
+        "cameraDisplay": [{"kwargs":{"name":"ELX"},"type":"+","op":"runtime_name"}], 
+        "camera": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}], 
+        "cameraTrigger": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}], 
+        "sensorDisplay": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}], 
+        "sensor": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}], 
+        "sensorTrigger": [{"kwargs":{"name":"Lund_Camera_Sensehat"},"type":"+","op":"runtime_name"}]
+    }
+}

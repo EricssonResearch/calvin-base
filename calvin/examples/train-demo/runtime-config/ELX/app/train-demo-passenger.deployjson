@@ -1,0 +1,239 @@
+{
+    "valid": true, 
+    "requirements": {
+        "readerStockholm": [
+            {
+                "kwargs": {
+                    "name": "Sthlm_RFID"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "term2": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "dbgMigrate": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "migrate": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "readerLund": [
+            {
+                "kwargs": {
+                    "name": "Lund_RFID"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "RFIDConst": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "jsonLund": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "file": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "dbgStockholm": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "deploy_info": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "term1": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "jsonStockholm": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "dbgLund": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "dataConst": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "servo": [
+            {
+                "kwargs": {
+                    "name": "Sthlm_Switch"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "deploy": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "snkLundConst": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "nothing": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "compareStockholm": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "snkStockholmConst": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "compareLund": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "join": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "name": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "selStockholm": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "selLund": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ], 
+        "dbgDeploy": [
+            {
+                "kwargs": {
+                    "name": "ELX"
+                }, 
+                "type": "+", 
+                "op": "runtime_name"
+            }
+        ]
+    }
+}

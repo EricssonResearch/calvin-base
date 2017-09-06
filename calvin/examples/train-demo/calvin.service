@@ -1,0 +1,14 @@
+[Unit]
+Description=calvin
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/home/pi/runtime-config/calvin.sh
+RestartSec=20
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

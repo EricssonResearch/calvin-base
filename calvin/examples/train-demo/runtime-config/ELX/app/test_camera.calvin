@@ -1,0 +1,13 @@
+cameraTrigger : std.Trigger(data=0.22, tick=1)
+camera : media.ImageSource()
+cameraDisplay : media.ImageSink()
+
+
+cameraTrigger.data > camera.trigger
+camera.b64image > cameraDisplay.b64image
+
+rule lund_camera_sensehat: runtime_name(name="Lund_Camera_Sensehat")
+rule display: runtime_name(name="ELX")
+
+apply cameraTrigger, camera: lund_camera_sensehat
+apply cameraDisplay: display

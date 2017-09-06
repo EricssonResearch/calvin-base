@@ -1,0 +1,9 @@
+init : flow.Init(data=1)
+compute : math.Compute(op="-")
+out : io.Print()
+
+1 > compute.a
+init.out > compute.b
+
+compute.result > init.in
+compute.result > out.token
