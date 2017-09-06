@@ -95,10 +95,29 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
             self._rescale = None
         self._label = label
         self._rotation = rotation
+        self._camera = picamera.PiCamera()
+        self._camera.rotation = self._rotation
+        self._camera.resolution = self._resolution
+        if self._label:
+            self._camera.annotate_text = self._label
+        self._camera.start_preview()
+        
 
     def can_write(self):
         return self._b64image is None and self._in_progress is None
 
+    def _q_read_image(self):
+        import base64
+        import io
+        stream = io.BytesIO()
+        if self._rescale:
+            self._camera.capture(stream, format="jpeg", resize=self._rescale)
+        else :
+            self._camera.capture(stream, format="jpeg")
+        stream.seek(0)
+        return base64.b64encode(stream.read())
+            
+        
     def _p_read_image(self):
         import base64
         import io
@@ -110,15 +129,15 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
                 cam.annotate_text = self._label
             cam.start_preview()
             if self._rescale:
-                cam.capture(stream, format="jpeg", resize=self._rescale)
+                cam.capture(stream, format="jpeg", resize=self._rescale, use_video_port=True)
             else :
-                cam.capture(stream, format="jpeg")
+                cam.capture(stream, format="jpeg", use_video_port=True)
         stream.seek(0)
         return base64.b64encode(stream.read())
     
     def _read_image(self):
         try :
-            return self._p_read_image()
+            return self._q_read_image()
         except Exception as e:
             _log.warning("Error reading image: {}".format(e))
         return ""
@@ -148,4 +167,4 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
     def close(self):
         if self._in_progress:
             self._in_progress.cancel()
-        
+        self._camera.close()
