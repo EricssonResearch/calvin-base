@@ -52,3 +52,4 @@ class Display(base_calvinsys_object.BaseCalvinsysObject):
 
     def close(self):
         self.display.enable(False)
+        self.display.clear()
