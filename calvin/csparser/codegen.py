@@ -504,7 +504,8 @@ class Flatten(object):
         self.consumed = set()
 
         # Promote ports and assignments, and create links across component borders
-        non_blocks = [x for x in node.children if type(x) is not ast.Block]
+        # N.B. By this point all sub-blocks have been removed, thus non_blocks == node.children
+        non_blocks = node.children[:]
         map(self.visit, non_blocks)
 
         # Clean up nodes no longer needed
