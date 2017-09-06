@@ -57,8 +57,8 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
             "rotation": {
                 "description": "Rotate image (in degrees)",
                 "type": "integer",
-                "minimum": -180,
-                "maximum": 180
+                "minimum": 0,
+                "maximum": 360
             }
         },
         "required": ["mode"],
