@@ -53,6 +53,12 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
                 "description": "Label to add to image",
                 "type": "string",
                 "maxLength": 41
+            },
+            "rotation": {
+                "description": "Rotate image (in degrees)",
+                "type": "integer",
+                "minimum": -180,
+                "maximum": 180
             }
         },
         "required": ["mode"],
@@ -78,7 +84,7 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
         "type": "string"
     }
 
-    def init(self, mode, label=None, width=None, height=None, **kwargs):
+    def init(self, mode, label=None, width=None, height=None, rotation=0, **kwargs):
         self._in_progress = None
         self._b64image = None
         mode = mode.split("x")
@@ -88,6 +94,7 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
         else :
             self._rescale = None
         self._label = label
+        self._rotation = rotation
 
     def can_write(self):
         return self._b64image is None and self._in_progress is None
@@ -97,6 +104,7 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
         import io
         stream = io.BytesIO()
         with picamera.PiCamera() as cam:
+            cam.rotation = self._rotation
             cam.resolution = self._resolution
             if self._label:
                 cam.annotate_text = self._label
