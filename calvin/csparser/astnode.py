@@ -289,11 +289,6 @@ class OutPort(Port):
     def __init__(self, **kwargs):
         super(OutPort, self).__init__(**kwargs)
 
-class InternalPort(Port):
-    """docstring for InternalPortNode"""
-    def __init__(self, **kwargs):
-        super(InternalPort, self).__init__(actor='', **kwargs)
-
 class InternalInPort(InPort):
     """docstring for InternalPortNode"""
     def __init__(self, **kwargs):
