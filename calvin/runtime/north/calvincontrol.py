@@ -88,7 +88,7 @@ class CalvinControl(object):
                 self.external_host = urlparse(external_uri).hostname
             else:
                 self.external_host = self.host
-            _log.info("Control API trying to listening on: %s:%s" % (self.host, self.port))
+            _log.info("Control API listening on: %s:%s" % (self.host, self.port))
 
             self.server = server_connection.ServerProtocolFactory(self.handle_request, "http", node_name=node.node_name)
             self.server.start(self.host, self.port)
