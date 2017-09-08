@@ -121,7 +121,7 @@ def teardown_module(module):
     global test_type
     global request_handler
 
-    helpers.teardown_test_type(request_handler, [rt1, rt2, rt3], test_type)
+    helpers.teardown_test_type(test_type, [rt1, rt2, rt3], request_handler)
 
 
 class CalvinTestBase(unittest.TestCase):

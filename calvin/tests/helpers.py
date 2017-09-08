@@ -454,8 +454,8 @@ def teardown_test_type(test_type, runtimes, request_handler):
     if test_type == "local":
         for peer in runtimes:
             request_handler.quit(peer)
-            retry(10, partial(request_handler.get_node_id, peer), lambda _: True, "Failed to stop peer %r" % (peer,))
-            # wait_for_it(peer)
+        for peer in runtimes:
+            retry(10, partial(wait_for_it, peer), lambda r: r, "Failed to stop peer %r" % (peer,))
         for p in multiprocessing.active_children():
             p.terminate()
             time.sleep(1)
