@@ -136,6 +136,10 @@ class StorageProxy(StorageBase):
         _log.analyze(self.node.id, "+ CLIENT", {'key': key})
         self.send(cmd='GET',msg={'key':key}, cb=cb)
 
+    def delete(self, key, cb=None):
+        _log.analyze(self.node.id, "+ CLIENT", {'key': key})
+        self.send(cmd='DELETE',msg={'key':key}, cb=cb)
+
     def get_concat(self, key, cb=None):
         """
             Gets a value from the storage

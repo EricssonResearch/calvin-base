@@ -506,7 +506,7 @@ class Storage(object):
         if (prefix + key) in self.localstore_sets:
             del self.localstore_sets[prefix + key]
         if self.started:
-            self.set(prefix, key, None, cb)
+            self.storage.delete(prefix + key, cb)
         else:
             if cb:
                 cb(key, True)
@@ -1078,6 +1078,7 @@ class Storage(object):
         _log.analyze(self.node.id, "+ SERVER", {'payload': payload})
         if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
             if 'value' in payload:
+                # TODO: Remove detection of set with None when constrained have support.
                 if payload['cmd'] == 'SET' and payload['value'] is None:
                     # We detected a delete operation, since a set op with unencoded None is a delete
                     payload['cmd'] = 'DELETE'

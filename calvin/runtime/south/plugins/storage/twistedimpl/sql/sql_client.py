@@ -155,14 +155,6 @@ class SqlClient(StorageBase):
             Set a key, value pair in the storage
         """
         _log.debug("SQL set %s to %s" % (key, value))
-        if value is None:
-            # This is actually a delete (an actual None would be serialized)
-            _log.debug("SQL delete %s" % (key,))
-            d1 = self.dbpool.runQuery(QUERY_DELETE.format(keystr=key, valuestr=value))
-            d1.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key, value=value),
-                            CalvinCB(self._set_fail_cb, cb=cb, key=key, value=value))
-            return
-
         def _set_value(*args, **kwargs):
             d2 = self.dbpool.runQuery(QUERY_SET[1].format(keystr=key, valuestr=value))
             d2.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key, value=value),
@@ -230,6 +222,34 @@ class SqlClient(StorageBase):
         _log.debug("SQL get %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
             async.DelayedCall(0, CalvinCB(cb, key, None))
+
+    def delete(self, key, cb=None):
+        _log.debug("SQL delete %s" % (key,))
+        d1 = self.dbpool.runQuery(QUERY_DELETE.format(keystr=key))
+        d1.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key),
+                        CalvinCB(self._set_fail_cb, cb=cb, key=key))
+
+    def _delete_cb(self, result, **kwargs):
+        _log.debug("SQL delete OK")
+        cb = kwargs.pop('cb', None)
+        key = kwargs.pop('key', None)
+        _log.debug("SQL delete OK %s" % str(result))
+        if cb is not None:
+            async.DelayedCall(0, CalvinCB(cb, key, True))
+
+    def _delete_fail_cb(self, failure, **kwargs):
+        _log.debug("SQL delete FAIL")
+        ok = False
+        cb = kwargs.pop('cb', None)
+        key = kwargs.pop('key', None)
+        # TODO handle errors
+        try:
+            err = int(str(failure.value)[1:5])
+        except:
+            err = 9999
+        _log.debug("SQL delete %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
+        if cb is not None:
+            async.DelayedCall(0, CalvinCB(cb, key, False))
 
     def get_concat(self, key, cb=None):
         """

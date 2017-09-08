@@ -73,6 +73,11 @@ class StorageLocal(object):
         else:
             async.DelayedCall(0, cb, key, None)
 
+    def delete(self, key, cb=None):
+        cb = cb or self._dummy_cb
+        del self._data[key]
+        async.DelayedCall(0, cb, key, True)
+
     def get_concat(self, key, cb=None):
         """
             Gets a value from the storage
