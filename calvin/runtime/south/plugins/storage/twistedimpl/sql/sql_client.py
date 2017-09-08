@@ -98,7 +98,7 @@ INSERT IGNORE INTO {db}.csetvalues (id, valuestr)
 
 QUERY_REMOVE = """
 DELETE FROM {db}.csetvalues WHERE
-    id IN (SELECT id, '{{valuestr}}' FROM {db}.ckeys WHERE keystr='{{keystr}}') AND valuestr='{{valuestr}}';
+    id IN (SELECT id FROM {db}.ckeys WHERE keystr='{{keystr}}') AND valuestr='{{valuestr}}';
 """.format(db=config_kwargs['db'])
 
 QUERY_GETCONCAT = """
