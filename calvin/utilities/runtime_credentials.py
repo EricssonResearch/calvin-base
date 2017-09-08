@@ -358,7 +358,9 @@ class RuntimeCredentials():
             if "domain_name" in _ca_conf:
                 return _ca_conf["domain_name"]
         except Exception as err:
-            _log.error("get_domain: error while trying to read domain from Calvin config, err={}".format(err))
+            _log.debug("get_domain: err={}".format(err))
+            _log.warning("get_domain: Could not read security domain from config. [Security not enabled]")  
+              
         _log.debug("get_domain: Domain not found in Calvin config, let's use supplied domain")
         if domain:
             return domain
