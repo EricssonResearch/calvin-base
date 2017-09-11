@@ -38,6 +38,9 @@ class DHT11(BaseDHT11):
         self._gpio.set_mode(self._pin, pigpio.INPUT)
         self._read_data_handle = None
         self._edge_ticks = None
+        self._listen_timeout = 1.0
+        self._listen_in_progress = None
+        self._humidity_last_reading = 0.0
 
     def can_write(self):
         return self._in_progress is False
@@ -57,7 +60,8 @@ class DHT11(BaseDHT11):
         self._in_progress = True
         self._gpio.set_mode(self._pin, pigpio.OUTPUT)
         self._gpio.write(self._pin, 0)
-        async.DelayedCall(0.018, self._switch_to_listen_cb)
+        async.DelayedCall(0.025, self._switch_to_listen_cb)
+        self._listen_in_progress = async.DelayedCall(self._listen_timeout, self._listen_failed)
 
     def _switch_to_listen_cb(self):
         self._gpio.write(self._pin, 1)
@@ -65,10 +69,18 @@ class DHT11(BaseDHT11):
         self._gpio.set_mode(self._pin, pigpio.INPUT)
         self._read_data_handle = self._gpio.callback(self._pin, pigpio.FALLING_EDGE, self._read_data_cb)
 
+    def _listen_failed(self):
+        _log.info("DHT11 read timeout, returning {}".format(self._humidity_last_reading))
+        self._read_data_handle.cancel()
+        self._read_data_handle = None
+        self._humidity = self._humidity_last_reading
+        self.scheduler_wakekup()
+
     def _read_data_cb(self, pin, edge, tick):
         self._edge_ticks.append(tick)
         if len(self._edge_ticks) < 41:
             return
+        async.call_from_thread(self._listen_in_progress.cancel)
         self._read_data_handle.cancel()
         self._read_data_handle = None
         self._parse_ticks()
@@ -88,7 +100,7 @@ class DHT11(BaseDHT11):
         bytesum = rhint + tint
         # print "RH={}.{}, T={}.{}, CS={}, BS={}, OK={}".format(rhint, 0, tint, 0, chksum, bytesum, chksum == bytesum)
         self._humidity = rhint
-        threads.call_from_thread(self.scheduler.wakeup)
+        async.call_from_thread(self.scheduler_wakeup)
 
     def can_read(self):
         return self._humidity is not None
@@ -96,6 +108,7 @@ class DHT11(BaseDHT11):
     def read(self):
         self._in_progress = False
         humidity = self._humidity
+        self._humidity_last_reading = humidity
         self._humidity = None
         return humidity
 
