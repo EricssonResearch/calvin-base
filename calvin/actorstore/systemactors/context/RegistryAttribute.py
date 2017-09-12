@@ -23,16 +23,16 @@ _log = get_actor_logger(__name__)
 class RegistryAttribute(Actor):
     """
     Fetch given registry attribute of runtime given as a section.subsection.subsubsection. Will only work for locally known attributes.
-    
+
     Input:
         trigger: Any token will trigger a read
     Output:
       value : The given attribute of this runtime, or null
     """
 
-    @manage([])
-    def init(self, attribute):
-        self.attr = attribute
+    @manage(["attr"])
+    def init(self, attr):
+        self.attr = attr
         self.setup()
 
     def did_migrate(self):
@@ -42,12 +42,12 @@ class RegistryAttribute(Actor):
         self.registry_attribute = calvinsys.open(self, "sys.attribute.indexed")
         # select attribute to read
         calvinsys.write(self.registry_attribute, self.attr)
-        
+
 
     @stateguard(lambda self: calvinsys.can_read(self.registry_attribute))
     @condition(action_input=['trigger'], action_output=['value'])
     def attribute(self, _):
-        
+
         attr = calvinsys.read(self.registry_attribute)
         return (attr,)
 
