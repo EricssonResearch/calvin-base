@@ -1,6 +1,6 @@
 # Weather service example
 
-In this example the [OpenWeatherMap](http://www.openweathermap.org) API is used to fetch information on current weather.
+In this example the [OpenWeatherMap](http://www.openweathermap.org) API is used to fetch information on current weather by configuring calvinsys to use it as a virtual sensor.
 
 ## Setup
 
@@ -45,7 +45,4 @@ For this case, the temperature from the location the runtime is located is used,
 
 ## DHT
 
-Calvin's internal registry is not strictly needed when running this small example,
-and can thus been turned off. To do this, set the environmental variable `CALVIN_GLOBAL_STORAGE_TYPE` to `\"local\"`:
-
-    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost weather.calvin
+Running a single application on a stand-alone runtime does not required the distributed features of Calvin, thus the distributed registry has been turned off in the config. 
