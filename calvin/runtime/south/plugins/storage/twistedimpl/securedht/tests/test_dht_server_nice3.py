@@ -36,7 +36,8 @@ from kademlia.utils import deferredDict, digest
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities import calvinconfig
 import socket
-ip_addr = socket.gethostbyname(socket.gethostname())
+from calvin.tests.helpers import get_ip_addr
+ip_addr = get_ip_addr()
 
 _log = calvinlogger.get_logger(__name__)
 name = "node3:"

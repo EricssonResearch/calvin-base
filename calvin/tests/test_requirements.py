@@ -33,11 +33,8 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 request_handler = RequestHandler()
 
-try:
-    ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
-except:
-    # If this fails add hostname to the /etc/hosts file for 127.0.0.1
-    ip_addr = socket.gethostbyname(socket.gethostname())
+from calvin.tests.helpers import get_ip_addr
+ip_addr = get_ip_addr()
 
 rt1 = None
 rt2 = None

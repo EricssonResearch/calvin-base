@@ -64,13 +64,10 @@ application_store_path = os.path.join(credentials_testdir, "scripts")
 
 NBR_OF_RUNTIMES=3
 
-try:
-    ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
-except:
-    import socket
-    # If this fails add hostname to the /etc/hosts file for 127.0.0.1
-    ip_addr = socket.gethostbyname(socket.gethostname())
-    hostname = socket.gethostname()
+import socket
+from calvin.tests.helpers import get_ip_addr
+ip_addr = get_ip_addr()
+hostname = socket.gethostname()
 
 rt=[]
 rt_attributes=[]
