@@ -655,7 +655,7 @@ class Storage(object):
     def _delete_node_cb(self, counter, org_cb, *args, **kwargs):
         _log.analyze(self.node.id, "+", {'counter': counter[0]})
         counter[0] = counter[0] - 1
-        if counter[0] == 0:
+        if counter[0] == 0 and org_cb:
             org_cb(*args, **kwargs)
 
     def _delete_node_timeout_cb(self, counter, org_cb):

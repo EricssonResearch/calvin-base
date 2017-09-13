@@ -246,3 +246,34 @@ def handle_get_port(self, handle, connection, match, data, hdr):
         func=self.storage_cb, handle=handle, connection=connection))
 
 
+@handler(r"POST /node/resource/cpuAvail\sHTTP/1")
+@authentication_decorator
+def handle_resource_cpu_avail(self, handle, connection, match, data, hdr):
+    """
+    POST /node/resource/cpuAvail
+    Updates CPU availability in the local node
+    Body:
+    {
+        "value": <CPU avail (0,25,50,75,100)>
+    }
+    Response status code: OK or INTERNAL_ERROR
+    Response: none
+    """
+    self.node.cpu_monitor.set_avail(data['value'],
+        CalvinCB(func=self.storage_cb, handle=handle, connection=connection))
+
+@handler(r"POST /node/resource/memAvail\sHTTP/1")
+@authentication_decorator
+def handle_resource_mem_avail(self, handle, connection, match, data, hdr):
+    """
+    POST /node/resource/memAvail
+    Updates RAM availability in the local node
+    Body:
+    {
+        "value": <RAM avail (0,25,50,75,100)>
+    }
+    Response status code: OK or INTERNAL_ERROR
+    Response: none
+    """
+    self.node.mem_monitor.set_avail(data['value'],
+        CalvinCB(func=self.storage_cb, handle=handle, connection=connection))
