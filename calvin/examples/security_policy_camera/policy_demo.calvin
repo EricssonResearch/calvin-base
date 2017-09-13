@@ -1,8 +1,0 @@
-trigger : std.Constant(data=1)
-camera : media.IPCamera()
-screen : media.ImageRenderer()
-status : io.Print()
-
-trigger.token  > camera.trigger
-camera.image > screen.image
-camera.status > status.token
