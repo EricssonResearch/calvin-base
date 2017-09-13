@@ -1,0 +1,6 @@
+in : std.CountTimer()
+pacer : std.Delay()
+out: io.Print()
+
+in.integer > pacer.token
+pacer.token > out.token
