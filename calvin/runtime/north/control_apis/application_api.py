@@ -126,7 +126,7 @@ def handle_actor_report(self, handle, connection, match, data, hdr):
         _log.exception("Actor report failed")
         report = None
         status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, None if report is None else json.dumps(report), status=status)
+    self.send_response(handle, connection, None if report is None else json.dumps(report, default=repr), status=status)
 
 
 @handler(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
