@@ -50,19 +50,8 @@ class CountTimer(Actor):
     def will_end(self):
         calvinsys.close(self.timer)
 
-    def timer_trigger_stepwise(self):
-        return calvinsys.can_read(self.timer) and self.count < self.steps and self.count < 3
-
-    def timer_trigger_repeat(self):
-        return calvinsys.can_read(self.timer) and self.count < self.steps
-
-    def timer_trigger_stopped(self):
-        return calvinsys.can_read(self.timer) and self.count >= self.steps
-
     # The counting action, first 3 use non periodic for testing purpose
-    # need guard with triggered() since the actor might be fired for other
-    # reasons
-    @stateguard(timer_trigger_stepwise)
+    @stateguard(lambda self: self.count < 3 and self.count < self.steps and calvinsys.can_read(self.timer))
     @condition(action_output=('integer',))
     def step_no_periodic(self):
         calvinsys.read(self.timer) # Ack
@@ -75,24 +64,21 @@ class CountTimer(Actor):
         return (self.count - 1, )
 
     # The counting action, handle periodic timer events hence no need to setup repeatedly
-    # need guard with triggered() since the actor might be fired for other
-    # reasons
-    @stateguard(timer_trigger_repeat)
+    @stateguard(lambda self: self.count < self.steps and calvinsys.can_read(self.timer))
     @condition(action_output=('integer',))
     def step_periodic(self):
         calvinsys.read(self.timer) # Ack
         self.count += 1
         return (self.count - 1, )
 
-    # The stopping action, need guard with raised() since the actor might be
-    # fired for other reasons
-    @stateguard(timer_trigger_stopped)
+    # Stop after given number of steps
+    @stateguard(lambda self: self.count == self.steps)
     @condition()
     def stop(self):
-        calvinsys.read(self.timer) # Ack
         calvinsys.close(self.timer) # Stop
+        self.count += 1
         self.timer = None
-        
+
 
     def report(self, **kwargs):
         if kwargs.get("stopped", False):
