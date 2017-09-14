@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import sys
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class CountTimer(Actor):
 
@@ -34,30 +34,30 @@ class CountTimer(Actor):
         self.steps = steps + start
         self.setup()
 
-    def setup(self):
-        self.use("calvinsys.events.timer", shorthand="timer")
+    def setup(self):        
         if self.count < 3:
-            self.timer = self['timer'].once(self.sleep)
+            self.timer = calvinsys.open(self, 'sys.timer.once')
         else:
-            self.timer = self['timer'].repeat(self.sleep)
+            self.timer = calvinsys.open(self, 'sys.timer.repeating')
+        calvinsys.write(self.timer, self.sleep)
 
     def will_migrate(self):
-        self.timer.cancel()
+        calvinsys.close(self.timer)
 
     def did_migrate(self):
         self.setup()
 
     def will_end(self):
-        self.timer.cancel()
+        calvinsys.close(self.timer)
 
     def timer_trigger_stepwise(self):
-        return self.timer.triggered and self.count < self.steps and self.count < 3
+        return calvinsys.can_read(self.timer) and self.count < self.steps and self.count < 3
 
     def timer_trigger_repeat(self):
-        return self.timer.triggered and self.count < self.steps
+        return calvinsys.can_read(self.timer) and self.count < self.steps
 
     def timer_trigger_stopped(self):
-        return self.timer.triggered and self.count >= self.steps
+        return calvinsys.can_read(self.timer) and self.count >= self.steps
 
     # The counting action, first 3 use non periodic for testing purpose
     # need guard with triggered() since the actor might be fired for other
@@ -65,12 +65,12 @@ class CountTimer(Actor):
     @stateguard(timer_trigger_stepwise)
     @condition(action_output=('integer',))
     def step_no_periodic(self):
-        self.timer.ack()
+        calvinsys.read(self.timer) # Ack
         if self.count == 2:
             # now continue with periodic timer events
-            self.timer = self['timer'].repeat(self.sleep)
-        else:
-            self.timer = self['timer'].once(self.sleep)
+            calvinsys.close(self.timer)
+            self._timer = calvinsys.open(self, 'sys.timer.repeating')
+        calvinsys.write(self.timer, self.sleep)
         self.count += 1
         return (self.count - 1, )
 
@@ -80,7 +80,7 @@ class CountTimer(Actor):
     @stateguard(timer_trigger_repeat)
     @condition(action_output=('integer',))
     def step_periodic(self):
-        self.timer.ack()
+        calvinsys.read(self.timer) # Ack
         self.count += 1
         return (self.count - 1, )
 
@@ -89,14 +89,15 @@ class CountTimer(Actor):
     @stateguard(timer_trigger_stopped)
     @condition()
     def stop(self):
-        self.timer.ack()
-        self.timer.cancel()
+        calvinsys.read(self.timer) # Ack
+        calvinsys.close(self.timer) # Stop
+        self.timer = None
         
 
     def report(self, **kwargs):
         if kwargs.get("stopped", False):
-            self.timer.cancel()
+            calvinsys.close(self._timer)
         return self.count - self.start
 
     action_priority = (step_no_periodic, step_periodic, stop)
-    requires = ['calvinsys.events.timer']
+    requires = ['sys.timer.once', 'sys.timer.repeating']

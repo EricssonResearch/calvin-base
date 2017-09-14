@@ -1,61 +1,64 @@
 {
-	"id": "policy1",
-	"description": "Security policy for user1 (Anders)",
-	"rule_combining": "permit_overrides",
-	"target": {
-		"subject": {
-			"first_name":["Anders"]
-		}
-	},
-	"rules": [
-		{
-			"id": "policy1_rule0",
-			"description": "Control interface",
-			"effect": "permit",
-			"target": {
-				"subject": {
-					"control_interface":["handle_deploy"]
-				}
-			}
-		},{
-			"id": "policy1_rule1",
-			"description": "Runtime resources",
-			"effect": "permit",
-			"target": {
-				"resource": {
-					"node_name.name":["testNode1"]
-				},
-				"subject":{
-					"actor_signer": ["signer"]
-				},
-				"action": {
-					"requires":["runtime", "calvinsys.io.*", "calvinsys.events.timer"]
-				}
-			}
-		},{
-			"id": "policy1_rule2",
-			"description": "Runtime resources",
-			"effect": "permit",
-			"target": {
-				"resource": {
-					"node_name.name":["testNode2"]
-				},
-				"subject":{
-					"actor_signer": ["signer"]
-				},
-				"action": {
-					"requires":["runtime", "calvinsys.io.*"]
-				}
-			}
-		},{
-			"id":"policy1_rule3",
-			"description":"Application signers",
-			"effect":"permit",
-			"target":{
-				"subject":{
-					"application_signer": ["signer"]
-				}
-			}
-		}
-	]
+    "id": "policy1",
+    "description": "Security policy for user1 (Anders)",
+    "rule_combining": "permit_overrides",
+    "target": {
+        "subject": {
+            "first_name": ["Anders"]
+        }
+    },
+    "rules": [
+        {
+            "id": "policy1_rule0",
+            "description": "Control interface",
+            "effect": "permit",
+            "target": {
+                "subject": {
+                    "control_interface": ["handle_deploy"]
+                }
+            }
+        },
+        {
+            "id": "policy1_rule1",
+            "description": "Runtime resources",
+            "effect": "permit",
+            "target": {
+                "resource": {
+                    "node_name.name": ["testNode1"]
+                },
+                "subject": {
+                    "actor_signer": ["signer"]
+                },
+                "action": {
+                    "requires": ["runtime", "io.*", "sys.timer.*"]
+                }
+            }
+        },
+        {
+            "id": "policy1_rule2",
+            "description": "Runtime resources",
+            "effect": "permit",
+            "target": {
+                "resource": {
+                    "node_name.name": ["testNode2"]
+                },
+                "subject": {
+                    "actor_signer": ["signer"]
+                },
+                "action": {
+                    "requires": ["runtime", "io.*"]
+                }
+            }
+        },
+        {
+            "id": "policy1_rule3",
+            "description": "Application signers",
+            "effect": "permit",
+            "target": {
+                "subject": {
+                    "application_signer": ["signer"]
+                }
+            }
+        }
+    ]
 }

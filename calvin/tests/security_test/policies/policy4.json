@@ -1,79 +1,82 @@
 {
-	"id": "policy4",
-	"description": "Policy for user4 (David) with incorrect obligation (00 should be used instead of 24) to force migration",
-	"rule_combining": "permit_overrides",
-	"target": {
-		"subject": {
-			"first_name": "David"
-		}
-	},
-	"rules": [
-		{
-			"id": "policy4_rule0",
-			"description": "Control interface",
-			"effect": "permit",
-			"target": {
-				"subject": {
-					"control_interface":["handle_deploy"]
-				}
-			}
-		},{
-			"id":"policy4_rule1",
-			"description":"Applications signers",
-			"effect":"permit",
-			"target":{
-				"subject":{
-					"application_signer": ["signer"]
-				}
-			}
-		},{
-			"id": "policy4_rule2",
-			"description": "Runtime resources",
-			"effect": "permit",
-			"target": {
-				"resource":{
-					"node_name.name": "testNode1"
-				},
-				"subject":{
-					"actor_signer": ["signer"]
-				},
-				"action": {
-					"requires": ["calvinsys.events.timer", "calvinsys.io.*", "runtime"]
-				}
-			},
-			"condition": {
-				"function": "and",
-				"attributes": [
-					{
-						"function": "equal",
-						"attributes": ["attr:resource:address.country", "SE"]
-					}
-				]
-			},
-			"obligations": [
-				{
-					"id": "time_range",
-					"attributes": {
-						"start_time": "24:00",
-						"end_time": "24:01"
-					}
-				}
-			]
-		},{
-			"id": "policy4_rule3",
-			"description": "Runtime resources",
-			"effect": "permit",
-			"target": {
-				"resource":{
-					"node_name.name": "testNode2"
-				},
-				"subject":{
-					"actor_signer": ["signer"]
-				},
-				"action": {
-					"requires": ["calvinsys.events.timer", "calvinsys.io.*", "runtime"]
-				}
-			}
-		}
-	]
+    "id": "policy4",
+    "description": "Policy for user4 (David) with incorrect obligation (00 should be used instead of 24) to force migration",
+    "rule_combining": "permit_overrides",
+    "target": {
+        "subject": {
+            "first_name": "David"
+        }
+    },
+    "rules": [
+        {
+            "id": "policy4_rule0",
+            "description": "Control interface",
+            "effect": "permit",
+            "target": {
+                "subject": {
+                    "control_interface": ["handle_deploy"]
+                }
+            }
+        },
+        {
+            "id": "policy4_rule1",
+            "description": "Applications signers",
+            "effect": "permit",
+            "target": {
+                "subject": {
+                    "application_signer": ["signer"]
+                }
+            }
+        },
+        {
+            "id": "policy4_rule2",
+            "description": "Runtime resources",
+            "effect": "permit",
+            "target": {
+                "resource": {
+                    "node_name.name": "testNode1"
+                },
+                "subject": {
+                    "actor_signer": ["signer"]
+                },
+                "action": {
+                    "requires": ["sys.timer.*", "io.*", "runtime"]
+                }
+            },
+            "condition": {
+                "function": "and",
+                "attributes": [
+                    {
+                        "function": "equal",
+                        "attributes": ["attr:resource:address.country", "SE"]
+                    }
+                ]
+            },
+            "obligations": [
+                {
+                    "id": "time_range",
+                    "attributes": {
+                        "start_time": "24:00",
+                        "end_time": "24:01"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "policy4_rule3",
+            "description": "Runtime resources",
+            "effect": "permit",
+            "target": {
+                "resource": {
+                    "node_name.name": "testNode2"
+                },
+                "subject": {
+                    "actor_signer": ["signer"]
+                },
+                "action": {
+                    "requires": ["sys.timer.*", "io.*", "runtime"]
+                }
+            }
+        }
+    ]
 }

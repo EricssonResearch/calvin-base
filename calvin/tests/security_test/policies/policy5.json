@@ -1,43 +1,45 @@
 {
-	"id": "policy5",
-	"description": "Security policy for user5 (Elin)",
-	"rule_combining": "permit_overrides",
-	"target": {
-		"subject": {
-			"first_name":["Elin"]
-		}
-	},
-	"rules": [
-		{
-			"id": "policy5_rule0",
-			"description": "Control interface",
-			"effect": "permit",
-			"target": {
-				"subject": {
-					"control_interface":["handle_deploy"]
-				}
-			}
-		},{
-			"id": "policy5_rule1",
-			"description": "Runtime resources",
-			"effect": "permit",
-			"target": {
-				"subject":{
-					"actor_signer": ["signer"]
-				},
-				"action": {
-					"requires":["runtime", "calvinsys.io.*", "calvinsys.events.timer"]
-				}
-			}
-		},{
-			"id":"policy5_rule3",
-			"description":"Application signers",
-			"effect":"permit",
-			"target":{
-				"subject":{
-					"application_signer": ["signer"]
-				}
-			}
-		}
-	]
+    "id": "policy5",
+    "description": "Security policy for user5 (Elin)",
+    "rule_combining": "permit_overrides",
+    "target": {
+        "subject": {
+            "first_name": ["Elin"]
+        }
+    },
+    "rules": [
+        {
+            "id": "policy5_rule0",
+            "description": "Control interface",
+            "effect": "permit",
+            "target": {
+                "subject": {
+                    "control_interface": ["handle_deploy"]
+                }
+            }
+        },
+        {
+            "id": "policy5_rule1",
+            "description": "Runtime resources",
+            "effect": "permit",
+            "target": {
+                "subject": {
+                    "actor_signer": ["signer"]
+                },
+                "action": {
+                    "requires": ["runtime", "io.*", "sys.timer.*"]
+                }
+            }
+        },
+        {
+            "id": "policy5_rule3",
+            "description": "Application signers",
+            "effect": "permit",
+            "target": {
+                "subject": {
+                    "application_signer": ["signer"]
+                }
+            }
+        }
+    ]
 }

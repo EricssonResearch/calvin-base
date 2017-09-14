@@ -87,4 +87,5 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
         if self._timer:
             self._timer.cancel()
             del self._timer
+            self._timer = None
         self._triggered = False

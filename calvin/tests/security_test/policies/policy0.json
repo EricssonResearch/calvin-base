@@ -1,23 +1,23 @@
 {
-	"id": "policy0",
-	"description": "Security policy for user0 (Admin) which has full access to the control interface of all runtimes",
-	"rule_combining": "permit_overrides",
-	"target": {
-		"subject": {
-			"control_interface": ".*"
-		}
-	},
-	"rules": [
-		{
-			"id": "policy0_rule0",
-			"description": "Give Admin full access to the control interface of testNode0",
-			"effect": "permit",
-			"target":{
-				"subject":{
-					"first_name":["Admin"],
-					"control_interface":".*"
-				}
-			}
-		}
-	]
+    "id": "policy0",
+    "description": "Security policy for user0 (Admin) which has full access to the control interface of all runtimes",
+    "rule_combining": "permit_overrides",
+    "target": {
+        "subject": {
+            "control_interface": ".*"
+        }
+    },
+    "rules": [
+        {
+            "id": "policy0_rule0",
+            "description": "Give Admin full access to the control interface of testNode0",
+            "effect": "permit",
+            "target": {
+                "subject": {
+                    "first_name": ["Admin"],
+                    "control_interface": ".*"
+                }
+            }
+        }
+    ]
 }
