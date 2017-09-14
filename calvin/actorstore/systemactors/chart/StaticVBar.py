@@ -33,7 +33,7 @@ class StaticVBar(Actor):
       labels: list of labels
 
     Outputs:
-      img : base64 representation of the chart. After decoding, use from_string() \
+      b64image : base64 representation of the chart. After decoding, use from_string() \
             in the image library to unpack the image.
     """
 
@@ -58,7 +58,7 @@ class StaticVBar(Actor):
         self.setup()
 
     @stateguard(lambda self: self.req_in_progress and self.chart_api.image_available())
-    @condition([], ['img'])
+    @condition([], ['b64image'])
     def handle_response(self):
         handle = self.req_in_progress.pop(0)
         image = self.chart_api.receive_image(handle)

@@ -32,18 +32,18 @@ component GetTimestamp() in -> out {
 //              Actor definitions              //
 /////////////////////////////////////////////////
 chart : chart.DynamicVBar(chart_param=CHART_PARAMETERS, dimension=8, left_to_right=false)
-screen : media.ImageRenderer(width=600, height=450)
-counter : std.CountTimer(sleep=1)
+screen : media.ImageSink()
+trigger : std.Trigger(data=true, tick=1.0)
 random : math.RandomInteger(lower=500, upper=801)
 time : GetTimestamp()
 
 /////////////////////////////////////////////////
 //                  Main script                //
 /////////////////////////////////////////////////
-counter.integer > time.in
+trigger.data > time.in
 time.out > chart.label
 
-counter.integer > random.trigger
+trigger.data > random.trigger
 random.integer > chart.value
 
-chart.img > screen.image
+chart.img > screen.b64image

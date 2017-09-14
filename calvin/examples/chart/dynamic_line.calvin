@@ -11,17 +11,17 @@ define CHART_PARAMETERS = {"chart_title": "A Simple Line Chart",
 //              Actor definitions              //
 /////////////////////////////////////////////////
 chart : chart.DynamicLine(chart_param=CHART_PARAMETERS)
-screen : media.ImageRenderer(width=600, height=450)
-counter : std.CountTimer(sleep=1)
+screen : media.ImageSink()
+trigger : std.Trigger(data=true, tick=1.0)
 random : math.RandomInteger(lower=25, upper=76)
 
 
 /////////////////////////////////////////////////
 //                  Main script                //
 /////////////////////////////////////////////////
-counter.integer > chart.label
+trigger.data > chart.label
 
-counter.integer > random.trigger
+trigger.data > random.trigger
 random.integer > chart.value
 
-chart.img > screen.image
+chart.img > screen.b64image

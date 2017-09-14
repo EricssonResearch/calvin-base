@@ -13,7 +13,7 @@ define CHART_PARAMETERS = {"chart_title": "A Horizontal Bar Chart",
 //              Actor definitions              //
 /////////////////////////////////////////////////
 chart : chart.StaticHBar(chart_param=CHART_PARAMETERS)
-screen : media.ImageRenderer(width=600, height=450)
+screen : media.ImageSink()
 
 
 /////////////////////////////////////////////////
@@ -22,5 +22,5 @@ screen : media.ImageRenderer(width=600, height=450)
 [10, 20, 30, 40, 50, 60, 70, 80] > chart.values
 ["a", "b", "c", "d", "e", "f", "g", "h"] > chart.labels
 
-chart.img > screen.image
+chart.b64image > screen.b64image
 
