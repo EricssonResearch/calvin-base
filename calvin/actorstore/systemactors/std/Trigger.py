@@ -57,7 +57,7 @@ class Trigger(Actor):
     @stateguard(lambda self: calvinsys.can_read(self._timer))
     @condition([], ['data'])
     def trigger(self):
-        self._timer.read()
+        calvinsys.read(self._timer) # Ack
         return (self.data, )
 
     action_priority = (start_timer, trigger)
