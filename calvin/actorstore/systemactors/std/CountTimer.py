@@ -69,7 +69,7 @@ class CountTimer(Actor):
         if self.count == 2:
             # now continue with periodic timer events
             calvinsys.close(self.timer)
-            self._timer = calvinsys.open(self, 'sys.timer.repeating')
+            self.timer = calvinsys.open(self, 'sys.timer.repeating')
         calvinsys.write(self.timer, self.sleep)
         self.count += 1
         return (self.count - 1, )
@@ -96,7 +96,7 @@ class CountTimer(Actor):
 
     def report(self, **kwargs):
         if kwargs.get("stopped", False):
-            calvinsys.close(self._timer)
+            calvinsys.close(self.timer)
         return self.count - self.start
 
     action_priority = (step_no_periodic, step_periodic, stop)
