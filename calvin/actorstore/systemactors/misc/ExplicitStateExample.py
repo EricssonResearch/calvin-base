@@ -47,21 +47,17 @@ class ExplicitStateExample(Actor):
     # Sincle we are using a custom object as part of the that we
     # are responsible for making this actor type migratable by
     # providing state() and set_state() taking care of conversion
-    # of object to and from a serializable representation.
-    # N.B. Mandatory use of calls to super's state and set_state
-    #      to handle all other state variables.
-    #
+    # of custom object to and from a serializable representation.
     def state(self):
-        state = super(ExplicitStateExample, self).state()
+        state = {}
         # Create a serializable representation of instance
         state['wrapper'] = [self.wrapper.left, self.wrapper.right]
         return state
 
-    def _set_state(self, state):
+    def set_state(self, state):
         l, r = state.pop('wrapper')
         # Create an instance from a serialized representation
         self.wrapper = Wrapper(l, r)
-        super(ExplicitStateExample, self)._set_state(state)
 
     @condition(['token'], ['token'])
     def wrap_action(self, input):

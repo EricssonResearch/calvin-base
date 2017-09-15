@@ -272,6 +272,9 @@ class Actor(object):
     # Class variable controls action priority order
     action_priority = tuple()
 
+    # These are the instance variables that will always be serialized, see serialize()/deserialize() below
+    _private_state_keys = ('_id', '_name', '_has_started', '_deployment_requirements', '_signature', '_subject_attributes', '_migration_info', "_port_property_capabilities", "_replication_data")
+
     # Internal state (status)
     class FSM(object):
 
@@ -352,7 +355,7 @@ class Actor(object):
         self._port_property_capabilities = None
         self._signature = None
         self._component_members = set([self._id])  # We are only part of component if this is extended
-        self._managed = set(('_id', '_name', '_has_started', '_deployment_requirements', '_signature', '_subject_attributes', '_migration_info', "_port_property_capabilities", "_replication_data"))
+        self._managed = set()
         self._has_started = False
         self._calvinsys = None
         self.calvinsys = None
@@ -634,59 +637,6 @@ class Actor(object):
     def disable(self):
         self.fsm.transition_to(Actor.STATUS.PENDING)
 
-    @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING, STATUS.ENABLED, STATUS.MIGRATABLE])
-    def state(self, remap=None):
-        state = {}
-        # Manual state handling
-        # Not available until after __init__ completes
-        state['_managed'] = list(self._managed)
-        state['inports'] = {
-            port: self.inports[port]._state(remap=remap) for port in self.inports}
-        state['outports'] = {
-            port: self.outports[port]._state(remap=remap) for port in self.outports}
-        state['_component_members'] = list(self._component_members)
-
-        # Managed state handling
-        for key in self._managed:
-            obj = self.__dict__[key]
-            if _implements_state(obj):
-                try:
-                    state[key] = obj.state(remap)
-                except:
-                    state[key] = obj.state()
-            else:
-                state[key] = obj
-
-        return state
-
-    @verify_status([STATUS.LOADED, STATUS.READY, STATUS.PENDING])
-    def _set_state(self, state):
-        # Managed state handling
-
-        # Update since if previously a shadow actor the init has been called first
-        # which potentially have altered the managed attributes set compared
-        # with the recorded state
-        self._managed.update(set(state['_managed']))
-
-        for key in state['_managed']:
-            if key not in self.__dict__:
-                self.__dict__[key] = state.pop(key)
-            else:
-                obj = self.__dict__[key]
-                if _implements_state(obj):
-                    obj.set_state(state.pop(key))
-                else:
-                    self.__dict__[key] = state.pop(key)
-
-        # Manual state handling
-        for port in state['inports']:
-            # Uses setdefault to support shadow actor
-            self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
-        for port in state['outports']:
-            # Uses setdefault to support shadow actor
-            self.outports.setdefault(port, actorport.OutPort(port, self))._set_state(state['outports'][port])
-        self._component_members= set(state['_component_members'])
-
     # TODO verify status should only allow reading connections when and after being fully connected (enabled)
     @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING, STATUS.MIGRATABLE])
     def connections(self, node_id):
@@ -705,11 +655,89 @@ class Actor(object):
         c['outports'] = outports
         return c
 
-    def serialize(self):
-        return self.state()
+    def state(self):
+        """Serialize custom state, implement in subclass if necessary"""
+        return {}
 
-    def deserialize(self, data):
-        self._set_state(data)
+    def set_state(self, state):
+        """Deserialize and set custom state, implement in subclass if necessary"""
+        pass
+
+    def _private_state(self, remap):
+        """Serialize state common to all actors"""
+        state = {}
+        state['_managed'] = list(self._managed)
+        state['inports'] = {
+            port: self.inports[port]._state(remap=remap) for port in self.inports}
+        state['outports'] = {
+            port: self.outports[port]._state(remap=remap) for port in self.outports}
+        state['_component_members'] = list(self._component_members)
+
+        # FIXME: The objects in _private_state_keys are well known, they are private after all,
+        #        and we shouldn't need this generic handler.
+        for key in self._private_state_keys:
+            obj = self.__dict__[key]
+            if _implements_state(obj):
+                try:
+                    state[key] = obj.state(remap)
+                except:
+                    state[key] = obj.state()
+            else:
+                state[key] = obj
+        return state
+
+    def _set_private_state(self, state):
+        """Deserialize and apply state common to all actors"""
+        self._managed.update(set(state['_managed']))
+        for port in state['inports']:
+            # Uses setdefault to support shadow actor
+            self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
+        for port in state['outports']:
+            # Uses setdefault to support shadow actor
+            self.outports.setdefault(port, actorport.OutPort(port, self))._set_state(state['outports'][port])
+        self._component_members= set(state['_component_members'])
+
+        # FIXME: The objects in _private_state_keys are well known, they are private after all,
+        #        and we shouldn't need this generic handler.
+        for key in self._private_state_keys:
+            if key not in self.__dict__:
+                self.__dict__[key] = state.pop(key, None)
+            else:
+                obj = self.__dict__[key]
+                if _implements_state(obj):
+                    obj.set_state(state.pop(key))
+                else:
+                    self.__dict__[key] = state.pop(key, None)
+
+    def _managed_state(self):
+        """
+        Serialize managed state.
+        Managed state can only contain objects that can be JSON-serialized.
+        """
+        state = {key: self.__dict__[key]  for key in self._managed}
+        return state
+
+    def _set_managed_state(self, state):
+        """
+        Deserialize and apply managed state.
+        Managed state can only contain objects that can be JSON-serialized.
+        """
+        for key in self._managed:
+            self.__dict__[key] = state.pop(key)
+
+    def serialize(self, remap=None):
+        """Returns the serialized state of an actor."""
+        state = {}
+        state['private'] = self._private_state(remap)
+        state['managed'] = self._managed_state()
+        state['custom'] = self.state()
+        return state
+
+    def deserialize(self, state):
+        """Restore an actor's state from the serialized state."""
+        self._set_private_state(state['private'])
+        self._set_managed_state(state['managed'])
+        self.set_state(state['custom'])
 
     def exception_handler(self, action, args):
         """Defult handler when encountering ExceptionTokens"""

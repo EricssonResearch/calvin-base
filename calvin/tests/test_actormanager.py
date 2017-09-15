@@ -54,10 +54,10 @@ class ActorManagerTests(unittest.TestCase):
         a_type = 'std.Constant'
         data = 42
         a, a_id = self._new_actor(a_type, {'data':data})
-        s = a.state()
+        s = a.serialize()
 
-        self.assertEqual(s['data'], data)
-        self.assertEqual(s['_id'], a_id)
+        self.assertEqual(s['managed']['data'], data)
+        self.assertEqual(s['private']['_id'], a_id)
 
     def test_new_actor_from_state(self):
         # Test basic actor state manipulation
@@ -65,7 +65,7 @@ class ActorManagerTests(unittest.TestCase):
         data = 42
         a, a_id = self._new_actor(a_type, {'data':data})
         a.data = 43
-        s = a.state()
+        s = a.serialize()
         self.am.destroy(a_id)
         self.assertEqual(len(self.am.actors), 0)
 

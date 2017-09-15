@@ -146,11 +146,11 @@ class ActorManager(object):
         """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
-            subject_attributes = state.pop('_subject_attributes', None)
-            migration_info = state.pop('_migration_info', None)
+            subject_attributes = state['private'].pop('_subject_attributes', None)
+            migration_info = state['private'].pop('_migration_info', None)
             try:
-                state['_managed'].remove('_subject_attributes')
-                state['_managed'].remove('_migration_info')
+                state['private'].remove('_subject_attributes')
+                state['private'].remove('_migration_info')
             except:
                 pass
             if security_enabled():
@@ -160,7 +160,7 @@ class ActorManager(object):
                 security = None
             actor_def, signer = self.lookup_and_verify(actor_type, security)
             requirements = actor_def.requires if hasattr(actor_def, "requires") else []
-            self.check_requirements_and_sec_policy(requirements, security, state['_id'],
+            self.check_requirements_and_sec_policy(requirements, security, state['private']['_id'],
                                                    signer, migration_info,
                                                    CalvinCB(self.new, actor_type, None,
                                                             state, prev_connections,
@@ -175,19 +175,19 @@ class ActorManager(object):
                              access_decision=None, shadow_actor=False):
         """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type, actor_def, actor_id=state['_id'], security=security,
+            a = self._new_actor(actor_type, actor_def, actor_id=state['private']['_id'], security=security,
                                 access_decision=access_decision, shadow_actor=shadow_actor)
-            if '_shadow_args' in state:
+            if '_shadow_args' in state['managed']:
                 # We were a shadow, do a full init
-                args = state.pop('_shadow_args')
-                state['_managed'].remove('_shadow_args')
+                args = state['managed'].pop('_shadow_args')
+                state['private']['_managed'].remove('_shadow_args')
                 a.init(**args)
                 # If still shadow don't call did_migrate
                 did_migrate = isinstance(a, ShadowActor)
             else:
                 did_migrate = True
             # Always do a set_state for the port's state
-            a._set_state(state)
+            a.deserialize(state)
             self.node.pm.add_ports_of_actor(a)
             if did_migrate:
                 a.did_migrate()
@@ -406,7 +406,7 @@ class ActorManager(object):
     def _migrate_disconnected(self, actor, actor_type, ports, node_id, status, callback = None, **state):
         """ Actor disconnected, continue migration """
         _log.analyze(self.node.id, "+ DISCONNECTED", {'actor_name': actor.name, 'actor_id': actor.id, 'status': status})
-        state = actor.state()
+        state = actor.serialize()
         self.destroy(actor.id, temporary=True)
         if status:
             callback = CalvinCB(callback, state=state, ports=ports, actor_type=actor_type)
