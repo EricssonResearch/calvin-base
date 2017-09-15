@@ -60,6 +60,7 @@ class DelayToken(Actor):
     def timeout(self):
         item = self.timers.pop(0)
         calvinsys.read(item['timer'])
+        calvinsys.close(item['timer'])
         return (item['token'], )
 
     action_priority = (timeout, token_available)
