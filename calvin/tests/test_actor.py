@@ -125,7 +125,7 @@ def test_state(actor):
         '_component_members': [actor.id],
         '_has_started': False,
         '_deployment_requirements': [],
-        '_managed': ['last', 'dump'],
+        '_managed': set(['last', 'dump']),
         '_signature': None,
         '_id': actor.id,
         '_port_property_capabilities': None,
@@ -171,13 +171,14 @@ def test_state(actor):
                          }
 
     test_state = actor.serialize()
-
-    for k, v in correct_state.iteritems():
-        # Read state use list to support JSON serialization
-        if isinstance(v, set):
-            assert set(test_state[k]) == v
-        else:
-            assert test_state[k] == v
+    for prop, expected in correct_state.iteritems():
+        actual = test_state[prop]
+        for k, v in expected.iteritems():
+            # Read state use list to support JSON serialization
+            if isinstance(v, set):
+                assert set(actual[k]) == v
+            else:
+                assert actual[k] == v
 
 @pytest.mark.parametrize("prev_signature,new_signature,expected", [
     (None, "new_val", "new_val"),
