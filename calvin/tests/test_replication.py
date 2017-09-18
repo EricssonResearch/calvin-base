@@ -136,7 +136,6 @@ class CalvinTestBase(unittest.TestCase):
 class TestReplication(CalvinTestBase):
 
     def testSimpleReplication(self):
-        assert False
         _log.analyze("TESTRUN", "+", {})
         script = """
             src    : std.Counter()

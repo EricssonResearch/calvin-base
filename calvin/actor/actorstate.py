@@ -18,29 +18,27 @@
 
 class ActorState(object):
     """
-    Class to let actors manipulate actor state variables before
-    a replication. Exposes managed attributes and 'replication_count'
+    Class to let actors manipulate serialized actor state before
+    a replication.
+    Exposes managed attributes and 'replication_count'
     as attributes of the object.
     """
 
-        
     def __init__(self, state, replication_data):
         super(ActorState, self).__init__()
-        self.state = state
-        self.replication_data = replication_data
+        self.__dict__['state'] = state
+        self.__dict__['replication_data'] = replication_data
 
     def __getattr__(self, name):
-        if name[0] != "_" and name in self.state['_managed']:
-            return self.state[name]
+        if name[0] != "_" and name in self.state['private']['_managed']:
+            return self.state['managed'][name]
         elif name == "replication_count":
             return self.replication_data.counter
         else:
             raise AttributeError("ActorState does not have access to %s" % name)
 
     def __setattr__(self, name, value):
-        if name == "state" or name == "replication_data":
-            self.__dict__[name] = value
-        elif name[0] != "_" and name in self.state['_managed']:
-            self.state[name] = value
+        if name[0] != "_" and name in self.state['private']['_managed']:
+            self.__dict__['state']['managed'][name] = value
         else:
-            self.__dict__[name] = value
+            raise AttributeError("ActorState does not have access to %s" % name)

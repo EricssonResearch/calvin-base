@@ -230,8 +230,8 @@ class ReplicationManager(object):
         ports['outports'] = {remap_ports[pid]: v for pid, v in ports['outports'].items()}
         _log.analyze(self.node.id, "+ GET STATE", remap_ports)
         state = actor.serialize(remap_ports)
-        state['_name'] = new_name
-        state['_id'] = new_id
+        state['private']['_name'] = new_name
+        state['private']['_id'] = new_id
         # Make copy to make sure no objects are shared between actors or master actor state is changed 
         state = copy.deepcopy(state)
         actor.will_replicate(ActorState(state, actor._replication_data))
