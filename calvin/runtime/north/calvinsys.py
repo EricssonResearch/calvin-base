@@ -40,7 +40,8 @@ class CalvinSys(object):
     def __init__(self):
         self._node = None
         self.capabilities = {}
-        self.objects = []
+        self._objects = {}
+        self._actors = {}
 
     def init(self, node):
         """
@@ -58,28 +59,31 @@ class CalvinSys(object):
             _log.info("Capability '%s' registered with module '%s'" % (key, module))
         self.capabilities = capabilities
 
-    def open(self, name, actor, **kwargs):
+    def _get_class(self, capability_name):
         """
         Open a capability and return corresponding object
         """
-        capability = self.capabilities.get(name, None)
+        capability = self.capabilities.get(capability_name, None)
         if capability is None:
-            raise Exception("No such capability '%s'", name)
+            raise Exception("No such capability '%s'", capability_name)
         pymodule = capability.get('module', None)
         if pymodule is None:
             pymodule = importlib.import_module('calvin.runtime.south.calvinsys.' + capability['path'])
             if pymodule is None:
-                raise Exception("Failed to import module '%s'" % name)
+                raise Exception("Failed to import module '%s'" % capability_name)
             capability['module'] = pymodule
         class_name = capability["path"].rsplit(".", 1)
         pyclass = getattr(pymodule, class_name[1])
         if not pyclass:
-            raise Exception("No entry %s in %s" % (name, capability['path']))
-        obj = pyclass(calvinsys=self, name=name, actor=actor)
+            raise Exception("No entry %s in %s" % (capability_name, capability['path']))
+        return capability, pyclass
+        
+    def _open(self, actor, capability_name, **kwargs):
+        capability, pyclass = self._get_class(capability_name)
+        obj = pyclass(calvinsys=self, name=capability_name, actor=actor)
         data = dict(capability['attributes'], **kwargs)
         validate(data, obj.init_schema)
         obj.init(**data)
-        self.objects.append(obj)
         return obj
 
     def scheduler_wakeup(self, actor):
@@ -100,12 +104,117 @@ class CalvinSys(object):
         Returns list of requirements this system satisfies
         """
         return self.capabilities.keys()
-
-    def remove(self, obj):
+ 
+    def _get_capability_object(self, ref, required=True):
         """
-        Remove object
+            Get capability object given a reference. If required (default), then raise exception if no such reference.
         """
+        cap = self._objects.get(ref, None)
+        if not cap and required:
+            raise Exception("Invalid reference {}. Available references: {}".format(ref, self._objects))
+        return cap["obj"] if cap else None
+        
+    # Calvinsys objects api
+    
+    def can_write(self, ref):
+        obj = self._get_capability_object(ref)
+        data = obj.can_write()
         try:
-            self.objects.remove(obj)
-        except ValueError:
-            _log.debug("Object does not exist")
+            validate(data, obj.can_write_schema)
+        except Exception as e:
+            _log.exception("Failed to validate schema, exception={}".format(e))
+        return data
+    
+    def write(self, ref, data):
+        obj = self._get_capability_object(ref)
+        try:
+            validate(data, obj.write_schema)
+            obj.write(data)
+        except Exception as e:
+            _log.exception("Failed to validate schema, exception={}".format(e))
+    
+    def can_read(self, ref):
+        obj = self._get_capability_object(ref)
+        data = obj.can_read()
+        try:
+            validate(data, obj.can_read_schema)
+        except Exception as e:
+            _log.exception("Failed to validate schema, exception={}".format(e))
+        return data
+    
+    def read(self, ref):
+        obj = self._get_capability_object(ref)
+        data = obj.read()
+        try:
+            validate(data, obj.read_schema)
+        except Exception as e:
+            _log.exception("Failed to validate schema, exception={}".format(e))
+        return data
+
+    def close(self, ref):
+        obj = self._get_capability_object(ref, required=False)
+        if obj:
+            obj.close()
+            self._objects.pop(ref)
+            for actor, refs in self._actors.iteritems():
+                if ref in refs:
+                    refs.remove(ref)
+            
+
+    def open(self, capability_name, actor, **kwargs):
+        """
+        Open a capability and return corresponding object
+        """
+        obj = self._open(actor, capability_name, **kwargs)
+        
+        csobjects = self._actors.setdefault(actor, [])
+        if len(csobjects) == 0:
+            idx = 0
+        else :
+            idx = int(csobjects[-1].rsplit('#', 1)[1])+1
+        
+        ref = "{}#{}".format(actor.id, idx)
+        self._objects[ref] = {"name": capability_name, "obj": obj, "args": kwargs}
+        self._actors.get(actor).append(ref)
+        
+        return ref
+    
+    def close_all(self, actor):
+        """
+            Close and free all open calvinsys objects for given actor
+        """
+        
+        if actor in self._actors:
+            references = self._actors.pop(actor)
+            for ref in references:
+                self.close(ref)
+
+    def serialize(self, actor):
+        """
+            serializes calvinsys objects used by given actor
+        """
+        if actor in self._actors:
+            references = self._actors.pop(actor)
+        else :
+            # Nothing to do here
+            return []
+            
+        serz = []
+        for ref in references:
+            csobj = self._objects.pop(ref)
+            csobj["ref"] = ref # save ref for future use
+            csobj["obj"] = csobj["obj"].serialize() # serialize object
+            serz.append(csobj)
+        return serz
+
+    def deserialize(self, actor, csobjects):
+        """
+            deserializes a list of calvinsys objects and associates them with given actor
+        """
+        print csobjects
+        for csobj in csobjects:
+            ref = csobj.pop("ref")
+            _, pyclass = self._get_class(csobj["name"])
+            csobj["obj"] = pyclass(calvinsys=self, name=csobj["name"], actor=actor).deserialize(state=csobj["obj"], **csobj["args"])
+            self._objects[ref] = csobj
+            self._actors.setdefault(actor, []).append(ref)
