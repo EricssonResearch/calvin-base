@@ -57,33 +57,33 @@ class Attribute(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     def init(self, **kwargs):
-        self.type = kwargs["type"]
+        self._type = kwargs["type"]
         self._attribute = None
 
     def write(self, attribute):
         self._attribute = attribute
         # public and private attributes use path notation
-        if self.type in ["private", "public"]:
+        if self._type in ["private", "public"]:
             self._attribute = attribute.replace('.', '/')
 
     def _has_attribute(self):
         val = None
-        if self.type == "private":
+        if self._type == "private":
             val = self.calvinsys._node.attributes.has_private_attribute(self._attribute)
-        elif self.type == "public":
+        elif self._type == "public":
             val = self.calvinsys._node.attributes.has_public_attribute(self._attribute)
-        elif self.type == "indexed":
+        elif self._type == "indexed":
             val = self._attribute in self.calvinsys._node.attributes.get_indexed_public_with_keys()
         
         return bool(val)
         
     def _get_attribute(self):
         val = None
-        if self.type == "private":
+        if self._type == "private":
             val = self.calvinsys._node.attributes.get_private(self._attribute)
-        elif self.type == "public":
+        elif self._type == "public":
             val = self.calvinsys._node.attributes.get_public(self._attribute)
-        elif self.type == "indexed":
+        elif self._type == "indexed":
             val = self.calvinsys._node.attributes.get_indexed_public_with_keys().get(self._attribute)
         return val
 
@@ -92,3 +92,14 @@ class Attribute(base_calvinsys_object.BaseCalvinsysObject):
         
     def read(self):
         return self._get_attribute()
+    
+    def close(self):
+        pass
+
+    def serialize(self):
+        return {"attribute": self._attribute, "type": self._type}
+        
+    def deserialize(self, state):
+        self._type = state["type"]
+        self._attribute = state["attribute"]
+        return self
