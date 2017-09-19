@@ -30,9 +30,6 @@ class Print(Actor):
 
     @manage(include=['stdout'])
     def init(self):
-        self.setup()
-
-    def setup(self):
         self.stdout = calvinsys.open(self, "io.stdout")
 
     @stateguard(lambda self: calvinsys.can_write(self.stdout))

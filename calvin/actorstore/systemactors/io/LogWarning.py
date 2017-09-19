@@ -30,26 +30,17 @@ class LogWarning(Actor):
         exception_token = args[0]
         return action_function(self, "Exception '%s'" % (exception_token,))
 
-    @manage([])
+    @manage(["log"])
     def init(self):
-        self.setup()
-        
-    def setup(self):
-        self._log = calvinsys.open(self, "log.warning")
+        self.log = calvinsys.open(self, "log.warning")
 
-    def will_migrate(self):
-        calvinsys.close(self._log)
-    
-    def did_migrate(self):
-        self.setup()
-
-    @stateguard(lambda self: calvinsys.can_write(self._log))
+    @stateguard(lambda self: calvinsys.can_write(self.log))
     @condition(action_input=['data'])
-    def log(self, data):
-        calvinsys.write(self._log, data)
+    def write(self, data):
+        calvinsys.write(self.log, data)
         
 
-    action_priority = (log, )
+    action_priority = (write, )
     
     requires = ["log.warning"]
 
