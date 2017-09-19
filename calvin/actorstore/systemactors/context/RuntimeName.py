@@ -30,24 +30,18 @@ class RuntimeName(Actor):
       value : A string denoting the name of this runtime, or null
     """
 
-    @manage([])
+    @manage(["registry"])
     def init(self):
-        self.setup()
-
-    def did_migrate(self):
-        self.setup()
-
-    def setup(self):
-        self.registry_attribute = calvinsys.open(self, "sys.attribute.indexed")
+        self.registry = calvinsys.open(self, "sys.attribute.indexed")
         # select attribute to read
-        calvinsys.write(self.registry_attribute, "node_name.name")
+        calvinsys.write(self.registry, "node_name.name")
 
-    @stateguard(lambda self: calvinsys.can_read(self.registry_attribute))
+    @stateguard(lambda self: calvinsys.can_read(self.registry))
     @condition(action_input=['trigger'], action_output=['value'])
-    def attribute(self, _):
-        attr = calvinsys.read(self.registry_attribute)
+    def read(self, _):
+        attr = calvinsys.read(self.registry)
         return (attr,)
 
-    action_priority = (attribute,)
+    action_priority = (read,)
 
     requires = ["sys.attribute.indexed"]

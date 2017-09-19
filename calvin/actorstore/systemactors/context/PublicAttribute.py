@@ -30,27 +30,19 @@ class PublicAttribute(Actor):
       value : The given attribute of this runtime, or null
     """
 
-    @manage(["attr"])
+    @manage(["attribute", "registry"])
     def init(self, attribute):
-        self.attr = attribute
-        self.setup()
-
-    def did_migrate(self):
-        self.setup()
-
-    def setup(self):
-        self.public_attribute = calvinsys.open(self, "sys.attribute.public")
+        self.attribute = attribute
+        self.registry = calvinsys.open(self, "sys.attribute.public")
         # select attribute to read
-        calvinsys.write(self.public_attribute, self.attr)
-        
+        calvinsys.write(self.registry, self.attribute)
 
-    @stateguard(lambda self: calvinsys.can_read(self.public_attribute))
+    @stateguard(lambda self: calvinsys.can_read(self.registry))
     @condition(action_input=['trigger'], action_output=['value'])
-    def attribute(self, _):
-        
-        attr = calvinsys.read(self.public_attribute)
-        return (attr,)
+    def read(self, _):
+        attribute = calvinsys.read(self.registry)
+        return (attribute,)
 
-    action_priority = (attribute,)
+    action_priority = (read,)
 
     requires = ["sys.attribute.public"]

@@ -26,7 +26,7 @@ class CountTimer(Actor):
       integer: Integer counter
     """
 
-    @manage(exclude=['timer'])
+    @manage()
     def init(self, sleep=0.1, start=1, steps=sys.maxint):
         self.start = start
         self.count = start
@@ -40,15 +40,6 @@ class CountTimer(Actor):
         else:
             self.timer = calvinsys.open(self, 'sys.timer.repeating')
         calvinsys.write(self.timer, self.sleep)
-
-    def will_migrate(self):
-        calvinsys.close(self.timer)
-
-    def did_migrate(self):
-        self.setup()
-
-    def will_end(self):
-        calvinsys.close(self.timer)
 
     # The counting action, first 3 use non periodic for testing purpose
     @stateguard(lambda self: self.count < 3 and self.count < self.steps and calvinsys.can_read(self.timer))
@@ -78,7 +69,6 @@ class CountTimer(Actor):
         calvinsys.close(self.timer) # Stop
         self.count += 1
         self.timer = None
-
 
     def report(self, **kwargs):
         if kwargs.get("stopped", False):
