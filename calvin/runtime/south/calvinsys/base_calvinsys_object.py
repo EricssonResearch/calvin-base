@@ -82,3 +82,16 @@ class BaseCalvinsysObject(object):
         Trigger the scheduler
         """
         self.calvinsys.scheduler_wakeup(self.actor)
+
+    def serialize(self):
+        """
+            Serialize calvinsys object (not always meaningful, hence default is empty serialization)
+        """
+        return None
+    
+    def deserialize(self, state, **kwargs):
+        """
+            Deserialize calvinsys object (not always meaningful, hence default is create new object)
+        """
+        self.init(**kwargs)
+        return self

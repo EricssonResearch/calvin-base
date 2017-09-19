@@ -205,7 +205,7 @@ class ActorManager(object):
         # @TOOD - check order here
         self.node.metering.remove_actor_info(actor_id)
         a = self.actors[actor_id]
-        a.will_end()
+        a._will_end()
         port_ids = self.node.pm.remove_ports_of_actor(a)
         # @TOOD - insert callback here
         if not temporary:

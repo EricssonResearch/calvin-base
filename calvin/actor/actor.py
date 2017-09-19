@@ -17,7 +17,6 @@
 import wrapt
 import functools
 import time
-from jsonschema import validate
 from calvin.utilities import calvinuuid
 from calvin.actor import actorport
 from calvin.utilities.calvinlogger import get_logger
@@ -208,44 +207,27 @@ class calvinsys(object):
         return get_calvinsys().open(name, actor, **kwargs)
 
     @staticmethod
-    def can_write(obj):
-        data = obj.can_write()
-        try:
-            validate(data, obj.can_write_schema)
-        except Exception as e:
-            _log.exception("Failed to validate schema, exception={}".format(e))
-        return data
+    def can_write(ref):
+        return get_calvinsys().can_write(ref)
 
     @staticmethod
-    def write(obj, data):
-        try:
-            validate(data, obj.write_schema)
-            obj.write(data)
-        except Exception as e:
-            _log.exception("Failed to validate schema, exception={}".format(e))
+    def write(ref, data):
+        return get_calvinsys().write(ref, data)
+
 
     @staticmethod
-    def can_read(obj):
-        data = obj.can_read()
-        try:
-            validate(data, obj.can_read_schema)
-        except Exception as e:
-            _log.exception("Failed to validate schema, exception={}".format(e))
-        return data
+    def can_read(ref):
+        return get_calvinsys().can_read(ref)
+
 
     @staticmethod
-    def read(obj):
-        data = obj.read()
-        try:
-            validate(data, obj.read_schema)
-        except Exception as e:
-            _log.exception("Failed to validate schema, exception={}".format(e))
-        return data
+    def read(ref):
+        return get_calvinsys().read(ref)
 
     @staticmethod
-    def close(obj):
-        obj.close()
-        get_calvinsys().remove(obj)
+    def close(ref):
+        return get_calvinsys().close(ref)
+
 
 class calvinlib(object):
 
@@ -416,9 +398,10 @@ class Actor(object):
         """Override in actor subclass if actions need to be taken after migrating."""
         pass
 
-    def will_end(self):
-        """Override in actor subclass if actions need to be taken before destruction."""
-        pass
+    def _will_end(self):
+        if hasattr(self, "will_end") and callable(self.will_end):
+            self.will_end()
+        get_calvinsys().close_all(self)
 
     def will_replicate(self, state):
         """Override in actor subclass if actions need to be taken before replication."""
@@ -684,11 +667,15 @@ class Actor(object):
                     state[key] = obj.state()
             else:
                 state[key] = obj
+        state["_calvinsys"] = get_calvinsys().serialize(actor=self)
         return state
 
     def _set_private_state(self, state):
         """Deserialize and apply state common to all actors"""
         self._managed.update(set(state['_managed']))
+
+        get_calvinsys().deserialize(actor=self, csobjects=state["_calvinsys"])
+
         for port in state['inports']:
             # Uses setdefault to support shadow actor
             self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
@@ -700,6 +687,8 @@ class Actor(object):
         # FIXME: The objects in _private_state_keys are well known, they are private after all,
         #        and we shouldn't need this generic handler.
         for key in self._private_state_keys:
+    
+        
             if key not in self.__dict__:
                 self.__dict__[key] = state.pop(key, None)
             else:
