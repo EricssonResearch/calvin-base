@@ -12,15 +12,15 @@ define CHART_PARAMETERS = {"chart_title": "A Simple Meter Chart",
 //              Actor definitions              //
 /////////////////////////////////////////////////
 chart : chart.Meter(chart_param=CHART_PARAMETERS)
-screen : media.ImageRenderer(width=600, height=450)
-counter : std.CountTimer(sleep=1)
+screen : media.ImageSink()
+trigger : std.Trigger(data=true, tick=1.0)
 random : math.RandomInteger(lower=1, upper=101)
 
 
 /////////////////////////////////////////////////
 //                  Main script                //
 /////////////////////////////////////////////////
-counter.integer > random.trigger
+trigger.data > random.trigger
 random.integer > chart.value
 
-chart.img > screen.image
+chart.img > screen.b64image
