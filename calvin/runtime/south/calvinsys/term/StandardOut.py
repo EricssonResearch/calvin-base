@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from __future__ import print_function
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
 
@@ -52,11 +52,11 @@ class StandardOut(base_calvinsys_object.BaseCalvinsysObject):
     def write(self, data=None):
         msg = ""
         if data is not None and self._prefix is not None:
-            msg = "{}: {}".format(self._prefix, data)
+            msg = u"{}: {}".format(self._prefix, data)
         elif data is not None:
-            msg = "{}".format(data)
+            msg = u"{}".format(data)
         elif self._prefix is not None:
-            msg = "{}".format(self._prefix)
+            msg = u"{}".format(self._prefix)
         print(msg)
 
     def close(self):
