@@ -89,3 +89,19 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
             del self._timer
             self._timer = None
         self._triggered = False
+        
+    # Serialize/deserialize calvinsys
+    def serialize(self):
+        return {"triggered": self._triggered, "timeout": self._timeout, 
+                "repeats": self._repeats, "nexttrigger": self._timer.nextcall()}
+                
+    def deserialize(self, state):
+        import time
+        self._triggered = state["triggered"]
+        self._timeout = state["timeout"]
+        self._repeats = state["repeats"]
+        if state["nexttrigger"]:
+            timeout = state["nexttrigger"] - time.time()
+            if timeout < 0: timeout = 0
+            self._timer = async.DelayedCall(timeout,  self._timer_cb)
+        return self

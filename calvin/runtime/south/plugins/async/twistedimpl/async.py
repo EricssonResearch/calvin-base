@@ -35,6 +35,12 @@ class DelayedCall(object):
     def cancel(self):
         if self.delayedCall.active():
             self.delayedCall.cancel()
+            
+    def nextcall(self):
+        if self.delayedCall.active():
+            return self.delayedCall.getTime()
+        else :
+            return None
 
 
 def run_ioloop():
