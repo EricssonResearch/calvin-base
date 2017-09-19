@@ -31,29 +31,15 @@ class DelayToken(Actor):
     def init(self, delay):
         self.delay = delay
         self.timers = []
-        self.setup()
-
-    def setup(self):
-        for token in self.timers: 
-            token['timer'] = self._new_timer()
 
     def _new_timer(self):
         timer = calvinsys.open(self, "sys.timer.once")
         calvinsys.write(timer, self.delay)
         return timer
-        
-    def will_migrate(self):
-        for tokens in self.timers:
-            calvinsys.close(tokens['timer'])
-            tokens['timer'] = None
-
-    def did_migrate(self):
-        self.setup()
 
     @condition(['token'])
     def token_available(self, token):
         self.timers.append({'token': token, 'timer': self._new_timer()})
-        
 
     @stateguard(lambda self: len(self.timers) > 0 and calvinsys.can_read(self.timers[0]['timer']))
     @condition([], ['token'])

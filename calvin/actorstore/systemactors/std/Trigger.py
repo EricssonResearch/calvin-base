@@ -24,7 +24,7 @@ class Trigger(Actor):
         data: given data
     """
 
-    @manage(['tick', 'data', 'started'])
+    @manage(['timer', 'tick', 'data', 'started'])
     def init(self, tick, data):
         self.tick = tick
         self.data = data
@@ -33,20 +33,11 @@ class Trigger(Actor):
         self.setup()
 
     def setup(self):
-        self._timer = calvinsys.open(self, "sys.timer.repeating")
+        self.timer = calvinsys.open(self, "sys.timer.repeating")
 
     def start(self):
-        calvinsys.write(self._timer, self.tick)
+        calvinsys.write(self.timer, self.tick)
         self.started = True
-
-    def will_migrate(self):
-        if self._timer:
-            calvinsys.close(self._timer)
-
-    def did_migrate(self):
-        self.setup()
-        if self.started:
-            self.start()
 
     @stateguard(lambda self: not self.started)
     @condition([], ['data'])
@@ -54,10 +45,10 @@ class Trigger(Actor):
         self.start()
         return (self.data, )
 
-    @stateguard(lambda self: calvinsys.can_read(self._timer))
+    @stateguard(lambda self: calvinsys.can_read(self.timer))
     @condition([], ['data'])
     def trigger(self):
-        calvinsys.read(self._timer) # Ack
+        calvinsys.read(self.timer) # Ack
         return (self.data, )
 
     action_priority = (start_timer, trigger)

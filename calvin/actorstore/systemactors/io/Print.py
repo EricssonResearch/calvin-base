@@ -28,18 +28,12 @@ class Print(Actor):
         # Check args to verify that it is EOSToken
         return action(self, *args)
 
-    @manage(exclude=['stdout'])
+    @manage(include=['stdout'])
     def init(self):
         self.setup()
 
     def setup(self):
         self.stdout = calvinsys.open(self, "io.stdout")
-
-    def will_migrate(self):
-        calvinsys.close(self.stdout)
-        
-    def did_migrate(self):
-        self.setup()
 
     @stateguard(lambda self: calvinsys.can_write(self.stdout))
     @condition(action_input=['token'])
