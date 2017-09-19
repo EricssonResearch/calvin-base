@@ -26,38 +26,23 @@ class ClassicDelay(Actor):
         token: anything
     """
 
-    @manage(['delay', 'started'])
+    @manage(['timer', 'delay', 'started'])
     def init(self, delay=0.1):
         self.delay = delay
+        self.timer = calvinsys.open(self, "sys.timer.repeating")
         self.started = False
-        self.setup()
-
-    def setup(self):
-        self._timer = calvinsys.open(self, "sys.timer.repeating")
-
-    def start(self):
-        calvinsys.write(self._timer, self.delay)
-        self.started = True
-
-    def will_migrate(self):
-        if self._timer:
-            calvinsys.close(self._timer)
-
-    def did_migrate(self):
-        self.setup()
-        if self.started:
-            self.start()
 
     @stateguard(lambda self: not self.started)
     @condition(['token'], ['token'])
     def start_timer(self, token):
-        self.start()
+        self.started = True
+        calvinsys.write(self.timer, self.delay)
         return (token, )
 
-    @stateguard(lambda self: self._timer and calvinsys.can_read(self._timer))
+    @stateguard(lambda self: calvinsys.can_read(self.timer))
     @condition(['token'], ['token'])
     def passthrough(self, token):
-        calvinsys.read(self._timer)
+        calvinsys.read(self.timer)
         return (token, )
 
     action_priority = (start_timer, passthrough)
