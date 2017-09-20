@@ -175,14 +175,12 @@ class ReplicationManager(object):
             # FIXME should not update during a replication, fix when we get the 
             # requirements from the deployment requirements
             actor._replication_data.init_requirements(requirements)
-            self.node.storage.add_replication(actor._replication_data, cb=None)
             return calvinresponse.CalvinResponse(True, {'replication_id': actor._replication_data.id})
         else:
             return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
         actor._replication_data.status = REPLICATION_STATUS.READY
 
         # TODO add a callback to make sure storing worked
-        self.node.storage.add_replication(actor._replication_data, cb=None)
         self.node.storage.add_actor(actor, self.node.id, cb=None)
         #TODO trigger replication loop
         return calvinresponse.CalvinResponse(True, {'replication_id': actor._replication_data.id})

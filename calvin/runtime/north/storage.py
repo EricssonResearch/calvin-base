@@ -782,68 +782,6 @@ class Storage(object):
     def get_replica_nodes(self, replication_id, cb=None):
         self.get_index(['replicas', 'nodes', replication_id], cb=cb)
 
-    def add_replication_cb(self, key, value, org_cb, id_, callback_ids):
-        if value == False:
-            del callback_ids[:]
-            if org_cb:
-                return org_cb(False)
-        try:
-            callback_ids.remove(id_)
-        except:
-            return
-        if not callback_ids:
-            if org_cb:
-                return org_cb(True)
-
-    def add_replication(self, replication_data, cb=None):
-        data = replication_data.state(None)
-        instances = data.pop('instances')
-        data.pop('counter')
-        callback_ids = instances + [data['id']]
-        self.set(prefix="replication-", key=data['id'], value=data,
-            cb=CalvinCB(self.add_replication_cb, org_cb=cb, id_=data['id'], callback_ids=callback_ids))
-
-    def remove_replication_cb(self, key, value, org_cb, id_, callback_ids):
-        if value == False:
-            del callback_ids[:]
-            if org_cb:
-                return org_cb(False)
-        try:
-            callback_ids.remove(id_)
-        except:
-            return
-        if not callback_ids:
-            if org_cb:
-                return org_cb(True)
-
-    def remove_replication(self, replication_id, cb=None):
-        callback_ids = [1, 2]
-        self.delete(prefix="replication-", key=replication_id,
-            cb=CalvinCB(self.remove_replication_cb, org_cb=cb, id_=1, callback_ids=callback_ids))
-        self.delete_index(['replicas', 'actors', replication_id], root_prefix_level=3,
-            cb=CalvinCB(self.remove_replication_cb, org_cb=cb, id_=2, callback_ids=callback_ids))
-
-    def get_replication_cb(self, key, value, org_cb, data):
-        if not value and '_sent_cb' not in data:
-            data['_sent_cb'] = True
-            return org_cb(False)
-        if isinstance(value, (list, tuple, set)):
-            # The instances
-            data['instances'] = value
-            data['counter'] = len(value) - 1  # The original is not counted
-        else:
-            # Dictionare with the rest of replication data
-            data.update(value)
-        if 'instances' in data and 'id' in data:
-            return org_cb(True)
-
-    def get_replication(self, replication_id, cb=None):
-        data = {}
-        self.get(prefix="replication-", key=replication_id,
-            cb=CalvinCB(self.get_replication_cb, org_cb=cb, data=data))
-        self.get_replica(replication_id,
-                cb=CalvinCB(self.get_replication_cb, org_cb=cb, data=data))
-
     def index_cb(self, key, value, org_cb, index_items):
         """
         Collect all the index levels operations into one callback
@@ -853,14 +791,14 @@ class Storage(object):
         org_key = key
         # cb False if not already done it at first False value
         if not value and index_items:
-            org_cb(key=org_key, value=False)
+            org_cb(key=org_key, value=calvinresponse.CalvinResponse(False))
             del index_items[:]
         if org_key in index_items:
             # remove this index level from list
             index_items.remove(org_key)
             # If all done send True
             if not index_items:
-                org_cb(key=org_key, value=True)
+                org_cb(key=org_key, value=calvinresponse.CalvinResponse(True))
 
     def _index_strings(self, index, root_prefix_level):
         # Make the list of index levels that should be used
