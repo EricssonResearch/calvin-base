@@ -192,7 +192,7 @@ class AppManager(object):
         application_id = key
         _log.analyze(self._node.id, "+", {'application_id': application_id, 'value': value})
         _log.debug("Destroy app info %s: %s" % (application_id, value))
-        if value:
+        if response.isnotfailresponse(value):
             self._destroy(Application(application_id, value['name'], value['origin_node_id'],
                                       self._node.am, value['actors_name_map']), cb=cb)
         elif cb:
@@ -239,7 +239,7 @@ class AppManager(object):
         _log.analyze(self._node.id, "+", {'actor_id': key, 'value': value, 'retries': retries,
                                         'check_replica': check_replica})
         _log.debug("Destroy app peers actor cb %s - retry: %d\n%s" % (key, retries, str(value)))
-        if value and 'node_id' in value:
+        if response.isnotfailresponse(value) and 'node_id' in value:
             application.update_node_info(value['node_id'], key)
             if 'replication_id' in value and check_replica:
                 application.replication_ids.append(value['replication_id'])
@@ -518,7 +518,7 @@ class AppManager(object):
                                                          move=move, cb=cb))
 
     def _migrate_got_app(self, key, value, app_id, deploy_info, move, cb):
-        if not value:
+        if response.isfailresponse(value):
             if cb:
                 cb(status=response.CalvinResponse(response.NOT_FOUND))
             return
@@ -545,7 +545,7 @@ class AppManager(object):
                                                                   move=move, cb=cb))
 
     def _migrate_from_rt(self, key, value, app, actor_id, req, move, cb):
-        if not value:
+        if response.isfailresponse(value):
             self._migrated_cb(response.CalvinResponse(response.NOT_FOUND), app, actor_id, cb)
             return
         _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'node_id': value['node_id']},

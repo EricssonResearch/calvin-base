@@ -20,6 +20,7 @@ from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinuuid
+from calvin.requests import calvinresponse
 
 _conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)
@@ -114,7 +115,14 @@ class StorageProxy(StorageBase):
         """ Gets called when a storage master replies"""
         _log.analyze(self.node.id, "+ CLIENT", {'payload': payload})
         if 'msg_uuid' in payload and payload['msg_uuid'] in self.replies and 'cmd' in payload and payload['cmd']=='REPLY':
-            self.replies.pop(payload['msg_uuid'])(**{k: v for k, v in payload.iteritems() if k in ('key', 'value')})
+            kwargs = {}
+            if 'key' in payload:
+                kwargs['key'] = payload['key']
+            if 'value' in payload:
+                kwargs['value'] = payload['value']
+            if 'response' in payload:
+                kwargs['value'] = calvinresponse.CalvinResponse(encoded=payload['response'])
+            self.replies.pop(payload['msg_uuid'])(**kwargs)
 
     def send(self, cmd, msg, cb):
         msg_id = calvinuuid.uuid("MSGID")

@@ -23,6 +23,7 @@ from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
+from calvin.requests import calvinresponse
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
@@ -30,8 +31,6 @@ _conf = calvinconfig.get()
 ############################
 # TODO Remake the storage API:
 # * better names needed
-# * append and remove should provid a list of serialized values not a serialized list
-# * delete should be exposed properly, not only set with None
 # * index should be exposed directly by storage plugin to allow engine optimizations
 ######################
 
@@ -155,6 +154,7 @@ class SqlClient(StorageBase):
             Set a key, value pair in the storage
         """
         _log.debug("SQL set %s to %s" % (key, value))
+        value = json.dumps(value)
         def _set_value(*args, **kwargs):
             d2 = self.dbpool.runQuery(QUERY_SET[1].format(keystr=key, valuestr=value))
             d2.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key, value=value),
@@ -167,10 +167,9 @@ class SqlClient(StorageBase):
         _log.debug("SQL set OK")
         cb = kwargs.pop('cb', None)
         key = kwargs.pop('key', None)
-        value = kwargs.pop('value', None)
         _log.debug("SQL set OK %s" % str(result))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, value))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=calvinresponse.OK)))
 
     def _set_fail_cb(self, failure, **kwargs):
         _log.debug("SQL set FAIL")
@@ -184,7 +183,7 @@ class SqlClient(StorageBase):
             err = 9999
         _log.debug("SQL set %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, value if ok else None))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
 
     def get(self, key, cb=None):
         """
@@ -200,11 +199,10 @@ class SqlClient(StorageBase):
         cb = kwargs.pop('cb', None)
         key = kwargs.pop('key', None)
         try:
-            r = result[0][0]
+            r = json.loads(result[0][0])
         except:
-            # Empty hence deleted or don't exist (DHT differentiate between these, False and None respectievly)
-            # SQL always give None
-            r = None
+            # Empty hence deleted or don't exist
+            r = calvinresponse.CalvinResponse(status=calvinresponse.NOT_FOUND)
         _log.debug("SQL get OK %s" % r)
         if cb is not None:
             async.DelayedCall(0, CalvinCB(cb, key, r))
@@ -221,7 +219,7 @@ class SqlClient(StorageBase):
             err = 9999
         _log.debug("SQL get %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, None))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=calvinresponse.NOT_FOUND)))
 
     def delete(self, key, cb=None):
         _log.debug("SQL delete %s" % (key,))
@@ -235,7 +233,7 @@ class SqlClient(StorageBase):
         key = kwargs.pop('key', None)
         _log.debug("SQL delete OK %s" % str(result))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, True))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=True)))
 
     def _delete_fail_cb(self, failure, **kwargs):
         _log.debug("SQL delete FAIL")
@@ -249,7 +247,7 @@ class SqlClient(StorageBase):
             err = 9999
         _log.debug("SQL delete %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, False))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
 
     def get_concat(self, key, cb=None):
         """
@@ -264,10 +262,13 @@ class SqlClient(StorageBase):
         _log.debug("SQL get_concat OK %s" % str(result))
         cb = kwargs.pop('cb', None)
         key = kwargs.pop('key', None)
-        r = "[" + ",".join([r[0] for r in result]) + "]"
-        _log.debug("SQL get_concat OK %s %s" % (result, r))
+        try:
+            extracted_result = [json.loads(r[0]) for r in result]
+        except:
+            extracted_result = []
+        _log.debug("SQL get_concat OK %s %s" % (result, extracted_result))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, r))
+            async.DelayedCall(0, CalvinCB(cb, key, extracted_result))
 
     def _getconcat_fail_cb(self, failure, **kwargs):
         _log.debug("SQL get_concat FAIL")
@@ -281,32 +282,29 @@ class SqlClient(StorageBase):
             err = 9999
         _log.debug("SQL get_concat %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, None))
+            # FIXME: Should this be empty list?
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=calvinresponse.NOT_FOUND)))
 
     def append(self, key, value, cb=None):
         _log.debug("SQL append %s to %s" % (value, key))
-        # Make serialized list of values into a list of serialized values
-        # Assumes JSON coded
-        # TODO change the storage API, to provide the list of serialized values
-        values = [json.dumps(v) for v in json.loads(value)]
+        values = [json.dumps(v) for v in value]
         def _append_value(*args, **kwargs):
             dlist = []
             for v in values:
                 dlist.append(self.dbpool.runQuery(QUERY_APPEND[1].format(keystr=key, valuestr=v)))
             d2 = defer.DeferredList(dlist) if len(dlist) > 1 else dlist[0]
-            d2.addCallbacks(CalvinCB(self._append_cb, cb=cb, key=key, value=value), CalvinCB(self._append_fail_cb, cb=cb, key=key, value=value))
+            d2.addCallbacks(CalvinCB(self._append_cb, cb=cb, key=key), CalvinCB(self._append_fail_cb, cb=cb, key=key))
         d1 = self.dbpool.runQuery(QUERY_APPEND[0].format(keystr=key))
-        d1.addCallbacks(_append_value, CalvinCB(self._append_fail_cb, cb=cb, key=key, value=value))
+        d1.addCallbacks(_append_value, CalvinCB(self._append_fail_cb, cb=cb, key=key))
         _log.debug("SQL append %s to %s requested" % (value, key))
 
     def _append_cb(self, result, **kwargs):
         _log.debug("SQL append OK")
         cb = kwargs.pop('cb', None)
         key = kwargs.pop('key', None)
-        value = kwargs.pop('value', None)
         _log.debug("SQL append OK %s" % str(result))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, value))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=True)))
 
     def _append_fail_cb(self, failure, **kwargs):
         _log.debug("SQL append FAIL")
@@ -320,29 +318,25 @@ class SqlClient(StorageBase):
             err = 9999
         _log.debug("SQL append %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, value if ok else None))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
 
     def remove(self, key, value, cb=None):
         _log.debug("SQL remove %s to %s" % (value, key))
-        # Make serialized list of values into a list of serialized values
-        # Assumes JSON coded
-        # TODO change the storage API, to provide the list of serialized values
-        values = [json.dumps(v) for v in json.loads(value)]
+        values = [json.dumps(v) for v in value]
         dlist = []
         for v in values:
             dlist.append(self.dbpool.runQuery(QUERY_REMOVE.format(keystr=key, valuestr=v)))
         d = defer.DeferredList(dlist) if len(dlist) > 1 else dlist[0]
-        d.addCallbacks(CalvinCB(self._remove_cb, cb=cb, key=key, value=value), CalvinCB(self._remove_fail_cb, cb=cb, key=key, value=value))
+        d.addCallbacks(CalvinCB(self._remove_cb, cb=cb, key=key), CalvinCB(self._remove_fail_cb, cb=cb, key=key))
         _log.debug("SQL remove %s to %s requested" % (value, key))
 
     def _remove_cb(self, result, **kwargs):
         _log.debug("SQL remove OK")
         cb = kwargs.pop('cb', None)
         key = kwargs.pop('key', None)
-        value = kwargs.pop('value', None)
         _log.debug("SQL remove OK %s" % str(result))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, value))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=True)))
 
     def _remove_fail_cb(self, failure, **kwargs):
         _log.debug("SQL remove FAIL")
@@ -356,7 +350,7 @@ class SqlClient(StorageBase):
             err = 9999
         _log.debug("SQL remove %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, value if ok else None))
+            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
 
     def bootstrap(self, addrs, cb=None):
         _log.debug("SQL bootstrap")

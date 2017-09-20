@@ -116,9 +116,9 @@ class TestCalvinNetwork(object):
 
         self._networks = []
         self._ports = []
-        _conf.set('global', 'storage_type', 'local_dict')
+        _conf.set('global', 'storage_type', 'test_local')
         #_conf.set('global', 'storage_proxy', 'local')
-        global_storage = storage_factory.get("local_dict", None)
+        global_storage = storage_factory.get("test_local", None)
 
         for a in range(count):
             node1 = create_node(global_storage)

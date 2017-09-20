@@ -15,7 +15,6 @@
 # limitations under the License.
 
 from calvin.runtime.north.plugins.storage import storage_factory
-from calvin.runtime.north.plugins.coders.messages import message_coder_factory
 from calvin.csparser.port_property_syntax import list_port_property_capabilities
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
@@ -26,6 +25,7 @@ from calvin.utilities import calvinconfig
 from calvin.actorstore.store import GlobalStore
 from calvin.utilities.security import Security, security_enabled
 from calvin.utilities import dynops
+from calvin.requests import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 import re
@@ -55,7 +55,6 @@ class Storage(object):
             self.storage = override_storage
         else:
             self.storage = storage_factory.get(storage_type, node)
-        self.coder = message_coder_factory.get("json")  # TODO: always json? append/remove requires json at the moment
         self.flush_delayedcall = None
         self.reset_flush_timeout()
 
@@ -96,8 +95,7 @@ class Storage(object):
             return
 
         _log.debug("Flush append on key %s: %s" % (key, list(value)))
-        coded_value = self.coder.encode(list(value))
-        self.storage.append(key=key, value=coded_value,
+        self.storage.append(key=key, value=list(value),
                             cb=CalvinCB(func=self.append_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
     def _flush_remove(self, key, value):
@@ -105,8 +103,7 @@ class Storage(object):
             return
 
         _log.debug("Flush remove on key %s: %s" % (key, list(value)))
-        coded_value = self.coder.encode(list(value))
-        self.storage.remove(key=key, value=coded_value,
+        self.storage.remove(key=key, value=list(value),
                             cb=CalvinCB(func=self.remove_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
     def started_cb(self, *args, **kwargs):
@@ -193,7 +190,7 @@ class Storage(object):
                     self.localstore[key] = org_value
 
         if org_cb:
-            org_cb(key=key, value=bool(value))
+            org_cb(key=key, value=value)
 
         self.trigger_flush()
 
@@ -207,7 +204,6 @@ class Storage(object):
             value indicate success.
         """
         _log.debug("Set key %s, value %s" % (prefix + key, value))
-        value = self.coder.encode(value) if value else value
 
         if prefix + key in self.localstore_sets:
             del self.localstore_sets[prefix + key]
@@ -217,13 +213,11 @@ class Storage(object):
         if self.started:
             self.storage.set(key=prefix + key, value=value, cb=CalvinCB(func=self.set_cb, org_key=key, org_value=value, org_cb=cb))
         elif cb:
-            async.DelayedCall(0, cb, key=key, value=True)
+            async.DelayedCall(0, cb, key=key, value=calvinresponse.CalvinResponse(True))
 
     def get_cb(self, key, value, org_cb, org_key):
         """ get callback
         """
-        if value:
-            value = self.coder.decode(value)
         org_cb(org_key, value)
 
     def get(self, prefix, key, cb):
@@ -231,18 +225,15 @@ class Storage(object):
             first look in locally set but not yet distributed registry
             It is assumed that the prefix and key are strings,
             the sum has to be an immutable object.
-            Callback cb with signature cb(key=key, value=<retrived value>/None/False)
+            Callback cb with signature cb(key=key, value=<retrived value>/CalvinResponse)
             note that the key here is without the prefix.
-            False is returned when value has been deleted,
-            None is returned if never set (this is current behaviour and might change).
+            CalvinResponse object is returned when value is not found.
         """
         if not cb:
             return
 
         if prefix + key in self.localstore:
             value = self.localstore[prefix + key]
-            if value:
-                value = self.coder.decode(value)
             async.DelayedCall(0, cb, key=key, value=value)
         else:
             try:
@@ -250,14 +241,13 @@ class Storage(object):
             except:
                 if self.started:
                     _log.error("Failed to get: %s" % key)
-                async.DelayedCall(0, cb, key=key, value=False)
+                async.DelayedCall(0, cb, key=key, value=calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
 
     def get_iter_cb(self, key, value, it, org_key, include_key=False):
         """ get callback
         """
         _log.analyze(self.node.id, "+ BEGIN", {'value': value, 'key': org_key})
-        if value:
-            value = self.coder.decode(value)
+        if calvinresponse.isnotfailresponse(value):
             it.append((key, value) if include_key else value)
             _log.analyze(self.node.id, "+", {'value': value, 'key': org_key})
         else:
@@ -284,8 +274,6 @@ class Storage(object):
         if it:
             if prefix + key in self.localstore:
                 value = self.localstore[prefix + key]
-                if value:
-                    value = self.coder.decode(value)
                 _log.analyze(self.node.id, "+", {'value': value, 'key': key})
                 it.append((key, value) if include_key else value)
             else:
@@ -301,8 +289,7 @@ class Storage(object):
     def get_concat_cb(self, key, value, org_cb, org_key, local_list):
         """ get callback
         """
-        if value:
-            value = self.coder.decode(value)
+        if calvinresponse.isnotfailresponse(value):
             if isinstance(value, (list, tuple, set)):
                 org_cb(org_key, list(set(value + local_list)))
             else:
@@ -348,8 +335,7 @@ class Storage(object):
         """ get callback
         """
         _log.analyze(self.node.id, "+ BEGIN", {'key': org_key, 'value': value, 'iter': str(it)})
-        if value:
-            value = self.coder.decode(value)
+        if calvinresponse.isnotfailresponse(value):
             _log.analyze(self.node.id, "+ VALUE", {'value': value, 'key': org_key})
             if isinstance(value, (list, tuple, set)):
                 it.extend([(org_key, v) for v in value] if include_key else value)
@@ -414,7 +400,7 @@ class Storage(object):
                 _log.warning("Failed to update %s" % key)
 
         if org_cb:
-            org_cb(key=org_key, value=bool(value))
+            org_cb(key=org_key, value=value)
         self.trigger_flush()
 
     def append(self, prefix, key, value, cb):
@@ -438,12 +424,11 @@ class Storage(object):
             self.localstore_sets[prefix + key] = {'+': set(value), '-': set([])}
 
         if self.started:
-            coded_value = self.coder.encode(list(self.localstore_sets[prefix + key]['+']))
-            self.storage.append(key=prefix + key, value=coded_value,
+            self.storage.append(key=prefix + key, value=list(self.localstore_sets[prefix + key]['+']),
                                 cb=CalvinCB(func=self.append_cb, org_key=key, org_value=value, org_cb=cb))
         else:
             if cb:
-                cb(key=key, value=True)
+                cb(key=key, value=calvinresponse.CalvinResponse(True))
 
     def remove_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ remove callback, on error retry after flush_timeout
@@ -460,7 +445,7 @@ class Storage(object):
                 _log.warning("Failed to update %s" % key)
 
         if org_cb:
-            org_cb(key=org_key, value=bool(value))
+            org_cb(key=org_key, value=value)
         self.trigger_flush()
 
     def remove(self, prefix, key, value, cb):
@@ -484,12 +469,11 @@ class Storage(object):
             self.localstore_sets[prefix + key] = {'+': set([]), '-': set(value)}
 
         if self.started:
-            coded_value = self.coder.encode(list(self.localstore_sets[prefix + key]['-']))
-            self.storage.remove(key=prefix + key, value=coded_value,
+            self.storage.remove(key=prefix + key, value=list(self.localstore_sets[prefix + key]['-']),
                                 cb=CalvinCB(func=self.remove_cb, org_key=key, org_value=value, org_cb=cb))
         else:
             if cb:
-                cb(key=key, value=True)
+                cb(key=key, value=calvinresponse.CalvinResponse(True))
 
     def delete(self, prefix, key, cb):
         """ Delete registry key: prefix+key
@@ -509,7 +493,7 @@ class Storage(object):
             self.storage.delete(prefix + key, cb)
         else:
             if cb:
-                cb(key, True)
+                cb(key, calvinresponse.CalvinResponse(True))
 
     ### Calvin object handling ###
 
@@ -827,7 +811,7 @@ class Storage(object):
         value: the value that is to be added to the set stored at each level of the index
         root_prefix_level: the top level of the index that can be searched separately,
                with e.g. =1 then node/address can't be split
-        cb: Callback with signature cb(key=key, value=True/False)
+        cb: Callback with signature cb(key=key, value=<CalvinResponse>)
             note that the key here is without the prefix and
             value indicate success.
         """
@@ -1015,27 +999,19 @@ class Storage(object):
         _log.debug("Storage proxy request %s" % payload)
         _log.analyze(self.node.id, "+ SERVER", {'payload': payload})
         if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
-            if 'value' in payload:
-                # TODO: Remove detection of set with None when constrained have support.
-                if payload['cmd'] == 'SET' and payload['value'] is None:
-                    # We detected a delete operation, since a set op with unencoded None is a delete
-                    payload['cmd'] = 'DELETE'
-                    payload.pop('value')
-                else:
-                    # Normal set op, but it will be encoded again in the set func when external storage, hence decode
-                    payload['value']=self.coder.decode(payload['value'])
             # Call this nodes storage methods, which could be local or DHT,
             # prefix is empty since that is already in the key (due to these calls come from the storage plugin level).
-            # If we are doing a get or get_concat then the result needs to be encoded, to correspond with what the
-            # client's higher level expect from storage plugin level.
             self._proxy_cmds[payload['cmd']](cb=CalvinCB(self._proxy_send_reply, tunnel=tunnel,
-                                                        encode=True if payload['cmd'] in ('GET', 'GET_CONCAT') else False,
-                                                        msgid=payload['msg_uuid']),
+                                                         msgid=payload['msg_uuid']),
                                              prefix="",
                                              **{k: v for k, v in payload.iteritems() if k in ('key', 'value')})
         else:
             _log.error("Unknown storage proxy request %s" % payload['cmd'] if 'cmd' in payload else "")
 
-    def _proxy_send_reply(self, key, value, tunnel, encode, msgid):
+    def _proxy_send_reply(self, key, value, tunnel, msgid):
         _log.analyze(self.node.id, "+ SERVER", {'msgid': msgid, 'key': key, 'value': value})
-        tunnel.send({'cmd': 'REPLY', 'msg_uuid': msgid, 'key': key, 'value': self.coder.encode(value) if encode else value})
+        # When a CalvinResponse send it on key 'response' instead of 'value' 
+        status = isinstance(value, calvinresponse.CalvinResponse)
+        svalue = value.encode() if status else value
+        response = 'response' if status else 'value'
+        tunnel.send({'cmd': 'REPLY', 'msg_uuid': msgid, 'key': key, response: svalue})

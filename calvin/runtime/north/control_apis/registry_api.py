@@ -169,7 +169,7 @@ def handle_post_node_attribute_indexed_public(self, handle, connection, match, d
 
 @register
 def storage_cb(self, key, value, handle, connection):
-    missing = value is None or value is False
+    missing = calvinresponse.isfailresponse(value)
     self.send_response(handle, connection, None if missing else json.dumps(value),
                        status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
 

@@ -346,7 +346,7 @@ class ReplicationManager(object):
     def _dereplicate_actor_cb(self, key, value, replication_data, terminate, cb):
         """ Get actor callback """
         _log.analyze(self.node.id, "+", {'actor_id': key, 'value': value})
-        if value and 'node_id' in value:
+        if calvinresponse.isnotfailresponse(value) and 'node_id' in value:
             # Use app destroy since it can remotely destroy actors
             self.node.proto.app_destroy(value['node_id'],
                 CalvinCB(self._dereplicated, replication_data=replication_data, last_replica_id=key, 
@@ -442,7 +442,7 @@ class ReplicationManager(object):
                 self.node.storage.get_replica(actor._replication_data.id, CalvinCB(self._current_actors_cb, actor=actor))
 
     def _current_actors_cb(self, key, value, actor):
-        collect_actors = [] if value is None else value
+        collect_actors = [] if calvinresponse.isfailresponse(value) else value
         missing = set(actor._replication_data.instances) - set(collect_actors + [actor.id])
         for actor_id in missing:
             actor._replication_data.instances.remove(actor_id)

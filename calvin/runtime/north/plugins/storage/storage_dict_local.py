@@ -15,11 +15,14 @@
 # limitations under the License.
 
 from calvin.runtime.south.plugins.async import async
+from calvin.requests import calvinresponse
 
 
 class StorageLocal(object):
     """
-        Base class for implementing storage plugins.
+        This is used for tests without full runtimes, does not work
+        for full runtimes!
+
         All functions in this class should be async and never block
 
         All functions takes a callback parameter:
@@ -61,7 +64,7 @@ class StorageLocal(object):
         """
         cb = cb or self._dummy_cb
         self._data[key] = value
-        async.DelayedCall(0, cb, key, True)
+        async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
 
     def get(self, key, cb=None):
         """
@@ -71,45 +74,45 @@ class StorageLocal(object):
         if key in self._data:
             async.DelayedCall(0, cb, key, self._data[key])
         else:
-            async.DelayedCall(0, cb, key, None)
+            async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
 
     def delete(self, key, cb=None):
         cb = cb or self._dummy_cb
         del self._data[key]
-        async.DelayedCall(0, cb, key, True)
+        async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
 
     def get_concat(self, key, cb=None):
         """
             Gets a value from the storage
         """
         cb = cb or self._dummy_cb
-        if key in self._data and isinstance(self._data[key], list()):
-            async.DelayedCall(0, cb, key, self._data[key])
+        if key in self._data and isinstance(self._data[key], set):
+            async.DelayedCall(0, cb, key, list(self._data[key]))
         else:
-            async.DelayedCall(0, cb, key, None)
+            async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
 
     def append(self, key, value, cb=None):
         cb = cb or self._dummy_cb
         if key not in self._data:
-            self._data[key] = [value]
+            self._data[key] = set(value)
         else:
-            self._data[key] = list(set(self._data[key] + [value]))
-        async.DelayedCall(0, cb, key, True)
+            if isinstance(self._data[key], set):
+                self._data[key] |= set(value)
+            else:
+                async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(False))
+                return
+        async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
 
     def remove(self, key, value, cb=None):
         cb = cb or self._dummy_cb
         if key not in self._data:
-            async.DelayedCall(0, cb, key, False)
+            async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
         else:
-            if isinstance(self._data[key], list()):
-                if value in self._data[key]:
-                    self._data[key].remove(value)
-                    async.DelayedCall(0, cb, key, True)
-                else:
-                    async.DelayedCall(0, cb, key, False)
+            if isinstance(self._data[key], set):
+                self._data[key] -= set(value)
+                async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
             else:
-                self._data.pop(key)
-                async.DelayedCall(0, cb, key, True)
+                async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(False))
 
     def bootstrap(self, addrs, cb=None):
         cb = cb or self._dummy_cb

@@ -31,7 +31,8 @@ def get(type_, node=None):
         return StorageProxy(node)
     elif type_ == "local":
         return None
-    elif type_ == "local_dict":
+    elif type_ == "test_local":
+        # This is used in transport tests without full runtimes, does not work for full runtimes!
         return StorageLocal(node)
 
     raise Exception("Parser {} requested is not supported".format(type_))

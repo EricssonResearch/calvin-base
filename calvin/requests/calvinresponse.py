@@ -193,6 +193,21 @@ class CalvinResponse(object):
     def __str__(self):
         return str(self.status) + ", " + RESPONSE_CODES[self.status] + ((", " + str(self.data)) if self.data else "")
 
+
+def isfailresponse(obj):
+    if isinstance(obj, CalvinResponse):
+        return not bool(obj)
+    else:
+        return False
+
+
+def isnotfailresponse(obj):
+    if isinstance(obj, CalvinResponse):
+        return bool(obj)
+    else:
+        return True
+
+
 if __name__ == '__main__':
     r = CalvinResponse(OK)
     r2 = CalvinResponse(OK)

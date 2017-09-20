@@ -18,6 +18,7 @@ import sys
 import traceback
 import time
 import Queue
+import json
 
 from twisted.internet import reactor, defer, threads
 
@@ -26,6 +27,7 @@ from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp
                                                                                               SERVICE_UUID,\
                                                                                               CA_SERVICE_UUID
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
+from calvin.requests import calvinresponse
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 
@@ -105,6 +107,14 @@ class TwistedWaitObject(object):
         d.addCallback(self._callback)
 
     def _callback(self, value):
+        if value is None or value == False:
+            value = calvinresponse.CalvinResponse(status=calvinresponse.NOT_FOUND)
+        else:
+            try:
+                value = json.loads(value)
+            except:
+                # For example a set operation that succeed will return True which is OK
+                value = calvinresponse.CalvinResponse(status=calvinresponse.OK) if value is True else value
         self._value = value
         if self._callback_class:
             self._callback_class(self._kwargs['key'], value)
@@ -201,6 +211,7 @@ class AutoDHTServer(StorageBase):
         return start_cb
 
     def set(self, key, value, cb=None):
+        value = json.dumps(value)
         return TwistedWaitObject(self.dht_server.set, key=key, value=value, cb=cb)
 
     def get(self, key, cb=None):
@@ -213,9 +224,13 @@ class AutoDHTServer(StorageBase):
         return TwistedWaitObject(self.dht_server.get_concat, key=key, cb=cb)
 
     def append(self, key, value, cb=None):
+        # TODO: handle this deeper inside DHT to remove unneccessary serializations
+        value = json.dumps(value)
         return TwistedWaitObject(self.dht_server.append, key=key, value=value, cb=cb)
 
     def remove(self, key, value, cb=None):
+        # TODO: handle this deeper inside DHT to remove unneccessary serializations
+        value = json.dumps(value)
         return TwistedWaitObject(self.dht_server.remove, key=key, value=value, cb=cb)
 
     def bootstrap(self, addrs, cb=None):

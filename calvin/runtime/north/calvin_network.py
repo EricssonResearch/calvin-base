@@ -571,8 +571,7 @@ class CalvinNetwork(object):
         _log.debug("Got response from storage key = %s, value = %s, callback = %s, force = %s", key, value, callback, force)
         _log.analyze(self.node.id, "+", {'value': value}, peer_node_id=key, tb=True)
 
-        # Test if value is None or False indicating node does not currently exist in storage
-        if not value:
+        if response.isfailresponse(value):
             # the peer_id did not exist in storage
             _log.info("Failed to get node %s info from storage", key)
             if key in self._peer_cache:
