@@ -61,13 +61,14 @@ application_store_path = ""
 
 NBR_OF_RUNTIMES=3
 
+import socket
+# If this fails add hostname to the /etc/hosts file for 127.0.0.1
 try:
-    ip_addr = os.environ["CALVIN_TEST_LOCALHOST"]
-except:
-    import socket
-    # If this fails add hostname to the /etc/hosts file for 127.0.0.1
     ip_addr = socket.gethostbyname(socket.gethostname())
     hostname = socket.gethostname()
+    skip = False
+except:
+    skip = True
 
 rt=[]
 rt_attributes=[]
@@ -76,6 +77,7 @@ storage_verified=False
 
 @pytest.mark.slow
 @pytest.mark.essential
+@pytest.mark.skipif(skip, reason="Test all security could not resolve hostname, you might need to edit /etc/hosts")
 class TestSecurity(unittest.TestCase):
 
     @pytest.fixture(autouse=True, scope="class")
