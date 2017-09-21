@@ -57,7 +57,7 @@ class StandardOut(base_calvinsys_object.BaseCalvinsysObject):
             msg = u"{}".format(data)
         elif self._prefix is not None:
             msg = u"{}".format(self._prefix)
-        print(msg)
+        print(msg.encode("utf-8"))
 
     def close(self):
         pass
