@@ -495,6 +495,205 @@ class Storage(object):
             if cb:
                 cb(key, calvinresponse.CalvinResponse(True))
 
+    def index_cb(self, key, value, org_cb, index_items):
+        """
+        Collect all the index levels operations into one callback
+        """
+        _log.debug("index cb key:%s, value:%s, index_items:%s" % (key, value, index_items))
+        #org_key = key.partition("-")[2]
+        org_key = key
+        # cb False if not already done it at first False value
+        if not value and index_items:
+            org_cb(key=org_key, value=calvinresponse.CalvinResponse(False))
+            del index_items[:]
+        if org_key in index_items:
+            # remove this index level from list
+            index_items.remove(org_key)
+            # If all done send True
+            if not index_items:
+                org_cb(key=org_key, value=calvinresponse.CalvinResponse(True))
+
+    def _index_strings(self, index, root_prefix_level):
+        # Make the list of index levels that should be used
+        # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
+        if isinstance(index, list):
+            items = index
+        else:
+            items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
+        root = "/".join(items[:root_prefix_level])
+        del items[:root_prefix_level]
+        items.insert(0, root)
+
+        # index strings for all levels
+        indexes = ['/'+'/'.join(items[:l]) for l in range(1,len(items)+1)]
+        return indexes
+
+    def add_index(self, index, value, root_prefix_level=3, cb=None):
+        """
+        Add single value (e.g. a node id) to a set stored in registry
+        later retrivable for each level of the index.
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
+               e.g. node/address/example_street/3/buildingA/level3/room3003,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
+        value: the value that is to be added to the set stored at each level of the index
+        root_prefix_level: the top level of the index that can be searched separately,
+               with e.g. =1 then node/address can't be split
+        cb: Callback with signature cb(key=key, value=<CalvinResponse>)
+            note that the key here is without the prefix and
+            value indicate success.
+        """
+
+        # TODO this implementation will store the value to each level of the index.
+        # When time permits a proper implementation should be done with for example
+        # a prefix hash table on top of the DHT or using other storage backend with
+        # prefix search built in.
+
+        _log.debug("add index %s: %s" % (index, value))
+
+        indexes = self._index_strings(index, root_prefix_level)
+
+        # make copy of indexes since altered in callbacks
+        for i in indexes[:]:
+            self.append(prefix="index-", key=i, value=[value],
+                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
+
+    def remove_index(self, index, value, root_prefix_level=2, cb=None):
+        """
+        Remove single value (e.g. a node id) from a set stored in registry
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
+               e.g. node/address/example_street/3/buildingA/level3/room3003,
+               node/affiliation/owner/com.ericsson/Harald,
+               node/affiliation/name/com.ericsson/laptop,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
+        value: the value that is to be removed from the set stored at each level of the index
+        root_prefix_level: the top level of the index that can be searched separately,
+               with e.g. =1 then node/address can't be split
+        cb: Callback with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and
+            value indicate success.
+        """
+
+        # TODO this implementation will delete the value to each level of the index.
+        # When time permits a proper implementation should be done with for example
+        # a prefix hash table on top of the DHT or using other storage backend with
+        # prefix search built in.
+
+        # TODO Currently we don't go deeper than the specified index for a remove,
+        # e.g. node/affiliation/owner/com.ericsson would remove the value from
+        # all deeper indeces. But no current use case exist either.
+
+        _log.debug("remove index %s: %s" % (index, value))
+
+        indexes = self._index_strings(index, root_prefix_level)
+
+        # make copy of indexes since altered in callbacks
+        for i in indexes[:]:
+            self.remove(prefix="index-", key=i, value=[value],
+                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
+
+    def delete_index(self, index, root_prefix_level=2, cb=None):
+        """
+        Remove index entry in registry
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
+               e.g. node/address/example_street/3/buildingA/level3/room3003,
+               node/affiliation/owner/com.ericsson/Harald,
+               node/affiliation/name/com.ericsson/laptop,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
+        root_prefix_level: the top level of the index that can be searched separately,
+               with e.g. =1 then node/address can't be split
+        cb: Callback with signature cb(key=key, value=True/False)
+            note that the key here is without the prefix and
+            value indicate success.
+        """
+
+        indexes = self._index_strings(index, root_prefix_level)
+
+        # make copy of indexes since altered in callbacks
+        for i in indexes[:]:
+            self.delete(prefix="index-", key=i,
+                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
+
+    def get_index(self, index, cb=None):
+        """
+        Get multiple values from the registry stored at the index level or
+        below it in hierarchy.
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
+               e.g. node/address/example_street/3/buildingA/level3/room3003,
+               node/affiliation/owner/com.ericsson/Harald,
+               node/affiliation/name/com.ericsson/laptop,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
+        cb: Callback cb with signature cb(key=key, value=<retrived values>),
+            value is a list.
+
+        The registry can be eventually consistent,
+        e.g. a removal of a value might only have reached part of a
+        distributed registry and hence still be part of returned
+        list of values, it may also miss values added by others but
+        not yet distributed.
+        """
+
+        # TODO this implementation will get the value from the level of the index.
+        # When time permits a proper implementation should be done with for example
+        # a prefix hash table on top of the DHT or using other storage backend with
+        # prefix search built in.
+
+        if isinstance(index, list):
+            index = "/".join(index)
+
+        if not index.startswith("/"):
+            index = "/" + index
+        _log.debug("get index %s" % (index))
+        self.get_concat(prefix="index-", key=index, cb=cb)
+
+    def get_index_iter(self, index, include_key=False):
+        """
+        Get multiple values from the registry stored at the index level or
+        below it in hierarchy.
+        index: The multilevel key:
+               a string with slash as delimiter for finer level of index,
+               e.g. node/address/example_street/3/buildingA/level3/room3003,
+               node/affiliation/owner/com.ericsson/Harald,
+               node/affiliation/name/com.ericsson/laptop,
+               index string must been escaped with \/ and \\ for / and \ within levels
+               OR a list of each levels strings
+        include_key: When the parameter include_key is True a tuple of (index, value)
+               is placed in dynamic interable instead of only the retrived value,
+               note it is only the supplied index, not for each sub-level.
+        returned: Dynamic iterable object
+            Values are placed in the dynamic iterable object.
+            The dynamic iterable are of the List subclass to
+            calvin.utilities.dynops.DynOps, see DynOps for details
+            of how they are used. The final method will be called when
+            all values are appended to the returned dynamic iterable.
+
+        The registry can be eventually consistent,
+        e.g. a removal of a value might only have reached part of a
+        distributed registry and hence still be part of returned
+        list of values, it may also miss values added by others but
+        not yet distributed.
+        """
+
+        # TODO this implementation will get the value from the level of the index.
+        # When time permits a proper implementation should be done with for example
+        # a prefix hash table on top of the DHT or using other storage backend with
+        # prefix search built in.
+
+        if isinstance(index, list):
+            index = "/".join(index)
+
+        if not index.startswith("/"):
+            index = "/" + index
+        _log.debug("get index iter %s" % (index))
+        return self.get_concat_iter(prefix="index-", key=index, include_key=include_key)
+
     ### Calvin object handling ###
 
     def add_node(self, node, cb=None):
@@ -765,205 +964,6 @@ class Storage(object):
 
     def get_replica_nodes(self, replication_id, cb=None):
         self.get_index(['replicas', 'nodes', replication_id], cb=cb)
-
-    def index_cb(self, key, value, org_cb, index_items):
-        """
-        Collect all the index levels operations into one callback
-        """
-        _log.debug("index cb key:%s, value:%s, index_items:%s" % (key, value, index_items))
-        #org_key = key.partition("-")[2]
-        org_key = key
-        # cb False if not already done it at first False value
-        if not value and index_items:
-            org_cb(key=org_key, value=calvinresponse.CalvinResponse(False))
-            del index_items[:]
-        if org_key in index_items:
-            # remove this index level from list
-            index_items.remove(org_key)
-            # If all done send True
-            if not index_items:
-                org_cb(key=org_key, value=calvinresponse.CalvinResponse(True))
-
-    def _index_strings(self, index, root_prefix_level):
-        # Make the list of index levels that should be used
-        # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
-        if isinstance(index, list):
-            items = index
-        else:
-            items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
-        root = "/".join(items[:root_prefix_level])
-        del items[:root_prefix_level]
-        items.insert(0, root)
-
-        # index strings for all levels
-        indexes = ['/'+'/'.join(items[:l]) for l in range(1,len(items)+1)]
-        return indexes
-
-    def add_index(self, index, value, root_prefix_level=3, cb=None):
-        """
-        Add single value (e.g. a node id) to a set stored in registry
-        later retrivable for each level of the index.
-        index: The multilevel key:
-               a string with slash as delimiter for finer level of index,
-               e.g. node/address/example_street/3/buildingA/level3/room3003,
-               index string must been escaped with \/ and \\ for / and \ within levels
-               OR a list of each levels strings
-        value: the value that is to be added to the set stored at each level of the index
-        root_prefix_level: the top level of the index that can be searched separately,
-               with e.g. =1 then node/address can't be split
-        cb: Callback with signature cb(key=key, value=<CalvinResponse>)
-            note that the key here is without the prefix and
-            value indicate success.
-        """
-
-        # TODO this implementation will store the value to each level of the index.
-        # When time permits a proper implementation should be done with for example
-        # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in.
-
-        _log.debug("add index %s: %s" % (index, value))
-
-        indexes = self._index_strings(index, root_prefix_level)
-
-        # make copy of indexes since altered in callbacks
-        for i in indexes[:]:
-            self.append(prefix="index-", key=i, value=[value],
-                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
-
-    def remove_index(self, index, value, root_prefix_level=2, cb=None):
-        """
-        Remove single value (e.g. a node id) from a set stored in registry
-        index: The multilevel key:
-               a string with slash as delimiter for finer level of index,
-               e.g. node/address/example_street/3/buildingA/level3/room3003,
-               node/affiliation/owner/com.ericsson/Harald,
-               node/affiliation/name/com.ericsson/laptop,
-               index string must been escaped with \/ and \\ for / and \ within levels
-               OR a list of each levels strings
-        value: the value that is to be removed from the set stored at each level of the index
-        root_prefix_level: the top level of the index that can be searched separately,
-               with e.g. =1 then node/address can't be split
-        cb: Callback with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and
-            value indicate success.
-        """
-
-        # TODO this implementation will delete the value to each level of the index.
-        # When time permits a proper implementation should be done with for example
-        # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in.
-
-        # TODO Currently we don't go deeper than the specified index for a remove,
-        # e.g. node/affiliation/owner/com.ericsson would remove the value from
-        # all deeper indeces. But no current use case exist either.
-
-        _log.debug("remove index %s: %s" % (index, value))
-
-        indexes = self._index_strings(index, root_prefix_level)
-
-        # make copy of indexes since altered in callbacks
-        for i in indexes[:]:
-            self.remove(prefix="index-", key=i, value=[value],
-                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
-
-    def delete_index(self, index, root_prefix_level=2, cb=None):
-        """
-        Remove index entry in registry
-        index: The multilevel key:
-               a string with slash as delimiter for finer level of index,
-               e.g. node/address/example_street/3/buildingA/level3/room3003,
-               node/affiliation/owner/com.ericsson/Harald,
-               node/affiliation/name/com.ericsson/laptop,
-               index string must been escaped with \/ and \\ for / and \ within levels
-               OR a list of each levels strings
-        root_prefix_level: the top level of the index that can be searched separately,
-               with e.g. =1 then node/address can't be split
-        cb: Callback with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and
-            value indicate success.
-        """
-
-        indexes = self._index_strings(index, root_prefix_level)
-
-        # make copy of indexes since altered in callbacks
-        for i in indexes[:]:
-            self.delete(prefix="index-", key=i,
-                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
-
-    def get_index(self, index, cb=None):
-        """
-        Get multiple values from the registry stored at the index level or
-        below it in hierarchy.
-        index: The multilevel key:
-               a string with slash as delimiter for finer level of index,
-               e.g. node/address/example_street/3/buildingA/level3/room3003,
-               node/affiliation/owner/com.ericsson/Harald,
-               node/affiliation/name/com.ericsson/laptop,
-               index string must been escaped with \/ and \\ for / and \ within levels
-               OR a list of each levels strings
-        cb: Callback cb with signature cb(key=key, value=<retrived values>),
-            value is a list.
-
-        The registry can be eventually consistent,
-        e.g. a removal of a value might only have reached part of a
-        distributed registry and hence still be part of returned
-        list of values, it may also miss values added by others but
-        not yet distributed.
-        """
-
-        # TODO this implementation will get the value from the level of the index.
-        # When time permits a proper implementation should be done with for example
-        # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in.
-
-        if isinstance(index, list):
-            index = "/".join(index)
-
-        if not index.startswith("/"):
-            index = "/" + index
-        _log.debug("get index %s" % (index))
-        self.get_concat(prefix="index-", key=index, cb=cb)
-
-    def get_index_iter(self, index, include_key=False):
-        """
-        Get multiple values from the registry stored at the index level or
-        below it in hierarchy.
-        index: The multilevel key:
-               a string with slash as delimiter for finer level of index,
-               e.g. node/address/example_street/3/buildingA/level3/room3003,
-               node/affiliation/owner/com.ericsson/Harald,
-               node/affiliation/name/com.ericsson/laptop,
-               index string must been escaped with \/ and \\ for / and \ within levels
-               OR a list of each levels strings
-        include_key: When the parameter include_key is True a tuple of (index, value)
-               is placed in dynamic interable instead of only the retrived value,
-               note it is only the supplied index, not for each sub-level.
-        returned: Dynamic iterable object
-            Values are placed in the dynamic iterable object.
-            The dynamic iterable are of the List subclass to
-            calvin.utilities.dynops.DynOps, see DynOps for details
-            of how they are used. The final method will be called when
-            all values are appended to the returned dynamic iterable.
-
-        The registry can be eventually consistent,
-        e.g. a removal of a value might only have reached part of a
-        distributed registry and hence still be part of returned
-        list of values, it may also miss values added by others but
-        not yet distributed.
-        """
-
-        # TODO this implementation will get the value from the level of the index.
-        # When time permits a proper implementation should be done with for example
-        # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in.
-
-        if isinstance(index, list):
-            index = "/".join(index)
-
-        if not index.startswith("/"):
-            index = "/" + index
-        _log.debug("get index iter %s" % (index))
-        return self.get_concat_iter(prefix="index-", key=index, include_key=include_key)
 
     ### Storage proxy server ###
 
