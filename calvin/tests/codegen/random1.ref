@@ -2,7 +2,9 @@
     "actors": {
         "random1:delay": {
             "actor_type": "std.ClassicDelay", 
-            "args": {}, 
+            "args": {
+                "delay": 0.1
+            }, 
             "signature": "5787838e931900c0dd74d6bee2347038577a2677016ed4992c7653889cf1678f"
         }, 
         "random1:print": {

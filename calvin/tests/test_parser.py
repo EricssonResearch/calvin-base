@@ -26,7 +26,7 @@ class TestBase(unittest.TestCase):
         }
 
         src : Foo(arg=ARG)
-        delay : std.ClassicDelay()
+        delay : std.ClassicDelay(delay=0.1)
         print : io.Print()
 
         src.out > print.token

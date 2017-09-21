@@ -856,7 +856,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             ident  : std.Identity()
-            delay  : std.ClassicDelay()
+            delay  : std.ClassicDelay(delay=0.1)
             snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             delay.token[in](routing="collect-tagged")
@@ -999,7 +999,7 @@ class TestReplication(CalvinTestBase):
         script = """
             src    : std.Counter()
             ident  : std.Identity()
-            delay  : std.ClassicDelay()
+            delay  : std.ClassicDelay(delay=0.1)
             snk    : test.Sink(store_tokens=1, quiet=1)
             src.integer(routing="random")
             delay.token[in](routing="collect-tagged")

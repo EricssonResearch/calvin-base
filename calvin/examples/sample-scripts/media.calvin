@@ -1,5 +1,5 @@
 /* actors */
-timer : std.RecTimer(delay=1)
+timer : std.ClassicDelay(interval=1)
 camera : media.Camera()
 screen : media.ImageRenderer()
 player : media.MediaPlayer(media_file="calvin/examples/doorlock/dingdong.ogg")

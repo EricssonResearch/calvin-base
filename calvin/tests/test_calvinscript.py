@@ -401,12 +401,12 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         self.assertEqual(errors[2]['reason'], "Actor i (std.Identity) is missing connection to inport 'token'")
         self.assertEqual(errors[3]['reason'], "Actor i (std.Identity) is missing connection to outport 'token'")
 
-    def testRedfineInstance(self):
+    def testRedefineInstance(self):
         script = """
         i:std.Identity()
         src:std.CountTimer()
         dst:test.Sink()
-        i:std.RecTimer()
+        i:std.ClassicDelay(delay=0.2)
         src.integer > i.token
         i.token > dst.token
         """
@@ -620,17 +620,6 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         }
         snk : Foo()
         1 > snk.in
-        """
-        result, errors, warnings = self.parse('inline', script)
-        self.assertEqual(len(errors), 0)
-
-    def testPortlistInternalInPort(self):
-        script = """
-        component Foo() -> out {
-            snk1 : io.Print()
-            snk2 : io.Print()
-            1  > snk1.token, snk2.token, .out
-        }
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 0)

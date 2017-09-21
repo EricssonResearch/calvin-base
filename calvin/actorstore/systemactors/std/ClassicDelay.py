@@ -27,7 +27,7 @@ class ClassicDelay(Actor):
     """
 
     @manage(['timer', 'delay', 'started'])
-    def init(self, delay=0.1):
+    def init(self, delay):
         self.delay = delay
         self.timer = calvinsys.open(self, "sys.timer.repeating")
         self.started = False

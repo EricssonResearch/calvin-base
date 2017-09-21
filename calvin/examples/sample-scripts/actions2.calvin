@@ -1,6 +1,6 @@
 src:std.Counter()
 dmy:std.Identity()
-del:std.ClassicDelay()
+del:std.ClassicDelay(delay=0.1)
 snk:io.Print()
 
 src.integer > dmy.token
