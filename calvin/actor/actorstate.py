@@ -30,7 +30,7 @@ class ActorState(object):
         self.__dict__['replication_data'] = replication_data
 
     def __getattr__(self, name):
-        if name[0] != "_" and name in self.state['private']['_managed']:
+        if name[0] != "_" and name in self.state['managed']:
             return self.state['managed'][name]
         elif name == "replication_count":
             return self.replication_data.counter
@@ -38,7 +38,7 @@ class ActorState(object):
             raise AttributeError("ActorState does not have access to %s" % name)
 
     def __setattr__(self, name, value):
-        if name[0] != "_" and name in self.state['private']['_managed']:
+        if name[0] != "_" and name in self.state['managed']:
             self.__dict__['state']['managed'][name] = value
         else:
             raise AttributeError("ActorState does not have access to %s" % name)

@@ -180,7 +180,6 @@ class ActorManager(object):
             if '_shadow_args' in state['managed']:
                 # We were a shadow, do a full init
                 args = state['managed'].pop('_shadow_args')
-                state['private']['_managed'].remove('_shadow_args')
                 a.init(**args)
                 # If still shadow don't call did_migrate
                 did_migrate = isinstance(a, ShadowActor)

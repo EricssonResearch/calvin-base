@@ -125,7 +125,6 @@ def test_state(actor):
         '_component_members': [actor.id],
         '_has_started': False,
         '_deployment_requirements': [],
-        '_managed': set(['last', 'dump']),
         '_signature': None,
         '_id': actor.id,
         '_port_property_capabilities': None,

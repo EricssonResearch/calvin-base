@@ -649,7 +649,6 @@ class Actor(object):
     def _private_state(self, remap):
         """Serialize state common to all actors"""
         state = {}
-        state['_managed'] = list(self._managed)
         state['inports'] = {
             port: self.inports[port]._state(remap=remap) for port in self.inports}
         state['outports'] = {
@@ -667,12 +666,13 @@ class Actor(object):
                     state[key] = obj.state()
             else:
                 state[key] = obj
+
         state["_calvinsys"] = get_calvinsys().serialize(actor=self)
+
         return state
 
     def _set_private_state(self, state):
         """Deserialize and apply state common to all actors"""
-        self._managed.update(set(state['_managed']))
 
         get_calvinsys().deserialize(actor=self, csobjects=state["_calvinsys"])
 
@@ -687,8 +687,6 @@ class Actor(object):
         # FIXME: The objects in _private_state_keys are well known, they are private after all,
         #        and we shouldn't need this generic handler.
         for key in self._private_state_keys:
-    
-        
             if key not in self.__dict__:
                 self.__dict__[key] = state.pop(key, None)
             else:
@@ -711,8 +709,9 @@ class Actor(object):
         Deserialize and apply managed state.
         Managed state can only contain objects that can be JSON-serialized.
         """
-        for key in self._managed:
-            self.__dict__[key] = state.pop(key)
+        self._managed.update(set(state.keys()))
+        for key, val in state.iteritems():
+            self.__dict__[key] = val
 
     def serialize(self, remap=None):
         """Returns the serialized state of an actor."""
