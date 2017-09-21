@@ -1,0 +1,6 @@
+trigger : std.Trigger(data=true, tick=1.0)
+name : context.RuntimeName()
+out : io.Print()
+
+trigger.data > name.trigger
+name.value > out.token

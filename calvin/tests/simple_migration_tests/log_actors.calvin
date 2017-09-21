@@ -1,0 +1,9 @@
+tick : std.Trigger(data="Yes", tick=0.2)
+info : io.LogInfo()
+warning : io.LogWarning()
+error : io.LogError()
+
+
+tick.data > info.data
+tick.data > warning.data
+tick.data > error.data

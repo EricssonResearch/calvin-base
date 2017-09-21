@@ -1,0 +1,6 @@
+actor_1 : std.Trigger(data=1, tick=0.1)
+actor_2 : std.DelayToken(delay=0.1)
+actor_3 : io.Print()
+
+actor_1.data > actor_2.token
+actor_2.token > actor_3.token

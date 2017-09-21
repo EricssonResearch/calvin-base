@@ -1,0 +1,4 @@
+timer : std.CountTimer()
+out : io.Print()
+
+timer.integer > out.token

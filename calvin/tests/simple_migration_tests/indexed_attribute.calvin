@@ -1,0 +1,6 @@
+actor_1 : std.Trigger(data=true, tick=1.0)
+actor_2 : context.RegistryAttribute(attribute="address.locality")
+actor_3 : io.Print()
+
+actor_1.data > actor_2.trigger
+actor_2.value > actor_3.token
