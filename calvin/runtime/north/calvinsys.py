@@ -211,7 +211,6 @@ class CalvinSys(object):
         """
             deserializes a list of calvinsys objects and associates them with given actor
         """
-        print csobjects
         for csobj in csobjects:
             ref = csobj.pop("ref")
             _, pyclass = self._get_class(csobj["name"])
