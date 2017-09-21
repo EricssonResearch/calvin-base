@@ -82,8 +82,7 @@ setup(name='calvin',
               'cscompile=calvin.Tools.cscompiler:main',
               'csmanage=calvin.Tools.csmanage:main',
               'csweb=calvin.Tools.www.csweb:main',
-              'csviz=calvin.Tools.csviz:main',
-              'csactortest=calvin.Tools.csactortest:main'
+              'csviz=calvin.Tools.csviz:main'
           ]
       }
       )
