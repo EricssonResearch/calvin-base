@@ -32,13 +32,7 @@ class CountTimer(Actor):
         self.count = start
         self.sleep = sleep
         self.steps = steps + start
-        self.setup()
-
-    def setup(self):        
-        if self.count < 3:
-            self.timer = calvinsys.open(self, 'sys.timer.once')
-        else:
-            self.timer = calvinsys.open(self, 'sys.timer.repeating')
+        self.timer = calvinsys.open(self, 'sys.timer.once')
         calvinsys.write(self.timer, self.sleep)
 
     # The counting action, first 3 use non periodic for testing purpose
