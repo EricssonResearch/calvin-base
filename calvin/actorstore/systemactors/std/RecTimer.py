@@ -14,69 +14,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 
 class RecTimer(Actor):
     """
-    Pass input after a given delay
+    After first token, pass on token once every 'delay' seconds. *Deprecated*
+    
+    This actor is identical to ClassicDelay.
+    
     Input :
-        token : anything
+        token: anything
     Outputs:
-        token : anything
+        token: anything
     """
 
-    @manage(['delay'])
-    def init(self, delay=0.1):
+    @manage(['timer', 'delay', 'started'])
+    def init(self, delay):
         self.delay = delay
-        self.setup()
+        self.timer = calvinsys.open(self, "sys.timer.repeating")
+        self.started = False
 
-    def setup(self):
-        self.use('calvinsys.events.timer', shorthand='timer')
-        self.timer = self['timer'].repeat(self.delay)
-
-    def will_migrate(self):
-        self.timer.cancel()
-
-    def did_migrate(self):
-        self.setup()
-
-    @stateguard(lambda self: self.timer and self.timer.triggered)
+    @stateguard(lambda self: not self.started)
     @condition(['token'], ['token'])
-    def flush(self, input):
-        return (input, )
+    def start_timer(self, token):
+        self.started = True
+        calvinsys.write(self.timer, self.delay)
+        return (token, )
 
-    @stateguard(lambda self: self.timer and self.timer.triggered)
-    @condition()
-    def clear(self):
-        self.timer.ack()
+    @stateguard(lambda self: calvinsys.can_read(self.timer))
+    @condition(['token'], ['token'])
+    def passthrough(self, token):
+        calvinsys.read(self.timer)
+        return (token, )
 
-
-    action_priority = (flush, clear)
-    requires = ['calvinsys.events.timer']
-
-    test_args = [1]
-
-    # Trigger a timer then add tokens. The tokens shall wait for the next trigger.
-    test_set = [
-        {
-            'setup': [lambda self: self.timer.trigger()],
-            'in': {'token': []}, 'out': {'token': []}
-        }
-    ]
-
-    # Add tokens, nothing returned since timer not triggered above shall have cleared.
-    test_set += [
-        {'in': {'token': [r]}, 'out': {'token': []}} for r in range(3)
-    ]
-
-    # Trigger the timer once then fetch three tokens.
-    # All tokens shall be flushed.
-    test_set += [
-        {
-            'setup': [lambda self: self.timer.trigger()],
-            'in': {'token': []}, 'out': {'token': [0]}
-        },
-        {'in': {'token': []}, 'out': {'token': [1]}},
-        {'in': {'token': []}, 'out': {'token': [2]}}
-    ]
+    action_priority = (start_timer, passthrough)
+    requires = ['sys.timer.repeating']
