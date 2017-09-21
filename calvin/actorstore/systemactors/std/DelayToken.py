@@ -19,7 +19,7 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class DelayToken(Actor):
     """
-    Sends input on after a given delay has passed. NOTE: Migration will currently reset timers.
+    Sends input on after a given delay has passed. Preserves time between tokens.
 
     Input :
         token : anything
@@ -32,14 +32,14 @@ class DelayToken(Actor):
         self.delay = delay
         self.timers = []
 
-    def _new_timer(self):
+    def new_timer(self):
         timer = calvinsys.open(self, "sys.timer.once")
         calvinsys.write(timer, self.delay)
         return timer
-
+        
     @condition(['token'])
     def token_available(self, token):
-        self.timers.append({'token': token, 'timer': self._new_timer()})
+        self.timers.append({'token': token, 'timer': self.new_timer()})
 
     @stateguard(lambda self: len(self.timers) > 0 and calvinsys.can_read(self.timers[0]['timer']))
     @condition([], ['token'])
