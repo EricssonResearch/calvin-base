@@ -34,7 +34,7 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
     }
     
     can_read_schema = {
-        "description": "True iff timer has triggered",
+        "description": "True if timer has triggered",
     }
 
     read_schema = {
