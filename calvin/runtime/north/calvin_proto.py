@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from calvin.utilities import calvinuuid
 from calvin.utilities.utils import enum
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
@@ -287,7 +288,7 @@ class CalvinProto(CalvinCBClass):
             self.network.link_get(payload['from_rt_uuid']),
             self.node.storage,
             CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
-                callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})),
+                callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'time': time.time()})),
             payload.get('attributes'))
 
     def proxy_sleep_request_handler(self, payload):
