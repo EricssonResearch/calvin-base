@@ -197,22 +197,20 @@ class CalvinSys(object):
             references = self._actors.pop(actor)
         else :
             # Nothing to do here
-            return []
+            return {}
             
-        serz = []
+        serz = {}
         for ref in references:
             csobj = self._objects.pop(ref)
-            csobj["ref"] = ref # save ref for future use
             csobj["obj"] = csobj["obj"].serialize() # serialize object
-            serz.append(csobj)
+            serz[ref] = csobj
         return serz
 
     def deserialize(self, actor, csobjects):
         """
             deserializes a list of calvinsys objects and associates them with given actor
         """
-        for csobj in csobjects:
-            ref = csobj.pop("ref")
+        for ref, csobj in csobjects.items():
             _, pyclass = self._get_class(csobj["name"])
             csobj["obj"] = pyclass(calvinsys=self, name=csobj["name"], actor=actor).deserialize(state=csobj["obj"], **csobj["args"])
             self._objects[ref] = csobj
