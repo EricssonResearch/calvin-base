@@ -104,7 +104,7 @@ class Authorization(object):
                         else:
                             _log.debug("No authorization server configured, let's try to find one in storage")
                             self.node.storage.get_index(['external_authorization_server'],
-                                                        CalvinCB(self._register_node_cb))
+                                            cb=CalvinCB(self._register_node_cb, key='external_authorization_server'))
                     else:
                         _log.debug("register_node: usage of local authorization server selected\n\tself.node={}".format(self.node))
                         self.pdp.register_node(self.node.id, self.node.attributes.get_indexed_public_with_keys())
@@ -133,8 +133,9 @@ class Authorization(object):
             self.authz_server_id = value[rand]
             #Fetch authorization runtime certificate and verify that it is certified as an
             # authorization server
-            self.node.storage.get_index(['certificate',self.authz_server_id],
-                                        CalvinCB(self._check_authz_certificate_cb, authz_list_key=key, authz_list=value))
+            index = ['certificate',self.authz_server_id]
+            self.node.storage.get_index(index, cb=CalvinCB(self._check_authz_certificate_cb, key="/".join(index),
+                                                            authz_list_key=key, authz_list=value))
 #            self.register_node_external()
         elif registration_search_attempt<10:
             time_to_sleep = 1+registration_search_attempt*registration_search_attempt*registration_search_attempt
@@ -143,7 +144,7 @@ class Authorization(object):
             time.sleep(time_to_sleep)
             registration_search_attempt = registration_search_attempt+1
             self.node.storage.get_index(['external_authorization_server'],
-                                        CalvinCB(self._register_node_cb))
+                                        cb=CalvinCB(self._register_node_cb, key='external_authorization_server'))
         else:
             raise Exception("No athorization server accepting external clients can be found")
 

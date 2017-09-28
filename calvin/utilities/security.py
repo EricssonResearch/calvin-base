@@ -458,7 +458,7 @@ class Security(object):
             return
         #Search for available authorization servers in storage
         self.node.storage.get_index(['authorization_server'],
-                                    cb=CalvinCB(self._send_authorization_runtime_search,
+                                    cb=CalvinCB(self._send_authorization_runtime_search, key='authorization_server',
                                                        counter=0, actor_id=actor_id,
                                                        actorstore_signature=actorstore_signature,
                                                        possible_placements=list(possible_placements),

@@ -107,7 +107,7 @@ class Authentication(object):
                         else:
                             _log.debug("No authentication server configured, let's try to find one in storage")
                             self.node.storage.get_index(['external_authentication_server'],
-                                                        CalvinCB(self._find_auth_server_cb))
+                                        cb=CalvinCB(self._find_auth_server_cb, key='external_authentication_server'))
                     else:
                         _log.error("Local authentication configured but no auth_server_id set, something likely failed in the intialization phase")
                 else:
@@ -127,13 +127,14 @@ class Authentication(object):
         _log.debug("_find_auth_server_cb:"
                    "\n\tkey={}"
                    "\n\tvalue={}"
-                   "\n\tattempt={}".format(key,value, _search_attempt))
+                   "\n\tattempt={}".format(key, value, _search_attempt))
         if value:
             self.auth_server_id = value[0]
             #Fetch authentication runtime certificate and verify that it is certified as an
             # authentication server
-            self.node.storage.get_index(['certificate',self.auth_server_id],
-                                        CalvinCB(self._check_auth_certificate_cb, auth_list_key=key, auth_list=value))
+            index = ['certificate',self.auth_server_id]
+            self.node.storage.get_index(index, cb=CalvinCB(self._check_auth_certificate_cb,
+                                        key="/".join(index), auth_list_key=key, auth_list=value))
         elif _search_attempt<10:
             time_to_sleep = 1+_search_attempt*_search_attempt*_search_attempt
             _log.error("No authentication server found, try again after sleeping {} seconds".format(time_to_sleep))
@@ -141,7 +142,7 @@ class Authentication(object):
             time.sleep(time_to_sleep)
             _search_attempt = _search_attempt+1
             self.node.storage.get_index(['external_authentication_server'],
-                                        CalvinCB(self._find_auth_server_cb))
+                                        cb=CalvinCB(self._find_auth_server_cb, key='external_authentication_server'))
         else:
             raise Exception("No athentication server accepting external clients can be found")
 

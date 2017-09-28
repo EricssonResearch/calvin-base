@@ -27,6 +27,7 @@ from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp
                                                                                               SERVICE_UUID,\
                                                                                               CA_SERVICE_UUID
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
+from calvin.utilities.calvin_callback import CalvinCB
 from calvin.requests import calvinresponse
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
@@ -103,6 +104,7 @@ class TwistedWaitObject(object):
         self._func = func
         self._kwargs = kwargs
         self._callback_class = kwargs.pop("cb")
+        self._include_key = kwargs.pop("_include_key", True)
         d = func(**kwargs)
         d.addCallback(self._callback)
 
@@ -117,7 +119,9 @@ class TwistedWaitObject(object):
                 value = calvinresponse.CalvinResponse(status=calvinresponse.OK) if value is True else value
         self._value = value
         if self._callback_class:
-            self._callback_class(self._kwargs['key'], value)
+            args = [self._kwargs['key']] if self._include_key else []
+            args.append(value)
+            self._callback_class(*args)
             # reactor.callFromThread(self._callback_class, self._kwargs['key'], value)
         self._q.put(self._value)
         self._done = True
@@ -220,8 +224,8 @@ class AutoDHTServer(StorageBase):
     def delete(self, key, cb=None):
         return TwistedWaitObject(self.dht_server.set, key=key, value=None, cb=cb)
 
-    def get_concat(self, key, cb=None):
-        return TwistedWaitObject(self.dht_server.get_concat, key=key, cb=cb)
+    def get_concat(self, key, cb=None, include_key=True):
+        return TwistedWaitObject(self.dht_server.get_concat, key=key, cb=cb, _include_key=include_key)
 
     def append(self, key, value, cb=None):
         # TODO: handle this deeper inside DHT to remove unneccessary serializations
@@ -232,6 +236,43 @@ class AutoDHTServer(StorageBase):
         # TODO: handle this deeper inside DHT to remove unneccessary serializations
         value = json.dumps(value)
         return TwistedWaitObject(self.dht_server.remove, key=key, value=value, cb=cb)
+
+    def _change_index_cb(self, key, value, org_cb, index_items):
+        """
+        Collect all the index levels operations into one callback
+        """
+        _log.debug("index cb key:%s, value:%s, index_items:%s" % (key, value, index_items))
+        # cb False if not already done it at first False value
+        if not value and index_items:
+            org_cb(value=calvinresponse.CalvinResponse(False))
+            del index_items[:]
+        if key in index_items:
+            # remove this index level from list
+            index_items.remove(key)
+            # If all done send True
+            if not index_items:
+                org_cb(value=calvinresponse.CalvinResponse(True))
+
+    def add_index(self, prefix, indexes, value, cb=None):
+        indexstrs = [prefix + '/'+'/'.join(indexes[:l]) for l in range(1,len(indexes)+1)]
+        for i in indexstrs[:]:
+            self.append(key=i, value=value,
+                         cb=CalvinCB(self._change_index_cb, org_cb=cb, index_items=indexstrs) if cb else None)
+
+    def remove_index(self, prefix, indexes, value, cb=None):
+        indexstrs = [prefix + '/'+'/'.join(indexes[:l]) for l in range(1,len(indexes)+1)]
+        for i in indexstrs[:]:
+            self.remove(key=i, value=value,
+                         cb=CalvinCB(self._change_index_cb, org_cb=cb, index_items=indexstrs) if cb else None)
+
+    def get_index(self, prefix, index, cb=None):
+        istr = prefix + '/'+'/'.join(index)
+        self.get_concat(istr, cb=cb, include_key=False)
+
+    def delete_index(self, prefix, indexes, cb=None):
+        indexstrs = [prefix + '/'+'/'.join(indexes[:l]) for l in range(1,len(indexes)+1)]
+        for i in indexstrs[:]:
+            self.delete(key=i, cb=CalvinCB(self._change_index_cb, org_cb=cb, index_items=indexstrs) if cb else None)
 
     def bootstrap(self, addrs, cb=None):
         return TwistedWaitObject(self.dht_server.bootstrap, addr=addrs, cb=cb)

@@ -563,9 +563,9 @@ class GlobalStore(ActorStore):
         """
         signature = GlobalStore.actor_signature(desc)
         self.node.storage.get_index(['actor', 'signature', signature],
-                                    CalvinCB(self._global_lookup_cb, signature=signature, org_cb=cb))
+                                    cb=CalvinCB(self._global_lookup_cb, signature=signature, org_cb=cb))
 
-    def _global_lookup_cb(self, key, value, signature, org_cb):
+    def _global_lookup_cb(self, value, signature, org_cb):
         if value:
             nbr = [len(value)]
             actors = []

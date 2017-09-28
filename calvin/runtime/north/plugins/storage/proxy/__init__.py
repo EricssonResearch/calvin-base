@@ -126,7 +126,8 @@ class StorageProxy(StorageBase):
 
     def send(self, cmd, msg, cb):
         msg_id = calvinuuid.uuid("MSGID")
-        self.replies[msg_id] = cb
+        if cb:
+            self.replies[msg_id] = cb
         msg['msg_uuid'] = msg_id
         self.tunnel.send(dict(msg, cmd=cmd, msg_uuid=msg_id))
 
@@ -162,6 +163,22 @@ class StorageProxy(StorageBase):
     def remove(self, key, value, cb=None):
         _log.analyze(self.node.id, "+ CLIENT", {'key': key, 'value': value})
         self.send(cmd='REMOVE',msg={'key':key, 'value': value}, cb=cb)
+
+    def add_index(self, prefix, indexes, value, cb=None):
+        _log.analyze(self.node.id, "+ CLIENT", {'indexes': indexes, 'value': value})
+        self.send(cmd='ADD_INDEX',msg={'prefix': prefix, 'index': indexes, 'value': value}, cb=cb)
+
+    def remove_index(self, prefix, indexes, value, cb=None):
+        _log.analyze(self.node.id, "+ CLIENT", {'indexes': indexes, 'value': value})
+        self.send(cmd='REMOVE_INDEX',msg={'prefix': prefix, 'index': indexes, 'value': value}, cb=cb)
+
+    def get_index(self, prefix, index, cb=None):
+        _log.analyze(self.node.id, "+ CLIENT", {'index': index})
+        self.send(cmd='GET_INDEX',msg={'prefix': prefix, 'index': index}, cb=cb)
+
+    def delete_index(self, prefix, indexes, cb=None):
+        _log.analyze(self.node.id, "+ CLIENT", {'indexes': indexes})
+        self.send(cmd='DELETE_INDEX',msg={'prefix': prefix, 'index': indexes}, cb=cb)
 
     def bootstrap(self, addrs, cb=None):
         _log.analyze(self.node.id, "+ CLIENT", None)

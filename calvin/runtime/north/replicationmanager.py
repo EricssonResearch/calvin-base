@@ -441,7 +441,7 @@ class ReplicationManager(object):
                 actor._replication_data.check_instances = t
                 self.node.storage.get_replica(actor._replication_data.id, CalvinCB(self._current_actors_cb, actor=actor))
 
-    def _current_actors_cb(self, key, value, actor):
+    def _current_actors_cb(self, value, actor):
         collect_actors = [] if calvinresponse.isfailresponse(value) else value
         missing = set(actor._replication_data.instances) - set(collect_actors + [actor.id])
         for actor_id in missing:

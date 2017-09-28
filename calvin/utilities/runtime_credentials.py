@@ -454,7 +454,7 @@ class RuntimeCredentials():
             else:
                 try:
                     self.node.storage.get_index(['certificate',cert_name],
-                                                CalvinCB(self._get_certificate_from_storage_cb,
+                                                cb=CalvinCB(self._get_certificate_from_storage_cb,
                                                         callback=callback))
                 except Exception as err:
                     _log.debug("Certificate could not be found in storage, err={}".format(err))
@@ -462,8 +462,8 @@ class RuntimeCredentials():
         except Exception as err:
             _log.debug("Failed searching for certificate locally, cert_name={},  err={}".format(cert_name, err))
 
-    def _get_certificate_from_storage_cb(self, key, value, callback):
-        _log.debug("_get_certificate_from_storage_cb, \nkey={}\nvalue={}\n\tcallback={}".format(key, value, callback))
+    def _get_certificate_from_storage_cb(self, value, callback):
+        _log.debug("_get_certificate_from_storage_cb, \nvalue={}\n\tcallback={}".format(value, callback))
         if value:
             nbr = len(value)
             try:

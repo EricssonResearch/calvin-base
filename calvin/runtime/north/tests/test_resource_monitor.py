@@ -48,6 +48,10 @@ class TestCpuMonitor(object):
         self.get_ans = value
         self.done = True
 
+    def cb2(self, value):
+        self.get_ans = value
+        self.done = True
+
     @pytest.inlineCallbacks
     def test_avail_invalid(self):
         """
@@ -81,7 +85,7 @@ class TestCpuMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb))
+            self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -98,7 +102,7 @@ class TestCpuMonitor(object):
 
         # node id must not be present at level 50, only at 25
         self.done = False
-        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25', '50'], cb=CalvinCB(self.cb))
+        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25', '50'], cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.get_ans is None
 
@@ -113,7 +117,7 @@ class TestCpuMonitor(object):
         assert self.get_ans == True
 
         self.done = False
-        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb))
+        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.node.id in self.get_ans
 
@@ -128,13 +132,13 @@ class TestCpuMonitor(object):
 
         # node id must not be present at level 25
         self.done = False
-        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb))
+        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.get_ans is None
 
         # no node in total indexes
         self.done = False
-        self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + ['1'], cb=CalvinCB(self.cb))
+        self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + ['1'], cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.get_ans is None
 
@@ -155,7 +159,7 @@ class TestCpuMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb))
+            self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -218,7 +222,7 @@ class TestMemMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb))
+            self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -235,7 +239,7 @@ class TestMemMonitor(object):
 
         # node id must not be present at level 50, only at 25
         self.done = False
-        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25', '50'], cb=CalvinCB(self.cb))
+        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25', '50'], cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.get_ans is None
 
@@ -250,7 +254,7 @@ class TestMemMonitor(object):
         assert self.get_ans == True
 
         self.done = False
-        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb))
+        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.node.id in self.get_ans
 
@@ -265,13 +269,13 @@ class TestMemMonitor(object):
 
         # node id must not be present at level 25
         self.done = False
-        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb))
+        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.get_ans is None
 
         # no node in total indexes
         self.done = False
-        self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + ['1K'], cb=CalvinCB(self.cb))
+        self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + ['1K'], cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.get_ans is None
 
@@ -292,6 +296,6 @@ class TestMemMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb))
+            self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans

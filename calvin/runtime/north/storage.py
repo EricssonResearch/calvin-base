@@ -29,6 +29,7 @@ from calvin.requests import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 import re
+import itertools
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
@@ -87,8 +88,12 @@ class Storage(object):
                              cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
         for key, value in self.localstore_sets.iteritems():
-            self._flush_append(key, value['+'])
-            self._flush_remove(key, value['-'])
+            if isinstance(key, tuple):
+                self._flush_add_index(key, value['+'])
+                self._flush_remove_index(key, value['-'])
+            else:
+                self._flush_append(key, value['+'])
+                self._flush_remove(key, value['-'])
 
     def _flush_append(self, key, value):
         if not value:
@@ -105,6 +110,23 @@ class Storage(object):
         _log.debug("Flush remove on key %s: %s" % (key, list(value)))
         self.storage.remove(key=key, value=list(value),
                             cb=CalvinCB(func=self.remove_cb, org_key=None, org_value=None, org_cb=None, silent=True))
+
+
+    def _flush_add_index(self, key, value):
+        if not value:
+            return
+
+        _log.debug("Flush add_index on %s: %s" % (key, list(value)))
+        self.storage.add_index(prefix="index-", indexes=list(key), value=list(value),
+            cb=CalvinCB(self.add_index_cb, org_value=value, org_cb=None, index_items=list(key), silent=True))
+
+    def _flush_remove_index(self, key, value):
+        if not value:
+            return
+
+        _log.debug("Flush remove_index on %s: %s" % (key, list(value)))
+        self.storage.remove_index(prefix="index-", index=list(key), value=list(value),
+            cb=CalvinCB(self.remove_index_cb, org_value=value, org_cb=None, index_items=list(key), silent=True))
 
     def started_cb(self, *args, **kwargs):
         """ Called when storage has started, flushes localstore
@@ -156,7 +178,12 @@ class Storage(object):
                             'APPEND': self.append,
                             'REMOVE': self.remove,
                             'DELETE': self.delete,
-                            'REPLY': self._proxy_reply}
+                            'REPLY': self._proxy_reply,
+                            'ADD_INDEX': self.add_index,
+                            'REMOVE_INDEX': self.remove_index,
+                            'GET_INDEX': self.get_index,
+                            'DELETE_INDEX': self.delete_index
+                            }
         try:
             self.node.proto.register_tunnel_handler('storage', CalvinCB(self.tunnel_request_handles))
         except:
@@ -331,60 +358,6 @@ class Storage(object):
                 _log.error("Failed to get: %s" % key, exc_info=True)
             async.DelayedCall(0, cb, key=key, value=local_list if local_list else None)
 
-    def get_concat_iter_cb(self, key, value, org_key, include_key, it):
-        """ get callback
-        """
-        _log.analyze(self.node.id, "+ BEGIN", {'key': org_key, 'value': value, 'iter': str(it)})
-        if calvinresponse.isnotfailresponse(value):
-            _log.analyze(self.node.id, "+ VALUE", {'value': value, 'key': org_key})
-            if isinstance(value, (list, tuple, set)):
-                it.extend([(org_key, v) for v in value] if include_key else value)
-        it.final()
-        _log.analyze(self.node.id, "+ END", {'key': org_key, 'iter': str(it)})
-
-    def get_concat_iter(self, prefix, key, include_key=False):
-        """ Get multiple values for registry key: prefix+key,
-            union of locally added but not yet distributed values
-            and values added by others.
-            It is assumed that the prefix and key are strings,
-            the sum has to be an immutable object.
-            Values are placed in returned dynamic iterable object.
-            When the parameter include_key is True a tuple of (key, value)
-            is placed in dynamic iterable object instead of only the retrived value.
-            The dynamic iterable are of the List subclass to
-            calvin.utilities.dynops.DynOps, see DynOps for details
-            of how they are used. The final method will be called when
-            all values are appended to the returned dynamic iterable.
-
-            The registry can be eventually consistent,
-            e.g. a removal of a value might only have reached part of a
-            distributed registry and hence still be part of returned
-            list of values, it may also miss values added by others but
-            not yet distributed.
-        """
-        _log.analyze(self.node.id, "+ BEGIN", {'key': key})
-        if prefix + key in self.localstore_sets:
-            _log.analyze(self.node.id, "+ GET LOCAL", None)
-            value = self.localstore_sets[prefix + key]
-            # Return the set that we intended to append since that's all we have until it is synced
-            local_list = list(value['+'])
-            _log.analyze(self.node.id, "+", {'value': local_list, 'key': key})
-        else:
-            local_list = []
-        if include_key:
-            local_list = [(key, v) for v in local_list]
-        it = dynops.List(local_list)
-        try:
-            self.storage.get_concat(key=prefix + key,
-                            cb=CalvinCB(func=self.get_concat_iter_cb, org_key=key,
-                                        include_key=include_key, it=it))
-        except:
-            if self.started:
-                _log.error("Failed to get: %s" % key, exc_info=True)
-            it.final()
-        _log.analyze(self.node.id, "+ END", {'key': key, 'iter': str(it)})
-        return it
-
     def append_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ append callback, on error retry after flush_timeout
         """
@@ -495,24 +468,6 @@ class Storage(object):
             if cb:
                 cb(key, calvinresponse.CalvinResponse(True))
 
-    def index_cb(self, key, value, org_cb, index_items):
-        """
-        Collect all the index levels operations into one callback
-        """
-        _log.debug("index cb key:%s, value:%s, index_items:%s" % (key, value, index_items))
-        #org_key = key.partition("-")[2]
-        org_key = key
-        # cb False if not already done it at first False value
-        if not value and index_items:
-            org_cb(key=org_key, value=calvinresponse.CalvinResponse(False))
-            del index_items[:]
-        if org_key in index_items:
-            # remove this index level from list
-            index_items.remove(org_key)
-            # If all done send True
-            if not index_items:
-                org_cb(key=org_key, value=calvinresponse.CalvinResponse(True))
-
     def _index_strings(self, index, root_prefix_level):
         # Make the list of index levels that should be used
         # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
@@ -520,48 +475,90 @@ class Storage(object):
             items = index
         else:
             items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
-        root = "/".join(items[:root_prefix_level])
-        del items[:root_prefix_level]
-        items.insert(0, root)
+        if root_prefix_level > 0:
+            root = "/".join(items[:root_prefix_level])
+            del items[:root_prefix_level]
+            items.insert(0, root)
 
-        # index strings for all levels
-        indexes = ['/'+'/'.join(items[:l]) for l in range(1,len(items)+1)]
-        return indexes
+        return items
 
-    def add_index(self, index, value, root_prefix_level=3, cb=None):
+    def add_index_cb(self, value, org_value, org_cb, index_items, silent=False):
+        _log.debug("add index cb value:%s, index_items:%s" % (value, index_items))
+        key = tuple(index_items)
+        if value:
+            # Success
+            if key in self.localstore_sets:
+                self.localstore_sets[key]['+'] -= set(org_value)
+                if not self.localstore_sets[key]['-'] and not self.localstore_sets[key]['+']:
+                    del self.localstore_sets[key]
+                self.reset_flush_timeout()
+        else:
+            if not silent:
+                _log.warning("Failed to update %s" % key)
+
+        if org_cb:
+            org_cb(value=value)
+        self.trigger_flush()
+
+    def add_index(self, index, value, root_prefix_level=2, cb=None):
         """
-        Add single value (e.g. a node id) to a set stored in registry
+        Add single value (e.g. a node id) or list to a set stored in registry
         later retrivable for each level of the index.
         index: The multilevel key:
                a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
                index string must been escaped with \/ and \\ for / and \ within levels
                OR a list of each levels strings
-        value: the value that is to be added to the set stored at each level of the index
+        value: the value or list that is to be added to the set stored at each level of the index
         root_prefix_level: the top level of the index that can be searched separately,
                with e.g. =1 then node/address can't be split
-        cb: Callback with signature cb(key=key, value=<CalvinResponse>)
-            note that the key here is without the prefix and
+        cb: Callback with signature cb(value=<CalvinResponse>)
             value indicate success.
         """
 
-        # TODO this implementation will store the value to each level of the index.
-        # When time permits a proper implementation should be done with for example
-        # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in.
-
         _log.debug("add index %s: %s" % (index, value))
-
+        # Get a list of the index levels
         indexes = self._index_strings(index, root_prefix_level)
+        # For local cache storage make the indexes the key
+        key = tuple(indexes)
+        # Make sure we send in a list as value
+        value = list(value) if isinstance(value, (list, set, tuple)) else [value]
 
-        # make copy of indexes since altered in callbacks
-        for i in indexes[:]:
-            self.append(prefix="index-", key=i, value=[value],
-                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
+        if key in self.localstore_sets:
+            # Append value items
+            self.localstore_sets[key]['+'] |= set(value)
+            # Don't remove value items any more
+            self.localstore_sets[key]['-'] -= set(value)
+        else:
+            self.localstore_sets[key] = {'+': set(value), '-': set([])}
+
+        if self.started:
+            self.storage.add_index(prefix="index-", indexes=indexes, value=value,
+                cb=CalvinCB(self.add_index_cb, org_cb=cb, index_items=indexes, org_value=value))
+        elif cb:
+            cb(value=calvinresponse.CalvinResponse(True))
+
+    def remove_index_cb(self, value, org_value, org_cb, index_items, silent=False):
+        _log.debug("remove index cb value:%s, index_items:%s" % (value, index_items))
+        key = tuple(index_items)
+        if value:
+            # Success
+            if key in self.localstore_sets:
+                self.localstore_sets[key]['-'] -= set(org_value)
+                if not self.localstore_sets[key]['-'] and not self.localstore_sets[key]['+']:
+                    del self.localstore_sets[key]
+                self.reset_flush_timeout()
+        else:
+            if not silent:
+                _log.warning("Failed to update %s" % key)
+
+        if org_cb:
+            org_cb(value=value)
+        self.trigger_flush()
 
     def remove_index(self, index, value, root_prefix_level=2, cb=None):
         """
-        Remove single value (e.g. a node id) from a set stored in registry
+        Remove single value (e.g. a node id) or list from a set stored in registry
         index: The multilevel key:
                a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
@@ -569,7 +566,7 @@ class Storage(object):
                node/affiliation/name/com.ericsson/laptop,
                index string must been escaped with \/ and \\ for / and \ within levels
                OR a list of each levels strings
-        value: the value that is to be removed from the set stored at each level of the index
+        value: the value or list that is to be removed from the set stored at each level of the index
         root_prefix_level: the top level of the index that can be searched separately,
                with e.g. =1 then node/address can't be split
         cb: Callback with signature cb(key=key, value=True/False)
@@ -577,23 +574,27 @@ class Storage(object):
             value indicate success.
         """
 
-        # TODO this implementation will delete the value to each level of the index.
-        # When time permits a proper implementation should be done with for example
-        # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in.
-
-        # TODO Currently we don't go deeper than the specified index for a remove,
-        # e.g. node/affiliation/owner/com.ericsson would remove the value from
-        # all deeper indeces. But no current use case exist either.
-
         _log.debug("remove index %s: %s" % (index, value))
-
+        # Get a list of the index levels
         indexes = self._index_strings(index, root_prefix_level)
+        # For local cache storage make the indexes the key
+        key = tuple(indexes)
+        # Make sure we send in a list as value
+        value = list(value) if isinstance(value, (list, set, tuple)) else [value]
 
-        # make copy of indexes since altered in callbacks
-        for i in indexes[:]:
-            self.remove(prefix="index-", key=i, value=[value],
-                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
+        if key in self.localstore_sets:
+            # Remove value items
+            self.localstore_sets[key]['+'] -= set(value)
+            # Do remove value items
+            self.localstore_sets[key]['-'] |= set(value)
+        else:
+            self.localstore_sets[key] = {'+': set([]), '-': set(value)}
+
+        if self.started:
+            self.storage.remove_index(prefix="index-", indexes=indexes, value=value,
+                cb=CalvinCB(self.remove_index_cb, org_cb=cb, index_items=indexes, org_value=value))
+        elif cb:
+            cb(value=calvinresponse.CalvinResponse(True))
 
     def delete_index(self, index, root_prefix_level=2, cb=None):
         """
@@ -619,7 +620,20 @@ class Storage(object):
             self.delete(prefix="index-", key=i,
                         cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
 
-    def get_index(self, index, cb=None):
+    def get_index_cb(self, value, local_values, org_cb, index_items, silent=False):
+        _log.debug("get index cb value:%s, index_items:%s" % (value, index_items))
+        if value:
+            # Success
+            value = set(value).union(local_values)
+        else:
+            value = local_values
+            if not silent:
+                _log.warning("Failed to find %s" % "/".join(index_items))
+
+        if org_cb:
+            org_cb(value=list(value) if value else calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
+
+    def get_index(self, index, root_prefix_level=2, cb=None):
         """
         Get multiple values from the registry stored at the index level or
         below it in hierarchy.
@@ -640,20 +654,25 @@ class Storage(object):
         not yet distributed.
         """
 
-        # TODO this implementation will get the value from the level of the index.
-        # When time permits a proper implementation should be done with for example
-        # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in.
-
-        if isinstance(index, list):
-            index = "/".join(index)
-
-        if not index.startswith("/"):
-            index = "/" + index
         _log.debug("get index %s" % (index))
-        self.get_concat(prefix="index-", key=index, cb=cb)
+        indexes = self._index_strings(index, root_prefix_level)
+        istr = "/".join(indexes)
+        local_values = set(itertools.chain(
+                            *(v['+'] for k, v in self.localstore_sets.items() if "/".join(k).startswith(istr))))
+        
+        if self.started:
+            self.storage.get_index(prefix="index-", index=indexes,
+                cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
+        elif cb:
+            cb(value=list(local_values) if local_values else calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
 
-    def get_index_iter(self, index, include_key=False):
+    def get_index_iter_cb(self, value, it, org_key, include_key=False):
+        _log.debug("get index iter cb key: %s value: %s" % (org_key, value))
+        if calvinresponse.isnotfailresponse(value):
+            it.extend([(org_key, v) for v in value] if include_key else value)
+        it.final()
+
+    def get_index_iter(self, index, include_key=False, root_prefix_level=2):
         """
         Get multiple values from the registry stored at the index level or
         below it in hierarchy.
@@ -673,26 +692,15 @@ class Storage(object):
             calvin.utilities.dynops.DynOps, see DynOps for details
             of how they are used. The final method will be called when
             all values are appended to the returned dynamic iterable.
-
-        The registry can be eventually consistent,
-        e.g. a removal of a value might only have reached part of a
-        distributed registry and hence still be part of returned
-        list of values, it may also miss values added by others but
-        not yet distributed.
         """
-
-        # TODO this implementation will get the value from the level of the index.
-        # When time permits a proper implementation should be done with for example
-        # a prefix hash table on top of the DHT or using other storage backend with
-        # prefix search built in.
-
-        if isinstance(index, list):
-            index = "/".join(index)
-
-        if not index.startswith("/"):
-            index = "/" + index
         _log.debug("get index iter %s" % (index))
-        return self.get_concat_iter(prefix="index-", key=index, include_key=include_key)
+        indexes = self._index_strings(index, root_prefix_level)
+        org_key = "/".join(indexes)
+        # TODO push also iterable into plugin?
+        it = dynops.List()
+        self.get_index(index=index, root_prefix_level=root_prefix_level, 
+            cb=CalvinCB(self.get_index_iter_cb, it=it, include_key=include_key, org_key=org_key))
+        return it
 
     ### Calvin object handling ###
 
@@ -1001,10 +1009,16 @@ class Storage(object):
         if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
             # Call this nodes storage methods, which could be local or DHT,
             # prefix is empty since that is already in the key (due to these calls come from the storage plugin level).
+            kwargs = {k: v for k, v in payload.iteritems() if k in ('key', 'value', 'prefix', 'index')}
+            kwargs.setdefault('prefix', "")
+            if payload['cmd'].endswith("_INDEX"):
+                kwargs.pop('prefix')
+                kwargs['root_prefix_level'] = 0
+                dummykey = {'key': None}
+            else:
+                dummykey = {}
             self._proxy_cmds[payload['cmd']](cb=CalvinCB(self._proxy_send_reply, tunnel=tunnel,
-                                                         msgid=payload['msg_uuid']),
-                                             prefix="",
-                                             **{k: v for k, v in payload.iteritems() if k in ('key', 'value')})
+                                                         msgid=payload['msg_uuid'], **dummykey), **kwargs)
         else:
             _log.error("Unknown storage proxy request %s" % payload['cmd'] if 'cmd' in payload else "")
 
@@ -1014,4 +1028,7 @@ class Storage(object):
         status = isinstance(value, calvinresponse.CalvinResponse)
         svalue = value.encode() if status else value
         response = 'response' if status else 'value'
-        tunnel.send({'cmd': 'REPLY', 'msg_uuid': msgid, 'key': key, response: svalue})
+        kwargs = {'cmd': 'REPLY', 'msg_uuid': msgid, response: svalue}
+        if key is not None:
+            kwargs['key'] = key
+        tunnel.send(kwargs)

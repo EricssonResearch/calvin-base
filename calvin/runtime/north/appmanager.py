@@ -259,7 +259,7 @@ class AppManager(object):
         if application.complete_node_info() and not application.replication_ids and not application.actor_replicas:
             self._destroy_final(application)
 
-    def _replicas_cb(self, key, value, replication_id, master_id, application):
+    def _replicas_cb(self, value, replication_id, master_id, application):
         application.replication_ids.remove(replication_id)
         if isinstance(value, (list, tuple, set)):
             application.actor_replicas.extend(value)

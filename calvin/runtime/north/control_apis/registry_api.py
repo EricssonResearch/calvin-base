@@ -4,6 +4,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 from routes import handler, register, uuid_re
 from authentication import authentication_decorator
+from calvin.utilities.attribute_resolver import format_index_string
 
 _log = get_logger(__name__)
 
@@ -66,10 +67,10 @@ def index_cb(self, handle, connection, *args, **kwargs):
 
 
 @register
-def get_index_cb(self, handle, connection, key, value, *args, **kwargs):
+def get_index_cb(self, handle, connection, value, *args, **kwargs):
     """ Index operation response
     """
-    _log.debug("get index cb (in control) %s, %s" % (key, value))
+    _log.debug("get index cb (in control) %s" % (value))
     self.send_response(handle, connection, None if value is None else json.dumps({'result': value}),
                        status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
 

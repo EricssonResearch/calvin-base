@@ -80,6 +80,18 @@ class StorageBase(object):
     def remove(self, key, value, cb=None):
         raise NotImplementedError()
 
+    def add_index(self, prefix, indexes, value, cb=None):
+        raise NotImplementedError()
+
+    def remove_index(self, prefix, indexes, value, cb=None):
+        raise NotImplementedError()
+
+    def get_index(self, prefix, index, cb=None):
+        raise NotImplementedError()
+
+    def delete_index(self, prefix, indexes, cb=None):
+        raise NotImplementedError()
+
     def bootstrap(self, addrs, cb=None):
         raise NotImplementedError()
 

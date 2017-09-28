@@ -88,6 +88,11 @@ QUERY_DELETE = """
 DELETE FROM {db}.ckeys WHERE keystr='{{keystr}}';
 """.format(db=config_kwargs['db'])
 
+# Due to value tabels have foreign key for id the values will also be deleted
+QUERY_DELETE_MANY = """
+DELETE FROM {db}.ckeys WHERE {{keystr}};
+""".format(db=config_kwargs['db'])
+
 QUERY_APPEND = [q.format(db=config_kwargs['db']) for q in ["""
 INSERT IGNORE INTO {db}.ckeys (keystr) VALUES('{{keystr}}');
 """, """
@@ -103,6 +108,11 @@ DELETE FROM {db}.csetvalues WHERE
 QUERY_GETCONCAT = """
 SELECT valuestr FROM {db}.csetvalues WHERE
     id IN (SELECT id FROM {db}.ckeys WHERE keystr='{{keystr}}');
+""".format(db=config_kwargs['db'])
+
+QUERY_GET_INDEX = """
+SELECT valuestr FROM {db}.csetvalues WHERE
+    id IN (SELECT id FROM {db}.ckeys WHERE keystr LIKE '{{keystr}}%');
 """.format(db=config_kwargs['db'])
 
 class SqlClient(StorageBase):
@@ -224,8 +234,8 @@ class SqlClient(StorageBase):
     def delete(self, key, cb=None):
         _log.debug("SQL delete %s" % (key,))
         d1 = self.dbpool.runQuery(QUERY_DELETE.format(keystr=key))
-        d1.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key),
-                        CalvinCB(self._set_fail_cb, cb=cb, key=key))
+        d1.addCallbacks(CalvinCB(self._delete_cb, cb=cb, key=key),
+                        CalvinCB(self._delete_fail_cb, cb=cb, key=key))
 
     def _delete_cb(self, result, **kwargs):
         _log.debug("SQL delete OK")
@@ -268,7 +278,10 @@ class SqlClient(StorageBase):
             extracted_result = []
         _log.debug("SQL get_concat OK %s %s" % (result, extracted_result))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, extracted_result))
+            if key is None:
+                async.DelayedCall(0, CalvinCB(cb, extracted_result))
+            else:
+                async.DelayedCall(0, CalvinCB(cb, key, extracted_result))
 
     def _getconcat_fail_cb(self, failure, **kwargs):
         _log.debug("SQL get_concat FAIL")
@@ -283,7 +296,10 @@ class SqlClient(StorageBase):
         _log.debug("SQL get_concat %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
             # FIXME: Should this be empty list?
-            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=calvinresponse.NOT_FOUND)))
+            if key is None:
+                async.DelayedCall(0, CalvinCB(cb, calvinresponse.CalvinResponse(status=calvinresponse.NOT_FOUND)))
+            else:
+                async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=calvinresponse.NOT_FOUND)))
 
     def append(self, key, value, cb=None):
         _log.debug("SQL append %s to %s" % (value, key))
@@ -351,6 +367,31 @@ class SqlClient(StorageBase):
         _log.debug("SQL remove %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
             async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
+
+    def add_index(self, prefix, indexes, value, cb=None):
+        _log.debug("SQL add_index %s %s" % (indexes, value))
+        key = prefix + '/'+'/'.join(indexes)
+        self.append(key, value, cb=cb)
+
+    def remove_index(self, prefix, indexes, value, cb=None):
+        _log.debug("SQL remove_index %s %s" % (indexes, value))
+        key = prefix + '/'+'/'.join(indexes)
+        self.remove(key, value, cb=cb)
+
+    def get_index(self, prefix, index, cb=None):
+        _log.debug("SQL get_index %s" % (index,))
+        key = prefix + '/'+'/'.join(index)
+        d = self.dbpool.runQuery(QUERY_GET_INDEX.format(keystr=key))
+        d.addCallbacks(CalvinCB(self._getconcat_cb, cb=cb), CalvinCB(self._getconcat_fail_cb, cb=cb))
+        _log.debug("SQL get_index %s requested" % (key,))
+
+    def delete_index(self, prefix, indexes, cb=None):
+        _log.debug("SQL delete_index %s" % (indexes,))
+        indexstrs = [prefix + '/'+'/'.join(indexes[:l]) for l in range(1,len(indexes)+1)]
+        key = "keystr='" + "' OR keystr='".join(indexstrs) + "'"
+        d1 = self.dbpool.runQuery(QUERY_DELETE_MANY.format(keystr=key))
+        d1.addCallbacks(CalvinCB(self._delete_cb, cb=cb, key=key),
+                        CalvinCB(self._delete_fail_cb, cb=cb, key=key))
 
     def bootstrap(self, addrs, cb=None):
         _log.debug("SQL bootstrap")
