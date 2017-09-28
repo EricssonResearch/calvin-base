@@ -4360,7 +4360,10 @@ def nbr_replicas(request):
     return request.param
 
 
-@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
+@pytest.mark.skipif(
+    calvinconfig.get().get("testing","proxy_storage") != 1 and 
+    calvinconfig.get().get("testing","force_replication") != 1,
+    reason="Will fail on some systems with DHT")
 @pytest.mark.essential
 @pytest.mark.slow
 class TestReplication(object):
