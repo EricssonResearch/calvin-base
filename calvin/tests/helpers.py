@@ -9,6 +9,7 @@ import multiprocessing
 import copy
 import numbers
 import netifaces
+import json
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
@@ -739,6 +740,11 @@ def start_runtime0(runtimes, rt, hostname, request_handler, tls=False, enroll_pa
     except:
         logfile = None
         outfile = None
+    try:
+        # Dump attribute file to allow manual check of starting runtimes later
+        json.dump(runtimes[0]["attributes"], open("/tmp/calvin5000.attr", "w"))
+    except:
+        pass
     csruntime(hostname, port=5000, controlport=5020, attr=runtimes[0]["attributes"],
                loglevel=_config_pytest.getoption("loglevel"), logfile=logfile, outfile=outfile,
                configfile="/tmp/calvin5000.conf")
@@ -763,6 +769,11 @@ def start_other_runtimes(runtimes, rt, hostname, request_handler, tls=False):
         except:
             logfile = None
             outfile = None
+        try:
+            # Dump attribute file to allow manual check of starting runtimes later
+            json.dump(runtimes[0]["attributes"], open("/tmp/calvin500{}.attr".format(i), "w"))
+        except:
+            pass
         csruntime(hostname,
                   port=5000+i,
                   controlport=5020+i,
