@@ -24,23 +24,11 @@ class Button(Actor):
       state : Button state 1=pressed, 0=not pressed
     """
 
-    @manage(include = ["text"])
+    @manage(include = ["text", "button"])
     def init(self, text="Button"):
         self.button = None
         self.text = text
-        self.setup()
-
-    def setup(self):
         self.button = calvinsys.open(self, "io.button", text=self.text)
-
-    def will_migrate(self):
-        calvinsys.close(self.button)
-
-    def will_end(self):
-        calvinsys.close(self.button)
-
-    def did_migrate(self):
-        self.setup()
 
     @stateguard(lambda self: self.button and calvinsys.can_read(self.button))
     @condition([], ["state"])
