@@ -50,7 +50,7 @@ setup(name='calvin',
           'PyJWT==1.4.0',
           'service-identity==17.0.0',
           'ndg-httpsclient==0.4.2',
-          'pyasn1==0.1.9',
+          'pyasn1==0.3.6',
           'pystache==0.5.4',
           'jsonschema==2.6.0'
       ],
