@@ -27,7 +27,6 @@ class Light(Actor):
 
     @manage(include = ["light"])
     def init(self):
-        self.light= None
         self.light = calvinsys.open(self, "io.light")
 
     @stateguard(lambda self: self.light and calvinsys.can_write(self.light))
