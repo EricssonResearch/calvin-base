@@ -98,6 +98,7 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
         import time
         self._timeout = state["timeout"]
         self._repeats = state["repeats"]
+        self._triggered = False
         if state["nexttrigger"]:
             timeout = state["nexttrigger"] - time.time()
             if timeout < 0: 
