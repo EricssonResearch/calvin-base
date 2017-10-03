@@ -22,7 +22,7 @@ class DistanceBase(object):
         self._actor = actor
         self._new_measurement = distance_callback
 
-    def start(self, frequency):
+    def start(self, period):
         pass
 
     def stop(self):

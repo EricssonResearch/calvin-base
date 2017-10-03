@@ -34,8 +34,8 @@ class Distance(object):
         self._has_data = True
         self._node.sched.trigger_loop(actor_ids=[self._actor])
 
-    def start(self, frequency):
-        self._distance.start(frequency)
+    def start(self, period):
+        self._distance.start(period)
 
     def stop(self):
         self._distance.stop()

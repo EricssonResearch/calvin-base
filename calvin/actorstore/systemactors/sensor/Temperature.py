@@ -22,15 +22,15 @@ _log = get_logger(__name__)
 class Temperature(Actor):
 
     """
-    Measure temperature. Takes the frequency of measurements, in Hz, as input.
+    Measure temperature. Takes the period of measurements, in seconds, as input.
 
     Outputs:
         centigrade :  temperature, in centigrade
     """
 
-    @manage(['frequency', 'timer', 'temperature'])
-    def init(self, frequency):
-        self.frequency = frequency
+    @manage(['period', 'timer', 'temperature'])
+    def init(self, period):
+        self.period = period
         self.temperature = calvinsys.open(self, "io.temperature")
         self.timer = calvinsys.open(self, "sys.timer.once")
         calvinsys.write(self.timer, 0)
@@ -40,7 +40,7 @@ class Temperature(Actor):
     def read_measurement(self):
         value = calvinsys.read(self.temperature)
         # reset timer
-        calvinsys.write(self.timer, 1.0/self.frequency)
+        calvinsys.write(self.timer, self.period)
         return (value,)
 
     @stateguard(lambda self: calvinsys.can_read(self.timer) and calvinsys.can_write(self.temperature))

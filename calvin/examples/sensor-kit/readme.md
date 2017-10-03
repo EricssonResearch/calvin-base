@@ -83,10 +83,10 @@ Config entry in `capabilities` list:
 
 ```
 io.button: {
-    "comment": "Push-to-make button", 
+    "comment": "Push-to-make button",
     "attributes": {
         "switch_pin": 16
-    }, 
+    },
     "module": "io.ky040knob.raspberry_pi.PIGPIOKY040"
 }
 ```
@@ -114,11 +114,11 @@ Config entry in `capabilities` list:
 
 ```
 io.knob: {
-    "comment": "Rotary encoder", 
+    "comment": "Rotary encoder",
     "attributes": {
-        "data_pin": 17, 
+        "data_pin": 17,
         "clock_pin": 18
-    }, 
+    },
     "module": "io.ky040knob.raspberry_pi.PIGPIOKY040"
 }
 ```
@@ -160,9 +160,9 @@ Config entry in `capabilities` list:
 ```
 io.distance: {
     "attributes": {
-        "echo_pin": 21, 
+        "echo_pin": 21,
         "trigger_pin": 20
-    }, 
+    },
     "module": "io.sr04distance.raspberry_pi.GPIOSR04"
 }
 ```
@@ -170,7 +170,7 @@ io.distance: {
 Usage example:
 
 ```
-distance : sensor.Distance(frequency=5)
+distance : sensor.Distance(period=0.2)
 out : io.Print()
 
 distance.meters > out.token
@@ -180,7 +180,7 @@ distance.meters > out.token
 
 ### Temperature sensor ([KY-001][KY-001]) <a name="_KY-001"></a>
 
-Default pin(s): 
+Default pin(s):
 
 ![KY-001][KY-001-img]
 
@@ -188,10 +188,10 @@ Config entry in `capabilities` list:
 
 ```
 io.temperature: {
-    "comment": "This device talks 1-wire on pin GPIO4", 
+    "comment": "This device talks 1-wire on pin GPIO4",
     "attributes": {
         "id": "n/a"
-    }, 
+    },
     "module": "io.ds18b20thermometer.raspberry_pi.DS18B20"
 }
 ```
@@ -199,7 +199,7 @@ io.temperature: {
 Usage example:
 
 ```
-temperature : sensor.Temperature(frequency=1)
+temperature : sensor.Temperature(period=1)
 out : io.Print()
 
 temperature.centigrade > out.token
@@ -221,7 +221,7 @@ Config entry in `capabilities` list:
 io.humidity: {
     "attributes": {
         "pin": 19
-    }, 
+    },
     "module": "io.dht11temphumidity.raspberry_pi.DHT11"
 }
 ```
@@ -249,11 +249,11 @@ Config entry in `capabilities` list:
 ```
 io.hallswitch: {
     "attributes": {
-        "pull": "OFF", 
-        "direction": "IN", 
-        "edge": "BOTH", 
+        "pull": "OFF",
+        "direction": "IN",
+        "edge": "BOTH",
         "pin": 23
-    }, 
+    },
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -268,12 +268,12 @@ Config entry in `capabilities` list:
 ```
 io.tiltswitch: {
     "attributes": {
-        "pull": "DOWN", 
-        "direction": "IN", 
-        "edge": "BOTH", 
-        "pin": 13, 
+        "pull": "DOWN",
+        "direction": "IN",
+        "edge": "BOTH",
+        "pin": 13,
         "bouncetime": 200
-    }, 
+    },
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -302,12 +302,12 @@ Config entry in `capabilities` list:
 ```
 io.knocksensor: {
     "attributes": {
-        "pull": "DOWN", 
-        "direction": "IN", 
-        "edge": "BOTH", 
-        "pin": 13, 
+        "pull": "DOWN",
+        "direction": "IN",
+        "edge": "BOTH",
+        "pin": 13,
         "bouncetime": 200
-    }, 
+    },
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -326,12 +326,12 @@ Config entry in `capabilities` list:
 ```
 io.lightbreaker: {
     "attributes": {
-        "pull": "DOWN", 
-        "direction": "IN", 
-        "edge": "BOTH", 
-        "pin": 22, 
+        "pull": "DOWN",
+        "direction": "IN",
+        "edge": "BOTH",
+        "pin": 22,
         "bouncetime": 200
-    }, 
+    },
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -361,11 +361,11 @@ Config entry in `capabilities` list:
 
 ```
 io.light: {
-    "comment": "Digital out, use with LED + 150 Ohm resistor", 
+    "comment": "Digital out, use with LED + 150 Ohm resistor",
     "attributes": {
-        "direction": "OUT", 
+        "direction": "OUT",
         "pin": 5
-    }, 
+    },
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -398,9 +398,9 @@ Config entry in `capabilities` list:
 io.pwm: {
     "attributes": {
         "frequency": 50, 
-        "pin": 26, 
+        "pin": 26,
         "dutycycle": 50
-    }, 
+    },
     "module": "io.pwm.raspberry_pi.PIGPIOPWM"
 }
 ```
@@ -420,11 +420,11 @@ Config entry in `capabilities` list:
 
 ```
 io.buzzer: {
-    "comment": "Active buzzer (KY-012, GND -> 'S', GPIO pin to '-')", 
+    "comment": "Active buzzer (KY-012, GND -> 'S', GPIO pin to '-')",
     "attributes": {
-        "direction": "OUT", 
+        "direction": "OUT",
         "pin": 12
-    }, 
+    },
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -490,4 +490,3 @@ buzzer: io.Buzzer()
 [Distance-img]: images/Distance.png
 [LED-img]: images/LED.png
 [PWM-img]: images/PWM.png
-

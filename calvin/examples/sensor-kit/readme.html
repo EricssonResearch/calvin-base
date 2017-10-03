@@ -58,10 +58,10 @@ GND     -  |39   40|  21   sclk    |
 <p><img src="images/KY-004.png" alt="KY-004" /></p>
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.button: {
-    &quot;comment&quot;: &quot;Push-to-make button&quot;, 
+    &quot;comment&quot;: &quot;Push-to-make button&quot;,
     &quot;attributes&quot;: {
         &quot;switch_pin&quot;: 16
-    }, 
+    },
     &quot;module&quot;: &quot;io.ky040knob.raspberry_pi.PIGPIOKY040&quot;
 }</code></pre>
 <p>Usage example:</p>
@@ -76,11 +76,11 @@ in.state &gt; out.token
 <p><img src="images/KY-040.png" alt="KY-040" /></p>
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.knob: {
-    &quot;comment&quot;: &quot;Rotary encoder&quot;, 
+    &quot;comment&quot;: &quot;Rotary encoder&quot;,
     &quot;attributes&quot;: {
-        &quot;data_pin&quot;: 17, 
+        &quot;data_pin&quot;: 17,
         &quot;clock_pin&quot;: 18
-    }, 
+    },
     &quot;module&quot;: &quot;io.ky040knob.raspberry_pi.PIGPIOKY040&quot;
 }</code></pre>
 <p>Usage example:</p>
@@ -109,13 +109,13 @@ add.result &gt; dimmer.dutycycle
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.distance: {
     &quot;attributes&quot;: {
-        &quot;echo_pin&quot;: 21, 
+        &quot;echo_pin&quot;: 21,
         &quot;trigger_pin&quot;: 20
-    }, 
+    },
     &quot;module&quot;: &quot;io.sr04distance.raspberry_pi.GPIOSR04&quot;
 }</code></pre>
 <p>Usage example:</p>
-<pre><code>distance : sensor.Distance(frequency=5)
+<pre><code>distance : sensor.Distance(period=0.2)
 out : io.Print()
 
 distance.meters &gt; out.token
@@ -125,14 +125,14 @@ distance.meters &gt; out.token
 <p><img src="images/KY-001.png" alt="KY-001" /></p>
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.temperature: {
-    &quot;comment&quot;: &quot;This device talks 1-wire on pin GPIO4&quot;, 
+    &quot;comment&quot;: &quot;This device talks 1-wire on pin GPIO4&quot;,
     &quot;attributes&quot;: {
         &quot;id&quot;: &quot;n/a&quot;
-    }, 
+    },
     &quot;module&quot;: &quot;io.ds18b20thermometer.raspberry_pi.DS18B20&quot;
 }</code></pre>
 <p>Usage example:</p>
-<pre><code>temperature : sensor.Temperature(frequency=1)
+<pre><code>temperature : sensor.Temperature(period=1)
 out : io.Print()
 
 temperature.centigrade &gt; out.token
@@ -145,7 +145,7 @@ temperature.centigrade &gt; out.token
 <pre><code>io.humidity: {
     &quot;attributes&quot;: {
         &quot;pin&quot;: 19
-    }, 
+    },
     &quot;module&quot;: &quot;io.dht11temphumidity.raspberry_pi.DHT11&quot;
 }</code></pre>
 <p>Usage example:</p>
@@ -161,11 +161,11 @@ hum.percent &gt; print.token</code></pre>
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.hallswitch: {
     &quot;attributes&quot;: {
-        &quot;pull&quot;: &quot;OFF&quot;, 
-        &quot;direction&quot;: &quot;IN&quot;, 
-        &quot;edge&quot;: &quot;BOTH&quot;, 
+        &quot;pull&quot;: &quot;OFF&quot;,
+        &quot;direction&quot;: &quot;IN&quot;,
+        &quot;edge&quot;: &quot;BOTH&quot;,
         &quot;pin&quot;: 23
-    }, 
+    },
     &quot;module&quot;: &quot;io.gpiopin.raspberry_pi.PIGPIOPin&quot;
 }</code></pre>
 <h3 id="tilt-switch-ky-020ky-020">Tilt switch (<a href="https://tkkrlab.nl/wiki/Arduino_KY-020_Tilt_switch_module">KY-020</a>) <a name="_KY-020"></a></h3>
@@ -173,12 +173,12 @@ hum.percent &gt; print.token</code></pre>
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.tiltswitch: {
     &quot;attributes&quot;: {
-        &quot;pull&quot;: &quot;DOWN&quot;, 
-        &quot;direction&quot;: &quot;IN&quot;, 
-        &quot;edge&quot;: &quot;BOTH&quot;, 
-        &quot;pin&quot;: 13, 
+        &quot;pull&quot;: &quot;DOWN&quot;,
+        &quot;direction&quot;: &quot;IN&quot;,
+        &quot;edge&quot;: &quot;BOTH&quot;,
+        &quot;pin&quot;: 13,
         &quot;bouncetime&quot;: 200
-    }, 
+    },
     &quot;module&quot;: &quot;io.gpiopin.raspberry_pi.PIGPIOPin&quot;
 }</code></pre>
 <p>Usage example:</p>
@@ -195,12 +195,12 @@ in.open &gt; led.on
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.knocksensor: {
     &quot;attributes&quot;: {
-        &quot;pull&quot;: &quot;DOWN&quot;, 
-        &quot;direction&quot;: &quot;IN&quot;, 
-        &quot;edge&quot;: &quot;BOTH&quot;, 
-        &quot;pin&quot;: 13, 
+        &quot;pull&quot;: &quot;DOWN&quot;,
+        &quot;direction&quot;: &quot;IN&quot;,
+        &quot;edge&quot;: &quot;BOTH&quot;,
+        &quot;pin&quot;: 13,
         &quot;bouncetime&quot;: 200
-    }, 
+    },
     &quot;module&quot;: &quot;io.gpiopin.raspberry_pi.PIGPIOPin&quot;
 }</code></pre>
 <p>Conflicts: io.vibrationsensor, io.tiltswitch</p>
@@ -210,12 +210,12 @@ in.open &gt; led.on
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.lightbreaker: {
     &quot;attributes&quot;: {
-        &quot;pull&quot;: &quot;DOWN&quot;, 
-        &quot;direction&quot;: &quot;IN&quot;, 
-        &quot;edge&quot;: &quot;BOTH&quot;, 
-        &quot;pin&quot;: 22, 
+        &quot;pull&quot;: &quot;DOWN&quot;,
+        &quot;direction&quot;: &quot;IN&quot;,
+        &quot;edge&quot;: &quot;BOTH&quot;,
+        &quot;pin&quot;: 22,
         &quot;bouncetime&quot;: 200
-    }, 
+    },
     &quot;module&quot;: &quot;io.gpiopin.raspberry_pi.PIGPIOPin&quot;
 }</code></pre>
 <p>Usage example:</p>
@@ -232,11 +232,11 @@ in.open &gt; led.on
 <p><img src="images/LED.png" alt="LED" /></p>
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.light: {
-    &quot;comment&quot;: &quot;Digital out, use with LED + 150 Ohm resistor&quot;, 
+    &quot;comment&quot;: &quot;Digital out, use with LED + 150 Ohm resistor&quot;,
     &quot;attributes&quot;: {
-        &quot;direction&quot;: &quot;OUT&quot;, 
+        &quot;direction&quot;: &quot;OUT&quot;,
         &quot;pin&quot;: 5
-    }, 
+    },
     &quot;module&quot;: &quot;io.gpiopin.raspberry_pi.PIGPIOPin&quot;
 }</code></pre>
 <p>Usage example:</p>
@@ -256,9 +256,9 @@ button.state &gt; out.token
 <pre><code>io.pwm: {
     &quot;attributes&quot;: {
         &quot;frequency&quot;: 50, 
-        &quot;pin&quot;: 26, 
+        &quot;pin&quot;: 26,
         &quot;dutycycle&quot;: 50
-    }, 
+    },
     &quot;module&quot;: &quot;io.pwm.raspberry_pi.PIGPIOPWM&quot;
 }</code></pre>
 <h3 id="active-buzzer-module-ky-012ky-012">Active buzzer module (<a href="http://arduinomodules.info/ky-012-active-buzzer-module/">KY-012</a>) <a name="_KY-012"></a></h3>
@@ -268,11 +268,11 @@ button.state &gt; out.token
 <p><img src="images/KY-012.png" alt="KY-012" /></p>
 <p>Config entry in <code>capabilities</code> list:</p>
 <pre><code>io.buzzer: {
-    &quot;comment&quot;: &quot;Active buzzer (KY-012, GND -&gt; &#39;S&#39;, GPIO pin to &#39;-&#39;)&quot;, 
+    &quot;comment&quot;: &quot;Active buzzer (KY-012, GND -&gt; &#39;S&#39;, GPIO pin to &#39;-&#39;)&quot;,
     &quot;attributes&quot;: {
-        &quot;direction&quot;: &quot;OUT&quot;, 
+        &quot;direction&quot;: &quot;OUT&quot;,
         &quot;pin&quot;: 12
-    }, 
+    },
     &quot;module&quot;: &quot;io.gpiopin.raspberry_pi.PIGPIOPin&quot;
 }</code></pre>
 <p>Usage example:</p>

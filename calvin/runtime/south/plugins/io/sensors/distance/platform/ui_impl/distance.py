@@ -38,10 +38,10 @@ class Distance(base_distance.DistanceBase):
         # Reload timer
         self.periodic = async.DelayedCall(self.delay, self._periodic_callback)
 
-    def start(self, frequency):
+    def start(self, period):
         # Args: delay, dc_callback, *args, **kwargs
         try:
-            self.delay = 1.0/frequency
+            self.delay = period
         except ZeroDivisionError:
             self.delay = 1.0
         self.periodic = async.DelayedCall(self.delay, self._periodic_callback)

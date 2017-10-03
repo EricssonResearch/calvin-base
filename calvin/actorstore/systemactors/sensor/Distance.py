@@ -22,52 +22,31 @@ _log = get_logger(__name__)
 class Distance(Actor):
 
     """
-    Measure distance. Takes the frequency of measurements, in Hz, as input.
+    Measure distance. Takes the period of measurements, in seconds, as input.
 
     Outputs:
         meters : distance, in meters
     """
 
-    @manage(['frequency'])
-    def init(self, frequency):
-        self.frequency = frequency
-        self.setup()
+    @manage(['period', 'distance', 'timer'])
+    def init(self, period):
+        self.period = period
+        self.distance = calvinsys.open(self, "io.distance")
+        self.timer = calvinsys.open(self, "sys.timer.repeating")
+        calvinsys.write(self.timer, period)
 
-    def setup(self):
-        _log.info("setup")
-        self._distance = calvinsys.open(self, "io.distance")
-        self._timer = calvinsys.open(self, "sys.timer.repeating")
-        calvinsys.write(self._timer, 1.0/self.frequency)
-
-    def will_migrate(self):
-        calvinsys.close(self._distance)
-        calvinsys.close(self._timer)
-        self._distance = None
-        self._timer = None
-
-    def did_migrate(self):
-        self.setup()
-
-    def will_end(self):
-        if self._distance:
-            calvinsys.close(self._distance)
-        if self._timer :
-            calvinsys.close(self._timer)
-
-    @stateguard(lambda self: calvinsys.can_read(self._distance))
+    @stateguard(lambda self: calvinsys.can_read(self.distance))
     @condition([], ['meters'])
     def read_measurement(self):
-        distance = calvinsys.read(self._distance)
-        return (distance,)
+        value = calvinsys.read(self.distance)
+        return (value,)
 
-    @stateguard(lambda self: calvinsys.can_read(self._timer) and calvinsys.can_write(self._distance))
+    @stateguard(lambda self: calvinsys.can_read(self.timer) and calvinsys.can_write(self.distance))
     @condition([], [])
     def start_measurement(self):
-        calvinsys.read(self._timer)
-        calvinsys.write(self._distance, True)
+        calvinsys.read(self.timer)
+        calvinsys.write(self.distance, True)
 
 
     action_priority = (read_measurement, start_measurement)
     requires =  ['io.distance', 'sys.timer.repeating']
-
-

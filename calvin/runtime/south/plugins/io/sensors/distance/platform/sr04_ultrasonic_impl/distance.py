@@ -40,13 +40,13 @@ class Distance(base_distance.DistanceBase):
         config = self._node.attributes.get_private("/hardware/sr04_ultrasonic")
         trig_pin = config.get('trig_pin', None)
         echo_pin = config.get('echo_pin', None)
-        self._frequency = None
+        self._period = None
 
         self.trig_pin = gpiopin.GPIOPin(None, trig_pin, "o", None)
         self.echo_pin = gpiopin.GPIOPin(self._echo_callback, echo_pin, "i", None)
 
-    def start(self, frequency=0.5):
-        self._frequency = frequency
+    def start(self, period=2):
+        self._period = period
         try :
             self.echo_pin.detect_edge("f")
             self._running = True
@@ -67,7 +67,7 @@ class Distance(base_distance.DistanceBase):
         if self.retry and self.retry.active():
             # retry in progress, skip
             return
-        self.retry = async.DelayedCall(1/self._frequency, self._next_measurement)
+        self.retry = async.DelayedCall(self._period, self._next_measurement)
 
     def _next_measurement(self):
         # self.in_progress = async.DelayedCall(self._delay, self._measure)
@@ -103,4 +103,3 @@ class Distance(base_distance.DistanceBase):
                 _log.warning("Could not remove event detect: %r" % (e,))
             self._running = False
         # gpio.cleanup()
-
