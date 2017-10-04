@@ -18,11 +18,21 @@ class Token(object):
 
     """ Token class """
 
-    def __init__(self, value=None):
+    def __init__(self, value=None, origin=None, timestamp=None):
         self.value = value
+        self._origin = origin
+        self._timestamp = timestamp
 
     def repr_for_coder(self):
-        return {'type':self.__class__.__name__, 'data':self.value}
+        representation = {
+            'type':self.__class__.__name__,
+            'value':self.value
+        }
+        if self._origin:
+            representation['origin'] = self._origin
+        if self._timestamp:
+            representation['self.timestamp'] = self._timestamp
+        return representation
 
     def encode(self, coder=None):
         if not coder:
@@ -32,13 +42,13 @@ class Token(object):
     @classmethod
     def decode(cls, data, coder=None):
         representaton = coder.decode(data) if coder else data
-        token_type = representaton.get('type', '')
+        token_type = representaton.pop('type', ExceptionToken)
         class_ = {
             'Token':Token,
             'ExceptionToken':ExceptionToken,
             'EOSToken': EOSToken
         }.get(token_type, ExceptionToken)
-        return class_(representaton.get('data', 'Bad Token'))
+        return class_(**representaton)
 
     def __str__(self):
         return "<%s> %s" % (self.__class__.__name__, str(self.value))

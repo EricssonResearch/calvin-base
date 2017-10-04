@@ -99,7 +99,7 @@ class TestTunnelEndpoint(unittest.TestCase):
             'port_id': self.port.id,
             'peer_port_id': self.peer_port.id,
             'sequencenbr': 0,
-            'token': {'type': 'Token', 'data': 5}
+            'token': {'type': 'Token', 'value': 5}
         }
         self.tunnel_in.recv_token(payload)
         assert self.trigger_loop.called

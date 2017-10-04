@@ -213,7 +213,7 @@ def test_set_inport_state(inport, outport):
         'name': 'new_name',
         'id': inport.id,
         'queue': {
-            'fifo': [{'data': n} for n in range(5)],
+            'fifo': [{'value': n} for n in range(5)],
             'N': 5,
             'readers': [in_endpoint.port.id],
             'write_pos': 5,
