@@ -77,7 +77,7 @@ class CalvinSys(object):
         if not pyclass:
             raise Exception("No entry %s in %s" % (capability_name, capability['path']))
         return capability, pyclass
-        
+
     def _open(self, actor, capability_name, **kwargs):
         capability, pyclass = self._get_class(capability_name)
         obj = pyclass(calvinsys=self, name=capability_name, actor=actor)
@@ -106,7 +106,7 @@ class CalvinSys(object):
         Returns list of requirements this system satisfies
         """
         return self.capabilities.keys()
- 
+
     def _get_capability_object(self, ref, required=True):
         """
             Get capability object given a reference. If required (default), then raise exception if no such reference.
@@ -115,9 +115,9 @@ class CalvinSys(object):
         if not cap and required:
             raise Exception("Invalid reference {}. Available references: {}".format(ref, self._objects))
         return cap["obj"] if cap else None
-        
+
     # Calvinsys objects api
-    
+
     def can_write(self, ref):
         obj = self._get_capability_object(ref)
         data = obj.can_write()
@@ -126,7 +126,7 @@ class CalvinSys(object):
         except Exception as e:
             _log.exception("Failed to validate schema, exception={}".format(e))
         return data
-    
+
     def write(self, ref, data):
         obj = self._get_capability_object(ref)
         try:
@@ -134,7 +134,7 @@ class CalvinSys(object):
             obj.write(data)
         except Exception as e:
             _log.exception("Failed to validate schema, exception={}".format(e))
-    
+
     def can_read(self, ref):
         obj = self._get_capability_object(ref)
         data = obj.can_read()
@@ -143,7 +143,7 @@ class CalvinSys(object):
         except Exception as e:
             _log.exception("Failed to validate schema, exception={}".format(e))
         return data
-    
+
     def read(self, ref):
         obj = self._get_capability_object(ref)
         data = obj.read()
@@ -161,31 +161,30 @@ class CalvinSys(object):
             for actor, refs in self._actors.iteritems():
                 if ref in refs:
                     refs.remove(ref)
-            
+
 
     def open(self, capability_name, actor, **kwargs):
         """
         Open a capability and return corresponding object
         """
         obj = self._open(actor, capability_name, **kwargs)
-        
+
         csobjects = self._actors.setdefault(actor, [])
         if len(csobjects) == 0:
             idx = 0
         else :
             idx = int(csobjects[-1].rsplit('#', 1)[1])+1
-        
+
         ref = "{}#{}".format(actor.id, idx)
         self._objects[ref] = {"name": capability_name, "obj": obj, "args": kwargs}
         self._actors.get(actor).append(ref)
-        
+
         return ref
-    
+
     def close_all(self, actor):
         """
             Close and free all open calvinsys objects for given actor
         """
-        
         if actor in self._actors:
             references = self._actors.pop(actor)
             for ref in references:
@@ -196,16 +195,16 @@ class CalvinSys(object):
             serializes calvinsys objects used by given actor
         """
         if actor in self._actors:
-            references = self._actors.pop(actor)
+            references = self._actors.get(actor)
         else :
             # Nothing to do here
             return {}
-            
+
         serz = {}
         for ref in references:
-            csobj = self._objects.pop(ref)
-            csobj["obj"] = csobj["obj"].serialize() # serialize object
-            serz[ref] = csobj
+            csobj = self._objects.get(ref)
+            state = csobj["obj"].serialize() # serialize object
+            serz[ref] = {"name": csobj["name"], "obj": state, "args": csobj["args"]}
         return serz
 
     def deserialize(self, actor, csobjects):
