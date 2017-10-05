@@ -102,3 +102,15 @@ class UDPListener(Actor):
 
     action_priority = (control, receive)
     requires = ['calvinsys.network.serverhandler', 'calvinsys.native.python-re']
+
+
+    test_set = [
+        {
+            'input': {'host': [],
+                      'port': [],
+                      'handle': [],
+                      'token': []},
+            'output': {'handle': [],
+                       'token': []}
+        }
+    ]

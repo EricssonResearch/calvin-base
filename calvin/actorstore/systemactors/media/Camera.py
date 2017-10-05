@@ -69,3 +69,12 @@ class Camera(Actor):
 
     action_priority = (get_image, trigger_action)
     requires = ['calvinsys.media.image', 'base64', 'calvinsys.media.camerahandler']
+
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_set = [
+#        {
+#            'inports': {'trigger': []},
+#            'outports': {'image': []},
+#        }
+#    ]

@@ -37,3 +37,11 @@ class Split(Actor):
         return (res,)
 
     action_priority = (action, )
+
+    test_kwargs = {'delim': ' '}
+    test_set = [
+        {
+            'inports': {'text': ["Five words in a list"]},
+            'outports': {'lines': [["Five", "words", "in",  "a", "list"]]}
+        }
+    ]

@@ -48,9 +48,10 @@ class BasicAuthHeader(Actor):
     action_priority = (authorization_header,)
     requires = ['base64']
 
+
     test_set = [
         {
-            'in': {'credential': [{"username": "root", "password": "pass"}]},
-            'out': {'header': [{"Authorization": "Basic cm9vdDpwYXNz"}]}
+            'inports': {'credential': [{"username": "root", "password": "pass"}]},
+            'outports': {'header': [{"Authorization": "Basic cm9vdDpwYXNz"}]}
         }
     ]

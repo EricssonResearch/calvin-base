@@ -36,10 +36,10 @@ class Mustache(Actor):
     def init(self, fmt):
         self.fmt = fmt
         self.setup()
-        
+
     def setup(self):
         self.use("calvinsys.native.python-mustache", shorthand="pystache")
-        
+
     def did_migrate(self):
         self.setup()
 
@@ -51,3 +51,11 @@ class Mustache(Actor):
     action_priority = (action, )
     requires = ["calvinsys.native.python-mustache"]
 
+
+    test_kwargs = {'fmt': "Temperature: {{temp}}C"}
+    test_set = [
+        {
+            'inports': {'dict': []},
+            'outports': {'text': []}
+        }
+    ]

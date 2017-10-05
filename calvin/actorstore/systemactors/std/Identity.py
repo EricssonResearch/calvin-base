@@ -47,7 +47,7 @@ class Identity(Actor):
 
     test_set = [
         {
-            'in': {'token': [1, 2, 3]},
-            'out': {'token': [1, 2, 3]}
+            'inports': {'token': [1, 2, 3]},
+            'outports': {'token': [1, 2, 3]}
         }
     ]

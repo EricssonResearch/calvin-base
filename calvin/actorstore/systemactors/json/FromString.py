@@ -60,26 +60,27 @@ class FromString(Actor):
     action_priority = (load,)
     requires = ['json']
 
+
     test_set = [
         {
-            'in': {'string': ['1']},
-            'out': {'data': [1]},
+            'inports': {'string': ['1']},
+            'outports': {'data': [1]},
         },
         {
-            'in': {'string': ['{"a": 1}']},
-            'out': {'data': [{"a": 1}]},
+            'inports': {'string': ['{"a": 1}']},
+            'outports': {'data': [{"a": 1}]},
         },
         {
-            'in': {'string': [EOSToken()]},
-            'out': {'data': ['Exception']},
+            'inports': {'string': [EOSToken()]},
+            'outports': {'data': ['Exception']},
         },
         {
-            'in': {'string': [None]},
-            'out': {'data': ['Exception']},
+            'inports': {'string': [None]},
+            'outports': {'data': ['Exception']},
         },
         {
             'setup': [lambda self: self.init(exception_output={})],
-            'in': {'string': [None]},
-            'out': {'data': [{}]},
+            'inports': {'string': [None]},
+            'outports': {'data': [{}]},
         },
     ]

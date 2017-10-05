@@ -38,31 +38,41 @@ class TriggeredWeather(Actor):
 
     def did_migrate(self):
         self.setup()
- 
+
     def setup(self):
         self._service = calvinsys.open(self, "weather")
         calvinsys.write(self._service, self._city)
 
     def teardown(self):
         calvinsys.close(self._pb)
-        
+
     def will_migrate(self):
         self.teardown()
-    
+
     def will_end(self):
         self.teardown()
-        
+
     @stateguard(lambda self: self._service and calvinsys.can_write(self._service))
     @condition(action_input=['trigger'])
     def start_forecast(self, _):
         calvinsys.write(self._service, self._city)
-    
+
     @stateguard(lambda self: self._service and calvinsys.can_read(self._service))
     @condition(action_output=['forecast'])
     def finish_forecast(self):
         forecast = calvinsys.read(self._service)
         return (forecast,)
 
-
     action_priority = (start_forecast, finish_forecast,)
     requires = ['weather']
+
+
+    test_kwargs = {'city': 'Lund'}
+    test_calvinsys = {'weather': {'read': ["sunny"],
+                                  'write': ["Lund", "Lund"]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True]},
+            'outports': {'forecast': ["sunny"]}
+        }
+    ]

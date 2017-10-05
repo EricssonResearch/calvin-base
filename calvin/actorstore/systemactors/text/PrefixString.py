@@ -44,7 +44,7 @@ class PrefixString(Actor):
 
     test_set = [
         {
-            'in': {'in': ['a', 'b', 'c']},
-            'out': {'out': ['Pa', 'Pb', 'Pc']}
+            'inports': {'in': ['a', 'b', 'c']},
+            'outports': {'out': ['Pa', 'Pb', 'Pc']}
         }
     ]

@@ -63,8 +63,15 @@ class TriggeredTemperature(Actor):
     def trigger_measurement(self, _):
         calvinsys.write(self._temperature, True)
 
-
     action_priority = (read_measurement, trigger_measurement)
-    requires =  ['io.temperature']
+    requires = ['io.temperature']
 
 
+    test_calvinsys = {'io.temperature': {'read': [20, 14],
+                                         'write': [True, True]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True, "True"]},
+            'outports': {'centigrade': [20, 14]}
+        }
+    ]

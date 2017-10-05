@@ -52,6 +52,13 @@ class EnclosureFanSpeed(Actor):
         return (fandata,)
 
     action_priority = (measure,)
-    requires =  ['calvinsys.sensors.enclosure']
+    requires = ['calvinsys.sensors.enclosure']
 
 
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'fans': 'dummy'}
+#    test_set = [
+#        {
+#            'output': {'rpms': []}
+#        }
+#    ]

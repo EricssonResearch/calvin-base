@@ -73,28 +73,26 @@ class Items(Actor):
             self.has_data = False
         return (res, )
 
-
     action_priority = (produce_item, consume_list)
-
     requires = ['copy']
+
 
     test_args = []
     test_kwargs = {}
-
     test_set = [
         {
-            'in': {'list': [[1,2,3]]},
-            'out': {'item': [1,2,3]},
+            'inports': {'list': [[1,2,3]]},
+            'outports': {'item': [1,2,3]},
         },
         {
-            'in': {'list': [[], [], [1,2,3]]},
-            'out': {'item': [1,2,3]},
+            'inports': {'list': [[], [], [1,2,3]]},
+            'outports': {'item': [1,2,3]},
         },
 
         # Error conditions
         {
-            'in': {'list': [1]},
-            'out': {'item': ['Exception']},
+            'inports': {'list': [1]},
+            'outports': {'item': ['Exception']},
         },
 
     ]

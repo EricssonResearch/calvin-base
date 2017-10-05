@@ -75,7 +75,16 @@ class MQTTPublisher(Actor):
     def send_message(self, topic, payload):
         self.publisher.publish(topic, payload)
 
-
-
     action_priority = (send_message, )
     requires = ['calvinsys.network.mqtthandler']
+
+# TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'host': "dummy",
+#                   'port': "dummy",
+#                   'settings': "dummy"}
+#    test_set = [
+#        {
+#            'inports': {'topic': [],
+#                        'payload': []},
+#        }
+#    ]

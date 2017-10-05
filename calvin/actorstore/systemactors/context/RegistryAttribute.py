@@ -44,5 +44,15 @@ class RegistryAttribute(Actor):
         return (value,)
 
     action_priority = (read,)
-
     requires = ["sys.attribute.indexed"]
+
+
+    test_kwargs = {'attribute': "runtime.attribute"}
+    test_calvinsys = {'sys.attribute.indexed': {'read': ["runtime.attribute"],
+                                                'write': ["runtime.attribute"]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True]},
+            'outports': {'value': ["runtime.attribute"]}
+        }
+    ]

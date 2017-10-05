@@ -63,3 +63,12 @@ class WSBroadcast(Actor):
     # add receive
     action_priority = (broadcast, start)
     requires = ['calvinsys.network.websockethandler']
+
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'host': '123.45.67.8', 'port': 9999}
+#    test_set = [
+#        {
+#            'input': {'token': ['test']}
+#        }
+#    ]

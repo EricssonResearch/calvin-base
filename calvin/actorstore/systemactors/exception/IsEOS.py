@@ -55,16 +55,16 @@ class IsEOS(Actor):
 
     test_set = [
         {  # normal token
-            'in': {'token': 42},
-            'out': {'status':[False]}
+            'inports': {'token': 42},
+            'outports': {'status':[False]}
         },
         {  # Exception
-            'in': {'token': ExceptionToken()},
-            'out': {'status':[False]}
+            'inports': {'token': ExceptionToken()},
+            'outports': {'status':[False]}
         },
         {  # Exception
-            'in': {'token': EOSToken()},
-            'out': {'status':[True]}
+            'inports': {'token': EOSToken()},
+            'outports': {'status':[True]}
         },
 
     ]

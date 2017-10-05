@@ -55,4 +55,11 @@ class ImageRenderer(Actor):
             self.image.show_image(self.base64.decode(image), self.width, self.height)
 
     action_priority = (render_image, )
-    requires =  ['calvinsys.media.image', 'base64']
+    requires = ['calvinsys.media.image', 'base64']
+
+
+    test_set = [
+        {
+            'inports': {'image': []}
+        }
+    ]

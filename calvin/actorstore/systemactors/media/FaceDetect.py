@@ -45,3 +45,11 @@ class FaceDetect(Actor) :
 
     action_priority = (detect, )
     requires = ['calvinsys.media.image', 'base64']
+
+
+    test_set = [
+        {
+            'inports': {'image': []},
+            'outports': {'faces': []}
+        }
+    ]

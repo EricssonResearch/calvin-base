@@ -20,6 +20,7 @@ from calvin.utilities.calvinlogger import get_actor_logger
 
 _log = get_actor_logger(__name__)
 
+
 class Bell(Actor):
 
     """
@@ -47,6 +48,13 @@ class Bell(Actor):
     def signal(self, _):
         calvinsys.write(self._bell, None)
 
-
     action_priority = (signal, )
     requires = ['notify.bell']
+
+
+    test_calvinsys = {'notify.bell': {'write': [None, None, None, None]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True, 1, "a", 0]},
+        }
+    ]

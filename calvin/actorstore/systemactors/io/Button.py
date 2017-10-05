@@ -37,3 +37,12 @@ class Button(Actor):
 
     action_priority = (trigger, )
     requires = ['io.button']
+
+
+    test_kwargs = {'text': "Button"}
+    test_calvinsys = {'io.button': {'read': [1,0,1,0,0,1,0,1]}}
+    test_set = [
+        {
+            'outports': {'state': [1,0,1,0,0,1,0,1]}
+        }
+    ]

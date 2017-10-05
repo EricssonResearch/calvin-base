@@ -54,5 +54,14 @@ class TriggeredRelativeHumidity(Actor):
         return (humidity,)
 
     action_priority = (deliver, measure,)
-    requires =  ['io.humidity']
+    requires = ['io.humidity']
 
+
+    test_calvinsys = {'io.humidity': {'read': [50, 40],
+                                      'write': [True, True]}}
+    test_set = [
+        {
+            'inports': {'measure': [True, "True"]},
+            'outports': {'percent': [50, 40]}
+        }
+    ]

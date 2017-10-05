@@ -33,7 +33,7 @@ class Buzzer(Actor):
         self.buzzer = calvinsys.open(self, "io.buzzer")
 
     def will_end(self):
-        if self.buzzer :
+        if self.buzzer:
             calvinsys.close(self.buzzer)
 
     def did_migrate(self):
@@ -46,3 +46,11 @@ class Buzzer(Actor):
 
     action_priority = (turn_on_off, )
     requires = ["io.buzzer"]
+
+
+    test_calvinsys = {'io.buzzer': {'write': [True, False, True, False]}}
+    test_set = [
+        {
+            'inports': {'on': [True, False, True, False]},
+        }
+    ]

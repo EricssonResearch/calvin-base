@@ -37,7 +37,7 @@ class Constant(Actor):
 
     test_set = [
         {
-            'in': {},
-            'out': {'token': [42]}
+            'inports': {},
+            'outports': {'token': [42]}
         } for i in range(3)
     ]

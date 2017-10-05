@@ -42,7 +42,7 @@ class Length(Actor):
 
     test_set = [
         {
-            'in': {'string': ["", "a", "bb", "\r\n"]},
-            'out': {'length': [0, 1, 2, 2]},
+            'inports': {'string': ["", "a", "bb", "\r\n"]},
+            'outports': {'length': [0, 1, 2, 2]},
         },
     ]

@@ -84,29 +84,29 @@ class Dict(Actor):
 
     test_set = [
         {
-            'in': {'key': ["a", "b"], 'value': [1, 2]},
-            'out': {'dict': [{"a":1}, {"b":2}]},
+            'inports': {'key': ["a", "b"], 'value': [1, 2]},
+            'outports': {'dict': [{"a":1}, {"b":2}]},
         },
         {
             'setup':[lambda self: self.init(n=2)],
-            'in': {'key': ["a", "b"], 'value': [1, 2]},
-            'out': {'dict': [{"a":1, "b":2}]},
+            'inports': {'key': ["a", "b"], 'value': [1, 2]},
+            'outports': {'dict': [{"a":1, "b":2}]},
         },
         {
             'setup':[lambda self: self.init(n=0)],
-            'in': {'key': ["a", "b", EOSToken()], 'value': [1, 2, EOSToken()]},
-            'out': {'dict': [{"a":1, "b":2}]},
+            'inports': {'key': ["a", "b", EOSToken()], 'value': [1, 2, EOSToken()]},
+            'outports': {'dict': [{"a":1, "b":2}]},
         },
         # Error conditions
         {
             'setup':[lambda self: self.init(n=0)],
-            'in': {'key': ["a", EOSToken()], 'value': [1, 2]},
-            'out': {'dict': ['Exception']},
+            'inports': {'key': ["a", EOSToken()], 'value': [1, 2]},
+            'outports': {'dict': ['Exception']},
         },
         {
             'setup':[lambda self: self.init(n=2)],
-            'in': {'key': ["a", 1, "b", "c"], 'value': [10, 20, 30, 40]},
-            'out': {'dict': ['Exception', {"b":30, "c":40}]},
+            'inports': {'key': ["a", 1, "b", "c"], 'value': [10, 20, 30, 40]},
+            'outports': {'dict': ['Exception', {"b":30, "c":40}]},
         },
 
     ]

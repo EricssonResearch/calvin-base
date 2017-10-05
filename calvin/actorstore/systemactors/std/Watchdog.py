@@ -21,7 +21,7 @@ class Watchdog(Actor):
     """
     Data on inport is passed on to outport unchanged. If nothing has arrived on the inport after `timeout` seconds, then true is sent on the timeout port.
     If parameter `immediate` is false, then the timer will not start until at least one token has arrived, otherwise it will start upon instantiation.
-    
+
     Inputs:
         data : anything
     Outputs:
@@ -77,3 +77,14 @@ class Watchdog(Actor):
 
     action_priority = (start_timer, passthrough, timeout)
     requires = ['calvinsys.events.timer']
+
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'timeout': 10, 'immediate': True}
+#    test_set = [
+#        {
+#            'inports': {'data': ["data_to_forward"]},
+#            'outports': {'data': ["data_to_forward"],
+#                         'timeout': [False]}
+#        }
+#    ]

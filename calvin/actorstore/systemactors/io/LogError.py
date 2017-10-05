@@ -38,9 +38,14 @@ class LogError(Actor):
     @condition(action_input=['data'])
     def write(self, data):
         calvinsys.write(self.log, data)
-        
 
     action_priority = (write, )
-    
     requires = ["log.error"]
 
+
+    test_calvinsys = {'log.error': {'write': ['a', 'b', 'c', 'd']}}
+    test_set = [
+        {
+            'inports': {'data': ['a', 'b', 'c', 'd']},
+        }
+    ]

@@ -50,3 +50,11 @@ class HallEffect(Actor):
 
     action_priority = (state_change, )
     requires = ['io.hallswitch']
+
+
+    test_calvinsys = {'io.hallswitch': {'read': [True, False, True, False]}}
+    test_set = [
+        {
+            'outports': {'state': [True, False, True, False]}
+        }
+    ]

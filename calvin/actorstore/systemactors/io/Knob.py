@@ -29,7 +29,7 @@ class Knob(Actor):
     @manage([])
     def init(self):
         self.setup()
-        
+
     def setup(self):
         self._knob = calvinsys.open(self, "io.knob")
 
@@ -51,3 +51,11 @@ class Knob(Actor):
 
     action_priority = (trigger, )
     requires = ['io.knob']
+
+
+    test_calvinsys = {'io.knob': {'read': [-1, 1, 0, 1]}}
+    test_set = [
+        {
+            'outports': {'direction': [-1, 1, 0, 1]}
+        }
+    ]

@@ -46,7 +46,7 @@ class Switch(Actor):
 
     test_set = [
         {
-            'in': {'switch': [True, False, 0, 1], 'a':[1,2,3,4], 'b':['a','b','c','d']},
-            'out': {'a':['a',2,3,4], 'b':[1,'b','c','d']},
+            'inports': {'switch': [True, False, 0, 1], 'a':[1,2,3,4], 'b':['a','b','c','d']},
+            'outports': {'a':['a',2,3,4], 'b':[1,'b','c','d']},
         },
     ]

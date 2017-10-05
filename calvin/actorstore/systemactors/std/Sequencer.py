@@ -36,7 +36,6 @@ class Sequencer(Actor):
     @condition(action_input=['data_in'])
     def incoming(self, token):
         self.token = token
-        
 
     @stateguard(lambda self: self.token is not None)
     @condition(action_output=['data_out'])
@@ -52,4 +51,12 @@ class Sequencer(Actor):
         self.eos = False
         return (EOSToken(),)
 
-    action_priority = (incoming, send_token, send_eos)
+    action_priority = (send_eos, send_token, incoming)
+
+
+    test_set = [
+        {
+            'inports': {'data_in': ["A", "B", "C"]},
+            'outports': {'data_out': ["A", 'End of stream', "B", 'End of stream', "C", 'End of stream']}
+        }
+    ]

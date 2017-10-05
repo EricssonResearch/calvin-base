@@ -43,5 +43,5 @@ class Counter(Actor):
 
     test_args = []
     test_set = [
-        {'in': {}, 'out': {'integer': [n]}} for n in range(1, 10)
+        {'inports': {}, 'outports': {'integer': [n]}} for n in range(1, 10)
     ]

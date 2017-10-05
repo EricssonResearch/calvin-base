@@ -55,26 +55,27 @@ class ToString(Actor):
     action_priority = (dump,)
     requires = ['json']
 
+
     test_set = [
         {
-            'in': {'data': [1]},
-            'out': {'string': ['1']},
+            'inports': {'data': [1]},
+            'outports': {'string': ['1']},
         },
         {
-            'in': {'data': [{"a": 1}]},
-            'out': {'string': ['{"a": 1}']},
+            'inports': {'data': [{"a": 1}]},
+            'outports': {'string': ['{"a": 1}']},
         },
         {
-            'in': {'data': [EOSToken()]},
-            'out': {'string': ['null']},
+            'inports': {'data': [EOSToken()]},
+            'outports': {'string': ['null']},
         },
         {
-            'in': {'data': [ExceptionToken()]},
-            'out': {'string': ['null']},
+            'inports': {'data': [ExceptionToken()]},
+            'outports': {'string': ['null']},
         },
         {
             'setup': [lambda self: self.init(exception_output={})],
-            'in': {'data': [ExceptionToken()]},
-            'out': {'string': ['{}']},
+            'inports': {'data': [ExceptionToken()]},
+            'outports': {'string': ['{}']},
         },
     ]

@@ -38,4 +38,10 @@ class Dealternate(Actor):
 
     action_priority = (dispatch,)
 
-
+    test_args = ["tag-1:"]
+    test_set = [
+        {
+            'inports': {'token': ['test']},
+            'outports': {'token': ['test']}
+        }
+    ]

@@ -50,6 +50,13 @@ class DigitalOut(Actor):
     def write_pin(self, state):
         calvinsys.write(self._pin, 1 if state else 0)
 
-
     action_priority = (write_pin, )
     requires = ["io.digitalout"]
+
+
+    test_calvinsys = {'io.digitalout': {'write': [1, 0, 1, 0]}}
+    test_set = [
+        {
+            'inports': {'state': [1, 0, 1, 0]},
+        }
+    ]

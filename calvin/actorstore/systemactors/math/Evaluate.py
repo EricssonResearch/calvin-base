@@ -43,7 +43,7 @@ class Evaluate(Actor):
     def did_migrate(self):
         self.setup()
 
-        
+
     @condition(['x', 'y'], ['result'])
     def compute(self, a, b):
         if self.expr:
@@ -54,11 +54,11 @@ class Evaluate(Actor):
             result = ExceptionToken(result)
         return (result, )
 
-
     action_priority = ( compute, )
+    requires = ['math.arithmetic.eval']
+
 
     test_args = ['x+y']
-
     test_set = [
         {
             'setup': [lambda self: self.init('x * y')],
@@ -72,5 +72,3 @@ class Evaluate(Actor):
         },
 
     ]
-
-    requires = ['math.arithmetic.eval']

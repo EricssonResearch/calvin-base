@@ -53,7 +53,7 @@ class Dealternate2(Actor):
 
     test_set = [
         {
-            'in': {'token': [1, 'a', 2, 'b']},
-            'out': {'token_1': [1, 2], 'token_2': ['a', 'b']}
+            'inports': {'token': [1, 'a', 2, 'b']},
+            'outports': {'token_1': [1, 2], 'token_2': ['a', 'b']}
         },
     ]

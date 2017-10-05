@@ -35,10 +35,10 @@ class SampleHold(Actor):
     def init(self, default=None):
         self.set_current(default)
         self.setup()
-        
+
     def setup(self):
         self.copy = calvinlib.use("copy")
-        
+
     def did_migrate(self):
         self.setup()
 
@@ -56,14 +56,13 @@ class SampleHold(Actor):
         return (self.current(), )
 
     action_priority = (action,)
-
     requires = ['copy']
-    
-    test_args = [-1]
 
+
+    test_args = [-1]
     test_set = [
         {
-            'in': {'in': [0, 1, 2, 3], 'sample': [False, True, 1, True]},
-            'out': {'out': [-1, 1, 1, 3]},
+            'inports': {'in': [0, 1, 2, 3], 'sample': [False, True, 1, True]},
+            'outports': {'out': [-1, 1, 1, 3]},
         },
     ]

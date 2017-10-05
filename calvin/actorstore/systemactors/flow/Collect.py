@@ -39,11 +39,11 @@ class Collect(Actor):
 
     test_set = [
         {
-            'in': {'token': [1, 2, 'a', 'b']},
-            'out': {'token': [1, 2, 'a', 'b']}
+            'inports': {'token': [1, 2, 'a', 'b']},
+            'outports': {'token': [1, 2, 'a', 'b']}
         },
         {
-            'in': {'token': [2]},
-            'out': {'token': [2]}
+            'inports': {'token': [2]},
+            'outports': {'token': [2]}
         }
     ]

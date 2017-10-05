@@ -50,3 +50,11 @@ class LightBreaker(Actor):
 
     action_priority = (state_change, )
     requires = ['io.lightbreaker']
+
+
+    test_calvinsys = {'io.lightbreaker': {'read': [True, False, True, False]}}
+    test_set = [
+        {
+            'outports': {'open': [True, False, True, False]}
+        }
+    ]

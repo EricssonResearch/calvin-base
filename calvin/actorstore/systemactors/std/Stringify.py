@@ -54,7 +54,7 @@ class Stringify(Actor):
 
     test_set = [
         {
-            'in': {'in': [1, 2, 'test']},
-            'out': {'out': ['1', '2', 'test']}
+            'inports': {'in': [1, 2, 'test']},
+            'outports': {'out': ['1', '2', 'test']}
         }
     ]

@@ -53,11 +53,11 @@ class Alternate2(Actor):
 
     test_set = [
         {
-            'in': {'token_1': [1, 2], 'token_2': ['a', 'b']},
-            'out': {'token': [1, 'a', 2, 'b']}
+            'inports': {'token_1': [1, 2], 'token_2': ['a', 'b']},
+            'outports': {'token': [1, 'a', 2, 'b']}
         },
         {
-            'in': {'token_1': [1]},
-            'out': {'token': [1]}
+            'inports': {'token_1': [1]},
+            'outports': {'token': [1]}
         }
     ]

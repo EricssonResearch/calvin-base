@@ -104,3 +104,11 @@ class UDPSender(Actor):
 
     action_priority = (control, send)
     requires = ['calvinsys.network.socketclienthandler', 'calvinsys.native.python-re']
+
+
+    test_set = [
+        {
+            'input': {'data_in': [],
+                      'control_in': []}
+        }
+    ]

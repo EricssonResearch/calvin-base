@@ -26,7 +26,7 @@ class Pushbullet(Actor):
     Post incoming tokens (text) to runtime specific pushbullet channel with given title
 
     Input:
-      message : A message 
+      message : A message
     """
 
     @manage(["title"])
@@ -36,24 +36,32 @@ class Pushbullet(Actor):
 
     def did_migrate(self):
         self.setup()
- 
+
     def setup(self):
         self._pb = calvinsys.open(self, "web.pushbullet.channel.post")
 
     def teardown(self):
         calvinsys.close(self._pb)
-        
+
     def will_migrate(self):
         self.teardown()
-    
+
     def will_end(self):
         self.teardown()
-        
+
     @stateguard(lambda self: self._pb and calvinsys.can_write(self._pb))
     @condition(action_input=['message'])
     def post_update(self, message):
         calvinsys.write(self._pb, {"message": message, "title": self._title})
-        
 
     action_priority = (post_update,)
     requires = ['web.pushbullet.channel.post']
+
+
+    test_kwargs = {'title': "Some Title"}
+    test_calvinsys = {'web.pushbullet.channel.post': {'write': [{'message': 'A message', 'title': 'Some Title'}]}}
+    test_set = [
+        {
+            'inports': {'message': ["A message"]}
+        }
+    ]

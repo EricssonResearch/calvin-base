@@ -57,7 +57,7 @@ class Select(Actor):
 
     test_set = [
         {
-            'in': {'select': [True, False, 0, 1], 'data':[1,2,3,4]},
-            'out': {'case_false': [2,3,4], 'case_true':[1]},
+            'inports': {'select': [True, False, 0, 1], 'data':[1,2,3,4]},
+            'outports': {'case_false': [2,3,4], 'case_true':[1]},
         },
     ]

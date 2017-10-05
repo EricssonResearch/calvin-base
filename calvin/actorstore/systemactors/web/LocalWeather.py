@@ -23,7 +23,7 @@ _log = get_logger(__name__)
 
 class LocalWeather(Actor):
     """
-    Get current weather where runtime is located (or think it is located) 
+    Get current weather where runtime is located (or think it is located)
 
     Input:
       trigger : start fetching weather on any token
@@ -37,25 +37,25 @@ class LocalWeather(Actor):
 
     def did_migrate(self):
         self.setup()
- 
+
     def setup(self):
         self._service = calvinsys.open(self, "weather.local")
         calvinsys.write(self._service, None)
 
     def teardown(self):
         calvinsys.close(self._service)
-        
+
     def will_migrate(self):
         self.teardown()
-    
+
     def will_end(self):
         self.teardown()
-    
+
     @stateguard(lambda self: self._service and calvinsys.can_write(self._service))
     @condition(action_input=['trigger'])
     def start_forecast(self, _):
         calvinsys.write(self._service, None)
-    
+
     @stateguard(lambda self: self._service and calvinsys.can_read(self._service))
     @condition(action_output=['forecast'])
     def finish_forecast(self):
@@ -64,3 +64,13 @@ class LocalWeather(Actor):
 
     action_priority = (start_forecast, finish_forecast,)
     requires = ['weather.local']
+
+
+    test_calvinsys = {'weather.local': {'read': ["sunny"],
+                                        'write': [None, None]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True]},
+            'outports': {'forecast': ["sunny"]}
+        }
+    ]

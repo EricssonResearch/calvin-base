@@ -50,23 +50,21 @@ class Compare(Actor):
     def test(self, x, y):
         return (bool(self.relation(x, y)), )
 
-
     action_priority = ( test, )
+    requires = ['math.arithmetic.eval']
+
 
     test_args = ['=']
-
     test_set = [
         {
             'setup': [lambda self: self.init('=')],
-            'in': {'a': [1, 1, 0, 0], 'b':[1, 0, 1, 0]},
-            'out': {'result': [True, False, False, True]},
+            'inports': {'a': [1, 1, 0, 0], 'b':[1, 0, 1, 0]},
+            'outports': {'result': [True, False, False, True]},
         },
         {
             'setup': [lambda self: self.init('!=')],
-            'in': {'a': [1, 1, 0, 0], 'b':[1, 0, 1, 0]},
-            'out': {'result': [False, True, True, False]},
+            'inports': {'a': [1, 1, 0, 0], 'b':[1, 0, 1, 0]},
+            'outports': {'result': [False, True, True, False]},
         },
 
     ]
-
-    requires = ['math.arithmetic.eval']

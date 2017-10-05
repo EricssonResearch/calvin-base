@@ -33,7 +33,7 @@ class TriggeredGyroscope(Actor):
         self.setup()
 
     def setup(self):
-        self.level = calvinsys.open(self, "sensor.gyroscope")
+        self.level = calvinsys.open(self, "io.gyroscope")
 
     def teardown(self):
         calvinsys.close(self.level)
@@ -51,7 +51,7 @@ class TriggeredGyroscope(Actor):
     @condition(['trigger'], [])
     def trigger_measurement(self, _):
         calvinsys.write(self.level, True)
-        
+
     @stateguard(lambda self: calvinsys.can_read(self.level))
     @condition([], ['rotation'])
     def read_measurement(self):
@@ -59,4 +59,14 @@ class TriggeredGyroscope(Actor):
         return (level,)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires =  ['io.gyroscope']
+    requires = ['io.gyroscope']
+
+
+    test_calvinsys = {'io.gyroscope': {'read': [{'x': 90, 'y': 180, 'z': 45}],
+                                           'write': [True]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True]},
+            'outports': {'rotation': [{'x': 90, 'y': 180, 'z': 45}]}
+        }
+    ]

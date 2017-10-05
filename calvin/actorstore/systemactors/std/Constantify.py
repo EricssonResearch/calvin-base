@@ -40,8 +40,8 @@ class Constantify(Actor):
 
     test_set = [
         {
-            'in': {'in': [1, 2, 3]},
-            'out': {'out': [42, 42, 42]},
+            'inports': {'in': [1, 2, 3]},
+            'outports': {'out': [42, 42, 42]},
         },
     ]
 

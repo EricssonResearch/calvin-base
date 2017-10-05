@@ -41,7 +41,6 @@ class TriggeredPressure(Actor):
     def will_end(self):
         calvinsys.close(self.level)
 
-    
     @stateguard(lambda self: calvinsys.can_write(self.level))
     @condition(['trigger'], [])
     def trigger_measurement(self, _):
@@ -54,4 +53,16 @@ class TriggeredPressure(Actor):
         return (level,)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires =  ['io.pressure']
+    requires = ['io.pressure']
+
+
+    # Will not run on calvin-base, any reason to test here?
+#    test_calvinsys = {'io.pressure': {'read': [100, 200],
+#                                      'write': [True]}}
+#
+#    test_set = [
+#        {
+#            'inports': {'trigger': [True]},
+#            'outports': {'pressure': [100, 150]}
+#        }
+#    ]

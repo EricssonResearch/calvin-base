@@ -17,13 +17,29 @@
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
 
-class MockOutput(base_calvinsys_object.BaseCalvinsysObject):
+class MockInputOutput(base_calvinsys_object.BaseCalvinsysObject):
     """
-    MockOutput - Mocked output device printing data to stdout.
+    MockInputOutput - Mocked input output device, printing data to stdout
     """
 
     init_schema = {
-        "description": "Init object"
+        "description": "Init object",
+        "type": "object",
+        "properties": {
+            "data": {
+                "description": "Data to return in read",
+                "type": "array"
+            }
+        }
+    }
+
+    can_read_schema = {
+        "description": "Returns True if data can be read, otherwise False",
+        "type": "boolean"
+    }
+
+    read_schema = {
+        "description": "Get data, verifies that can_read has been called."
     }
 
     can_write_schema = {
@@ -35,13 +51,30 @@ class MockOutput(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Compares data to expected data specified in actor test, also verifies that can_write has been called."
     }
 
-    def init(self, calvinsys, **kwargs):
+    def init(self, data, calvinsys, **kwargs):
+        self.read_called = False
+        self._read_allowed = True
         self.write_called = False
         self._write_allowed = True
 
+        self.data = list(data)
         self._expected_data = []
+
+        if 'read' in calvinsys:
+            self.data = calvinsys['read']
         if 'write' in calvinsys:
             self._expected_data = calvinsys['write']
+
+    def can_read(self):
+        self._read_allowed = True
+        return len(self.data) > 0
+
+    def read(self):
+        self.read_called = True
+        if not self._read_allowed:
+            raise AssertionError("read() called without preceding can_read()")
+        self._read_allowed = False
+        return self.data.pop(0)
 
     def can_write(self):
         self._write_allowed = True
@@ -57,7 +90,9 @@ class MockOutput(base_calvinsys_object.BaseCalvinsysObject):
             raise AssertionError("Expected data '%s' does not match '%s'" % (expected, data))
 
     def close(self):
+        self.data = []
         self._expected_data = []
 
     def start_verifying_calvinsys(self):
+        self._read_allowed = False
         self._write_allowed = False

@@ -65,8 +65,11 @@ class Format(Actor):
     action_priority = (action, )
     requires = ['calvinsys.native.python-re']
 
+
     test_args = [r"{huey.dewey.louie} \{huey.dewey.louie\}"]
     test_set = [
-        {'in': {'dict': [{'huey': {'dewey': {'louie': 'gotcha!'}}}]}},
-        {'out': {'text': ['gotcha! {huey.dewey.louie}']}},
+        {
+            'inports': {'dict': [{'huey': {'dewey': {'louie': 'gotcha!'}}}]},
+            'outports': {'text': ['gotcha! {huey.dewey.louie}']}
+        }
     ]

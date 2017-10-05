@@ -43,5 +43,10 @@ class CollectCompleteDict(Actor):
 
     action_priority = (collect_tokens, )
 
-    test_args = []
-    test_kwargs = {'select':{}}
+    test_kwargs = {'mapping': "dummy"}
+    test_set = [
+        {
+            'inports': {'token': ['t', 'e', 's', 't']},
+            'outports': {'dict': ['t', 'e', 's', 't']}
+        }
+    ]

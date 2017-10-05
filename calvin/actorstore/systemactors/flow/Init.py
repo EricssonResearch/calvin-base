@@ -51,7 +51,7 @@ class Init(Actor):
 
     test_set = [
         {
-            'in': {'in': [1,2,3]},
-            'out': {'out': [0,1,2,3]},
+            'inports': {'in': [1,2,3]},
+            'outports': {'out': [0,1,2,3]},
         },
     ]

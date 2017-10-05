@@ -49,3 +49,12 @@ class SimpleUDPSender(Actor):
 
     action_priority = (send, )
     requires = ['calvinsys.network.socketclienthandler']
+
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'address': '123.45.67.8', 'port': 9999}
+#    test_set = [
+#        {
+#            'input': {'data': ['dummy']}
+#        }
+#    ]

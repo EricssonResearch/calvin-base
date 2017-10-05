@@ -45,8 +45,16 @@ class RandomInteger(Actor):
 
     @condition(action_input=['trigger'], action_output=['integer'])
     def action(self, trigger):
-        return self.rng.random_integer(lower=self.lower, upper=self.upper), 
+        return self.rng.random_integer(lower=self.lower, upper=self.upper),
 
     action_priority = (action, )
-
     requires = ['math.random']
+
+
+    test_kwargs = {'lower': 1, 'upper': 2}
+    test_set = [
+        {
+            'inports': {'trigger': [True, 1, "a"]},
+            'outports': {'integer': [1, 1, 1]}
+        }
+    ]

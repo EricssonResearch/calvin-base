@@ -58,7 +58,7 @@ class HTTPDelete(Actor):
     def new_request(self, url, header):
         url = url.encode('ascii', 'ignore')
         self.request = self['http'].delete(url, header)
-        
+
 
     @stateguard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     @condition(action_output=['status', 'header'])
@@ -68,7 +68,7 @@ class HTTPDelete(Actor):
         headers = self['http'].headers(self.request)
         self.reset_request()
         return (status, headers)
-        
+
     @stateguard(lambda actor: actor.request and actor['http'].received_error(actor.request))
     @condition()
     def handle_error(self):
@@ -78,3 +78,13 @@ class HTTPDelete(Actor):
 
     action_priority = (handle_error, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler']
+
+
+    test_set = [
+        {
+            'inports': {'URL': [],
+                        'header': []},
+            'outports': {'status': [],
+                         'header': []}
+        }
+    ]

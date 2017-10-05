@@ -36,3 +36,11 @@ class Light(Actor):
 
     action_priority = (light, )
     requires = ["io.light"]
+
+
+    test_calvinsys = {'io.light': {'write': [1, 0, 1, 0]}}
+    test_set = [
+        {
+            'inports': {'on': [True, False, True, False]},
+        }
+    ]

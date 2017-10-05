@@ -35,24 +35,31 @@ class Twitter(Actor):
 
     def did_migrate(self):
         self.setup()
- 
+
     def setup(self):
         self._twit = calvinsys.open(self, "web.twitter.post")
 
     def teardown(self):
         calvinsys.close(self._twit)
-        
+
     def will_migrate(self):
         self.teardown()
-    
+
     def will_end(self):
         self.teardown()
-        
+
     @stateguard(lambda self: self._twit and calvinsys.can_write(self._twit))
     @condition(action_input=['status'])
     def post_update(self, status):
         calvinsys.write(self._twit, status)
-        
 
     action_priority = (post_update,)
     requires = ['web.twitter.post']
+
+
+    test_calvinsys = {'web.twitter.post': {'write': ["A twitter message"]}}
+    test_set = [
+        {
+            'inports': {'status': ["A twitter message"]},
+        }
+    ]

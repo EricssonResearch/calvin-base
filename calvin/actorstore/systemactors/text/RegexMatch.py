@@ -52,7 +52,7 @@ class RegexMatch(Actor):
     @condition(['text'], [])
     def match(self, text):
         self.perform_match(str(text))
-        
+
 
     @stateguard(lambda self: self.result is not None and self.did_match)
     @condition([], ['match'])
@@ -71,13 +71,13 @@ class RegexMatch(Actor):
     action_priority = (match, output_match, output_no_match)
     requires = ['calvinsys.native.python-re']
 
-    test_args = [".* (FLERP).* "]
 
+    test_args = [".* (FLERP).* "]
     test_set = [
-        {'in': {'text': ["This is a test FLERP please ignore"]},
-         'out': {'match': ['FLERP'], 'no_match':[]}
+        {'inports': {'text': ["This is a test FLERP please ignore"]},
+         'outports': {'match': ['FLERP'], 'no_match':[]}
          },
-        {'in': {'text': ["This is a test please ignore"]},
-         'out': {'match': [], 'no_match':["This is a test please ignore"]}
+        {'inports': {'text': ["This is a test please ignore"]},
+         'outports': {'match': [], 'no_match':["This is a test please ignore"]}
          }
     ]

@@ -58,7 +58,7 @@ class WordCount(Actor):
 
     test_set = [
         {
-            'in': {'in': ['a', 'b', 'a', EOSToken()]},
-            'out': {'out': [{'a': 2, 'b': 1}]}
+            'inports': {'in': ['a', 'b', 'a', EOSToken()]},
+            'outports': {'out': [{'a': 2, 'b': 1}]}
         }
     ]

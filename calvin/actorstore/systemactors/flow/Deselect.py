@@ -61,7 +61,7 @@ class Deselect(Actor):
 
     test_set = [
         {
-            'in': {
+            'inports': {
                 'case_false': ['a', 'b', 'c'],
                 'case_true':['A', 'B', 'C'],
                 'select': [True, False]*3

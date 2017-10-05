@@ -55,3 +55,12 @@ class GPIOReader(Actor):
 
     action_priority = (get_state, )
     requires = ['calvinsys.io.gpiohandler']
+
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'gpio_pin' : 23, 'edge': "b", 'pull': "d"}
+#    test_set = [
+#        {
+#            'outports': {'state': []}
+#        }
+#    ]

@@ -16,6 +16,7 @@
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
+
 class MockInput(base_calvinsys_object.BaseCalvinsysObject):
     """
     MockInput - Mocked input device.
@@ -37,17 +38,31 @@ class MockInput(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     read_schema = {
-        "description": "Get data"
+        "description": "Get data, verifies that can_read has been called."
     }
 
-    def init(self, data, **kwargs):
-        self.data = list(data)
+    def init(self, data, calvinsys, **kwargs):
+        self.read_called = False
+        self._read_allowed = True
+
+        if 'read' in calvinsys:
+            self.data = calvinsys['read']
+        else:
+            self.data = list(data)
 
     def can_read(self):
+        self._read_allowed = True
         return len(self.data) > 0
 
     def read(self):
-        return self.data.pop()
+        self.read_called = True
+        if not self._read_allowed:
+            raise AssertionError("read() called without preceding can_read()")
+        self._read_allowed = False
+        return self.data.pop(0)
 
     def close(self):
         self.data = []
+
+    def start_verifying_calvinsys(self):
+        self._read_allowed = False

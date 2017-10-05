@@ -60,4 +60,14 @@ class TriggeredStepCounter(Actor):
         return (level,)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires =  ['io.stepcounter']
+    requires = ['io.stepcounter']
+
+
+    test_calvinsys = {'io.stepcounter': {'read': [50, 40],
+                                         'write': [True, True]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True, "True"]},
+            'outports': {'steps': [50, 40]}
+        }
+    ]

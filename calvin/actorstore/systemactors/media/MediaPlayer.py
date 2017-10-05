@@ -48,7 +48,14 @@ class MediaPlayer(Actor):
     def play(self, play):
         if play:
             self.player.play(self.media_file)
-        
 
     action_priority = (play, )
     requires =  ['calvinsys.media.mediaplayer']
+
+
+    test_kwargs = {'media_file': "dummy"}
+    test_set = [
+        {
+            'inports': {'play': []},
+        }
+    ]

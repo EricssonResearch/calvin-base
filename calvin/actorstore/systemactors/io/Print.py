@@ -38,6 +38,12 @@ class Print(Actor):
         calvinsys.write(self.stdout, data)
 
     action_priority = (write, )
-    
     requires = ['io.stdout']
-    
+
+
+    test_calvinsys = {'io.stdout': {'write': ["This", "is", "a", "print"]}}
+    test_set = [
+        {
+            'inports': {'token': ["This", "is", "a", "print"]},
+        }
+    ]

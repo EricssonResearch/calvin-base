@@ -54,7 +54,7 @@ class Burn(Actor):
     test_set = [
         {
             'setup': [lambda self: self.init(duration=0.0001)],
-            'in': {'token': [1, 2, 3]},
-            'out': {'token': [1, 2, 3]}
+            'inports': {'token': [1, 2, 3]},
+            'outports': {'token': [1, 2, 3]}
         }
     ]

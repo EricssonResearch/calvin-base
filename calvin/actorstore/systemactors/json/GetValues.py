@@ -48,20 +48,20 @@ class GetValues(GetValue):
 
     test_set = [
         {
-            'in': {'container': [{"a":1}], 'keys':[["a"]]},
-            'out': {'values': [[1]]},
+            'inports': {'container': [{"a":1}], 'keys':[["a"]]},
+            'outports': {'values': [[1]]},
         },
         {
-            'in': {'container': [{"a":{"b":2}}], 'keys':[["a", ["a"], ["a", "b"]]]},
-            'out': {'values': [[{"b":2}, {"b":2}, 2]]},
+            'inports': {'container': [{"a":{"b":2}}], 'keys':[["a", ["a"], ["a", "b"]]]},
+            'outports': {'values': [[{"b":2}, {"b":2}, 2]]},
         },
         {
-            'in': {'container': [[1,2,3]], 'keys':[[1, 2]]},
-            'out': {'values': [[2, 3]]},
+            'inports': {'container': [[1,2,3]], 'keys':[[1, 2]]},
+            'outports': {'values': [[2, 3]]},
         },
         {
-            'in': {'container': [[{"a":{"b":2}}, 0]], 'keys':[[1, [1], [0, "a", "b"]]]},
-            'out': {'values': [[0, 0, 2]]},
+            'inports': {'container': [[{"a":{"b":2}}, 0]], 'keys':[[1, [1], [0, "a", "b"]]]},
+            'outports': {'values': [[0, 0, 2]]},
         },
         # Error conditions
         # FIXME: Can't test when output is list?!

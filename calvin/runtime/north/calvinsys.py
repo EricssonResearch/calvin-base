@@ -24,12 +24,20 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 _calvinsys = None
 
+TESTING = False
+
+
 def get_calvinsys():
     """ Returns the calvinsys singleton"""
     global _calvinsys
+    global TESTING
+    if _calvinsys is None and TESTING:
+        from calvin.actorstore.tests.test_actors import MockCalvinSys
+        _calvinsys = MockCalvinSys()
     if _calvinsys is None:
         _calvinsys = CalvinSys()
     return _calvinsys
+
 
 class CalvinSys(object):
 
@@ -161,7 +169,6 @@ class CalvinSys(object):
             for actor, refs in self._actors.iteritems():
                 if ref in refs:
                     refs.remove(ref)
-
 
     def open(self, capability_name, actor, **kwargs):
         """

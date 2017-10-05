@@ -48,6 +48,12 @@ class EnclosureRoomTemperature(Actor):
         return (data,)
 
     action_priority = (measure,)
-    requires =  ['calvinsys.sensors.enclosure']
+    requires = ['calvinsys.sensors.enclosure']
 
 
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_set = [
+#        {
+#            'output': {'centigrade': []}
+#        }
+#    ]

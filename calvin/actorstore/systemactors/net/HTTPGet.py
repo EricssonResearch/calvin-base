@@ -60,7 +60,7 @@ class HTTPGet(Actor):
     def new_request(self, url, params, header):
         url = url.encode('ascii', 'ignore')
         self.request = self['http'].get(url, params, header)
-        
+
 
     @stateguard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     @condition(action_output=['status', 'header'])
@@ -81,7 +81,7 @@ class HTTPGet(Actor):
     @condition()
     def handle_empty_body(self):
         self.reset_request()
-        
+
     @stateguard(lambda actor: actor.request and actor['http'].received_error(actor.request))
     @condition()
     def handle_error(self):
@@ -91,3 +91,15 @@ class HTTPGet(Actor):
 
     action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler']
+
+
+    test_set = [
+        {
+            'inports': {'URL': [],
+                        'params': [],
+                        'header': []},
+            'outports': {'status': [],
+                         'header': [],
+                         'data': []}
+        }
+    ]

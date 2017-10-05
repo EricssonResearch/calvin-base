@@ -68,7 +68,7 @@ class FiniteCounter(Actor):
     test_set = [
             {
             'setup': [lambda self: self.init(steps=3)],
-            'in': {},
-            'out': {'integer': [0, 1, 2, EOSToken().value]}
+            'inports': {},
+            'outports': {'integer': [0, 1, 2, EOSToken().value]}
             },
     ]

@@ -42,13 +42,13 @@ class Sum(Actor):
 
     test_set = [
         {
-            'in': {'integer': [5]},
-            'out': {'integer': [5]},
+            'inports': {'integer': [5]},
+            'outports': {'integer': [5]},
             'postcond': [lambda self: self.sum == 5]
         },
         {
-            'in': {'integer': [1, 2, 3]},
-            'out': {'integer': [6, 8, 11]},
+            'inports': {'integer': [1, 2, 3]},
+            'outports': {'integer': [6, 8, 11]},
             'postcond': [lambda self: self.sum == 11]
         }
     ]

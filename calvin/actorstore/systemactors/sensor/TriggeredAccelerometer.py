@@ -59,4 +59,14 @@ class TriggeredAccelerometer(Actor):
         return (level,)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires =  ['io.accelerometer']
+    requires = ['io.accelerometer']
+
+
+    test_calvinsys = {'io.accelerometer': {'read': [10, 12, 0, 5],
+                                           'write': [True]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True]},
+            'outports': {'acceleration': [10, 12, 0, 5]}
+        }
+    ]

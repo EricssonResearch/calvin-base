@@ -72,28 +72,28 @@ class GetValue(Actor):
 
     test_set = [
         {
-            'in': {'container': [{"a":1}], 'key':["a"]},
-            'out': {'value': [1]},
+            'inports': {'container': [{"a":1}], 'key':["a"]},
+            'outports': {'value': [1]},
         },
         {
-            'in': {'container': [{"a":{"b":2}}]*3, 'key':["a", ["a"], ["a", "b"]]},
-            'out': {'value': [{"b":2}, {"b":2}, 2]},
+            'inports': {'container': [{"a":{"b":2}}]*3, 'key':["a", ["a"], ["a", "b"]]},
+            'outports': {'value': [{"b":2}, {"b":2}, 2]},
         },
         {
-            'in': {'container': [[1,2,3]], 'key':[1]},
-            'out': {'value': [2]},
+            'inports': {'container': [[1,2,3]], 'key':[1]},
+            'outports': {'value': [2]},
         },
         {
-            'in': {'container': [[{"a":{"b":2}}, 0]]*3, 'key':[1, [1], [0, "a", "b"]]},
-            'out': {'value': [0, 0, 2]},
+            'inports': {'container': [[{"a":{"b":2}}, 0]]*3, 'key':[1, [1], [0, "a", "b"]]},
+            'outports': {'value': [0, 0, 2]},
         },
         # Error conditions
         {
-            'in': {'container': [1], 'key':["a"]},
-            'out': {'value': ['Exception']},
+            'inports': {'container': [1], 'key':["a"]},
+            'outports': {'value': ['Exception']},
         },
         {
-            'in': {'container': [{"b":2}], 'key':["a"]},
-            'out': {'value': ['Exception']},
+            'inports': {'container': [{"b":2}], 'key':["a"]},
+            'outports': {'value': ['Exception']},
         },
     ]

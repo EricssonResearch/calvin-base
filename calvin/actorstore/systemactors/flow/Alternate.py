@@ -45,3 +45,15 @@ class Alternate(Actor):
         return (None)
         
     action_priority = (dispatch, collect)
+
+    test_args = ["tag-1:"]
+    
+    test_set = [
+        {
+            'inports': {'token': ['test']},
+            'outports': {'token': ['t']}
+        },
+        {
+            'outports': {'token': ['e']}
+        }
+    ]

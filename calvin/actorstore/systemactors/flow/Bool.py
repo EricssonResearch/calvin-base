@@ -57,11 +57,11 @@ class Bool(Actor):
 
     test_set = [
         {
-            'in': {'token': [None, 0, 0.0, 0L, 0j, "", [], {}, False]},
-            'out': {'bool': [False]*9},
+            'inports': {'token': [None, 0, 0.0, 0L, 0j, "", [], {}, False]},
+            'outports': {'bool': [False]*9},
         },
         {
-            'in': {'token': [1, 2, 3.0, 1L, 2j, "Some string", [1, 2], {"a": 2}, True]},
-            'out': {'bool': [True]*9},
+            'inports': {'token': [1, 2, 3.0, 1L, 2j, "Some string", [1, 2], {"a": 2}, True]},
+            'outports': {'bool': [True]*9},
         },
     ]

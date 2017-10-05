@@ -50,3 +50,11 @@ class ImageSink(Actor):
 
     action_priority = (render_image, )
     requires = ['image.render']
+
+
+    test_calvinsys = {'image.render': {'write': ["dummy_data"]}}
+    test_set = [
+        {
+            'inports': {'b64image': ["dummy_data"]},
+        }
+    ]

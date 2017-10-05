@@ -91,6 +91,17 @@ class MQTTSubscriber(Actor):
         self.message = None
         return (message,)
 
-
     action_priority = (deliver_message, consume_message, )
     requires = ['calvinsys.network.mqtthandler']
+
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'host': "dummy",
+#                   'port': "dummy",
+#                   'topics': "dummy",
+#                   'settings': "dummy"}
+#    test_set = [
+#        {
+#            'output': {'message': []}
+#        }
+#    ]

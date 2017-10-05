@@ -21,7 +21,7 @@ _log = calvinlogger.get_logger(__name__)
 
 class Log(Actor):
     """
-    Write data to calvin log using specified loglevel. 
+    Write data to calvin log using specified loglevel.
     Supported loglevels: INFO, WARNING, ERROR
 
     Input:
@@ -37,7 +37,7 @@ class Log(Actor):
     def init(self, loglevel):
         self.loglevel = loglevel
         self.setup()
-        
+
     def setup(self):
         if self.loglevel == "INFO":
             self._logger = _log.info
@@ -50,15 +50,14 @@ class Log(Actor):
 
     def will_migrate(self):
         self._logger(" -- migrating")
-    
+
     def did_migrate(self):
         self.setup()
         self._logger(" -- finished migrating")
-    
+
     @condition(action_input=['data'])
     def log(self, data):
         self._logger("{}".format(data))
-        
+
 
     action_priority = (log, )
-

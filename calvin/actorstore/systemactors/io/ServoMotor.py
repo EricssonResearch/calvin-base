@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, condition, manage, calvinsys
+from calvin.actor.actor import Actor, condition, stateguard, manage, calvinsys
 from calvin.utilities.calvinlogger import get_actor_logger
 
 _log = get_actor_logger(__name__)
@@ -35,9 +35,18 @@ class ServoMotor(Actor):
         self._servo = calvinsys.open(self, "io.servomotor")
         calvinsys.write(self._servo, 90)
 
+    @stateguard(lambda self: calvinsys.can_write(self._servo))
     @condition(action_input=("angle",))
     def set_angle(self, angle):
         calvinsys.write(self._servo, angle)
 
     action_priority = (set_angle, )
     requires = ["io.servomotor"]
+
+
+    test_calvinsys = {'io.servomotor': {'write': [90, -90, 90, 180, -45]}}
+    test_set = [
+        {
+            'inports': {'angle': [-90, 90, 180, -45]},
+        }
+    ]

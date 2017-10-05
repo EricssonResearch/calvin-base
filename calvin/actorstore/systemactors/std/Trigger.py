@@ -39,7 +39,7 @@ class Trigger(Actor):
         calvinsys.write(self.timer, self.tick)
         self.started = True
 
-    @stateguard(lambda self: not self.started)
+    @stateguard(lambda self: not self.started and calvinsys.can_write(self.timer))
     @condition([], ['data'])
     def start_timer(self):
         self.start()
@@ -53,3 +53,13 @@ class Trigger(Actor):
 
     action_priority = (start_timer, trigger)
     requires = ['sys.timer.repeating']
+
+
+    test_kwargs = {'tick': 12, 'data': "data_to_forward"}
+    test_calvinsys = {'sys.timer.repeating': {'read': ["dummy_data_read"],
+                                              'write': [12]}}
+    test_set = [
+        {
+            'outports': {'data': ["data_to_forward"]}
+        }
+    ]

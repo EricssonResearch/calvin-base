@@ -67,8 +67,8 @@ class Sink(Actor):
 
     test_set = [
         {
-            'in': {'token': ['aa', 'ba', 'ca', 'da']},
-            'out': {},
+            'inports': {'token': ['aa', 'ba', 'ca', 'da']},
+            'outports': {},
             'postcond': [lambda self: self.tokens == ['aa', 'ba', 'ca', 'da']]
         }
     ]

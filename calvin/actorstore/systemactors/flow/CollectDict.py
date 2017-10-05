@@ -27,7 +27,7 @@ class CollectDict(Actor):
     Inputs:
       token(routing="collect-any-tagged"): token
     Outputs:
-      dict : Collected dictionary according to 'mapping' 
+      dict : Collected dictionary according to 'mapping'
     """
 
     @manage(['mapping'])
@@ -42,3 +42,12 @@ class CollectDict(Actor):
         return (token,)
 
     action_priority = (collect_tokens, )
+
+
+    test_kwargs = {'mapping': 'dummy'}
+    test_set = [
+        {
+            'inports': {'token': ["a", "b", 1]},
+            'outports': {'dict': ["a", "b", 1]}
+        }
+    ]

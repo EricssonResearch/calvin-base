@@ -93,17 +93,16 @@ class FileWriter(Actor):
     action_priority = (writef, openf)
     requires = ['calvinsys.io.filehandler']
 
+
     test_args = [absolute_basename('test_file'), 'testing']
-
     test_data = ['line-1', 'line-2']
-
     test_set = [
         {
-            'in': {'data': [file_data[0], file_data[1], EOSToken()]},
+            'inports': {'data': [file_data[0], file_data[1], EOSToken()]},
             'postcond': [verify_file]
         },
         {
-            'in': {'data': [file_data[0], file_data[1], EOSToken()]},
+            'inports': {'data': [file_data[0], file_data[1], EOSToken()]},
             'postcond': [verify_file]
         }
     ]

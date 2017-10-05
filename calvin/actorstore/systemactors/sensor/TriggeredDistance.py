@@ -63,8 +63,15 @@ class TriggeredDistance(Actor):
     def trigger_measurement(self, _):
         calvinsys.write(self._distance, True)
 
-
     action_priority = (read_measurement, trigger_measurement)
-    requires =  ['io.distance']
+    requires = ['io.distance']
 
 
+    test_calvinsys = {'io.distance': {'read': [10, 12, 0, 5],
+                                      'write': [True]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True]},
+            'outports': {'meters': [10, 12, 0, 5]}
+        }
+    ]

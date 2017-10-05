@@ -50,3 +50,10 @@ class Switch(Actor):
     action_priority = (action, )
     requires = ['io.switch']
 
+
+    test_calvinsys = {'io.switch': {'read': [1,0,1,0]}}
+    test_set = [
+        {
+            'outports': {'state': [1,0,1,0]}
+        }
+    ]

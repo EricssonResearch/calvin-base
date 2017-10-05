@@ -77,8 +77,15 @@ class StaticHBar(Actor):
 
         handle = self.chart_api.request_image()
         self.req_in_progress.append(handle)
-        
 
     action_priority = (handle_response, send_request, )
-
     requires = ['calvinsys.media.image', 'base64', 'calvinsys.charts.chart_handler']
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_set = [
+#        {
+#            'inports': {'labels': [],
+#                        'values': []},
+#            'outports': {'b64image': []}
+#        }
+#    ]

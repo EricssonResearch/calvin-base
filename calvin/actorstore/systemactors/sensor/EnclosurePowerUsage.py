@@ -52,6 +52,13 @@ class EnclosurePowerUsage(Actor):
         return (data,)
 
     action_priority = (measure,)
-    requires =  ['calvinsys.sensors.enclosure']
+    requires = ['calvinsys.sensors.enclosure']
 
 
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'power_supplies': 'dummy'}
+#    test_set = [
+#        {
+#            'output': {'watts': []}
+#        }
+#    ]

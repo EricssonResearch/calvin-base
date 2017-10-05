@@ -38,9 +38,14 @@ class LogWarning(Actor):
     @condition(action_input=['data'])
     def write(self, data):
         calvinsys.write(self.log, data)
-        
 
     action_priority = (write, )
-    
     requires = ["log.warning"]
 
+
+    test_calvinsys = {'log.warning': {'write': ['a', 'b', 'c', 'd']}}
+    test_set = [
+        {
+            'inports': {'data': ['a', 'b', 'c', 'd']},
+        }
+    ]

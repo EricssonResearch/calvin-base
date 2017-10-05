@@ -36,7 +36,7 @@ class SimpleUDPListener(Actor):
             self.port = int(self.port)
         except ValueError:
             self.port = 0
-    
+
         self.setup()
 
     def did_migrate(self):
@@ -54,3 +54,12 @@ class SimpleUDPListener(Actor):
 
     action_priority = (receive,)
     requires = ['calvinsys.network.serverhandler']
+
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'address': '123.45.67.8:9999'}
+#    test_set = [
+#        {
+#            'output': {'data': []}
+#        }
+#    ]

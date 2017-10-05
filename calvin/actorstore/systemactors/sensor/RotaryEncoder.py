@@ -53,6 +53,13 @@ class RotaryEncoder(Actor):
         return (direction,)
 
     action_priority = (turn, button,)
-    requires =  ['calvinsys.sensors.rotary_encoder']
+    requires = ['calvinsys.sensors.rotary_encoder']
 
 
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_set = [
+#        {
+#            'outports': {'direction': [],
+#                         'button': []}
+#        }
+#    ]

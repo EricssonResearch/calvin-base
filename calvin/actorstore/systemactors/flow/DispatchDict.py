@@ -25,7 +25,7 @@ class DispatchDict(Actor):
     Inputs:
       dict: dictionary
     Outputs:
-      token(routing="dispatch-mapped") : Dispatching tokens to connected ports according to 'mapping' 
+      token(routing="dispatch-mapped") : Dispatching tokens to connected ports according to 'mapping'
       default: Default route for unknown token values
     """
 
@@ -62,6 +62,13 @@ class DispatchDict(Actor):
         val = self.unmapped_out.pop(key)
         return (val,)
 
-
     action_priority = (dispatch_token, dispatch_default, get_dict)
 
+    test_kwargs = {'mapping': 'dummy'}
+    test_set = [
+        {
+            'inports': {'dict': [{"a": 1}, {"b": 2}, {"c": 3}]},
+            'outports': {'token': [],
+                         'default': [1, 2, 3]}
+        }
+    ]

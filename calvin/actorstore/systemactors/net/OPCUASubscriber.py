@@ -99,6 +99,18 @@ class OPCUASubscriber(Actor):
             _log.info(" - handle_changed: %d variables queued" % (len(self.changed_params),))
             self._report = False
         return (variable,)
-    
+
     action_priority = (handle_changed, changed)
     requires = ['calvinsys.opcua.client']
+
+# TBD: Reenable test after updating to use new calvinsys API
+#    test_kwargs = {'endpoint': "dummy",
+#                   'config': {"namespace": 1234,
+#                              "parameters": {"<tag>": {"address": "<address>",
+#                                                       "info": "<description>"}}}}
+#
+#    test_set = [
+#        {
+#            'output': {'variable': []}
+#        }
+#    ]

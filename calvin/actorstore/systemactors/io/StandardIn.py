@@ -37,7 +37,8 @@ class StandardIn(Actor):
         return (line, )
 
     action_priority = (read, )
-    requires =  ['calvinsys.io.filehandler']
+    requires = ['calvinsys.io.filehandler']
+
 
     # StdInMock reads "stdin\nstdin_second_line"
     test_set = [

@@ -22,7 +22,7 @@ class PickUpGesture(Actor):
     Senses a pick-up gesture
 
     Outputs:
-        pickup :  A trigger that a pick-up gesture was measured. 
+        pickup :  A trigger that a pick-up gesture was measured.
     """
 
     @manage(exclude=['level'])
@@ -51,4 +51,12 @@ class PickUpGesture(Actor):
         return (level,)
 
     action_priority = (read_measurement, )
-    requires =  ['io.pickupgesture']
+    requires = ['io.pickupgesture']
+
+
+    test_calvinsys = {'io.pickupgesture': {'read': [True, False, True, False]}}
+    test_set = [
+        {
+            'outports': {'pickup': [True, False, True, False]}
+        }
+    ]

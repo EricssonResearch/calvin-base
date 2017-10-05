@@ -52,14 +52,14 @@ class HTTPPost(Actor):
             self['http'].finalize(self.request)
             self.request = None
         self.received_headers = False
-        
+
     @stateguard(lambda self: not self.request)
     @condition(action_input=['URL', 'params', 'header', 'data'])
     def new_request(self, url, params, header, data):
         url = url.encode('ascii', 'ignore')
         data = data.encode('ascii', 'ignore')
         self.request = self['http'].post(url, params, header, data)
-        
+
 
     @stateguard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
     @condition(action_output=['status', 'header'])
@@ -91,3 +91,16 @@ class HTTPPost(Actor):
 
     action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler']
+
+
+    test_set = [
+        {
+            'inports': {'URL': [],
+                        'params': [],
+                        'header': [],
+                        'data': []},
+            'outports': {'status': [],
+                         'header': [],
+                         'data': []}
+        }
+    ]

@@ -69,3 +69,10 @@ class ExplicitStateExample(Actor):
         helper.write('token', 1)
         helper.loop_once()
         assert helper.read('token') == '((( 1 )))'
+
+    test_set = [
+        {
+            'inports': {'token': ["a", "b", 1]},
+            'outports': {'token': ['((( a )))', '((( b )))', '((( 1 )))']}
+        }
+    ]

@@ -29,3 +29,10 @@ class Timestamp(Actor):
 
     action_priority = (action,)
     requires = ['calvinsys.native.python-time']
+
+
+    test_set = [
+        {
+            'inports': {'trigger': [True]}
+        }
+    ]

@@ -80,7 +80,7 @@ class HTTPPut(Actor):
     def handle_empty_body(self):
         self.reset_request()
         return ()
-        
+
     @stateguard(lambda actor: actor.request and actor['http'].received_error(actor.request))
     @condition()
     def handle_error(self):
@@ -90,3 +90,16 @@ class HTTPPut(Actor):
 
     action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
     requires = ['calvinsys.network.httpclienthandler']
+
+
+    test_set = [
+        {
+            'inports': {'URL': [],
+                        'params': [],
+                        'header': [],
+                        'data': []},
+            'outports': {'status': [],
+                         'header': [],
+                         'data': []}
+        }
+    ]

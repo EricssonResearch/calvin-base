@@ -79,32 +79,32 @@ class SetDefault(Actor):
 
     test_set = [
         {
-            'in': {'container': [{'a':1}], 'key':['a'], 'value':[42]},
-            'out': {'container': [{'a':1}]},
+            'inports': {'container': [{'a':1}], 'key':['a'], 'value':[42]},
+            'outports': {'container': [{'a':1}]},
         },
         {
-            'in': {'container': [{'a':2}], 'key':['c'], 'value':[42]},
-            'out': {'container': [{'a':2, 'c': 42}]},
+            'inports': {'container': [{'a':2}], 'key':['c'], 'value':[42]},
+            'outports': {'container': [{'a':2, 'c': 42}]},
         },
         {
-            'in': {'container': [[1,{'a':3},3]], 'key':[[1, 'a']], 'value':[42]},
-            'out': {'container': [[1,{'a':3},3]]},
+            'inports': {'container': [[1,{'a':3},3]], 'key':[[1, 'a']], 'value':[42]},
+            'outports': {'container': [[1,{'a':3},3]]},
         },
         {
-            'in': {'container': [[1,{'c':4},3]], 'key':[[1, 'a']], 'value':[42]},
-            'out': {'container': [[1,{'a': 42, 'c':4},3]]},
+            'inports': {'container': [[1,{'c':4},3]], 'key':[[1, 'a']], 'value':[42]},
+            'outports': {'container': [[1,{'a': 42, 'c':4},3]]},
         },
         # Error conditions
         {
-            'in': {'container': [[1,2,3]], 'key':[1], 'value':[42]},
-            'out': {'container': ['Exception']},
+            'inports': {'container': [[1,2,3]], 'key':[1], 'value':[42]},
+            'outports': {'container': ['Exception']},
         },
         {
-            'in': {'container': [{'a':5}], 'key':[1], 'value':[42]},
-            'out': {'container': ['Exception']},
+            'inports': {'container': [{'a':5}], 'key':[1], 'value':[42]},
+            'outports': {'container': ['Exception']},
         },
         {
-            'in': {'container': [{'a':6}], 'key':[1], 'value':[42]},
-            'out': {'container': ['Exception']},
+            'inports': {'container': [{'a':6}], 'key':[1], 'value':[42]},
+            'outports': {'container': ['Exception']},
         }
     ]

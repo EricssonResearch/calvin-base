@@ -47,7 +47,16 @@ class FaceFinder(Actor) :
     def report(self):
         image = calvinsys.read(self._object_counter)
         return (image, )
-        
-    action_priority = (analyze, report )
-    
+
+    action_priority = (analyze, report)
     requires = ['image.facefinding']
+
+
+    test_calvinsys = {'image.facefinding': {'read': ["dummy_data_read"],
+                                            'write': ["dummy_data_write"]}}
+    test_set = [
+        {
+            'inports': {'b64image': ["dummy_data_write"]},
+            'outports': {'b64image': ["dummy_data_read"]}
+        }
+    ]

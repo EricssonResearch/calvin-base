@@ -58,7 +58,7 @@ class FileReader(Actor):
         except:
             self.file = None
             self.file_not_found = True
-        
+
 
     @stateguard(lambda self: self.file_not_found)
     @condition([], ['out'])
@@ -81,24 +81,24 @@ class FileReader(Actor):
         return (EOSToken(), )
 
     action_priority = (open_file, file_not_found, readline, eof)
-    requires =  ['calvinsys.io.filehandler']
+    requires = ['calvinsys.io.filehandler']
+
 
     # Assumes file contains "A\nB\nC\nD\nE\nF\nG\nH\nI"
-
     test_set = [
         {  # Test 3, read a non-existing file
-            'in': {'filename': "no such file"},
-            'out': {'out': ["File not found"]}
+            'inports': {'filename': "no such file"},
+            'outports': {'out': ["File not found"]}
         },
         {  # Test 1, read a file
-            'in': {'filename': absolute_filename('data.txt')},
-            'out': {'out': ['A', 'B', 'C', 'D']}
+            'inports': {'filename': absolute_filename('data.txt')},
+            'outports': {'out': ['A', 'B', 'C', 'D']}
         },
         {  # Test 2, read more of file
-            'out': {'out': ['E', 'F', 'G', 'H']}
+            'outports': {'out': ['E', 'F', 'G', 'H']}
         },
         {  # Test 3, read last of file
-            'out': {'out': ['I']}
+            'outports': {'out': ['I']}
         }
 
     ]

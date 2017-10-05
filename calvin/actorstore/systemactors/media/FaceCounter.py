@@ -47,7 +47,16 @@ class FaceCounter(Actor) :
     def report(self):
         objects = calvinsys.read(self._object_counter)
         return (objects, )
-        
+
     action_priority = (analyze, report )
-    
     requires = ['image.facedetection']
+
+
+    test_calvinsys = {'image.facedetection': {'read': ["dummy_data_read"],
+                                              'write': ["dummy_data_write"]}}
+    test_set = [
+        {
+            'inports': {'b64image': ["dummy_data_write"]},
+            'outports': {'objects': ["dummy_data_read"]}
+        }
+    ]

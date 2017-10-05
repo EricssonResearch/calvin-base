@@ -22,11 +22,11 @@ import datetime
 
 def now():
     return datetime.datetime.now()
-    
+
 def elapsed(t):
     diff = now() - t
     return diff.total_seconds()
-    
+
 _log = get_logger(__name__)
 
 
@@ -34,7 +34,7 @@ class RFIDReader(Actor):
 
     """
     RFIDReader - read MIFare Classic/ultralight when present, write incoming data to it.
-    
+
     Inputs:
         data : {"data": <data>}
     Outputs:
@@ -61,14 +61,14 @@ class RFIDReader(Actor):
 
     def will_migrate(self):
         self.timeout_timer.cancel()
-        
+
     @stateguard(lambda self: self._state == "idle" and self.timeout_timer.triggered)
     @condition()
     def is_idle(self):
         _log.debug("is_idle")
         self.timeout_timer.ack()
         self.timeout_timer.cancel()
-        
+
         if self.rfid.request_idl():
             uid = self.rfid.anti_collision()
             if uid is not None:
@@ -80,8 +80,8 @@ class RFIDReader(Actor):
                 self._state = "reset"
         else :
             self.timeout_timer = self['timer'].once(0.5)
-        
-        
+
+
     @stateguard(lambda self: self._state == "card present")
     @condition()
     def card_present(self):
@@ -96,7 +96,7 @@ class RFIDReader(Actor):
                 self._state = "card active"
         else :
             self._state = "reset"
-        
+
 
     @stateguard(lambda self: self._state == "card active")
     @condition([], ["data"])
@@ -116,7 +116,7 @@ class RFIDReader(Actor):
             _log.info("could not read card %r" % (self.active_uid,))
             self._state = "reset"
         return (result,)
-    
+
     @stateguard(lambda self: self._state == "check card" and self.timeout_timer.triggered)
     @condition()
     def check_card(self):
@@ -125,7 +125,7 @@ class RFIDReader(Actor):
         if self.rfid.read_value(self.active_type) is None:
             self.timeout_timer.cancel()
             self._state = "card gone"
-        
+
 
     @stateguard(lambda self: self._state == "check card")
     @condition(["data"], [])
@@ -137,9 +137,9 @@ class RFIDReader(Actor):
             self._state = "card gone"
         else :
             _log.info("write successful")
-        
+
         # Code goes here
-        
+
     @stateguard(lambda self: self._state == "card gone")
     @condition([], ["data"])
     def card_gone(self):
@@ -155,7 +155,15 @@ class RFIDReader(Actor):
         self.rfid.initialize()
         self._state = "idle"
         self.timeout_timer = self['timer'].once(self.timeout)
-        
-        
+
     action_priority = (reset, write_card, read_card, card_present, check_card, card_gone, is_idle, )
     requires = ["calvinsys.sensors.rfid", "calvinsys.events.timer"]
+
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_set = [
+#        {
+#            'inputs': {'data': []},
+#            'outports': {'data': []}
+#        }
+#    ]

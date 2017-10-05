@@ -40,3 +40,8 @@ class Terminator(Actor):
 
     action_priority = (null, )
 
+    test_set = [
+        {
+            'inports': {'void': []},
+        }
+    ]

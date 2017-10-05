@@ -23,7 +23,7 @@ _log = get_actor_logger(__name__)
 class RuntimeName(Actor):
     """
     Get name of current runtime
-    
+
     Input:
         trigger: Any token will trigger a read
     Output:
@@ -43,5 +43,14 @@ class RuntimeName(Actor):
         return (attr,)
 
     action_priority = (read,)
-
     requires = ["sys.attribute.indexed"]
+
+
+    test_calvinsys = {'sys.attribute.indexed': {'read': ["runtime.attribute"],
+                                                'write': ["node_name.name"]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True]},
+            'outports': {'value': ["runtime.attribute"]}
+        }
+    ]

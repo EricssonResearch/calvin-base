@@ -39,15 +39,15 @@ class Compute(Actor):
     def init(self, op):
         self.op_string = op
         self.setup()
-        
+
     def setup(self):
         self.math = calvinlib.use("math.arithmetic.operator")
         self.op = self.math.operator(op=self.op_string)
 
-        
+
     def did_migrate(self):
         self.setup()
-        
+
     @condition(['a', 'b'], ['result'])
     def compute(self, a, b):
         try:
@@ -56,42 +56,39 @@ class Compute(Actor):
             res = ExceptionToken(str(e))
         return (res, )
 
-
-    action_priority = ( compute, )
+    action_priority = (compute, )
+    requires = ['math.arithmetic.operator']
 
     test_args = ['+']
-
     test_set = [
         {
             'setup': [lambda self: self.init('*')],
-            'in': {'a': [1, 2, 3, 4], 'b':[1, 2, 3, 4]},
-            'out': {'result': [1, 4, 9, 16]},
+            'inports': {'a': [1, 2, 3, 4], 'b':[1, 2, 3, 4]},
+            'outports': {'result': [1, 4, 9, 16]},
         },
         {
             'setup': [lambda self: self.init('mod')],
-            'in': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
-            'out': {'result': [1, 2, 0, 1]},
+            'inports': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
+            'outports': {'result': [1, 2, 0, 1]},
         },
         {
             'setup': [lambda self: self.init('+')],
-            'in': {'a': [1, 2, 3, 4], 'b':[1, 2, 3, 4]},
-            'out': {'result': [2, 4, 6, 8]},
+            'inports': {'a': [1, 2, 3, 4], 'b':[1, 2, 3, 4]},
+            'outports': {'result': [2, 4, 6, 8]},
         },
         {
             'setup': [lambda self: self.init('-')],
-            'in': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
-            'out': {'result': [-2, -1, 0, 1]},
+            'inports': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
+            'outports': {'result': [-2, -1, 0, 1]},
         },
         {
             'setup': [lambda self: self.init('/')],
-            'in': {'a': [1, 2, 3, 4], 'b':[1, 2, 3, 4]},
-            'out': {'result': [1, 1, 1, 1]},
+            'inports': {'a': [1, 2, 3, 4], 'b':[1, 2, 3, 4]},
+            'outports': {'result': [1, 1, 1, 1]},
         },
         {
             'setup': [lambda self: self.init('div')],
-            'in': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
-            'out': {'result': [0, 0, 1, 1]},
+            'inports': {'a': [1, 2, 3, 4], 'b':[3, 3, 3, 3]},
+            'outports': {'result': [0, 0, 1, 1]},
         }
     ]
-
-    requires = ['math.arithmetic.operator']

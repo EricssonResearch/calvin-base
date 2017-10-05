@@ -43,7 +43,7 @@ class LineJoin(Actor):
         #        Similarly, if self.text is not None => raise
         self.text = self.delim.join(self.lines)
         self.lines = []
-        
+
 
     @stateguard(lambda self: self.text is not None)
     @condition([], ['text'])
@@ -56,7 +56,14 @@ class LineJoin(Actor):
     @condition(['line'], [])
     def append(self, token):
         self.lines.append(token)
-        
 
     action_priority = (produce, append, )
 
+
+    test_kwargs = {'delim': ' '}
+    test_set = [
+        {
+            'inports': {'line': ["One", "lines", "off", "words", EOSToken()]},
+            'outports': {'text': ["One lines off words"]}
+        }
+    ]

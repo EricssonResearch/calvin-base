@@ -59,4 +59,14 @@ class TriggeredSoilMoisture(Actor):
         return (level,)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires =  ['io.soilmoisture']
+    requires = ['io.soilmoisture']
+
+
+    test_calvinsys = {'io.soilmoisture': {'read': [50, 40],
+                                          'write': [True, True]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True, "True"]},
+            'outports': {'level': [50, 40]}
+        }
+    ]

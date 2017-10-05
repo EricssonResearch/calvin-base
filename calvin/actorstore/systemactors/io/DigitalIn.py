@@ -53,3 +53,11 @@ class DigitalIn(Actor):
 
     action_priority = (read_pin, )
     requires = ["io.digitalin"]
+
+
+    test_calvinsys = {'io.digitalin': {'read': [1,0,1,0]}}
+    test_set = [
+        {
+            'outports': {'state': [1,0,1,0]}
+        }
+    ]

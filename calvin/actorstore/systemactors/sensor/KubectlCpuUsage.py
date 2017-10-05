@@ -67,6 +67,12 @@ class KubectlCpuUsage(Actor):
         return (payload,)
 
     action_priority = (dispatch_single, measure,)
-    requires =  ['calvinsys.sensors.kubectl']
+    requires = ['calvinsys.sensors.kubectl']
 
 
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_set = [
+#        {
+#            'outports': {'usage': []}
+#        }
+#    ]

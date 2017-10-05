@@ -41,14 +41,14 @@ class Iterate(Actor):
         self.has_data = False
         self.index = 0
         self.setup()
-        
+
     def setup(self):
         self.copy = calvinlib.use("copy")
 
-        
+
     def did_migrate(self):
         self.setup()
-        
+
     @stateguard(lambda self: not self.has_data)
     @condition(['token'], [])
     def consume(self, data):
@@ -60,7 +60,7 @@ class Iterate(Actor):
             self.data = self.copy.copy(data) if mutable else data
         self.has_data = True
         self.index = 0
-        
+
 
     @stateguard(lambda self: self.has_data and type(self.data) is list)
     @condition([], ['item', 'index'])
@@ -103,61 +103,60 @@ class Iterate(Actor):
         return (res, 0)
 
     action_priority = (produce_listitem, produce_dictitem, produce_stringitem, produce_plainitem, consume)
-
     requires = ['copy']
-    
+
+
     test_args = []
     test_kwargs = {}
-
     test_set = [
         {
-            'in': {'token': [[1,2,3]]},
-            'out': {'item': [1,2,3], 'index': [0, 1, 2]},
+            'inports': {'token': [[1,2,3]]},
+            'outports': {'item': [1,2,3], 'index': [0, 1, 2]},
         },
         {
-            'in': {'token': ["abcd"]},
-            'out': {'item': ["a", "b", "c", "d"], 'index': [0, 1, 2, 3]},
+            'inports': {'token': ["abcd"]},
+            'outports': {'item': ["a", "b", "c", "d"], 'index': [0, 1, 2, 3]},
         },
         {
-            'in': {'token': [1,2,3]},
-            'out': {'item': [1, 2, 3], 'index': [0, 0, 0]},
+            'inports': {'token': [1,2,3]},
+            'outports': {'item': [1, 2, 3], 'index': [0, 0, 0]},
         },
         {
-            'in': {'token': {"a":"A", "b":1}},
-            'out': {'item': set([1, "A"]), 'index': set(["a", "b"])},
+            'inports': {'token': {"a":"A", "b":1}},
+            'outports': {'item': set([1, "A"]), 'index': set(["a", "b"])},
         },
         {
-            'in': {'token': [""]},
-            'out': {'item': [None], 'index': [0]},
+            'inports': {'token': [""]},
+            'outports': {'item': [None], 'index': [0]},
         },
         {
-            'in': {'token': [{}]},
-            'out': {'item': [None], 'index': [0]},
+            'inports': {'token': [{}]},
+            'outports': {'item': [None], 'index': [0]},
         },
         {
-            'in': {'token': [[]]},
-            'out': {'item': [None], 'index': [0]},
+            'inports': {'token': [[]]},
+            'outports': {'item': [None], 'index': [0]},
         },
         {
-            'in': {'token': [[], []]},
-            'out': {'item': [None, None], 'index': [0, 0]},
+            'inports': {'token': [[], []]},
+            'outports': {'item': [None, None], 'index': [0, 0]},
         },
 
         {
-            'in': {'token': [[1], [2]]},
-            'out': {'item': [1, 2], 'index': [0, 0]},
+            'inports': {'token': [[1], [2]]},
+            'outports': {'item': [1, 2], 'index': [0, 0]},
         },
         {
-            'in': {'token': [[], [1,2,3]]},
-            'out': {'item': [None, 1,2,3], 'index': [0, 0, 1, 2]},
+            'inports': {'token': [[], [1,2,3]]},
+            'outports': {'item': [None, 1,2,3], 'index': [0, 0, 1, 2]},
         },
         {
-            'in': {'token': [[], [], [1,2]]},
-            'out': {'item': [None, None, 1,2], 'index': [0, 0, 0, 1]},
+            'inports': {'token': [[], [], [1,2]]},
+            'outports': {'item': [None, None, 1,2], 'index': [0, 0, 0, 1]},
         },
         {
-            'in': {'token': ["ab", "", "A"]},
-            'out': {'item': ["a", "b", None, "A"], 'index': [0, 1, 0, 0]},
+            'inports': {'token': ["ab", "", "A"]},
+            'outports': {'item': ["a", "b", None, "A"], 'index': [0, 1, 0, 0]},
         },
 
     ]

@@ -58,7 +58,6 @@ class DynamicHBar(Actor):
         self.use('calvinsys.charts.chart_handler', shorthand="chart")
         self.chart_api = self['chart'].create_hbar_chart(self.params)
 
-        
     def did_migrate(self):
         self.setup()
 
@@ -90,8 +89,15 @@ class DynamicHBar(Actor):
 
         handle = self.chart_api.request_image()
         self.req_in_progress.append(handle)
-        
 
     action_priority = (handle_response, send_request, )
-
     requires = ['calvinsys.media.image', 'base64', 'calvinsys.charts.chart_handler']
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_set = [
+#        {
+#            'inports': {'label': [],
+#                        'value': []},
+#            'outports': {'b64image': []}
+#        }
+#    ]

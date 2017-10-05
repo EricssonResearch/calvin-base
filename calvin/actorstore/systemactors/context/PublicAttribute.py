@@ -23,7 +23,7 @@ _log = get_actor_logger(__name__)
 class PublicAttribute(Actor):
     """
     Fetch given public attribute of runtime given as a section.subsection.subsubsection
-    
+
     Input:
         trigger: Any token will trigger a read
     Output:
@@ -44,5 +44,16 @@ class PublicAttribute(Actor):
         return (attribute,)
 
     action_priority = (read,)
-
     requires = ["sys.attribute.public"]
+
+
+    test_kwargs = {'attribute': "runtime.attribute"}
+    test_calvinsys = {'sys.attribute.public': {'read': ["runtime.attribute"],
+                                               'write': ["runtime.attribute"]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True]},
+            # Verify tokens on outport
+            'outports': {'value': ["runtime.attribute"]}
+        }
+    ]

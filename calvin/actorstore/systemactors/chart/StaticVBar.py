@@ -71,13 +71,19 @@ class StaticVBar(Actor):
     @condition(['values', 'labels'], [])
     def send_request(self, values, labels):
         self.chart_api.set_chart_dataset(values)
-
         self.chart_api.set_axes_label([0] + labels)
 
         handle = self.chart_api.request_image()
         self.req_in_progress.append(handle)
-        
 
     action_priority = (handle_response, send_request, )
-
     requires = ['calvinsys.media.image', 'base64', 'calvinsys.charts.chart_handler']
+
+#    TBD: Reenable test after updating to use new calvinsys API
+#    test_set = [
+#        {
+#            'inports': {'labels': [],
+#                        'values': []},
+#            'outports': {'b64image': []}
+#        }
+#    ]

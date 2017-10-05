@@ -57,3 +57,13 @@ class ImageSource(Actor):
 
     action_priority = (fetch_image, send_image)
     requires = ['image.source']
+
+
+    test_calvinsys = {'image.source': {'read': [1,0,1,0,0,1,0,1],
+                                       'write': [None, None, None, None]}}
+    test_set = [
+        {
+            'inports': {'trigger': [True, 1, "a", 0]},
+            'outports': {'b64image': [1,0,1,0,0,1,0,1]}
+        }
+    ]

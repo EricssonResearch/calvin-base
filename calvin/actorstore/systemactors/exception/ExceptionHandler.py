@@ -77,35 +77,35 @@ class ExceptionHandler(Actor):
 
     test_set = [
         {  # normal token
-            'in': {'token': 42},
-            'out': {'token': [42], 'status':[]}
+            'inports': {'token': 42},
+            'outports': {'token': [42], 'status':[]}
         },
         {  # Exception
-            'in': {'token': ExceptionToken()},
-            'out': {'token': ['End of stream'], 'status':['Exception']}
+            'inports': {'token': ExceptionToken()},
+            'outports': {'token': ['End of stream'], 'status':['Exception']}
         },
         {  # Exception
-            'in': {'token': EOSToken()},
-            'out': {'token': ['End of stream'], 'status':['End of stream']}
+            'inports': {'token': EOSToken()},
+            'outports': {'token': ['End of stream'], 'status':['End of stream']}
         },
         {  # Long list with Exceptions in middle
             'setup': [lambda self: self.init(replace=True, replacement="EOS")],
-            'in': {'token': [0, 1, 2, EOSToken(), 0, 1, 2, EOSToken(), 0, 1, 2]},
-            'out': {'token': [0, 1, 2, 'EOS', 0, 1, 2, 'EOS', 0, 1, 2], 'status':['End of stream', 'End of stream']}
+            'inports': {'token': [0, 1, 2, EOSToken(), 0, 1, 2, EOSToken(), 0, 1, 2]},
+            'outports': {'token': [0, 1, 2, 'EOS', 0, 1, 2, 'EOS', 0, 1, 2], 'status':['End of stream', 'End of stream']}
         },
         {  # Exception with replace (default)
             'setup': [lambda self: self.init(replace=True)],
-            'in': {'token': EOSToken()},
-            'out': {'token': [None], 'status':['End of stream']}
+            'inports': {'token': EOSToken()},
+            'outports': {'token': [None], 'status':['End of stream']}
         },
         {  # Exception with replace
             'setup': [lambda self: self.init(replace=True, replacement={})],
-            'in': {'token': EOSToken()},
-            'out': {'token': [{}], 'status':['End of stream']}
+            'inports': {'token': EOSToken()},
+            'outports': {'token': [{}], 'status':['End of stream']}
         },
         {  # Exception with replace
             'setup': [lambda self: self.init(replace=True, replacement={})],
-            'in': {'token': ExceptionToken()},
-            'out': {'token': [{}], 'status':['Exception']}
+            'inports': {'token': ExceptionToken()},
+            'outports': {'token': [{}], 'status':['Exception']}
         },
     ]

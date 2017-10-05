@@ -32,7 +32,7 @@ class ClassicDelay(Actor):
         self.timer = calvinsys.open(self, "sys.timer.repeating")
         self.started = False
 
-    @stateguard(lambda self: not self.started)
+    @stateguard(lambda self: not self.started and calvinsys.can_write(self.timer))
     @condition(['token'], ['token'])
     def start_timer(self, token):
         self.started = True
@@ -47,3 +47,14 @@ class ClassicDelay(Actor):
 
     action_priority = (start_timer, passthrough)
     requires = ['sys.timer.repeating']
+
+
+    test_kwargs = {'delay': 20}
+    test_calvinsys = {'sys.timer.repeating': {'read': ["d", "u", "m", "m", "y"],
+                                              'write': [20]}}
+    test_set = [
+        {
+            'inports': {'token': ["a", "b", 1]},
+            'outports': {'token': ["a", "b", 1]}
+        }
+    ]

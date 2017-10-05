@@ -50,7 +50,6 @@ def reactor_listen(node_name, factory, host, port):
             _log.error("Server failed listenSSL, err={}".format(err))
     else:
         listener = reactor.listenTCP(port, factory, interface=host)
-        # @tif, check with Harald how to verify that workaround is still ok.
         # WORKAROUND This is here due to an obscure error in twisted trying to write to a listening port
         # on some architectures/OSes. The default is to raise a RuntimeError.
         listener.doWrite = lambda: None
