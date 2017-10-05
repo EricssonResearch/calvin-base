@@ -29,10 +29,10 @@ class Light(Actor):
     def init(self):
         self.light = calvinsys.open(self, "io.light")
 
-    @stateguard(lambda self: self.light and calvinsys.can_write(self.light))
+    @stateguard(lambda self: calvinsys.can_write(self.light))
     @condition(action_input=("on",))
-    def set_state(self, state):
-        calvinsys.write(self.light, 1 if state else 0)
+    def light(self, on):
+        calvinsys.write(self.light, 1 if on else 0)
 
-    action_priority = (set_state, )
+    action_priority = (light, )
     requires = ["io.light"]
