@@ -18,20 +18,44 @@ class Token(object):
 
     """ Token class """
 
-    def __init__(self, value=None, origin=None, timestamp=None):
-        self.value = value
+    def __init__(self, value=None, origin=None, timestamp=None, port_tag=None):
+        self._value = value
         self._origin = origin
         self._timestamp = timestamp
+        self._port_tag = port_tag
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def origin(self):
+        return self._origin
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @property
+    def port_tag(self):
+        return self._port_tag
+
+    @value.setter
+    def value(self, new_value):
+        raise Exception("NICHT PILLEN!")
+        # self._value = new_value
 
     def repr_for_coder(self):
         representation = {
             'type':self.__class__.__name__,
-            'value':self.value
+            'value':self._value
         }
         if self._origin:
             representation['origin'] = self._origin
         if self._timestamp:
             representation['self.timestamp'] = self._timestamp
+        if self._port_tag:
+            representation['self.port_tag'] = self._port_tag
         return representation
 
     def encode(self, coder=None):
@@ -51,7 +75,7 @@ class Token(object):
         return class_(**representaton)
 
     def __str__(self):
-        return "<%s> %s" % (self.__class__.__name__, str(self.value))
+        return "<%s> %s" % (self.__class__.__name__, str(self._value))
 
     def __repr__(self):
         # To get it printed nicely also in lists
@@ -61,15 +85,15 @@ class ExceptionToken(Token):
 
     """ Base class for exception tokens """
 
-    def __init__(self, value="Exception"):
-        super(ExceptionToken, self).__init__(value)
+    def __init__(self, value="Exception", origin=None, timestamp=None, port_tag=None):
+        super(ExceptionToken, self).__init__(value, origin, timestamp, port_tag)
 
 class EOSToken(ExceptionToken):
 
     """ End of stream token """
 
-    def __init__(self, value="End of stream"):
-        super(EOSToken, self).__init__(value)
+    def __init__(self, value="End of stream", origin=None, timestamp=None, port_tag=None):
+        super(EOSToken, self).__init__(value, origin, timestamp, port_tag)
 
 
 if __name__ == '__main__':

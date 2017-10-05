@@ -21,6 +21,7 @@ import copy
 
 _log = calvinlogger.get_logger(__name__)
 
+# TODO: Move tags to metadata
 
 class CollectTagged(CollectUnordered):
 
@@ -40,7 +41,7 @@ class CollectTagged(CollectUnordered):
             writer = self.writers[i % len(self.writers)]
             if self.write_pos[writer] - self.tentative_read_pos[writer] >= 1:
                 read_pos = self.tentative_read_pos[writer]
-                data = self.fifo[writer][read_pos % self.N]
+                tok = self.fifo[writer][read_pos % self.N]
                 self.tentative_read_pos[writer] = read_pos + 1
                 if self.peek_turn_pos == -1:
                     self.peek_turn_pos = self.turn_pos
@@ -48,9 +49,15 @@ class CollectTagged(CollectUnordered):
                 # Modify token to tagged value
                 # Make copy so that repeated peeks are not repeatedly tagging
                 # Also copy to preserv Token class, potential exception token.
-                data = copy.deepcopy(data)
-                data.value = {self.tags[writer]: data.value}
-                return data
+                # tok = copy.deepcopy(tok)
+                # tok.value = {self.tags[writer]: tok.value}
+                # return tok
+                tok_class = tok.__class__
+                ## FIXME: This is what it should be, so action in actor can access metadata
+                ## return tok_class(tok.value, tok.origin, tok.timestamp, self.tags[writer])
+                ## FIXME: This is what we have to do for now
+                return tok_class({self.tags[writer]: tok.value}, tok.origin, tok.timestamp)
+
         raise QueueEmpty(reader=metadata)
 
     def _set_port_mapping(self, mapping):

@@ -20,6 +20,7 @@ from calvin.utilities import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 
+# TODO: Move tags to metadata
 
 class FanoutMappedFIFO(FanoutBase):
 
@@ -53,9 +54,10 @@ class FanoutMappedFIFO(FanoutBase):
         # data is a Token whose value is wrapped in a {selector:value} dict
         mapped_value = data.value
         select, value = mapped_value.popitem()
-        data.value = value
+        tok_class = data.__class__
+        tok = tok_class(value, data.origin, data.timestamp)
         peer = self.mapping[select]
-        return data, peer
+        return tok, peer
 
     def write(self, data, metadata):
         # print data, metadata

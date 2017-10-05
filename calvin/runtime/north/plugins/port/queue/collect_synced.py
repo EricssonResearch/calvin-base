@@ -23,6 +23,7 @@ import copy
 
 _log = calvinlogger.get_logger(__name__)
 
+# TODO: Move tags to metadata
 
 class CollectSynced(CollectBase):
 
@@ -61,17 +62,19 @@ class CollectSynced(CollectBase):
                     if w is writer:
                         break
                     self.tentative_read_pos[w] -= 1
-                # return exception token alone
-                data = copy.deepcopy(data)
-                data.value = {self.tags[writer]: data.value}
+                # # return exception token alone
+                # data = copy.deepcopy(data)
+                # data.value = {self.tags[writer]: data.value}
                 self.tentative_read_pos[writer] = read_pos + 1
-                return data
+                tok_class = data.__class__
+                return tok_class({self.tags[writer]: data.value}, data.origin, data.timestamp)
+
             self.tentative_read_pos[writer] = read_pos + 1
             value[self.tags[writer]] = data.value
         if self.tags_are_ordering:
             # ensure values sorted on index in original ordering
             value = [x for (y,x) in sorted(zip(value.keys(), value.values()))]
-        return Token(value)
+        return Token(value, data.origin, data.timestamp)
 
     def _set_port_mapping(self, mapping):
         if not set(mapping.values()) == set(self.writers):
