@@ -77,7 +77,7 @@ def manage(include=None, exclude=None):
     return wrapper
 
 
-def condition(action_input=[], action_output=[]):
+def condition(action_input=[], action_output=[], metadata=False):
     """
     Decorator condition specifies the required input data and output space.
     Both parameters are lists of port names
@@ -91,6 +91,7 @@ def condition(action_input=[], action_output=[]):
 
         @functools.wraps(action_method)
         def condition_wrapper(self):
+            # FIXME: tokens_available(1), the length argument is no longer relevant (always == 1)
             #
             # Check if input ports have enough tokens. Note that all([]) evaluates to True
             #
@@ -111,16 +112,19 @@ def condition(action_input=[], action_output=[]):
             for portname in action_input:
                 port = self.inports[portname]
                 token, exhaust = port.read()
-                is_exception_token = isinstance(token, ExceptionToken)
-                exception = exception or is_exception_token
-                args.append(token if is_exception_token else token.value )
                 if exhaust:
                    exhausted_ports.add(port)
+
+                is_exception_token = isinstance(token, ExceptionToken)
+                exception = exception or is_exception_token
+                x = token if is_exception_token else ((token.value, token.metadata) if metadata else token.value)
+                args.append(x)
             #
             # Check for exceptional conditions
             #
             if exception:
                 # FIXME: Simplify exception handling
+                # FIXME: Either unwrap args != ExceptionToken or alway pass metadata
                 production = self.exception_handler(action_method, args) or ()
             else:
                 #
@@ -142,8 +146,10 @@ def condition(action_input=[], action_output=[]):
             # Write the results from the action to the output port(s)
             #
             for portname, retval in zip(action_output, production):
+                # FIXME: If metadata retval _must_ be a tuple of (value, metadata)
                 port = self.outports[portname]
-                port.write_token(retval if isinstance(retval, Token) else Token(retval))
+                x = retval if isinstance(retval, Token) else (Token(retval[0], **retval[1]) if metadata else Token(retval))
+                port.write_token(x)
 
             return (True, True, exhausted_ports)
 

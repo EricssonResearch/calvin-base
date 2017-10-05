@@ -56,7 +56,7 @@ class CollectTagged(CollectUnordered):
                 ## FIXME: This is what it should be, so action in actor can access metadata
                 ## return tok_class(tok.value, tok.origin, tok.timestamp, self.tags[writer])
                 ## FIXME: This is what we have to do for now
-                return tok_class({self.tags[writer]: tok.value}, tok.origin, tok.timestamp)
+                return tok_class({self.tags[writer]: tok.value}, **tok.metadata)
 
         raise QueueEmpty(reader=metadata)
 

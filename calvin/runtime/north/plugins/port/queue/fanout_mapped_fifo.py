@@ -55,7 +55,7 @@ class FanoutMappedFIFO(FanoutBase):
         mapped_value = data.value
         select, value = mapped_value.popitem()
         tok_class = data.__class__
-        tok = tok_class(value, data.origin, data.timestamp)
+        tok = tok_class(value, **data.metadata)
         peer = self.mapping[select]
         return tok, peer
 

@@ -29,21 +29,16 @@ class Token(object):
         return self._value
 
     @property
-    def origin(self):
-        return self._origin
+    def metadata(self):
+        return {"origin":self._origin, "timestamp":self._timestamp, "port_tag":self._port_tag}
 
-    @property
-    def timestamp(self):
-        return self._timestamp
-
-    @property
-    def port_tag(self):
-        return self._port_tag
+    @metadata.setter
+    def metadata(self, x):
+        raise Exception("To change metadata, create a new token: Token(value, **metadata)")
 
     @value.setter
     def value(self, new_value):
-        raise Exception("NICHT PILLEN!")
-        # self._value = new_value
+        raise Exception("To change value, create a new token: Token(value, **metadata)")
 
     def repr_for_coder(self):
         representation = {
@@ -53,9 +48,9 @@ class Token(object):
         if self._origin:
             representation['origin'] = self._origin
         if self._timestamp:
-            representation['self.timestamp'] = self._timestamp
+            representation['timestamp'] = self._timestamp
         if self._port_tag:
-            representation['self.port_tag'] = self._port_tag
+            representation['port_tag'] = self._port_tag
         return representation
 
     def encode(self, coder=None):
