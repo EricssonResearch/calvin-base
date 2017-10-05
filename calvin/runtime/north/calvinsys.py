@@ -81,7 +81,9 @@ class CalvinSys(object):
     def _open(self, actor, capability_name, **kwargs):
         capability, pyclass = self._get_class(capability_name)
         obj = pyclass(calvinsys=self, name=capability_name, actor=actor)
-        data = dict(capability['attributes'], **kwargs)
+        # Ensure platform attributes take precedence
+        data = kwargs
+        data.update(capability['attributes'])
         validate(data, obj.init_schema)
         obj.init(**data)
         return obj
@@ -212,7 +214,9 @@ class CalvinSys(object):
         """
         for ref, csobj in csobjects.items():
             capability, pyclass = self._get_class(csobj["name"])
-            data = dict(capability["attributes"], **csobj["args"])
+            # Ensure platform attributes take precedence
+            data = csobj["args"]
+            data.update(capability['attributes'])
             csobj["obj"] = pyclass(calvinsys=self, name=csobj["name"], actor=actor).deserialize(state=csobj["obj"], **data)
             self._objects[ref] = csobj
             self._actors.setdefault(actor, []).append(ref)

@@ -99,7 +99,7 @@ class Attribute(base_calvinsys_object.BaseCalvinsysObject):
     def serialize(self):
         return {"attribute": self._attribute, "type": self._type}
         
-    def deserialize(self, state):
+    def deserialize(self, state, **kwargs):
         self._type = state["type"]
         self._attribute = state["attribute"]
         return self
