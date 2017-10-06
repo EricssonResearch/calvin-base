@@ -21,59 +21,59 @@ def unwrap(data):
     
 @pytest_unittest
 class TestCollectUnorderedFIFO(unittest.TestCase):
-    
+
     def setUp(self):
         self.inport = create_port()
-        
+
     def setup_writers(self, n):
         writer_list = [ "writer-%d" % i for i in range(1, n+1)]
         for writer in writer_list:
             self.inport.add_writer(writer, {})
-        
+
     def tearDown(self):
         pass
-        
+
     def testInit(self):
         assert self.inport
-        
+
     def testType(self):
         queue_type = self.inport.queue_type
         self.assertEqual(queue_type, "collect:unordered")
-    
+
     def testGetPeers(self):
         self.setup_writers(3)
-        self.assertEqual(set(self.inport.get_peers()), 
+        self.assertEqual(set(self.inport.get_peers()),
                          set(["writer-%d" % i for i in [1,2,3]]))
     def testAddWriter(self):
         self.inport.add_writer("writer", {})
         self.assertTrue("writer" in self.inport.writers)
-        
+
     def testRemoveWriter_Normal(self):
         self.setup_writers(1)
         self.inport.remove_writer("writer-1")
         self.assertTrue("writer-1" not in self.inport.writers)
-        
+
     def testRemoveWriter_Failure(self):
         with self.assertRaises(Exception):
             self.inport.remove_writer(self)
-        
+
         with self.assertRaises(Exception):
             self.inport.remove_writer("no such writer")
-        
-        
+
+
     def testAddReader_Normal(self):
         self.inport.add_reader(None, None)
-        
+
     def testAddReader_Illegal(self):
         pass
-            
+
     def testAddReader_Replication(self):
         # Test replication etc
         pass
 
     def testRemoveReader_Normal(self):
         self.inport.remove_reader(None)
-        
+
     def testWrite_Normal(self):
         self.setup_writers(3)
         for _ in range(3):
@@ -82,13 +82,13 @@ class TestCollectUnorderedFIFO(unittest.TestCase):
         for i in [1,2,3]:
             fifo = self.inport.fifo["writer-%d" % i]
             self.assertEqual(fifo[:3], [i,i,i])
-        
+
     def testWrite_QueueFull(self):
         self.setup_writers(2)
         with self.assertRaises(QueueFull):
             for i in range(10):
                 self.inport.write("fillme", "writer-1")
-    
+
     def testTokensAvailable_Normal(self):
         self.setup_writers(5)
         self.inport.write(Token("data-1"), "writer-1")
@@ -97,17 +97,17 @@ class TestCollectUnorderedFIFO(unittest.TestCase):
         self.inport.write(Token("data-1"), "writer-2")
         self.assertTrue(self.inport.tokens_available(2, None))
         self.assertFalse(self.inport.tokens_available(3, None))
-        
-    
+
+
     def testTokensAvailable_Erroneous(self):
         pass
-        
+
     def testSlotsAvailable_Normal(self):
         self.setup_writers(5)
-        
+
         for i in [1,2,3,4,5]:
             self.assertTrue(self.inport.slots_available(self.inport.N-1, "writer-%d" % i))
-        
+
         for i in [1,2,3]:
             self.inport.write(Token("data"), "writer-%d" % i)
         for w in self.inport.writers:
@@ -128,7 +128,7 @@ class TestCollectUnorderedFIFO(unittest.TestCase):
             self.assertEqual(self.inport.peek(None).value, "data-%d" % i)
         for i in [1,2,3]:
             self.assertEqual(self.inport.peek(None).value, "data-%d" % (i+3))
-        
+
     def testPeek_Failure(self):
         self.setup_writers(3)
         with self.assertRaises(QueueEmpty):
@@ -151,7 +151,7 @@ class TestCollectUnorderedFIFO(unittest.TestCase):
         except QueueEmpty:
             pass
         self.assertEqual(data_2, ["data-%d" % i for i in [1,2,3,4,5,6]])
-        
+
     def testCommit(self):
         self.setup_writers(3)
         for i in [1,2,3]:
@@ -166,7 +166,7 @@ class TestCollectUnorderedFIFO(unittest.TestCase):
             self.inport.peek(None)
         # ensure the data was as expected
         self.assertEqual(data, ["data-%d" % i for i in [1,2,3,4,5,6]])
-                
+
     def testSerialize(self):
         self.setup_writers(3)
         for i in [1,2,3]:

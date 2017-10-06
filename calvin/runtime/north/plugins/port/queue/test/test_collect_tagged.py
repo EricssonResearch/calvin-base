@@ -20,10 +20,10 @@ def unwrap(data):
             
 @pytest_unittest
 class TestCollectUnorderedFIFOTagged(TestCollectUnorderedFIFO):
-    
+
     def setUp(self):
         self.inport = create_port(routing="collect-tagged")
-        
+
     def testType(self):
         queue_type = self.inport.queue_type
         self.assertEqual(queue_type, "collect:tagged")
@@ -66,7 +66,7 @@ class TestCollectUnorderedFIFOTagged(TestCollectUnorderedFIFO):
         for i in [1,2,3]:
             tag, data = unwrap(self.inport.peek(None))
             data_1.setdefault(tag, []).append(data)
-        
+
         self.inport.cancel(None)
         data_2 = {}
         try :
@@ -77,7 +77,7 @@ class TestCollectUnorderedFIFOTagged(TestCollectUnorderedFIFO):
             pass
         for tag, data in data_1.items():
             self.assertEqual(data, data_2[tag][:len(data)])
-        
+
     def testCommit(self):
         self.setup_writers(3)
         for i in [1,2,3]:
