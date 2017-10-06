@@ -38,7 +38,8 @@ class CollectAny(CollectBase):
         super(CollectAny, self).__init__(port_properties, peer_port_properties)
         self._type = "collect:any-tagged"
 
-    def tokens_available(self, length, metadata):
+    # FIXME: length argument will allways be 1
+    def tokens_available(self, length, _):
         if length >= self.N:
             return False
         # Any FIFOs need to have length tokens
@@ -48,32 +49,20 @@ class CollectAny(CollectBase):
         return False
 
     def peek(self, metadata):
-        value = {}
         for writer in self.writers:
             if self.write_pos[writer] == self.tentative_read_pos[writer]:
                 continue
             read_pos = self.tentative_read_pos[writer]
             data = self.fifo[writer][read_pos % self.N]
-            if isinstance(data, ExceptionToken):
-                # We found an exception token, will return it alone
-                # First cancel previous peeks
-                for w in self.writers:
-                    if w is writer:
-                        break
-                    self.tentative_read_pos[w] -= 1
-                # return exception token alone
-                self.tentative_read_pos[writer] = read_pos + 1
-                tok_class = data.__class__
-                meta = data.metadata
-                meta['port_tag'] = self.tags[writer]
-                return tok_class(data.value, **meta)
             self.tentative_read_pos[writer] = read_pos + 1
             tok_class = data.__class__
             meta = data.metadata
+            # FIXME: this tagging should be done by the writing port instead
             meta['port_tag'] = self.tags[writer]
             return tok_class(data.value, **meta)
         raise QueueEmpty(reader=metadata)
 
+    # FIXME: Remove
     def _set_port_mapping(self, mapping):
         if not set(mapping.values()) == set(self.writers):
             print mapping, self.readers
