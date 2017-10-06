@@ -17,8 +17,8 @@ def create_port(routing):
     return queue.get(port)
 
 def unwrap(data):
-    return data.value.items()[0]
-    
+    return (data.metadata.get('port_tag'), data.value)
+
 @pytest_unittest
 class TestCollectAnyFIFO(unittest.TestCase):
 
@@ -193,7 +193,7 @@ class TestCollectAnyFIFO(unittest.TestCase):
             w3: 6 9
         """
         data_2 = self.inport.peek(None).value
-        self.assertEqual(data_2, {"writer-2": 'Exception'})
+        self.assertEqual(data_2, 'Exception')
         """
             w1: 4 7
             w2: 8

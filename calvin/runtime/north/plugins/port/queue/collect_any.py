@@ -66,7 +66,9 @@ class CollectAny(CollectBase):
                 # data.value = {self.tags[writer]: data.value}
                 self.tentative_read_pos[writer] = read_pos + 1
                 tok_class = data.__class__
-                return tok_class({self.tags[writer]: data.value}, **data.metadata)
+                meta = data.metadata
+                meta['port_tag'] = self.tags[writer]
+                return tok_class(data.value, **meta)
             self.tentative_read_pos[writer] = read_pos + 1
             value[self.tags[writer]] = data.value
         if value:

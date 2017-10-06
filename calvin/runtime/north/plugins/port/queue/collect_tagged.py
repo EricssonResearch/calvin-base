@@ -46,17 +46,11 @@ class CollectTagged(CollectUnordered):
                 if self.peek_turn_pos == -1:
                     self.peek_turn_pos = self.turn_pos
                 self.turn_pos = (i + 1)  % len(self.writers)
-                # Modify token to tagged value
-                # Make copy so that repeated peeks are not repeatedly tagging
-                # Also copy to preserv Token class, potential exception token.
-                # tok = copy.deepcopy(tok)
-                # tok.value = {self.tags[writer]: tok.value}
-                # return tok
+
                 tok_class = tok.__class__
-                ## FIXME: This is what it should be, so action in actor can access metadata
-                ## return tok_class(tok.value, tok.origin, tok.timestamp, self.tags[writer])
-                ## FIXME: This is what we have to do for now
-                return tok_class({self.tags[writer]: tok.value}, **tok.metadata)
+                meta = tok.metadata
+                meta['port_tag'] = self.tags[writer]
+                return tok_class(tok.value, **meta)
 
         raise QueueEmpty(reader=metadata)
 
