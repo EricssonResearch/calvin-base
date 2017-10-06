@@ -54,6 +54,7 @@ class StorageProxy(StorageBase):
                                corresponding_server_node_names=[self._server_node_name])
 
     def _got_link(self, master_id, org_cb):
+        _log.debug("_got_link %s, %s" % (master_id, org_cb))
         self.master_id = master_id
         self.tunnel = self.node.proto.tunnel_new(self.master_id, 'storage', {})
         self.tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, org_cb=org_cb))

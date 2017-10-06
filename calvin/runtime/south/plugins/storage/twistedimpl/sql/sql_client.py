@@ -31,7 +31,6 @@ _conf = calvinconfig.get()
 ############################
 # TODO Remake the storage API:
 # * better names needed
-# * index should be exposed directly by storage plugin to allow engine optimizations
 ######################
 
 # The config kwarg depends on which database python module that is used
@@ -165,11 +164,12 @@ class SqlClient(StorageBase):
         """
         _log.debug("SQL set %s to %s" % (key, value))
         value = json.dumps(value)
+        key_sql = key.replace("'", r"\'")
         def _set_value(*args, **kwargs):
-            d2 = self.dbpool.runQuery(QUERY_SET[1].format(keystr=key, valuestr=value))
+            d2 = self.dbpool.runQuery(QUERY_SET[1].format(keystr=key_sql, valuestr=value))
             d2.addCallbacks(CalvinCB(self._set_cb, cb=cb, key=key, value=value),
                             CalvinCB(self._set_fail_cb, cb=cb, key=key, value=value))
-        d1 = self.dbpool.runQuery(QUERY_SET[0].format(keystr=key, valuestr=value))
+        d1 = self.dbpool.runQuery(QUERY_SET[0].format(keystr=key_sql, valuestr=value))
         d1.addCallbacks(_set_value, CalvinCB(self._set_fail_cb, cb=cb, key=key, value=value))
         _log.debug("SQL set %s to %s requested" % (key, value))
 
@@ -200,7 +200,8 @@ class SqlClient(StorageBase):
             Gets a value from the storage
         """
         _log.debug("SQL get %s" % (key,))
-        d = self.dbpool.runQuery(QUERY_GET.format(keystr=key))
+        key_sql = key.replace("'", r"\'")
+        d = self.dbpool.runQuery(QUERY_GET.format(keystr=key_sql))
         d.addCallbacks(CalvinCB(self._get_cb, cb=cb, key=key), CalvinCB(self._get_fail_cb, cb=cb, key=key))
         _log.debug("SQL get %s requested" % (key,))
 
@@ -233,7 +234,8 @@ class SqlClient(StorageBase):
 
     def delete(self, key, cb=None):
         _log.debug("SQL delete %s" % (key,))
-        d1 = self.dbpool.runQuery(QUERY_DELETE.format(keystr=key))
+        key_sql = key.replace("'", r"\'")
+        d1 = self.dbpool.runQuery(QUERY_DELETE.format(keystr=key_sql))
         d1.addCallbacks(CalvinCB(self._delete_cb, cb=cb, key=key),
                         CalvinCB(self._delete_fail_cb, cb=cb, key=key))
 
@@ -264,7 +266,8 @@ class SqlClient(StorageBase):
             Gets a value from the storage
         """
         _log.debug("SQL get_concat %s" % (key,))
-        d = self.dbpool.runQuery(QUERY_GETCONCAT.format(keystr=key))
+        key_sql = key.replace("'", r"\'")
+        d = self.dbpool.runQuery(QUERY_GETCONCAT.format(keystr=key_sql))
         d.addCallbacks(CalvinCB(self._getconcat_cb, cb=cb, key=key), CalvinCB(self._getconcat_fail_cb, cb=cb, key=key))
         _log.debug("SQL get_concat %s requested" % (key,))
 
@@ -304,13 +307,14 @@ class SqlClient(StorageBase):
     def append(self, key, value, cb=None):
         _log.debug("SQL append %s to %s" % (value, key))
         values = [json.dumps(v) for v in value]
+        key_sql = key.replace("'", r"\'")
         def _append_value(*args, **kwargs):
             dlist = []
             for v in values:
-                dlist.append(self.dbpool.runQuery(QUERY_APPEND[1].format(keystr=key, valuestr=v)))
+                dlist.append(self.dbpool.runQuery(QUERY_APPEND[1].format(keystr=key_sql, valuestr=v)))
             d2 = defer.DeferredList(dlist) if len(dlist) > 1 else dlist[0]
             d2.addCallbacks(CalvinCB(self._append_cb, cb=cb, key=key), CalvinCB(self._append_fail_cb, cb=cb, key=key))
-        d1 = self.dbpool.runQuery(QUERY_APPEND[0].format(keystr=key))
+        d1 = self.dbpool.runQuery(QUERY_APPEND[0].format(keystr=key_sql))
         d1.addCallbacks(_append_value, CalvinCB(self._append_fail_cb, cb=cb, key=key))
         _log.debug("SQL append %s to %s requested" % (value, key))
 
@@ -338,10 +342,11 @@ class SqlClient(StorageBase):
 
     def remove(self, key, value, cb=None):
         _log.debug("SQL remove %s to %s" % (value, key))
+        key_sql = key.replace("'", r"\'")
         values = [json.dumps(v) for v in value]
         dlist = []
         for v in values:
-            dlist.append(self.dbpool.runQuery(QUERY_REMOVE.format(keystr=key, valuestr=v)))
+            dlist.append(self.dbpool.runQuery(QUERY_REMOVE.format(keystr=key_sql, valuestr=v)))
         d = defer.DeferredList(dlist) if len(dlist) > 1 else dlist[0]
         d.addCallbacks(CalvinCB(self._remove_cb, cb=cb, key=key), CalvinCB(self._remove_fail_cb, cb=cb, key=key))
         _log.debug("SQL remove %s to %s requested" % (value, key))
@@ -381,15 +386,16 @@ class SqlClient(StorageBase):
     def get_index(self, prefix, index, cb=None):
         _log.debug("SQL get_index %s" % (index,))
         key = prefix + '/'+'/'.join(index)
-        d = self.dbpool.runQuery(QUERY_GET_INDEX.format(keystr=key))
+        d = self.dbpool.runQuery(QUERY_GET_INDEX.format(keystr=key.replace("'", r"\'")))
         d.addCallbacks(CalvinCB(self._getconcat_cb, cb=cb), CalvinCB(self._getconcat_fail_cb, cb=cb))
         _log.debug("SQL get_index %s requested" % (key,))
 
     def delete_index(self, prefix, indexes, cb=None):
         _log.debug("SQL delete_index %s" % (indexes,))
-        indexstrs = [prefix + '/'+'/'.join(indexes[:l]) for l in range(1,len(indexes)+1)]
+        indexstrs = [(prefix + '/'+'/'.join(indexes[:l])).replace("'", r"\'") for l in range(1,len(indexes)+1)]
         key = "keystr='" + "' OR keystr='".join(indexstrs) + "'"
         d1 = self.dbpool.runQuery(QUERY_DELETE_MANY.format(keystr=key))
+        #FIXME wrong key here, should be removed
         d1.addCallbacks(CalvinCB(self._delete_cb, cb=cb, key=key),
                         CalvinCB(self._delete_fail_cb, cb=cb, key=key))
 

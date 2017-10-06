@@ -320,9 +320,9 @@ class Storage(object):
             if isinstance(value, (list, tuple, set)):
                 org_cb(org_key, list(set(value + local_list)))
             else:
-                org_cb(org_key, local_list if local_list else None)
+                org_cb(org_key, local_list)
         else:
-            org_cb(org_key, local_list if local_list else None)
+            org_cb(org_key, local_list)
 
     def get_concat(self, prefix, key, cb):
         """ Get multiple values for registry key: prefix+key,
@@ -356,7 +356,7 @@ class Storage(object):
         except:
             if self.started:
                 _log.error("Failed to get: %s" % key, exc_info=True)
-            async.DelayedCall(0, cb, key=key, value=local_list if local_list else None)
+            async.DelayedCall(0, cb, key=key, value=local_list)
 
     def append_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ append callback, on error retry after flush_timeout
