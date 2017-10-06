@@ -61,21 +61,18 @@ class CollectAny(CollectBase):
                     if w is writer:
                         break
                     self.tentative_read_pos[w] -= 1
-                # # return exception token alone
-                # data = copy.deepcopy(data)
-                # data.value = {self.tags[writer]: data.value}
+                # return exception token alone
                 self.tentative_read_pos[writer] = read_pos + 1
                 tok_class = data.__class__
                 meta = data.metadata
                 meta['port_tag'] = self.tags[writer]
                 return tok_class(data.value, **meta)
             self.tentative_read_pos[writer] = read_pos + 1
-            value[self.tags[writer]] = data.value
-        if value:
-            return Token(value, **data.metadata)
-        else:
-            raise QueueEmpty(reader=metadata)
-
+            tok_class = data.__class__
+            meta = data.metadata
+            meta['port_tag'] = self.tags[writer]
+            return tok_class(data.value, **meta)
+        raise QueueEmpty(reader=metadata)
 
     def _set_port_mapping(self, mapping):
         if not set(mapping.values()) == set(self.writers):

@@ -75,6 +75,17 @@ class Port(object):
 
         self.queue.set_config(config)
 
+    def get_reverse_mapping(self, mapping):
+        """Given a mapping {<key>:<actor.port>, ...} return the reverse mapping {<port_id>:<key>}"""
+
+        def _local_name(peer_actor):
+            _, local_name = peer_actor._name.rsplit(':', 1)
+            return local_name
+
+        port_to_id = {'{}.{}'.format(_local_name(ep.peer_port.owner), ep.peer_port.name) : ep.peer_port.id for ep in self.endpoints}
+
+        return {port_to_id[p]:k for k,p in mapping.iteritems()}
+
     def set_queue(self, new_queue):
         if self.queue is None:
             self.queue = new_queue

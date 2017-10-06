@@ -27,18 +27,27 @@ class CollectDict(Actor):
     Inputs:
       token(routing="collect-any-tagged"): token
     Outputs:
-      dict : Collected dictionary according to 'mapping' 
+      dict : Collected dictionary according to 'mapping'
     """
+
+    # Using collect_any queue
 
     @manage(['mapping'])
     def init(self, mapping):
         self.mapping = mapping
 
     def will_start(self):
-        self.inports['token'].set_config({'port-mapping':self.mapping})
+        # At this time, ports are connected and have a port_id,
+        # change mapping from {<key>:&actor.port, ...} -> {<port_id>:<key>, ..}
+        # using identity &actor.port === <port_id>
+        self.mapping = self.inports['token'].get_reverse_mapping(self.mapping)
 
-    @condition(['token'], ['dict'])
-    def collect_tokens(self, token):
-        return (token,)
+    @condition(['token'], ['dict'], metadata=True)
+    def collect_tokens(self, inval):
+        data, meta = inval
+        port_id = meta.pop('port_tag', 'MISSING PORT TAG')
+        key = self.mapping.get(port_id, port_id)
+        retval = {key:data}
+        return ((retval, meta),)
 
     action_priority = (collect_tokens, )
