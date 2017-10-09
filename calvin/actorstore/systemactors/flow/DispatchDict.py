@@ -29,38 +29,45 @@ class DispatchDict(Actor):
       default: Default route for unknown token values
     """
 
-    @manage(['mapping', 'mapped_out', "unmapped_out"])
+    @manage(['mapping', 'mapped_out', "unmapped_out"]) 
     def init(self, mapping):
         self.mapped_out = {}
         self.unmapped_out = {}
         self.mapping = mapping
 
     def will_start(self):
-        self.outports['token'].set_config({'port-mapping':self.mapping})
+        # At this time, ports are connected and all destinations have a port_id,
+        # change mapping from {<key>:&actor.port, ...} -> {<key>:<port_id>, ..}
+        # using identity &actor.port === <port_id>
+        self.mapping = self.outports['token'].get_mapping(self.mapping)
+        print "mapping:", self.mapping
 
+
+    # FIXME: Propagate metadata
     @stateguard(lambda self: not self.mapped_out and not self.unmapped_out)
-    @condition(['dict'], [])
-    def get_dict(self, dictionary):
+    @condition(['dict'], [],  metadata=True)
+    def get_dict(self, data):
+        dictionary, meta = data
         for key, value in dictionary.iteritems():
             if key in self.mapping :
-                self.mapped_out[key] = value
+                self.mapped_out[key] = (value, meta)
             else :
-                self.unmapped_out[key] = value
-        return ()
+                self.unmapped_out[key] = (value, meta)
 
     @stateguard(lambda self: self.mapped_out)
-    @condition([], ['token'])
+    @condition([], ['token'], metadata=True)
     def dispatch_token(self):
         key = self.mapped_out.keys()[0]
-        val = self.mapped_out.pop(key)
-        return ({key:val},)
+        val, meta = self.mapped_out.pop(key)
+        meta['port_tag'] = self.mapping[key]
+        return ((val, meta),)
 
     @stateguard(lambda self: self.unmapped_out)
-    @condition([], ['default'])
+    @condition([], ['default'], metadata=True)
     def dispatch_default(self):
         key = self.unmapped_out.keys()[0]
-        val = self.unmapped_out.pop(key)
-        return (val,)
+        val, meta = self.unmapped_out.pop(key)
+        return ((val, meta),)
 
 
     action_priority = (dispatch_token, dispatch_default, get_dict)

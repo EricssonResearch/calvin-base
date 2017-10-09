@@ -32,6 +32,8 @@ class FanoutMappedFIFO(FanoutBase):
         super(FanoutMappedFIFO, self).__init__(port_properties, peer_port_properties)
         self._type = "dispatch:mapped"
 
+    # FIXME: Remove. Don't store mapping here. 
+    #        Handle remapping as part as did_replicate, just like will_start
     def _state(self, remap=None):
         state = super(FanoutMappedFIFO, self)._state(remap)
         if remap is None:
@@ -40,24 +42,14 @@ class FanoutMappedFIFO(FanoutBase):
             state['mapping'] = {k : remap.get(pid, pid) for k, pid in self.mapping.iteritems()}
         return state
 
+    # FIXME: Remove. Don't store mapping here. 
+    #        Handle remapping as part as did_replicate, just like will_start
     def _set_state(self, state):
         super(FanoutMappedFIFO, self)._set_state(state)
         self.mapping = state['mapping']
 
-    def _set_port_mapping(self, mapping):
-        if not set(mapping.values()) == set(self.readers):
-            print mapping, self.readers
-            raise Exception("Illegal port mapping dictionary")
-        self.mapping = mapping
-
     def _unwrap_data(self, data):
-        # data is a Token whose value is wrapped in a {selector:value} dict
-        mapped_value = data.value
-        select, value = mapped_value.popitem()
-        tok_class = data.__class__
-        tok = tok_class(value, **data.metadata)
-        peer = self.mapping[select]
-        return tok, peer
+        return data, data.metadata['port_tag']
 
     def write(self, data, metadata):
         # print data, metadata
