@@ -22,7 +22,7 @@ from calvin.utilities import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
 class FanoutBase(object):
-    
+
     def __init__(self, port_properties, peer_port_properties):
         # Set default queue length to 4 if not specified
         length = port_properties.get('queue_length', 4)
@@ -40,7 +40,7 @@ class FanoutBase(object):
         self.tentative_read_pos = {}
         # No type in base class
         self._type = None
-        
+
     def __str__(self):
         fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
         return "Queue: %s\nTokens: %s\nw:%s, r:%s, tr:%s" % (self._type, fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
@@ -80,17 +80,17 @@ class FanoutBase(object):
         if len(self.readers) > self.nbr_peers:
             # If the peer has been replicated just set it to nbr connected
             self.nbr_peers = len(self.readers)
-        
+
     @property
     def queue_type(self):
         return self._type
 
     def _set_port_mapping(self, mapping):
         raise NotImplementedError
-        
+
     def _set_port_order(self, ordering):
         raise NotImplementedError
-        
+
     def set_config(self, config):
         """
         Set additional config information on the port.
@@ -108,7 +108,7 @@ class FanoutBase(object):
     def remove_writer(self, writer):
         # TODO: Should this be here?
         pass
-        
+
     def add_reader(self, reader, properties):
         if not isinstance(reader, basestring):
             raise Exception('Not a string: %s' % reader)
@@ -126,7 +126,7 @@ class FanoutBase(object):
         if len(self.readers) > self.nbr_peers:
             _log.debug("ADD_READER %s" % reader)
             self.nbr_peers = len(self.readers)
-    
+
     def remove_reader(self, reader):
         # Remove a reader from the list of readers in
         # the queue. Returns False if no such reader
@@ -139,16 +139,16 @@ class FanoutBase(object):
         self.readers.remove(reader)
         self.nbr_peers -= 1
         return True
-    
+
     def get_peers(self):
         return self.readers
-    
+
     def set_exhausted_tokens(self, tokens):
         _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
         if tokens and tokens.values()[0]:
             _log.error("Got exhaust tokens on scheduler_fifo port %s" % str(tokens))
         return self.nbr_peers
-    
+
     def is_exhausting(self, peer_id=None):
         return False
 
@@ -168,7 +168,7 @@ class FanoutBase(object):
         else:
             self.remove_reader(peer_id)
         return []
-        
+
     def tokens_available(self, length, metadata):
         if metadata not in self.readers:
             raise Exception("No reader %s in %s" % (metadata, self.readers))
@@ -191,7 +191,7 @@ class FanoutBase(object):
 
     def cancel(self, metadata):
         self.tentative_read_pos[metadata] = self.read_pos[metadata]
-    
+
     #
     # Queue operations used by communication which utilize a sequence number
     #
@@ -245,4 +245,3 @@ class FanoutBase(object):
     def com_is_committed(self, reader):
         return self.tentative_read_pos[reader] == self.read_pos[reader]
 
-    
