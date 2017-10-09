@@ -48,6 +48,7 @@ class Port(object):
     def __str__(self):
         return "%s id=%s" % (self.name, self.id)
 
+    # FIXME: Remove
     def set_config(self, config):
         """
         Set additional config information on the port.

@@ -42,6 +42,8 @@ class CollectDict(Actor):
         # using identity &actor.port === <port_id>
         self.mapping = self.inports['token'].get_reverse_mapping(self.mapping)
 
+    # FIXME: Build dict until same port tag appears again => produce
+    #        If dict not empty when inport is => produce
     @condition(['token'], ['dict'], metadata=True)
     def collect_tokens(self, inval):
         data, meta = inval

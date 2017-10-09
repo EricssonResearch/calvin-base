@@ -85,12 +85,15 @@ class FanoutBase(object):
     def queue_type(self):
         return self._type
 
+    # FIXME: Remove
     def _set_port_mapping(self, mapping):
         raise NotImplementedError
 
+    # FIXME: Remove
     def _set_port_order(self, ordering):
         raise NotImplementedError
 
+    # FIXME: Remove
     def set_config(self, config):
         """
         Set additional config information on the port.

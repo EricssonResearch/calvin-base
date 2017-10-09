@@ -10,6 +10,7 @@ pytest_unittest = pytest.mark.unittest
 class DummyPort(object):
     pass
 
+# FIXME
 def wrap(data, destination):
     return Token({destination:data})
 

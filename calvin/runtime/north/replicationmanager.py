@@ -196,6 +196,11 @@ class ReplicationManager(object):
     #
     # Replicate
     #
+    ####################################################################################
+    # [PP]: Replication is special case of migration, and should IMO be handled as such.
+    #       Then we wouldn't need deepcopying and serialize() with remap argument, since
+    #       we could apply changes to the fresh copy on the "other" runtime.
+    ####################################################################################
     def replicate(self, actor_id, dst_node_id, callback):
         try:
             actor = self.node.am.actors[actor_id]
