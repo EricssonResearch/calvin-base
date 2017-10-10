@@ -3680,6 +3680,13 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    # The construct 
+    #         snk.token(routing="collect-any-tagged", nbr_peers=2)
+    #         src1.integer(tag="src_one")
+    #         src2.integer(tag="src_two")
+    # has been superceeded by the use of CollectDict actor
+    
+    @pytest.mark.xfail
     def testCollectTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3722,6 +3729,7 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectTagPortRemoteMoveMany2(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3752,8 +3760,6 @@ class TestPortRouting(CalvinTestBase):
             assert len(actuals[i]) < len(actuals[i+1])
             self.migrate(fr, to, snk)
 
-        print actuals
-
         assert all([len(t)==1 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
         assert "src_one" in set([t.keys()[0] for t in actuals[-1][len(actuals[-2])+1:]])
@@ -3767,6 +3773,7 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectTagPortRemoteMoveMany3(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3798,8 +3805,6 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
-
         assert all([len(t)==1 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
         assert "src_one" in set([t.keys()[0] for t in actuals[-1][len(actuals[-2])+1:]])
@@ -3813,6 +3818,7 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectAllTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3841,8 +3847,6 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
-
         assert all([len(t)==2 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
         assert "src_one" in set([k for t in actuals[-1][len(actuals[-2])+1:] for k in t.keys()])
@@ -3855,6 +3859,7 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectAnyTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3883,8 +3888,6 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
-
         assert all([len(t) in [1, 2] for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
         assert "src_one" in set([k for t in actuals[-1][len(actuals[-2])+1:] for k in t.keys()])
@@ -3897,6 +3900,7 @@ class TestPortRouting(CalvinTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectOneTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3927,7 +3931,7 @@ class TestPortRouting(CalvinTestBase):
         assert len(actual) >= 3 * 10
         print actual, exceptions
 
-        self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
+        self.assert_lists_equal(exceptions, [u'End of stream']*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
         self.assert_lists_equal(range(1001,1200), high, min_length=15)
@@ -3935,6 +3939,7 @@ class TestPortRouting(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectAnyTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3965,7 +3970,7 @@ class TestPortRouting(CalvinTestBase):
         assert len(actual) >= 3 * 10
         print actual, exceptions
 
-        self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
+        self.assert_lists_equal(exceptions, [u'End of stream']*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
         self.assert_lists_equal(range(1001,1200), high, min_length=15)
@@ -3973,6 +3978,7 @@ class TestPortRouting(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectAllTagPortWithException(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -4003,7 +4009,7 @@ class TestPortRouting(CalvinTestBase):
         assert len(actual) >= 3 * 10
         print actual, exceptions
 
-        self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
+        self.assert_lists_equal(exceptions, [u'End of stream']*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
         self.assert_lists_equal(range(1001,1200), high, min_length=15)

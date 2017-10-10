@@ -32,27 +32,10 @@ class FanoutMappedFIFO(FanoutBase):
         super(FanoutMappedFIFO, self).__init__(port_properties, peer_port_properties)
         self._type = "dispatch:mapped"
 
-    # FIXME: Remove. Don't store mapping here. 
-    #        Handle remapping as part as did_replicate, just like will_start
-    def _state(self, remap=None):
-        state = super(FanoutMappedFIFO, self)._state(remap)
-        if remap is None:
-            state['mapping'] = self.mapping
-        else :
-            state['mapping'] = {k : remap.get(pid, pid) for k, pid in self.mapping.iteritems()}
-        return state
-
-    # FIXME: Remove. Don't store mapping here. 
-    #        Handle remapping as part as did_replicate, just like will_start
-    def _set_state(self, state):
-        super(FanoutMappedFIFO, self)._set_state(state)
-        self.mapping = state['mapping']
-
     def _unwrap_data(self, data):
         return data, data.metadata['port_tag']
 
     def write(self, data, metadata):
-        # print data, metadata
         # metadata is port_id of containing port
         data, peer = self._unwrap_data(data)
         if not self.slots_available(1, peer):
@@ -60,13 +43,11 @@ class FanoutMappedFIFO(FanoutBase):
             raise QueueFull()
         # Write token in peer's FIFO
         write_pos = self.write_pos[peer]
-        #_log.debug("WRITE2 %s %s %d\n%s" % (metadata, peer, write_pos, str(map(str, self.fifo[peer]))))
         self.fifo[peer][write_pos % self.N] = data
         self.write_pos[peer] = write_pos + 1
         return True
 
     def slots_available(self, length, metadata):
-        # print "slots_available", length, metadata
         # Sometimes metadata = id of the outport owning this queue (called from @condition?)
         # Darn. That means that we can only check for the case where EVERY sub-queue has at least 'length' slots free...
         # Oh well, such is life.

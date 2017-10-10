@@ -25,16 +25,22 @@ class Dealternate(Actor):
       token(routing="dispatch-ordered") : Dispatching tokens to connected ports in order
     """
 
-    @manage(['order'])
+    @manage(['index', 'order', 'port_order'])
     def init(self, order):
+        self.index = 0
         self.order = order
 
     def will_start(self):
-        self.outports['token'].set_config({'port-order':self.order})
-
-    @condition(['token'], ['token'])
+        self.port_order = self.outports['token'].get_ordering(self.order)        
+        
+    @condition(['token'], ['token'], metadata=True)
     def dispatch(self, tok):
-        return (tok,)
+        data, meta = tok
+        index = self.index
+        meta['port_tag'] = self.port_order[index]
+        index += 1
+        self.index = index % len(self.order)
+        return ((data, meta),)
 
     action_priority = (dispatch,)
 

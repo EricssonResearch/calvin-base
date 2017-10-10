@@ -35,11 +35,15 @@ class CollectCompleteDict(Actor):
         self.mapping = mapping
 
     def will_start(self):
-        self.inports['token'].set_config({'port-mapping':self.mapping})
+        self.mapping = self.inports['token'].get_reverse_mapping(self.mapping)
+        
 
-    @condition(['token'], ['dict'])
+    @condition(['token'], ['dict'], metadata=True)
     def collect_tokens(self, token):
-        return (token,)
+        data, meta = token
+        keys = [self.mapping.get(x, x) for x in meta['port_tag']]
+        retval = dict(zip(keys, data))
+        return ((retval, {}),)
 
     action_priority = (collect_tokens, )
 

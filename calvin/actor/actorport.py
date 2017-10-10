@@ -25,7 +25,6 @@ import copy
 
 _log = get_logger(__name__)
 
-
 class Port(object):
     """docstring for Port"""
 
@@ -48,56 +47,28 @@ class Port(object):
     def __str__(self):
         return "%s id=%s" % (self.name, self.id)
 
-    # FIXME: Remove
-    def set_config(self, config):
-        """
-        Set additional config information on the port.
-        The default behaviour is to delegate the information to the port's queue.
-        The 'config' parameter is a dictionary with settings.
-        """
-
+    def _portname_to_id_map(self):
+        
         def _local_name(peer_actor):
             _, local_name = peer_actor._name.rsplit(':', 1)
             return local_name
-
-        port_to_id = {'{}.{}'.format(_local_name(ep.peer_port.owner), ep.peer_port.name) : ep.peer_port.id for ep in self.endpoints}
-        if 'port-order' in config:
-            # Remap from actor.port to port_id
-            # FIXME: Will not work in the general case.
-            #        Extend calvinsys with runtime API and use that instead
-            port_order = config['port-order']
-            config['port-order'] = [port_to_id[p] for p in port_order]
-        if 'port-mapping' in config:
-            # Remap from actor.port to port_id
-            # FIXME: Will not work in the general case.
-            #        Extend calvinsys with runtime API and use that instead
-            mapping = config['port-mapping']
-            config['port-mapping'] = {k:port_to_id[p] for k,p in mapping.iteritems()}
-
-        self.queue.set_config(config)
+        
+        return {'{}.{}'.format(_local_name(ep.peer_port.owner), ep.peer_port.name) : ep.peer_port.id for ep in self.endpoints}
 
     def get_reverse_mapping(self, mapping):
         """Given a mapping {<key>:<actor.port>, ...} return the reverse mapping {<port_id>:<key>}"""
-
-        def _local_name(peer_actor):
-            _, local_name = peer_actor._name.rsplit(':', 1)
-            return local_name
-
-        port_to_id = {'{}.{}'.format(_local_name(ep.peer_port.owner), ep.peer_port.name) : ep.peer_port.id for ep in self.endpoints}
-
+        port_to_id = self._portname_to_id_map()
         return {port_to_id[p]:k for k,p in mapping.iteritems()}
 
     def get_mapping(self, mapping):
         """Given a mapping {<key>:<actor.port>, ...} return the reverse mapping {<key>:<port_id>}"""
-
-        def _local_name(peer_actor):
-            _, local_name = peer_actor._name.rsplit(':', 1)
-            return local_name
-
-        port_to_id = {'{}.{}'.format(_local_name(ep.peer_port.owner), ep.peer_port.name) : ep.peer_port.id for ep in self.endpoints}
-
+        port_to_id = self._portname_to_id_map()
         return {k:port_to_id[p] for k,p in mapping.iteritems()}
-
+        
+    def get_ordering(self, order):
+        """Given a list [<actor.port>, ...] return the corresponding port id:s [<port_id>, ...]"""
+        port_to_id = self._portname_to_id_map()
+        return [port_to_id[p] for p in order]
 
     def set_queue(self, new_queue):
         if self.queue is None:

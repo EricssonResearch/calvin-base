@@ -31,97 +31,27 @@ class FanoutOrderedFIFO(FanoutBase):
 
     def __init__(self, port_properties, peer_port_properties):
         super(FanoutOrderedFIFO, self).__init__(port_properties, peer_port_properties)
-        self.reader_turn = None
-        self.turn_pos = 0
-        self._set_turn()
         self._type = "dispatch:ordered"
 
-    def _set_turn(self):
-        # Get routing schedule based on info after ':' in type
-        # Set the correct method
-        self._update_turn = self._ordered
-        if self.reader_turn is None:
-            # Populate with alternating values up to N
-            self.reader_turn = [p for n in range(self.N) for p in range(self.nbr_peers)][:self.N]
-        # print "_set_turn(): "
-        # print "    self._update_turn:", self._update_turn
-        # print "    self.reader_turn:", self.reader_turn
+    def _unwrap_data(self, data):
+        return data, data.metadata['port_tag']
 
-    def _reset_turn(self):
-        # Populate with alternating values up to N
-        pos = self.reader_turn[self.turn_pos % self.N]
-        self.reader_turn = [p for n in range(self.N) for p in range(self.nbr_peers)][pos:self.N+pos]
-        self.turn_pos = 0
-
-    def _ordered(self):
-        reader = self.reader_turn[self.turn_pos % self.N]
-        prev = self.reader_turn[(self.turn_pos - 1) % self.N]
-        self.reader_turn[self.turn_pos % self.N] = (prev + 1) % self.nbr_peers
-        self.turn_pos += 1
-        # print "_ordered():"
-        # print "    reader:", reader
-        # print "    self.reader_turn:", self.reader_turn
-        return reader
-
-    def _state(self, remap=None):
-        state = super(FanoutOrderedFIFO, self)._state(remap)
-        if remap is None:
-            state['reader_turn'] = self.reader_turn
-            state['turn_pos'] = self.turn_pos
-        else :
-            state['reader_turn'] = None
-            state['turn_pos'] = 0
-        return state
-
-    def _set_state(self, state):
-        super(FanoutOrderedFIFO, self)._set_state(state)
-        self.reader_turn = state['reader_turn']
-        self.turn_pos = state['turn_pos']
-        self._set_turn()
-
-    def _set_port_order(self, order):
-        if not set(order) == set(self.readers):
-            # print order, self.readers
-            raise Exception("Illegal port order list")
-        self.readers = order
-
-    def add_reader(self, reader, properties):
-        super(FanoutOrderedFIFO, self).add_reader(reader, properties)
-        self.readers.sort()
-    
-    def remove_reader(self, reader):
-        removed = super(FanoutOrderedFIFO, self).remove_reader(reader)
-        if removed:
-            self._reset_turn()
-        return removed
-            
     def write(self, data, metadata):
-        #_log.debug("WRITE1 %s" % metadata)
-        if not self.slots_available(1, metadata):
+        # metadata is port_id of containing port
+        data, peer = self._unwrap_data(data)
+        if not self.slots_available(1, peer):
+            # if not slots_available:
             raise QueueFull()
         # Write token in peer's FIFO
-        peer = self.readers[self._update_turn()]
         write_pos = self.write_pos[peer]
-        #_log.debug("WRITE2 %s %s %d\n%s" % (metadata, peer, write_pos, str(map(str, self.fifo[peer]))))
         self.fifo[peer][write_pos % self.N] = data
         self.write_pos[peer] = write_pos + 1
         return True
 
     def slots_available(self, length, metadata):
-        if length >= self.N:
-            return False
-        if length == 1:
-            # shortcut for common special case
-            peer = self.readers[self.reader_turn[self.turn_pos % self.N]]
-            return self.write_pos[peer] - self.read_pos[peer] < self.N - 1
-        # list of peer indexes that will be written to
-        peers = [self.reader_turn[i % self.N] for i in range(self.turn_pos, self.turn_pos + length)]
-        for p in peers:
-            # How many slots for this peer
-            c = peers.count(p)
-            peer = self.readers[p]
-            # If this peer does not have c slots then return False
-            if (self.N - (self.write_pos[peer] - self.read_pos[peer]) - 1) < c:
-                return False
-        # ... otherwise all had enough slots
-        return True
+        # Sometimes metadata = id of the outport owning this queue (called from @condition?)
+        # Darn. That means that we can only check for the case where EVERY sub-queue has at least 'length' slots free...
+        # Oh well, such is life.
+        if metadata in self.readers:
+            return self.write_pos[metadata] - self.read_pos[metadata] < self.N - length
+        return all(self.write_pos[r] - self.read_pos[r] < self.N - length for r in self.readers)

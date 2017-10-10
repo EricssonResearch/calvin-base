@@ -62,11 +62,5 @@ class CollectAny(CollectBase):
             return tok_class(data.value, **meta)
         raise QueueEmpty(reader=metadata)
 
-    # FIXME: Remove
-    def _set_port_mapping(self, mapping):
-        if not set(mapping.values()) == set(self.writers):
-            print mapping, self.readers
-            raise Exception("Illegal port mapping dictionary")
-        self.tags = { v: k for k,v in mapping.items() }
 
 

@@ -50,7 +50,8 @@ class CollectSynced(CollectBase):
     def peek(self, metadata):
         if not self.tokens_available(1, metadata):
             raise QueueEmpty(reader=metadata)
-        value = {}
+        # value = {}
+        values, metas = [], []
         # Collect all tokens 
         for writer in self.writers:
             read_pos = self.tentative_read_pos[writer]
@@ -63,8 +64,6 @@ class CollectSynced(CollectBase):
                         break
                     self.tentative_read_pos[w] -= 1
                 # # return exception token alone
-                # data = copy.deepcopy(data)
-                # data.value = {self.tags[writer]: data.value}
                 self.tentative_read_pos[writer] = read_pos + 1
                 tok_class = data.__class__
                 meta = data.metadata
@@ -72,22 +71,18 @@ class CollectSynced(CollectBase):
                 return tok_class(data.value, **meta)
 
             self.tentative_read_pos[writer] = read_pos + 1
-            value[self.tags[writer]] = data.value
-        if self.tags_are_ordering:
-            # ensure values sorted on index in original ordering
-            value = [x for (y,x) in sorted(zip(value.keys(), value.values()))]
-        return Token(value, **data.metadata)
+            values.append(data.value)
+            meta = data.metadata
+            meta['port_tag'] = self.tags[writer] # FIXME: Get set port tag in src port 
+            metas.append(meta)
+        
+        # Convert list of metadata dicts to dict of metadata lists
+        meta = {'port_tag':[], 'origin':[], 'timestamp':[]}
+        for m in metas:
+            meta['port_tag'].append(m['port_tag'])
+            meta['origin'].append(m.get('origin', None))
+            meta['timestamp'].append(m.get('timestamp', None))
 
-    def _set_port_mapping(self, mapping):
-        if not set(mapping.values()) == set(self.writers):
-            print mapping, self.writers
-            raise Exception("Illegal port mapping dictionary")
-        self.tags = { v: k for k,v in mapping.items() }
+        return Token(values, **meta)
 
-    def _set_port_order(self, order):
-        if not set(order) == set(self.writers):
-            print order, self.writers
-            raise Exception("Illegal port ordering")
-        self.tags_are_ordering = True
-        self.tags = { v: order.index(v) for v in order }
         

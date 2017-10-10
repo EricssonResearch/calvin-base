@@ -15,13 +15,13 @@
 # limitations under the License.
 
 from calvin.utilities import calvinlogger
-from calvin.runtime.north.plugins.port.queue.fanout_ordered_fifo import FanoutOrderedFIFO
+from calvin.runtime.north.plugins.port.queue.fanout_random_fifo import FanoutRandomFIFO
 
 
 _log = calvinlogger.get_logger(__name__)
 
 
-class FanoutRoundRobinFIFO(FanoutOrderedFIFO):
+class FanoutRoundRobinFIFO(FanoutRandomFIFO):
 
     """
     A FIFO which route tokens based on a round-robin schedule to peers

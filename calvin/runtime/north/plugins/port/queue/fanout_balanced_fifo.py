@@ -16,12 +16,12 @@
 
 from calvin.runtime.north.plugins.port.queue.common import QueueFull
 from calvin.utilities import calvinlogger
-from calvin.runtime.north.plugins.port.queue.fanout_ordered_fifo import FanoutOrderedFIFO
+from calvin.runtime.north.plugins.port.queue.fanout_random_fifo import FanoutRandomFIFO
 
 _log = calvinlogger.get_logger(__name__)
 
 
-class FanoutBalancedFIFO(FanoutOrderedFIFO):
+class FanoutBalancedFIFO(FanoutRandomFIFO):
 
     """
     A queue which routes tokens trying to keep to peers equally busy

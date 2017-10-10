@@ -31,7 +31,7 @@ class Alternate(Actor):
         self.incoming = []
 
     def will_start(self):
-        self.inports['token'].set_config({'port-order':self.order})
+        self.port_order = self.inports['token'].get_ordering(self.order)
 
     @stateguard(lambda self: len(self.incoming) > 0)
     @condition([], ['token'])
@@ -39,9 +39,11 @@ class Alternate(Actor):
         next = self.incoming.pop(0)
         return (next,)
 
-    @condition(['token'], [])
+    @condition(['token'], [], metadata=True)
     def collect(self, tok):
-        self.incoming += tok
-        return (None)
+        data, meta = tok
+        tdict = dict(zip(meta['port_tag'], data))
+        self.incoming += [tdict[k] for k in self.port_order]
+        return None
         
     action_priority = (dispatch, collect)
