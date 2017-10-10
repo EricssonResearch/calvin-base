@@ -131,6 +131,90 @@ class CalvinTestBase(unittest.TestCase):
         self.wait_for_migration(dest, [actor])
 
 
+class TestReplicationNewQueues(CalvinTestBase):
+    
+    def testBaselineReplication(self):
+        script = r"""
+        source : std.CountTimer(sleep=0.2)
+        filter : std.Identity()
+        collect : flow.Collect()
+        sink : test.Sink(store_tokens=true, quiet=true)
+
+        source.integer > filter.token
+        filter.token > collect.token
+        collect.token > sink.token
+        """
+        
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(1)
+        filt = d.actor_map['testScript:filter']
+        sink = d.actor_map['testScript:sink']
+        result = request_handler.replicate(self.rt1, filt, self.rt2.id)
+        time.sleep(1)
+        actual = request_handler.report(self.rt1, sink)
+        helpers.destroy_app(d)
+        assert len(actual) > len(set(actual))
+        assert result and u'actor_id' in result
+
+    def testDispatchReplication(self):
+        script = r"""
+        source : std.CountTimer(sleep=0.2)
+        dispatch : flow.Dispatch()
+        filter : std.Identity()
+        collect : flow.Collect()
+        sink : test.Sink(store_tokens=true, quiet=true)
+
+        source.integer > dispatch.token
+        dispatch.token > filter.token
+        filter.token > collect.token
+        collect.token > sink.token
+        """
+        
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(1)
+        filt = d.actor_map['testScript:filter']
+        sink = d.actor_map['testScript:sink']
+        result = request_handler.replicate(self.rt1, filt, self.rt2.id)
+        time.sleep(1)
+        actual = request_handler.report(self.rt1, sink)
+        helpers.destroy_app(d)
+        assert len(actual) == len(set(actual))
+        assert result and u'actor_id' in result
+
+    def testMappedReplication(self):
+        script = r"""
+        source : std.CountTimer(sleep=0.2)
+        id1 : std.Identity()
+        id2 : std.Identity()
+        dictify : flow.CollectCompleteDict(mapping={"id1":&id1.token, "id2":&id2.token})
+        collect : flow.Collect()
+        sink : test.Sink(store_tokens=true, quiet=true)
+
+        source.integer > id1.token, id2.token
+        id1.token > dictify.token
+        id2.token > dictify.token
+        dictify.dict > collect.token
+        collect.token > sink.token
+        """
+        
+        app_info, errors, warnings = self.compile_script(script, "testScript")
+        d = deployer.Deployer(self.rt1, app_info)
+        d.deploy()
+        time.sleep(1)
+        filt = d.actor_map['testScript:dictify']
+        sink = d.actor_map['testScript:sink']
+        result = request_handler.replicate(self.rt1, filt, self.rt2.id)
+        time.sleep(2)
+        actual = request_handler.report(self.rt1, sink)
+        helpers.destroy_app(d)
+        assert all((set(x.keys()) == set(('id1', 'id2')) for x in actual))
+        assert result and u'actor_id' in result
+
+
 @pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow
 class TestReplication(CalvinTestBase):
