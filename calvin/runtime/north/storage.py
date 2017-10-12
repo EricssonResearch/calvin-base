@@ -631,7 +631,7 @@ class Storage(object):
                 _log.warning("Failed to find %s" % "/".join(index_items))
 
         if org_cb:
-            org_cb(value=list(value) if value else calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
+            org_cb(value=list(value))
 
     def get_index(self, index, root_prefix_level=2, cb=None):
         """
@@ -656,15 +656,15 @@ class Storage(object):
 
         _log.debug("get index %s" % (index))
         indexes = self._index_strings(index, root_prefix_level)
-        istr = "/".join(indexes)
+        # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
-                            *(v['+'] for k, v in self.localstore_sets.items() if "/".join(k).startswith(istr))))
-        
+            *(v['+'] for k, v in self.localstore_sets.items()
+                if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, indexes)))))
         if self.started:
             self.storage.get_index(prefix="index-", index=indexes,
                 cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
         elif cb:
-            cb(value=list(local_values) if local_values else calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
+            cb(value=list(local_values))
 
     def get_index_iter_cb(self, value, it, org_key, include_key=False):
         _log.debug("get index iter cb key: %s value: %s" % (org_key, value))

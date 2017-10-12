@@ -304,18 +304,19 @@ class SqlClient(StorageBase):
             else:
                 async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=calvinresponse.NOT_FOUND)))
 
-    def append(self, key, value, cb=None):
+    def append(self, key, value, cb=None, include_key=True):
         _log.debug("SQL append %s to %s" % (value, key))
         values = [json.dumps(v) for v in value]
         key_sql = key.replace("'", r"\'")
+        key_none = key if include_key else None
         def _append_value(*args, **kwargs):
             dlist = []
             for v in values:
                 dlist.append(self.dbpool.runQuery(QUERY_APPEND[1].format(keystr=key_sql, valuestr=v)))
             d2 = defer.DeferredList(dlist) if len(dlist) > 1 else dlist[0]
-            d2.addCallbacks(CalvinCB(self._append_cb, cb=cb, key=key), CalvinCB(self._append_fail_cb, cb=cb, key=key))
+            d2.addCallbacks(CalvinCB(self._append_cb, cb=cb, key=key_none), CalvinCB(self._append_fail_cb, cb=cb, key=key_none))
         d1 = self.dbpool.runQuery(QUERY_APPEND[0].format(keystr=key_sql))
-        d1.addCallbacks(_append_value, CalvinCB(self._append_fail_cb, cb=cb, key=key))
+        d1.addCallbacks(_append_value, CalvinCB(self._append_fail_cb, cb=cb, key=key_none))
         _log.debug("SQL append %s to %s requested" % (value, key))
 
     def _append_cb(self, result, **kwargs):
@@ -324,7 +325,10 @@ class SqlClient(StorageBase):
         key = kwargs.pop('key', None)
         _log.debug("SQL append OK %s" % str(result))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=True)))
+            if key is None:
+                async.DelayedCall(0, CalvinCB(cb, calvinresponse.CalvinResponse(status=True)))
+            else:
+                async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=True)))
 
     def _append_fail_cb(self, failure, **kwargs):
         _log.debug("SQL append FAIL")
@@ -338,17 +342,21 @@ class SqlClient(StorageBase):
             err = 9999
         _log.debug("SQL append %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
+            if key is None:
+                async.DelayedCall(0, CalvinCB(cb, calvinresponse.CalvinResponse(status=ok)))
+            else:
+                async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
 
-    def remove(self, key, value, cb=None):
+    def remove(self, key, value, cb=None, include_key=True):
         _log.debug("SQL remove %s to %s" % (value, key))
         key_sql = key.replace("'", r"\'")
+        key_none = key if include_key else None
         values = [json.dumps(v) for v in value]
         dlist = []
         for v in values:
             dlist.append(self.dbpool.runQuery(QUERY_REMOVE.format(keystr=key_sql, valuestr=v)))
         d = defer.DeferredList(dlist) if len(dlist) > 1 else dlist[0]
-        d.addCallbacks(CalvinCB(self._remove_cb, cb=cb, key=key), CalvinCB(self._remove_fail_cb, cb=cb, key=key))
+        d.addCallbacks(CalvinCB(self._remove_cb, cb=cb, key=key_none), CalvinCB(self._remove_fail_cb, cb=cb, key=key_none))
         _log.debug("SQL remove %s to %s requested" % (value, key))
 
     def _remove_cb(self, result, **kwargs):
@@ -357,7 +365,10 @@ class SqlClient(StorageBase):
         key = kwargs.pop('key', None)
         _log.debug("SQL remove OK %s" % str(result))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=True)))
+            if key is None:
+                async.DelayedCall(0, CalvinCB(cb, calvinresponse.CalvinResponse(status=True)))
+            else:
+                async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=True)))
 
     def _remove_fail_cb(self, failure, **kwargs):
         _log.debug("SQL remove FAIL")
@@ -371,21 +382,27 @@ class SqlClient(StorageBase):
             err = 9999
         _log.debug("SQL remove %s %i %s" % ("OK" if ok else "FAIL", err, str(failure)))
         if cb is not None:
-            async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
+            if key is None:
+                async.DelayedCall(0, CalvinCB(cb, calvinresponse.CalvinResponse(status=ok)))
+            else:
+                async.DelayedCall(0, CalvinCB(cb, key, calvinresponse.CalvinResponse(status=ok)))
 
     def add_index(self, prefix, indexes, value, cb=None):
         _log.debug("SQL add_index %s %s" % (indexes, value))
-        key = prefix + '/'+'/'.join(indexes)
-        self.append(key, value, cb=cb)
+        # Make sure that internal index level / is different from level seperator
+        key = prefix + '/'+'/'.join([i.replace('/',r'+/') for i in indexes]) + '/'
+        self.append(key, value, cb=cb, include_key=False)
 
     def remove_index(self, prefix, indexes, value, cb=None):
         _log.debug("SQL remove_index %s %s" % (indexes, value))
-        key = prefix + '/'+'/'.join(indexes)
-        self.remove(key, value, cb=cb)
+        # Make sure that internal index level / is different from level seperator
+        key = prefix + '/'+'/'.join([i.replace('/',r'+/') for i in indexes]) + '/'
+        self.remove(key, value, cb=cb, include_key=False)
 
     def get_index(self, prefix, index, cb=None):
         _log.debug("SQL get_index %s" % (index,))
-        key = prefix + '/'+'/'.join(index)
+        # Make sure that internal index level / is different from level seperator and we only match full level
+        key = prefix + '/'+'/'.join([i.replace('/',r'+/') for i in index]) + '/'
         d = self.dbpool.runQuery(QUERY_GET_INDEX.format(keystr=key.replace("'", r"\'")))
         d.addCallbacks(CalvinCB(self._getconcat_cb, cb=cb), CalvinCB(self._getconcat_fail_cb, cb=cb))
         _log.debug("SQL get_index %s requested" % (key,))

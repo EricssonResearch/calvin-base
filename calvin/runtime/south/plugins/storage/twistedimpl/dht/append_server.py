@@ -164,7 +164,12 @@ class KademliaProtocolAppend(KademliaProtocol):
             else:
                 old_value_ = self.storage[key]
                 old_value = json.loads(old_value_)
-                new_value = list(set(old_value + pvalue))
+                try:
+                    new_value = list(set(old_value + pvalue))
+                except TypeError:
+                    # When the key have been used for single values it does not contain a list
+                    # Just replace old value
+                    new_value = pvalue
                 _log.debug("%s append key: %s old: %s add: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
                 self.storage[key] = json.dumps(new_value)
             return True
@@ -189,7 +194,12 @@ class KademliaProtocolAppend(KademliaProtocol):
             self.set_keys.add(key)
             if key in self.storage:
                 old_value = json.loads(self.storage[key])
-                new_value = list(set(old_value) - set(pvalue))
+                if isinstance(old_value, list):
+                    new_value = list(set(old_value) - set(pvalue))
+                else:
+                    # When the key have been used for single values it does not contain a list
+                    # Just empty it
+                    new_value = []
                 self.storage[key] = json.dumps(new_value)
                 _log.debug("%s remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
 
