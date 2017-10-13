@@ -166,8 +166,7 @@ class Storage(object):
         elif cb:
             async.DelayedCall(0, cb)
 
-        if not self.proxy:
-            self._init_proxy()
+        self._init_proxy()
 
     def _init_proxy(self):
         _log.analyze(self.node.id, "+ SERVER", None)
