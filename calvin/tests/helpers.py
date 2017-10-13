@@ -3,6 +3,7 @@ from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities import calvinconfig
 from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RT
+from calvin.requests import calvinresponse
 import os
 import time
 import multiprocessing
@@ -161,8 +162,11 @@ def delete_app(request_handler, runtime, app_id, check_actor_ids=None, retries=1
                 response = request_handler.async_response(r)
                 if response is not None:
                     gone = False
-            except:
-                pass
+            except Exception as e:
+                msg = str(e.message)
+                if not msg.startswith(str(calvinresponse.NOT_FOUND)):
+                    gone = False
+                _log.exception("verify_actors_gone %s %s" % (gone, msg))
         return gone
 
     try:
