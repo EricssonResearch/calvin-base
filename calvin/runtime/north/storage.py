@@ -948,11 +948,13 @@ class Storage(object):
         self.delete(prefix="port-", key=port_id, cb=cb)
 
     def add_replica(self, replication_id, actor_id, node_id=None, cb=None):
+        _log.analyze(self.node.id, "+", {'replication_id':replication_id, 'actor_id':actor_id})
         self.add_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
         self.add_index(['replicas', 'nodes', replication_id],
                         self.node.id if node_id is None else node_id, root_prefix_level=3, cb=cb)
 
     def remove_replica(self, replication_id, actor_id, cb=None):
+        _log.analyze(self.node.id, "+", {'replication_id':replication_id, 'actor_id':actor_id})
         self.remove_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
 
     def remove_replica_node(self, replication_id, actor_id, cb=None):
@@ -968,10 +970,10 @@ class Storage(object):
             self.remove_index(['replicas', 'nodes', replication_id], self.node.id, root_prefix_level=3, cb=cb)
 
     def get_replica(self, replication_id, cb=None):
-        self.get_index(['replicas', 'actors', replication_id], cb=cb)
+        self.get_index(['replicas', 'actors', replication_id], root_prefix_level=3, cb=cb)
 
     def get_replica_nodes(self, replication_id, cb=None):
-        self.get_index(['replicas', 'nodes', replication_id], cb=cb)
+        self.get_index(['replicas', 'nodes', replication_id], root_prefix_level=3, cb=cb)
 
     ### Storage proxy server ###
 

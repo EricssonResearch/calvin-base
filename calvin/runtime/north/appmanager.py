@@ -260,6 +260,7 @@ class AppManager(object):
             self._destroy_final(application)
 
     def _replicas_cb(self, value, replication_id, master_id, application):
+        _log.analyze(self._node.id, "+", {'value': value})
         application.replication_ids.remove(replication_id)
         if isinstance(value, (list, tuple, set)):
             application.actor_replicas.extend(value)
