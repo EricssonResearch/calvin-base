@@ -56,18 +56,12 @@ class Scheduler(object):
         self.done = True
 
     def loop_once(self, all_=False):
-        try:
-            activity = self.monitor.communicate(self)
-        except:
-            _log.exception("loop_once monitor failed")
-            return
+        activity = self.monitor.communicate(self)
 
         actors_to_fire = None if all_ else self._trigger_set
         did_fire, timeout, actor_ids = self.fire_actors(actors_to_fire)
 
         self._loop_once = None
-
-        local_trigger_set = self._trigger_set
         self._trigger_set = set()
 
         activity = did_fire or activity or timeout
