@@ -74,7 +74,7 @@ class Scheduler(object):
 
         if activity:
             # Something happened - run again
-            self.trigger_loop(0, actor_ids)
+            self.trigger_loop(actor_ids=actor_ids)
         else:
             # No firings, wait a while until next loop
             if self._watchdog is not None:
@@ -82,26 +82,29 @@ class Scheduler(object):
             self._watchdog = async.DelayedCall(self._watchdog_timeout, self.trigger_loop)
 
 
-    def trigger_loop(self, delay=0, actor_ids=None):
-        """ Trigger the loop_once potentially after waiting delay seconds """
-        if delay > 0:
-            _log.debug("Delayed trigger %s" % delay)
-            async.DelayedCall(delay, self.loop_once, True)
+    def trigger_loop(self, actor_ids=None):
+        # Never have more then one outstanding loop_once
+        if actor_ids is None:
+            if self._loop_once is not None:
+                self._loop_once.cancel()
+            self._loop_once = async.DelayedCall(0, self.loop_once, True)
         else:
-            # Never have more then one outstanding loop_once
-            if actor_ids is None:
-                if self._loop_once is not None:
-                    self._loop_once.cancel()
-                self._loop_once = async.DelayedCall(0, self.loop_once, True)
-            else:
-                self._trigger_set.update(actor_ids)
-                # Don't run None jobs
-                if self._trigger_set == set([None]):
-                    _log.debug("Ignoring fire")
-                    return
+            self._trigger_set.update(actor_ids)
+            # Don't run None jobs
+            if self._trigger_set == set([None]):
+                _log.debug("Ignoring fire")
+                return
 
-                if self._loop_once is None:
-                    self._loop_once = async.DelayedCall(0, self.loop_once)
+            if self._loop_once is None:
+                self._loop_once = async.DelayedCall(0, self.loop_once)
+                    
+    def trig_from_tunnel(self, backoff_time=0):
+        # If backoff_time > 0 don't call UNTIL that time has passed.
+        # Doesn't work with current scheduler/monitor, so tunnel::communicate has a workaround
+        if self._loop_once is not None:
+            self._loop_once.cancel()
+        self._loop_once = async.DelayedCall(backoff_time, self.loop_once, True)
+        
 
     def _log_exception_during_fire(self, e):
         _log.exception(e)
@@ -166,14 +169,17 @@ class DebugScheduler(Scheduler):
     def __init__(self, node, actor_mgr, monitor):
         super(DebugScheduler, self).__init__(node, actor_mgr, monitor)
 
-    def trigger_loop(self, delay=0, actor_ids=None):
+    def trigger_loop(self, actor_ids=None):
         #import inspect
         #import traceback
-        super(DebugScheduler, self).trigger_loop(delay, actor_ids)
+        super(DebugScheduler, self).trigger_loop(actor_ids=actor_ids)
         #(frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
         #_log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
         #_log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
         _log.analyze(self.node.id, "+ Triggered", None, tb=True)
+
+    def trig_from_tunnel(self, backoff_time=0):
+        super(DebugScheduler, self).trig_from_tunnel(backoff_time=backoff_time)
 
     def _log_exception_during_fire(self, e):
         from infi.traceback import format_exception
