@@ -144,11 +144,6 @@ class Scheduler(object):
             except Exception as e:
                 self._log_exception_during_fire(e)
 
-            pressure = actor.get_pressure().values()
-            pressure_values = [p for _, _, p in pressure]
-            if self.actor_pressures.get(actor.id, False) != pressure_values:
-                self.actor_pressures[actor.id] = pressure_values
-
         return (did_fire, False, actor_ids)
 
     def maintenance_loop(self):
