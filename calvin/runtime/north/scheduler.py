@@ -57,29 +57,33 @@ class Scheduler(object):
         # We don't know how we got here, so cancel both of these (safe thing to do)
         self._cancel_watchdog()
         self._cancel_schedule()
-            
+
         # Transfer tokens between actors
-        activity = self.monitor.communicate(self)
+        did_transfer_tokens = self.monitor.communicate(self)
 
         # Pick which set of actors to fire, None means EVERY actor
         actors_to_fire = None if fire_all else self._trigger_set
-        did_fire, timeout, actor_ids = self.fire_actors(actors_to_fire)
-
         # Reset the set of potential actors
         self._trigger_set = set()
+        did_fire_actor_ids = self.fire_actors(actors_to_fire)
+        # If the did_fire_actor_ids set is empty no actor could fire any action
+        did_fire = bool(did_fire_actor_ids)
 
-        # FIXME: This is probably not the correct way to compute activity
-        activity = did_fire or activity or timeout
-        
+        activity = did_fire or did_transfer_tokens
+
         if activity:
             # Something happened - run again
-            self._schedule_actors(actor_ids=actor_ids)
+            # We would like to call _schedule_actors with a list of actors, like so ...
+            # self._schedule_actors(actor_ids=actor_ids)
+            # ... but we don't have a strategy, so run'em all :(
+            self._schedule_all()
         else:
             # No firings, set a watchdog timeout
             self._watchdog = async.DelayedCall(self._watchdog_timeout, self._watchdog_wakeup)
 
 
     def trigger_loop(self, actor_ids=None):
+        # Currently, the only time this makes sense with an actor_ids list/set is when called from calvinsys
         if actor_ids is None:
             self._schedule_all()
         else:
@@ -89,12 +93,12 @@ class Scheduler(object):
         if self._loop_once is not None:
             self._loop_once.cancel()
             self._loop_once = None
-        
+
     def _cancel_watchdog(self):
         if self._watchdog is not None:
-            self._watchdog.cancel()        
+            self._watchdog.cancel()
             self._watchdog = None
-            
+
     def _watchdog_wakeup(self):
         _log.warning("Watchdog wakeup -- this should not really happen...")
         self._schedule_all()
@@ -123,28 +127,37 @@ class Scheduler(object):
         self._cancel_watchdog()
         self._cancel_schedule()
         self._loop_once = async.DelayedCall(backoff_time, self.loop_once, True)
-        
+
 
     def _log_exception_during_fire(self, e):
         _log.exception(e)
 
     def fire_actors(self, actor_ids=None):
-        did_fire = False
-        actor_ids = set()
-
+        """
+        Try to fire actions on actors on this runtime.
+        Parameter 'actor_ids' is a set of actors that are meaningful to try.
+        If 'actor_ids' is None, all enabled actors will be tried.
+        Returns a set with id of actors that did fire at least one action
+        """
+        # This is a list of the actors on the runtime
         actors = self.actor_mgr.enabled_actors()
-        # Shuffle order since now we stop after executing actors for too long
+        # If actor_ids is supplied, filter the actor list
+        if actor_ids is not None:
+            actors = [a for a in actors if a.id in actor_ids]
+        # Shuffle order
         random.shuffle(actors)
 
+        did_fire_actor_ids = set()
         for actor in actors:
             try:
                 _log.debug("Fire actor %s (%s, %s)" % (actor.name, actor._type, actor.id))
-                did_fire |= actor.fire()
-                actor_ids.add(actor.id)
+                did_fire_action = actor.fire()
+                if did_fire_action:
+                    did_fire_actor_ids.add(actor.id)
             except Exception as e:
                 self._log_exception_during_fire(e)
 
-        return (did_fire, False, actor_ids)
+        return did_fire_actor_ids
 
     def maintenance_loop(self):
         # Migrate denied actors
