@@ -186,14 +186,14 @@ class TunnelConnection(BaseConnection):
                                              self.peer_port_meta.node_id,
                                              reply.data['port_id'],
                                              self.peer_port_meta.properties,
-                                             self.node.sched.trig_from_tunnel)
+                                             self.node.sched.schedule_tunnel)
         else:
             endp = endpoint.TunnelOutEndpoint(self.port,
                                               tunnel,
                                               self.peer_port_meta.node_id,
                                               reply.data['port_id'],
                                               self.peer_port_meta.properties,
-                                              self.node.sched.trig_from_tunnel)
+                                              self.node.sched.schedule_tunnel)
         if endp.use_monitor():
             # register into main loop
             self.node.monitor.register_endpoint(endp)
@@ -245,14 +245,14 @@ class TunnelConnection(BaseConnection):
                                              self.peer_port_meta.node_id,
                                              self.peer_port_meta.port_id,
                                              self.peer_port_meta.properties,
-                                             self.node.sched.trig_from_tunnel)
+                                             self.node.sched.schedule_tunnel)
         else:
             endp = endpoint.TunnelOutEndpoint(self.port,
                                               tunnel,
                                               self.peer_port_meta.node_id,
                                               self.peer_port_meta.port_id,
                                               self.peer_port_meta.properties,
-                                              self.node.sched.trig_from_tunnel)
+                                              self.node.sched.schedule_tunnel)
         if endp.use_monitor():
             self.node.monitor.register_endpoint(endp)
 
