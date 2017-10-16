@@ -41,8 +41,8 @@ class Scheduler(object):
         self.delayed_loop = None
         self._loop_once = None
         self._trigger_set = set()
-        self._heartbeat_loop = None
-        self._heartbeat = 1
+        self._watchdog = None
+        self._watchdog_timeout = 1
         self._maintenance_loop = None
         self._maintenance_delay = _conf.get(None, "maintenance_delay") or 300
         self.actor_pressures = {}
@@ -77,9 +77,9 @@ class Scheduler(object):
             self.trigger_loop(0, actor_ids)
         else:
             # No firings, wait a while until next loop
-            if self._heartbeat_loop is not None:
-                self._heartbeat_loop.cancel()
-            self._heartbeat_loop = async.DelayedCall(self._heartbeat, self.trigger_loop)
+            if self._watchdog is not None:
+                self._watchdog.cancel()
+            self._watchdog = async.DelayedCall(self._watchdog_timeout, self.trigger_loop)
 
         # Control replication
         self.node.rm.replication_loop()
