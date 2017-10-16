@@ -81,8 +81,6 @@ class Scheduler(object):
                 self._watchdog.cancel()
             self._watchdog = async.DelayedCall(self._watchdog_timeout, self.trigger_loop)
 
-        # Control replication
-        self.node.rm.replication_loop()
 
     def trigger_loop(self, delay=0, actor_ids=None):
         """ Trigger the loop_once potentially after waiting delay seconds """
