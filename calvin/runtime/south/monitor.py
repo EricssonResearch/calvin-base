@@ -33,6 +33,6 @@ class Event_Monitor(object):
     def unregister_endpoint(self, endpoint):
         self.endpoints.remove(endpoint)
 
-    def loop(self, scheduler):
+    def communicate(self, scheduler):
         # Communicate endpoint, see if anyone sent anything
         return any([endp.communicate() for endp in self.endpoints])

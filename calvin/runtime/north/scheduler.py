@@ -57,7 +57,7 @@ class Scheduler(object):
 
     def loop_once(self, all_=False):
         try:
-            activity = self.monitor.loop(self)
+            activity = self.monitor.communicate(self)
         except:
             _log.exception("loop_once monitor failed")
             return
