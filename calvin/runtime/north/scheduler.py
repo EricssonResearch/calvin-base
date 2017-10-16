@@ -38,7 +38,6 @@ class Scheduler(object):
         self.done = False
         self.node = node
         self.monitor = monitor
-        self.delayed_loop = None
         self._loop_once = None
         self._trigger_set = set()
         self._watchdog = None
@@ -55,25 +54,30 @@ class Scheduler(object):
             async.DelayedCall(0, async.stop_ioloop)
         self.done = True
 
-    def loop_once(self, all_=False):
+    def loop_once(self, fire_all=False):
+        # We don't know how we got here, so cancel both of these (safe thing to do)
+        self._cancel_watchdog()
+        self._cancel_schedule()
+            
+        # Transfer tokens between actors
         activity = self.monitor.communicate(self)
 
-        actors_to_fire = None if all_ else self._trigger_set
+        # Pick which set of actors to fire, None means EVERY actor
+        actors_to_fire = None if fire_all else self._trigger_set
         did_fire, timeout, actor_ids = self.fire_actors(actors_to_fire)
 
-        self._loop_once = None
+        # Reset the set of potential actors
         self._trigger_set = set()
 
+        # FIXME: This is probably not the correct way to compute activity
         activity = did_fire or activity or timeout
-
+        
         if activity:
             # Something happened - run again
             self._schedule_actors(actor_ids=actor_ids)
         else:
-            # No firings, wait a while until next loop
-            if self._watchdog is not None:
-                self._watchdog.cancel()
-            self._watchdog = async.DelayedCall(self._watchdog_timeout, self._schedule_all)
+            # No firings, set a watchdog timeout
+            self._watchdog = async.DelayedCall(self._watchdog_timeout, self._watchdog_wakeup)
 
 
     def trigger_loop(self, actor_ids=None):
@@ -82,11 +86,25 @@ class Scheduler(object):
         else:
             self._schedule_actors(actor_ids)
 
+    def _cancel_schedule(self):
+        if self._loop_once is not None:
+            self._loop_once.cancel()
+            self._loop_once = None
+        
+    def _cancel_watchdog(self):
+        if self._watchdog is not None:
+            self._watchdog.cancel()        
+            self._watchdog = None
+            
+    def _watchdog_wakeup(self):
+        _log.warning("Watchdog wakeup -- this should not really happen...")
+        self._schedule_all()
+
     def _schedule_all(self):
         # If there is a scheduled loop_once then cancel it since it might be
         # scheduled later, and/or with argument set to False.
-        if self._loop_once is not None:
-            self._loop_once.cancel()
+        self._cancel_watchdog()
+        self._cancel_schedule()
         self._loop_once = async.DelayedCall(0, self.loop_once, True)
 
     def _schedule_actors(self, actor_ids):
@@ -97,13 +115,14 @@ class Scheduler(object):
         #                    AND
         #                    the set of actors is non-empty
         if self._loop_once is None and self._trigger_set:
+            self._cancel_watchdog()
             self._loop_once = async.DelayedCall(0, self.loop_once)
 
     def schedule_tunnel(self, backoff_time=0):
         # If backoff_time > 0 don't call UNTIL that time has passed.
         # Doesn't work with current scheduler/monitor, so tunnel::communicate has a workaround
-        if self._loop_once is not None:
-            self._loop_once.cancel()
+        self._cancel_watchdog()
+        self._cancel_schedule()
         self._loop_once = async.DelayedCall(backoff_time, self.loop_once, True)
         
 
