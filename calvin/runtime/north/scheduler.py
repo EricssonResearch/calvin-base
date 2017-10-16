@@ -34,7 +34,6 @@ class Scheduler(object):
     def __init__(self, node, actor_mgr, monitor):
         super(Scheduler, self).__init__()
         self.actor_mgr = actor_mgr
-        self.idle = False
         self.done = False
         self.node = node
         self.monitor = monitor
@@ -137,8 +136,6 @@ class Scheduler(object):
         # Shuffle order since now we stop after executing actors for too long
         random.shuffle(actors)
 
-        start_time = time.time()
-        timeout = False
         for actor in actors:
             try:
                 _log.debug("Fire actor %s (%s, %s)" % (actor.name, actor._type, actor.id))
@@ -152,14 +149,7 @@ class Scheduler(object):
             if self.actor_pressures.get(actor.id, False) != pressure_values:
                 self.actor_pressures[actor.id] = pressure_values
 
-            timeout = time.time() - start_time > 0.100
-            if timeout:
-                break
-
-        # FIXME: self.idle = not (timeout or did_fire)
-        self.idle = False if timeout else not did_fire
-
-        return (did_fire, timeout, actor_ids)
+        return (did_fire, False, actor_ids)
 
     def maintenance_loop(self):
         # Migrate denied actors
