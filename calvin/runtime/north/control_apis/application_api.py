@@ -421,14 +421,12 @@ def handle_deploy(self, handle, connection, match, data, hdr):
             credentials = ""
             # Supply security verification data when available
             content = None
-            if "sec_credentials" in data:
-                credentials = data['sec_credentials']
-                content = {}
-                if not "sec_sign" in data:
-                    data['sec_sign'] = {}
-                content = {
-                        'file': data["script"],
-                        'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
+            content = {}
+            if not "sec_sign" in data:
+                data['sec_sign'] = {}
+            content = {
+                    'file': data["script"],
+                    'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
             compiler.compile_script_check_security(
                 data["script"],
                 filename=data["name"],

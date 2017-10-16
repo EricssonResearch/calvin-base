@@ -320,12 +320,11 @@ class RequestHandler(object):
         r = self._delete(rt, timeout, async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
-    def deploy_application(self, rt, name, script, deploy_info=None, credentials=None, content=None,
+    def deploy_application(self, rt, name, script, deploy_info=None, content=None,
                            check=True, timeout=DEFAULT_TIMEOUT, async=False):
         data = {
             "name": name,
             "script": script,
-            "sec_credentials": credentials,
             "deploy_info": deploy_info,
             "check": check
         }
@@ -336,12 +335,11 @@ class RequestHandler(object):
         r = self._post(rt, timeout, async, DEPLOY, data)
         return self.check_response(r)
 
-    def deploy_app_info(self, rt, name, app_info, deploy_info=None, credentials=None, check=True,
+    def deploy_app_info(self, rt, name, app_info, deploy_info=None, check=True,
                         timeout=DEFAULT_TIMEOUT, async=False):
         data = {
             "name": name,
             "app_info": app_info,
-            "sec_credentials": credentials,
             "deploy_info": deploy_info,
             "check": check
         }
