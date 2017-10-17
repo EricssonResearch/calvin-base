@@ -32,11 +32,11 @@ class RotaryEncoder(object):
 
     def _knob(self, direction):
         self._direction = direction
-        self._node.sched.trigger_loop(actor_ids=[self._actor])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor)
     
     def _button(self):
         self._button_pressed = True
-        self._node.sched.trigger_loop(actor_ids=[self._actor])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor)
         
     def was_turned(self):
         return self._direction is not None

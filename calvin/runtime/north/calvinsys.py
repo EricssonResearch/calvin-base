@@ -100,7 +100,7 @@ class CalvinSys(object):
         """
         Trigger scheduler
         """
-        self._node.sched.trigger_loop(actor_ids=[actor.id])
+        self._node.sched.schedule_calvinsys(actor_id=actor.id)
 
     def has_capability(self, requirement):
         """

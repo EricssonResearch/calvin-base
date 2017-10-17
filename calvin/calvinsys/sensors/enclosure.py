@@ -58,7 +58,7 @@ class Enclosure(object):
         return self.enclosure.identity()
         
     def _trigger(self):
-        self._node.sched.trigger_loop(actor_ids=[self._actor])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor)
 
     def get_cpu_temps(self):
         assert self.has_cpu_temps

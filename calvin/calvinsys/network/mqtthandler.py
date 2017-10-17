@@ -66,7 +66,7 @@ class MQTTHandler(object):
 
     def new_message(self, topic, message):
         self._messages.append((topic,message))
-        self._node.sched.trigger_loop(actor_ids=[self._actor])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor)
     
     def has_message(self):
         return len(self._messages) > 0

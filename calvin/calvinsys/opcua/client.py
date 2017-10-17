@@ -40,7 +40,7 @@ class OPCUAClient(object):
         self.state = OPCUAClient.STATE["init"]
     
     def _trigger(self):
-        self._node.sched.trigger_loop(actor_ids=[self._actor])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor)
         
     def _set_state(self, new_state):
         _log.info("%s -> %s" % (self.state, new_state,))

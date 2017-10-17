@@ -37,7 +37,7 @@ class Sys(object):
                 pass
 
     def scheduler_wakeup(self):
-        self._node.sched.trigger_loop()
+        self._node.sched.schedule_calvinsys()
 
     def scheduler_maintenance_wakeup(self, delay=False):
         self._node.sched.trigger_maintenance_loop(delay)

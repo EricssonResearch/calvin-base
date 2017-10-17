@@ -89,13 +89,6 @@ class Scheduler(object):
         pending = [a for a in actors if a.id in self._trigger_set]
         return pending
 
-    def trigger_loop(self, actor_ids=None):
-        # Currently, the only time this makes sense with an actor_ids list/set is when called from calvinsys
-        if actor_ids is None:
-            self._schedule_all()
-        else:
-            self._schedule_actors(actor_ids)
-
     def _cancel_schedule(self):
         if self._loop_once is not None:
             self._loop_once.cancel()
@@ -138,6 +131,11 @@ class Scheduler(object):
         self._cancel_schedule()
         self._loop_once = async.DelayedCall(backoff_time, self.loop_once, True)
 
+    def schedule_calvinsys(self, actor_id=None):
+        if actor_id is None:
+            self._schedule_all()
+        else:
+            self._schedule_actors(actor_ids=[actor_id])
 
     def _log_exception_during_fire(self, e):
         _log.exception(e)

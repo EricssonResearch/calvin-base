@@ -51,10 +51,10 @@ class HTTPClientHandler(object):
         return self._issue_request('DELETE', url, {}, headers, None)
 
     def _receive_headers(self, dummy=None):
-        self._node.sched.trigger_loop()
+        self._node.sched.schedule_calvinsys()
 
     def _receive_body(self, dummy=None):
-        self._node.sched.trigger_loop()
+        self._node.sched.schedule_calvinsys()
 
     def received_error(self, handle):
         return self._requests[handle].error() is not None

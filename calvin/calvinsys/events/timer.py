@@ -22,11 +22,11 @@ _log = get_logger(__name__)
 
 
 class TimerEvent(async.DelayedCall):
-    def __init__(self, actor_id, delay, trigger_loop, repeats=False):
+    def __init__(self, actor_id, delay, schedule_calvinsys, repeats=False):
         super(TimerEvent, self).__init__(delay, dc_callback=self.trigger)
         self._actor_id = actor_id
         self._triggered = False
-        self.trigger_loop = trigger_loop
+        self.schedule_calvinsys = schedule_calvinsys
         self.repeats = repeats
         _log.debug("Set calvinsys timer %f %s on %s" % (delay, "repeat" if self.repeats else "", self._actor_id))
 
@@ -42,7 +42,7 @@ class TimerEvent(async.DelayedCall):
         self._triggered = True
         if self.repeats:
             self.reset()
-        self.trigger_loop(actor_ids=[self._actor_id])
+        self.schedule_calvinsys(actor_id=self._actor_id)
 
 
 class TimerHandler(object):
@@ -52,10 +52,10 @@ class TimerHandler(object):
         self.node = node
 
     def once(self, delay):
-        return TimerEvent(self._actor.id, delay, self.node.sched.trigger_loop)
+        return TimerEvent(self._actor.id, delay, self.node.sched.schedule_calvinsys)
 
     def repeat(self, delay):
-        return TimerEvent(self._actor.id, delay, self.node.sched.trigger_loop, repeats=True)
+        return TimerEvent(self._actor.id, delay, self.node.sched.schedule_calvinsys, repeats=True)
 
 def register(node, actor, events=None):
     """
