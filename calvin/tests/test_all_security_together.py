@@ -73,7 +73,7 @@ try:
 except:
     skip = True
 
-rt_list=[]
+runtimes=[]
 rt_attributes=[]
 request_handler=None
 storage_verified=False
@@ -170,7 +170,7 @@ class CalvinSecureTestBase(unittest.TestCase):
         from conftest import _config_pytest
         import fileinput
         global storage_verified
-        global rt_list
+        global runtimes
         global rt_attributes
         global request_handler
         global actor_store_path
@@ -224,8 +224,8 @@ class CalvinSecureTestBase(unittest.TestCase):
                         }
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
-        helpers.start_runtime0(runtimes, rt_list, hostname, request_handler, tls=True)
-        helpers.get_enrollment_passwords(runtimes, method="controlapi_set", rt_list=rt_list, request_handler=request_handler)
+        helpers.start_runtime0(runtimes, hostname, request_handler, tls=True)
+        helpers.get_enrollment_passwords(runtimes, method="controlapi_set", request_handler=request_handler)
         # Other runtimes: external authentication, external authorization.
         rt_conf.set('global','storage_type','proxy')
         rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % hostname )
@@ -265,43 +265,36 @@ class CalvinSecureTestBase(unittest.TestCase):
 #                    })
 #        rt3_conf.save("/tmp/calvin5003.conf")
 
-        helpers.start_other_runtimes(runtimes, rt_list, hostname, request_handler, tls=True)
+        helpers.start_other_runtimes(runtimes, hostname, request_handler, tls=True)
         time.sleep(1)
-
         try:
-            helpers.security_verify_storage(rt_list, request_handler)
+            helpers.security_verify_storage(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed storage verification, err={}".format(err))
             raise
         request.addfinalizer(self.teardown)
-        self.rt1=rt_list[1]
-        self.rt2=rt_list[2]
+        self.rt1=runtimes[1]["RT"]
+        self.rt2=runtimes[2]["RT"]
         for i in range(1, NBR_OF_RUNTIMES):
             try:
-                rt_list[i].id = request_handler.get_node_id(rt_list[i])
+                runtimes[i]["RT"].id = request_handler.get_node_id(runtimes[i]["RT"])
             except Exception as e:
                 if isinstance(e, Timeout):
                     raise Exception("Can't connect to runtime.\n\te={}".format(e))
                 _log.exception("Test deploy failed")
                 raise Exception("Failed to get node id, e={}".format(e))
-        _log.info("Hakan 3 runtimes={}".format(runtimes))
-        _log.info("Hakan 3 runtimes.={}".format(runtimes[1]))
-        _log.info("Hakan 3 runtimes.={}".format(runtimes[1]["node_name"]))
-        for runtime in runtimes:
-            _log.info("Hakan runtime={}".format(runtime))
-            host = runtime['rt']
-            try:
-                _log.info("Hakan 1 host={}".format(host))
-                _log.info("Hakan 1 host={}".format([h["node_name"] for h in runtimes if h != runtime]))
-                helpers.retry(10,
-                              request_handler.peer_setup(host, [h["node_name"] for h in runtimes if h != runtime]),
-                              lambda _: True, "Failed peer_setup") 
-            except Exception as err:
-                _log.error("Hakan failed peer_setup, err={}".format(err))
+#        for runtime in runtimes:
+#            host = runtime['RT']
+#            try:
+#                helpers.retry(10,
+#                              request_handler.peer_setup(host, [h["node_name"] for h in runtimes if h != runtime]),
+#                              lambda _: True, "Failed peer_setup") 
+#            except Exception as err:
+#                _log.error("Hakan failed peer_setup, err={}".format(err))
 
 
     def teardown(self):
-        helpers.teardown_slow(rt_list, request_handler, hostname)
+        helpers.teardown_slow(runtimes, request_handler, hostname)
 
 
 ###################################
@@ -319,7 +312,7 @@ class TestSingedCode(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[1], "correctly_signed", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[1]["RT"], "correctly_signed", content) 
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
@@ -328,11 +321,11 @@ class TestSingedCode(CalvinSecureTestBase):
 
         snk = result['actor_map']['correctly_signed:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[1], snk, kwargs={'active': True})
-        actual = helpers.actual_tokens(request_handler, rt_list[1], snk, size=5, retries=20)
+        request_handler.report(runtimes[1]["RT"], snk, kwargs={'active': True})
+        actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, rt_list[1], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
 
     @pytest.mark.slow
@@ -345,7 +338,7 @@ class TestSingedCode(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = helpers.deploy_signed_application_that_should_fail(request_handler, rt_list[1], "incorrectly_signed", content) 
+            result = helpers.deploy_signed_application_that_should_fail(request_handler, runtimes[1]["RT"], "incorrectly_signed", content) 
         except Exception as e:
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
         return
@@ -360,7 +353,7 @@ class TestSingedCode(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[1], "correctlySignedApp_incorrectlySignedActor", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[1]["RT"], "correctlySignedApp_incorrectlySignedActor", content) 
         except Exception as e:
             _log.debug(str(e))
             if e.message.startswith("401"):
@@ -370,13 +363,13 @@ class TestSingedCode(CalvinSecureTestBase):
 
         snk = result['actor_map']['correctlySignedApp_incorrectlySignedActor:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[1], snk, kwargs={'active': True})
+        request_handler.report(runtimes[1]["RT"], snk, kwargs={'active': True})
         try:
-            helpers.actual_tokens(request_handler, rt_list[1], snk, size=5, retries=2)
+            helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=2)
         except Exception as e:
             if e.message.startswith("Not enough tokens"):
                 # We were blocked, as we should
-                helpers.delete_app(request_handler, rt_list[1], result['application_id']) 
+                helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
                 return
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
         raise Exception("Incorrectly signed actor was not stopped as it should have been")
@@ -398,7 +391,7 @@ class TestAuthorization(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[1], "unsignedApp_signedActors", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[1]["RT"], "unsignedApp_signedActors", content) 
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
@@ -407,11 +400,11 @@ class TestAuthorization(CalvinSecureTestBase):
 
         snk = result['actor_map']['unsignedApp_signedActors:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[1], snk, kwargs={'active': True})
-        actual = helpers.actual_tokens(request_handler, rt_list[1], snk, size=5, retries=20)
+        request_handler.report(runtimes[1]["RT"], snk, kwargs={'active': True})
+        actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, rt_list[1], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -423,7 +416,7 @@ class TestAuthorization(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user3", "password": "pass3"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[1], "unsignedApp_unsignedActors", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[1]["RT"], "unsignedApp_unsignedActors", content) 
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_unsignedActors")
@@ -432,11 +425,11 @@ class TestAuthorization(CalvinSecureTestBase):
 
         snk = result['actor_map']['unsignedApp_unsignedActors:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[1], snk, kwargs={'active': True})
-        actual = helpers.actual_tokens(request_handler, rt_list[1], snk, size=5, retries=20)
+        request_handler.report(runtimes[1]["RT"], snk, kwargs={'active': True})
+        actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, rt_list[1], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -448,7 +441,7 @@ class TestAuthorization(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[2], "correctly_signed", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[2]["RT"], "correctly_signed", content) 
         except Exception as e:
             _log.debug(str(e))
             if e.message.startswith("401"):
@@ -459,13 +452,13 @@ class TestAuthorization(CalvinSecureTestBase):
 
         snk = result['actor_map']['correctly_signed:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[2], snk, kwargs={'active': True})
+        request_handler.report(runtimes[2]["RT"], snk, kwargs={'active': True})
         try:
-            helpers.actual_tokens(request_handler, rt_list[2], snk, size=5, retries=2)
+            helpers.actual_tokens(request_handler, runtimes[2]["RT"], snk, size=5, retries=2)
         except Exception as e:
             if e.message.startswith("Not enough tokens"):
                 # We were blocked, as we should
-                helpers.delete_app(request_handler, rt_list[2], result['application_id']) 
+                helpers.delete_app(request_handler, runtimes[2]["RT"], result['application_id']) 
                 return
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
         raise Exception("Actor with unallowed requirements was not stopped as it should have been")
@@ -481,7 +474,7 @@ class TestAuthorization(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[0], "unsignedApp_signedActors", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[0]["RT"], "unsignedApp_signedActors", content) 
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
@@ -490,11 +483,11 @@ class TestAuthorization(CalvinSecureTestBase):
 
         snk = result['actor_map']['unsignedApp_signedActors:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[0], snk, kwargs={'active': True})
-        actual = helpers.actual_tokens(request_handler, rt_list[0], snk, size=5, retries=20)
+        request_handler.report(runtimes[0]["RT"], snk, kwargs={'active': True})
+        actual = helpers.actual_tokens(request_handler, runtimes[0]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, rt_list[0], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[0]["RT"], result['application_id']) 
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -506,7 +499,7 @@ class TestAuthorization(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user2", "password": "pass2"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[1], "unsignedApp_signedActors", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[1]["RT"], "unsignedApp_signedActors", content) 
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
@@ -515,11 +508,11 @@ class TestAuthorization(CalvinSecureTestBase):
 
         snk = result['actor_map']['unsignedApp_signedActors:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[1], snk, kwargs={'active': True})
-        actual = helpers.actual_tokens(request_handler, rt_list[1], snk, size=5, retries=20)
+        request_handler.report(runtimes[1]["RT"], snk, kwargs={'active': True})
+        actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, rt_list[1], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -531,16 +524,16 @@ class TestAuthorization(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user4", "password": "pass4"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[1], "correctly_signed", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[1]["RT"], "correctly_signed", content) 
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
 
-        # Verify that actors exist like this (all of them should have migrated to rt_list[2])
+        # Verify that actors exist like this (all of them should have migrated to runtimes[2]["RT"])
         try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
+            actors = helpers.fetch_and_log_runtime_actors(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -550,11 +543,11 @@ class TestAuthorization(CalvinSecureTestBase):
 
         snk = result['actor_map']['correctly_signed:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[2], snk, kwargs={'active': True})
-        actual = helpers.actual_tokens(request_handler, rt_list[2], snk, size=5, retries=20)
+        request_handler.report(runtimes[2]["RT"], snk, kwargs={'active': True})
+        actual = helpers.actual_tokens(request_handler, runtimes[2]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, rt_list[1], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
 ###################################
 #   Control interface authorization 
@@ -571,7 +564,7 @@ class TestControlInterfaceAuthorization(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user6", "password": "pass6"})
-            result = helpers.deploy_signed_application_that_should_fail(request_handler, rt_list[1], "correctly_signed", content) 
+            result = helpers.deploy_signed_application_that_should_fail(request_handler, runtimes[1]["RT"], "correctly_signed", content) 
         except Exception as e:
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
             raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
@@ -584,7 +577,7 @@ class TestControlInterfaceAuthorization(CalvinSecureTestBase):
         result = {}
         users_db=None
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        users_db = helpers.retry(10, partial(request_handler.get_users_db, rt_list[0]), lambda _: True, "Failed to get users database")
+        users_db = helpers.retry(10, partial(request_handler.get_users_db, runtimes[0]["RT"]), lambda _: True, "Failed to get users database")
         if users_db:
             users_db['user7']={"username": "user7",
                                         "attributes": {
@@ -597,9 +590,9 @@ class TestControlInterfaceAuthorization(CalvinSecureTestBase):
         else:
             raise Exception("users_db not in result or users_db not in result[users_db]")
         #PUT the update database to the authentication server
-        helpers.retry(10, partial(request_handler.post_users_db, rt_list[0], users_db), lambda _: True, "Failed to post users database")
+        helpers.retry(10, partial(request_handler.post_users_db, runtimes[0]["RT"], users_db), lambda _: True, "Failed to post users database")
         #Read the users database back again and check if Greta has been added
-        users_db2 = helpers.retry(10, partial(request_handler.get_users_db, rt_list[0]), lambda _: True, "Failed to get users database")
+        users_db2 = helpers.retry(10, partial(request_handler.get_users_db, runtimes[0]["RT"]), lambda _: True, "Failed to get users database")
         if not 'user7' in users_db2:
             raise Exception("Failed to update the users_db")
 
@@ -621,7 +614,7 @@ class TestAuthentication(CalvinSecureTestBase):
             _log.error("Hakan kommer hit 101")
             request_handler.set_credentials({"user": "user_not_allowed", "password": "pass1"})
             _log.error("Hakan kommer hit 102")
-            result = helpers.deploy_signed_application_that_should_fail(request_handler, rt_list[1], "correctly_signed", content) 
+            result = helpers.deploy_signed_application_that_should_fail(request_handler, runtimes[1]["RT"], "correctly_signed", content) 
         except Exception as e:
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
             raise Exception("Deployment of app correctly_signed did not fail for security reasons")
@@ -637,7 +630,7 @@ class TestAuthentication(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "incorrect_password"})
-            result = helpers.deploy_signed_application_that_should_fail(request_handler, rt_list[1], "incorrectly_signed", content) 
+            result = helpers.deploy_signed_application_that_should_fail(request_handler, runtimes[1]["RT"], "incorrectly_signed", content) 
         except Exception as e:
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
             raise Exception("Deployment of app correctly_signed, did not fail for security reasons")  
@@ -653,7 +646,7 @@ class TestAuthentication(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user5", "password": "pass5"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[0], "correctly_signed", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[0]["RT"], "correctly_signed", content) 
         except Exception as e:
             if isinstance(e, Timeout):
                 raise Exception("Can't connect to runtime 0.\n\te={}".format(e))
@@ -664,11 +657,11 @@ class TestAuthentication(CalvinSecureTestBase):
 
         snk = result['actor_map']['correctly_signed:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[0], snk, kwargs={'active': True})
-        actual = helpers.actual_tokens(request_handler, rt_list[0], snk, size=5, retries=20)
+        request_handler.report(runtimes[0]["RT"], snk, kwargs={'active': True})
+        actual = helpers.actual_tokens(request_handler, runtimes[0]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, rt_list[0], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[0]["RT"], result['application_id']) 
 
     @pytest.mark.slow
     @pytest.mark.essential
@@ -680,7 +673,7 @@ class TestAuthentication(CalvinSecureTestBase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user5", "password": "pass5"})
-            result = helpers.deploy_signed_application(request_handler, rt_list[1], "correctly_signed", content) 
+            result = helpers.deploy_signed_application(request_handler, runtimes[1]["RT"], "correctly_signed", content) 
         except Exception as e:
             if isinstance(e, Timeout):
                 raise Exception("Can't connect to runtime.\n\te={}".format(e))
@@ -691,11 +684,11 @@ class TestAuthentication(CalvinSecureTestBase):
 
         snk = result['actor_map']['correctly_signed:snk']
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        request_handler.report(rt_list[1], snk, kwargs={'active': True})
-        actual = helpers.actual_tokens(request_handler, rt_list[1], snk, size=5, retries=20)
+        request_handler.report(runtimes[1]["RT"], snk, kwargs={'active': True})
+        actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, rt_list[1], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
 #    @pytest.mark.xfail
 #    @pytest.mark.slow
@@ -710,7 +703,7 @@ class TestAuthentication(CalvinSecureTestBase):
 #            if not content:
 #                raise Exception("Failed finding script, signature and cert, stopping here")
 #            request_handler.set_credentials({"user": "user5", "password": "pass5"})
-#            result = request_handler.deploy_application(rt_list[3], "correctly_signed", content['file'], 
+#            result = request_handler.deploy_application(runtimes[3]["RT"], "correctly_signed", content['file'], 
 #                        content=content,
 #                        check=True)
 #        except Exception as e:
@@ -732,10 +725,10 @@ class TestAuthentication(CalvinSecureTestBase):
 #        assert result['actor_map']['correctly_signed:sum'] in actors[3]
 #        assert result['actor_map']['correctly_signed:snk'] in actors[3]
 #
-#        actual = request_handler.report(rt_list[3], result['actor_map']['correctly_signed:snk'])
+#        actual = request_handler.report(runtimes[3]["RT"], result['actor_map']['correctly_signed:snk'])
 #        assert len(actual) > 2
 #
-#        helpers.delete_app(request_handler, rt_list[3], result['application_id']) 
+#        helpers.delete_app(request_handler, runtimes[3]["RT"], result['application_id']) 
 
 
 
@@ -743,96 +736,96 @@ class TestAuthentication(CalvinSecureTestBase):
 ###################################
 #   Non-security Calvin tests
 ###################################
-@pytest.mark.slow
-@pytest.mark.essential
-class TestNodeSetup(CalvinSecureTestBase):
-
-    """Testing starting a node"""
-
-    def testStartNode(self):
-        """Testing starting node"""
-        #import sys
-        #from twisted.python import log
-        #from twisted.internet import defer
-        #log.startLogging(sys.stdout)
-        #defer.setDebugging(True)
-
-        assert request_handler.get_node(self.rt1, self.rt1.id)['uris'] == self.rt1.uris
-
-
-@pytest.mark.essential
-@pytest.mark.slow
-class TestRemoteConnection(CalvinSecureTestBase):
+#@pytest.mark.slow
+#@pytest.mark.essential
+#class TestNodeSetup(CalvinSecureTestBase):
+#
+#    """Testing starting a node"""
+#
+#    def testStartNode(self):
+#        """Testing starting node"""
+#        #import sys
+#        #from twisted.python import log
+#        #from twisted.internet import defer
+#        #log.startLogging(sys.stdout)
+#        #defer.setDebugging(True)
+#
+#        assert request_handler.get_node(self.rt1, self.rt1.id)['uris'] == self.rt1.uris
 
 
-    """Testing remote connections"""
+#@pytest.mark.essential
+#@pytest.mark.slow
+#class TestRemoteConnection(CalvinSecureTestBase):
+#
+#
+#    """Testing remote connections"""
+#
+#    def testRemoteOneActor(self):
+#        """Testing remote port"""
+#        from twisted.python import log
+#        from twisted.internet import defer
+#        import sys
+#        defer.setDebugging(True)
+#        log.startLogging(sys.stdout)
+#
+#        rt = runtimes[1]["RT"]
+#        peer = runtimes[1]["RT"]
+##        peer = runtimes[2]["RT"]
+#
+#        request_handler.set_credentials({"user": "user0", "password": "pass0"})
+#        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+#
+#        csum = request_handler.new_actor(peer, 'std.Sum', 'sum')
+#        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
+#        time.sleep(1)
+#        request_handler.connect(rt, snk, 'token', peer.id, csum, 'integer')
+#        time.sleep(1)
+#        request_handler.connect(peer, csum, 'integer', rt.id, src, 'integer')
+#        time.sleep(1)
+#
+#        # Wait for some tokens
+#        actual = wait_for_tokens(rt, snk, 10)
+#
+#        request_handler.disconnect(rt, src)
+#
+#        # Fetch sent
+#        expected = expected_tokens(rt, src, 'sum')
+#
+#        self.assert_lists_equal(expected, actual)
+#
+#        request_handler.delete_actor(rt, snk)
+#        request_handler.delete_actor(peer, csum)
+#        request_handler.delete_actor(rt, src)
 
-    def testRemoteOneActor(self):
-        """Testing remote port"""
-        from twisted.python import log
-        from twisted.internet import defer
-        import sys
-        defer.setDebugging(True)
-        log.startLogging(sys.stdout)
-
-        rt = rt_list[1]
-        peer = rt_list[1]
-#        peer = rt_list[2]
-
-        request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
-
-        csum = request_handler.new_actor(peer, 'std.Sum', 'sum')
-        src = request_handler.new_actor(rt, 'std.CountTimer', 'src')
-        time.sleep(1)
-        request_handler.connect(rt, snk, 'token', peer.id, csum, 'integer')
-        time.sleep(1)
-        request_handler.connect(peer, csum, 'integer', rt.id, src, 'integer')
-        time.sleep(1)
-
-        # Wait for some tokens
-        actual = wait_for_tokens(rt, snk, 10)
-
-        request_handler.disconnect(rt, src)
-
-        # Fetch sent
-        expected = expected_tokens(rt, src, 'sum')
-
-        self.assert_lists_equal(expected, actual)
-
-        request_handler.delete_actor(rt, snk)
-        request_handler.delete_actor(peer, csum)
-        request_handler.delete_actor(rt, src)
-
-    def testRemoteSlowPort(self):
-        """Testing remote slow port and that token flow control works"""
-
-        rt = rt_list[1]
-        peer = rt_list[2]
-
-        snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
-        alt = request_handler.new_actor(peer, 'flow.Alternate2', 'alt')
-        src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
-        src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
-
-        request_handler.connect(rt, snk1, 'token', peer.id, alt, 'token')
-        request_handler.connect(peer, alt, 'token_1', rt.id, src1, 'integer')
-        request_handler.connect(peer, alt, 'token_2', rt.id, src2, 'integer')
-
-        actual = wait_for_tokens(rt, snk1, 10)
-
-        request_handler.disconnect(rt, src1)
-        request_handler.disconnect(rt, src2)
-
-        expected_1 = expected_tokens(rt, src1, 'seq')
-        expected_2 = expected_tokens(rt, src2, 'seq')
-        expected = helpers.flatten_zip(zip(expected_1, expected_2))
-
-        self.assert_lists_equal(expected, actual)
-
-        request_handler.delete_actor(rt, snk1)
-        request_handler.delete_actor(peer, alt)
-        request_handler.delete_actor(rt, src1)
-        request_handler.delete_actor(rt, src2)
+#    def testRemoteSlowPort(self):
+#        """Testing remote slow port and that token flow control works"""
+#
+#        rt = runtimes[1]["RT"]
+#        peer = runtimes[2]["RT"]
+#
+#        snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
+#        alt = request_handler.new_actor(peer, 'flow.Alternate2', 'alt')
+#        src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
+#        src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
+#
+#        request_handler.connect(rt, snk1, 'token', peer.id, alt, 'token')
+#        request_handler.connect(peer, alt, 'token_1', rt.id, src1, 'integer')
+#        request_handler.connect(peer, alt, 'token_2', rt.id, src2, 'integer')
+#
+#        actual = wait_for_tokens(rt, snk1, 10)
+#
+#        request_handler.disconnect(rt, src1)
+#        request_handler.disconnect(rt, src2)
+#
+#        expected_1 = expected_tokens(rt, src1, 'seq')
+#        expected_2 = expected_tokens(rt, src2, 'seq')
+#        expected = helpers.flatten_zip(zip(expected_1, expected_2))
+#
+#        self.assert_lists_equal(expected, actual)
+#
+#        request_handler.delete_actor(rt, snk1)
+#        request_handler.delete_actor(peer, alt)
+#        request_handler.delete_actor(rt, src1)
+#        request_handler.delete_actor(rt, src2)
 
 #

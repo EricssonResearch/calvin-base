@@ -111,15 +111,15 @@ def deploy_app(request_handler, deployer, runtimes, retries=10):
 
     return retry(retries, check_application, lambda r: r, "Application not found on all peers")
 
-def deploy_signed_application(request_handler, rt_list, name, content, retries=10):
+def deploy_signed_application(request_handler, runtimes, name, content, retries=10):
     """
     Deploys app associated w/ deployer and then tries to verify its
     presence in registry (for all runtimes).
     """
     from functools import partial
-    return retry(retries, partial(request_handler.deploy_application, rt_list, name, script=content['file'], content=content, check=True), lambda _: True, "Failed to deploy application")
+    return retry(retries, partial(request_handler.deploy_application, runtimes, name, script=content['file'], content=content, check=True), lambda _: True, "Failed to deploy application")
 
-def deploy_signed_application_that_should_fail(request_handler, rt_list, name, content, retries=20):
+def deploy_signed_application_that_should_fail(request_handler, runtimes, name, content, retries=20):
     """
     Deploys app associated w/ deployer and then tries to verify its
     presence in registry (for all runtimes).
@@ -129,7 +129,7 @@ def deploy_signed_application_that_should_fail(request_handler, rt_list, name, c
     result = None
     while retry < retries:
         try:
-            result = request_handler.deploy_application(rt_list, name, content['file'], content=content, check=True)
+            result = request_handler.deploy_application(runtimes, name, content['file'], content=content, check=True)
         except Exception as e:
             try:
                 if e.message.startswith("401"):
@@ -578,44 +578,42 @@ def sign_files_for_security_tests(credentials_testdir):
     certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=credentials_testdir)
     return actor_store_path, application_store_path
 
-def fetch_and_log_runtime_actors(rt_list, request_handler):
+def fetch_and_log_runtime_actors(runtimes, request_handler):
     from functools import partial
     # Verify that actors exist like this
     actors=[]
     #Use admins credentials to access the control interface
     request_handler.set_credentials({"user": "user0", "password": "pass0"})
-    for runtime in rt:
-        actors_rt = retry(20, partial(request_handler.get_actors, runtime), lambda _: True, "Failed to get actors")
+    for runtime in runtimes:
+        actors_rt = retry(20, partial(request_handler.get_actors, runtime["RT"]), lambda _: True, "Failed to get actors")
         actors.append(actors_rt)
-    for i in range(len(rt_list)):
+    for i in range(len(runtimes)):
         _log.info("\n\trt{} actors={}".format(i, actors[i]))
     return actors
 
-def security_verify_storage(rt_list, request_handler):
+def security_verify_storage(runtimes, request_handler):
     from functools import partial
-    _log.info("Let's verify storage, rt={}".format(rt_list))
-    _log.info("Let's verify storage, rt={} rt={} rt={} ".format(rt_list[0], rt_list[1], rt_list[2]))
-    rt_id=[None]*len(rt_list)
+    rt_id=[None]*len(runtimes)
     # Wait for control API to be up and running
-    for j in range(len(rt_list)):
-        rt_id[j] = retry(30, partial(request_handler.get_node_id, rt_list[j]), lambda _: True, "Failed to get node id")
+    for j in range(len(runtimes)):
+        rt_id[j] = retry(30, partial(request_handler.get_node_id, runtimes[j]['RT']), lambda _: True, "Failed to get node id")
     _log.info("RUNTIMES:{}".format(rt_id))
     # Wait for storage to be connected
     index = "node/capabilities/json" 
     failed = True
     def test():
-        count=[0]*len(rt_list)
-        caps =[0]*len(rt_list)
+        count=[0]*len(runtimes)
+        caps =[0]*len(runtimes)
         #Loop through all runtimes to ask them which runtimes nodes they know with json-capabilities
-        for j in range(len(rt_list)):
-            caps[j] = retry(30, partial(request_handler.get_index, rt_list[j], index), lambda _: True, "Failed to get index")['result']
+        for j in range(len(runtimes)):
+            caps[j] = retry(30, partial(request_handler.get_index, runtimes[j]['RT'], index), lambda _: True, "Failed to get index")['result']
             #Add the known nodes to statistics of how many nodes store keys from that node
-            for k in range(len(rt_list)):
+            for k in range(len(runtimes)):
                 count[k] = count[k] + caps[j].count(rt_id[k])
         _log.info("rt_ids={}\n\tcount={}".format(rt_id, count))
         return count
 
-    criterion = lambda count: (x >=min(5, len(rt_list)) for x in count)
+    criterion = lambda count: (x >=min(5, len(runtimes)) for x in count)
     retry(30, test, criterion, "Storage has not spread as it should")
     #Loop through all runtimes and make sure they can lookup all other runtimes
 #    for runtime1 in rt:
@@ -675,23 +673,23 @@ def _get_node_names(runtimes):
         runtimes[i]["node_name"] = attributes.get_node_name_as_str()
 
 
-def get_enrollment_passwords(runtimes, method="ca", rt_list=None, request_handler=None, ca=None):
+def get_enrollment_passwords(runtimes, method="ca", request_handler=None, ca=None):
     from functools import partial
     #Set/get enrollment for the other runtimes:
     for i in range(len(runtimes)):
         node_name = runtimes[i]["node_name"]
         if method=="ca" and ca:
             runtimes[i]["enrollment_password"] = ca.cert_enrollment_add_new_runtime(node_name)
-        elif method=="controlapi_get" and rt_list:
+        elif method=="controlapi_get" and runtimes:
             enrollment_password = retry(10,
-                                        partial(request_handler.get_enrollment_password, rt_list[0], node_name),
+                                        partial(request_handler.get_enrollment_password, runtimes[0]["RT"], node_name),
                                         lambda _: True, "Failed to get enrollment password")
             runtimes[i]["enrollment_password"] = enrollment_password
         elif method=="controlapi_set":
             enrollment_password = "abrakadabra123456789"
             runtimes[i]["enrollment_password"] = enrollment_password
             retry(  10,
-                    partial(request_handler.set_enrollment_password, rt_list[0], node_name, enrollment_password),
+                    partial(request_handler.set_enrollment_password, runtimes[0]["RT"], node_name, enrollment_password),
                     lambda _: True, "Failed to get enrollment password")
             runtimes[i]["enrollment_password"] = enrollment_password
         else:
@@ -740,11 +738,11 @@ def _runtime_attributes(domain_name, runtimes):
                             }
                         }
 
-def wait_for_runtime(request_handler, rt_list):
+def wait_for_runtime(request_handler, rt):
     from functools import partial
-    rt_id = retry(100, partial(request_handler.get_node_id, rt_list), lambda _: True, "Failed to get node id")
+    rt_id = retry(100, partial(request_handler.get_node_id, rt), lambda _: True, "Failed to get node id")
 
-def start_runtime0(runtimes, rt_list, hostname, request_handler, tls=False, enroll_passwords=False):
+def start_runtime0(runtimes, hostname, request_handler, tls=False, enroll_passwords=False):
     from calvin.Tools.csruntime import csruntime
     from conftest import _config_pytest
     #Start runtime 0 as it takes alot of time to start, and needs to be up before the others start
@@ -767,17 +765,14 @@ def start_runtime0(runtimes, rt_list, hostname, request_handler, tls=False, enro
                configfile="/tmp/calvin5000.conf")
     uri = "calvinip://{}:5000".format(hostname)
     curi = "https://{}:5020".format(hostname) if tls==True else "http://{}:5020".format(hostname)
-    rt_list.append(RT(curi))
-    runtimes[0]['rt'] = RT(curi)
-    rt_list[0].uris=[uri]
-    runtimes[0]['rt'].uris=[uri]
-    rt_list[0].attributes=runtimes[0]["attributes"]
-    runtimes[0]['rt'].attributes=runtimes[0]["attributes"]
+    runtimes[0]['RT'] = RT(curi)
+    runtimes[0]['RT'].uris=[uri]
+    runtimes[0]['RT'].attributes=runtimes[0]["attributes"]
 
     #Wait for runtime 0 to be up and running
-    wait_for_runtime(request_handler, rt_list[0])
+    wait_for_runtime(request_handler, runtimes[0]["RT"])
 
-def start_other_runtimes(runtimes, rt_list, hostname, request_handler, tls=False):
+def start_other_runtimes(runtimes, hostname, request_handler, tls=False):
     from calvin.Tools.csruntime import csruntime
     from conftest import _config_pytest
     #Start the other runtimes
@@ -807,53 +802,47 @@ def start_other_runtimes(runtimes, rt_list, hostname, request_handler, tls=False
         uri = "calvinip://{}:500{}".format(hostname, i)
         curi = "https://{}:502{}".format(hostname, i) if tls==True else "http://{}:502{}".format(hostname, i)
         requests_rt = RT(curi)
-        runtimes[i]['rt'] = RT(curi)
-        runtimes[i]['rt'].uris = [uri]
-        rt_list.append(requests_rt)
-        rt_list[i].uris=[uri]
-        runtimes[i]['rt'].uris = [uri]
-        rt_list[i].attributes=runtimes[i]["attributes"]
-        runtimes[i]['rt'].attributes=runtimes[i]["attributes"]
+        runtimes[i]['RT'] = RT(curi)
+        runtimes[i]['RT'].uris = [uri]
+        runtimes[i]['RT'].attributes=runtimes[i]["attributes"]
         time.sleep(0.1)
 
 def start_all_runtimes(runtimes, hostname, request_handler, tls=False):
-    rt_list=[]
-    start_runtime0(runtimes, rt_list, hostname, request_handler, tls=tls)
-    start_other_runtimes(runtimes, rt_list, hostname, request_handler, tls=tls)
-    return rt_list
+    start_runtime0(runtimes, hostname, request_handler, tls=tls)
+    start_other_runtimes(runtimes, hostname, request_handler, tls=tls)
 
-def teardown_slow(rt_list, request_handler, hostname):
+def teardown_slow(runtimes, request_handler, hostname):
     request_handler.set_credentials({"user": "user0", "password": "pass0"})
-    for i in range(1, len(rt_list)):
+    for i in range(1, len(runtimes)):
         _log.info("kill runtime {}".format(i))
         try:
-            request_handler.quit(rt_list[i])
+            request_handler.quit(runtmes[i]["RT"])
         except Exception:
             _log.error("Failed quit for node {}".format(i))
     # Kill Auth/Authz node last since the other nodes need it for authorization
     # of the kill requests
     time.sleep(2)
     try:
-        request_handler.quit(rt_list[0])
+        request_handler.quit(runtimes[0]["RT"])
     except Exception:
         _log.error("Failed quit for node 0")
     time.sleep(0.2)
     for p in multiprocessing.active_children():
         p.terminate()
     # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
-    for i in range(len(rt_list)):
+    for i in range(len(runtimes)):
         os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
     time.sleep(0.2)
 
-def teardown(rt_list, request_handler, hostname):
+def teardown(runtimes, request_handler, hostname):
     request_handler.set_credentials({"user": "user0", "password": "pass0"})
-    for runtime in rt_list:
+    for runtime in runtimes:
         request_handler.quit(runtime)
     time.sleep(0.2)
     for p in multiprocessing.active_children():
         p.terminate()
     # They will die eventually (about 5 seconds) in most cases, but this makes sure without wasting time
-    for i in range(len(rt_list)):
+    for i in range(len(runtimes)):
         os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
     time.sleep(0.2)
 
