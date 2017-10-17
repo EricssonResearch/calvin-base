@@ -62,7 +62,7 @@ class Scheduler(object):
         did_transfer_tokens = self.monitor.communicate(self)
 
         # Pick which set of actors to fire, None means EVERY actor
-        actors_to_fire = None if fire_all else self._trigger_set
+        actors_to_fire = self.all_actors() if fire_all else self.pending_actors()
         # Reset the set of potential actors
         self._trigger_set = set()
         did_fire_actor_ids = self.fire_actors(actors_to_fire)
@@ -81,6 +81,13 @@ class Scheduler(object):
             # No firings, set a watchdog timeout
             self._schedule_watchdog()
 
+    def all_actors(self):
+        return self.actor_mgr.enabled_actors()
+
+    def pending_actors(self):
+        actors = self.actor_mgr.enabled_actors()
+        pending = [a for a in actors if a.id in self._trigger_set]
+        return pending
 
     def trigger_loop(self, actor_ids=None):
         # Currently, the only time this makes sense with an actor_ids list/set is when called from calvinsys
@@ -135,21 +142,12 @@ class Scheduler(object):
     def _log_exception_during_fire(self, e):
         _log.exception(e)
 
-    def fire_actors(self, actor_ids=None):
+    def fire_actors(self, actors):
         """
         Try to fire actions on actors on this runtime.
-        Parameter 'actor_ids' is a set of actors that are meaningful to try.
-        If 'actor_ids' is None, all enabled actors will be tried.
+        Parameter 'actors' is a set of actors to try (in that ).
         Returns a set with id of actors that did fire at least one action
         """
-        # This is a list of the actors on the runtime
-        actors = self.actor_mgr.enabled_actors()
-        # If actor_ids is supplied, filter the actor list
-        if actor_ids is not None:
-            actors = [a for a in actors if a.id in actor_ids]
-        # Shuffle order
-        random.shuffle(actors)
-
         did_fire_actor_ids = set()
         for actor in actors:
             try:
