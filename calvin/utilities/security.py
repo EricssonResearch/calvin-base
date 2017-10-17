@@ -77,7 +77,7 @@ def security_enabled():
 
 def encode_jwt(payload, node):
     """Encode JSON Web Token"""
-    _log.debug("encode_jwt:\n\tpayload={}".format(payload))
+#    _log.debug("encode_jwt:\n\tpayload={}".format(payload))
     if node.runtime_credentials:
         private_key = node.runtime_credentials.get_private_key()
     else:
@@ -87,7 +87,7 @@ def encode_jwt(payload, node):
 
 def decode_jwt(token, sender_cert_name, node, actor_id=None, callback=None):
     """Decode JSON Web Token"""
-    _log.debug("decode_jwt:\n\ttoken={}\n\tsender_cert_name={}\n\tnode={}\n\tactor_id={}\n\tcallback={}".format(token, sender_cert_name, node, actor_id, callback))
+#    _log.debug("decode_jwt:\n\ttoken={}\n\tsender_cert_name={}\n\tnode={}\n\tactor_id={}\n\tcallback={}".format(token, sender_cert_name, node, actor_id, callback))
     # Get authorization server certificate from disk.
     try:
         node.runtime_credentials.get_certificate(cert_name=sender_cert_name,
@@ -103,7 +103,7 @@ def decode_jwt(token, sender_cert_name, node, actor_id=None, callback=None):
 
 def _decode_jwt_cb(certstring, token, node, actor_id=None, callback=None):
     """Decode JSON Web Token"""
-    _log.debug("_decode_jwt_cb\n\tsender certstring={}\n\ttoken={}\n\tnode={}\n\tactor_id={}\n\tcallback={}".format(certstring, token, node, actor_id, callback))
+#    _log.debug("_decode_jwt_cb\n\tsender certstring={}\n\ttoken={}\n\tnode={}\n\tactor_id={}\n\tcallback={}".format(certstring, token, node, actor_id, callback))
     sender_public_key = certificate.get_public_key_from_certstr(certstring)
     sender_node_id = certificate.cert_DN_Qualifier(certstring=certstring)
     # The signature is verified using the Elliptic Curve public key of the sender.
