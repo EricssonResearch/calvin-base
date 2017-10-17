@@ -79,7 +79,7 @@ class Scheduler(object):
             self._schedule_all()
         else:
             # No firings, set a watchdog timeout
-            self._watchdog = async.DelayedCall(self._watchdog_timeout, self._watchdog_wakeup)
+            self._schedule_watchdog()
 
 
     def trigger_loop(self, actor_ids=None):
@@ -102,6 +102,9 @@ class Scheduler(object):
     def _watchdog_wakeup(self):
         _log.warning("Watchdog wakeup -- this should not really happen...")
         self._schedule_all()
+
+    def _schedule_watchdog(self):
+        self._watchdog = async.DelayedCall(self._watchdog_timeout, self._watchdog_wakeup)
 
     def _schedule_all(self):
         # If there is a scheduled loop_once then cancel it since it might be
