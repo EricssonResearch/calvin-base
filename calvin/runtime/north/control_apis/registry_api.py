@@ -1,4 +1,5 @@
 import json
+import re
 from calvin.requests import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
@@ -16,13 +17,18 @@ def handle_post_index(self, handle, connection, match, data, hdr):
     Store value under index key
     Body:
     {
-        "value": <string>
+        "value": <string>,
+        "root_prefix_level": <int>  # optional
     }
     Response status code: OK or INTERNAL_ERROR
     Response: none
     """
+    kwargs = {}
+    if 'root_prefix_level' in data:
+        kwargs['root_prefix_level'] = int(data['root_prefix_level'])
     self.node.storage.add_index(
-        match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
+        match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection), **kwargs)
+
 
 @handler(r"DELETE /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 @authentication_decorator
@@ -33,24 +39,32 @@ def handle_delete_index(self, handle, connection, match, data, hdr):
     Body:
     {
         "value": <string>
+        "root_prefix_level": <int>  # optional
     }
     Response status code: OK or INTERNAL_ERROR
     Response: none
     """
+    kwargs = {}
+    if 'root_prefix_level' in data:
+        kwargs['root_prefix_level'] = int(data['root_prefix_level'])
     self.node.storage.remove_index(
-        match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
+        match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection), **kwargs)
+
 
 # Can't be access controlled, as it is needed to find authorization server
-@handler(r"GET /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@handler(r"GET /index/([0-9a-zA-Z\.\-/_]*)(?:\?root_prefix_level=([0-9]*))?\sHTTP/1")
 def handle_get_index(self, handle, connection, match, data, hdr):
     """
-    GET /index/{key}
+    GET /index/{key}?root_prefix_level={level}
     Fetch values under index key
     Response status code: OK or NOT_FOUND
     Response: {"result": <list of strings>}
     """
+    kwargs = {}
+    if match.group(2) is not None:
+        kwargs['root_prefix_level'] = int(match.group(2))
     self.node.storage.get_index(
-        match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
+        match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection), **kwargs)
 
 
 @register

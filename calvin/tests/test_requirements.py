@@ -131,11 +131,11 @@ class TestDeployScript(unittest.TestCase):
         for i in range(30):
             try:
                 if not (rt1_id in caps1  and rt2_id in caps2 and rt3_id in caps1):
-                    caps1 = request_handler.get_index(rt1, "node/capabilities/json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/json", root_prefix_level=3)['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
-                    caps2 = request_handler.get_index(rt2, "node/capabilities/json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/json", root_prefix_level=3)['result']
                 if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3):
-                    caps3 = request_handler.get_index(rt3, "node/capabilities/json")['result']
+                    caps3 = request_handler.get_index(rt3, "node/capabilities/json", root_prefix_level=3)['result']
                 if rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3):
                     failed = False
                     break
@@ -306,9 +306,9 @@ class TestDeployShadow(unittest.TestCase):
         for i in range(30):
             try:
                 if not (rt1_id in caps1 and rt2_id in caps1):
-                    caps1 = request_handler.get_index(rt1, "node/capabilities/json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/json", root_prefix_level=3)['result']
                 if not (rt1_id in caps2 and rt2_id in caps2):
-                    caps2 = request_handler.get_index(rt2, "node/capabilities/json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/json", root_prefix_level=3)['result']
                 if rt_ids <= set(caps1) and rt_ids <= set(caps2):
                     failed = False
                     break
@@ -619,11 +619,11 @@ class TestSepDeployShadow(unittest.TestCase):
         for i in range(30):
             try:
                 if not (rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1):
-                    caps1 = request_handler.get_index(rt1, "node/capabilities/json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/json", root_prefix_level=3)['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
-                    caps2 = request_handler.get_index(rt2, "node/capabilities/json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/json", root_prefix_level=3)['result']
                 if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3):
-                    caps3 = request_handler.get_index(rt3, "node/capabilities/json")['result']
+                    caps3 = request_handler.get_index(rt3, "node/capabilities/json", root_prefix_level=3)['result']
                 if rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3):
                     failed = False
                     break
@@ -890,11 +890,11 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         for i in range(30):
             try:
                 if not (rt1_id in caps1 and rt2_id in caps1 and rt3_id in caps1):
-                    caps1 = request_handler.get_index(rt1, "node/capabilities/json")['result']
+                    caps1 = request_handler.get_index(rt1, "node/capabilities/json", root_prefix_level=3)['result']
                 if not (rt1_id in caps2 and rt2_id in caps2 and rt3_id in caps2):
-                    caps2 = request_handler.get_index(rt2, "node/capabilities/json")['result']
+                    caps2 = request_handler.get_index(rt2, "node/capabilities/json", root_prefix_level=3)['result']
                 if not (rt1_id in caps3 and rt2_id in caps3 and rt3_id in caps3):
-                    caps3 = request_handler.get_index(rt3, "node/capabilities/json")['result']
+                    caps3 = request_handler.get_index(rt3, "node/capabilities/json", root_prefix_level=3)['result']
                 if rt_ids <= set(caps1) and rt_ids <= set(caps2) and rt_ids <= set(caps3):
                     failed = False
                     break

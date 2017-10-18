@@ -889,7 +889,7 @@ function getActor(id, show, replicas, retries)
 // Get replicas for replication with id "id"
 function getReplicas(id)
 {
-    var url = connect_uri + '/index/replicas/actors/' + id;
+    var url = connect_uri + '/index/replicas/actors/' + id + '?root_prefix_level=3';
     console.log("getReplicas - url: " + url)
     $.ajax({
         timeout: 20000,

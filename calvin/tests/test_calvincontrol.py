@@ -42,51 +42,56 @@ def test_get_calvincontrol_returns_xxx():
 @pytest.mark.parametrize("url,match,handler", [
     ("GET /actor_doc HTTP/1", None, "handle_get_actor_doc"),
     ("POST /log HTTP/1", None, "handle_post_log"),
-    ("DELETE /log/TRACE_" + uuid + " HTTP/1", "TRACE_" + uuid, "handle_delete_log"),
-    ("GET /log/TRACE_" + uuid + " HTTP/1", "TRACE_" + uuid, "handle_get_log"),
+    ("DELETE /log/TRACE_" + uuid + " HTTP/1", ["TRACE_" + uuid], "handle_delete_log"),
+    ("GET /log/TRACE_" + uuid + " HTTP/1", ["TRACE_" + uuid], "handle_get_log"),
     ("GET /id HTTP/1", None, "handle_get_node_id"),
     ("GET /nodes HTTP/1", None, "handle_get_nodes"),
-    ("GET /node/NODE_" + uuid + " HTTP/1", "NODE_" + uuid, "handle_get_node"),
+    ("GET /node/NODE_" + uuid + " HTTP/1", ["NODE_" + uuid], "handle_get_node"),
     ("POST /peer_setup HTTP/1", None, "handle_peer_setup"),
     ("GET /applications HTTP/1", None, "handle_get_applications"),
-    ("GET /application/APP_" + uuid + " HTTP/1", "APP_" + uuid, "handle_get_application"),
-    ("DELETE /application/APP_" + uuid + " HTTP/1", "APP_" + uuid, "handle_del_application"),
+    ("GET /application/APP_" + uuid + " HTTP/1", ["APP_" + uuid], "handle_get_application"),
+    ("DELETE /application/APP_" + uuid + " HTTP/1", ["APP_" + uuid], "handle_del_application"),
     ("POST /actor HTTP/1", None, "handle_new_actor"),
     ("GET /actors HTTP/1", None, "handle_get_actors"),
-    ("GET /actor/" + uuid + " HTTP/1", uuid, "handle_get_actor"),
-    ("DELETE /actor/" + uuid + " HTTP/1", uuid, "handle_del_actor"),
-    ("GET /actor/" + uuid + "/report HTTP/1", uuid, "handle_actor_report"),
-    ("POST /actor/" + uuid + "/migrate HTTP/1", uuid, "handle_actor_migrate"),
-    ("POST /actor/" + uuid + "/disable HTTP/1", uuid, "handle_actor_disable"),
-    ("GET /actor/" + uuid + "/port/PORT_" + uuid + " HTTP/1", uuid, "handle_get_port"),
-    ("GET /actor/" + uuid + "/port/PORT_" + uuid + "/state HTTP/1", uuid, "handle_get_port_state"),
+    ("GET /actor/" + uuid + " HTTP/1", [uuid], "handle_get_actor"),
+    ("DELETE /actor/" + uuid + " HTTP/1", [uuid], "handle_del_actor"),
+    ("GET /actor/" + uuid + "/report HTTP/1", [uuid], "handle_actor_report"),
+    ("POST /actor/" + uuid + "/migrate HTTP/1", [uuid], "handle_actor_migrate"),
+    ("POST /actor/" + uuid + "/disable HTTP/1", [uuid], "handle_actor_disable"),
+    ("GET /actor/" + uuid + "/port/PORT_" + uuid + " HTTP/1", [uuid, "PORT_" + uuid], "handle_get_port"),
+    ("GET /actor/" + uuid + "/port/PORT_" + uuid + "/state HTTP/1", [uuid, "PORT_" + uuid], "handle_get_port_state"),
     ("POST /connect HTTP/1", None, "handle_connect"),
     ("POST /set_port_property HTTP/1", None, "handle_set_port_property"),
     ("POST /deploy HTTP/1", None, "handle_deploy"),
-    ("POST /application/APP_" + uuid + "/migrate HTTP/1", "APP_" + uuid, "handle_post_application_migrate"),
+    ("POST /application/APP_" + uuid + "/migrate HTTP/1", ["APP_" + uuid], "handle_post_application_migrate"),
     ("POST /disconnect HTTP/1", None, "handle_disconnect"),
     ("DELETE /node HTTP/1", None, "handle_quit"),
-    ("DELETE /node/migrate HTTP/1", "migrate", "handle_quit"),
-    ("DELETE /node/now HTTP/1", "now", "handle_quit"),
+    ("DELETE /node/migrate HTTP/1", ["migrate"], "handle_quit"),
+    ("DELETE /node/now HTTP/1", ["now"], "handle_quit"),
     ("POST /meter HTTP/1", None, "handle_post_meter"),
-    ("DELETE /meter/METERING_" + uuid + " HTTP/1", "METERING_" + uuid, "handle_delete_meter"),
-    ("GET /meter/METERING_" + uuid + "/timed HTTP/1", "METERING_" + uuid, "handle_get_timed_meter"),
-    ("GET /meter/METERING_" + uuid + "/aggregated HTTP/1", "METERING_" + uuid, "handle_get_aggregated_meter"),
-    ("GET /meter/METERING_" + uuid + "/metainfo HTTP/1", "METERING_" + uuid, "handle_get_metainfo_meter"),
-    ("POST /index/abc123 HTTP/1", "abc123", "handle_post_index"),
-    ("DELETE /index/abc123 HTTP/1", "abc123", "handle_delete_index"),
-    ("GET /index/abc123 HTTP/1", "abc123", "handle_get_index"),
-    ("GET /storage/abc123 HTTP/1", "abc123", "handle_get_storage"),
-    ("POST /storage/abc123 HTTP/1", "abc123", "handle_post_storage"),
+    ("DELETE /meter/METERING_" + uuid + " HTTP/1", ["METERING_" + uuid], "handle_delete_meter"),
+    ("GET /meter/METERING_" + uuid + "/timed HTTP/1", ["METERING_" + uuid], "handle_get_timed_meter"),
+    ("GET /meter/METERING_" + uuid + "/aggregated HTTP/1", ["METERING_" + uuid], "handle_get_aggregated_meter"),
+    ("GET /meter/METERING_" + uuid + "/metainfo HTTP/1", ["METERING_" + uuid], "handle_get_metainfo_meter"),
+    ("POST /index/abc123 HTTP/1", ["abc123"], "handle_post_index"),
+    ("DELETE /index/abc123 HTTP/1", ["abc123"], "handle_delete_index"),
+    ("GET /index/abc123 HTTP/1", ["abc123", None], "handle_get_index"),
+    ("GET /index/abc123?root_prefix_level=3 HTTP/1", ["abc123", "3"], "handle_get_index"),
+    ("GET /storage/abc123 HTTP/1", ["abc123"], "handle_get_storage"),
+    ("POST /storage/abc123 HTTP/1", ["abc123"], "handle_post_storage"),
     ("OPTIONS /abc123 HTTP/1", None, "handle_options"),
-    ("POST /node/resource/cpuAvail HTTP/1", 25, "handle_monitor_cpu_avail"),
-    ("POST /node/resource/memAvail HTTP/1", 25, "handle_monitor_mem_avail")
+    ("POST /node/resource/cpuAvail HTTP/1", None, "handle_resource_cpu_avail"),
+    ("POST /node/resource/memAvail HTTP/1", None, "handle_resource_mem_avail")
 ])
 
 def test_routes_correctly(url, match, handler):
     control = CalvinControl()
-    handler = control._handler_for_route(url)
-    assert handler is not None
+    handler_func, mo = control._handler_for_route(url)
+    assert handler_func is not None
+    assert handler_func.__name__ == handler
+    assert mo is not None
+    if match is not None:
+        assert list(mo.groups()) == match
 
 def test_send_response():
     control = CalvinControl()
