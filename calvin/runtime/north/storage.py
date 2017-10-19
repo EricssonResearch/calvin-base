@@ -146,9 +146,9 @@ class Storage(object):
         import json
         with tempfile.NamedTemporaryFile(mode='w', prefix="storage", delete=False) as fp:
             fp.write("[")
-            json.dump({k: json.loads(v) for k, v in self.localstore.items()}, fp)
+            json.dump({str(k): str(v) for k, v in self.localstore.items()}, fp)
             fp.write(", ")
-            json.dump({k: list(v['+']) for k, v in self.localstore_sets.items()}, fp)
+            json.dump({str(k): list(v['+']) for k, v in self.localstore_sets.items()}, fp)
             fp.write("]")
             name = fp.name
         return name
@@ -697,7 +697,7 @@ class Storage(object):
         org_key = "/".join(indexes)
         # TODO push also iterable into plugin?
         it = dynops.List()
-        self.get_index(index=index, root_prefix_level=root_prefix_level, 
+        self.get_index(index=index, root_prefix_level=root_prefix_level,
             cb=CalvinCB(self.get_index_iter_cb, it=it, include_key=include_key, org_key=org_key))
         return it
 
@@ -1025,7 +1025,7 @@ class Storage(object):
 
     def _proxy_send_reply(self, key, value, tunnel, msgid):
         _log.analyze(self.node.id, "+ SERVER", {'msgid': msgid, 'key': key, 'value': value})
-        # When a CalvinResponse send it on key 'response' instead of 'value' 
+        # When a CalvinResponse send it on key 'response' instead of 'value'
         status = isinstance(value, calvinresponse.CalvinResponse)
         svalue = value.encode() if status else value
         response = 'response' if status else 'value'
