@@ -78,12 +78,13 @@ def create_callback(timeout=.5):
     return cb, d
 
 @pytest.inlineCallbacks
-def wait_for(function, condition=lambda x: x(), timeout=1):
+def wait_for(function, condition=lambda x: x(), timeout=1, test_part=None):
     for a in range(int(timeout/.1)):
         if condition(function):
             break
         yield threads.defer_to_thread(time.sleep, .1)
 
     if not condition(function):
-        print("Timeout while waiting for function %s with condition %s" % (function, condition))
+        print("Timeout while waiting for %s function %s with condition %s" % 
+                ("" if test_part is None else test_part, function, condition))
 

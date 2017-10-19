@@ -163,12 +163,14 @@ class KademliaProtocolAppend(KademliaProtocol):
                 self.storage[key] = value
             else:
                 old_value_ = self.storage[key]
-                old_value = json.loads(old_value_)
                 try:
+                    old_value = json.loads(old_value_)
                     new_value = list(set(old_value + pvalue))
-                except TypeError:
+                except:
                     # When the key have been used for single values it does not contain a list
+                    # When have been deleted contains None
                     # Just replace old value
+                    old_value = old_value_
                     new_value = pvalue
                 _log.debug("%s append key: %s old: %s add: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
                 self.storage[key] = json.dumps(new_value)
@@ -193,12 +195,13 @@ class KademliaProtocolAppend(KademliaProtocol):
             pvalue = json.loads(value)
             self.set_keys.add(key)
             if key in self.storage:
-                old_value = json.loads(self.storage[key])
-                if isinstance(old_value, list):
+                try:
+                    old_value = json.loads(self.storage[key])
                     new_value = list(set(old_value) - set(pvalue))
-                else:
-                    # When the key have been used for single values it does not contain a list
+                except:
+                    # When the key have been used for single values or deleted it does not contain a list
                     # Just empty it
+                    old_value = self.storage[key]
                     new_value = []
                 self.storage[key] = json.dumps(new_value)
                 _log.debug("%s remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(nodeid), base64.b64encode(key), old_value, pvalue, new_value))
@@ -260,8 +263,15 @@ class AppendServer(Server):
                         self.storage[dkey] = value
                     else:
                         old_value_ = self.storage[dkey]
-                        old_value = json.loads(old_value_)
-                        new_value = list(set(old_value + pvalue))
+                        try:
+                            old_value = json.loads(old_value_)
+                            new_value = list(set(old_value + pvalue))
+                        except:
+                            # When the key have been used for single values it does not contain a list
+                            # When have been deleted contains None
+                            # Just replace old value
+                            new_value = pvalue
+                            old_value = old_value_
                         _log.debug("%s local append key: %s old: %s add: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(dkey), old_value, pvalue, new_value))
                         self.storage[dkey] = json.dumps(new_value)
                 except:
@@ -339,8 +349,14 @@ class AppendServer(Server):
                     pvalue = json.loads(value)
                     self.set_keys.add(dkey)
                     if dkey in self.storage:
-                        old_value = json.loads(self.storage[dkey])
-                        new_value = list(set(old_value) - set(pvalue))
+                        try:
+                            old_value = json.loads(self.storage[dkey])
+                            new_value = list(set(old_value) - set(pvalue))
+                        except:
+                            # When the key have been used for single values or deleted it does not contain a list
+                            # Just empty it
+                            old_value = self.storage[dkey]
+                            new_value = []
                         self.storage[dkey] = json.dumps(new_value)
                         _log.debug("%s local remove key: %s old: %s remove: %s new: %s" % (base64.b64encode(node.id), base64.b64encode(dkey), old_value, pvalue, new_value))
                 except:
@@ -428,7 +444,9 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
         if self.local_value:
             jvalues.append((None, self.local_value))
         _log.debug("_handleFoundValues %s" % str(jvalues))
-        if len(jvalues) != 1:
+        # Filter out deleted values
+        jvalues = [v for v in jvalues if v[1] is not None]
+        if len(jvalues) > 1:
             args = (self.node.long_id, str(jvalues))
             _log.debug("Got multiple values for key %i: %s" % args)
             try:
@@ -445,7 +463,10 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
                 value = valueCounts.most_common(1)[0][0]
                 _set_op = False
         else:
-            key, value = jvalues[0]
+            try:
+                key, value = jvalues[0]
+            except:
+                value = "[]"  # JSON empty list
 
         peerToSaveTo = self.nearestWithoutValue.popleft()
         if peerToSaveTo is not None:

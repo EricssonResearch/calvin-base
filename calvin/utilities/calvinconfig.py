@@ -185,6 +185,13 @@ class CalvinConfig(object):
         """Add a named section"""
         self.config.setdefault(section.lower(), {})
 
+    def remove_section(self, section):
+        """Remove a named section if it exist"""
+        try:
+            del self.config[section.lower()]
+        except:
+            pass
+
     def get_in_order(self, option, default=None):
         v = self.get('ARGUMENTS', option)
         if v is None:

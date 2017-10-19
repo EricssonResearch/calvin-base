@@ -15,37 +15,40 @@
 # limitations under the License.
 
 import pytest
-import sys
 import os
 import copy
-import random
 import time
-import json
-import uuid
-import Queue
-import multiprocessing
+import shutil
 import traceback
 from functools import partial
-import unittest
 
 from mock import Mock
 from twisted.internet import reactor, defer
 
 from calvin.utilities import calvinuuid
 from calvin.utilities import calvinlogger
-from calvin.utilities import calvinconfig
-from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
+import calvin.utilities.calvinconfig
+from calvin.utilities.utils import get_home
+from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import threads, async
 from calvin.runtime.north import storage, calvin_proto
 from calvin.requests import calvinresponse
 from calvin.tests.helpers_twisted import create_callback, wait_for
 import calvin.tests
+from calvin.tests import helpers
+from calvin.utilities import attribute_resolver
+
+#FIXME Can't get cert chain to work for securedht (maybe because secure conf is read also after started)
+import calvin.utilities.certificate
+def chain_dummy(*args, **kwargs):
+    pass
+calvin.utilities.certificate.verify_certificate_chain = chain_dummy
 
 _log = calvinlogger.get_logger(__name__)
-_conf = calvinconfig.get()
+_conf = calvin.utilities.calvinconfig.get()
 
-storage_types = ["notstarted", "dht", "proxy", "sql"]
-#storage_types = ["dht"]
+storage_types = ["notstarted", "dht", "securedht", "proxy", "sql"]
+#storage_types = ["securedht"]
 
 class FakeTunnel(calvin_proto.CalvinTunnel):
     def send(self, payload):
@@ -109,6 +112,45 @@ def setup(request):
             try:
                 _conf.set('global', 'storage_type', 'dht')
                 all_started.extend(map(partial(prep_node, stype), nodes[stype]))
+            except:
+                traceback.print_exc()
+        elif stype == "securedht":
+            try:
+                homefolder = get_home()
+                credentials_testdir = os.path.join(homefolder, ".calvin","test_all_storage_dir")
+                runtimesdir = os.path.join(credentials_testdir,"runtimes")
+                security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
+                domain_name="test_security_domain"
+                code_signer_name="test_signer"
+                orig_identity_provider_path = os.path.join(security_testdir,"identity_provider")
+                identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
+                policy_storage_path = os.path.join(security_testdir, "policies")
+                try:
+                    shutil.rmtree(credentials_testdir)
+                except Exception as err:
+                    print "Failed to remove old tesdir, err={}".format(err)
+                    pass
+                try:
+                    shutil.copytree(orig_identity_provider_path, identity_provider_path)
+                except Exception as err:
+                    _log.error("Failed to copy the identity provider files, err={}".format(err))
+                    raise
+                runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, 3)
+
+                for r, n in zip(runtimes, nodes[stype]):
+                    n.attributes = attribute_resolver.AttributeResolver(r['attributes'])
+                    n.enrollment_password = r['enrollment_password']
+                    n.id = r['id']
+                    n.runtime_credentials = r['credentials']
+                    n.node_name = r['node_name']
+
+                #print "###RUNTIMES", runtimes
+
+                _conf.add_section("security")
+                _conf.set('security', 'security_dir', credentials_testdir)
+                _conf.set('global','storage_type','securedht')
+                all_started.extend(map(partial(prep_node, stype), nodes[stype]))
+                _conf.remove_section("security")
             except:
                 traceback.print_exc()
         elif stype == "notstarted":
@@ -377,14 +419,14 @@ class TestAllStorage(object):
                         self.done = False
                         self.get_ans = None
                         self.nodes[stype][y].storage.append("test6-", key + str(y), [i], CalvinCB(self.cb))
-                        yield wait_for(self._test_done, timeout=10)
+                        yield wait_for(self._test_done, timeout=10, test_part="append"+key+str(y))
                         # Verify response is CalvinResponse object with OK status
                         assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                         print "append response", self.get_ans, stype, i, y
                         self.done = False
                         self.get_ans = None
                         self.nodes[stype][y].storage.delete("test6-", key + str(y), CalvinCB(self.cb))
-                        yield wait_for(self._test_done, timeout=10)
+                        yield wait_for(self._test_done, timeout=10, test_part="delete"+key+str(y))
                         # Verify response is CalvinResponse object with OK status
                         assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                         print "delete response", self.get_ans, stype, i, y
@@ -395,10 +437,52 @@ class TestAllStorage(object):
                         self.done = False
                         self.get_ans = None
                         self.nodes[stype][x].storage.get_concat("test6-", key + str(y), CalvinCB(self.cb))
-                        yield wait_for(self._test_done, timeout=10)
+                        yield wait_for(self._test_done, timeout=10, test_part="get_concat"+key+str(y))
                         print "get_concat response", self.get_ans, stype, i, x
                         # Verify the response is empty list (no difference between emptied or deleted)
                         assert self.get_ans == []
+
+    @pytest.inlineCallbacks
+    def test_append_delete_append_get_concat(self, setup):
+        """ Test that append returns OK, delete return OK and get returns second append """
+        self.nodes = setup.get("nodes")
+        self.verify_started()
+        for stype in storage_types:
+            for i in ["aa"]:
+                for y in range(3):
+                    key = "t3" + str(i)
+                    self.done = False
+                    self.get_ans = None
+                    self.nodes[stype][y].storage.append("test7-", key + str(y), [i], CalvinCB(self.cb))
+                    yield wait_for(self._test_done, timeout=10, test_part="append"+key+str(y))
+                    # Verify response is CalvinResponse object with OK status
+                    assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
+                    print "append response", self.get_ans, stype, i, y
+                    self.done = False
+                    self.get_ans = None
+                    self.nodes[stype][y].storage.delete("test7-", key + str(y), CalvinCB(self.cb))
+                    yield wait_for(self._test_done, timeout=10, test_part="delete"+key+str(y))
+                    # Verify response is CalvinResponse object with OK status
+                    assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
+                    print "delete response", self.get_ans, stype, i, y
+                    self.done = False
+                    self.get_ans = None
+                    self.nodes[stype][y].storage.append("test7-", key + str(y), [i+"2"], CalvinCB(self.cb))
+                    yield wait_for(self._test_done, timeout=10, test_part="append2"+key+str(y))
+                    # Verify response is CalvinResponse object with OK status
+                    assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
+                    print "append2 response", self.get_ans, stype, i, y
+                    for x in range(3):
+                        if stype == "notstarted" and x != y:
+                            # Not started storage is never connected to other nodes storage
+                            continue
+                        self.done = False
+                        self.get_ans = None
+                        self.nodes[stype][x].storage.get_concat("test7-", key + str(y), CalvinCB(self.cb))
+                        yield wait_for(self._test_done, timeout=10, test_part="get_concat"+key+str(y))
+                        print "get_concat response", self.get_ans, stype, i, x
+                        # Verify the response is second appended value
+                        assert self.get_ans == [i+"2"]
 
     @pytest.inlineCallbacks
     def test_add_get_index(self, setup):
