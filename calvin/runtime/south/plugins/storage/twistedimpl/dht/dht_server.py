@@ -269,11 +269,6 @@ class AutoDHTServer(StorageBase):
         istr = prefix + '/'+'/'.join(index)
         self.get_concat(istr, cb=cb, include_key=False)
 
-    def delete_index(self, prefix, indexes, cb=None):
-        indexstrs = [prefix + '/'+'/'.join(indexes[:l]) for l in range(1,len(indexes)+1)]
-        for i in indexstrs[:]:
-            self.delete(key=i, cb=CalvinCB(self._change_index_cb, org_cb=cb, index_items=indexstrs) if cb else None)
-
     def bootstrap(self, addrs, cb=None):
         return TwistedWaitObject(self.dht_server.bootstrap, addr=addrs, cb=cb)
 

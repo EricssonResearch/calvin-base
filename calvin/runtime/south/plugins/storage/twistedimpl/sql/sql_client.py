@@ -407,15 +407,6 @@ class SqlClient(StorageBase):
         d.addCallbacks(CalvinCB(self._getconcat_cb, cb=cb), CalvinCB(self._getconcat_fail_cb, cb=cb))
         _log.debug("SQL get_index %s requested" % (key,))
 
-    def delete_index(self, prefix, indexes, cb=None):
-        _log.debug("SQL delete_index %s" % (indexes,))
-        indexstrs = [(prefix + '/'+'/'.join(indexes[:l])).replace("'", r"\'") for l in range(1,len(indexes)+1)]
-        key = "keystr='" + "' OR keystr='".join(indexstrs) + "'"
-        d1 = self.dbpool.runQuery(QUERY_DELETE_MANY.format(keystr=key))
-        #FIXME wrong key here, should be removed
-        d1.addCallbacks(CalvinCB(self._delete_cb, cb=cb, key=key),
-                        CalvinCB(self._delete_fail_cb, cb=cb, key=key))
-
     def bootstrap(self, addrs, cb=None):
         _log.debug("SQL bootstrap")
 

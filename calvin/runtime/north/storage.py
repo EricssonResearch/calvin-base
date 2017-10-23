@@ -180,8 +180,7 @@ class Storage(object):
                             'REPLY': self._proxy_reply,
                             'ADD_INDEX': self.add_index,
                             'REMOVE_INDEX': self.remove_index,
-                            'GET_INDEX': self.get_index,
-                            'DELETE_INDEX': self.delete_index
+                            'GET_INDEX': self.get_index
                             }
         try:
             self.node.proto.register_tunnel_handler('storage', CalvinCB(self.tunnel_request_handles))
@@ -568,7 +567,7 @@ class Storage(object):
         value: the value or list that is to be removed from the set stored at each level of the index
         root_prefix_level: the top level of the index that can be searched separately,
                with e.g. =1 then node/address can't be split
-        cb: Callback with signature cb(key=key, value=True/False)
+        cb: Callback with signature cb(value=<CalvinResponse>)
             note that the key here is without the prefix and
             value indicate success.
         """
@@ -597,7 +596,8 @@ class Storage(object):
 
     def delete_index(self, index, root_prefix_level=2, cb=None):
         """
-        Remove index entry in registry
+        Delete index entry in registry - this have the semantics of
+        remove_index(index, get_index(index)) - NOT IMPLEMENTED since never used
         index: The multilevel key:
                a string with slash as delimiter for finer level of index,
                e.g. node/address/example_street/3/buildingA/level3/room3003,
@@ -607,17 +607,11 @@ class Storage(object):
                OR a list of each levels strings
         root_prefix_level: the top level of the index that can be searched separately,
                with e.g. =1 then node/address can't be split
-        cb: Callback with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and
+        cb: Callback with signature cb(value=<CalvinResponse>)
             value indicate success.
         """
 
-        indexes = self._index_strings(index, root_prefix_level)
-
-        # make copy of indexes since altered in callbacks
-        for i in indexes[:]:
-            self.delete(prefix="index-", key=i,
-                        cb=CalvinCB(self.index_cb, org_cb=cb, index_items=indexes) if cb else None)
+        raise NotImplementedError()
 
     def get_index_cb(self, value, local_values, org_cb, index_items, silent=False):
         _log.debug("get index cb value:%s, index_items:%s" % (value, index_items))
@@ -643,7 +637,7 @@ class Storage(object):
                node/affiliation/name/com.ericsson/laptop,
                index string must been escaped with \/ and \\ for / and \ within levels
                OR a list of each levels strings
-        cb: Callback cb with signature cb(key=key, value=<retrived values>),
+        cb: Callback cb with signature cb(value=<retrived values>),
             value is a list.
 
         The registry can be eventually consistent,

@@ -140,14 +140,6 @@ class StorageLocal(object):
                 if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, index)))))
         async.DelayedCall(0, cb, list(values))
 
-    def delete_index(self, prefix, indexes, cb=None):
-        indexes = [prefix] + indexes
-        for i in range(1, len(indexes)):
-            try:
-                del self._data[tuple(indexes[:i])]
-            except:
-                pass
-
     def bootstrap(self, addrs, cb=None):
         cb = cb or self._dummy_cb
         async.DelayedCall(0, cb, True)

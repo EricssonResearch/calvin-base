@@ -177,10 +177,6 @@ class StorageProxy(StorageBase):
         _log.analyze(self.node.id, "+ CLIENT", {'index': index})
         self.send(cmd='GET_INDEX',msg={'prefix': prefix, 'index': index}, cb=cb)
 
-    def delete_index(self, prefix, indexes, cb=None):
-        _log.analyze(self.node.id, "+ CLIENT", {'indexes': indexes})
-        self.send(cmd='DELETE_INDEX',msg={'prefix': prefix, 'index': indexes}, cb=cb)
-
     def bootstrap(self, addrs, cb=None):
         _log.analyze(self.node.id, "+ CLIENT", None)
 
