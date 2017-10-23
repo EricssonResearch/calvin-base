@@ -16,7 +16,7 @@
 
 from calvin.runtime.south.plugins.async import async
 from calvin.requests import calvinresponse
-
+import itertools
 
 class StorageLocal(object):
     """
@@ -93,26 +93,60 @@ class StorageLocal(object):
 
     def append(self, key, value, cb=None):
         cb = cb or self._dummy_cb
-        if key not in self._data:
-            self._data[key] = set(value)
-        else:
-            if isinstance(self._data[key], set):
-                self._data[key] |= set(value)
-            else:
-                async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(False))
-                return
+        if key in self._data and isinstance(self._data[key], set):
+            self._data[key] |= set(value)
+            async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
+            return
+        self._data[key] = set(value)
         async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
 
     def remove(self, key, value, cb=None):
         cb = cb or self._dummy_cb
-        if key not in self._data:
+        if key in self._data and isinstance(self._data[key], set):
+            self._data[key] -= set(value)
             async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
-        else:
-            if isinstance(self._data[key], set):
-                self._data[key] -= set(value)
-                async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
-            else:
-                async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(False))
+            return
+        del self._data[key]
+        async.DelayedCall(0, cb, key, calvinresponse.CalvinResponse(True))
+
+    def add_index(self, prefix, indexes, value, cb=None):
+        cb = cb or self._dummy_cb
+        indexes = [prefix] + indexes
+        key = tuple(indexes)
+        if key in self._data and isinstance(self._data[key], set):
+            self._data[key] |= set(value)
+            async.DelayedCall(0, cb, calvinresponse.CalvinResponse(True))
+            return
+        self._data[key] = set(value)
+        async.DelayedCall(0, cb, calvinresponse.CalvinResponse(True))
+
+    def remove_index(self, prefix, indexes, value, cb=None):
+        cb = cb or self._dummy_cb
+        indexes = [prefix] + indexes
+        key = tuple(indexes)
+        if key in self._data and isinstance(self._data[key], set):
+            self._data[key] -= set(value)
+            async.DelayedCall(0, cb, calvinresponse.CalvinResponse(True))
+            return
+        del self._data[key]
+        async.DelayedCall(0, cb, calvinresponse.CalvinResponse(True))
+
+    def get_index(self, prefix, index, cb=None):
+        cb = cb or self._dummy_cb
+        index = [prefix] + index
+        # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
+        values = set(itertools.chain(
+            *(v for k, v in self._data.items()
+                if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, index)))))
+        async.DelayedCall(0, cb, list(values))
+
+    def delete_index(self, prefix, indexes, cb=None):
+        indexes = [prefix] + indexes
+        for i in range(1, len(indexes)):
+            try:
+                del self._data[tuple(indexes[:i])]
+            except:
+                pass
 
     def bootstrap(self, addrs, cb=None):
         cb = cb or self._dummy_cb
