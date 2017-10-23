@@ -30,7 +30,7 @@ def compile_script(source_text, filename, credentials=None, verify=True):
 
 # FIXME: It might make sense to turn this function into a plain asynchronous security check.
 #        Caller can then call compile_script based on status
-def compile_script_check_security(source_text, filename, cb, security=None, content=None, verify=True, node=None, signature=None):
+def compile_script_check_security(data, filename, cb, security=None, content=None, verify=True, node=None, signature=None):
     """
     Compile a script and return a tuple (deployable, errors, warnings).
 
@@ -49,14 +49,22 @@ def compile_script_check_security(source_text, filename, cb, security=None, cont
         callback({}, it)
         return
 
-    def _handle_policy_decision(source_text, appname, verify, access_decision, org_cb, security=None):
+    def _handle_policy_decision(data, appname, verify, access_decision, org_cb, security=None):
         if not access_decision:
             _log.error("Access denied")
             # This error reason is detected in calvin control and gives proper REST response
             _exit_with_error(org_cb)
             return
-
-        deployable, issuetracker = compile_script(source_text, appname)
+        if 'app_info' not in data and 'script' in data:
+            deployable, issuetracker = compile_script(data['script'], appname)
+        elif 'app_info' in data:
+            deployable = data['app_info']
+            issuetracker = IssueTracker()
+        else:
+            _log.error("Neither app_info or script supplied")
+            # This error reason is detected in calvin control and gives proper REST response
+            _exit_with_error(org_cb)
+            return
         org_cb(deployable, issuetracker, security=security)
 
     #
@@ -80,7 +88,7 @@ def compile_script_check_security(source_text, filename, cb, security=None, cont
             _exit_with_error(cb)
             return
         sec.check_security_policy(
-            CalvinCB(_handle_policy_decision, source_text, appname, verify, security=security, org_cb=cb),
+            CalvinCB(_handle_policy_decision, data, appname, verify, security=security, org_cb=cb),
             element_type = "application",
             element_value = signer
         )
@@ -90,9 +98,9 @@ def compile_script_check_security(source_text, filename, cb, security=None, cont
     # We get here if node is None, or security is disabled
     #
     # This used to be
-    # _handle_policy_decision(source_text, filename, verify, access_decision=True, security=None, org_cb=cb)
+    # _handle_policy_decision(data, filename, verify, access_decision=True, security=None, org_cb=cb)
     # but since _handle_policy_decision is called with access_decision=True, security=None only compile_script would be called
-    deployable, issuetracker = compile_script(source_text, appname)
+    deployable, issuetracker = compile_script(data, appname)
     cb(deployable, issuetracker, security=None)
 
 

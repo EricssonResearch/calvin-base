@@ -56,6 +56,8 @@ def handle_new_actor(self, handle, connection, match, data, hdr):
     """
     POST /actor
     Create a new actor
+    NOTE: this should only be allowed for testing purposes as it allows bypassing application signature
+    verification.
     Body:
     {
         "actor_type:" <type of actor>,
@@ -66,8 +68,10 @@ def handle_new_actor(self, handle, connection, match, data, hdr):
     Response: {"actor_id": <actor-id>}
     """
     try:
-        actor_id = self.node.new(actor_type=data['actor_type'], args=data[
-                                 'args'], deploy_args=data['deploy_args'])
+        actor_id = self.node.new(actor_type=data['actor_type'], args=data['args'],
+                                 security=self.security,
+                                 access_decision=True,
+                                 deploy_args=data['deploy_args'])
         status = calvinresponse.OK
     except:
         actor_id = None
@@ -360,7 +364,6 @@ def handle_deploy(self, handle, connection, match, data, hdr):
         "script": <calvin script>  # alternativly "app_info"
         "app_info": <compiled script as app_info>  # alternativly "script"
         "sec_sign": {<cert hash>: <security signature of script>, ...} # optional and only with "script"
-        "sec_credentials": <security credentials of user> # optional
         "deploy_info":
            {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
             "requirements": {
@@ -373,17 +376,8 @@ def handle_deploy(self, handle, connection, match, data, hdr):
                             }
            }
     }
-    Note that either a script or app_info must be supplied. Optionally security
-    verification of application script can be made. Also optionally user credentials
-    can be supplied, some runtimes are configured to require credentials. The
-    credentials takes for example the following form:
-        {"user": <username>,
-         "password": <password>,
-         "role": <role>,
-         "group": <group>,
-         ...
-        }
-
+    Note that either a script or app_info must be supplied. 
+    
     The matching rules are implemented as plug-ins, intended to be extended.
     The type "+" is "and"-ing rules together (actually the intersection of all
     possible nodes returned by the rules.) The type "-" is explicitly removing
@@ -416,39 +410,25 @@ def handle_deploy(self, handle, connection, match, data, hdr):
     """
     try:
         _log.analyze(self.node.id, "+", data)
-        if 'app_info' not in data:
-            kwargs = {}
-            credentials = ""
-            # Supply security verification data when available
-            content = None
-            content = {}
-            if not "sec_sign" in data:
-                data['sec_sign'] = {}
-            content = {
-                    'file': data["script"],
-                    'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
-            compiler.compile_script_check_security(
-                data["script"],
-                filename=data["name"],
-                security=self.security,
-                content=content,
-                node=self.node,
-                verify=(data["check"] if "check" in data else True),
-                cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
-                **kwargs
-            )
-        else:
-            # Supplying app_info is for backward compatibility hence abort if node configured security
-            # Main user is csruntime when deploying script at the same time and some tests used
-            # via calvin.Tools.deployer (the Deployer below is the new in appmanager)
-            # TODO rewrite these users to send the uncompiled script as cscontrol does.
-            if security_enabled():
-                _log.error("Can't combine compiled script with runtime having security")
-                self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
-                return
-            app_info = data['app_info']
-            issuetracker = IssueTracker()
-            self.handle_deploy_cont(app_info, issuetracker, handle, connection, data)
+        kwargs = {}
+        # Supply security verification data when available
+        content = {}
+        if not "sec_sign" in data:
+            data['sec_sign'] = {}
+        signed_data=data['app_info'] if 'app_info' in data else data['script']
+        content = {
+                'file': signed_data,
+                'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
+        compiler.compile_script_check_security(
+            data,
+            filename=data["name"],
+            security=self.security,
+            content=content,
+            node=self.node,
+            verify=(data["check"] if "check" in data else True),
+            cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
+            **kwargs
+        )
     except Exception as e:
         _log.exception("Deployer failed, e={}".format(e))
         self.send_response(handle, connection, json.dumps({'exception': str(e)}),
