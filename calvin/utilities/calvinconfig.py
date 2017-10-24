@@ -101,7 +101,8 @@ class CalvinConfig(object):
                 'stdout_plugin': 'defaultimpl',
                 'transports': ['calvinip'],
                 'control_proxy': None,
-                'fcm_server_secret': None
+                'fcm_server_secret': None,
+                'compiled_actors_path': None
             },
             'testing': {
                 'comment': 'Test settings',
