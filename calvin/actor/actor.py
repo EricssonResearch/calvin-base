@@ -355,6 +355,11 @@ class Actor(object):
 
         self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.items()}
         self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.items()}
+        _log.info("Hakan actor:"
+                  "\n\tsecurity={}"
+                  "\n\t_subject_attributes={}"
+                  "\n\tinports={}"
+                  "\n\toutports={}".format(self.sec, self._subject_attributes, self.inports, self.outports))
 
         hooks = {
             (Actor.STATUS.PENDING, Actor.STATUS.ENABLED): self._will_start,
@@ -673,9 +678,8 @@ class Actor(object):
 
     def _set_private_state(self, state):
         """Deserialize and apply state common to all actors"""
-
         get_calvinsys().deserialize(actor=self, csobjects=state["_calvinsys"])
-
+        subject_attributes = self._subject_attributes;
         for port in state['inports']:
             # Uses setdefault to support shadow actor
             self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
@@ -695,6 +699,8 @@ class Actor(object):
                     obj.set_state(state.pop(key))
                 else:
                     self.__dict__[key] = state.pop(key, None)
+        #TODO: replace this temporary hack to overcome the subject attributes from being overwritten
+        self._subject_attributes = subject_attributes;
 
     def _managed_state(self):
         """
@@ -718,6 +724,7 @@ class Actor(object):
         state = {}
         state['private'] = self._private_state(remap)
         state['managed'] = self._managed_state()
+        state['security']= self._security_state()
         state['custom'] = self.state()
         return state
 
