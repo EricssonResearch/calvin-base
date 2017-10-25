@@ -254,8 +254,11 @@ class Actor(object):
     # Class variable controls action priority order
     action_priority = tuple()
 
+    # These are the security variables that will always be serialized, see serialize()/deserialize() below
+    _security_state_keys = ('_subject_attributes')
+
     # These are the instance variables that will always be serialized, see serialize()/deserialize() below
-    _private_state_keys = ('_id', '_name', '_has_started', '_deployment_requirements', '_signature', '_subject_attributes', '_migration_info', "_port_property_capabilities", "_replication_data")
+    _private_state_keys = ('_id', '_name', '_has_started', '_deployment_requirements', '_signature', '_migration_info', "_port_property_capabilities", "_replication_data")
 
     # Internal state (status)
     class FSM(object):
@@ -355,11 +358,6 @@ class Actor(object):
 
         self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.items()}
         self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.items()}
-        _log.info("Hakan actor:"
-                  "\n\tsecurity={}"
-                  "\n\t_subject_attributes={}"
-                  "\n\tinports={}"
-                  "\n\toutports={}".format(self.sec, self._subject_attributes, self.inports, self.outports))
 
         hooks = {
             (Actor.STATUS.PENDING, Actor.STATUS.ENABLED): self._will_start,
@@ -679,7 +677,6 @@ class Actor(object):
     def _set_private_state(self, state):
         """Deserialize and apply state common to all actors"""
         get_calvinsys().deserialize(actor=self, csobjects=state["_calvinsys"])
-        subject_attributes = self._subject_attributes;
         for port in state['inports']:
             # Uses setdefault to support shadow actor
             self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
@@ -699,8 +696,20 @@ class Actor(object):
                     obj.set_state(state.pop(key))
                 else:
                     self.__dict__[key] = state.pop(key, None)
-        #TODO: replace this temporary hack to overcome the subject attributes from being overwritten
-        self._subject_attributes = subject_attributes;
+
+    def _security_state(self):
+        """
+        Serialize security state.
+        Security state can only contain objects that can be JSON-serialized.
+        """
+        return {'_subject_attributes':self._subject_attributes}
+
+    def _set_security_state(self, state):
+        """
+        Deserialize and apply security state.
+        Security state can only contain objects that can be JSON-serialized.
+        """
+        pass
 
     def _managed_state(self):
         """
@@ -731,6 +740,7 @@ class Actor(object):
     def deserialize(self, state):
         """Restore an actor's state from the serialized state."""
         self._set_private_state(state['private'])
+        self._set_security_state(state['security'])
         self._set_managed_state(state['managed'])
         self.set_state(state['custom'])
 

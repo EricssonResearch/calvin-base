@@ -103,7 +103,7 @@ class ActorManager(object):
     def _new_actor(self, actor_type, class_=None, actor_id=None, security=None, access_decision=None, shadow_actor=False):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         if security_enabled() and not access_decision:
-            _log.debug("Security policy check for actor failed")
+            _log.debug("Security policy check for actor failed, access_decision={}".format(access_decision))
             shadow_actor = True
         if shadow_actor:
             class_ = ShadowActor
@@ -146,10 +146,10 @@ class ActorManager(object):
         """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
-            subject_attributes = state['private'].pop('_subject_attributes', None)
+            subject_attributes = state['security'].pop('_subject_attributes', None)
             migration_info = state['private'].pop('_migration_info', None)
             try:
-                state['private'].remove('_subject_attributes')
+                state['security'].remove('_subject_attributes')
                 state['private'].remove('_migration_info')
             except:
                 pass
