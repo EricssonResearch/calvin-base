@@ -56,7 +56,7 @@ def dump_stack(stack, exc):
     for entry in traceback.format_list(part_stack):
         print entry,
 
-def create_callback(timeout=.5):
+def create_callback(timeout=.5, test_part=None):
     def dummy_callback(d, *args, **kwargs):
         if d.called:
             return
@@ -72,7 +72,8 @@ def create_callback(timeout=.5):
     reactor.callLater(timeout, dummy_callback, d, __timeout=True)
     #exc_type, exc_value, exc_traceback = sys.exc_info()
     #traceback.print_stack()
-    d.__timeout_exc = Exception("Timeout waiting for deferred, %ss have passed, check stdout for traceback" % (timeout,))
+    d.__timeout_exc = Exception("Timeout waiting for %s, %ss have passed, check stdout for traceback" %
+                                    ("deferred" if test_part is None else test_part, timeout))
     d.__timeout_stack = traceback.extract_stack()
     cb = CalvinCB(dummy_callback, d)
     return cb, d

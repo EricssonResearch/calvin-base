@@ -83,10 +83,11 @@ def _dummy_inline(*args):
 if not hasattr(pytest, 'inlineCallbacks'):
     pytest.inlineCallbacks = _dummy_inline
 
-@pytest.fixture(autouse=True, scope="module")
+@pytest.fixture(autouse=True, scope="class")
 def setup(request):
     # Create 3 test nodes per storage type
     print "###SETUP"
+
     tunnels = {}
     nodes = {}
     for ti in range(len(storage_types)):
@@ -101,7 +102,7 @@ def setup(request):
             except:
                 traceback.print_exc()
         if stype != "notstarted" :
-            cb, d = create_callback(timeout=10)
+            cb, d = create_callback(timeout=10, test_part=stype + " start")
             n.storage.start(cb=cb)
             return d
 
@@ -212,18 +213,29 @@ def setup(request):
         print "### Some storage plugins might have failed to start! ###"
         traceback.print_exc()
     print time.time()
+    def teardown():
+        print "#####TEARDOWN"
+        all_stopped = []
+        for ntypes in nodes.values():
+            for n in ntypes:
+                cb, d = create_callback(timeout=10)
+                n.storage.stop(cb=cb)
+                all_stopped.append(d)
+        dl = defer.DeferredList(all_stopped)
+        try:
+            pytest.blockon(dl)
+        except:
+            print "### Some storage plugins might have failed to stopp ###"
+            traceback.print_exc()
+    request.addfinalizer(teardown)
     return {"nodes": nodes}
 
 @pytest.mark.essential
-@pytest.mark.skipif(pytest.inlineCallbacks == _dummy_inline,
+@pytest.mark.skipif(pytest.inlineCallbacks.__name__ == "_dummy_inline",
                     reason="No inline twisted plugin enabled, please use --twisted to py.test")
 class TestAllStorage(object):
     """ Test that all storage plugin types functionality is identical and correct.
     """
-    @pytest.inlineCallbacks
-    def teardown(self):
-        yield threads.defer_to_thread(time.sleep, .001)
-
     def _test_done(self):
         return self.done
 
@@ -237,21 +249,28 @@ class TestAllStorage(object):
 
     def verify_started(self):
         """ Test that all the plugins that should have started have done so. """
+        working = []
         for stype in storage_types:
             if stype == "notstarted":
                 # Not started storage is never started
+                working.append(stype)
                 continue
             for y in range(3):
                 if stype == "proxy" and y == 0:
                     # The first node in proxy is the local master which is never started
                     continue
-                assert self.nodes[stype][y].storage.started
+                if not self.nodes[stype][y].storage.started:
+                    break
+                if y == 2:
+                    # All started for stype plugin
+                    working.append(stype)
+        return working
 
     @pytest.inlineCallbacks
     def test_set_get(self, setup):
         """ Test that set returns OK and get returns value set """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for i in ["aa", "bb", "", None, True, False, 0, 1, 2, [0, 1], {"xx": 10}]:
                 key = str(i)
@@ -279,7 +298,7 @@ class TestAllStorage(object):
     def test_set_delete_get(self, setup):
         """ Test that set returns OK, delete return OK and get returns 404 response """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for i in ["aa", "bb", "cc", "", None, True, False, 0, 1, 2, [0, 1], {"xx": 10}]:
                 for y in range(3):
@@ -316,7 +335,7 @@ class TestAllStorage(object):
     def test_append_getconcat(self, setup):
         """ Test that single value append returns OK and get_concat returns appended value in list """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for i in ["aa", "bb", "", True, False, 0, 1, 2]:  # values must be hashable (i.e. not list or dict)
                 key = str(i)
@@ -344,7 +363,7 @@ class TestAllStorage(object):
     def test_append_multi_getconcat(self, setup):
         """ Test that appending multiple values returns OK and get_concat returns the unique values (set) in a list """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for i in [("aa", "aa"), ("bb", 2, "ff"), (True, ""), (False, True)]:  # values must be hashable (i.e. not list or dict)
                 key = str(i)
@@ -373,7 +392,7 @@ class TestAllStorage(object):
         """ Test that appending multiple values returns OK, remove a value returns OK
              and get_concat returns the unique values (set) in a list """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for i in [("aa", "aa"), ("bb", 2, "ff"), (0, 1, 2, 3)]:  # values must be hashable (i.e. not list or dict)
                 key = str(i)
@@ -409,7 +428,7 @@ class TestAllStorage(object):
     def test_append_delete_get_concat(self, setup):
         """ Test that append returns OK, delete return OK and get returns empty set """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for i in ["aa", None, True, False, 0, 1, 2]:
                 for y in range(3):
@@ -446,7 +465,7 @@ class TestAllStorage(object):
     def test_append_delete_append_get_concat(self, setup):
         """ Test that append returns OK, delete return OK and get returns second append """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for i in ["aa"]:
                 for y in range(3):
@@ -488,7 +507,7 @@ class TestAllStorage(object):
     def test_add_get_index(self, setup):
         """ Test that add_index returns OK and get_index returns appended value in list for index hierarchies """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for y in range(3):
                 for i in [(["aa", "bb", "", "dd"], "xx"),
@@ -531,7 +550,7 @@ class TestAllStorage(object):
     def test_add_remove_get_index(self, setup):
         """ Test that add_index returns OK, remove_index returns OK and get_index returns appended value in list for index hierarchies """
         self.nodes = setup.get("nodes")
-        self.verify_started()
+        storage_types = self.verify_started()
         for stype in storage_types:
             for y in range(3):
                 for i in [(["aa", "bb", "", "dd"], ["xx", "kk", "ll"], "+"),
@@ -578,4 +597,8 @@ class TestAllStorage(object):
                         print "get_index response", self.get_ans, stype, index, x
                         # Verify we read what is written if too short prefix or not existing we should get [].
                         assert set(self.get_ans) == set(i[1]) 
+
+    def test_all_started(self, setup):
+        self.nodes = setup.get("nodes")
+        assert storage_types == self.verify_started()
 

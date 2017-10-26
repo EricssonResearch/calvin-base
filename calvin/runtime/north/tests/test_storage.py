@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from calvin.requests import calvinresponse
 from calvin.utilities import calvinuuid
 from calvin.runtime.north import storage
 from calvin.runtime.north import appmanager
@@ -48,7 +49,7 @@ class TestSetFlushAndGet(object):
         def started_cb(started):
             self.q.put(started)
 
-        cb, d = create_callback()
+        cb, d = create_callback(timeout=2)
         self.storage = storage.Storage(DummyNode())
         self.storage.start('', cb)
         self.storage2 = storage.Storage(DummyNode())
@@ -60,10 +61,10 @@ class TestSetFlushAndGet(object):
         assert "test2" in self.storage.localstore
         assert "test3" in self.storage.localstore
 
-        cb2, d = create_callback()
+        cb2, d = create_callback(timeout=2)
         self.storage2.start('', cb2)
         value = yield d
-        # print value[0][0]
+        # print value
         assert value[0][0]
 
         yield wait_for(self.storage.localstore.keys, condition=lambda x: not x())
@@ -104,7 +105,7 @@ class TestStorageStarted(object):
         self.storage.add_node(node, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is True
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.OK
 
         self.storage.get_node(node.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
@@ -114,12 +115,12 @@ class TestStorageStarted(object):
         self.storage.delete_node(node, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is True
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.OK
 
         self.storage.get_node(node.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is None
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.NOT_FOUND
 
     @pytest.inlineCallbacks
     def test_application_functions(self):
@@ -134,7 +135,7 @@ class TestStorageStarted(object):
         self.storage.add_application(application, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is True
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.OK
 
         self.storage.get_application(application.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
@@ -144,12 +145,12 @@ class TestStorageStarted(object):
         self.storage.delete_application(application.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is True
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.OK
 
         self.storage.get_application(application.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is None
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.NOT_FOUND
 
     @pytest.inlineCallbacks
     def test_actor_functions(self):
@@ -169,7 +170,7 @@ class TestStorageStarted(object):
         self.storage.add_actor(actor, calvinuuid.uuid("NODE"), cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is True
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.OK
 
         self.storage.get_actor(actor.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
@@ -179,12 +180,12 @@ class TestStorageStarted(object):
         self.storage.delete_actor(actor.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is True
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.OK
 
         self.storage.get_actor(actor.id, cb=CalvinCB(cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())
         value = self.q.get(timeout=.001)
-        assert value["value"] is None
+        assert isinstance(value["value"], calvinresponse.CalvinResponse) and value["value"] == calvinresponse.NOT_FOUND
 
 
 @pytest.mark.essential
@@ -283,7 +284,7 @@ class TestStorageNotStarted(object):
         value = self.q.get(timeout=.001)
         assert value["key"] == port1.id
         assert value["value"]["name"] == port1.name
-        assert value["value"]["peers"] == [["local", port2.id]]
+        assert value["value"]["peers"] == [("local", port2.id)]
 
         self.storage.add_actor(actor2, calvinuuid.uuid("NODE"))
         value = self.storage.get_actor(actor2.id, cb=CalvinCB(func=cb))
@@ -300,7 +301,7 @@ class TestStorageNotStarted(object):
         value = self.q.get(timeout=.001)
         assert value["key"] == port2.id
         assert value["value"]["name"] == port2.name
-        assert value["value"]["peers"] == [["local", port1.id]]
+        assert value["value"]["peers"] == [("local", port1.id)]
 
         self.storage.delete_actor(actor1.id, cb=CalvinCB(func=cb))
         yield wait_for(self.q.empty, condition=lambda x: not x())

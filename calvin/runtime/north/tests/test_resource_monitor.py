@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from calvin.runtime.north import storage
+from calvin.requests import calvinresponse
+import calvin.utilities.calvinconfig
 from calvin.runtime.north.resource_monitor.cpu import CpuMonitor
 from calvin.runtime.north.resource_monitor.memory import MemMonitor
 from calvin.runtime.south.plugins.async import threads
@@ -10,6 +12,8 @@ from calvin.tests.helpers_twisted import create_callback, wait_for
 import calvin.tests
 import pytest
 import time
+
+_conf = calvin.utilities.calvinconfig.get()
 
 # So it skipps if we dont have twisted plugin
 def _dummy_inline(*args):
@@ -29,6 +33,7 @@ class TestCpuMonitor(object):
 
     @pytest.inlineCallbacks
     def setup(self):
+        _conf.set('global', 'storage_type', 'local')
         self.node = calvin.tests.TestNode(["127.0.0.1:5000"])
         self.node.attributes = AttributeResolver({"indexed_public": {"cpuTotal": "1" }})
         self.storage = storage.Storage(self.node)
@@ -85,7 +90,7 @@ class TestCpuMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb2))
+            self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), root_prefix_level=2, cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -102,9 +107,9 @@ class TestCpuMonitor(object):
 
         # node id must not be present at level 50, only at 25
         self.done = False
-        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25', '50'], cb=CalvinCB(self.cb2))
+        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25', '50'], root_prefix_level=2, cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
-        assert self.get_ans is None
+        assert self.get_ans == []
 
     @pytest.inlineCallbacks
     def test_stop_node(self):
@@ -117,7 +122,7 @@ class TestCpuMonitor(object):
         assert self.get_ans == True
 
         self.done = False
-        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb2))
+        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25'], root_prefix_level=2, cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.node.id in self.get_ans
 
@@ -128,19 +133,19 @@ class TestCpuMonitor(object):
         self.done = False
         self.storage.get(prefix="nodeCpuAvail-", key=self.node.id, cb=CalvinCB(self.cb))
         yield wait_for(self._test_done)
-        assert self.get_ans is False
+        assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.NOT_FOUND
 
         # node id must not be present at level 25
         self.done = False
-        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb2))
+        self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + ['0', '25'], root_prefix_level=2, cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
-        assert self.get_ans is None
+        assert self.get_ans == []
 
         # no node in total indexes
         self.done = False
-        self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + ['1'], cb=CalvinCB(self.cb2))
+        self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + ['1'], root_prefix_level=2, cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
-        assert self.get_ans is None
+        assert self.get_ans == []
 
     @pytest.inlineCallbacks
     def test_total_valid(self):
@@ -155,11 +160,11 @@ class TestCpuMonitor(object):
             self.node.attributes = AttributeResolver({"indexed_public": {"cpuTotal": i }})
             self.storage.add_node(self.node, cb=self.cb)
             yield wait_for(self._test_done)
-            assert self.get_ans == True
+            assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb2))
+            self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), root_prefix_level=2, cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -170,6 +175,7 @@ class TestMemMonitor(object):
 
     @pytest.inlineCallbacks
     def setup(self):
+        _conf.set('global', 'storage_type', 'local')
         self.node = calvin.tests.TestNode(["127.0.0.1:5000"])
         self.node.attributes = AttributeResolver({"indexed_public": {"memTotal": "10G" }})
         self.storage = storage.Storage(self.node)
@@ -186,6 +192,10 @@ class TestMemMonitor(object):
         return self.done
 
     def cb(self, key, value):
+        self.get_ans = value
+        self.done = True
+
+    def cb2(self, value):
         self.get_ans = value
         self.done = True
 
@@ -222,7 +232,7 @@ class TestMemMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb2))
+            self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), root_prefix_level=2, cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -239,9 +249,9 @@ class TestMemMonitor(object):
 
         # node id must not be present at level 50, only at 25
         self.done = False
-        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25', '50'], cb=CalvinCB(self.cb2))
+        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25', '50'], root_prefix_level=2, cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
-        assert self.get_ans is None
+        assert self.get_ans == []
 
     @pytest.inlineCallbacks
     def test_stop_node(self):
@@ -254,7 +264,7 @@ class TestMemMonitor(object):
         assert self.get_ans == True
 
         self.done = False
-        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb2))
+        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25'], root_prefix_level=2, cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
         assert self.node.id in self.get_ans
 
@@ -265,19 +275,19 @@ class TestMemMonitor(object):
         self.done = False
         self.storage.get(prefix="nodeMemAvail-", key=self.node.id, cb=CalvinCB(self.cb))
         yield wait_for(self._test_done)
-        assert self.get_ans is False
+        assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.NOT_FOUND
 
         # node id must not be present at level 25
         self.done = False
-        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25'], cb=CalvinCB(self.cb2))
+        self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + ['0', '25'], root_prefix_level=2, cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
-        assert self.get_ans is None
+        assert self.get_ans == []
 
         # no node in total indexes
         self.done = False
-        self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + ['1K'], cb=CalvinCB(self.cb2))
+        self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + ['1K'], root_prefix_level=2, cb=CalvinCB(self.cb2))
         yield wait_for(self._test_done)
-        assert self.get_ans is None
+        assert self.get_ans == []
 
     @pytest.inlineCallbacks
     def test_total_valid(self):
@@ -292,10 +302,10 @@ class TestMemMonitor(object):
             self.node.attributes = AttributeResolver({"indexed_public": {"memTotal": i }})
             self.storage.add_node(self.node, cb=self.cb)
             yield wait_for(self._test_done)
-            assert self.get_ans == True
+            assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), cb=CalvinCB(self.cb2))
+            self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), root_prefix_level=2, cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
