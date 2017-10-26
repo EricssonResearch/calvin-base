@@ -195,13 +195,15 @@ class Node(object):
         _log.debug("\n%s# NODE: %s \n# %s %s %s \n%s" %
                    ('#' * 40, self.id, preamble if preamble else "*", args, kwargs, '#' * 40))
 
-    def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None):
+    def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None, security=None, access_decision=None):
         # TODO requirements should be input to am.new
         # TODO: make it possible to use security/credentials here.
         actor_def, signer = self.am.lookup_and_verify(actor_type)
         actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
                                signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None,
-                               actor_def=actor_def)
+                               actor_def=actor_def,
+                               security=security,
+                               access_decision=access_decision)
         if deploy_args:
             app_id = deploy_args['app_id']
             if 'app_name' not in deploy_args:
