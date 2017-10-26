@@ -62,7 +62,7 @@ policy_storage_path = os.path.join(security_testdir, "policies")
 actor_store_path = ""
 application_store_path = ""
 
-#A minimum of 3 runtimes is assumed
+#A minimum of 4 runtimes is assumed
 NBR_OF_RUNTIMES=5
 rt1 = None
 rt2 = None
@@ -91,7 +91,6 @@ def deploy_app(deployer, runtimes=None):
     return helpers.deploy_app(request_handler, deployer, runtimes)
 
 def expected_tokens(rt, actor_id, t_type='seq'):
-    _log.info("Hakan expected_tokens")
     return helpers.expected_tokens(request_handler, rt, actor_id, t_type)
 
 def wait_for_tokens(rt, actor_id, size=5, retries=20):
@@ -99,74 +98,30 @@ def wait_for_tokens(rt, actor_id, size=5, retries=20):
 
 def actual_tokens(rt, actor_id, size=5, retries=20):
     return helpers.actual_tokens(request_handler, rt, actor_id, size, retries)
-#
-#def actual_tokens_multiple(rt, actor_ids, size=5, retries=20):
-#    return helpers.actual_tokens_multiple(request_handler, rt, actor_ids, size, retries)
+
+def actual_tokens_multiple(rt, actor_ids, size=5, retries=20):
+    return helpers.actual_tokens_multiple(request_handler, rt, actor_ids, size, retries)
 
 def assert_lists_equal(expected, actual, min_length=5):
     assert len(actual) >= min_length
     assert actual
     assert reduce(lambda a, b: a and b[0] == b[1], zip(expected, actual), True)
 
-#def wait_for_migration(runtime, actors, retries=20):
-#    retry = 0
-#    if not isinstance(actors, list):
-#        actors = [ actors ]
-#    while retry < retries:
-#        try:
-#            current = request_handler.get_actors(runtime)
-#            if set(actors).issubset(set(current)):
-#                break
-#            else:
-#                _log.info("Migration not finished, retrying in %f" % (retry * 0.1,))
-#                retry += 1
-#                time.sleep(retry * 0.1)
-#        except Exception as e:
-#            _log.info("Migration not finished %s, retrying in %f" % (str(e), retry * 0.1,))
-#            retry += 1
-#            time.sleep(retry * 0.1)
-#    if retry == retries:
-#        _log.info("Migration failed, after %d retires" % (retry,))
-#        raise Exception("Migration failed")
 #
-#def migrate(source, dest, actor):
-#    request_handler.migrate(source, actor, dest.id)
-#    wait_for_migration(dest, [actor])
-#
-#def wait_until_nbr(rt, actor_id, size=5, retries=20, sleep=0.1):
-#    for i in range(retries):
-#        r = request_handler.report(rt, actor_id)
-#        l = r if isinstance(r, numbers.Number) else len(r)
-#        if l >= size:
-#            break
-#        time.sleep(sleep)
-#    assert l >= size
-#
+def wait_until_nbr(rt, actor_id, size=5, retries=20, sleep=0.1):
+    for i in range(retries):
+        r = request_handler.report(rt, actor_id)
+        l = r if isinstance(r, numbers.Number) else len(r)
+        if l >= size:
+            break
+        time.sleep(sleep)
+    assert l >= size
+
 def get_runtime(n=1):
     import random
     _runtimes = [runtimes[1]["RT"], runtimes[2]["RT"], runtimes[3]["RT"]]
     random.shuffle(_runtimes)
     return _runtimes[:n]
-#
-#def setup_module(module):
-#    global rt1, rt2, rt3
-#    global request_handler
-#    global test_type
-#
-#    request_handler = RequestHandler()
-#    test_type, [rt1, rt2, rt3] = helpers.setup_test_type(request_handler)
-#
-#
-#def teardown_module(module):
-#    global rt1
-#    global rt2
-#    global rt3
-#    global test_type
-#    global request_handler
-#
-#    helpers.teardown_test_type(test_type, [rt1, rt2, rt3], request_handler)
-
-
 
 @pytest.mark.slow
 @pytest.mark.essential
@@ -184,6 +139,9 @@ class CalvinSecureTestBase(unittest.TestCase):
         global request_handler
         global actor_store_path
         global application_store_path
+        global rt1
+        global rt2
+        global rt3
         try:
             shutil.rmtree(credentials_testdir)
         except Exception as err:
@@ -284,6 +242,7 @@ class CalvinSecureTestBase(unittest.TestCase):
         rt0=runtimes[0]["RT"]
         rt1=runtimes[1]["RT"]
         rt2=runtimes[2]["RT"]
+        rt2=runtimes[3]["RT"]
         for i in range(1, NBR_OF_RUNTIMES):
             try:
                 runtimes[i]["RT"].id = request_handler.get_node_id(runtimes[i]["RT"])
@@ -832,7 +791,7 @@ class TestNodeSetup(CalvinSecureTestBase):
         #log.startLogging(sys.stdout)
         #defer.setDebugging(True)
 
-        assert request_handler.get_node(self.rt1, self.rt1.id)['uris'] == self.rt1.uris
+        assert request_handler.get_node(rt1, rt1.id)['uris'] == rt1.uris
 
 
 @pytest.mark.essential
@@ -1055,43 +1014,31 @@ class TestActorMigration(CalvinSecureTestBase):
 
         rt = runtimes[1]["RT"]
         peer = runtimes[2]["RT"]
-        peer3 = runtimes[3]["RT"]
-        peer4 = runtimes[4]["RT"]
 
         snk = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk', store_tokens=1, quiet=1)
         csum = request_handler.new_actor(peer, 'std.Sum', 'sum')
-        src = request_handler.new_actor(peer3, 'std.CountTimer', 'src')
+        src = request_handler.new_actor(peer, 'std.CountTimer', 'src')
 
         request_handler.connect(rt, snk, 'token', peer.id, csum, 'integer')
-        request_handler.connect(peer, csum, 'integer', peer3.id, src, 'integer')
+        request_handler.connect(peer, csum, 'integer', peer.id, src, 'integer')
 
         wait_for_tokens(rt, snk)
 
         actual_x = actual_tokens(rt, snk)
-        _log.info("Hakan actual_x={}".format(actual_x))
         for i in range(5):
-            try:
-                if i % 2 == 0:
-                    _log.info("Hakan migrate to rt1")
-                    self.migrate(peer3, peer4, src)
-                else:
-                    _log.info("Hakan migrate to rt2")
-                    self.migrate(peer4, peer3, src)
-            except Exception as err:
-                _log.error("Hakan failed to migrate, err={}".format(err))
-            try:
-                actual_x = actual_tokens(rt, snk, len(actual_x)+5)
-                _log.info("Hakan i={}  actual_x={}".format(i, actual_x))
-            except Exception as err:
-                _log.error("Hakan failed to migrate 2, err={}".format(err))
+            if i % 2 == 0:
+                self.migrate(peer, rt, src)
+            else:
+                self.migrate(rt, peer, src)
+            actual_x = actual_tokens(rt, snk, len(actual_x)+5)
 
-        expected = expected_tokens(peer4, src, 'sum')
+        expected = expected_tokens(rt, src, 'sum')
         actual = actual_tokens(rt, snk, len(expected))
         self.assert_lists_equal(expected, actual)
 
         request_handler.delete_actor(rt, snk)
         request_handler.delete_actor(peer, csum)
-        request_handler.delete_actor(peer4, src)
+        request_handler.delete_actor(rt, src)
 
     def testInOutPortRemoteToLocalMigration(self):
         """Testing out- and inport remote to local migration"""
@@ -1105,20 +1052,14 @@ class TestActorMigration(CalvinSecureTestBase):
 
         request_handler.connect(rt, snk, 'token', peer.id, csum, 'integer')
         request_handler.connect(peer, csum, 'integer', rt.id, src, 'integer')
-        _log.info("Hakan 1")
         actual_1 = wait_for_tokens(rt, snk)
-        _log.info("Hakan 2")
 
         self.migrate(peer, rt, csum)
-        _log.info("Hakan 3")
 
         wait_for_tokens(rt, snk, len(actual_1)+5)
-        _log.info("Hakan 4")
 
         expected = expected_tokens(rt, src, 'sum')
-        _log.info("Hakan 5")
         actual = actual_tokens(rt, snk, len(expected))
-        _log.info("Hakan 6, actual={}".format(actual))
         self.assert_lists_equal(expected, actual)
         request_handler.delete_actor(rt, snk)
         request_handler.delete_actor(rt, csum)
@@ -1136,22 +1077,17 @@ class TestActorMigration(CalvinSecureTestBase):
 
         request_handler.connect(rt, snk, 'token', rt.id, csum, 'integer')
         request_handler.connect(rt, csum, 'integer', rt.id, src, 'integer')
-        _log.info("Hakan 1")
         wait_for_tokens(rt, snk)
-        _log.info("Hakan 2")
 
         actual_x = actual_tokens(rt, snk)
-        _log.info("Hakan 3, actual={}".format(actual_x))
         for i in range(5):
             if i % 2 == 0:
                 self.migrate(rt, peer, csum)
             else:
                 self.migrate(peer, rt, csum)
             actual_x = actual_tokens(rt, snk, len(actual_x)+5)
-            _log.info("Hakan 4, actual={}".format(actual_x))
 
         expected = expected_tokens(rt, src, 'sum')
-        _log.info("Hakan 5, expected={}".format(expected))
         actual = actual_tokens(rt, snk, len(expected))
 
         self.assert_lists_equal(expected, actual)
@@ -1342,94 +1278,94 @@ class TestConnections(CalvinSecureTestBase):
     @pytest.mark.slow
     def testLocalSourceSink(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk, 'token', rt1.id, src, 'integer')
 
-        actual = wait_for_tokens(self.rt1, snk)
-        expected = expected_tokens(self.rt1, src, 'seq')
+        actual = wait_for_tokens(rt1, snk)
+        expected = expected_tokens(rt1, src, 'seq')
 
         self.assert_lists_equal(expected, actual)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt1, snk)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt1, snk)
 
     def testMigrateSink(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk, 'token', rt1.id, src, 'integer')
 
-        pre_migrate = wait_for_tokens(self.rt1, snk)
+        pre_migrate = wait_for_tokens(rt1, snk)
 
-        self.migrate(self.rt1, self.rt2, snk)
+        self.migrate(rt1, rt2, snk)
 
-        actual = wait_for_tokens(self.rt2, snk, len(pre_migrate)+5)
-        expected = expected_tokens(self.rt1, src)
+        actual = wait_for_tokens(rt2, snk, len(pre_migrate)+5)
+        expected = expected_tokens(rt1, src)
 
         self.assert_lists_equal(expected, actual)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt2, snk)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt2, snk)
 
     def testMigrateSource(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk, 'token', rt1.id, src, 'integer')
 
-        actual = wait_for_tokens(self.rt1, snk)
+        actual = wait_for_tokens(rt1, snk)
 
-        self.migrate(self.rt1, self.rt2, src)
+        self.migrate(rt1, rt2, src)
 
-        actual = actual_tokens(self.rt1, snk, len(actual)+5 )
-        expected = expected_tokens(self.rt2, src)
+        actual = actual_tokens(rt1, snk, len(actual)+5 )
+        expected = expected_tokens(rt2, src)
 
         self.assert_lists_equal(expected, actual)
 
-        request_handler.delete_actor(self.rt2, src)
-        request_handler.delete_actor(self.rt1, snk)
+        request_handler.delete_actor(rt2, src)
+        request_handler.delete_actor(rt1, snk)
 
     def testTwoStepMigrateSinkSource(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk, 'token', rt1.id, src, 'integer')
 
-        pre_migrate = wait_for_tokens(self.rt1, snk)
-        self.migrate(self.rt1, self.rt2, snk)
-        mid_migrate = wait_for_tokens(self.rt2, snk, len(pre_migrate)+5)
-        self.migrate(self.rt1, self.rt2, src)
-        post_migrate = wait_for_tokens(self.rt2, snk, len(mid_migrate)+5)
+        pre_migrate = wait_for_tokens(rt1, snk)
+        self.migrate(rt1, rt2, snk)
+        mid_migrate = wait_for_tokens(rt2, snk, len(pre_migrate)+5)
+        self.migrate(rt1, rt2, src)
+        post_migrate = wait_for_tokens(rt2, snk, len(mid_migrate)+5)
 
-        expected = expected_tokens(self.rt2, src)
+        expected = expected_tokens(rt2, src)
 
         self.assert_lists_equal(expected, post_migrate, min_length=10)
-        request_handler.delete_actor(self.rt2, src)
-        request_handler.delete_actor(self.rt2, snk)
+        request_handler.delete_actor(rt2, src)
+        request_handler.delete_actor(rt2, snk)
 
     def testTwoStepMigrateSourceSink(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.CountTimer', 'src')
+        snk = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk, 'token', rt1.id, src, 'integer')
 
-        pre_migrate = wait_for_tokens(self.rt1, snk)
-        self.migrate(self.rt1, self.rt2, src)
-        mid_migrate = wait_for_tokens(self.rt1, snk, len(pre_migrate)+5)
-        self.migrate(self.rt1, self.rt2, snk)
-        post_migrate = wait_for_tokens(self.rt2, snk, len(mid_migrate)+5)
+        pre_migrate = wait_for_tokens(rt1, snk)
+        self.migrate(rt1, rt2, src)
+        mid_migrate = wait_for_tokens(rt1, snk, len(pre_migrate)+5)
+        self.migrate(rt1, rt2, snk)
+        post_migrate = wait_for_tokens(rt2, snk, len(mid_migrate)+5)
 
-        expected = expected_tokens(self.rt2, src)
+        expected = expected_tokens(rt2, src)
         self.assert_lists_equal(expected, post_migrate, min_length=15)
 
-        request_handler.delete_actor(self.rt2, src)
-        request_handler.delete_actor(self.rt2, snk)
+        request_handler.delete_actor(rt2, src)
+        request_handler.delete_actor(rt2, snk)
 
 @pytest.mark.essential
 class TestScripts(CalvinSecureTestBase):
@@ -1443,14 +1379,14 @@ class TestScripts(CalvinSecureTestBase):
           src.integer > snk.token
           """
         app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['simple:snk']
         src = d.actor_map['simple:src']
 
-        actual = wait_for_tokens(self.rt1, snk)
-        expected = expected_tokens(self.rt1, src)
+        actual = wait_for_tokens(rt1, snk)
+        expected = expected_tokens(rt1, src)
 
         self.assert_lists_equal(expected, actual)
 
@@ -1462,14 +1398,14 @@ class TestScripts(CalvinSecureTestBase):
         scriptname = 'test1'
         scriptfile = absolute_filename("scripts/%s.calvin" % (scriptname, ))
         app_info, issuetracker = compile_tool.compile_file(scriptfile, ds=False, ir=False)
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         src = d.actor_map['%s:src' % scriptname]
         snk = d.actor_map['%s:snk' % scriptname]
 
-        actual = wait_for_tokens(self.rt1, snk)
-        expected = expected_tokens(self.rt1, src)
+        actual = wait_for_tokens(rt1, snk)
+        expected = expected_tokens(rt1, src)
 
         self.assert_lists_equal(expected, actual)
 
@@ -1487,18 +1423,18 @@ class TestStateMigration(CalvinSecureTestBase):
           sum.integer > snk.token
           """
         app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         src = d.actor_map['simple:src']
         csum = d.actor_map['simple:sum']
         snk = d.actor_map['simple:snk']
 
-        tokens = len(wait_for_tokens(self.rt1, snk))
-        self.migrate(self.rt1, self.rt2, csum)
+        tokens = len(wait_for_tokens(rt1, snk))
+        self.migrate(rt1, rt2, csum)
 
-        actual = actual_tokens(self.rt1, snk, tokens+5)
-        expected = expected_tokens(self.rt1, src, 'sum')
+        actual = actual_tokens(rt1, snk, tokens+5)
+        expected = expected_tokens(rt1, src, 'sum')
 
         self.assert_lists_equal(expected, actual)
         helpers.destroy_app(d)
@@ -1519,22 +1455,22 @@ class TestAppLifeCycle(CalvinSecureTestBase):
           sum.integer > snk.token
           """
         app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         src = d.actor_map['simple:src']
         csum = d.actor_map['simple:sum']
         snk = d.actor_map['simple:snk']
 
-        tokens = len(wait_for_tokens(self.rt1, snk))
-        self.migrate(self.rt1, self.rt2, csum)
+        tokens = len(wait_for_tokens(rt1, snk))
+        self.migrate(rt1, rt2, csum)
 
-        actual = actual_tokens(self.rt1, snk, tokens+5)
-        expected = expected_tokens(self.rt1, src, 'sum')
+        actual = actual_tokens(rt1, snk, tokens+5)
+        expected = expected_tokens(rt1, src, 'sum')
 
         self.assert_lists_equal(expected, actual)
 
-        helpers.delete_app(request_handler, self.rt1, d.app_id)
+        helpers.delete_app(request_handler, rt1, d.app_id)
 
         def check_actors_gone(runtime):
             for actor in src, csum, snk:
@@ -1547,7 +1483,7 @@ class TestAppLifeCycle(CalvinSecureTestBase):
                     pass
             return True
 
-        for rt in [ self.rt1, self.rt2, self.rt3 ]:
+        for rt in [ rt1, rt2, rt3 ]:
             check_rt = partial(check_actors_gone, rt)
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Not all actors gone on rt '%r'" % (rt.id, ))
             assert all_gone
@@ -1561,7 +1497,7 @@ class TestAppLifeCycle(CalvinSecureTestBase):
                     return True
             return app is None
 
-        for rt in [ self.rt1, self.rt2, self.rt3 ]:
+        for rt in [ rt1, rt2, rt3 ]:
             check_rt = partial(check_application_gone, rt)
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Application still present on rt '%r'" % (rt.id, ))
             assert all_gone
@@ -1581,25 +1517,25 @@ class TestAppLifeCycle(CalvinSecureTestBase):
         #? log.startLogging(sys.stdout)
 
         app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         src = d.actor_map['simple:src']
         csum = d.actor_map['simple:sum']
         snk = d.actor_map['simple:snk']
 
-        tokens = len(wait_for_tokens(self.rt1, snk))
+        tokens = len(wait_for_tokens(rt1, snk))
 
-        self.migrate(self.rt1, self.rt2, src)
-        self.migrate(self.rt1, self.rt2, csum)
-        self.migrate(self.rt1, self.rt2, snk)
+        self.migrate(rt1, rt2, src)
+        self.migrate(rt1, rt2, csum)
+        self.migrate(rt1, rt2, snk)
 
-        actual = actual_tokens(self.rt2, snk, tokens+5)
-        expected = expected_tokens(self.rt2, src, 'sum')
+        actual = actual_tokens(rt2, snk, tokens+5)
+        expected = expected_tokens(rt2, src, 'sum')
 
         self.assert_lists_equal(expected, actual)
 
-        helpers.delete_app(request_handler, self.rt1, d.app_id)
+        helpers.delete_app(request_handler, rt1, d.app_id)
 
         def check_actors_gone(runtime):
             for actor in src, csum, snk:
@@ -1612,7 +1548,7 @@ class TestAppLifeCycle(CalvinSecureTestBase):
                     pass
             return True
 
-        for rt in [ self.rt1, self.rt2, self.rt3 ]:
+        for rt in [ rt1, rt2, rt3 ]:
             check_rt = partial(check_actors_gone, rt)
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Not all actors gone on rt '%r'" % (rt.id, ))
             assert all_gone
@@ -1626,7 +1562,7 @@ class TestAppLifeCycle(CalvinSecureTestBase):
                     return True
             return app is None
 
-        for rt in [ self.rt1, self.rt2, self.rt3 ]:
+        for rt in [ rt1, rt2, rt3 ]:
             check_rt = partial(check_application_gone, rt)
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Application still present on rt '%r'" % (rt.id, ))
             assert all_gone
@@ -1637,17 +1573,17 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
     def test10(self):
         _log.analyze("TESTRUN", "+", {})
         # Two actors, doesn't seem to trigger the bug
-        src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        snk = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt1, snk, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk, 'token', rt1.id, src, 'integer')
 
-        actual = actual_tokens(self.rt1, snk, 10)
+        actual = actual_tokens(rt1, snk, 10)
 
         self.assert_lists_equal(range(1, 10), actual)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt1, snk)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt1, snk)
 
     def test11(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1659,84 +1595,84 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
             src.integer > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['simple:snk']
 
-        actual = actual_tokens(self.rt1, snk, 10)
+        actual = actual_tokens(rt1, snk, 10)
         self.assert_lists_equal(range(1, 10), actual)
 
         helpers.destroy_app(d)
 
     def test20(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        ity = request_handler.new_actor(self.rt1, 'std.Identity', 'ity')
-        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        ity = request_handler.new_actor(rt1, 'std.Identity', 'ity')
+        snk = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
-        request_handler.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk, 'token', rt1.id, ity, 'token')
+        request_handler.connect(rt1, ity, 'token', rt1.id, src, 'integer')
 
-        actual = actual_tokens(self.rt1, snk, 10)
+        actual = actual_tokens(rt1, snk, 10)
 
         self.assert_lists_equal(range(1, 10), actual)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt1, ity)
-        request_handler.delete_actor(self.rt1, snk)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt1, ity)
+        request_handler.delete_actor(rt1, snk)
 
     def test21(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        ity = request_handler.new_actor(self.rt2, 'std.Identity', 'ity')
-        snk = request_handler.new_actor_wargs(self.rt3, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        ity = request_handler.new_actor(rt2, 'std.Identity', 'ity')
+        snk = request_handler.new_actor_wargs(rt3, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
-        request_handler.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt3, snk, 'token', rt2.id, ity, 'token')
+        request_handler.connect(rt2, ity, 'token', rt1.id, src, 'integer')
 
-        actual = actual_tokens(self.rt3, snk, 10)
+        actual = actual_tokens(rt3, snk, 10)
         self.assert_lists_equal(range(1,10), actual)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt2, ity)
-        request_handler.delete_actor(self.rt3, snk)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt2, ity)
+        request_handler.delete_actor(rt3, snk)
 
     def test22(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        ity = request_handler.new_actor(self.rt2, 'std.Identity', 'ity')
-        snk = request_handler.new_actor_wargs(self.rt3, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        ity = request_handler.new_actor(rt2, 'std.Identity', 'ity')
+        snk = request_handler.new_actor_wargs(rt3, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt2, ity, 'token', self.rt1.id, src, 'integer')
-        request_handler.connect(self.rt3, snk, 'token', self.rt2.id, ity, 'token')
+        request_handler.connect(rt2, ity, 'token', rt1.id, src, 'integer')
+        request_handler.connect(rt3, snk, 'token', rt2.id, ity, 'token')
 
-        actual = actual_tokens(self.rt3, snk, 10)
+        actual = actual_tokens(rt3, snk, 10)
         self.assert_lists_equal(range(1,10), actual)
 
-        actual = actual_tokens(self.rt3, snk, len(actual)+1)
+        actual = actual_tokens(rt3, snk, len(actual)+1)
         self.assert_lists_equal(range(1,len(actual)), actual)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt2, ity)
-        request_handler.delete_actor(self.rt3, snk)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt2, ity)
+        request_handler.delete_actor(rt3, snk)
 
     def test25(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        ity = request_handler.new_actor(self.rt1, 'std.Identity', 'ity')
-        snk = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        ity = request_handler.new_actor(rt1, 'std.Identity', 'ity')
+        snk = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
-        request_handler.connect(self.rt1, ity, 'token', self.rt1.id, src, 'integer')
-        request_handler.connect(self.rt1, snk, 'token', self.rt1.id, ity, 'token')
+        request_handler.connect(rt1, ity, 'token', rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk, 'token', rt1.id, ity, 'token')
 
-        actual = actual_tokens(self.rt1, snk, 10)
+        actual = actual_tokens(rt1, snk, 10)
 
         self.assert_lists_equal(range(1, 10), actual)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt1, ity)
-        request_handler.delete_actor(self.rt1, snk)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt1, ity)
+        request_handler.delete_actor(rt1, snk)
 
     def test26(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1750,11 +1686,11 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
             ity.token > snk.token
           """
         app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
         snk = d.actor_map['simple:snk']
 
-        actual = actual_tokens(self.rt1, snk, 10)
+        actual = actual_tokens(rt1, snk, 10)
         self.assert_lists_equal(range(1,10), actual)
 
         helpers.destroy_app(d)
@@ -1762,25 +1698,25 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
 
     def test30(self):
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        snk1 = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
-        snk2 = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        snk1 = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
+        snk2 = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
 
-        request_handler.set_port_property(self.rt1, src, 'out', 'integer',
+        request_handler.set_port_property(rt1, src, 'out', 'integer',
                                             port_properties={'routing': 'fanout', 'nbr_peers': 2})
 
-        request_handler.connect(self.rt1, snk1, 'token', self.rt1.id, src, 'integer')
-        request_handler.connect(self.rt1, snk2, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk1, 'token', rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk2, 'token', rt1.id, src, 'integer')
 
-        actual1 = actual_tokens(self.rt1, snk1, 10)
-        actual2 = actual_tokens(self.rt1, snk2, 10)
+        actual1 = actual_tokens(rt1, snk1, 10)
+        actual2 = actual_tokens(rt1, snk2, 10)
 
         self.assert_lists_equal(list(range(1, 10)), actual1)
         self.assert_lists_equal(list(range(1, 10)), actual2)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt1, snk1)
-        request_handler.delete_actor(self.rt1, snk2)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt1, snk1)
+        request_handler.delete_actor(rt1, snk2)
 
     def test31(self):
         # Verify that fanout defined implicitly in scripts is handled correctly
@@ -1794,13 +1730,13 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
             src.integer > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "test31")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk1 = d.actor_map['test31:snk1']
         snk2 = d.actor_map['test31:snk2']
-        actual1 = actual_tokens(self.rt1, snk1, 10)
-        actual2 = actual_tokens(self.rt1, snk2, 10)
+        actual1 = actual_tokens(rt1, snk1, 10)
+        actual2 = actual_tokens(rt1, snk2, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual1)
@@ -1830,13 +1766,13 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
             foo.b > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "test32")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk1 = d.actor_map['test32:snk1']
         snk2 = d.actor_map['test32:snk2']
-        actual1 = actual_tokens(self.rt1, snk1, 10)
-        actual2 = actual_tokens(self.rt1, snk2, 10)
+        actual1 = actual_tokens(rt1, snk1, 10)
+        actual2 = actual_tokens(rt1, snk2, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual1)
@@ -1847,23 +1783,23 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
     def test40(self):
         # Verify round robin port
         _log.analyze("TESTRUN", "+", {})
-        src = request_handler.new_actor(self.rt1, 'std.Counter', 'src')
-        snk1 = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
-        snk2 = request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
+        src = request_handler.new_actor(rt1, 'std.Counter', 'src')
+        snk1 = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
+        snk2 = request_handler.new_actor_wargs(rt1, 'test.Sink', 'snk2', store_tokens=1, quiet=1)
 
-        request_handler.set_port_property(self.rt1, src, 'out', 'integer',
+        request_handler.set_port_property(rt1, src, 'out', 'integer',
                                             port_properties={'routing': 'round-robin', 'nbr_peers': 2})
 
-        request_handler.connect(self.rt1, snk1, 'token', self.rt1.id, src, 'integer')
-        request_handler.connect(self.rt1, snk2, 'token', self.rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk1, 'token', rt1.id, src, 'integer')
+        request_handler.connect(rt1, snk2, 'token', rt1.id, src, 'integer')
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
-        actual1 = actual_tokens(self.rt1, snk1, 10)
-        actual2 = actual_tokens(self.rt1, snk2, 10)
+        actual1 = actual_tokens(rt1, snk1, 10)
+        actual2 = actual_tokens(rt1, snk2, 10)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -1871,9 +1807,9 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
         start = 1 if snk1_token_id > snk2_token_id else 2
         self.assert_lists_equal(list(range(start, 20, 2)), actual2)
 
-        request_handler.delete_actor(self.rt1, src)
-        request_handler.delete_actor(self.rt1, snk1)
-        request_handler.delete_actor(self.rt1, snk2)
+        request_handler.delete_actor(rt1, src)
+        request_handler.delete_actor(rt1, snk1)
+        request_handler.delete_actor(rt1, snk2)
 
 @pytest.mark.essential
 class TestNullPorts(CalvinSecureTestBase):
@@ -1893,11 +1829,11 @@ class TestNullPorts(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testVoidActor")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testVoidActor:snk']
-        actual = wait_for_tokens(self.rt1, snk, 10)
+        actual = wait_for_tokens(rt1, snk, 10)
         expected = list(range(1, 10))
         self.assert_lists_equal(expected, actual)
 
@@ -1916,11 +1852,11 @@ class TestNullPorts(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testTerminatorActor")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testTerminatorActor:snk']
-        actual = wait_for_tokens(self.rt1, snk)
+        actual = wait_for_tokens(rt1, snk)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
@@ -1943,11 +1879,11 @@ class TestCompare(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testBadOp")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testBadOp:snk']
-        actual = wait_for_tokens(self.rt1, snk, 10)
+        actual = wait_for_tokens(rt1, snk, 10)
         expected = [0] * 10
 
         self.assert_lists_equal(expected, actual)
@@ -1967,13 +1903,13 @@ class TestCompare(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testEqual")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testEqual:snk']
 
         expected = [x == 5 for x in range(1, 10)]
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual)
         helpers.destroy_app(d)
@@ -1993,12 +1929,12 @@ class TestCompare(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testGreaterThanOrEqual")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testGreaterThanOrEqual:snk']
         expected = [x >= 5 for x in range(1, 10)]
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual)
         helpers.destroy_app(d)
@@ -2022,11 +1958,11 @@ class TestSelect(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testTrue")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testTrue:snk']
-        actual = wait_for_tokens(self.rt1, snk, 10)
+        actual = wait_for_tokens(rt1, snk, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
@@ -2048,12 +1984,12 @@ class TestSelect(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testFalse")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testFalse:snk']
 
-        actual = wait_for_tokens(self.rt1, snk, 10)
+        actual = wait_for_tokens(rt1, snk, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
@@ -2076,11 +2012,11 @@ class TestSelect(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testBadSelect")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testBadSelect:snk']
-        actual = wait_for_tokens(self.rt1, snk, 10)
+        actual = wait_for_tokens(rt1, snk, 10)
         expected = list(range(1, 10))
 
         self.assert_lists_equal(expected, actual)
@@ -2111,13 +2047,13 @@ class TestDeselect(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testDeselectTrue")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testDeselectTrue:snk']
 
         expected = [1] * 5 + [0] * 5
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
         helpers.destroy_app(d)
@@ -2143,13 +2079,13 @@ class TestDeselect(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testDeselectFalse")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testDeselectFalse:snk']
 
         expected = [0] * 5 + [1] * 5
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2173,13 +2109,13 @@ class TestDeselect(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testDeselectBadSelect")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testDeselectBadSelect:snk']
 
         expected = [0] * 10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2205,7 +2141,7 @@ class TestLineJoin(CalvinSecureTestBase):
         app_info, errors, warnings = self.compile_script(script, "testBasicJoin")
         print errors
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         with open(datafile, "r") as fp:
@@ -2213,7 +2149,7 @@ class TestLineJoin(CalvinSecureTestBase):
 
         snk = d.actor_map['testBasicJoin:snk']
 
-        actual = wait_for_tokens(self.rt1, snk, 1)
+        actual = wait_for_tokens(rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
@@ -2237,13 +2173,13 @@ class TestRegex(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexMatch")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testRegexMatch:snk']
 
         expected = ["24.1632"]
-        actual = wait_for_tokens(self.rt1, snk, 1)
+        actual = wait_for_tokens(rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
@@ -2265,12 +2201,12 @@ class TestRegex(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexNoMatch")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testRegexNoMatch:snk']
         expected = ["x24.1632"]
-        actual = wait_for_tokens(self.rt1, snk, 1)
+        actual = wait_for_tokens(rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
@@ -2291,13 +2227,13 @@ class TestRegex(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexCapture")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testRegexCapture:snk']
 
         expected = ["24"]
-        actual = wait_for_tokens(self.rt1, snk, 1)
+        actual = wait_for_tokens(rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
@@ -2318,13 +2254,13 @@ class TestRegex(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexMultiCapture")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testRegexMultiCapture:snk']
 
         expected = ["24"]
-        actual = wait_for_tokens(self.rt1, snk, 1)
+        actual = wait_for_tokens(rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
@@ -2345,12 +2281,12 @@ class TestRegex(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexCaptureNoMatch")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testRegexCaptureNoMatch:snk']
         expected = ["x24.1632"]
-        actual = wait_for_tokens(self.rt1, snk, 1)
+        actual = wait_for_tokens(rt1, snk, 1)
 
         self.assert_lists_equal(expected, actual, min_length=1)
 
@@ -2370,13 +2306,13 @@ class TestConstantAsArguments(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testConstant")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testConstant:snk']
 
         expected = [42]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2393,13 +2329,13 @@ class TestConstantAsArguments(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantRecursive")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testConstantRecursive:snk']
 
         expected = [42]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2417,14 +2353,14 @@ class TestConstantOnPort(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
         time.sleep(.1)
 
         snk = d.actor_map['testLiteralOnPort:snk']
 
         expected = [42]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2439,13 +2375,13 @@ class TestConstantOnPort(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantOnPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testConstantOnPort:snk']
 
         expected = ["Hello"]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2461,13 +2397,13 @@ class TestConstantOnPort(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantRecursiveOnPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testConstantRecursiveOnPort:snk']
 
         expected = ["yay"]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2491,13 +2427,13 @@ class TestConstantAndComponents(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnCompPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testLiteralOnCompPort:snk']
 
         expected = ["42"]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2518,13 +2454,13 @@ class TestConstantAndComponents(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantOnCompPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testConstantOnCompPort:snk']
 
         expected = ["42"]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2545,13 +2481,13 @@ class TestConstantAndComponents(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testStringConstantOnCompPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testStringConstantOnCompPort:snk']
 
         expected = ["42"]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2574,13 +2510,13 @@ class TestConstantAndComponentsArguments(CalvinSecureTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testComponentArgument")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testComponentArgument:snk']
 
         expected = [1,2,3,4,5]
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=5)
 
@@ -2600,13 +2536,13 @@ class TestConstantAndComponentsArguments(CalvinSecureTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgument")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testComponentConstantArgument:snk']
 
         expected = [1,2,3,4,5]
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=5)
 
@@ -2627,13 +2563,13 @@ class TestConstantAndComponentsArguments(CalvinSecureTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgumentDirect")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testComponentConstantArgumentDirect:snk']
 
         expected = [1,2,3,4,5,6,7,8,9,10]
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2653,13 +2589,13 @@ class TestConstantAndComponentsArguments(CalvinSecureTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testComponentArgumentAsImplicitActor")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testComponentArgumentAsImplicitActor:snk']
 
         expected = ["hup"]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
 
@@ -2680,13 +2616,13 @@ class TestConstantAndComponentsArguments(CalvinSecureTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgumentAsImplicitActor")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testComponentConstantArgumentAsImplicitActor:snk']
 
         expected = ["hup"]*10
-        actual = wait_for_tokens(self.rt1, snk, len(expected))
+        actual = wait_for_tokens(rt1, snk, len(expected))
 
         self.assert_lists_equal(expected, actual, min_length=10)
         d.destroy()
@@ -2702,12 +2638,12 @@ class TestConstantifyOnPort(CalvinSecureTestBase):
             src.integer > /"X"/ snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testLiteralOnPort:snk']
 
-        actual = wait_for_tokens(self.rt1, snk, 10)
+        actual = wait_for_tokens(rt1, snk, 10)
         expected = ['X']*len(actual)
 
         self.assert_lists_equal(expected, actual, min_length=10)
@@ -2723,14 +2659,14 @@ class TestConstantifyOnPort(CalvinSecureTestBase):
             src.integer > /"X"/ snk1.token, snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPortlist")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk1 = d.actor_map['testLiteralOnPortlist:snk1']
         snk2 = d.actor_map['testLiteralOnPortlist:snk2']
 
-        actual1 = wait_for_tokens(self.rt1, snk1, 10)
-        actual2 = wait_for_tokens(self.rt1, snk2, 10)
+        actual1 = wait_for_tokens(rt1, snk1, 10)
+        actual2 = wait_for_tokens(rt1, snk2, 10)
 
         expected1 = ['X']*len(actual1)
         expected2 = range(1, len(actual2))
@@ -2749,13 +2685,13 @@ class TestConstantifyOnPort(CalvinSecureTestBase):
             src.integer > /"X"/ snk1.token, /"Y"/ snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralsOnPortlist")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk1 = d.actor_map['testLiteralsOnPortlist:snk1']
         snk2 = d.actor_map['testLiteralsOnPortlist:snk2']
-        actual1 = wait_for_tokens(self.rt1, snk1, 10)
-        actual2 = wait_for_tokens(self.rt1, snk2, 10)
+        actual1 = wait_for_tokens(rt1, snk1, 10)
+        actual2 = wait_for_tokens(rt1, snk2, 10)
 
         expected1 = ['X']*len(actual1)
         expected2 = ['Y']*len(actual2)
@@ -2776,14 +2712,14 @@ class TestConstantifyOnPort(CalvinSecureTestBase):
             src.integer > /FOO/ snk1.token, /BAR/ snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantsOnPortlist")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk1 = d.actor_map['testConstantsOnPortlist:snk1']
         snk2 = d.actor_map['testConstantsOnPortlist:snk2']
 
-        actual1 = wait_for_tokens(self.rt1, snk1, 10)
-        actual2 = wait_for_tokens(self.rt1, snk2, 10)
+        actual1 = wait_for_tokens(rt1, snk1, 10)
+        actual2 = wait_for_tokens(rt1, snk2, 10)
         expected1 = ['X']*len(actual1)
         expected2 = ['Y']*len(actual2)
 
@@ -2809,12 +2745,12 @@ class TestConstantifyOnPort(CalvinSecureTestBase):
             ticker.out > test.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnComponentInPort")
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         deploy_app(d)
 
         snk = d.actor_map['testLiteralOnComponentInPort:test']
 
-        actual = wait_for_tokens(self.rt1, snk, 10)
+        actual = wait_for_tokens(rt1, snk, 10)
         expected = ['X']*len(actual)
 
         self.assert_lists_equal(expected, actual, min_length=10)
@@ -2837,16 +2773,16 @@ class TestPortProperties(CalvinSecureTestBase):
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -2881,16 +2817,16 @@ class TestPortProperties(CalvinSecureTestBase):
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
         assert (self. get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -2937,16 +2873,16 @@ class TestPortProperties(CalvinSecureTestBase):
                 'token')
         assert (self.get_port_property(app_info, 'testScript:snk2:compsnk', 'token', 'in', 'test1') == 'dummy2')
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
         snk2 = d.actor_map['testScript:snk2:compsnk']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -2981,16 +2917,16 @@ class TestPortProperties(CalvinSecureTestBase):
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
         assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -3036,16 +2972,16 @@ class TestPortProperties(CalvinSecureTestBase):
                 'token')
         assert (self.get_port_property(app_info, 'testScript:snk2:compsnk', 'token', 'in', 'test1') == 'dummyx')
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
         snk2 = d.actor_map['testScript:snk2:compsnk']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -3091,16 +3027,16 @@ class TestPortProperties(CalvinSecureTestBase):
                 'token')
         assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test1') == 'dummyx')
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -3136,16 +3072,16 @@ class TestPortProperties(CalvinSecureTestBase):
                 'integer')
         assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
         snk2 = d.actor_map['testScript:snk2:compsnk']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -3182,16 +3118,16 @@ class TestPortProperties(CalvinSecureTestBase):
         assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[0] == 'round-robin')
         assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[1] == 'random')
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -3230,16 +3166,16 @@ class TestPortProperties(CalvinSecureTestBase):
         assert len(self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')) == 1
         assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[0] == 'round-robin')
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -3301,16 +3237,16 @@ class TestPortProperties(CalvinSecureTestBase):
         assert len(self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing')) == 2
         assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing')[0] == 'round-robin')
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
         snk2 = d.actor_map['testScript:snk2:compsnk']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -3363,16 +3299,16 @@ class TestPortProperties(CalvinSecureTestBase):
         assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test1')[0] == 'dummyy')
         assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test2') == 'dummyi')
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
         snk2 = d.actor_map['testScript:snk2']
-        actual1 = wait_for_tokens(self.rt1, snk1, 11)
-        actual2 = wait_for_tokens(self.rt1, snk2, 11)
+        actual1 = wait_for_tokens(rt1, snk1, 11)
+        actual2 = wait_for_tokens(rt1, snk2, 11)
 
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
 
@@ -3408,11 +3344,11 @@ class TestCollectPort(CalvinSecureTestBase):
                 'token')
         assert (self.get_port_property(app_info, 'testCollectPort:snk', 'token', 'in', 'nbr_peers') == 2)
 
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk = d.actor_map['testCollectPort:snk']
-        actual = wait_for_tokens(self.rt1, snk, 10)
+        actual = wait_for_tokens(rt1, snk, 10)
 
         high = [x for x in actual if x > 999]
         low = [x for x in actual if x < 999]
@@ -3455,12 +3391,12 @@ class TestCollectPort(CalvinSecureTestBase):
                 'token')
         assert (self.get_port_property(app_info, 'testCollectPort:duo:id1', 'token', 'in', 'nbr_peers') == 2)
         assert (self.get_port_property(app_info, 'testCollectPort:duo:id2', 'token', 'in', 'nbr_peers') == 2)
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testCollectPort:snk1']
         snk2 = d.actor_map['testCollectPort:snk2']
-        actual1, actual2 = actual_tokens_multiple(self.rt1, [snk1, snk2], 10)
+        actual1, actual2 = actual_tokens_multiple(rt1, [snk1, snk2], 10)
 
         high = sorted([x for x in actual1 + actual2 if x > 999])
         low = sorted([x for x in actual1 + actual2 if x < 999])
@@ -3503,12 +3439,12 @@ class TestCollectPort(CalvinSecureTestBase):
                 'token')
         assert (self.get_port_property(app_info, 'testCollectPort:snk1', 'token', 'in', 'nbr_peers') == 2)
         assert (self.get_port_property(app_info, 'testCollectPort:snk2', 'token', 'in', 'nbr_peers') == 2)
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
 
         snk1 = d.actor_map['testCollectPort:snk1']
         snk2 = d.actor_map['testCollectPort:snk2']
-        actual1, actual2 = actual_tokens_multiple(self.rt1, [snk1, snk2], 10)
+        actual1, actual2 = actual_tokens_multiple(rt1, [snk1, snk2], 10)
 
         high = sorted([x for x in actual1 + actual2 if x > 999])
         low = sorted([x for x in actual1 + actual2 if x < 999])
@@ -3535,11 +3471,11 @@ class TestCollectPort(CalvinSecureTestBase):
         assert (app_info['port_properties']['testCollectPort:snk'][0]['port'] ==
                 'token')
         assert (self.get_port_property(app_info, 'testCollectPort:snk', 'token', 'in', 'nbr_peers') == 2)
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
-        self.migrate(self.rt1, self.rt2, snk)
-        actual = wait_for_tokens(self.rt2, snk, 10)
+        self.migrate(rt1, rt2, snk)
+        actual = wait_for_tokens(rt2, snk, 10)
 
         high = [x for x in actual if x > 999]
         low = [x for x in actual if x < 999]
@@ -3566,11 +3502,11 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -3600,13 +3536,13 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src2 = d.actor_map['testCollectPort:src2']
-        self.migrate(self.rt1, self.rt2, src2)
+        self.migrate(rt1, rt2, src2)
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -3636,15 +3572,15 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src1 = d.actor_map['testCollectPort:src1']
         src2 = d.actor_map['testCollectPort:src2']
-        self.migrate(self.rt1, self.rt2, src1)
-        self.migrate(self.rt1, self.rt3, src2)
+        self.migrate(rt1, rt2, src1)
+        self.migrate(rt1, rt3, src2)
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -3675,11 +3611,11 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -3717,13 +3653,13 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src2 = d.actor_map['testCollectPort:src2']
-        self.migrate(self.rt1, self.rt2, src2)
+        self.migrate(rt1, rt2, src2)
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -3762,15 +3698,15 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src1 = d.actor_map['testCollectPort:src1']
         src2 = d.actor_map['testCollectPort:src2']
-        self.migrate(self.rt1, self.rt2, src1)
-        self.migrate(self.rt1, self.rt3, src2)
+        self.migrate(rt1, rt2, src1)
+        self.migrate(rt1, rt3, src2)
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -3809,11 +3745,11 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -3851,11 +3787,11 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -3897,12 +3833,12 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
-        exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
-        actual = request_handler.report(self.rt1, snk)
+        exceptions = wait_for_tokens(rt1, exptsnk, 10)
+        actual = request_handler.report(rt1, snk)
         assert len(actual) >= 3 * 10
         print actual, exceptions
 
@@ -3935,12 +3871,12 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
-        exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
-        actual = request_handler.report(self.rt1, snk)
+        exceptions = wait_for_tokens(rt1, exptsnk, 10)
+        actual = request_handler.report(rt1, snk)
         assert len(actual) >= 3 * 10
         print actual, exceptions
 
@@ -3973,12 +3909,12 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
-        exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
-        actual = request_handler.report(self.rt1, snk)
+        exceptions = wait_for_tokens(rt1, exptsnk, 10)
+        actual = request_handler.report(rt1, snk)
         assert len(actual) >= 3 * 10
         print actual, exceptions
 
@@ -4010,17 +3946,17 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
         actuals1 = [[]]
         actuals2 = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -4056,18 +3992,18 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-        self.migrate(self.rt1, self.rt2, snk2)
+        self.migrate(rt1, rt2, snk2)
         actuals1 = [[]]
         actuals2 = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -4103,19 +4039,19 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        snk1_meta = request_handler.get_actor(self.rt1, snk1)
-        snk2_meta = request_handler.get_actor(self.rt1, snk2)
+        snk1_meta = request_handler.get_actor(rt1, snk1)
+        snk2_meta = request_handler.get_actor(rt1, snk2)
         snk1_token_id = snk1_meta['inports'][0]['id']
         snk2_token_id = snk2_meta['inports'][0]['id']
-        self.migrate(self.rt1, self.rt2, snk1)
-        self.migrate(self.rt1, self.rt3, snk2)
+        self.migrate(rt1, rt2, snk1)
+        self.migrate(rt1, rt3, snk2)
         actuals1 = [[]]
         actuals2 = [[]]
-        rts = [self.rt2, self.rt3]
+        rts = [rt2, rt3]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -4151,13 +4087,13 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
         actuals1 = [[]]
         actuals2 = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -4189,14 +4125,14 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        self.migrate(self.rt1, self.rt2, snk2)
+        self.migrate(rt1, rt2, snk2)
         actuals1 = [[]]
         actuals2 = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -4228,15 +4164,15 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
-        self.migrate(self.rt1, self.rt2, snk1)
-        self.migrate(self.rt1, self.rt3, snk2)
+        self.migrate(rt1, rt2, snk1)
+        self.migrate(rt1, rt3, snk2)
         actuals1 = [[]]
         actuals2 = [[]]
-        rts = [self.rt2, self.rt3]
+        rts = [rt2, rt3]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -4274,11 +4210,11 @@ class TestPortRouting(CalvinSecureTestBase):
         print errors
         print app_info
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info, request_handler=request_handler)
+        d = deployer.Deployer(rt1, app_info, request_handler=request_handler)
         d.deploy()
         snk = d.actor_map['testActorPortProperty:snk']
         actuals = [[]]
-        rts = [self.rt1, self.rt2]
+        rts = [rt1, rt2]
         for i in range(5):
             to = rts[(i+1)%2]
             fr = rts[i%2]
@@ -4307,11 +4243,10 @@ class TestDeployScript(CalvinSecureTestBase):
       apply src, snk: simple
         """
 
-        rt = self.rt1
+        rt = rt1
         response = helpers.deploy_script(request_handler, "simple", script, rt)
 
         print response
-
         src = response['actor_map']['simple:src']
         snk = response['actor_map']['simple:snk']
 
@@ -4610,7 +4545,7 @@ class TestReplication(object):
 class TestPortmappingScript(CalvinSecureTestBase):
 
     def _run_test(self, script, minlen):
-        rt = self.rt1
+        rt = rt1
         response = helpers.deploy_script(request_handler, "simple", script, rt)
         snk = response['actor_map']['simple:snk']
         wait_for_tokens(rt, snk, minlen)

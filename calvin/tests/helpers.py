@@ -111,25 +111,33 @@ def deploy_app(request_handler, deployer, runtimes, retries=10):
 
     return retry(retries, check_application, lambda r: r, "Application not found on all peers")
 
-def deploy_signed_application(request_handler, runtimes, name, content, retries=10):
+def deploy_signed_application(request_handler, runtimes, name, application_path, retries=10):
     """
     Deploys app associated w/ deployer and then tries to verify its
     presence in registry (for all runtimes).
     """
     from functools import partial
+    from calvin.utilities.security import Security
+    content = Security.verify_signature_get_files(application_path)
+    if not content:
+        raise Exception("Failed finding script, signature and cert, stopping here")
     return retry(retries, partial(request_handler.deploy_application, runtimes, name, script=content['file'], content=content, check=True), lambda _: True, "Failed to deploy application")
 
-def deploy_signed_application_that_should_fail(request_handler, runtimes, name, content, retries=20):
+def deploy_signed_application_that_should_fail(request_handler, runtimes, name, application_path, retries=20):
     """
     Deploys app associated w/ deployer and then tries to verify its
     presence in registry (for all runtimes).
     """
+    from calvin.utilities.security import Security
     delay = 0.1
     retry = 0
     result = None
     while retry < retries:
         try:
-            result = request_handler.deploy_application(runtimes, name, content['file'], content=content, check=True)
+            content = Security.verify_signature_get_files(application_path)
+            if not content:
+                raise Exception("Failed finding script, signature and cert, stopping here")
+            result = request_handler.deploy_application(runtimes, name, script=content['file'], content=content, check=True)
         except Exception as e:
             try:
                 if e.message.startswith("401"):
@@ -472,6 +480,12 @@ def teardown_test_type(test_type, runtimes, request_handler):
             p.terminate()
             time.sleep(1)
 
+def sign_appInfo_for_security_tests(credentials_testdir):
+    from calvin.utilities import code_signer
+    cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
+    cs.sign_file(actor_Alternate2_path)
+
+
 def sign_files_for_security_tests(credentials_testdir):
     from calvin.utilities import code_signer
     from calvin.utilities.utils import get_home
@@ -490,6 +504,18 @@ def sign_files_for_security_tests(credentials_testdir):
         with open(file_path, 'w') as file:
             file.write(filedata)
 
+    def _copy_and_sign_actor(prefix, file_name):
+        #Create signed version of the actor
+        directory = os.path.join(actor_store_path, prefix)
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+            shutil.copy(os.path.join(orig_actor_store_path, prefix, "__init__.py"), os.path.join(actor_store_path, prefix, "__init__.py"))
+        orig_actor_path = os.path.join(orig_actor_store_path, prefix, file_name)
+        new_actor_path = os.path.join(actor_store_path, prefix, file_name)
+        shutil.copy(orig_actor_path, new_actor_path)
+        cs.sign_file(new_actor_path)
+        return new_actor_path
+
     homefolder = get_home()
     runtimesdir = os.path.join(credentials_testdir,"runtimes")
     runtimes_truststore_signing_path = os.path.join(runtimesdir,"truststore_for_signing")
@@ -500,13 +526,21 @@ def sign_files_for_security_tests(credentials_testdir):
     application_store_path = os.path.join(credentials_testdir, "scripts")
     print "Create test folders"
     try:
-        os.makedirs(actor_store_path)
-        os.makedirs(os.path.join(actor_store_path,"test"))
-        shutil.copy(os.path.join(orig_actor_store_path,"test","__init__.py"), os.path.join(actor_store_path,"test","__init__.py"))
-        os.makedirs(os.path.join(actor_store_path,"std"))
-        shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
-        os.makedirs(os.path.join(actor_store_path,"flow"))
-        shutil.copy(os.path.join(orig_actor_store_path,"flow","__init__.py"), os.path.join(actor_store_path,"flow","__init__.py"))
+#        os.makedirs(actor_store_path)
+#        os.makedirs(os.path.join(actor_store_path,"test"))
+#        shutil.copy(os.path.join(orig_actor_store_path,"test","__init__.py"), os.path.join(actor_store_path,"test","__init__.py"))
+#        os.makedirs(os.path.join(actor_store_path,"std"))
+#        shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
+#        os.makedirs(os.path.join(actor_store_path,"flow"))
+#        shutil.copy(os.path.join(orig_actor_store_path,"flow","__init__.py"), os.path.join(actor_store_path,"flow","__init__.py"))
+#        os.makedirs(os.path.join(actor_store_path,"misc"))
+#        shutil.copy(os.path.join(orig_actor_store_path,"misc","__init__.py"), os.path.join(actor_store_path,"misc","__init__.py"))
+#        os.makedirs(os.path.join(actor_store_path,"io"))
+#        shutil.copy(os.path.join(orig_actor_store_path,"io","__init__.py"), os.path.join(actor_store_path,"io","__init__.py"))
+#        os.makedirs(os.path.join(actor_store_path,"text"))
+#        shutil.copy(os.path.join(orig_actor_store_path,"text","__init__.py"), os.path.join(actor_store_path,"text","__init__.py"))
+#        os.makedirs(os.path.join(actor_store_path,"exception"))
+#        shutil.copy(os.path.join(orig_actor_store_path,"exception","__init__.py"), os.path.join(actor_store_path,"exception","__init__.py"))
         shutil.copytree(orig_application_store_path, application_store_path)
     except Exception as err:
         _log.error("Failed to create test folder structure, err={}".format(err))
@@ -516,28 +550,47 @@ def sign_files_for_security_tests(credentials_testdir):
     print "Trying to create a new test application/actor signer."
     cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
 
-    #Create signed version of CountTimer actor
-    orig_actor_Alternate2_path = os.path.join(orig_actor_store_path,"flow","Alternate2.py")
-    actor_Alternate2_path = os.path.join(actor_store_path,"flow","Alternate2.py")
-    shutil.copy(orig_actor_Alternate2_path, actor_Alternate2_path)
-    cs.sign_file(actor_Alternate2_path)
+    _copy_and_sign_actor("flow", "Alternate.py")
+    _copy_and_sign_actor("flow", "Alternate2.py")
+    _copy_and_sign_actor("flow", "Collect.py")
+    _copy_and_sign_actor("flow", "CollectCompleteDict.py")
+    _copy_and_sign_actor("flow", "Dealternate.py")
+    _copy_and_sign_actor("flow", "Deselect.py")
+    _copy_and_sign_actor("flow", "Dispatch.py")
+    _copy_and_sign_actor("flow", "DispatchDict.py")
+    _copy_and_sign_actor("flow", "Join.py")
+    _copy_and_sign_actor("flow", "Void.py")
+    _copy_and_sign_actor("flow", "Select.py")
+    _copy_and_sign_actor("flow", "Terminator.py")
 
-    #Create signed version of CountTimer actor
-    orig_actor_CountTimer_path = os.path.join(orig_actor_store_path,"std","CountTimer.py")
-    actor_CountTimer_path = os.path.join(actor_store_path,"std","CountTimer.py")
-    shutil.copy(orig_actor_CountTimer_path, actor_CountTimer_path)
-    cs.sign_file(actor_CountTimer_path)
+    _copy_and_sign_actor("io", "FileReader.py")
+
+    _copy_and_sign_actor("misc", "ExplicitStateExample.py")
+
+    _copy_and_sign_actor("std","Counter.py")
+    _copy_and_sign_actor("std","Constant.py")
+    _copy_and_sign_actor("std","Constantify.py")
+    _copy_and_sign_actor("std","Compare.py")
+    _copy_and_sign_actor("std","Identity.py")
+    _copy_and_sign_actor("std","Stringify.py")
+    _copy_and_sign_actor("std","Trigger.py")
+    actor_CountTimer_path = _copy_and_sign_actor("std","CountTimer.py")
+    actor_Sum_path = _copy_and_sign_actor("std","Sum.py")
+
+    _copy_and_sign_actor("test","FiniteCounter.py")
+    _copy_and_sign_actor("test","TestProcess.py")
+    actor_Sink_path = _copy_and_sign_actor("test","Sink.py")
+
+    _copy_and_sign_actor("text","LineJoin.py")
+    _copy_and_sign_actor("text","PrefixString.py")
+    _copy_and_sign_actor("text","RegexMatch.py")
+
+    _copy_and_sign_actor("exception","ExceptionHandler.py")
 
     #Create unsigned version of CountTimer actor
     actor_CountTimerUnsigned_path = actor_CountTimer_path.replace(".py", "Unsigned.py") 
     shutil.copy(actor_CountTimer_path, actor_CountTimerUnsigned_path)
     replace_text_in_file(actor_CountTimerUnsigned_path, "CountTimer", "CountTimerUnsigned")
-
-    #Create signed version of Sum actor
-    orig_actor_Sum_path = os.path.join(orig_actor_store_path,"std","Sum.py")
-    actor_Sum_path = os.path.join(actor_store_path,"std","Sum.py")
-    shutil.copy(orig_actor_Sum_path, actor_Sum_path)
-    cs.sign_file(actor_Sum_path)
 
     #Create unsigned version of Sum actor
     actor_SumUnsigned_path = actor_Sum_path.replace(".py", "Unsigned.py") 
@@ -553,12 +606,6 @@ def sign_files_for_security_tests(credentials_testdir):
     #Now append to the signed file so the signature verification fails
     with open(actor_SumFake_path, "a") as fd:
             fd.write(" ")
-
-    #Create signed version of Sink actor
-    orig_actor_Sink_path = os.path.join(orig_actor_store_path,"test","Sink.py")
-    actor_Sink_path = os.path.join(actor_store_path,"test","Sink.py")
-    shutil.copy(orig_actor_Sink_path, actor_Sink_path)
-    cs.sign_file(actor_Sink_path)
 
     #Create unsigned version of Sink actor
     actor_SinkUnsigned_path = actor_Sink_path.replace(".py", "Unsigned.py") 
