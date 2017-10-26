@@ -100,7 +100,16 @@ def compile_script_check_security(data, filename, cb, security=None, content=Non
     # This used to be
     # _handle_policy_decision(data, filename, verify, access_decision=True, security=None, org_cb=cb)
     # but since _handle_policy_decision is called with access_decision=True, security=None only compile_script would be called
-    deployable, issuetracker = compile_script(data, appname)
+    if 'app_info' not in data and 'script' in data:
+        deployable, issuetracker = compile_script(data['script'], appname)
+    elif 'app_info' in data:
+        deployable = data['app_info']
+        issuetracker = IssueTracker()
+    else:
+        _log.error("Neither app_info or script supplied")
+        # This error reason is detected in calvin control and gives proper REST response
+        _exit_with_error(org_cb)
+        return
     cb(deployable, issuetracker, security=None)
 
 
