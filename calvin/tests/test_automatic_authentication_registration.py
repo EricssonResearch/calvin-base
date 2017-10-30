@@ -69,7 +69,7 @@ from calvin.tests.helpers import get_ip_addr
 ip_addr = get_ip_addr()
 hostname = socket.gethostname()
 
-rt=[]
+runtimes=[]
 rt_attributes=[]
 request_handler=None
 storage_verified=False
@@ -81,13 +81,13 @@ class TestSecurity(unittest.TestCase):
     def setup(self, request):
         from calvin.Tools.csruntime import csruntime
         from conftest import _config_pytest
-        global rt
+        global runtimes
         global rt_attributes
         global request_handler
         try:
             shutil.rmtree(credentials_testdir)
         except Exception as err:
-            print "Failed to remove old tesdir, err={}".format(err)
+            print "Failed to remove old testdir, err={}".format(err)
             pass
         try:
             shutil.copytree(orig_identity_provider_path, identity_provider_path)
@@ -135,12 +135,18 @@ class TestSecurity(unittest.TestCase):
         for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
-        rt = helpers.start_all_runtimes(runtimes, hostname, request_handler)
+        helpers.start_all_runtimes(runtimes, hostname, request_handler)
+        time.sleep(1)
+        try:
+            helpers.security_verify_storage(runtimes, request_handler)
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
         request.addfinalizer(self.teardown)
 
 
     def teardown(self):
-        helpers.teardown_slow(rt, request_handler, hostname)
+        helpers.teardown_slow(runtimes, request_handler, hostname)
 
 
 ###################################
@@ -149,47 +155,36 @@ class TestSecurity(unittest.TestCase):
 
     @pytest.mark.slow
     def testPositive_CorrectlySignedApp_CorrectlySignedActors(self):
+        script = """
+      src : std.CountTimer()
+      snk : test.Sink(store_tokens=1, quiet=1)
+      src.integer > snk.token
+    """
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
-
-        try:
-            helpers.security_verify_storage(rt, request_handler)
-        except Exception as err:
-            _log.error("Failed storage verification, err={}".format(err))
-            raise
-
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "correctly_signed.calvin"))
-            if not content:
-                raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(rt[1], "correctly_signed", content['file'], 
-                        content=content,
-                        check=True)
+            result = request_handler.deploy_application(runtimes[1]["RT"], "test_script", script)
         except Exception as e:
-            if e.message.startswith("401"):
-                raise Exception("Failed security verification of app correctly_signed")
-            _log.exception("Test deploy failed")
-            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
+#            if e.message.startswith("401"):
+#                raise Exception("Failed security verification of app test_script")
+            _log.error("Test deploy failed, err={}".format(e))
+            raise Exception("Failed deployment of app test_script, no use to verify if requirements fulfilled")
 
         # Verify that actors exist like this
         try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
+            actors = helpers.fetch_and_log_runtime_actors(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
-        assert result['actor_map']['correctly_signed:src'] in actors[1]
-        assert result['actor_map']['correctly_signed:sum'] in actors[1]
-        assert result['actor_map']['correctly_signed:snk'] in actors[1]
+        assert result['actor_map']['test_script:src'] in actors[1]
+        assert result['actor_map']['test_script:snk'] in actors[1]
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
-        actual = request_handler.report(rt[1], result['actor_map']['correctly_signed:snk'])
+        actual = request_handler.report(runtimes[1]["RT"], result['actor_map']['test_script:snk'])
         print "actual=", actual
         assert len(actual) > 2
 
-        request_handler.delete_application(rt[1], result['application_id'])
+        request_handler.delete_application(runtimes[1]["RT"], result['application_id'])
 
 
 
