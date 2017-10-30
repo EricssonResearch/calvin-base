@@ -114,7 +114,6 @@ Start runtime, compile calvinscript and deploy application.
 def runtime(uris, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_node, start_node
     kwargs = {'attributes': attributes} if attributes else {}
-    _log.info("Hakan csruntime::runtime, control_uri={}".format(control_uri))
     try:
         if dispatch:
             return dispatch_node(uris=uris, control_uri=control_uri, **kwargs)
