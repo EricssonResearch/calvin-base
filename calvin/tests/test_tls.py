@@ -55,7 +55,7 @@ orig_application_store_path = os.path.join(security_testdir, "scripts")
 
 hostname=None
 NBR_OF_RUNTIMES=4
-rt=[]
+runtimes=[]
 rt_attributes=[]
 request_handler=None
 storage_verified=False
@@ -70,7 +70,7 @@ class TestSecurity(unittest.TestCase):
         from conftest import _config_pytest
         import fileinput
         global hostname
-        global rt
+        global runtimes
         global rt_attributes
         global request_handler
         try:
@@ -156,12 +156,18 @@ class TestSecurity(unittest.TestCase):
         for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
-        rt = helpers.start_all_runtimes(runtimes, hostname, request_handler, tls=True)
+        helpers.start_all_runtimes(runtimes, hostname, request_handler, tls=True)
+        time.sleep(1)
+        try:
+            helpers.security_verify_storage(runtimes, request_handler)
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
         request.addfinalizer(self.teardown)
 
 
     def teardown(self):
-        helpers.teardown(rt, request_handler, hostname)
+        helpers.teardown(runtimes, request_handler, hostname)
 
 
 ###################################
@@ -169,23 +175,16 @@ class TestSecurity(unittest.TestCase):
 ###################################
 
     def test_deploy_and_migrate_with_tls(self):
+        script = """
+      src : std.CountTimer()
+      snk : test.Sink(store_tokens=1, quiet=1)
+      src.integer > snk.token
+    """
         _log.analyze("TESTRUN", "+", {})
-        global storage_verified
-        if not storage_verified:
-            try:
-                storage_verified = helpers.security_verify_storage(rt, request_handler)
-            except Exception as err:
-                _log.error("Failed storage verification, err={}".format(err))
-                raise
+        rt = runtimes[2]['RT']
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(orig_application_store_path, "correctly_signed.calvin"))
-            if not content:
-                raise Exception("Failed finding script, signature and cert, stopping here")
-            request_handler.set_credentials({domain_name:{"user": "user3", "password": "pass3"}})
-            result = request_handler.deploy_application(rt[2], "test_script", content['file'], 
-                        content=content,
-                        check=True)
+            result = request_handler.deploy_application(rt, "test_script", script)
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed to deploy script")
@@ -193,23 +192,21 @@ class TestSecurity(unittest.TestCase):
             raise Exception("Failed deployment of script, no use to verify if requirements fulfilled")
 
         #Log actor ids:
-        _log.info("Actors id:s:\n\tsrc id={}\n\tsum={}\n\tsnk={}".format(result['actor_map']['test_script:src'],
-                                                                        result['actor_map']['test_script:sum'],
+        _log.info("Actors id:s:\n\tsrc id={}\n\tsnk={}".format(result['actor_map']['test_script:src'],
                                                                         result['actor_map']['test_script:snk']))
 
 
         # Verify that actors exist like this
         try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
+            actors = helpers.fetch_and_log_runtime_actors(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
         assert result['actor_map']['test_script:src'] in actors[2]
-        assert result['actor_map']['test_script:sum'] in actors[2]
         assert result['actor_map']['test_script:snk'] in actors[2]
         time.sleep(1)
         try:
-            actual = request_handler.report(rt[2], result['actor_map']['test_script:snk'])
+            actual = request_handler.report(rt, result['actor_map']['test_script:snk'])
         except Exception as err:
             _log.error("Failed to report from runtime 2, err={}".format(err))
             raise
@@ -217,6 +214,6 @@ class TestSecurity(unittest.TestCase):
         assert len(actual) > 5
 
         time.sleep(1)
-        request_handler.delete_application(rt[2], result['application_id'])
+        request_handler.delete_application(rt, result['application_id'])
 
 

@@ -712,7 +712,6 @@ def _create_CA_and_rehash(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
 
 def _get_node_names(runtimes):
     from calvin.utilities.attribute_resolver import AttributeResolver
-    from calvin.utilities import calvinuuid
     from copy import deepcopy
     for i in range(len(runtimes)):
         rt_attribute = deepcopy(runtimes[i]["attributes"])
@@ -744,6 +743,7 @@ def get_enrollment_passwords(runtimes, method="ca", request_handler=None, ca=Non
 
 def _generate_certiticates(ca, runtimes, domain_name, credentials_testdir):
     from calvin.utilities import runtime_credentials
+    from calvin.utilities import calvinuuid
     for i in range(len(runtimes)):
         runtimes[i]["id"]= calvinuuid.uuid("")
         node_name = runtimes[i]["node_name"]
@@ -884,7 +884,7 @@ def teardown_slow(runtimes, request_handler, hostname):
 def teardown(runtimes, request_handler, hostname):
     request_handler.set_credentials({"user": "user0", "password": "pass0"})
     for runtime in runtimes:
-        request_handler.quit(runtime)
+        request_handler.quit(runtime["RT"])
     time.sleep(0.2)
     for p in multiprocessing.active_children():
         p.terminate()
