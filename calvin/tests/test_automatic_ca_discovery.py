@@ -68,7 +68,7 @@ from calvin.tests.helpers import get_ip_addr
 ip_addr = get_ip_addr()
 hostname = socket.gethostname()
 
-rt=[]
+runtimes=[]
 rt_attributes=[]
 request_handler=None
 storage_verified=False
@@ -82,7 +82,7 @@ class TestSecurity(unittest.TestCase):
         from calvin.Tools.csruntime import csruntime
         from conftest import _config_pytest
         import fileinput
-        global rt
+        global runtimes
         global rt_attributes
         global request_handler
         try:
@@ -123,11 +123,17 @@ class TestSecurity(unittest.TestCase):
                         })
             rt_conf.save("/tmp/calvin{}.conf".format(5000+i))
 
-        rt = helpers.start_all_runtimes(runtimes, hostname, request_handler, tls=True)
+        helpers.start_all_runtimes(runtimes, hostname, request_handler, tls=True)
+        time.sleep(1)
+        try:
+            helpers.security_verify_storage(runtimes, request_handler)
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
         request.addfinalizer(self.teardown)
 
     def teardown(self):
-        helpers.teardown(rt, request_handler, hostname)
+        helpers.teardown(runtimes, request_handler, hostname)
 
 
 ###################################
@@ -137,30 +143,13 @@ class TestSecurity(unittest.TestCase):
     @pytest.mark.slow
     def test_deploy_and_migrate_with_automatice_ca_discovery(self):
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
-        start = time.time()
-        try:
-            helpers.security_verify_storage(rt, request_handler)
-        except Exception as err:
-            _log.error("Failed storage verification, err={}".format(err))
-            raise
-        time_to_verify_storaget = time.time()-start
-        time.sleep(1)
-        try:
-            rt0_id = request_handler.get_node_id(rt[0])
-            rt1_id = request_handler.get_node_id(rt[1])
-        except Exception as err:
-            _log.error("Failed to fetch runtime ids, err={}".format(err))
-            raise
         result = {}
         try:
             content = Security.verify_signature_get_files(os.path.join(application_store_path, "unsignedApp_unsignedActors.calvin"))
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user3", "password": "pass3"})
-            result = request_handler.deploy_application(rt[0], "unsignedApp_unsignedActors", content['file'], 
+            result = request_handler.deploy_application(runtimes[0]["RT"], "unsignedApp_unsignedActors", content['file'], 
                         content=content,
                         check=True)
         except Exception as e:
@@ -176,7 +165,7 @@ class TestSecurity(unittest.TestCase):
 
         # Verify that actors exist like this
         try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
+            actors = helpers.fetch_and_log_runtime_actors(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
@@ -185,7 +174,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['unsignedApp_unsignedActors:snk'] in actors[0]
         time.sleep(1)
         try:
-            actual = request_handler.report(rt[0], result['actor_map']['unsignedApp_unsignedActors:snk'])
+            actual = request_handler.report(runtimes[0]["RT"], result['actor_map']['unsignedApp_unsignedActors:snk'])
         except Exception as err:
             _log.error("Failed to report from runtime 0, err={}".format(err))
             raise
@@ -193,6 +182,6 @@ class TestSecurity(unittest.TestCase):
         assert len(actual) > 5
 
         time.sleep(1)
-        request_handler.delete_application(rt[0], result['application_id'])
+        request_handler.delete_application(runtimes[0]["RT"], result['application_id'])
 
 

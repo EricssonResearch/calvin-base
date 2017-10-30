@@ -114,6 +114,7 @@ Start runtime, compile calvinscript and deploy application.
 def runtime(uris, control_uri, attributes=None, dispatch=False):
     from calvin.utilities.nodecontrol import dispatch_node, start_node
     kwargs = {'attributes': attributes} if attributes else {}
+    _log.info("Hakan csruntime::runtime, control_uri={}".format(control_uri))
     try:
         if dispatch:
             return dispatch_node(uris=uris, control_uri=control_uri, **kwargs)
@@ -319,7 +320,6 @@ def runtime_certificate(rt_attributes):
                             cmd, headers = parse_http_response(response)
                             if 'location' in headers:
                                 ca_control_uri, ca_node_id = headers['location'].split('/node/')
-                                ca_control_uri = ca_control_uri.replace("http","https")
                                 ca_control_uris.append(ca_control_uri)
                                 _log.debug("CA control_uri={}, node_id={}".format(ca_control_uri, ca_node_id))
                     else:
@@ -385,10 +385,14 @@ def main():
             return 1
 
     uris = args.uris
+    tls_enabled = _conf.get("security","control_interface_security")
     if args.host is None:
         control_uri = None
     else:
-        control_uri = "http://%s:%d" % (args.host, args.controlport)
+        if tls_enabled=="tls":
+            control_uri = "https://%s:%d" % (args.host, args.controlport)
+        else:
+            control_uri = "http://%s:%d" % (args.host, args.controlport)
         uris.append("calvinip://%s:%d" % (args.host, args.port))
 
     if not uris:
