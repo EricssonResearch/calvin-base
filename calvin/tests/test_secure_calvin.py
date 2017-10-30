@@ -50,7 +50,7 @@ _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 homefolder = get_home()
-credentials_testdir = os.path.join(homefolder, ".calvin","test_all_security_together_dir")
+credentials_testdir = os.path.join(homefolder, ".calvin","test_secure_calvin")
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
@@ -63,6 +63,12 @@ actor_store_path = ""
 application_store_path = ""
 
 USE_TLS=True
+#NOTE, only proxy storage currently work, dynamically finding authz and auth
+# servers fails for DHT and SecureDHT for some reason
+PROXY_STORAGE = bool(int(os.environ.get("CALVIN_TESTING_PROXY_STORAGE", True)))
+DHT = bool(int(os.environ.get("CALVIN_TESTING_DHT_STORAGE", False)))
+SECURE_DHT = bool(int(os.environ.get("CALVIN_TESTING_SECURE_DHT_STORAGE", False)))
+
 #A minimum of 4 runtimes is assumed
 NBR_OF_RUNTIMES=5
 rt1 = None
@@ -94,7 +100,7 @@ def deploy_app(deployer, runtimes=None):
 def expected_tokens(rt, actor_id, t_type='seq'):
     return helpers.expected_tokens(request_handler, rt, actor_id, t_type)
 
-def wait_for_tokens(rt, actor_id, size=5, retries=40):
+def wait_for_tokens(rt, actor_id, size=5, retries=20):
     return helpers.wait_for_tokens(request_handler, rt, actor_id, size, retries)
 
 def actual_tokens(rt, actor_id, size=5, retries=20):
@@ -125,7 +131,6 @@ def get_runtime(n=1):
     return _runtimes[:n]
 
 @pytest.mark.slow
-@pytest.mark.essential
 @pytest.mark.skipif(skip, reason="Test all security could not resolve hostname, you might need to edit /etc/hosts")
 class CalvinSecureTestBase(unittest.TestCase):
 
@@ -155,7 +160,11 @@ class CalvinSecureTestBase(unittest.TestCase):
             print "Failed to create test folder structure, err={}".format(err)
             raise
         actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
-        runtimes = helpers.create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
+        if USE_TLS:
+            runtimes = helpers.create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
+        else:
+            #CA does not listen to http for ceritifate requests, so we'll have to create them before starting test
+            runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
@@ -170,11 +179,16 @@ class CalvinSecureTestBase(unittest.TestCase):
             rt_conf.set('security', 'control_interface_security', "tls")
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
-#        rt_conf.set('global', 'storage_type', "securedht")
 
         # Runtime 0: Certificate authority, authentication server, authorization server.
         rt0_conf = copy.deepcopy(rt_conf)
-        rt0_conf.set('global','storage_type','local')
+        if PROXY_STORAGE:
+            rt0_conf.set('global','storage_type','local')
+        elif SECURE_DHT:
+            rt0_conf.set('global','storage_type','securedht')
+        else:
+            #Default storage is DHT
+            rt0_conf.set('global','storage_type','dht')
         rt0_conf.set('security','certificate_authority',{
                         'domain_name':domain_name,
                         'is_ca':'True'
@@ -196,17 +210,44 @@ class CalvinSecureTestBase(unittest.TestCase):
         helpers.start_runtime0(runtimes, hostname, request_handler, tls=USE_TLS)
         helpers.get_enrollment_passwords(runtimes, method="controlapi_set", request_handler=request_handler)
         # Other runtimes: external authentication, external authorization.
-        rt_conf.set('global','storage_type','proxy')
-        rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % hostname )
-        rt_conf.set("security", "security_conf", {
-                        "comment": "External authentication, external authorization",
-                        "authentication": {
-                            "procedure": "external"
-                        },
-                        "authorization": {
-                            "procedure": "external"
-                        }
-                    })
+        if PROXY_STORAGE:
+            rt_conf.set('global','storage_type','proxy')
+            rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % hostname )
+            rt_conf.set("security", "security_conf", {
+                            "comment": "External authentication, external authorization",
+                            "authentication": {
+                                "procedure": "external"
+                            },
+                            "authorization": {
+                                "procedure": "external"
+                            }
+                        })
+        elif DHT:
+            rt_conf.set('global','storage_type','dht')
+            rt_conf.set("security", "security_conf", {
+                            "comment": "External authentication, external authorization",
+                            "authentication": {
+                                "procedure": "external",
+                                "server_uuid": runtimes[0]["id"]
+                            },
+                            "authorization": {
+                                "procedure": "external",
+                                "server_uuid": runtimes[0]["id"]
+                            }
+                        })
+        else:
+            rt_conf.set('global','storage_type','securedht')
+            rt_conf.set("security", "security_conf", {
+                            "comment": "External authentication, external authorization",
+                            "authentication": {
+                                "procedure": "external",
+                                "server_uuid": runtimes[0]["id"]
+                            },
+                            "authorization": {
+                                "procedure": "external",
+                                "server_uuid": runtimes[0]["id"]
+                            }
+                        })
 
         for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.set('security','certificate_authority',{
@@ -235,13 +276,6 @@ class CalvinSecureTestBase(unittest.TestCase):
 #        rt3_conf.save("/tmp/calvin5003.conf")
 
         helpers.start_other_runtimes(runtimes, hostname, request_handler, tls=USE_TLS)
-        time.sleep(1)
-        try:
-            helpers.security_verify_storage(runtimes, request_handler)
-        except Exception as err:
-            _log.error("Failed storage verification, err={}".format(err))
-            raise
-        rt0=runtimes[0]["RT"]
         rt1=runtimes[1]["RT"]
         rt2=runtimes[2]["RT"]
         rt3=runtimes[3]["RT"]
@@ -314,10 +348,10 @@ class CalvinSecureTestBase(unittest.TestCase):
 ###################################
 #   Signature related tests
 ###################################
-class TestSingedCode(CalvinSecureTestBase):
+@pytest.mark.slow
+@pytest.mark.essential
+class TestSignedCode(CalvinSecureTestBase):
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_CorrectlySignedApp_CorrectlySignedActors(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -341,8 +375,6 @@ class TestSingedCode(CalvinSecureTestBase):
 
         helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
-#    @pytest.mark.slow
-#    @pytest.mark.essential
 #    def testPositive_CorrectlySignedAppInfo_CorrectlySignedActors(self):
 #        _log.analyze("TESTRUN", "+", {})
 #        result = {}
@@ -376,8 +408,6 @@ class TestSingedCode(CalvinSecureTestBase):
 #        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testNegative_IncorrectlySignedApp(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -390,8 +420,6 @@ class TestSingedCode(CalvinSecureTestBase):
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
         return
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testNegative_CorrectlySignedApp_IncorrectlySignedActor(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -427,9 +455,9 @@ class TestSingedCode(CalvinSecureTestBase):
 ###################################
 #   Policy related tests
 ###################################
+@pytest.mark.slow
+@pytest.mark.essential
 class TestAuthorization(CalvinSecureTestBase):
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_Permit_UnsignedApp_SignedActors(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -453,8 +481,6 @@ class TestAuthorization(CalvinSecureTestBase):
 
         helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_Permit_UnsignedApp_UnsignedActor(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -472,7 +498,6 @@ class TestAuthorization(CalvinSecureTestBase):
                                                        runtimes[1]["RT"],
                                                        "unsignedApp_unsignedActors", 
                                                        os.path.join(application_store_path, "unsignedApp_unsignedActors.calvin")) 
-            _log.info("Hakan response={}".format(result))
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_unsignedActors")
@@ -487,8 +512,6 @@ class TestAuthorization(CalvinSecureTestBase):
 
         helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testNegative_Deny_SignedApp_SignedActor_UnallowedRequirement(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -520,8 +543,6 @@ class TestAuthorization(CalvinSecureTestBase):
         raise Exception("Actor with unallowed requirements was not stopped as it should have been")
 
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_Local_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -545,8 +566,6 @@ class TestAuthorization(CalvinSecureTestBase):
 
         helpers.delete_app(request_handler, runtimes[0]["RT"], result['application_id']) 
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_External_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -570,8 +589,6 @@ class TestAuthorization(CalvinSecureTestBase):
 
         helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_Migration_When_Denied(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -609,9 +626,9 @@ class TestAuthorization(CalvinSecureTestBase):
 #   Control interface authorization 
 #   as well as user db management
 ###################################
+@pytest.mark.slow
+@pytest.mark.essential
 class TestControlInterfaceAuthorization(CalvinSecureTestBase):
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testNegative_Control_Interface_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -626,8 +643,6 @@ class TestControlInterfaceAuthorization(CalvinSecureTestBase):
             raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
         return
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_Add_User(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -656,9 +671,9 @@ class TestControlInterfaceAuthorization(CalvinSecureTestBase):
 ###################################
 #   Authentication related tests
 ###################################
+@pytest.mark.slow
+@pytest.mark.essential
 class TestAuthentication(CalvinSecureTestBase):
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testNegative_UnallowedUser(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -673,8 +688,6 @@ class TestAuthentication(CalvinSecureTestBase):
             raise Exception("Deployment of app correctly_signed did not fail for security reasons")
         return
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testNegative_IncorrectPassword(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -689,8 +702,6 @@ class TestAuthentication(CalvinSecureTestBase):
             raise Exception("Deployment of app correctly_signed, did not fail for security reasons")  
         return
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_Local_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -716,8 +727,6 @@ class TestAuthentication(CalvinSecureTestBase):
 
         helpers.delete_app(request_handler, runtimes[0]["RT"], result['application_id']) 
 
-    @pytest.mark.slow
-    @pytest.mark.essential
     def testPositive_External_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
@@ -790,7 +799,7 @@ class TestAuthentication(CalvinSecureTestBase):
 #   Non-security Calvin tests
 ###################################
 @pytest.mark.slow
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestNodeSetup(CalvinSecureTestBase):
 
     """Testing starting a node"""
@@ -806,7 +815,7 @@ class TestNodeSetup(CalvinSecureTestBase):
         assert request_handler.get_node(rt1, rt1.id)['uris'] == rt1.uris
 
 
-@pytest.mark.essential
+#@pytest.mark.essential
 @pytest.mark.slow
 class TestRemoteConnection(CalvinSecureTestBase):
 
@@ -877,7 +886,7 @@ class TestRemoteConnection(CalvinSecureTestBase):
         request_handler.delete_actor(rt, src1)
         request_handler.delete_actor(rt, src2)
 
-    @pytest.mark.skip
+    @pytest.mark.xfail
     def testRemoteSlowFanoutPort(self):
         """Testing remote slow port with fan out and that token flow control works"""
 
@@ -891,9 +900,9 @@ class TestRemoteConnection(CalvinSecureTestBase):
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
 
         request_handler.connect(rt, snk1, 'token', peer.id, alt, 'token')
-        request_handler.connect(peer, alt, 'token_2', rt.id, src2, 'integer')
-        request_handler.connect(peer, alt, 'token_1', rt.id, src1, 'integer')
         request_handler.connect(peer, snk2, 'token', rt.id, src1, 'integer')
+        request_handler.connect(peer, alt, 'token_1', rt.id, src1, 'integer')
+        request_handler.connect(peer, alt, 'token_2', rt.id, src2, 'integer')
 
         # Wait for some tokens
         actual_1 = wait_for_tokens(rt, snk1, 10)
@@ -915,7 +924,7 @@ class TestRemoteConnection(CalvinSecureTestBase):
         request_handler.delete_actor(rt, src1)
         request_handler.delete_actor(rt, src2)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 @pytest.mark.slow
 class TestActorMigration(CalvinSecureTestBase):
 
@@ -1188,7 +1197,7 @@ class TestActorMigration(CalvinSecureTestBase):
         request_handler.delete_actor(peer0, wrapper)
         request_handler.delete_actor(rt, src)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 @pytest.mark.slow
 class TestCalvinScript(CalvinSecureTestBase):
 
@@ -1286,7 +1295,7 @@ class TestCalvinScript(CalvinSecureTestBase):
         for actor in d.actor_map.values():
             assert actor not in actors
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestConnections(CalvinSecureTestBase):
     @pytest.mark.slow
     def testLocalSourceSink(self):
@@ -1380,7 +1389,7 @@ class TestConnections(CalvinSecureTestBase):
         request_handler.delete_actor(rt2, src)
         request_handler.delete_actor(rt2, snk)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestScripts(CalvinSecureTestBase):
 
     @pytest.mark.slow
@@ -1453,7 +1462,7 @@ class TestStateMigration(CalvinSecureTestBase):
         helpers.destroy_app(d)
 
 @pytest.mark.slow
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestAppLifeCycle(CalvinSecureTestBase):
 
     def testAppDestructionOneRemote(self):
@@ -1497,7 +1506,6 @@ class TestAppLifeCycle(CalvinSecureTestBase):
             return True
 
         for rt in [ rt1, rt2, rt3 ]:
-            _log.info("Hakan rt={}".format(rt))
             check_rt = partial(check_actors_gone, rt)
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Not all actors gone on rt '%r'" % (rt.id, ))
             assert all_gone
@@ -1581,7 +1589,7 @@ class TestAppLifeCycle(CalvinSecureTestBase):
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Application still present on rt '%r'" % (rt.id, ))
             assert all_gone
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestEnabledToEnabledBug(CalvinSecureTestBase):
 
     def test10(self):
@@ -1825,7 +1833,7 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
         request_handler.delete_actor(rt1, snk1)
         request_handler.delete_actor(rt1, snk2)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestNullPorts(CalvinSecureTestBase):
 
     def testVoidActor(self):
@@ -1876,7 +1884,7 @@ class TestNullPorts(CalvinSecureTestBase):
         self.assert_lists_equal(expected, actual)
         helpers.destroy_app(d)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestCompare(CalvinSecureTestBase):
 
     def testBadOp(self):
@@ -1953,7 +1961,7 @@ class TestCompare(CalvinSecureTestBase):
         self.assert_lists_equal(expected, actual)
         helpers.destroy_app(d)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestSelect(CalvinSecureTestBase):
 
     def testTrue(self):
@@ -2037,7 +2045,7 @@ class TestSelect(CalvinSecureTestBase):
 
         helpers.destroy_app(d)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestDeselect(CalvinSecureTestBase):
 
     def testDeselectTrue(self):
@@ -2135,7 +2143,7 @@ class TestDeselect(CalvinSecureTestBase):
 
         helpers.destroy_app(d)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestLineJoin(CalvinSecureTestBase):
 
     def testBasicJoin(self):
@@ -2170,7 +2178,7 @@ class TestLineJoin(CalvinSecureTestBase):
         helpers.destroy_app(d)
 
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestRegex(CalvinSecureTestBase):
 
     def testRegexMatch(self):
@@ -2307,7 +2315,7 @@ class TestRegex(CalvinSecureTestBase):
         helpers.destroy_app(d)
 
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestConstantAsArguments(CalvinSecureTestBase):
 
     def testConstant(self):
@@ -2356,7 +2364,7 @@ class TestConstantAsArguments(CalvinSecureTestBase):
         helpers.destroy_app(d)
 
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestConstantOnPort(CalvinSecureTestBase):
 
     def testLiteralOnPort(self):
@@ -2424,7 +2432,7 @@ class TestConstantOnPort(CalvinSecureTestBase):
         helpers.destroy_app(d)
 
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestConstantAndComponents(CalvinSecureTestBase):
 
     def testLiteralOnCompPort(self):
@@ -2508,7 +2516,7 @@ class TestConstantAndComponents(CalvinSecureTestBase):
         helpers.destroy_app(d)
 
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestConstantAndComponentsArguments(CalvinSecureTestBase):
 
     def testComponentArgument(self):
@@ -2641,7 +2649,7 @@ class TestConstantAndComponentsArguments(CalvinSecureTestBase):
         self.assert_lists_equal(expected, actual, min_length=10)
         d.destroy()
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestConstantifyOnPort(CalvinSecureTestBase):
 
     def testLiteralOnPort(self):
@@ -2772,7 +2780,7 @@ class TestConstantifyOnPort(CalvinSecureTestBase):
         d.destroy()
 
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestPortProperties(CalvinSecureTestBase):
 
     def testRoundRobin(self):
@@ -3334,7 +3342,7 @@ class TestPortProperties(CalvinSecureTestBase):
 
         helpers.destroy_app(d)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestCollectPort(CalvinSecureTestBase):
 
     def testCollectPort(self):
@@ -3498,7 +3506,7 @@ class TestCollectPort(CalvinSecureTestBase):
         helpers.destroy_app(d)
 
 
-@pytest.mark.essential
+#@pytest.mark.essential
 class TestPortRouting(CalvinSecureTestBase):
 
     def testCollectPortRemoteMoveMany1(self):
@@ -3764,17 +3772,14 @@ class TestPortRouting(CalvinSecureTestBase):
         actuals = [[]]
         rts = [rt1, rt2]
         for i in range(5):
-#            _log.info("Hakan i={}\n\tactuals={}".format(i, actuals))dd
             to = rts[(i+1)%2]
             fr = rts[i%2]
             temp = wait_for_tokens(fr, snk, len(actuals[i]))
             actuals.append(temp)
-            _log.info("Hakan i={}\n\tactuals={}\n\tlen={}".format(i, temp, len(actuals[i])))
 #            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
         print actuals
-        _log.info("Hakan actuals={}".format(actuals))
 
         assert all([len(t)==2 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
@@ -3784,8 +3789,6 @@ class TestPortRouting(CalvinSecureTestBase):
 
         high = [x['src_two'] for x in actuals[-1]]
         low = [x['src_one'] for x in actuals[-1]]
-        _log.info("Hakan high={}".format(high))
-        _log.info("Hakan low={}".format(low))
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
@@ -4249,7 +4252,7 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=15)
         helpers.destroy_app(d)
 
-@pytest.mark.essential
+#@pytest.mark.essential
 @pytest.mark.slow
 class TestDeployScript(CalvinSecureTestBase):
 
@@ -4269,12 +4272,8 @@ class TestDeployScript(CalvinSecureTestBase):
         print response
         src = response['actor_map']['simple:src']
         snk = response['actor_map']['simple:snk']
-        _log.info("Hakan response={}".format(response))
-        _log.info("Hakan src={}".format(response['placement'][src][0]))
         rt_src = request_handler.get_node(rt, response['placement'][src][0])["control_uris"]
-        _log.info("Hakan rt_src={}".format(rt_src))
         rt_snk = request_handler.get_node(rt, response['placement'][snk][0])["control_uris"]
-        _log.info("Hakan rt_snk={}".format(rt_snk))
 
         assert response["requirements_fulfilled"]
 
@@ -4301,7 +4300,7 @@ def nbr_replicas(request):
     calvinconfig.get().get("testing","proxy_storage") != 1 and 
     calvinconfig.get().get("testing","force_replication") != 1,
     reason="Will fail on some systems with DHT")
-@pytest.mark.essential
+#@pytest.mark.essential
 @pytest.mark.slow
 class TestReplication(object):
     def testSimpleReplication(self, rt_order3, nbr_replicas):
