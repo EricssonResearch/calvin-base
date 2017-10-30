@@ -68,7 +68,7 @@ from calvin.tests.helpers import get_ip_addr
 ip_addr = get_ip_addr()
 hostname = socket.gethostname()
 
-rt=[]
+runtimes=[]
 rt_attributes=[]
 request_handler=None
 storage_verified=False
@@ -81,7 +81,7 @@ class TestSecurity(unittest.TestCase):
         from calvin.Tools.csruntime import csruntime
         from conftest import _config_pytest
         import fileinput
-        global rt
+        global runtimes
         global rt_attributes
         global request_handler
         try:
@@ -109,11 +109,17 @@ class TestSecurity(unittest.TestCase):
             })
             rt_conf.save("/tmp/calvin{}.conf".format(5000+i))
 
-        rt = helpers.start_all_runtimes(runtimes, hostname, request_handler)
+        helpers.start_all_runtimes(runtimes, hostname, request_handler)
+        time.sleep(1)
+        try:
+            helpers.security_verify_storage(runtimes, request_handler)
+        except Exception as err:
+            _log.error("Failed storage verification, err={}".format(err))
+            raise
         request.addfinalizer(self.teardown)
 
     def teardown(self):
-        helpers.teardown(rt, request_handler, hostname)
+        helpers.teardown(runtimes, request_handler, hostname)
 
 ###################################
 #   Policy related tests
@@ -121,61 +127,42 @@ class TestSecurity(unittest.TestCase):
 
     @pytest.mark.slow
     def test_deploy_and_migrate_with_securedht(self):
+        script = """
+      src : std.CountTimer()
+      snk : test.Sink(store_tokens=1, quiet=1)
+      src.integer > snk.token
+    """
         _log.analyze("TESTRUN", "+", {})
-        global rt
-        global request_handler
-        global security_testdir
-        start = time.time()
-        try:
-            helpers.security_verify_storage(rt, request_handler)
-        except Exception as err:
-            _log.error("Failed storage verification, err={}".format(err))
-            raise
-        time_to_verify_storaget = time.time()-start
-        time.sleep(1)
-        try:
-            rt0_id = request_handler.get_node_id(rt[0])
-            rt1_id = request_handler.get_node_id(rt[1])
-        except Exception as err:
-            _log.error("Failed to fetch runtime ids, err={}".format(err))
-            raise
         result = {}
         try:
-            content = Security.verify_signature_get_files(os.path.join(application_store_path, "unsignedApp_unsignedActors.calvin"))
-            if not content:
-                raise Exception("Failed finding script, signature and cert, stopping here")
-            request_handler.set_credentials({"user": "user3", "password": "pass3"})
-            result = request_handler.deploy_application(rt[0], "unsignedApp_unsignedActors", content['file'], 
-                        content=content,
-                        check=True)
+            result = request_handler.deploy_application(runtimes[0]["RT"], "unsignedApp_unsignedActors", script)
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed to deploy unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
         try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
+            actors = helpers.fetch_and_log_runtime_actors(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
+
  #Log actor ids:
-        _log.info("Actors id:s:\n\tsrc id={}\n\tsum={}\n\tsnk={}".format(result['actor_map']['unsignedApp_unsignedActors:src'],
-                                                                        result['actor_map']['unsignedApp_unsignedActors:sum'],
-                                                                        result['actor_map']['unsignedApp_unsignedActors:snk']))
+        _log.info("Actors id:s:\n\tsrc id={}\n\tsnk={}".format(result['actor_map']['unsignedApp_unsignedActors:src'],
+                                                               result['actor_map']['unsignedApp_unsignedActors:snk']))
 
 
-        # Verify that actors exist like this
+        # Verify that actors both src and snk are running at rt0
         try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
+            actors = helpers.fetch_and_log_runtime_actors(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
         assert result['actor_map']['unsignedApp_unsignedActors:src'] in actors[0]
-        assert result['actor_map']['unsignedApp_unsignedActors:sum'] in actors[0]
         assert result['actor_map']['unsignedApp_unsignedActors:snk'] in actors[0]
         time.sleep(1)
         try:
-            actual = request_handler.report(rt[0], result['actor_map']['unsignedApp_unsignedActors:snk'])
+            actual = request_handler.report(runtimes[0]["RT"], result['actor_map']['unsignedApp_unsignedActors:snk'])
         except Exception as err:
             _log.error("Failed to report from runtime 0, err={}".format(err))
             raise
@@ -184,58 +171,50 @@ class TestSecurity(unittest.TestCase):
 
         #Migrate snk actor to rt1
         time.sleep(2)
-        _log.info("Let's migrate actor {} from runtime {}(rt0) to runtime {}(rt1)".format(rt0_id, result['actor_map']['unsignedApp_unsignedActors:snk'], rt1_id))
+        _log.info("Let's migrate actor {} from runtime {}(rt0) to runtime {}(rt1)".format(result['actor_map']['unsignedApp_unsignedActors:snk'], runtimes[0]["id"],  runtimes[1]["id"]))
         try:
-            request_handler.migrate(rt[0], result['actor_map']['unsignedApp_unsignedActors:snk'], rt1_id)
+            request_handler.migrate(runtimes[0]["RT"], result['actor_map']['unsignedApp_unsignedActors:snk'], runtimes[1]["id"])
         except Exception as err:
             _log.error("Failed to send first migration request to runtime 0, err={}".format(err))
             raise
         try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
+            actors = helpers.fetch_and_log_runtime_actors(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
         assert result['actor_map']['unsignedApp_unsignedActors:src'] in actors[0]
-        assert result['actor_map']['unsignedApp_unsignedActors:sum'] in actors[0]
         assert result['actor_map']['unsignedApp_unsignedActors:snk'] in actors[1]
         time.sleep(1)
         try:
-            actual = request_handler.report(rt[1], result['actor_map']['unsignedApp_unsignedActors:snk'])
+            actual = request_handler.report(runtimes[1]["RT"], result['actor_map']['unsignedApp_unsignedActors:snk'])
         except Exception as err:
             _log.error("Failed to report snk values from runtime 1, err={}".format(err))
             raise
         _log.info("actual={}".format(actual))
         assert len(actual) > 3
 
-        #Migrate src actor to rt3
+        #Migrate src actor to rt1
         time.sleep(1)
         try:
-            request_handler.migrate(rt[0], result['actor_map']['unsignedApp_unsignedActors:src'], rt1_id)
+            request_handler.migrate(runtimes[0]["RT"], result['actor_map']['unsignedApp_unsignedActors:src'], runtimes[1]["id"])
         except Exception as err:
             _log.error("Failed to send second migration requestfrom runtime 0, err={}".format(err))
             raise
         try:
-            actors = helpers.fetch_and_log_runtime_actors(rt, request_handler)
+            actors = helpers.fetch_and_log_runtime_actors(runtimes, request_handler)
         except Exception as err:
             _log.error("Failed to get actors from runtimes, err={}".format(err))
             raise
         assert result['actor_map']['unsignedApp_unsignedActors:src'] in actors[1]
-        assert result['actor_map']['unsignedApp_unsignedActors:sum'] in actors[0]
         assert result['actor_map']['unsignedApp_unsignedActors:snk'] in actors[1]
         time.sleep(1)
         try:
-            actual = request_handler.report(rt[1], result['actor_map']['unsignedApp_unsignedActors:snk'])
+            actual = request_handler.report(runtimes[1]["RT"], result['actor_map']['unsignedApp_unsignedActors:snk'])
         except Exception as err:
             _log.error("Failed to report snk values from runtime 1, err={}".format(err))
             raise
         _log.info("actual={}".format(actual))
         assert len(actual) > 3
-        _log.info("\n\t----------------------------"
-                  "\n\tTotal time to verify storage is {} seconds"
-                  "\n\tTotal time of entire (including storage verification) is {} seconds"
-                  "\n\t----------------------------".format(time_to_verify_storaget, time.time()-start))
-
-        time.sleep(1)
-        request_handler.delete_application(rt[0], result['application_id'])
+        request_handler.delete_application(runtimes[0]["RT"], result['application_id'])
 
 
