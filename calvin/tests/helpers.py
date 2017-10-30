@@ -240,7 +240,6 @@ def expected_sum(n):
 def expected_tokens(request_handler, rt, actor_id, t_type):
     
     tokens = request_handler.report(rt, actor_id)
-    _log.info("Hakan helpers.expected_tokens, rt={}, tokens={}".format(rt, tokens))
     if t_type == 'seq':
         return expected_counter(tokens)
 
@@ -853,6 +852,12 @@ def start_other_runtimes(runtimes, hostname, request_handler, tls=False):
         runtimes[i]['RT'].uris = [uri]
         runtimes[i]['RT'].attributes=runtimes[i]["attributes"]
         time.sleep(0.1)
+    time.sleep(1)
+    try:
+        security_verify_storage(runtimes, request_handler)
+    except Exception as err:
+        _log.error("Failed storage verification, err={}".format(err))
+        raise
 
 def start_all_runtimes(runtimes, hostname, request_handler, tls=False):
     start_runtime0(runtimes, hostname, request_handler, tls=tls)

@@ -145,12 +145,6 @@ class TestSecurity(unittest.TestCase):
             rt_conf.save("/tmp/calvin500{}.conf".format(i))
 
         helpers.start_all_runtimes(runtimes, hostname, request_handler)
-        time.sleep(1)
-        try:
-            helpers.security_verify_storage(runtimes, request_handler)
-        except Exception as err:
-            _log.error("Failed storage verification, err={}".format(err))
-            raise
         request.addfinalizer(self.teardown)
 
 
