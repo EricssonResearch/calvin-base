@@ -54,14 +54,15 @@ credentials_testdir = os.path.join(homefolder, ".calvin","test_all_security_toge
 runtimesdir = os.path.join(credentials_testdir,"runtimes")
 runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
 security_testdir = os.path.join(os.path.dirname(__file__), "security_test")
-domain_name="test_security_domain"
-org_name='org.testexample'
+domain_name="com.ericsson"
+org_name='com.ericsson'
 orig_identity_provider_path = os.path.join(security_testdir,"identity_provider")
 identity_provider_path = os.path.join(credentials_testdir, "identity_provider")
 policy_storage_path = os.path.join(security_testdir, "policies")
 actor_store_path = ""
 application_store_path = ""
 
+USE_TLS=True
 #A minimum of 4 runtimes is assumed
 NBR_OF_RUNTIMES=5
 rt1 = None
@@ -93,7 +94,7 @@ def deploy_app(deployer, runtimes=None):
 def expected_tokens(rt, actor_id, t_type='seq'):
     return helpers.expected_tokens(request_handler, rt, actor_id, t_type)
 
-def wait_for_tokens(rt, actor_id, size=5, retries=20):
+def wait_for_tokens(rt, actor_id, size=5, retries=40):
     return helpers.wait_for_tokens(request_handler, rt, actor_id, size, retries)
 
 def actual_tokens(rt, actor_id, size=5, retries=20):
@@ -164,8 +165,9 @@ class CalvinSecureTestBase(unittest.TestCase):
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
 
         rt_conf = copy.deepcopy(_conf)
-        rt_conf.set('security', 'runtime_to_runtime_security', "tls")
-        rt_conf.set('security', 'control_interface_security', "tls")
+        if USE_TLS:
+            rt_conf.set('security', 'runtime_to_runtime_security', "tls")
+            rt_conf.set('security', 'control_interface_security', "tls")
         rt_conf.set('security', 'security_dir', credentials_testdir)
         rt_conf.set('global', 'actor_paths', [actor_store_path])
 #        rt_conf.set('global', 'storage_type', "securedht")
@@ -191,7 +193,7 @@ class CalvinSecureTestBase(unittest.TestCase):
                         }
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
-        helpers.start_runtime0(runtimes, hostname, request_handler, tls=True)
+        helpers.start_runtime0(runtimes, hostname, request_handler, tls=USE_TLS)
         helpers.get_enrollment_passwords(runtimes, method="controlapi_set", request_handler=request_handler)
         # Other runtimes: external authentication, external authorization.
         rt_conf.set('global','storage_type','proxy')
@@ -232,7 +234,7 @@ class CalvinSecureTestBase(unittest.TestCase):
 #                    })
 #        rt3_conf.save("/tmp/calvin5003.conf")
 
-        helpers.start_other_runtimes(runtimes, hostname, request_handler, tls=True)
+        helpers.start_other_runtimes(runtimes, hostname, request_handler, tls=USE_TLS)
         time.sleep(1)
         try:
             helpers.security_verify_storage(runtimes, request_handler)
@@ -242,7 +244,7 @@ class CalvinSecureTestBase(unittest.TestCase):
         rt0=runtimes[0]["RT"]
         rt1=runtimes[1]["RT"]
         rt2=runtimes[2]["RT"]
-        rt2=runtimes[3]["RT"]
+        rt3=runtimes[3]["RT"]
         for i in range(1, NBR_OF_RUNTIMES):
             try:
                 runtimes[i]["RT"].id = request_handler.get_node_id(runtimes[i]["RT"])
@@ -254,6 +256,7 @@ class CalvinSecureTestBase(unittest.TestCase):
         request.addfinalizer(self.teardown)
 
     def teardown(self):
+        pass
         helpers.teardown_slow(runtimes, request_handler, hostname)
 
     def assert_lists_equal(self, expected, actual, min_length=5):
@@ -455,12 +458,21 @@ class TestAuthorization(CalvinSecureTestBase):
     def testPositive_Permit_UnsignedApp_UnsignedActor(self):
         _log.analyze("TESTRUN", "+", {})
         result = {}
+        script = """
+      src : std.CountTimer()
+      snk : test.Sink(store_tokens=1, quiet=1)
+      src.integer > snk.token
+
+      rule simple: node_attr_match(index=["node_name", {"organization": "com.ericsson"}])
+      apply src, snk: simple
+        """
         try:
             request_handler.set_credentials({"user": "user3", "password": "pass3"})
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[1]["RT"],
                                                        "unsignedApp_unsignedActors", 
                                                        os.path.join(application_store_path, "unsignedApp_unsignedActors.calvin")) 
+            _log.info("Hakan response={}".format(result))
         except Exception as e:
             if e.message.startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_unsignedActors")
@@ -842,9 +854,9 @@ class TestRemoteConnection(CalvinSecureTestBase):
 
         snk1 = request_handler.new_actor_wargs(rt, 'test.Sink', 'snk1', store_tokens=1, quiet=1)
         alt = request_handler.new_actor(peer, 'flow.Alternate2', 'alt')
-        src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.1, steps=100)
+        src1 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src1', sleep=0.01, steps=100)
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
-
+        time.sleep(1)
         request_handler.connect(rt, snk1, 'token', peer.id, alt, 'token')
         request_handler.connect(peer, alt, 'token_1', rt.id, src1, 'integer')
         request_handler.connect(peer, alt, 'token_2', rt.id, src2, 'integer')
@@ -865,6 +877,7 @@ class TestRemoteConnection(CalvinSecureTestBase):
         request_handler.delete_actor(rt, src1)
         request_handler.delete_actor(rt, src2)
 
+    @pytest.mark.skip
     def testRemoteSlowFanoutPort(self):
         """Testing remote slow port with fan out and that token flow control works"""
 
@@ -878,9 +891,9 @@ class TestRemoteConnection(CalvinSecureTestBase):
         src2 = request_handler.new_actor_wargs(rt, 'std.CountTimer', 'src2', sleep=1.0, steps=10)
 
         request_handler.connect(rt, snk1, 'token', peer.id, alt, 'token')
-        request_handler.connect(peer, snk2, 'token', rt.id, src1, 'integer')
-        request_handler.connect(peer, alt, 'token_1', rt.id, src1, 'integer')
         request_handler.connect(peer, alt, 'token_2', rt.id, src2, 'integer')
+        request_handler.connect(peer, alt, 'token_1', rt.id, src1, 'integer')
+        request_handler.connect(peer, snk2, 'token', rt.id, src1, 'integer')
 
         # Wait for some tokens
         actual_1 = wait_for_tokens(rt, snk1, 10)
@@ -1484,6 +1497,7 @@ class TestAppLifeCycle(CalvinSecureTestBase):
             return True
 
         for rt in [ rt1, rt2, rt3 ]:
+            _log.info("Hakan rt={}".format(rt))
             check_rt = partial(check_actors_gone, rt)
             all_gone = helpers.retry(20, check_rt, lambda x: x, "Not all actors gone on rt '%r'" % (rt.id, ))
             assert all_gone
@@ -3514,7 +3528,6 @@ class TestPortRouting(CalvinSecureTestBase):
             self.migrate(fr, to, snk)
 
         print actuals
-
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
@@ -3751,12 +3764,17 @@ class TestPortRouting(CalvinSecureTestBase):
         actuals = [[]]
         rts = [rt1, rt2]
         for i in range(5):
+#            _log.info("Hakan i={}\n\tactuals={}".format(i, actuals))dd
             to = rts[(i+1)%2]
             fr = rts[i%2]
-            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
+            temp = wait_for_tokens(fr, snk, len(actuals[i]))
+            actuals.append(temp)
+            _log.info("Hakan i={}\n\tactuals={}\n\tlen={}".format(i, temp, len(actuals[i])))
+#            actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
         print actuals
+        _log.info("Hakan actuals={}".format(actuals))
 
         assert all([len(t)==2 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
@@ -3766,6 +3784,8 @@ class TestPortRouting(CalvinSecureTestBase):
 
         high = [x['src_two'] for x in actuals[-1]]
         low = [x['src_one'] for x in actuals[-1]]
+        _log.info("Hakan high={}".format(high))
+        _log.info("Hakan low={}".format(low))
         self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
@@ -4249,9 +4269,12 @@ class TestDeployScript(CalvinSecureTestBase):
         print response
         src = response['actor_map']['simple:src']
         snk = response['actor_map']['simple:snk']
-
+        _log.info("Hakan response={}".format(response))
+        _log.info("Hakan src={}".format(response['placement'][src][0]))
         rt_src = request_handler.get_node(rt, response['placement'][src][0])["control_uris"]
+        _log.info("Hakan rt_src={}".format(rt_src))
         rt_snk = request_handler.get_node(rt, response['placement'][snk][0])["control_uris"]
+        _log.info("Hakan rt_snk={}".format(rt_snk))
 
         assert response["requirements_fulfilled"]
 

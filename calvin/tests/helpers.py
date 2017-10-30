@@ -240,7 +240,7 @@ def expected_sum(n):
 def expected_tokens(request_handler, rt, actor_id, t_type):
     
     tokens = request_handler.report(rt, actor_id)
-
+    _log.info("Hakan helpers.expected_tokens, rt={}, tokens={}".format(rt, tokens))
     if t_type == 'seq':
         return expected_counter(tokens)
 
@@ -482,7 +482,7 @@ def teardown_test_type(test_type, runtimes, request_handler):
 
 def sign_appInfo_for_security_tests(credentials_testdir):
     from calvin.utilities import code_signer
-    cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
+    cs = code_signer.CS(organization="com.ericsson", commonName="signer", security_dir=credentials_testdir)
     cs.sign_file(actor_Alternate2_path)
 
 
@@ -548,7 +548,7 @@ def sign_files_for_security_tests(credentials_testdir):
         raise
 
     print "Trying to create a new test application/actor signer."
-    cs = code_signer.CS(organization="testsigner", commonName="signer", security_dir=credentials_testdir)
+    cs = code_signer.CS(organization="com.ericsson", commonName="signer", security_dir=credentials_testdir)
 
     _copy_and_sign_actor("flow", "Alternate.py")
     _copy_and_sign_actor("flow", "Alternate2.py")
@@ -765,8 +765,8 @@ def _generate_certiticates(ca, runtimes, domain_name, credentials_testdir):
 
 def _runtime_attributes(domain_name, runtimes):
     #Define the runtime attributes
-    org_name='org.testexample'
-    domain_name="test_security_domain"
+    org_name='com.ericsson'
+    domain_name="com.ericsson"
     for i in range(len(runtimes)):
         print i," "
         purpose = 'CA-authserver-authzserver' if i==0 else ""
