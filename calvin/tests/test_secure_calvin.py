@@ -3508,7 +3508,7 @@ class TestCollectPort(CalvinSecureTestBase):
 
 #@pytest.mark.essential
 class TestPortRouting(CalvinSecureTestBase):
-
+    @pytest.mark.xfail
     def testCollectPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3542,6 +3542,7 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectPortRemoteMoveMany2(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3578,6 +3579,7 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectPortRemoteMoveMany3(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3616,6 +3618,7 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3658,6 +3661,7 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectTagPortRemoteMoveMany2(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3703,6 +3707,7 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectTagPortRemoteMoveMany3(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3749,6 +3754,7 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectAllTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -3793,6 +3799,7 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testCollectAnyTagPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -4047,6 +4054,7 @@ class TestPortRouting(CalvinSecureTestBase):
 
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testRoundRobinPortRemoteMoveMany3(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -4095,6 +4103,7 @@ class TestPortRouting(CalvinSecureTestBase):
 
         helpers.destroy_app(d)
 
+    @pytest.mark.xfail
     def testRandomPortRemoteMoveMany1(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
