@@ -41,10 +41,11 @@ class MockInput(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Get data, verifies that can_read has been called."
     }
 
-    def init(self, data, calvinsys, **kwargs):
+    def init(self, data, **kwargs):
         self.read_called = False
         self._read_allowed = True
 
+        calvinsys = kwargs.get('calvinsys', '')
         if 'read' in calvinsys:
             self.data = calvinsys['read']
         else:

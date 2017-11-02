@@ -35,11 +35,12 @@ class MockOutput(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Compares data to expected data specified in actor test, also verifies that can_write has been called."
     }
 
-    def init(self, calvinsys, **kwargs):
+    def init(self, **kwargs):
         self.write_called = False
         self._write_allowed = True
-
         self._expected_data = []
+
+        calvinsys = kwargs.get('calvinsys', '')
         if 'write' in calvinsys:
             self._expected_data = calvinsys['write']
 
@@ -52,9 +53,11 @@ class MockOutput(base_calvinsys_object.BaseCalvinsysObject):
         if not self._write_allowed:
             raise AssertionError("write() called without preceding can_write()")
         self._write_allowed = False
-        expected = self._expected_data.pop(0)
-        if expected != data:
-            raise AssertionError("Expected data '%s' does not match '%s'" % (expected, data))
+
+        if self._expected_data:
+            expected = self._expected_data.pop(0)
+            if expected != data:
+                raise AssertionError("Expected data '%s' does not match '%s'" % (expected, data))
 
     def close(self):
         self._expected_data = []
