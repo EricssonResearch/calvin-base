@@ -5,98 +5,133 @@
     <link rel="stylesheet" type="text/css" href="css/calvin.css">
 </head>
 <body>
-<!-- Tabbed menu -->
-<div class="tabs">
-    <ul class="nav nav-tabs" id="tabMenu">
-        <li class="active"><a data-target="#tabPeers" data-toggle="tab"><h2>Runtimes</h2></a></li>
-        <li><a data-target="#tabApplications" data-toggle="tab"><h2>Applications</h2></a></li>
-        <li><a data-target="#tabConnections" data-toggle="tab"><h2>Connections</h2></a></li>
-    </ul>
 
-    <div class="tab-content">
-        <div id="tabPeers" class="tab-pane active">
-            <h4>Control API</h4>
-            <table class="table table-bordered table-striped" id="controlTable" style="width: 20%">
-            </table>
-            <h4>Runtimes</h4>
-            <table class="table table-bordered table-striped" id="peersTable">
-                <th align="left">ID</th>
-                <th align="left">Name</th>
-                <th align="left">URIs</th>
-                <th align="left">Control URIs</th>
-                <th align="left">Proxy</th>
-                <th align="left">Sleeping</th>
-                <th align="left">Configure</th>
-                <th align="left">Destroy</th>
-                <th align="left">Abolish</th>
-                <th align="left">Deploy application</th>
-            </table>
+<div class="container-fluid">
+
+  <div class="panel-group">
+    <div class="panel panel-default">
+      <div id="panelConnect" class="panel panel-default">
+        <div class="panel-body">
+          Control URI: <input type="text" name="connect_uri" id="connect_uri" size="35"/>
         </div>
+        <div class="panel-footer">
+          <button type="button" class="btn btn-primary btn-xs" onclick="connect()">Connect</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        <div id="tabApplications" class="tab-pane">
-            <div id="applicationData">
-                <h4>Application</h4>
-                <input type="checkbox" id="chkDrawApplication" onchange="toggleDrawConnections()" checked>Draw application graph<br>
-                &nbsp;&nbsp;<input type="checkbox" id="chkDrawConnections" checked>Draw connections<br>
-                &nbsp;&nbsp;<input type="checkbox" id="chkShowPortNames" checked>Show portnames<br>
+  <div class="panel-group">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4 class="panel-title">
+          <a data-toggle="collapse" href="#panelRuntimes">Runtimes</a>
+        </h4>
+      </div>
+      <div id="panelRuntimes" class="panel-collapse collapse in">
+        <div class="panel-body">
+          <table class="table" id="peersTable">
+              <th align="left">ID</th>
+              <th align="left">Name</th>
+              <th align="left">URIs</th>
+              <th align="left">Control URIs</th>
+              <th align="left">Proxy</th>
+              <th align="left">Sleeping</th>
+              <th align="left">Configure</th>
+              <th align="left">Destroy</th>
+              <th align="left">Abolish</th>
+              <th align="left">Deploy application</th>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-group">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4 class="panel-title">
+          <a data-toggle="collapse" href="#panelApplications">Applications</a>
+        </h4>
+      </div>
+      <div id="panelApplications" class="panel-collapse collapse in">
+        <div class="panel-body">
+          <table class="table">
+            <tr>
+              <td>
+                Application
+              </td>
+              <td>
+                Actor
+              </td>
+              <td>
+                Port
+              </td>
+              <td>
+                Tokens
+              </td>
+            </tr>
+            <tr>
+              <td>
                 <select id="applicationSelector" onchange="showApplication()"></select>
-                <table class="table table-bordered table-striped" id="applicationsTable"></table>
-                <h4>Actor</h4>
+                <table class="table" id="applicationsTable"></table>
+              </td>
+              <td>
                 <select id="actorSelector" onchange="updateSelectedActor()"></select>
-                <table class="table table-bordered table-striped" id="actorsTable"></table>
-                <h4>Port</h4>
+                <table class="table" id="actorsTable"></table>
+              </td>
+              <td>
                 <select id="portSelector" onchange="showPort()"></select>
-                <table class="table table-bordered table-striped" id="actorPortsTable"></table>
-                <h4>Tokens</h4>
-                <table class="table table-bordered table-striped" id="actorPortFifoTable"></table>
-            </div>
+                <table class="table" id="actorPortsTable"></table>
+              </td>
+              <td>
+                <table class="table" id="actorPortFifoTable"></table>
+              </td>
+            </tr>
+          </table>
+          </table>
+          <label data-toggle="collapse" data-target="#applicationGraphDiv" aria-expanded="false" aria-controls="applicationGraphDiv">
+            <input type="checkbox" id="chkDrawApplication" onchange="showApplication()">View graph
+          </label>
+          <div id="applicationGraphDiv" class="collapse">
+            <input type="checkbox" id="chkDrawConnections" onchange="showApplication()" checked>Draw connections<br>
+            <input type="checkbox" id="chkShowPortNames" onchange="showApplication()" checked>Show portnames<br>
             <div id="applicationGraph"></div>
+          </div>
         </div>
-
-        <div id="tabConnections" class="tab-pane">
-            <div id="connectionsGraph"></div>
-        </div>
+      </div>
     </div>
-</div>
+  </div>
 
-<!-- Log data from runtimes -->
-<div id="logData">
-    <h4>Trace</h4>
-    <button class="btn btn-primary btn-xs" style="margin-left: 5px;" onclick="startLog()">Start trace</button>
-    <button class="btn btn-danger btn-xs" style="margin-left: 5px;" onclick="stopLog()">Stop trace</button>
-    <button class="btn btn-default btn-xs" style="margin-left: 5px;" onclick="clearLog()">Clear trace</button>
-    <table class="table table-bordered table-striped" id="logTable" align="left" width="1200">
-        <th align="left">Timestamp</th>
-        <th align="left">Node id</th>
-        <th align="left">Event type</th>
-        <th align="left">Id/Peer id</th>
-        <th align="left">Name/URI</th>
-        <th align="left">Type/Action/Peer</th>
-        <th align="left">Is shadow/Consumed</th>
-        <th align="left">Produced</th>
-        <th align="left">Action result</th>
-    </table>
-</div>
-
-<!-- Connect dialog -->
-<div id="connectDialog" title="Connect" style="display:none;" class="modal modal-dialog">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h4 class="modal-title">Connect</h4>
+  <div class="panel-group">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4 class="panel-title">
+          <a data-toggle="collapse" href="#panelLog">Trace</a>
+        </h4>
+      </div>
+      <div id="panelLog" class="panel-collapse collapse in">
+        <div class="panel-body">
+          <table class="table" id="logTable">
+              <th align="left">Timestamp</th>
+              <th align="left">Node id</th>
+              <th align="left">Event type</th>
+              <th align="left">Id/Peer id</th>
+              <th align="left">Name/URI</th>
+              <th align="left">Type/Action/Peer</th>
+              <th align="left">Is shadow/Consumed</th>
+              <th align="left">Produced</th>
+              <th align="left">Action result</th>
+          </table>
         </div>
-        <div class="modal-body">
-            <form onsubmit="connectHandler(); return false;">
-                <label for="connect_uri">Control URI:</label>
-                <br>
-                <input type="text" name="connect_uri" id="connect_uri" size="35" />
-                <br>
-                <input type="checkbox" id="chk_get_all_runtimes" checked>Get all runtimes<br>
-            </form>
+        <div class="panel-footer">
+          <button type="button" class="btn btn-primary btn-xs" onclick="startLog()">Start trace</button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="stopLog()">Stop trace</button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="clearLog()">Clear</button>
         </div>
-        <div class="modal-footer">
-            <button type="submit" class="btn btn-success" onclick="connectHandler()">Connect</button>
-        </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Configure runtime dialog -->
