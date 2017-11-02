@@ -143,7 +143,7 @@ def handle_post_node_attribute_indexed_public_cb(self, key, value, handle, conne
             self.node.storage.add_index(indexed_string, key)
         value['attributes']['indexed_public'] = indexed_public
         self.node.storage.set(prefix="node-", key=key, value=value,
-            cb=CalvinCB(func=self.storage_cb, handle=handle, connection=connection))
+            cb=CalvinCB(self.index_cb, handle, connection))
     except Exception as e:
         _log.error("Failed to update node %s", e)
         self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
@@ -168,8 +168,7 @@ def handle_post_node_attribute_indexed_public(self, handle, connection, match, d
                 self.node.storage.remove_node_index(self.node)
                 self.node.attributes.set_indexed_public(data)
                 self.node_name = self.node.attributes.get_node_name_as_str()
-                self.node.storage.add_node(self.node, CalvinCB(
-                    func=self.storage_cb, handle=handle, connection=connection))
+                self.node.storage.add_node(self.node, CalvinCB(self.index_cb, handle, connection))
             else:
                 self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
         else:
@@ -274,8 +273,7 @@ def handle_resource_cpu_avail(self, handle, connection, match, data, hdr):
     Response status code: OK or INTERNAL_ERROR
     Response: none
     """
-    self.node.cpu_monitor.set_avail(data['value'],
-        CalvinCB(func=self.storage_cb, handle=handle, connection=connection))
+    self.node.cpu_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle, connection))
 
 @handler(r"POST /node/resource/memAvail\sHTTP/1")
 @authentication_decorator
@@ -290,5 +288,4 @@ def handle_resource_mem_avail(self, handle, connection, match, data, hdr):
     Response status code: OK or INTERNAL_ERROR
     Response: none
     """
-    self.node.mem_monitor.set_avail(data['value'],
-        CalvinCB(func=self.storage_cb, handle=handle, connection=connection))
+    self.node.mem_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle, connection))
