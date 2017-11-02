@@ -1520,7 +1520,7 @@ function replicate(actor_id)
         var node = findRuntime(actor.peer_id);
         if (node) {
             if (node.control_uris) {
-                var url = node.control_uri[0] + '/actor/' + actor.id + '/replicate';
+                var url = node.control_uris[0] + '/actor/' + actor.id + '/replicate';
                 if (peer_id == "same") {
                     var data = JSON.stringify({});
                 } else {
