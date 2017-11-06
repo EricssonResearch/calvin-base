@@ -37,9 +37,11 @@ class Sys(object):
                 pass
 
     def scheduler_wakeup(self):
+        print "FIRST MOVER 2"
         self._node.sched.schedule_calvinsys()
 
     def scheduler_maintenance_wakeup(self, delay=False):
+        print "FIRST MAINTENANCE MOVER 2"
         self._node.sched.trigger_maintenance_loop(delay)
 
     def _loadmodule(self, modulename):

@@ -100,6 +100,7 @@ class CalvinSys(object):
         """
         Trigger scheduler
         """
+        print "FIRST MOVER 1"
         self._node.sched.schedule_calvinsys(actor_id=actor.id)
 
     def has_capability(self, requirement):
