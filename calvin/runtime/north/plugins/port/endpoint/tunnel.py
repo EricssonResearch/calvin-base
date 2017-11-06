@@ -71,7 +71,7 @@ class TunnelInEndpoint(Endpoint):
             r = self.port.queue.com_write(Token.decode(payload['token']), self.peer_id, payload['sequencenbr'])
             if r == COMMIT_RESPONSE.handled:
                 # New token, trigger loop
-                self.schedule_tunnel()
+                self.schedule_tunnel(rx=self)
             if r == COMMIT_RESPONSE.invalid:
                 ok = False
             else:
@@ -163,7 +163,7 @@ class TunnelOutEndpoint(Endpoint):
         self.bulk = True
         self.backoff = 0.0
         # Maybe someone can fill the queue again
-        self.schedule_tunnel()
+        self.schedule_tunnel(tx_ack=self)
         r = self.port.queue.com_commit(self.peer_id, sequencenbr)
         if r == COMMIT_RESPONSE.handled or r == COMMIT_RESPONSE.invalid:
             return
@@ -181,7 +181,7 @@ class TunnelOutEndpoint(Endpoint):
             self.time_cont = curr_time
         if self.time_cont <= curr_time:
             # Need to trigger again due to either too late NACK or switched from series of ACK
-            self.schedule_tunnel()
+            self.schedule_tunnel(tx_nack=self)
         self.bulk = False
         self.backoff = min(1.0, 0.1 if self.backoff < 0.1 else self.backoff * 2.0)
 
@@ -218,17 +218,19 @@ class TunnelOutEndpoint(Endpoint):
             while self.port.queue.tokens_available(1, self.peer_id):
                 sent = True
                 self._send_one_token()
-        elif (self.port.queue.tokens_available(1, self.peer_id) and
-              self.port.queue.com_is_committed(self.peer_id) and
-              time.time() >= self.time_cont):
+        elif (self.port.queue.tokens_available(1, self.peer_id) and self.port.queue.com_is_committed(self.peer_id)):
             # Send only one since other side sent NACK likely due to their FIFO is full
             # Something to read and last (N)ACK recived
             self._send_one_token()
             sent = True
             self.time_cont = time.time() + self.backoff
             # Make sure that resend will be tried in backoff seconds
-            self.schedule_tunnel(backoff_time=self.backoff)
+            # self.schedule_tunnel(backoff_time=self.backoff)
+        else:
+            print "NOT SENDING, TIME < BACKOFF", self
         return sent
+        
+        
 
     def get_peer(self):
         return (self.peer_node_id, self.peer_id)

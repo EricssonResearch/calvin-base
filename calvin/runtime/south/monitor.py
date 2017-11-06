@@ -26,6 +26,25 @@ class Event_Monitor(object):
         """docstring for __init__"""
 
         self.endpoints = []
+        self._backoff = {}
+        
+    def set_backoff(self, endpoint):
+        self._backoff[endpoint] = 5
+        print backoff
+    
+    def _wait(self, endpoint):
+        return self._backoff.get(endpoint, 0) > 0
+        
+    def _decrease_backoff(self, endpoint):
+        bo = self._backoff.get(endpoint, 0)
+        if bo > 0:
+            self._backoff[endpoint] = b0-1
+    
+    def _outstanding(self):
+        for bo in self._backoff:
+            if bo > 0:
+                return True
+        return False            
 
     def register_endpoint(self, endpoint):
         self.endpoints.append(endpoint)
@@ -35,4 +54,11 @@ class Event_Monitor(object):
 
     def communicate(self, scheduler):
         # Communicate endpoint, see if anyone sent anything
-        return any([endp.communicate() for endp in self.endpoints])
+        did_try = False
+        for endp in self.endpoints:
+            if self._wait(endp): 
+                self._decrease_backoff(endp)
+            else:
+                endp.communicate()
+                did_try = True
+        return did_try or self._outstanding()

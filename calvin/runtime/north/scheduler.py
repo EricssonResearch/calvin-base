@@ -59,6 +59,7 @@ class Scheduler(object):
         self._cancel_schedule()
 
         # Transfer tokens between actors
+        # FIXME: did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
         did_transfer_tokens = self.monitor.communicate(self)
 
         # Pick which set of actors to fire, None means EVERY actor
@@ -113,7 +114,7 @@ class Scheduler(object):
         self._cancel_schedule()
         self._loop_once = async.DelayedCall(0, self.loop_once, True)
 
-    def _schedule_actors(self, actor_ids):
+    def _schedule_actors(self, actor_ids):        
         # Update the set of actors that could possibly fire
         self._trigger_set.update(actor_ids)
         # Schedule loop_once if-and-only-if
@@ -124,12 +125,27 @@ class Scheduler(object):
             self._cancel_watchdog()
             self._loop_once = async.DelayedCall(0, self.loop_once)
 
-    def schedule_tunnel(self, backoff_time=0):
-        # If backoff_time > 0 don't call UNTIL that time has passed.
-        # Doesn't work with current scheduler/monitor, so tunnel::communicate has a workaround
-        self._cancel_watchdog()
-        self._cancel_schedule()
-        self._loop_once = async.DelayedCall(backoff_time, self.loop_once, True)
+    # def schedule_tunnel(self, backoff_time=0):
+    #     # If backoff_time > 0 don't call UNTIL that time has passed.
+    #     # Doesn't work with current scheduler/monitor, so tunnel::communicate has a workaround
+    #     self._cancel_watchdog()
+    #     self._cancel_schedule()
+    #     self._loop_once = async.DelayedCall(backoff_time, self.loop_once, True)
+    def schedule_tunnel(self, rx=None, tx_ack=None, tx_nack=None):
+        _log.warning("schedule_tunnel")
+        # one of rx, tx_ack, tx_nack is endpoint in question
+        if rx:
+            # We got a token, meaning that the corrsponding actor could possibly fire -- _schedule_actors()
+            print "rx", rx, rx.port.owner.id
+            self._schedule_actors(actor_ids=[rx.port.owner.id])
+        elif tx_ack:
+            # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
+            print "tx_ack", tx_ack
+        elif tx_nack:
+            # We got back NACK on sent token, endpoint should wait before resending
+            print "tx_nack", tx_nack
+            self.monitor.set_backoff(tx_nack)
+        self._schedule_all()
 
     def schedule_calvinsys(self, actor_id=None):
         if actor_id is None:
