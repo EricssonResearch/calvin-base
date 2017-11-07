@@ -42,6 +42,12 @@
               <th align="left">Abolish</th>
               <th align="left">Deploy application</th>
           </table>
+          <label data-toggle="collapse" data-target="#connectionsGraphDiv" aria-expanded="false" aria-controls="connectionsGraphDiv">
+            <input type="checkbox" id="chkShowConnections" onchange="drawConnections()">View graph
+          </label>
+          <div id="connectionsGraphDiv" class="collapse">
+            <div id="connectionsGraph"></div>
+          </div>
         </div>
       </div>
     </div>

@@ -67,7 +67,7 @@ function showInfo(message)
 function clearLog()
 {
   var tableRef = document.getElementById('logTable');
-  for(var i = 1; i < tableRef.rows.length;) {
+  for(var i = 0; i < tableRef.rows.length;) {
      tableRef.deleteRow(i);
   }
 }
@@ -162,7 +162,7 @@ function updateGraph()
   }));
 
   // Run the renderer. This is what draws the final graph.
-  render(d3.select("svg g"), graph);
+  render(svg.select("g"), graph);
 
   svg.attr("width", 1000);
   svg.attr("height", 600);
@@ -185,6 +185,85 @@ function clearApplicationGraph() {
   svg.attr("width", 1000);
   svg.attr("height", 600);
 }
+
+function drawConnections()
+{
+  var nodes = [];
+  var links = [];
+
+  document.getElementById("connectionsGraph").innerHTML = "";
+
+  var width = 800,
+  height = 600;
+
+  var svg_con = d3.select("#connectionsGraph").append("svg")
+  .attr("width", width)
+  .attr("height", height);
+
+  var force = d3.layout.force()
+  .charge(-120)
+  .linkDistance(100)
+  .size([width, height]);
+
+  var index_peer;
+  for (index_peer in peers) {
+    var source = {id:peers[index_peer].id, name:peers[index_peer].node_name.name};
+    nodes.push(source);
+  }
+
+  for (index_peer in peers) {
+    var source = findNode(nodes, peers[index_peer].id);
+    if (source) {
+      var index_connection;
+      for (index_connection in peers[index_peer].peers) {
+        var dest = findNode(nodes, peers[index_peer].peers[index_connection]);
+        if (dest) {
+          links.push({source:source, target:dest});
+        }
+      }
+    }
+  }
+
+  force
+  .nodes(nodes)
+  .links(links)
+  .start();
+
+  var link = svg_con.selectAll(".link")
+  .data(force.links())
+  .enter().append("line")
+  .attr("class", "link")
+  .style("stroke-width", function(d) { return 2; });
+
+  var gnodes = svg_con.selectAll('g.gnode')
+  .data(nodes)
+  .enter()
+  .append('g')
+  .classed('gnode', true);
+
+  var node = gnodes.append("circle")
+  .attr("class", "node")
+  .attr("r", 10)
+  .style("fill", function(d) { return color("#aec7e8"); })
+  .call(force.drag);
+
+  var labels = gnodes.append("text")
+  .attr("x", 10)
+  .attr("y", ".31em")
+  .style("font-size", "15px")
+  .text(function(d) { return d.name; });
+
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+    .attr("y1", function(d) { return d.source.y; })
+    .attr("x2", function(d) { return d.target.x; })
+    .attr("y2", function(d) { return d.target.y; });
+
+    gnodes.attr("transform", function(d) {
+      return 'translate(' + [d.x, d.y] + ')';
+    });
+  });
+};
 
 // Runtime object constructor function
 function runtimeObject(id)
@@ -1786,7 +1865,7 @@ function eventHandler(event)
   var trace_size = $("#trace_size").val();
   var data = JSON.parse(event.data);
   var tableRef = document.getElementById('logTable');
-  if (tableRef.rows.length > trace_size) {
+  if (tableRef.rows.length >= trace_size) {
     tableRef.deleteRow(tableRef.rows.length -1);
   }
   var newRow = tableRef.insertRow(0);
