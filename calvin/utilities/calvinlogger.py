@@ -25,7 +25,7 @@ from colorlog import ColoredFormatter
 _name = "calvin"
 _log = None
 _use_color = False
-
+_ch_handler = None
 
 class JSONEncoderIters(json.JSONEncoder):
     def default(self, o):
@@ -79,6 +79,7 @@ logging.addLevelName(5, "ANALYZE")
 def _create_logger(filename=None):
     global _log
     global _name
+    global _ch_handler
     if _log is None:
         _log = logging.getLogger(_name)
         _log.setLevel(logging.INFO)
@@ -118,10 +119,17 @@ def _create_logger(filename=None):
 
         # add ch to logger
         _log.addHandler(ch)
+        _ch_handler = ch # To allow further logger to use the same handler        
 
     return _log
 
-
+def add_logging_handler(logger_name):
+    global _ch_handler
+    try:
+        logging.getLogger(logger_name).addHandler(_ch_handler)
+    except Exception as e:
+        _log.error("Could not add logger {}: {}".format(logger_name, e))
+    
 def set_file(filename):
     _create_logger(filename)
 
