@@ -53,77 +53,61 @@ class Scheduler(object):
             async.DelayedCall(0, async.stop_ioloop)
         self.done = True
 
-    def loop_once(self, fire_all=False):
-        # We don't know how we got here, so cancel both of these (safe thing to do)
-        self._cancel_watchdog()
-        self._cancel_schedule()
-
-        # Transfer tokens between actors
-        # FIXME: did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
-        did_transfer_tokens = self.monitor.communicate(self)
-
-        # Pick which set of actors to fire, None means EVERY actor
-        actors_to_fire = self.all_actors() if fire_all else self.pending_actors()
-        # Reset the set of potential actors
-        self._trigger_set = set()
-        did_fire_actor_ids = self.fire_actors(actors_to_fire)
-        # If the did_fire_actor_ids set is empty no actor could fire any action
-        did_fire = bool(did_fire_actor_ids)
-
-        activity = did_fire or did_transfer_tokens
-
-        if activity:
-            # Something happened - run again
-            # We would like to call _schedule_actors with a list of actors, like so ...
-            # self._schedule_actors(actor_ids=actor_ids)
-            # ... but we don't have a strategy, so run'em all :(
-            self._schedule_all()
-        else:
-            # No firings, set a watchdog timeout
-            self._schedule_watchdog()
-
     def all_actors(self):
         return self.actor_mgr.enabled_actors()
+        
+    def all_actor_ids(self):
+        return [a.id for a in self.all_actors()]
 
     def pending_actors(self):
-        actors = self.actor_mgr.enabled_actors()
+        actors = self.all_actors()
         pending = [a for a in actors if a.id in self._trigger_set]
         return pending
 
-    def _cancel_schedule(self):
-        if self._loop_once is not None:
-            self._loop_once.cancel()
-            self._loop_once = None
+    def pending(self):
+        return self._trigger_set
+        
+    def clear_pending(self):
+        self._trigger_set = set()
 
-    def _cancel_watchdog(self):
-        if self._watchdog is not None:
-            self._watchdog.cancel()
-            self._watchdog = None
+    def update_pending(self, actor_ids):
+        self._trigger_set.update(actor_ids)
 
-    def _watchdog_wakeup(self):
-        _log.warning("Watchdog wakeup -- this should not really happen...")
-        self._schedule_all()
+    def strategy(self, did_transfer_tokens, did_fire_actor_ids):
+        raise Exception("Must implement strategy in subclass")
 
-    def _schedule_watchdog(self):
-        self._watchdog = async.DelayedCall(self._watchdog_timeout, self._watchdog_wakeup)
-
-    def _schedule_all(self):
-        # If there is a scheduled loop_once then cancel it since it might be
-        # scheduled later, and/or with argument set to False.
+    def loop_once(self):
+        # We don't know how we got here, so cancel both of these (safe thing to do)
         self._cancel_watchdog()
         self._cancel_schedule()
-        self._loop_once = async.DelayedCall(0, self.loop_once, True)
+        # Transfer tokens between actors
+        # FIXME: did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
+        did_transfer_tokens = self.monitor.communicate(self)
+        # Pick which set of actors to fire
+        actors_to_fire = self.pending_actors()
+        # Reset the set of potential actors
+        self.clear_pending()
+        did_fire_actor_ids = self.fire_actors(actors_to_fire)
+        self.strategy(did_transfer_tokens, did_fire_actor_ids)
 
-    def _schedule_actors(self, actor_ids):        
-        # Update the set of actors that could possibly fire
-        self._trigger_set.update(actor_ids)
-        # Schedule loop_once if-and-only-if
-        #                    it is not already scheduled
-        #                    AND
-        #                    the set of actors is non-empty
-        if self._loop_once is None and self._trigger_set:
-            self._cancel_watchdog()
-            self._loop_once = async.DelayedCall(0, self.loop_once)
+
+    def fire_actors(self, actors):
+        """
+        Try to fire actions on actors on this runtime.
+        Parameter 'actors' is a set of actors to try (in that ).
+        Returns a set with id of actors that did fire at least one action
+        """
+        did_fire_actor_ids = set()
+        for actor in actors:
+            try:
+                _log.debug("Fire actor %s (%s, %s)" % (actor.name, actor._type, actor.id))
+                did_fire_action = actor.fire()
+                if did_fire_action:
+                    did_fire_actor_ids.add(actor.id)
+            except Exception as e:
+                self._log_exception_during_fire(e)
+        
+        return did_fire_actor_ids
 
     # def schedule_tunnel(self, backoff_time=0):
     #     # If backoff_time > 0 don't call UNTIL that time has passed.
@@ -153,27 +137,52 @@ class Scheduler(object):
         else:
             self._schedule_actors(actor_ids=[actor_id])
 
+    def _cancel_schedule(self):
+        if self._loop_once is not None:
+            self._loop_once.cancel()
+            self._loop_once = None
+
+    def _cancel_watchdog(self):
+        if self._watchdog is not None:
+            self._watchdog.cancel()
+            self._watchdog = None
+
+    def _watchdog_wakeup(self):
+        _log.warning("Watchdog wakeup -- this should not really happen...")
+        self._schedule_all()
+
+    def _schedule_watchdog(self):
+        self._watchdog = async.DelayedCall(self._watchdog_timeout, self._watchdog_wakeup)
+
+    def _schedule_all(self):
+        # If there is a scheduled loop_once then cancel it since it might be
+        # scheduled later, and/or with argument set to False.
+        self._cancel_watchdog()
+        self._cancel_schedule()
+        self.update_pending(self.all_actor_ids())
+        # print "Pending: ", self.all_actor_ids(), self.pending()
+        self._loop_once = async.DelayedCall(0, self.loop_once)
+
+    def _schedule_actors(self, actor_ids):
+        # Update the set of actors that could possibly fire
+        self.update_pending(actor_ids)
+        # Schedule loop_once if-and-only-if
+        #                    it is not already scheduled
+        #                    AND
+        #                    the set of actors is non-empty
+        if self._loop_once is None:
+            if self.pending():
+                self._cancel_watchdog()
+                self._loop_once = async.DelayedCall(0, self.loop_once)
+
+
     def _log_exception_during_fire(self, e):
         _log.exception(e)
 
-    def fire_actors(self, actors):
-        """
-        Try to fire actions on actors on this runtime.
-        Parameter 'actors' is a set of actors to try (in that ).
-        Returns a set with id of actors that did fire at least one action
-        """
-        did_fire_actor_ids = set()
-        for actor in actors:
-            try:
-                _log.debug("Fire actor %s (%s, %s)" % (actor.name, actor._type, actor.id))
-                did_fire_action = actor.fire()
-                if did_fire_action:
-                    did_fire_actor_ids.add(actor.id)
-            except Exception as e:
-                self._log_exception_during_fire(e)
 
-        return did_fire_actor_ids
-
+    #
+    # Maintenance loop
+    #
     def maintenance_loop(self):
         # Migrate denied actors
         for actor in self.actor_mgr.migratable_actors():
@@ -195,6 +204,27 @@ class Scheduler(object):
         else:
             self._maintenance_loop = async.DelayedCall(0, self.maintenance_loop)
 
+
+class BaselineScheduler(Scheduler):
+
+    def strategy(self, did_transfer_tokens, did_fire_actor_ids):
+        
+        # If the did_fire_actor_ids set is empty no actor could fire any action
+        did_fire = bool(did_fire_actor_ids)
+        activity = did_fire or did_transfer_tokens
+        # print "STRATEGY:", did_transfer_tokens, did_fire_actor_ids, did_fire, activity
+        if activity:
+            # Something happened - run again
+            # We would like to call _schedule_actors with a list of actors, like so ...
+            # self._schedule_actors(actor_ids=actor_ids)
+            # ... but we don't have a strategy, so run'em all :(
+            self._schedule_all()
+            # print "STRATEGY: _schedule_all"
+        else:
+            # No firings, set a watchdog timeout
+            self._schedule_watchdog()
+            # print "STRATEGY: _schedule_watchdog"
+        
 
 class DebugScheduler(Scheduler):
     """This is an instrumented version of the scheduler for use in debugging runs."""

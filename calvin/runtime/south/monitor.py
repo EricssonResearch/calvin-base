@@ -52,13 +52,27 @@ class Event_Monitor(object):
     def unregister_endpoint(self, endpoint):
         self.endpoints.remove(endpoint)
 
+    # def communicate(self, scheduler):
+    #     # Communicate endpoint, see if anyone sent anything
+    #     did_try = False
+    #     for endp in self.endpoints:
+    #         if self._wait(endp):
+    #             self._decrease_backoff(endp)
+    #         else:
+    #             endp.communicate()
+    #             did_try = True
+    #     return did_try or self._outstanding()
+    
     def communicate(self, scheduler):
         # Communicate endpoint, see if anyone sent anything
         did_try = False
+        did_comm = False
         for endp in self.endpoints:
-            if self._wait(endp): 
+            if self._wait(endp):
                 self._decrease_backoff(endp)
             else:
-                endp.communicate()
+                did_comm |= endp.communicate()
                 did_try = True
-        return did_try or self._outstanding()
+                
+        return did_comm
+    

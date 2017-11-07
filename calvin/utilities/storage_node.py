@@ -47,7 +47,8 @@ class StorageNode(object):
         self.id = calvinuuid.uuid("NODE")
         self.control_uri = control_uri
         self.control = calvincontrol.get_calvincontrol()
-        _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
+        # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
+        _scheduler = scheduler.BaselineScheduler
         self.sched = _scheduler(self, FakeAM(), FakeMonitor())
         self.control.start(node=self, uri=control_uri)
         self.storage = storage.Storage(self)
