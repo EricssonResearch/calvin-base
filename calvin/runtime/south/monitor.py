@@ -38,7 +38,7 @@ class Event_Monitor(object):
     def _decrease_backoff(self, endpoint):
         bo = self._backoff.get(endpoint, 0)
         if bo > 0:
-            self._backoff[endpoint] = b0-1
+            self._backoff[endpoint] = bo-1
     
     def _outstanding(self):
         for bo in self._backoff:
