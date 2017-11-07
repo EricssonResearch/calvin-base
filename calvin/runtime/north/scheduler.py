@@ -43,7 +43,6 @@ class Scheduler(object):
         self._watchdog_timeout = 1
         self._maintenance_loop = None
         self._maintenance_delay = _conf.get(None, "maintenance_delay") or 300
-        self.actor_pressures = {}
 
     def run(self):
         async.run_ioloop()
