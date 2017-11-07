@@ -20,6 +20,8 @@ import inspect
 import os
 import traceback
 
+from twisted.python import log as twisted_logger
+
 from colorlog import ColoredFormatter
 
 _name = "calvin"
@@ -118,6 +120,12 @@ def _create_logger(filename=None):
 
         # add ch to logger
         _log.addHandler(ch)
+        _log.info("Starting twisted logger")
+        observer = twisted_logger.PythonLoggingObserver()
+        observer.start()
+        logging.getLogger("twisted").addHandler(ch)
+        _log.info("twisted logging on-line")
+        
 
     return _log
 
