@@ -116,7 +116,6 @@ class TunnelOutEndpoint(Endpoint):
         self.schedule_tunnel = schedule_tunnel
         # Keep track of acked tokens, only contains something post call if acks comes out of order
         self.sequencenbrs_acked = []
-        self.backoff = 0.0
         self.bulk = True
 
     def __str__(self):
@@ -159,7 +158,6 @@ class TunnelOutEndpoint(Endpoint):
     def _reply_ack(self, sequencenbr, status):
         # Back to full send speed directly
         self.bulk = True
-        self.backoff = 0.0
         # Maybe someone can fill the queue again
         self.schedule_tunnel(tx_ack=self)
         r = self.port.queue.com_commit(self.peer_id, sequencenbr)
@@ -175,7 +173,6 @@ class TunnelOutEndpoint(Endpoint):
     def _reply_nack(self, sequencenbr, status):
         # Make send only send one token at a time and have increasing time between them
         self.bulk = False
-        self.backoff = min(1.0, 0.1 if self.backoff < 0.1 else self.backoff * 2.0)
         # Need to trigger again due to either too late NACK or switched from series of ACK
         self.schedule_tunnel(tx_nack=self)
 
@@ -190,7 +187,7 @@ class TunnelOutEndpoint(Endpoint):
                                                        self.peer_id,
                                                        self.port.name,
                                                        sequencenbr_sent,
-                                                       "" if self.bulk else "@%f" % (self.backoff)))
+                                                       "BULK" if self.bulk else "THROTTLE"))
         self.tunnel.send({
             'cmd': 'TOKEN',
             'token': token.encode(),
@@ -204,8 +201,6 @@ class TunnelOutEndpoint(Endpoint):
 
     def communicate(self, *args, **kwargs):
         # FIXME uses internal queue attributes
-        # FIXME: Move backoff handling to scheduler/monitor
-        #        DO NOT keep track of the time here!
         sent = False
         if self.bulk:
             # Send all we have, since other side seems to keep up

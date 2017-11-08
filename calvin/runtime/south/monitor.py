@@ -31,20 +31,22 @@ class Event_Monitor(object):
         self._backoff = {}
         
     def set_backoff(self, endpoint):
-        self._backoff[endpoint] = time.time() + endpoint.backoff
+        _, bo = self._backoff.get(endpoint, (0, 0))
+        bo = min(1.0, 0.1 if bo < 0.1 else bo * 2.0)
+        self._backoff[endpoint] = (time.time() + bo, bo)
         
     def clear_backoff(self, endpoint):
         self._backoff.pop(endpoint, None)
         
     def next_slot(self):
         if self._backoff:
-            return min(self._backoff.values())
+            return min(self._backoff.values(), key=lambda x : x[0])
         return None
 
     def _check_backoff(self):
         current = time.time()
         for ep in self._backoff.keys():
-            tc = self._backoff[ep]
+            tc = self._backoff[ep][0]
             if tc < current:
                 self.clear_backoff(ep)
 

@@ -124,6 +124,7 @@ class Scheduler(object):
         elif tx_ack:
             # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
             # print "tx_ack", tx_ack.bulk, tx_ack.backoff, tx_ack.time_cont
+            self.monitor.clear_backoff(tx_ack)
             self._schedule_all()
         elif tx_nack:
             # We got back NACK on sent token, endpoint should wait before resending
@@ -131,7 +132,9 @@ class Scheduler(object):
             self.monitor.set_backoff(tx_nack)
             # self._schedule_all()
         elif throttle:
-            self.monitor.set_backoff(throttle)
+            # print self.monitor.next_slot()
+            # FIXME: schedule at this time if nothing else to be done (presently done in strategy)
+            pass
 
     def schedule_calvinsys(self, actor_id=None):
         if actor_id is None:
