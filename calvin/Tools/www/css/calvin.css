@@ -22,31 +22,10 @@ text {
     stroke-opacity: .6;
 }
 
-#applicationData {
-    float:left;
-    resize: both;
-    overflow: auto;
-}
-
-#applicationGraph {
-    float:left;
-    resize: both;
-    overflow: auto;
-}
-
 .spinner {
     position: fixed;
     top: 40%;
     left: 40%;
-}
-
-/*----- Table selection -----*/
-table tr.active {background: #ccc;}
-
-#logData {
-    width:100%;
-    height: 50%;
-    clear: both;
 }
 
 div.ui-widget-header {
@@ -55,4 +34,15 @@ div.ui-widget-header {
 
 .modal {
     position: absolute;
+}
+
+.panel-heading .accordion-toggle:after {
+    /* symbol for "opening" panels */
+    content: "-";
+    float: right;
+    color: grey;
+}
+.panel-heading .accordion-toggle.collapsed:after {
+    /* symbol for "collapsed" panels */
+    content: "+";
 }
