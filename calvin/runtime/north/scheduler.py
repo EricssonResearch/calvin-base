@@ -109,33 +109,6 @@ class Scheduler(object):
         
         return did_fire_actor_ids
 
-    # def schedule_tunnel(self, backoff_time=0):
-    #     # If backoff_time > 0 don't call UNTIL that time has passed.
-    #     # Doesn't work with current scheduler/monitor, so tunnel::communicate has a workaround
-    #     self._cancel_watchdog()
-    #     self._cancel_schedule()
-    #     self._loop_once = async.DelayedCall(backoff_time, self.loop_once, True)
-    def schedule_tunnel(self, rx=None, tx_ack=None, tx_nack=None, throttle=None):
-        _log.warning("schedule_tunnel")
-        # one of rx, tx_ack, tx_nack is endpoint in question
-        if rx:
-            # We got a token, meaning that the corrsponding actor could possibly fire -- _schedule_actors()
-            print "rx", rx, rx.port.owner.id
-            self._schedule_actors(actor_ids=[rx.port.owner.id])
-        elif tx_ack:
-            # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
-            # print "tx_ack", tx_ack.bulk, tx_ack.backoff, tx_ack.time_cont
-            self.monitor.clear_backoff(tx_ack)
-            self._schedule_all()
-        elif tx_nack:
-            # We got back NACK on sent token, endpoint should wait before resending
-            # print "tx_nack", tx_nack.bulk, tx_nack.backoff, tx_nack.time_cont
-            self.monitor.set_backoff(tx_nack)
-            # self._schedule_all()
-        elif throttle:
-            # print self.monitor.next_slot()
-            # FIXME: schedule at this time if nothing else to be done (presently done in strategy)
-            pass
     def fire_actor(self, actor):
         """
         Try to fire actions on actor on this runtime.
@@ -173,6 +146,32 @@ class Scheduler(object):
 
         return actor_did_fire
 
+
+    def tunnel_rx(self, endpoint):
+        # _log.warning("schedule::tunnel_rx")
+        # We got a token, meaning that the corrsponding actor could possibly fire -- _schedule_actors()
+        # print "rx", rx, rx.port.owner.id
+        self._schedule_actors(actor_ids=[endpoint.port.owner.id])
+
+    def tunnel_tx_ack(self, endpoint):
+        # _log.warning("schedule::tunnel_tx_ack")
+        # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
+        # print "tx_ack", tx_ack.bulk, tx_ack.backoff, tx_ack.time_cont
+        self.monitor.clear_backoff(endpoint)
+        self._schedule_all()
+
+    def tunnel_tx_nack(self, endpoint):
+        # _log.warning("schedule::tunnel_tx_nack")
+        # We got back NACK on sent token, endpoint should wait before resending
+        # print "tx_nack", tx_nack.bulk, tx_nack.backoff, tx_nack.time_cont
+        self.monitor.set_backoff(endpoint)
+        # self._schedule_all()
+
+    def tunnel_tx_throttle(self, endpoint):
+        # _log.warning("schedule::tx_throttle")
+        # print self.monitor.next_slot()
+        # FIXME: schedule at this time if nothing else to be done (presently done in strategy)
+        pass
 
     def schedule_calvinsys(self, actor_id=None):
         if actor_id is None:

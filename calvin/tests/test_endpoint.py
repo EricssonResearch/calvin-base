@@ -77,11 +77,11 @@ class TestTunnelEndpoint(unittest.TestCase):
         self.port = InPort("port", Mock())
         self.peer_port = OutPort("peer_port", Mock())
         self.tunnel = Mock()
-        self.trigger_loop = Mock()
+        self.scheduler = Mock()
         self.node_id = 123
         self.peer_node_id = 456
-        self.tunnel_in = TunnelInEndpoint(self.port, self.tunnel, self.peer_node_id, self.peer_port.id, {}, self.trigger_loop)
-        self.tunnel_out = TunnelOutEndpoint(self.peer_port, self.tunnel, self.node_id, self.port.id, {}, self.trigger_loop)
+        self.tunnel_in = TunnelInEndpoint(self.port, self.tunnel, self.peer_node_id, self.peer_port.id, {}, self.scheduler)
+        self.tunnel_out = TunnelOutEndpoint(self.peer_port, self.tunnel, self.node_id, self.port.id, {}, self.scheduler)
         self.port.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
         self.port.attach_endpoint(self.tunnel_in)
         self.peer_port.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
@@ -102,26 +102,26 @@ class TestTunnelEndpoint(unittest.TestCase):
             'token': {'type': 'Token', 'data': 5}
         }
         self.tunnel_in.recv_token(payload)
-        assert self.trigger_loop.called
+        assert self.scheduler.tunnel_rx.called
         assert self.port.queue.fifo[0].value == 5
         self.tunnel.send.assert_called_with(expected_reply)
 
-        self.trigger_loop.reset_mock()
+        self.scheduler.reset_mock()
         self.tunnel.send.reset_mock()
 
         payload['sequencenbr'] = 100
         self.tunnel_in.recv_token(payload)
-        assert not self.trigger_loop.called
+        assert not self.scheduler.tunnel_rx.called
         expected_reply['sequencenbr'] = 100
         expected_reply['value'] = 'NACK'
         self.tunnel.send.assert_called_with(expected_reply)
 
-        self.trigger_loop.reset_mock()
+        self.scheduler.reset_mock()
         self.tunnel.send.reset_mock()
 
         payload['sequencenbr'] = 0
         self.tunnel_in.recv_token(payload)
-        assert not self.trigger_loop.called
+        assert not self.scheduler.called
         expected_reply['sequencenbr'] = 0
         expected_reply['value'] = 'ACK'
         self.tunnel.send.assert_called_with(expected_reply)
@@ -141,7 +141,7 @@ class TestTunnelEndpoint(unittest.TestCase):
 
         self.tunnel_out.reply(0, 'ACK')
         self.tunnel_out.port.queue.com_commit.assert_called_with(self.port.id, nbr)
-        assert self.trigger_loop.called
+        assert self.scheduler.tunnel_tx_ack.called
 
         self.tunnel_out.port.write_token(Token(1))
         self.tunnel_out._send_one_token()
@@ -149,6 +149,8 @@ class TestTunnelEndpoint(unittest.TestCase):
 
         self.tunnel_out.reply(nbr, 'NACK')
         assert self.tunnel_out.port.queue.com_cancel.called
+        assert self.scheduler.tunnel_tx_nack.called
+        
 
     def test_nack_reply(self):
         self.tunnel_out.port.write_token(Token(1))
