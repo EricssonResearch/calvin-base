@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -29,22 +31,17 @@ class Event_Monitor(object):
         self._backoff = {}
         
     def set_backoff(self, endpoint):
-        self._backoff[endpoint] = 5
-        print backoff
-    
-    def _wait(self, endpoint):
-        return self._backoff.get(endpoint, 0) > 0
+        self._backoff[endpoint] = time.time() + endpoint.backoff
+        print "NEXT:", self._backoff
         
-    def _decrease_backoff(self, endpoint):
-        bo = self._backoff.get(endpoint, 0)
-        if bo > 0:
-            self._backoff[endpoint] = bo-1
-    
-    def _outstanding(self):
-        for bo in self._backoff:
-            if bo > 0:
-                return True
-        return False            
+    def next_slot(self):
+        if self._backoff:
+            return min(self._backoff.values())
+        return None
+
+    def _check_backoff(self):
+        current = time.time()
+        self._backoff = {ep:tc for ep, tc in  self._backoff.iteritems() if tc < current}
 
     def register_endpoint(self, endpoint):
         self.endpoints.append(endpoint)
@@ -52,27 +49,15 @@ class Event_Monitor(object):
     def unregister_endpoint(self, endpoint):
         self.endpoints.remove(endpoint)
 
-    # def communicate(self, scheduler):
-    #     # Communicate endpoint, see if anyone sent anything
-    #     did_try = False
-    #     for endp in self.endpoints:
-    #         if self._wait(endp):
-    #             self._decrease_backoff(endp)
-    #         else:
-    #             endp.communicate()
-    #             did_try = True
-    #     return did_try or self._outstanding()
-    
     def communicate(self, scheduler):
-        # Communicate endpoint, see if anyone sent anything
-        did_try = False
+        """Communicate over all endpoints, return True if at least one send something."""
+        # Update the backoff dictionary containing endpoints that should NOT communicate.
+        self._check_backoff()
         did_comm = False
+        # Loop over all endpoints, skip those in backoff dictionary
         for endp in self.endpoints:
-            if self._wait(endp):
-                self._decrease_backoff(endp)
-            else:
+            if not endp in self._backoff:
                 did_comm |= endp.communicate()
-                did_try = True
                 
         return did_comm
     

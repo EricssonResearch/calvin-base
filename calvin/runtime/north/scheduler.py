@@ -114,7 +114,7 @@ class Scheduler(object):
     #     self._cancel_watchdog()
     #     self._cancel_schedule()
     #     self._loop_once = async.DelayedCall(backoff_time, self.loop_once, True)
-    def schedule_tunnel(self, rx=None, tx_ack=None, tx_nack=None):
+    def schedule_tunnel(self, rx=None, tx_ack=None, tx_nack=None, throttle=None):
         _log.warning("schedule_tunnel")
         # one of rx, tx_ack, tx_nack is endpoint in question
         if rx:
@@ -123,12 +123,15 @@ class Scheduler(object):
             self._schedule_actors(actor_ids=[rx.port.owner.id])
         elif tx_ack:
             # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
-            print "tx_ack", tx_ack
+            # print "tx_ack", tx_ack.bulk, tx_ack.backoff, tx_ack.time_cont
+            self._schedule_all()
         elif tx_nack:
             # We got back NACK on sent token, endpoint should wait before resending
-            print "tx_nack", tx_nack
+            # print "tx_nack", tx_nack.bulk, tx_nack.backoff, tx_nack.time_cont
             self.monitor.set_backoff(tx_nack)
-        self._schedule_all()
+            # self._schedule_all()
+        elif throttle:
+            self.monitor.set_backoff(throttle.backoff)
 
     def schedule_calvinsys(self, actor_id=None):
         if actor_id is None:
@@ -153,14 +156,14 @@ class Scheduler(object):
     def _schedule_watchdog(self):
         self._watchdog = async.DelayedCall(self._watchdog_timeout, self._watchdog_wakeup)
 
-    def _schedule_all(self):
+    def _schedule_all(self, delay=0):
         # If there is a scheduled loop_once then cancel it since it might be
         # scheduled later, and/or with argument set to False.
         self._cancel_watchdog()
         self._cancel_schedule()
         self.update_pending(self.all_actor_ids())
         # print "Pending: ", self.all_actor_ids(), self.pending()
-        self._loop_once = async.DelayedCall(0, self.loop_once)
+        self._loop_once = async.DelayedCall(delay, self.loop_once)
 
     def _schedule_actors(self, actor_ids):
         # Update the set of actors that could possibly fire
@@ -211,6 +214,7 @@ class BaselineScheduler(Scheduler):
         # If the did_fire_actor_ids set is empty no actor could fire any action
         did_fire = bool(did_fire_actor_ids)
         activity = did_fire or did_transfer_tokens
+        next_slot = self.monitor.next_slot()
         # print "STRATEGY:", did_transfer_tokens, did_fire_actor_ids, did_fire, activity
         if activity:
             # Something happened - run again
@@ -219,6 +223,9 @@ class BaselineScheduler(Scheduler):
             # ... but we don't have a strategy, so run'em all :(
             self._schedule_all()
             # print "STRATEGY: _schedule_all"
+        elif next_slot:
+            current = time.time()
+            self._schedule_all(max(0, next_slot - current))
         else:
             # No firings, set a watchdog timeout
             self._schedule_watchdog()

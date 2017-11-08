@@ -18,7 +18,6 @@ from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 from calvin.runtime.north.plugins.port.queue.common import COMMIT_RESPONSE, QueueEmpty, QueueFull
 from calvin.runtime.north.plugins.port import DISCONNECT
-import time
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -118,7 +117,6 @@ class TunnelOutEndpoint(Endpoint):
         # Keep track of acked tokens, only contains something post call if acks comes out of order
         self.sequencenbrs_acked = []
         self.backoff = 0.0
-        self.time_cont = 0.0
         self.bulk = True
 
     def __str__(self):
@@ -176,14 +174,10 @@ class TunnelOutEndpoint(Endpoint):
 
     def _reply_nack(self, sequencenbr, status):
         # Make send only send one token at a time and have increasing time between them
-        curr_time = time.time()
-        if self.bulk:
-            self.time_cont = curr_time
-        if self.time_cont <= curr_time:
-            # Need to trigger again due to either too late NACK or switched from series of ACK
-            self.schedule_tunnel(tx_nack=self)
         self.bulk = False
         self.backoff = min(1.0, 0.1 if self.backoff < 0.1 else self.backoff * 2.0)
+        # Need to trigger again due to either too late NACK or switched from series of ACK
+        self.schedule_tunnel(tx_nack=self)
 
         r = self.port.queue.com_cancel(self.peer_id, sequencenbr)
         if r == COMMIT_RESPONSE.handled:
@@ -196,7 +190,7 @@ class TunnelOutEndpoint(Endpoint):
                                                        self.peer_id,
                                                        self.port.name,
                                                        sequencenbr_sent,
-                                                       "" if self.bulk else "@%f/%f" % (self.time_cont, self.backoff)))
+                                                       "" if self.bulk else "@%f" % (self.backoff)))
         self.tunnel.send({
             'cmd': 'TOKEN',
             'token': token.encode(),
@@ -223,11 +217,8 @@ class TunnelOutEndpoint(Endpoint):
             # Something to read and last (N)ACK recived
             self._send_one_token()
             sent = True
-            self.time_cont = time.time() + self.backoff
             # Make sure that resend will be tried in backoff seconds
-            # self.schedule_tunnel(backoff_time=self.backoff)
-        else:
-            print "NOT SENDING, TIME < BACKOFF", self
+            self.schedule_tunnel(throttle=self)
         return sent
         
         
