@@ -631,7 +631,7 @@ class ActorTester(object):
             self.test_sys.verify_read_write_during_init(aut, actor)
             self.test_sys.init_done(actor)
 
-            aut.fire()
+            aut.fire_deprecated()
 
             for port, values in outputs.iteritems():
                 try:

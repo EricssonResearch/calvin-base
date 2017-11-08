@@ -37,7 +37,7 @@ class Scheduler(object):
         self.done = False
         self.node = node
         self.monitor = monitor
-        self._loop_once = None
+        self._scheduled = None
         self._trigger_set = set()
         self._watchdog = None
         self._watchdog_timeout = 1
@@ -75,7 +75,7 @@ class Scheduler(object):
     def strategy(self, did_transfer_tokens, did_fire_actor_ids):
         raise Exception("Must implement strategy in subclass")
 
-    def loop_once(self):
+    def _loop_once(self):
         # We don't know how we got here, so cancel both of these (safe thing to do)
         self._cancel_watchdog()
         self._cancel_schedule()
@@ -100,7 +100,8 @@ class Scheduler(object):
         for actor in actors:
             try:
                 _log.debug("Fire actor %s (%s, %s)" % (actor.name, actor._type, actor.id))
-                did_fire_action = actor.fire()
+                # did_fire_action = actor.fire_deprecated()
+                did_fire_action = self.fire_actor(actor)
                 if did_fire_action:
                     did_fire_actor_ids.add(actor.id)
             except Exception as e:
@@ -135,6 +136,43 @@ class Scheduler(object):
             # print self.monitor.next_slot()
             # FIXME: schedule at this time if nothing else to be done (presently done in strategy)
             pass
+    def fire_actor(self, actor):
+        """
+        Try to fire actions on actor on this runtime.
+        Returns boolean that is True if actor fired
+        """
+        #
+        # First make sure we are allowed to run
+        #
+        if not actor._authorized():
+            return False
+
+        start_time = time.time()
+        actor_did_fire = False
+        #
+        # Repeatedly go over the action priority list
+        #
+        done = False
+        while not done:
+            did_fire, output_ok, exhausted = actor.fire()
+            actor_did_fire |= did_fire
+            if did_fire:
+                #
+                # Limit time given to actors even if it could continue a new round of firing
+                #
+                time_spent = time.time() - start_time
+                done = time_spent > 0.020
+            else:
+                #
+                # We reached the end of the list without ANY firing during this round
+                # => handle exhaustion and return
+                #
+                # FIXME: Move exhaust handling to scheduler
+                actor._handle_exhaustion(exhausted, output_ok)
+                done = True
+
+        return actor_did_fire
+
 
     def schedule_calvinsys(self, actor_id=None):
         if actor_id is None:
@@ -143,9 +181,9 @@ class Scheduler(object):
             self._schedule_actors(actor_ids=[actor_id])
 
     def _cancel_schedule(self):
-        if self._loop_once is not None:
-            self._loop_once.cancel()
-            self._loop_once = None
+        if self._scheduled is not None:
+            self._scheduled.cancel()
+            self._scheduled = None
 
     def _cancel_watchdog(self):
         if self._watchdog is not None:
@@ -160,25 +198,25 @@ class Scheduler(object):
         self._watchdog = async.DelayedCall(self._watchdog_timeout, self._watchdog_wakeup)
 
     def _schedule_all(self, delay=0):
-        # If there is a scheduled loop_once then cancel it since it might be
+        # If there is a scheduled _loop_once then cancel it since it might be
         # scheduled later, and/or with argument set to False.
         self._cancel_watchdog()
         self._cancel_schedule()
         self.update_pending(self.all_actor_ids())
         # print "Pending: ", self.all_actor_ids(), self.pending()
-        self._loop_once = async.DelayedCall(delay, self.loop_once)
+        self._scheduled = async.DelayedCall(delay, self._loop_once)
 
     def _schedule_actors(self, actor_ids):
         # Update the set of actors that could possibly fire
         self.update_pending(actor_ids)
-        # Schedule loop_once if-and-only-if
+        # Schedule _loop_once if-and-only-if
         #                    it is not already scheduled
         #                    AND
         #                    the set of actors is non-empty
-        if self._loop_once is None:
+        if self._scheduled is None:
             if self.pending():
                 self._cancel_watchdog()
-                self._loop_once = async.DelayedCall(0, self.loop_once)
+                self._scheduled = async.DelayedCall(0, self._loop_once)
 
 
     def _log_exception_during_fire(self, e):
@@ -235,29 +273,29 @@ class BaselineScheduler(Scheduler):
             # print "STRATEGY: _schedule_watchdog"
         
 
-class DebugScheduler(Scheduler):
-    """This is an instrumented version of the scheduler for use in debugging runs."""
-
-    def __init__(self, node, actor_mgr, monitor):
-        super(DebugScheduler, self).__init__(node, actor_mgr, monitor)
-
-    def trigger_loop(self, actor_ids=None):
-        #import inspect
-        #import traceback
-        super(DebugScheduler, self).trigger_loop(actor_ids=actor_ids)
-        #(frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
-        #_log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
-        #_log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
-        _log.analyze(self.node.id, "+ Triggered", None, tb=True)
-
-    def schedule_tunnel(self, backoff_time=0):
-        super(DebugScheduler, self).schedule_tunnel(backoff_time=backoff_time)
-
-    def _log_exception_during_fire(self, e):
-        from infi.traceback import format_exception
-        _log.error('\n'.join(format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback)))
-
-    def fire_actors(self, actor_ids=None):
-        from infi.traceback import traceback_context
-        traceback_context()
-        return super(DebugScheduler, self).fire_actors(actor_ids)
+# class DebugScheduler(Scheduler):
+#     """This is an instrumented version of the scheduler for use in debugging runs."""
+#
+#     def __init__(self, node, actor_mgr, monitor):
+#         super(DebugScheduler, self).__init__(node, actor_mgr, monitor)
+#
+#     def trigger_loop(self, actor_ids=None):
+#         #import inspect
+#         #import traceback
+#         super(DebugScheduler, self).trigger_loop(actor_ids=actor_ids)
+#         #(frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
+#         #_log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
+#         #_log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
+#         _log.analyze(self.node.id, "+ Triggered", None, tb=True)
+#
+#     def schedule_tunnel(self, backoff_time=0):
+#         super(DebugScheduler, self).schedule_tunnel(backoff_time=backoff_time)
+#
+#     def _log_exception_during_fire(self, e):
+#         from infi.traceback import format_exception
+#         _log.error('\n'.join(format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback)))
+#
+#     def fire_actors(self, actor_ids=None):
+#         from infi.traceback import traceback_context
+#         traceback_context()
+#         return super(DebugScheduler, self).fire_actors(actor_ids)
