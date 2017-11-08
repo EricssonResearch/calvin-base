@@ -131,7 +131,7 @@ class Scheduler(object):
             self.monitor.set_backoff(tx_nack)
             # self._schedule_all()
         elif throttle:
-            self.monitor.set_backoff(throttle.backoff)
+            self.monitor.set_backoff(throttle)
 
     def schedule_calvinsys(self, actor_id=None):
         if actor_id is None:
