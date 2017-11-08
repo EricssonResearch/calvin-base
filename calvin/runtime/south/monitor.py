@@ -32,7 +32,9 @@ class Event_Monitor(object):
         
     def set_backoff(self, endpoint):
         self._backoff[endpoint] = time.time() + endpoint.backoff
-        print "NEXT:", self._backoff
+        
+    def clear_backoff(self, endpoint):
+        self._backoff.pop(endpoint, None)
         
     def next_slot(self):
         if self._backoff:
@@ -41,13 +43,17 @@ class Event_Monitor(object):
 
     def _check_backoff(self):
         current = time.time()
-        self._backoff = {ep:tc for ep, tc in  self._backoff.iteritems() if tc < current}
+        for ep in self._backoff.keys():
+            tc = self._backoff[ep]
+            if tc < current:
+                self.clear_backoff(ep)
 
     def register_endpoint(self, endpoint):
         self.endpoints.append(endpoint)
 
     def unregister_endpoint(self, endpoint):
         self.endpoints.remove(endpoint)
+        self.clear_backoff(endpoint)
 
     def communicate(self, scheduler):
         """Communicate over all endpoints, return True if at least one send something."""
