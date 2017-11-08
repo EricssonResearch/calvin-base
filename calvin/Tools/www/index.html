@@ -11,12 +11,14 @@
   <div class="panel-group">
     <div class="panel panel-default">
       <div id="panelConnect" class="panel panel-default">
-        <div class="panel-body">
-          Control URI: <input type="text" name="connect_uri" id="connect_uri" size="35"/>
-        </div>
-        <div class="panel-footer">
-          <button type="button" class="btn btn-primary btn-xs" onclick="connect()">Connect</button>
-        </div>
+        <form onsubmit="connect(); return false;">
+          <div class="panel-body">
+            Control URI: <input type="text" name="connect_uri" id="connect_uri" size="35"/>
+          </div>
+          <div class="panel-footer">
+            <button type="button" class="btn btn-primary btn-xs" onclick="connect()">Connect</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
