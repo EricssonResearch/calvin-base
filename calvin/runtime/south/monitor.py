@@ -40,7 +40,8 @@ class Event_Monitor(object):
         
     def next_slot(self):
         if self._backoff:
-            return min(self._backoff.values(), key=lambda x : x[0])
+            val = min(self._backoff.values(), key=lambda x : x[0])
+            return val[0]
         return None
 
     def _check_backoff(self):
