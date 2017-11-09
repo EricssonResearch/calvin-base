@@ -27,12 +27,17 @@ _log = get_logger(__name__)
 _conf = calvinconfig.get()
 
 
-class Scheduler(object):
-
-    """docstring for Scheduler"""
+# FIXME: Split out a partly abstract Scheduler class and implement specific 
+#        scheduling strategies in subclasses
+class BaselineScheduler(object):
+    """
+    The scheduler is the only active component in a runtime, 
+    except for calvinsys and token transport. Every other piece of
+    code is (or should be) purely reactive.
+    """
 
     def __init__(self, node, actor_mgr, monitor):
-        super(Scheduler, self).__init__()
+        super(BaselineScheduler, self).__init__()
         self.actor_mgr = actor_mgr
         self.done = False
         self.node = node
@@ -52,6 +57,9 @@ class Scheduler(object):
             async.DelayedCall(0, async.stop_ioloop)
         self.done = True
 
+    #
+    # Helper methods
+    #  
     def all_actors(self):
         return self.actor_mgr.enabled_actors()
         
@@ -72,9 +80,96 @@ class Scheduler(object):
     def update_pending(self, actor_ids):
         self._trigger_set.update(actor_ids)
 
-    def strategy(self, did_transfer_tokens, did_fire_actor_ids):
-        raise Exception("Must implement strategy in subclass")
+    #
+    # Event "API" used by subsystems to inform scheduler about events
+    #
+    def tunnel_rx(self, endpoint):
+        """Token recieved on endpoint"""
+        # _log.warning("schedule::tunnel_rx")
+        # We got a token, meaning that the corrsponding actor could possibly fire
+        self._schedule_actors(actor_ids=[endpoint.port.owner.id])
 
+    def tunnel_tx_ack(self, endpoint):
+        """Token successfully sent on endpoint"""
+        # _log.warning("schedule::tunnel_tx_ack")
+        # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
+        self.monitor.clear_backoff(endpoint)
+        self._schedule_all()
+
+    def tunnel_tx_nack(self, endpoint):
+        """Token unsuccessfully sent on endpoint"""
+        # _log.warning("schedule::tunnel_tx_nack")
+        # We got back NACK on sent token, endpoint should wait before resending
+        self.monitor.set_backoff(endpoint)
+
+    def tunnel_tx_throttle(self, endpoint):
+        """Backoff request for endpoint"""
+        # _log.warning("schedule::tx_throttle")
+        # FIXME: schedule at this time if nothing else to be done (presently done in strategy)
+        pass
+
+    def schedule_calvinsys(self, actor_id=None):
+        """Incoming platform event"""
+        # FIXME: When old calvinsys is gone, actor_id will always be present
+        if actor_id is None:
+            self._schedule_all()
+        else:
+            self._schedule_actors(actor_ids=[actor_id])
+        
+    #
+    # Capture the scheduling logic here?
+    #
+    def strategy(self, did_transfer_tokens, did_fire_actor_ids):
+        # If the did_fire_actor_ids set is empty no actor could fire any action
+        did_fire = bool(did_fire_actor_ids)
+        activity = did_fire or did_transfer_tokens
+        next_slot = self.monitor.next_slot()
+        # print "STRATEGY:", did_transfer_tokens, did_fire_actor_ids, did_fire, activity
+        if activity:
+            # Something happened - run again
+            # We would like to call _schedule_actors with a list of actors, like so ...
+            # self._schedule_actors(actor_ids=actor_ids)
+            # ... but we don't have a strategy, so run'em all :(
+            self._schedule_all()
+            # print "STRATEGY: _schedule_all"
+        elif next_slot:
+            current = time.time()
+            self._schedule_all(max(0, next_slot - current))
+        else:
+            # No firings, set a watchdog timeout
+            self._schedule_watchdog()
+            # print "STRATEGY: _schedule_watchdog"
+        
+    #
+    # Maintenance loop
+    #
+    # FIXME: Deal with this later
+    def maintenance_loop(self):
+        # Migrate denied actors
+        for actor in self.actor_mgr.migratable_actors():
+            self.actor_mgr.migrate(actor.id, actor.migration_info["node_id"],
+                                   callback=CalvinCB(actor.remove_migration_info))
+        # Enable denied actors again if access is permitted. Will try to migrate if access still denied.
+        for actor in self.actor_mgr.denied_actors():
+            actor.enable_or_migrate()
+        # TODO: try to migrate shadow actors as well.
+        self._maintenance_loop = None
+        self.trigger_maintenance_loop(delay=True)
+
+    def trigger_maintenance_loop(self, delay=False):
+        # Never have more then one maintenance loop.
+        if self._maintenance_loop is not None:
+            self._maintenance_loop.cancel()
+        if delay:
+            self._maintenance_loop = async.DelayedCall(self._maintenance_delay, self.maintenance_loop)
+        else:
+            self._maintenance_loop = async.DelayedCall(0, self.maintenance_loop)
+
+    #
+    # Private methods
+    #
+    # FIXME: Clean up, and split in common and specific functionality so we can use this as 
+    #        a base class for schedulers
     def _loop_once(self):
         # We don't know how we got here, so cancel both of these (safe thing to do)
         self._cancel_watchdog()
@@ -86,11 +181,11 @@ class Scheduler(object):
         actors_to_fire = self.pending_actors()
         # Reset the set of potential actors
         self.clear_pending()
-        did_fire_actor_ids = self.fire_actors(actors_to_fire)
+        did_fire_actor_ids = self._fire_actors(actors_to_fire)
         self.strategy(did_transfer_tokens, did_fire_actor_ids)
 
 
-    def fire_actors(self, actors):
+    def _fire_actors(self, actors):
         """
         Try to fire actions on actors on this runtime.
         Parameter 'actors' is a set of actors to try (in that ).
@@ -101,7 +196,7 @@ class Scheduler(object):
             try:
                 _log.debug("Fire actor %s (%s, %s)" % (actor.name, actor._type, actor.id))
                 # did_fire_action = actor.fire_deprecated()
-                did_fire_action = self.fire_actor(actor)
+                did_fire_action = self._fire_actor(actor)
                 if did_fire_action:
                     did_fire_actor_ids.add(actor.id)
             except Exception as e:
@@ -109,7 +204,7 @@ class Scheduler(object):
         
         return did_fire_actor_ids
 
-    def fire_actor(self, actor):
+    def _fire_actor(self, actor):
         """
         Try to fire actions on actor on this runtime.
         Returns boolean that is True if actor fired
@@ -145,39 +240,6 @@ class Scheduler(object):
                 done = True
 
         return actor_did_fire
-
-
-    def tunnel_rx(self, endpoint):
-        # _log.warning("schedule::tunnel_rx")
-        # We got a token, meaning that the corrsponding actor could possibly fire -- _schedule_actors()
-        # print "rx", rx, rx.port.owner.id
-        self._schedule_actors(actor_ids=[endpoint.port.owner.id])
-
-    def tunnel_tx_ack(self, endpoint):
-        # _log.warning("schedule::tunnel_tx_ack")
-        # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
-        # print "tx_ack", tx_ack.bulk, tx_ack.backoff, tx_ack.time_cont
-        self.monitor.clear_backoff(endpoint)
-        self._schedule_all()
-
-    def tunnel_tx_nack(self, endpoint):
-        # _log.warning("schedule::tunnel_tx_nack")
-        # We got back NACK on sent token, endpoint should wait before resending
-        # print "tx_nack", tx_nack.bulk, tx_nack.backoff, tx_nack.time_cont
-        self.monitor.set_backoff(endpoint)
-        # self._schedule_all()
-
-    def tunnel_tx_throttle(self, endpoint):
-        # _log.warning("schedule::tx_throttle")
-        # print self.monitor.next_slot()
-        # FIXME: schedule at this time if nothing else to be done (presently done in strategy)
-        pass
-
-    def schedule_calvinsys(self, actor_id=None):
-        if actor_id is None:
-            self._schedule_all()
-        else:
-            self._schedule_actors(actor_ids=[actor_id])
 
     def _cancel_schedule(self):
         if self._scheduled is not None:
@@ -221,80 +283,3 @@ class Scheduler(object):
     def _log_exception_during_fire(self, e):
         _log.exception(e)
 
-
-    #
-    # Maintenance loop
-    #
-    def maintenance_loop(self):
-        # Migrate denied actors
-        for actor in self.actor_mgr.migratable_actors():
-            self.actor_mgr.migrate(actor.id, actor.migration_info["node_id"],
-                                   callback=CalvinCB(actor.remove_migration_info))
-        # Enable denied actors again if access is permitted. Will try to migrate if access still denied.
-        for actor in self.actor_mgr.denied_actors():
-            actor.enable_or_migrate()
-        # TODO: try to migrate shadow actors as well.
-        self._maintenance_loop = None
-        self.trigger_maintenance_loop(delay=True)
-
-    def trigger_maintenance_loop(self, delay=False):
-        # Never have more then one maintenance loop.
-        if self._maintenance_loop is not None:
-            self._maintenance_loop.cancel()
-        if delay:
-            self._maintenance_loop = async.DelayedCall(self._maintenance_delay, self.maintenance_loop)
-        else:
-            self._maintenance_loop = async.DelayedCall(0, self.maintenance_loop)
-
-
-class BaselineScheduler(Scheduler):
-
-    def strategy(self, did_transfer_tokens, did_fire_actor_ids):
-        
-        # If the did_fire_actor_ids set is empty no actor could fire any action
-        did_fire = bool(did_fire_actor_ids)
-        activity = did_fire or did_transfer_tokens
-        next_slot = self.monitor.next_slot()
-        # print "STRATEGY:", did_transfer_tokens, did_fire_actor_ids, did_fire, activity
-        if activity:
-            # Something happened - run again
-            # We would like to call _schedule_actors with a list of actors, like so ...
-            # self._schedule_actors(actor_ids=actor_ids)
-            # ... but we don't have a strategy, so run'em all :(
-            self._schedule_all()
-            # print "STRATEGY: _schedule_all"
-        elif next_slot:
-            current = time.time()
-            self._schedule_all(max(0, next_slot - current))
-        else:
-            # No firings, set a watchdog timeout
-            self._schedule_watchdog()
-            # print "STRATEGY: _schedule_watchdog"
-        
-
-# class DebugScheduler(Scheduler):
-#     """This is an instrumented version of the scheduler for use in debugging runs."""
-#
-#     def __init__(self, node, actor_mgr, monitor):
-#         super(DebugScheduler, self).__init__(node, actor_mgr, monitor)
-#
-#     def trigger_loop(self, actor_ids=None):
-#         #import inspect
-#         #import traceback
-#         super(DebugScheduler, self).trigger_loop(actor_ids=actor_ids)
-#         #(frame, filename, line_no, fname, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
-#         #_log.debug("triggered %s by %s in file %s at %s" % (time.time(), fname, filename, line_no))
-#         #_log.debug("Trigger happend here:\n" + ''.join(traceback.format_stack()[-6:-1]))
-#         _log.analyze(self.node.id, "+ Triggered", None, tb=True)
-#
-#     def schedule_tunnel(self, backoff_time=0):
-#         super(DebugScheduler, self).schedule_tunnel(backoff_time=backoff_time)
-#
-#     def _log_exception_during_fire(self, e):
-#         from infi.traceback import format_exception
-#         _log.error('\n'.join(format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback)))
-#
-#     def fire_actors(self, actor_ids=None):
-#         from infi.traceback import traceback_context
-#         traceback_context()
-#         return super(DebugScheduler, self).fire_actors(actor_ids)
