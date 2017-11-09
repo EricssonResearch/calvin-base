@@ -61,6 +61,7 @@ class LocalConnection(BaseConnection):
         ein = endpoint.LocalInEndpoint(inport, outport)
         eout = endpoint.LocalOutEndpoint(outport, inport)
 
+        # FIXME: Let monitor handle whether it should be used or not
         if ein.use_monitor():
             self.node.monitor.register_endpoint(ein)
         if eout.use_monitor():
@@ -90,6 +91,7 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
         remaining_tokens = {}
         # Can only be one for the one peer as argument to disconnect, but loop for simplicity
+        # FIXME: Let monitor handle whether it should be used or not
         for ep in endpoints:
             remaining_tokens.update(ep.remaining_tokens)
             if ep.use_monitor():
@@ -103,6 +105,7 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP PEER", {'port_id': self.port.id, 'endpoints': endpoints})
         peer_remaining_tokens = {}
         # Can only be one for the one peer as argument to disconnect, but loop for simplicity
+        # FIXME: Let monitor handle whether it should be used or not
         for ep in endpoints:
             peer_remaining_tokens.update(ep.remaining_tokens)
             if ep.use_monitor():

@@ -194,6 +194,7 @@ class TunnelConnection(BaseConnection):
                                               reply.data['port_id'],
                                               self.peer_port_meta.properties,
                                               self.node.sched)
+        # FIXME: Let monitor handle whether it should be used or not
         if endp.use_monitor():
             # register into main loop
             self.node.monitor.register_endpoint(endp)
@@ -253,6 +254,7 @@ class TunnelConnection(BaseConnection):
                                               self.peer_port_meta.port_id,
                                               self.peer_port_meta.properties,
                                               self.node.sched)
+        # FIXME: Let monitor handle whether it should be used or not
         if endp.use_monitor():
             self.node.monitor.register_endpoint(endp)
 
@@ -344,6 +346,7 @@ class TunnelConnection(BaseConnection):
         _log.analyze(self.node.id, "+ EP", {'port_id': self.port.id, 'endpoints': endpoints})
         remaining_tokens = {}
         # Can only be one for the one peer as argument to disconnect, but loop for simplicity
+        # FIXME: Let monitor handle whether it should be used or not
         for ep in endpoints:
             remaining_tokens.update(ep.remaining_tokens)
             if ep.use_monitor():

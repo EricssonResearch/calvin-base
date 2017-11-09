@@ -21,6 +21,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
+# FIXME: Fold into scehduler?
 class Event_Monitor(object):
 
     def __init__(self):
@@ -58,6 +59,7 @@ class Event_Monitor(object):
         self.endpoints.remove(endpoint)
         self.clear_backoff(endpoint)
 
+    # FIXME: supply a list of endpoints
     def communicate(self, scheduler):
         """Communicate over all endpoints, return True if at least one send something."""
         # Update the backoff dictionary containing endpoints that should NOT communicate.
