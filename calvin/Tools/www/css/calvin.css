@@ -1,48 +1,53 @@
 body { font: 12px Arial;}
 
 text {
-    font-weight: 300;
-    font-family: Arial;
-    font-size: 12px;
+  font-weight: 300;
+  font-family: Arial;
+  font-size: 12px;
 }
 
 .node rect {
-    stroke: #999;
-    fill: #fff;
-    stroke-width: 1.5px;
+  stroke: #999;
+  fill: #fff;
+  stroke-width: 1.5px;
 }
 
 .edgePath path {
-    stroke: #333;
-    stroke-width: 1.5px;
+  stroke: #333;
+  stroke-width: 1.5px;
 }
 
 .link {
-    stroke: #999;
-    stroke-opacity: .6;
+  stroke: #999;
+  stroke-opacity: .6;
 }
 
 .spinner {
-    position: fixed;
-    top: 40%;
-    left: 40%;
+  position: fixed;
+  top: 40%;
+  left: 40%;
 }
 
 div.ui-widget-header {
-    background: #7FB5DA;
+  background: #7FB5DA;
 }
 
 .modal {
-    position: absolute;
+  position: absolute;
 }
 
 .panel-heading .accordion-toggle:after {
-    /* symbol for "opening" panels */
-    content: "-";
-    float: right;
-    color: grey;
+  /* symbol for opened panels */
+  content: "-";
+  float: right;
+  color: grey;
 }
+
 .panel-heading .accordion-toggle.collapsed:after {
-    /* symbol for "collapsed" panels */
-    content: "+";
+  /* symbol for collapsed panels */
+  content: "+";
+}
+
+.table.no-border tr td, .table.no-border tr th {
+    border-width: 0;
 }

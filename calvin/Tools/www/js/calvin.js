@@ -2196,7 +2196,186 @@ function setRequirements(application, requirements)
   });
 }
 
+// Kappa fuctions
+
+function showKappaDialog()
+{
+  $("#kappaDialog").modal({
+    modal: true,
+    show: true
+  });
+}
+
+function createKappa()
+{
+  var url = $("#kappa_url").val();
+  var data = $("#kappa_script").val();
+
+  console.log("createKappa url: " + url + " data: " + data);
+
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    url: url,
+    type: 'PUT',
+    contentType: 'text/plain',
+    processData: false,
+    data: data,
+    success: function(data) {
+      showSuccess("Kappa " + data + " created");
+      getKappas();
+      getApplicationsAndActors();
+    },
+    error: function(data, status) {
+      console.log("Failed to create Kappa data: " + JSON.stringify(data) + " status: " + status);
+      showError("Failed to create Kappa:<br>" + data.responseText.replace(/\n/g, "<br>"));
+    }
+  });
+}
+
+function getKappas()
+{
+  var url = $("#kappa_url").val();
+
+  console.log("getKappas url: " + url);
+
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    dataType: 'json',
+    url: url,
+    type: 'GET',
+    contentType: 'html',
+    crossOrigin: true,
+    success: function(data) {
+      var kappaSelector = document.getElementById("kappaSelector");
+      clearCombo(kappaSelector);
+      if (data) {
+        console.log("getKappas - Response: " + JSON.stringify(data));
+        for (var key in data) {
+          var kappa = data[key];
+          var optKappa = new Option(kappa.name);
+          optKappa.id = key;
+          kappaSelector.options.add(optKappa);
+        }
+      } else {
+        showMessage("No Kappas");
+      }
+    },
+    error: function() {
+      showError("Failed to get Kappas");
+    }
+  });
+}
+
+function getKappaData()
+{
+  var selectedIndex = document.getElementById("kappaSelector").selectedIndex;
+  var selectOptions = document.getElementById("kappaSelector").options;
+  var kappaID = selectOptions[selectedIndex].id;
+  var url = document.getElementById('kappa_url').value + "/" + kappaID;
+
+  console.log("getKappaData - url: " + url);
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    dataType: 'json',
+    url: url,
+    type: 'GET',
+    success: function(data) {
+      console.log("getKappaData - Response: " + data);
+      document.getElementById('kappa_data').value = JSON.stringify(data);
+    },
+    error: function() {
+      showError("Failed to get Kappa data");
+    }
+  });
+}
+
+function postKappaData()
+{
+  var selectedIndex = document.getElementById("kappaSelector").selectedIndex;
+  var selectOptions = document.getElementById("kappaSelector").options;
+  var kappaID = selectOptions[selectedIndex].id;
+  var url = document.getElementById('kappa_url').value + "/" + kappaID;
+  var data = $("#kappa_data").val();
+
+  console.log("postKappaData url: " + url + " data: " + data);
+
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    url: url,
+    type: 'POST',
+    data: data,
+    contentType: 'application/json',
+    processData: false,
+    success: function(data) {
+      showSuccess("Kappa data posted");
+    },
+    error: function(data, status) {
+      console.log("Failed to post Kappa data, data: " + JSON.stringify(data) + " status: " + status);
+      showError("Failed to post Kappa data");
+    }
+  });
+}
+
+function deleteKappa()
+{
+  var selectedIndex = document.getElementById("kappaSelector").selectedIndex;
+  var selectOptions = document.getElementById("kappaSelector").options;
+  var kappaID = selectOptions[selectedIndex].id;
+  var url = document.getElementById('kappa_url').value + "/" + kappaID;
+
+  console.log("deleteKappa url: " + url)
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    url: url,
+    type: 'DELETE',
+    success: function() {
+      showSuccess("Kappa deleted");
+      getKappas();
+      getApplicationsAndActors();
+    },
+    error: function() {
+      showError("Failed to delete kappa");
+    }
+  });
+}
+
 jQuery(document).ready(function() {
+  $(".kappaDiv").hide();
+  var kappa = document.URL.match(/kappa=([0-9]+)/);
+  if (kappa && kappa[1] == 1) {
+    $(".kappaDiv").show();
+  }
+
   // handle file select in deploy app
   var fileInputDeploy = document.getElementById('fileInputDeploy');
   var fileDisplayDeploy = document.getElementById('deploy_script');
@@ -2255,13 +2434,18 @@ jQuery(document).ready(function() {
     reader.readAsText(file);
   });
 
-  $('#tabRuntimeConfig a').click(function (e) {
-    e.preventDefault();
-    $(this).tab('show');
-  })
+  // handle file select in kappa dialog
+  var fileInputKappa = document.getElementById('fileInputKappa');
+  var kappa_script = document.getElementById('kappa_script');
+  fileInputKappa.addEventListener('change', function(e) {
+    var file = fileInputKappa.files[0];
+    var reader = new FileReader();
 
-  $('#tabDeployApplication a').click(function (e) {
-    e.preventDefault();
-    $(this).tab('show');
-  })
+    reader.onload = function(e) {
+      console.log("Setting kappa script " + e.target.result);
+      kappa_script.innerHTML = e.target.result;
+    }
+
+    reader.readAsText(file);
+  });
 });
