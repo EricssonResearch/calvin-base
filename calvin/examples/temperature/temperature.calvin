@@ -1,6 +1,4 @@
-tick : std.Trigger(data=true, tick=1.0)
-thermometer : sensor.Temperature()
+thermometer : sensor.Temperature(period=1.0)
 out : io.Print()
 
-tick.data> thermometer.measure
 thermometer.centigrade > out.token

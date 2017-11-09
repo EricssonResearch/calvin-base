@@ -32,8 +32,7 @@ class Distance(Actor):
     def init(self, period):
         self.period = period
         self.distance = calvinsys.open(self, "io.distance")
-        self.timer = calvinsys.open(self, "sys.timer.repeating")
-        calvinsys.write(self.timer, period)
+        self.timer = calvinsys.open(self, "sys.timer.repeating", period=period)
 
     @stateguard(lambda self: calvinsys.can_read(self.distance))
     @condition([], ['meters'])

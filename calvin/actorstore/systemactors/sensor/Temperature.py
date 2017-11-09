@@ -32,8 +32,7 @@ class Temperature(Actor):
     def init(self, period):
         self.period = period
         self.temperature = calvinsys.open(self, "io.temperature")
-        self.timer = calvinsys.open(self, "sys.timer.once")
-        calvinsys.write(self.timer, 0)
+        self.timer = calvinsys.open(self, "sys.timer.once", period=0)
 
     @stateguard(lambda self: calvinsys.can_read(self.temperature) and calvinsys.can_write(self.timer))
     @condition([], ['centigrade'])
@@ -59,7 +58,7 @@ class Temperature(Actor):
     test_calvinsys = {'io.temperature': {'read': [10, 12, 0, 5],
                                          'write': [True]},
                       'sys.timer.once': {'read': ['dummy'],
-                                         'write': [0, 10, 10, 10, 10]}}
+                                         'write': [10, 10, 10, 10]}}
     test_set = [
         {
             'outports': {'centigrade': [10, 12, 0, 5]}

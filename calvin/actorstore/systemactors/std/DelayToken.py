@@ -33,8 +33,7 @@ class DelayToken(Actor):
         self.timers = []
 
     def new_timer(self):
-        timer = calvinsys.open(self, "sys.timer.once")
-        calvinsys.write(timer, self.delay)
+        timer = calvinsys.open(self, "sys.timer.once", period=self.delay)
         return timer
 
     @condition(['token'])

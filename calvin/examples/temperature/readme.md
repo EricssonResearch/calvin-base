@@ -19,8 +19,8 @@ The example assumes the following devices:
 
 ### Calvin configuration
 
-The following plugins needs to be loaded to run this script:
-- `environmental_sensor_plugin`
+The following capability needs to be configured to run this script:
+- `io.temperature`
 
 A `calvin.conf` file is prepared for this purpose. For the `calvin.conf` to be
 loaded, start the calvin script from within the directory the `calvin.conf`
@@ -31,14 +31,21 @@ the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/c
 ## 1-wire sensor
 
 ### Calvin configuration
-In order to load the `w1temp_impl` plugin, the file `calvin.conf` needs to be
-updated with this `environmental_sensor_plugin`:
+In order to load the `w1temp_impl` capability, the file `calvin.conf` needs to be
+updated to:
 
     {
-        "global": {
-            "environmental_sensor_plugin": "platform/raspberry_pi/w1temp_impl"
+        "calvinsys": {
+            "capabilities": {
+                "io.temperature": {
+                    "comment": "This device talks 1-wire on pin GPIO4",
+                    "module": "io.ds18b20thermometer.raspberry_pi.DS18B20",
+                    "attributes": {"id": "n/a"}
+                }
+            }
         }
     }
+
 
 
 On the Raspberry Pi, the following line needs to be added to `/boot/config.txt`

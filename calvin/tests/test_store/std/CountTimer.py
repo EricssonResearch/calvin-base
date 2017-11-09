@@ -17,6 +17,7 @@
 import sys
 from calvin.actor.actor import Actor, manage, condition, stateguard
 
+
 class CountTimer(Actor):
 
     """

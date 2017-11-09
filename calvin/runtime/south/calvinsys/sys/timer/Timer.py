@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2015 Ericsson AB
@@ -18,6 +17,7 @@
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.runtime.south.plugins.async import async
 
+
 class Timer(base_calvinsys_object.BaseCalvinsysObject):
     """
     Timers - Handling of system timers
@@ -29,10 +29,14 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
             "repeats" :  {
                 "description": "Should the timer automatically reset once triggered?",
                 "type": "boolean"
+            },
+            "period" : {
+                "description": "The period of measurements, in seconds. If set to 0 timer triggers immediately",
+                "type": "number"
             }
         }
     }
-    
+
     can_read_schema = {
         "description": "True if timer has triggered",
     }
@@ -40,61 +44,67 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
     read_schema = {
         "description": "Ack triggered timer"
     }
-    
+
     can_write_schema = {
         "description": "Always True"
     }
-    
+
     write_schema = {
         "description": "Set or cancel timer; number indicates set/reset, and false cancels",
         "type": ["number", "boolean"]
     }
 
-    def init(self, repeats=False, **kwargs):
+    def init(self, repeats=False, period=None, **kwargs):
         self._timer = None
+        self._timeout = period
         self._triggered = False
-        self._timeout = None
         self._repeats = repeats
+        if self._timeout is 0:
+            self._triggered = True
+        if self._timeout:
+            self._timer = self._reset_timer(self._timeout)
+
+    def _reset_timer(self, timeout):
+        return async.DelayedCall(timeout, self._timer_cb)
 
     def _timer_cb(self):
         self._triggered = True
         self.scheduler_wakeup()
-        
+
     def can_read(self):
         return self._triggered
-    
+
     def read(self):
         self._triggered = False
-        if self._repeats :
-            self._timer = async.DelayedCall(self._timeout, self._timer_cb)
-    
+        if self._repeats:
+            self._timer = self._reset_timer(self._timeout)
+
     def write(self, set_reset_or_cancel):
         cancel_only = isinstance(set_reset_or_cancel, bool)
-
         # cancel timer if running
         if self._timer and self._timer.active():
             self._timer.cancel()
-        
+
         if not cancel_only:
             self._timeout = float(set_reset_or_cancel)
-            self._timer = async.DelayedCall(self._timeout, self._timer_cb)
+            self._timer = self._reset_timer(self._timeout)
 
     def can_write(self):
         # Can always stop & reset a timer
         return True
-        
+
     def close(self):
         if self._timer:
             self._timer.cancel()
             del self._timer
             self._timer = None
         self._triggered = False
-        
+
     # Serialize/deserialize calvinsys
     def serialize(self):
-        return {"triggered": self._triggered, "timeout": self._timeout, 
+        return {"triggered": self._triggered, "timeout": self._timeout,
                 "repeats": self._repeats, "nexttrigger": self._timer.nextcall() if self._timer else None}
-                
+
     def deserialize(self, state, **kwargs):
         import time
         self._triggered = state["triggered"]
@@ -102,8 +112,9 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
         self._repeats = state["repeats"]
         if state["nexttrigger"]:
             timeout = state["nexttrigger"] - time.time()
-            if timeout < 0: timeout = 0
-            self._timer = async.DelayedCall(timeout,  self._timer_cb)
+            if timeout < 0:
+                timeout = 0
+            self._timer = self._reset_timer(timeout)
         else:
             self._timer = None
         return self
