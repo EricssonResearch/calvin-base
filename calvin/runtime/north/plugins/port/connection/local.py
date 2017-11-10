@@ -42,15 +42,7 @@ class LocalConnection(BaseConnection):
         # Local connect wants the first port to be an inport
         inport, outport = (port1, port2) if port1.direction == 'in' else (port2, port1)
         self._connect_via_local(inport, outport)
-        if self.callback:
-            self.callback(status=response.CalvinResponse(True),
-                     actor_id=self.port.owner.id,
-                     port_name=self.port.name,
-                     port_id=self.port.id,
-                     peer_node_id=self.peer_port_meta.node_id,
-                     peer_actor_id=self.peer_port_meta.actor_id,
-                     peer_port_name=self.peer_port_meta.port_name,
-                     peer_port_id=self.peer_port_meta.port_id)
+        self.async_reply(status=response.CalvinResponse(True))
         return None
 
     def _connect_via_local(self, inport, outport):

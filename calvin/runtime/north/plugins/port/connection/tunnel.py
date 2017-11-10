@@ -36,20 +36,6 @@ class TunnelConnection(BaseConnection):
         if self.purpose != PURPOSE.INIT:
             self.token_tunnel = self.node.pm.connections_data[self.__class__.__name__]
 
-    def async_reply(self, status):
-        if not self.callback:
-            return 
-        self.callback(
-            status=status,
-            actor_id=self.port.owner.id,
-            port_name=self.port.name,
-            port_id=self.port.id,
-            peer_node_id=self.peer_port_meta.node_id,
-            peer_actor_id=self.peer_port_meta.actor_id,
-            peer_port_name=self.peer_port_meta.port_name,
-            peer_port_id=self.peer_port_meta.port_id
-        )
-        
     def connect(self, status=None, port_meta=None):
         # TODO: status & port_meta unused
         if self.peer_port_meta.node_id == self.node.id:

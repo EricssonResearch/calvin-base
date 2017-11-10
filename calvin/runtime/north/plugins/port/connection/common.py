@@ -30,6 +30,20 @@ class BaseConnection(object):
         self.factory = factory
         self._parallel_connections = []
 
+    def async_reply(self, status):
+        if not self.callback:
+            return
+        self.callback(
+            status=status,
+            actor_id=self.port.owner.id,
+            port_name=self.port.name,
+            port_id=self.port.id,
+            peer_node_id=self.peer_port_meta.node_id,
+            peer_actor_id=self.peer_port_meta.actor_id,
+            peer_port_name=self.peer_port_meta.port_name,
+            peer_port_id=self.peer_port_meta.port_id
+        )
+
     def parallel_connections(self, connections):
         self._parallel_connections = connections
 
