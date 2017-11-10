@@ -194,16 +194,11 @@ class TunnelConnection(BaseConnection):
                                               reply.data['port_id'],
                                               self.peer_port_meta.properties,
                                               self.node.sched)
-        # FIXME: Let monitor handle whether it should be used or not
-        if endp.use_monitor():
-            # register into main loop
-            self.node.monitor.register_endpoint(endp)
+
         invalid_endpoint = self.port.attach_endpoint(endp)
-        # remove previous endpoint
-        if invalid_endpoint:
-            if invalid_endpoint.use_monitor():
-                self.node.monitor.unregister_endpoint(invalid_endpoint)
-            invalid_endpoint.destroy()
+        invalid_endpoint.unregister(self.node.sched)
+        invalid_endpoint.destroy()
+        endp.register(self.node.sched)
 
         # Done connecting the port
         if self.callback:
@@ -254,16 +249,11 @@ class TunnelConnection(BaseConnection):
                                               self.peer_port_meta.port_id,
                                               self.peer_port_meta.properties,
                                               self.node.sched)
-        # FIXME: Let monitor handle whether it should be used or not
-        if endp.use_monitor():
-            self.node.monitor.register_endpoint(endp)
 
         invalid_endpoint = self.port.attach_endpoint(endp)
-        # Remove previous endpoint
-        if invalid_endpoint:
-            if invalid_endpoint.use_monitor():
-                self.node.monitor.unregister_endpoint(invalid_endpoint)
-            invalid_endpoint.destroy()
+        invalid_endpoint.unregister(self.node.sched)
+        invalid_endpoint.destroy()
+        endp.register(self.node.sched)
 
         # Update storage
         self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
@@ -349,8 +339,7 @@ class TunnelConnection(BaseConnection):
         # FIXME: Let monitor handle whether it should be used or not
         for ep in endpoints:
             remaining_tokens.update(ep.remaining_tokens)
-            if ep.use_monitor():
-                self.node.monitor.unregister_endpoint(ep)
+            ep.unregister(self.node.sched)
             ep.destroy()
         return remaining_tokens
 

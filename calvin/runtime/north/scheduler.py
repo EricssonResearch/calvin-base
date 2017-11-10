@@ -115,7 +115,12 @@ class BaselineScheduler(object):
             self._schedule_all()
         else:
             self._schedule_actors(actor_ids=[actor_id])
-        
+
+    def register_endpoint(self, endpoint):
+        self.monitor.register_endpoint(endpoint)
+
+    def unregister_endpoint(self, endpoint):
+        self.monitor.unregister_endpoint(endpoint)
     #
     # Capture the scheduling logic here?
     #
