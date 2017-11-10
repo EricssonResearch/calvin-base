@@ -1504,6 +1504,10 @@ function migrate(actor_id)
     }
     var node = findRuntime(actor.peer_id);
     if (node) {
+      if (node.proxy) {
+        console.log("Using proxy for migration");
+        node = findRuntime(node.proxy);
+      }
       if (node.control_uris) {
         var url = node.control_uris[0] + '/actor/' + actor.id + '/migrate';
         var data = JSON.stringify({'peer_node_id': peer_id});
