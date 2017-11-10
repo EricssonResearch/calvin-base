@@ -27,11 +27,11 @@ _log = get_logger(__name__)
 _conf = calvinconfig.get()
 
 
-# FIXME: Split out a partly abstract Scheduler class and implement specific 
+# FIXME: Split out a partly abstract Scheduler class and implement specific
 #        scheduling strategies in subclasses
 class BaselineScheduler(object):
     """
-    The scheduler is the only active component in a runtime, 
+    The scheduler is the only active component in a runtime,
     except for calvinsys and token transport. Every other piece of
     code is (or should be) purely reactive.
     """
@@ -59,10 +59,10 @@ class BaselineScheduler(object):
 
     #
     # Helper methods
-    #  
+    #
     def all_actors(self):
         return self.actor_mgr.enabled_actors()
-        
+
     def all_actor_ids(self):
         return [a.id for a in self.all_actors()]
 
@@ -73,7 +73,7 @@ class BaselineScheduler(object):
 
     def pending(self):
         return self._trigger_set
-        
+
     def clear_pending(self):
         self._trigger_set = set()
 
@@ -145,7 +145,7 @@ class BaselineScheduler(object):
                 # No firings, set a watchdog timeout
                 self._schedule_watchdog()
                 # print "STRATEGY: _schedule_watchdog"
-        
+
     #
     # Maintenance loop
     #
@@ -174,7 +174,7 @@ class BaselineScheduler(object):
     #
     # Private methods
     #
-    # FIXME: Clean up, and split in common and specific functionality so we can use this as 
+    # FIXME: Clean up, and split in common and specific functionality so we can use this as
     #        a base class for schedulers
     def _loop_once(self):
         # We don't know how we got here, so cancel both of these (safe thing to do)
@@ -192,7 +192,7 @@ class BaselineScheduler(object):
         self.node.rm.replication_loop()
         # Figure out strategy
         self.strategy(did_transfer_tokens, did_fire_actor_ids)
-        
+
 
 
     def _fire_actors(self, actors):
@@ -211,7 +211,7 @@ class BaselineScheduler(object):
                     did_fire_actor_ids.add(actor.id)
             except Exception as e:
                 self._log_exception_during_fire(e)
-        
+
         return did_fire_actor_ids
 
     def _fire_actor(self, actor):
