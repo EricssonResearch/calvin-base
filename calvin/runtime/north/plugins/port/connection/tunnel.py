@@ -36,6 +36,20 @@ class TunnelConnection(BaseConnection):
         if self.purpose != PURPOSE.INIT:
             self.token_tunnel = self.node.pm.connections_data[self.__class__.__name__]
 
+    def async_reply(self, status):
+        if not self.callback:
+            return 
+        self.callback(
+            status=status,
+            actor_id=self.port.owner.id,
+            port_name=self.port.name,
+            port_id=self.port.id,
+            peer_node_id=self.peer_port_meta.node_id,
+            peer_actor_id=self.peer_port_meta.actor_id,
+            peer_port_name=self.peer_port_meta.port_name,
+            peer_port_id=self.peer_port_meta.port_id
+        )
+        
     def connect(self, status=None, port_meta=None):
         # TODO: status & port_meta unused
         if self.peer_port_meta.node_id == self.node.id:
@@ -63,17 +77,9 @@ class TunnelConnection(BaseConnection):
             # call _connect_via_tunnel when we get the response of the tunnel
             self.token_tunnel.pending_tunnels[self.peer_port_meta.node_id].append(CalvinCB(self._connect_via_tunnel))
             return
-        elif tunnel.status == CalvinTunnel.STATUS.TERMINATED:
+        if tunnel.status == CalvinTunnel.STATUS.TERMINATED:
             # TODO should we retry at this level?
-            if self.callback:
-                self.callback(status=response.CalvinResponse(response.INTERNAL_ERROR),
-                         actor_id=self.port.owner.id,
-                         port_name=self.port.name,
-                         port_id=self.port.id,
-                         peer_node_id=self.peer_port_meta.node_id,
-                         peer_actor_id=self.peer_port_meta.actor_id,
-                         peer_port_name=self.peer_port_meta.port_name,
-                         peer_port_id=self.peer_port_meta.port_id)
+            self.async_reply(status=response.CalvinResponse(response.INTERNAL_ERROR))
             return
 
         _log.analyze(self.node.id, "+ HAD TUNNEL",
@@ -92,29 +98,13 @@ class TunnelConnection(BaseConnection):
             # The other end beat us to connecting the port, lets just report success and return
             _log.analyze(self.node.id, "+ IS CONNECTED", {'local_port': self.port, 'peer_port': self.peer_port_meta},
                             peer_node_id=self.peer_port_meta.node_id)
-            if self.callback:
-                self.callback(status=response.CalvinResponse(True),
-                         actor_id=self.port.owner.id,
-                         port_name=self.port.name,
-                         port_id=self.port.id,
-                         peer_node_id=self.peer_port_meta.node_id,
-                         peer_actor_id=self.peer_port_meta.actor_id,
-                         peer_port_name=self.peer_port_meta.port_name,
-                         peer_port_id=self.peer_port_meta.port_id)
+            self.async_reply(status=response.CalvinResponse(True))
             return None
 
         if not status:
             # Failed getting a tunnel, just inform the one wanting to connect
-            if self.callback:
-                self.callback(status=response.CalvinResponse(response.INTERNAL_ERROR),
-                         actor_id=self.port.owner.id,
-                         port_name=self.port.name,
-                         port_id=self.port.id,
-                         peer_node_id=self.peer_port_meta.node_id,
-                         peer_actor_id=self.peer_port_meta.actor_id,
-                         peer_port_name=self.peer_port_meta.port_name,
-                         peer_port_id=self.peer_port_meta.port_id)
-                return None
+            self.async_reply(status=response.CalvinResponse(response.INTERNAL_ERROR))
+            return None
         # Finally we have all information and a tunnel
         # Lets ask the peer if it can connect our port.
         tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
@@ -138,16 +128,8 @@ class TunnelConnection(BaseConnection):
                 # FIXME: Could the port have moved to our node and we need to check local???
                 self.peer_port_meta.retry(CalvinCB(self.connect))
                 return
-            if self.callback:
-                self.callback(status=response.CalvinResponse(response.NOT_FOUND),
-                         actor_id=self.port.owner.id,
-                         port_name=self.port.name,
-                         port_id=self.port.id,
-                         peer_node_id=self.peer_port_meta.node_id,
-                         peer_actor_id=self.peer_port_meta.actor_id,
-                         peer_port_name=self.peer_port_meta.port_name,
-                         peer_port_id=self.peer_port_meta.port_id)
-                return
+            self.async_reply(status=response.CalvinResponse(response.NOT_FOUND))
+            return
 
         if reply == response.GONE:
             # Other end did not accept our port connection request, likely due to they have not got the message
@@ -158,18 +140,9 @@ class TunnelConnection(BaseConnection):
                 self.peer_port_meta.retries += 1
                 # Status here just indicate that we should have a tunnel
                 self._connect_via_tunnel(status=response.CalvinResponse(True))
-                return
             else:
-                if self.callback:
-                    self.callback(status=response.CalvinResponse(False),
-                                     actor_id=self.port.owner.id,
-                                     port_name=self.port.name,
-                                     port_id=self.port.id,
-                                     peer_node_id=self.peer_port_meta.node_id,
-                                     peer_actor_id=self.peer_port_meta.actor_id,
-                                     peer_port_name=self.peer_port_meta.port_name,
-                                     peer_port_id=self.peer_port_meta.port_id)
-                return
+                self.async_reply(status=response.CalvinResponse(False))
+            return
 
         # Update our peer port's properties with newly recieved information
         if self.peer_port_meta.properties is None:
@@ -201,15 +174,7 @@ class TunnelConnection(BaseConnection):
         endp.register(self.node.sched)
 
         # Done connecting the port
-        if self.callback:
-            self.callback(status=response.CalvinResponse(True),
-                             actor_id=self.port.owner.id,
-                             port_name=self.port.name,
-                             port_id=self.port.id,
-                             peer_node_id=self.peer_port_meta.node_id,
-                             peer_actor_id=self.peer_port_meta.actor_id,
-                             peer_port_name=self.peer_port_meta.port_name,
-                             peer_port_id=self.peer_port_meta.port_id)
+        self.async_reply(status=response.CalvinResponse(True))
 
         # Update storage
         self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
