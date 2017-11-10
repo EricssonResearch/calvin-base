@@ -54,7 +54,7 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
         self._timer = None
         self._triggered = False
         self._timeout = None
-        self._repeats = True
+        self._repeats = repeats
 
     def _timer_cb(self):
         self._triggered = True
