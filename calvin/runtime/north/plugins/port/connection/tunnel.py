@@ -153,20 +153,13 @@ class TunnelConnection(BaseConnection):
         # Set up the port's endpoint
         tunnel = self.token_tunnel.tunnels[self.peer_port_meta.node_id]
         self.port.set_queue(queue.get(self.port, peer_port_meta=self.peer_port_meta))
-        if self.port.direction == 'in':
-            endp = endpoint.TunnelInEndpoint(self.port,
-                                             tunnel,
-                                             self.peer_port_meta.node_id,
-                                             reply.data['port_id'],
-                                             self.peer_port_meta.properties,
-                                             self.node.sched)
-        else:
-            endp = endpoint.TunnelOutEndpoint(self.port,
-                                              tunnel,
-                                              self.peer_port_meta.node_id,
-                                              reply.data['port_id'],
-                                              self.peer_port_meta.properties,
-                                              self.node.sched)
+        cls = endpoint.TunnelInEndpoint if self.port.direction == 'in' else endpoint.TunnelOutEndpoint
+        endp = cls(self.port,
+                   tunnel,
+                   self.peer_port_meta.node_id,
+                   reply.data['port_id'],
+                   self.peer_port_meta.properties,
+                   self.node.sched)
 
         invalid_endpoint = self.port.attach_endpoint(endp)
         invalid_endpoint.unregister(self.node.sched)
@@ -200,20 +193,13 @@ class TunnelConnection(BaseConnection):
             self.port.owner.id, self.port.id, payload['port_id'], self.peer_port_meta.node_id)
 
         self.port.set_queue(queue.get(self.port, peer_port_meta=self.peer_port_meta))
-        if self.port.direction == "in":
-            endp = endpoint.TunnelInEndpoint(self.port,
-                                             tunnel,
-                                             self.peer_port_meta.node_id,
-                                             self.peer_port_meta.port_id,
-                                             self.peer_port_meta.properties,
-                                             self.node.sched)
-        else:
-            endp = endpoint.TunnelOutEndpoint(self.port,
-                                              tunnel,
-                                              self.peer_port_meta.node_id,
-                                              self.peer_port_meta.port_id,
-                                              self.peer_port_meta.properties,
-                                              self.node.sched)
+        cls = endpoint.TunnelInEndpoint if self.port.direction == 'in' else endpoint.TunnelOutEndpoint
+        endp = cls(self.port,
+                   tunnel,
+                   self.peer_port_meta.node_id,
+                   self.peer_port_meta.port_id,
+                   self.peer_port_meta.properties,
+                   self.node.sched)
 
         invalid_endpoint = self.port.attach_endpoint(endp)
         invalid_endpoint.unregister(self.node.sched)
