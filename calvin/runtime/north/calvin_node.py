@@ -39,7 +39,6 @@ from calvin.runtime.north.authorization import authorization
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
-from calvin.runtime.south.monitor import Event_Monitor
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
@@ -111,14 +110,13 @@ class Node(object):
         self.authentication = authentication.Authentication(self)
         self.authorization = authorization.Authorization(self)
         self.metering = metering.set_metering(metering.Metering(self))
-        self.monitor = Event_Monitor()
         self.am = actormanager.ActorManager(self)
         self.rm = replicationmanager.ReplicationManager(self)
         self.control = calvincontrol.get_calvincontrol()
 
         # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         _scheduler = scheduler.BaselineScheduler
-        self.sched = _scheduler(self, self.am, self.monitor)
+        self.sched = _scheduler(self, self.am)
         self.async_msg_ids = {}
         self._calvinsys = CalvinSys(self)
         calvinsys = get_calvinsys()

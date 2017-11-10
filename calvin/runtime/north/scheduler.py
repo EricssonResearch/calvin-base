@@ -18,6 +18,7 @@ import sys
 import time
 import random
 
+from monitor import Event_Monitor
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
@@ -36,12 +37,12 @@ class BaselineScheduler(object):
     code is (or should be) purely reactive.
     """
 
-    def __init__(self, node, actor_mgr, monitor):
+    def __init__(self, node, actor_mgr):
         super(BaselineScheduler, self).__init__()
         self.actor_mgr = actor_mgr
         self.done = False
         self.node = node
-        self.monitor = monitor
+        self.monitor = Event_Monitor()
         self._scheduled = None
         self._trigger_set = set()
         self._watchdog = None
