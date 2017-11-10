@@ -182,8 +182,9 @@ class BaselineScheduler(object):
         self._cancel_watchdog()
         self._cancel_schedule()
         # Transfer tokens between actors
-        # FIXME: did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
-        did_transfer_tokens = self.monitor.communicate(self)
+        # Until we track this, supply all endpoints to communicate
+        list_of_endpoints = self.monitor.endpoints
+        did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
         # Pick which set of actors to fire
         actors_to_fire = self.pending_actors()
         # Reset the set of potential actors

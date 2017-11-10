@@ -60,13 +60,13 @@ class Event_Monitor(object):
         self.clear_backoff(endpoint)
 
     # FIXME: supply a list of endpoints
-    def communicate(self, scheduler):
+    def communicate(self, endpoints):
         """Communicate over all endpoints, return True if at least one send something."""
         # Update the backoff dictionary containing endpoints that should NOT communicate.
         self._check_backoff()
         did_comm = False
-        # Loop over all endpoints, skip those in backoff dictionary
-        for endp in self.endpoints:
+        # Loop over supplied endpoints, skip those in backoff dictionary
+        for endp in endpoints:
             if not endp in self._backoff:
                 did_comm |= endp.communicate()
                 
