@@ -182,7 +182,11 @@ class BaselineScheduler(object):
         # Reset the set of potential actors
         self.clear_pending()
         did_fire_actor_ids = self._fire_actors(actors_to_fire)
+        # Control replication
+        self.node.rm.replication_loop()
+        # Figure out strategy
         self.strategy(did_transfer_tokens, did_fire_actor_ids)
+        
 
 
     def _fire_actors(self, actors):
