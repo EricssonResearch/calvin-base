@@ -123,7 +123,6 @@ class BaselineScheduler(object):
         # If the did_fire_actor_ids set is empty no actor could fire any action
         did_fire = bool(did_fire_actor_ids)
         activity = did_fire or did_transfer_tokens
-        next_slot = self.monitor.next_slot()
         # print "STRATEGY:", did_transfer_tokens, did_fire_actor_ids, did_fire, activity
         if activity:
             # Something happened - run again
@@ -132,13 +131,15 @@ class BaselineScheduler(object):
             # ... but we don't have a strategy, so run'em all :(
             self._schedule_all()
             # print "STRATEGY: _schedule_all"
-        elif next_slot:
-            current = time.time()
-            self._schedule_all(max(0, next_slot - current))
         else:
-            # No firings, set a watchdog timeout
-            self._schedule_watchdog()
-            # print "STRATEGY: _schedule_watchdog"
+            next_slot = self.monitor.next_slot()
+            if next_slot:
+                current = time.time()
+                self._schedule_all(max(0, next_slot - current))
+            else:
+                # No firings, set a watchdog timeout
+                self._schedule_watchdog()
+                # print "STRATEGY: _schedule_watchdog"
         
     #
     # Maintenance loop
