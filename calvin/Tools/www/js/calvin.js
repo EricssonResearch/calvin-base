@@ -66,10 +66,7 @@ function showInfo(message)
 // Clear log table
 function clearLog()
 {
-  var tableRef = document.getElementById('logTable');
-  for(var i = 0; i < tableRef.rows.length;) {
-     tableRef.deleteRow(i);
-  }
+  clearTableWithHeader(document.getElementById('logTable'));
 }
 
 function addActorToGraph(actor)
@@ -371,6 +368,14 @@ function clearTable(tableRef)
   }
 }
 
+// Helper to clear table with header
+function clearTableWithHeader(tableRef)
+{
+  for(var i = 1; i < tableRef.rows.length;) {
+    tableRef.deleteRow(i);
+  }
+}
+
 // Helper to clear combobox
 function clearCombo(selectbox)
 {
@@ -435,8 +440,8 @@ function connect()
   var applicationSelector = document.getElementById("applicationSelector");
   var traceApplicationSelector = document.getElementById("traceApplicationSelector");
 
-  clearTable(document.getElementById("peersTable"));
-  clearTable(document.getElementById('logTable'));
+  clearTableWithHeader(document.getElementById("peersTable"));
+  clearTableWithHeader(document.getElementById('logTable'));
   clearTable(document.getElementById("applicationsTable"));
   clearTable(document.getElementById("actorsTable"));
   clearTable(document.getElementById("actorPortsTable"));
@@ -1865,10 +1870,10 @@ function eventHandler(event)
   var trace_size = $("#trace_size").val();
   var data = JSON.parse(event.data);
   var tableRef = document.getElementById('logTable');
-  if (tableRef.rows.length >= trace_size) {
-    tableRef.deleteRow(tableRef.rows.length -1);
+  if (tableRef.rows.length > trace_size) {
+    tableRef.deleteRow(tableRef.rows.length - 1);
   }
-  var newRow = tableRef.insertRow(0);
+  var newRow = tableRef.insertRow(1);
   var cell0 = newRow.insertCell(0);
   var cell1 = newRow.insertCell(1);
   var cell2 = newRow.insertCell(2);
