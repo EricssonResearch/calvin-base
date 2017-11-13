@@ -38,15 +38,14 @@ class SimpleScheduler(object):
         self.monitor = Event_Monitor()
         self._tasks = []
         self._scheduled = None
-        self._replication_interval = 2
         # FIXME: later
-        self._maintenance_loop = None
+        self._replication_interval = 2
         self._maintenance_delay = _conf.get(None, "maintenance_delay") or 300
 
-
     def run(self):
-        self.insert_task(self._fire_communicate, 0)
+        self.insert_task(self.maintenance_loop, self._maintenance_delay)
         self.insert_task(self._check_replication, self._replication_interval)
+        self.insert_task(self._fire_communicate, 0)
         async.run_ioloop()
 
     def stop(self):
@@ -80,6 +79,7 @@ class SimpleScheduler(object):
         """Backoff request for endpoint"""
         # Schedule tx for endpoint at this time
         pass
+        # FIXME: Under what circumstances is this method called?
 
     def schedule_calvinsys(self, actor_id=None):
         """Incoming platform event"""
@@ -103,6 +103,7 @@ class SimpleScheduler(object):
     #
     # FIXME: Deal with this later
     def maintenance_loop(self):
+        print "maintenance_loop"
         # Migrate denied actors
         for actor in self.actor_mgr.migratable_actors():
             self.actor_mgr.migrate(actor.id, actor.migration_info["node_id"],
@@ -111,18 +112,16 @@ class SimpleScheduler(object):
         for actor in self.actor_mgr.denied_actors():
             actor.enable_or_migrate()
         # TODO: try to migrate shadow actors as well.
-        self._maintenance_loop = None
-        self.trigger_maintenance_loop(delay=True)
+        # Since we may have moved stuff around, schedule _fire_communicate
+        self.insert_task(self._fire_communicate, 0)
+        # Schedule next maintenance
+        self.insert_task(self.maintenance_loop, self._maintenance_delay)
 
     def trigger_maintenance_loop(self, delay=False):
-        # Never have more then one maintenance loop.
-        if self._maintenance_loop is not None:
-            self._maintenance_loop.cancel()
         if delay:
-            self._maintenance_loop = async.DelayedCall(self._maintenance_delay, self.maintenance_loop)
-        else:
-            self._maintenance_loop = async.DelayedCall(0, self.maintenance_loop)
-
+            # No need to schedule delayed maintenance, we do that periodically anyway
+            return
+        self.insert_task(self.maintenance_loop, 0)
 
     # There are at least five things that needs to be done:
     # 1. Call fire() on actors
@@ -173,7 +172,7 @@ class SimpleScheduler(object):
             # Queue is empty, set a watchdog to go off in 60s
             self.insert_task(self._watchdog, 60)
         if not self._scheduled.active():
-            _log.warning("NO SCHEDULED TASK!")
+            raise Exception("NO SCHEDULED TASK!")
 
     def _watchdog(self):
         _log.warning("WATCHDOG TRIGGERED")
