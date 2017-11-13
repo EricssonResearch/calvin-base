@@ -164,7 +164,8 @@ class SimpleScheduler(object):
             if activity:
                 self.insert_task(self._fire_communicate_replicate, 0)
         if self._tasks:
-            self._schedule_next(t, self._process_next)
+            delay = max(0, t - time.time())
+            self._schedule_next(delay, self._process_next)
         else:
             print "QUEUE EMPTY"
             self.insert_task(self._watchdog, 2)
