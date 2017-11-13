@@ -115,7 +115,8 @@ class Node(object):
         self.control = calvincontrol.get_calvincontrol()
 
         # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
-        _scheduler = scheduler.BaselineScheduler
+        _scheduler = scheduler.SimpleScheduler
+        # _scheduler = scheduler.BaselineScheduler
         self.sched = _scheduler(self, self.am)
         self.async_msg_ids = {}
         self._calvinsys = CalvinSys(self)
