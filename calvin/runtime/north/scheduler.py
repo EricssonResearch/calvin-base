@@ -45,7 +45,7 @@ class SimpleScheduler(object):
     def run(self):
         self.insert_task(self.maintenance_loop, self._maintenance_delay)
         self.insert_task(self._check_replication, self._replication_interval)
-        self.insert_task(self._fire_communicate, 0)
+        self.insert_task(self.strategy, 0)
         async.run_ioloop()
 
     def stop(self):
@@ -58,13 +58,13 @@ class SimpleScheduler(object):
     def tunnel_rx(self, endpoint):
         """Token recieved on endpoint"""
         # We got a token, meaning that the corrsponding actor could possibly fire
-        self.insert_task(self._fire_communicate, 0)
+        self.insert_task(self.strategy, 0)
 
     def tunnel_tx_ack(self, endpoint):
         """Token successfully sent on endpoint"""
         # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
         self.monitor.clear_backoff(endpoint)
-        self.insert_task(self._fire_communicate, 0)
+        self.insert_task(self.strategy, 0)
 
     def tunnel_tx_nack(self, endpoint):
         """Token unsuccessfully sent on endpoint"""
@@ -73,7 +73,7 @@ class SimpleScheduler(object):
         next_slot = self.monitor.next_slot()
         if next_slot:
             current = time.time()
-            self.insert_task(self._fire_communicate, max(0, next_slot - current))
+            self.insert_task(self.strategy, max(0, next_slot - current))
 
     def tunnel_tx_throttle(self, endpoint):
         """Backoff request for endpoint"""
@@ -83,7 +83,7 @@ class SimpleScheduler(object):
 
     def schedule_calvinsys(self, actor_id=None):
         """Incoming platform event"""
-        self.insert_task(self._fire_communicate, 0)
+        self.insert_task(self.strategy, 0)
 
     def register_endpoint(self, endpoint):
         self.monitor.register_endpoint(endpoint)
@@ -96,14 +96,13 @@ class SimpleScheduler(object):
     def _check_replication(self):
         # Control replication
         self.node.rm.replication_loop()
-        self.insert_task(self._fire_communicate, 0)
+        self.insert_task(self.strategy, 0)
         self.insert_task(self._check_replication, self._replication_interval)
     #
     # Maintenance loop
     #
     # FIXME: Deal with this later
     def maintenance_loop(self):
-        print "maintenance_loop"
         # Migrate denied actors
         for actor in self.actor_mgr.migratable_actors():
             self.actor_mgr.migrate(actor.id, actor.migration_info["node_id"],
@@ -112,8 +111,8 @@ class SimpleScheduler(object):
         for actor in self.actor_mgr.denied_actors():
             actor.enable_or_migrate()
         # TODO: try to migrate shadow actors as well.
-        # Since we may have moved stuff around, schedule _fire_communicate
-        self.insert_task(self._fire_communicate, 0)
+        # Since we may have moved stuff around, schedule strategy
+        self.insert_task(self.strategy, 0)
         # Schedule next maintenance
         self.insert_task(self.maintenance_loop, self._maintenance_delay)
 
@@ -170,15 +169,15 @@ class SimpleScheduler(object):
             self._schedule_next(delay, self._process_next)
         else:
             # Queue is empty, set a watchdog to go off in 60s
-            self.insert_task(self._watchdog, 60)
+            self.insert_task(self.watchdog, 60)
         if not self._scheduled.active():
             raise Exception("NO SCHEDULED TASK!")
 
-    def _watchdog(self):
+    def watchdog(self):
         _log.warning("WATCHDOG TRIGGERED")
-        self.insert_task(self._fire_communicate, 0)
+        self.insert_task(self.strategy, 0)
 
-    def _fire_communicate(self):
+    def strategy(self):
         # Really naive -- always try everything
         list_of_endpoints = self.monitor.endpoints
         did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
@@ -186,7 +185,7 @@ class SimpleScheduler(object):
         did_fire_actor_ids = self._fire_actors(actors_to_fire)
         activity = did_transfer_tokens or bool(did_fire_actor_ids)
         if activity:
-            self.insert_task(self._fire_communicate, 0)
+            self.insert_task(self.strategy, 0)
 
     def _fire_actors(self, actors):
         """
@@ -243,10 +242,10 @@ class SimpleScheduler(object):
                 done = True
 
         return actor_did_fire
-    
+
     def _log_exception_during_fire(self, e):
         _log.exception(e)
-    
+
 
 
 # FIXME: Split out a partly abstract Scheduler class and implement specific
