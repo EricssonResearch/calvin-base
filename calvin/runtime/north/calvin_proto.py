@@ -253,10 +253,6 @@ class CalvinProto(CalvinCBClass):
         """ Called by transport when a full payload has been received
         """
         _log.analyze(self.rt_id, "RECV", payload)
-        link = self.network.link_get(payload['from_rt_uuid'])
-        if link is None:
-            # TODO: Create own exception here
-            raise Exception("ERROR_UNKNOWN_RUNTIME")
 
         if payload['to_rt_uuid'] == self.rt_id:
             if not ('cmd' in payload and payload['cmd'] in self.callback_valid_names()):
