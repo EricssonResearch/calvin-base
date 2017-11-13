@@ -29,7 +29,7 @@ _conf = calvinconfig.get()
 
 
 class SimpleScheduler(object):
-    
+
     def __init__(self, node, actor_mgr):
         super(SimpleScheduler, self).__init__()
         self.node = node
@@ -41,7 +41,7 @@ class SimpleScheduler(object):
         # FIXME: later
         self._maintenance_loop = None
         self._maintenance_delay = _conf.get(None, "maintenance_delay") or 300
-        
+
 
     def run(self):
         async.run_ioloop()
@@ -73,7 +73,7 @@ class SimpleScheduler(object):
         if next_slot:
             current = time.time()
             self.insert_task(self._fire_communicate_replicate, max(0, next_slot - current))
-        
+
     def tunnel_tx_throttle(self, endpoint):
         """Backoff request for endpoint"""
         # Schedule tx for endpoint at this time
@@ -88,7 +88,7 @@ class SimpleScheduler(object):
 
     def unregister_endpoint(self, endpoint):
         self.monitor.unregister_endpoint(endpoint)
-        
+
     #
     # Maintenance loop
     #
@@ -113,16 +113,16 @@ class SimpleScheduler(object):
             self._maintenance_loop = async.DelayedCall(self._maintenance_delay, self.maintenance_loop)
         else:
             self._maintenance_loop = async.DelayedCall(0, self.maintenance_loop)
-        
-        
+
+
     # There are at least five things that needs to be done:
     # 1. Call fire() on actors
     # 2. Call communicate on endpoints
-    #    2.a Throttle comm if needed   
+    #    2.a Throttle comm if needed
     # 3. Call replication_loop every now and then (when?)
-    # 4. Call maintenance_loop every now and then (when?) 
+    # 4. Call maintenance_loop every now and then (when?)
     # 5. Set watchdog as a final resort?
-    
+
     def insert_task(self, what, delay):
         # Insert a task in time order,
         # if it ends up first in list, re-schedule _process_next
@@ -144,13 +144,13 @@ class SimpleScheduler(object):
         # If we're first, reschedule
         if index == 0:
             self._schedule_next(delay, self._process_next)
-            
+
     def _schedule_next(self, delay, what):
         if self._scheduled:
             self._scheduled.cancel()
         self._scheduled = async.DelayedCall(delay, what)
-        
-        
+
+
     def _process_next(self):
         # Get next task from queue and do it unless next task is in the future,
         # in that case, schedule _process_next (this method) at that time
@@ -169,15 +169,15 @@ class SimpleScheduler(object):
         else:
             print "QUEUE EMPTY"
             self.insert_task(self._watchdog, 2)
-    
+
     def _watchdog(self):
         print "WATCHDOG TRIGGERED"
-        retval = self._fire_communicate_replicate() 
+        retval = self._fire_communicate_replicate()
         return retval
-        
+
     def _fire_communicate_replicate(self):
         print "ACTING _fire_communicate_replicate"
-        # Really naive -- always try everything 
+        # Really naive -- always try everything
         list_of_endpoints = self.monitor.endpoints
         did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
         actors_to_fire = self.actor_mgr.enabled_actors()
@@ -187,8 +187,8 @@ class SimpleScheduler(object):
         activity = did_transfer_tokens or bool(did_fire_actor_ids)
         # print activity, did_transfer_tokens, "||", bool(did_fire_actor_ids)
         return activity
-        
-            
+
+
     def _fire_actors(self, actors):
         """
         Try to fire actions on actors on this runtime.
@@ -244,7 +244,7 @@ class SimpleScheduler(object):
                 done = True
 
         return actor_did_fire
-    
+
 
 # FIXME: Split out a partly abstract Scheduler class and implement specific
 #        scheduling strategies in subclasses
