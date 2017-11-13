@@ -243,6 +243,10 @@ class SimpleScheduler(object):
                 done = True
 
         return actor_did_fire
+    
+    def _log_exception_during_fire(self, e):
+        _log.exception(e)
+    
 
 
 # FIXME: Split out a partly abstract Scheduler class and implement specific
