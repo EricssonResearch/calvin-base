@@ -27,69 +27,92 @@ from calvin.utilities import calvinconfig
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
 
+class BaseScheduler(object):
 
-class SimpleScheduler(object):
+    """
+    The scheduler is the only active component in a runtime,
+    except for calvinsys and token transport. Every other piece of
+    code is (or should be) purely reactive.
+
+    This class cannot be used as a scheduler
+    """
 
     def __init__(self, node, actor_mgr):
-        super(SimpleScheduler, self).__init__()
+        super(BaseScheduler, self).__init__()
         self.node = node
         self.actor_mgr = actor_mgr
         self.done = False
-        self.monitor = Event_Monitor()
         self._tasks = []
         self._scheduled = None
         # FIXME: later
         self._replication_interval = 2
         self._maintenance_delay = _conf.get(None, "maintenance_delay") or 300
 
+    # System entry point
     def run(self):
-        self.insert_task(self.maintenance_loop, self._maintenance_delay)
+        self.insert_task(self._maintenance_loop, self._maintenance_delay)
         self.insert_task(self._check_replication, self._replication_interval)
         self.insert_task(self.strategy, 0)
         async.run_ioloop()
 
+    # System exit point
     def stop(self):
         if not self.done:
             async.DelayedCall(0, async.stop_ioloop)
         self.done = True
-    #
+
+    ######################################################################
     # Event "API" used by subsystems to inform scheduler about events
-    #
+    # Most of them needs to be subclassed in a working scheduler
+    ######################################################################
+
     def tunnel_rx(self, endpoint):
         """Token recieved on endpoint"""
         # We got a token, meaning that the corrsponding actor could possibly fire
-        self.insert_task(self.strategy, 0)
+        pass
 
     def tunnel_tx_ack(self, endpoint):
         """Token successfully sent on endpoint"""
         # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
-        self.monitor.clear_backoff(endpoint)
-        self.insert_task(self.strategy, 0)
+        pass
 
     def tunnel_tx_nack(self, endpoint):
         """Token unsuccessfully sent on endpoint"""
         # We got back NACK on sent token, endpoint should wait before resending
-        self.monitor.set_backoff(endpoint)
-        next_slot = self.monitor.next_slot()
-        if next_slot:
-            current = time.time()
-            self.insert_task(self.strategy, max(0, next_slot - current))
+        pass
 
     def tunnel_tx_throttle(self, endpoint):
         """Backoff request for endpoint"""
         # Schedule tx for endpoint at this time
-        pass
         # FIXME: Under what circumstances is this method called?
+        pass
 
     def schedule_calvinsys(self, actor_id=None):
         """Incoming platform event"""
-        self.insert_task(self.strategy, 0)
+        pass
 
     def register_endpoint(self, endpoint):
-        self.monitor.register_endpoint(endpoint)
+        pass
 
     def unregister_endpoint(self, endpoint):
-        self.monitor.unregister_endpoint(endpoint)
+        pass
+
+    ######################################################################
+    # Stuff that needs to be implemented in a subclass
+    ######################################################################
+
+    def strategy(self):
+        """This is where the scheduling happens..."""
+        raise Exception("Really need a strategy")
+
+    def watchdog(self):
+        """If nothing else is scheduled, this will be called after 60s"""
+        pass
+
+    ######################################################################
+    # Semi-private stuff, should be cleaned up later
+    ######################################################################
+
     #
     # Replication
     #
@@ -98,11 +121,11 @@ class SimpleScheduler(object):
         self.node.rm.replication_loop()
         self.insert_task(self.strategy, 0)
         self.insert_task(self._check_replication, self._replication_interval)
+
     #
     # Maintenance loop
     #
-    # FIXME: Deal with this later
-    def maintenance_loop(self):
+    def _maintenance_loop(self):
         # Migrate denied actors
         for actor in self.actor_mgr.migratable_actors():
             self.actor_mgr.migrate(actor.id, actor.migration_info["node_id"],
@@ -114,23 +137,21 @@ class SimpleScheduler(object):
         # Since we may have moved stuff around, schedule strategy
         self.insert_task(self.strategy, 0)
         # Schedule next maintenance
-        self.insert_task(self.maintenance_loop, self._maintenance_delay)
+        self.insert_task(self._maintenance_loop, self._maintenance_delay)
 
     def trigger_maintenance_loop(self, delay=False):
+        """Public API"""
         if delay:
             # No need to schedule delayed maintenance, we do that periodically anyway
             return
-        self.insert_task(self.maintenance_loop, 0)
+        self.insert_task(self._maintenance_loop, 0)
 
-    # There are at least five things that needs to be done:
-    # 1. Call fire() on actors
-    # 2. Call communicate on endpoints
-    #    2.a Throttle comm if needed
-    # 3. Call replication_loop every now and then (when?)
-    # 4. Call maintenance_loop every now and then (when?)
-    # 5. Set watchdog as a final resort?
+    ######################################################################
+    # Quite-private stuff, fairly generic
+    ######################################################################
 
     def insert_task(self, what, delay):
+        """Call to insert a task"""
         # Insert a task in time order,
         # if it ends up first in list, re-schedule _process_next
         t = time.time() + delay
@@ -152,12 +173,13 @@ class SimpleScheduler(object):
         if index == 0:
             self._schedule_next(delay, self._process_next)
 
-
+    # Don't call directly
     def _schedule_next(self, delay, what):
         if self._scheduled:
             self._scheduled.cancel()
         self._scheduled = async.DelayedCall(delay, what)
 
+    # Don't call directly
     def _process_next(self):
         # Get next task from queue and do it unless next task is in the future,
         # in that case, schedule _process_next (this method) at that time
@@ -173,19 +195,10 @@ class SimpleScheduler(object):
         if not self._scheduled.active():
             raise Exception("NO SCHEDULED TASK!")
 
-    def watchdog(self):
-        _log.warning("WATCHDOG TRIGGERED")
-        self.insert_task(self.strategy, 0)
-
-    def strategy(self):
-        # Really naive -- always try everything
-        list_of_endpoints = self.monitor.endpoints
-        did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
-        actors_to_fire = self.actor_mgr.enabled_actors()
-        did_fire_actor_ids = self._fire_actors(actors_to_fire)
-        activity = did_transfer_tokens or bool(did_fire_actor_ids)
-        if activity:
-            self.insert_task(self.strategy, 0)
+    ######################################################################
+    # Default implementation of _fire_actors, and _fire_actor
+    # Can be used, but should be cleaned up and/or overridden
+    ######################################################################
 
     def _fire_actors(self, actors):
         """
@@ -202,7 +215,7 @@ class SimpleScheduler(object):
                 if did_fire_action:
                     did_fire_actor_ids.add(actor.id)
             except Exception as e:
-                self._log_exception_during_fire(e)
+                _log.exception(e)
 
         return did_fire_actor_ids
 
@@ -243,19 +256,85 @@ class SimpleScheduler(object):
 
         return actor_did_fire
 
-    def _log_exception_during_fire(self, e):
-        _log.exception(e)
+
+######################################################################
+# SIMPLE SCHEDULER
+######################################################################
+class SimpleScheduler(BaseScheduler):
+
+    """A very naive example scheduler deriving from BaseScheduler"""
+
+    def __init__(self, node, actor_mgr):
+        super(SimpleScheduler, self).__init__(node, actor_mgr)
+        self.monitor = Event_Monitor()
+
+    def tunnel_rx(self, endpoint):
+        """Token recieved on endpoint"""
+        # We got a token, meaning that the corrsponding actor could possibly fire
+        self.insert_task(self.strategy, 0)
+
+    def tunnel_tx_ack(self, endpoint):
+        """Token successfully sent on endpoint"""
+        # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
+        self.monitor.clear_backoff(endpoint)
+        self.insert_task(self.strategy, 0)
+
+    def tunnel_tx_nack(self, endpoint):
+        """Token unsuccessfully sent on endpoint"""
+        # We got back NACK on sent token, endpoint should wait before resending
+        self.monitor.set_backoff(endpoint)
+        next_slot = self.monitor.next_slot()
+        if next_slot:
+            current = time.time()
+            self.insert_task(self.strategy, max(0, next_slot - current))
+
+    def tunnel_tx_throttle(self, endpoint):
+        """Backoff request for endpoint"""
+        # Schedule tx for endpoint at this time
+        pass
+        # FIXME: Under what circumstances is this method called?
+
+    def schedule_calvinsys(self, actor_id=None):
+        """Incoming platform event"""
+        self.insert_task(self.strategy, 0)
+
+    def register_endpoint(self, endpoint):
+        self.monitor.register_endpoint(endpoint)
+
+    def unregister_endpoint(self, endpoint):
+        self.monitor.unregister_endpoint(endpoint)
+
+    # There are at least five things that needs to be done:
+    # 1. Call fire() on actors
+    # 2. Call communicate on endpoints
+    #    2.a Throttle comm if needed
+    # 3. Call replication_loop every now and then (handled by base class)
+    # 4. Call maintenance_loop every now and then (handled by base class)
+    # 5. Implement watchdog as a final resort?
+
+    def strategy(self):
+        # Really naive -- always try everything
+        list_of_endpoints = self.monitor.endpoints
+        did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
+        actors_to_fire = self.actor_mgr.enabled_actors()
+        did_fire_actor_ids = self._fire_actors(actors_to_fire)
+        activity = did_transfer_tokens or bool(did_fire_actor_ids)
+        if activity:
+            self.insert_task(self.strategy, 0)
+
+    def watchdog(self):
+        # Log and try to get back on track....
+        _log.warning("WATCHDOG TRIGGERED")
+        self.insert_task(self.strategy, 0)
 
 
 
-# FIXME: Split out a partly abstract Scheduler class and implement specific
-#        scheduling strategies in subclasses
+######################################################################
+# DEPRECATED SCHEDULER
+######################################################################
 class BaselineScheduler(object):
-    """
-    The scheduler is the only active component in a runtime,
-    except for calvinsys and token transport. Every other piece of
-    code is (or should be) purely reactive.
-    """
+    
+    """This is the old scheduler that should go away..."""
 
     def __init__(self, node, actor_mgr):
         super(BaselineScheduler, self).__init__()
