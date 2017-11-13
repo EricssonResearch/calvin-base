@@ -100,7 +100,6 @@ class CalvinSys(object):
         """
         Trigger scheduler
         """
-        print "calvin/runtime/north/calvinsys.py/CalvinSys.scheduler_wakeup()"
         self._node.sched.schedule_calvinsys(actor_id=actor.id)
 
     def has_capability(self, requirement):
