@@ -161,16 +161,14 @@ class SimpleScheduler(object):
             delay = max(0, t - time.time())
             self._schedule_next(delay, self._process_next)
         else:
-            print "QUEUE EMPTY"
-            self.insert_task(self._watchdog, 2)
+            # Queue is empty, set a watchdog to go off in 60s
+            self.insert_task(self._watchdog, 60)
 
     def _watchdog(self):
-        print "WATCHDOG TRIGGERED"
-        retval = self._fire_communicate_replicate()
-        return retval
+        _log.warning("WATCHDOG TRIGGERED")
+        self._fire_communicate_replicate()
 
     def _fire_communicate_replicate(self):
-        # print "ACTING _fire_communicate_replicate"
         # Really naive -- always try everything
         list_of_endpoints = self.monitor.endpoints
         did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
@@ -179,7 +177,6 @@ class SimpleScheduler(object):
         # Control replication
         self.node.rm.replication_loop()
         activity = did_transfer_tokens or bool(did_fire_actor_ids)
-        # print activity, did_transfer_tokens, "||", bool(did_fire_actor_ids)
         if activity:
             self.insert_task(self._fire_communicate_replicate, 0)
 
