@@ -154,17 +154,10 @@ class SimpleScheduler(object):
     def _process_next(self):
         # Get next task from queue and do it unless next task is in the future,
         # in that case, schedule _process_next (this method) at that time
-        while self._tasks:
-            now = time.time()
-            t, todo = self._tasks[0]
-            if t > now:
-                break
-            self._tasks.pop(0)
-            activity = todo()
-            
-        if activity:
-            self.insert_task(self._fire_communicate_replicate, 0)
-        elif self._tasks:
+        _, todo = self._tasks.pop(0)
+        todo()
+        if self._tasks:
+            t, _ = self._tasks[0]
             delay = max(0, t - time.time())
             self._schedule_next(delay, self._process_next)
         else:
@@ -187,8 +180,8 @@ class SimpleScheduler(object):
         self.node.rm.replication_loop()
         activity = did_transfer_tokens or bool(did_fire_actor_ids)
         # print activity, did_transfer_tokens, "||", bool(did_fire_actor_ids)
-        return activity
-
+        if activity:
+            self.insert_task(self._fire_communicate_replicate, 0)
 
     def _fire_actors(self, actors):
         """
