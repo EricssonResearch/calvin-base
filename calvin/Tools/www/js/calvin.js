@@ -143,6 +143,13 @@ function addPortToGraph(port)
   }
 }
 
+$(window).resize(function() {
+  if (graphTimer) {
+    clearTimeout(graphTimer);
+  }
+  graphTimer = setTimeout(updateGraph, 1000);
+});
+
 function updateGraph()
 {
   graph.nodes().forEach(function(v) {
@@ -161,12 +168,14 @@ function updateGraph()
   // Run the renderer. This is what draws the final graph.
   render(svg.select("g"), graph);
 
-  svg.attr("width", 1000);
-  svg.attr("height", 600);
+  var applicationGraph = document.getElementById("applicationGraph");
+  svg.attr("width", applicationGraph.clientWidth);
+  svg.attr("height", window.innerHeight/1.5);
 }
 
 // Clear application graph
-function clearApplicationGraph() {
+function clearApplicationGraph()
+{
   document.getElementById("applicationGraph").innerHTML = "";
 
   graph = new dagreD3.graphlib.Graph({compound:true})
@@ -176,11 +185,7 @@ function clearApplicationGraph() {
               .setDefaultEdgeLabel(function() { return {}; });
   render = new dagreD3.render();
   svg = d3.select("#applicationGraph").append("svg");
-  svg.attr("width", document.getElementById("applicationGraph").width);
-  svg.attr("height", document.getElementById("applicationGraph").height);
   svgGroup = svg.append("g");
-  svg.attr("width", 1000);
-  svg.attr("height", 600);
 }
 
 function drawConnections()
