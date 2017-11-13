@@ -161,9 +161,10 @@ class SimpleScheduler(object):
                 break
             self._tasks.pop(0)
             activity = todo()
-            if activity:
-                self.insert_task(self._fire_communicate_replicate, 0)
-        if self._tasks:
+            
+        if activity:
+            self.insert_task(self._fire_communicate_replicate, 0)
+        elif self._tasks:
             delay = max(0, t - time.time())
             self._schedule_next(delay, self._process_next)
         else:
@@ -176,7 +177,7 @@ class SimpleScheduler(object):
         return retval
 
     def _fire_communicate_replicate(self):
-        print "ACTING _fire_communicate_replicate"
+        # print "ACTING _fire_communicate_replicate"
         # Really naive -- always try everything
         list_of_endpoints = self.monitor.endpoints
         did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
