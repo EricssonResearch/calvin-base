@@ -244,8 +244,8 @@ class CalvinConfig(object):
     def update(self, section, option, value):
         """Set value of option in named section"""
         _section = self.config[section.lower()]
-        _section[option.lower()].update(value)
-
+        # May or may not exist
+        _section.setdefault(option.lower(), {}).update(value)
 
     def set_config(self, config):
         """Set complete config"""

@@ -10,6 +10,7 @@ from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities.security import security_enabled
 from routes import handler, register, uuid_re
 from authentication import authentication_decorator
+from calvin.requests import calvinresponse
 
 _log = get_logger(__name__)
 
@@ -132,6 +133,19 @@ def handle_actor_report(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None if report is None else json.dumps(report, default=repr), status=status)
 
+@register
+def handle_actor_migrate_proto_cb(self, handle, connection, status, *args, **kwargs):
+    self.send_response(handle, connection, None, status=status.status)
+
+@register
+def handle_actor_migrate_lookup_peer_cb(self, key, value, handle, connection, actor_id, peer_node_id):
+    if calvinresponse.isnotfailresponse(value):
+        self.node.proto.actor_migrate_direct(value['node_id'],
+            CalvinCB(self.handle_actor_migrate_proto_cb, handle, connection),
+            actor_id,
+            peer_node_id)
+    else:
+        self.send_response(handle, connection, None, status=calvinresponse.NOT_FOUND)
 
 @handler(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
 @authentication_decorator
@@ -157,13 +171,19 @@ def handle_actor_migrate(self, handle, connection, match, data, hdr):
     Response: none
     """
     status = calvinresponse.OK
+    actor_id = match.group(1)
     if 'peer_node_id' in data:
-        try:
-            self.node.am.migrate(match.group(1), data['peer_node_id'],
-                             callback=CalvinCB(self.actor_migrate_cb, handle, connection))
-        except:
-            _log.exception("Migration failed")
-            status = calvinresponse.INTERNAL_ERROR
+        if actor_id in self.node.am.list_actors():
+            try:
+                self.node.am.migrate(actor_id, data['peer_node_id'],
+                                 callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+            except:
+                _log.exception("Migration failed")
+                status = calvinresponse.INTERNAL_ERROR
+        else:
+            self.node.storage.get_actor(actor_id,
+                CalvinCB(func=self.handle_actor_migrate_lookup_peer_cb, handle=handle, connection=connection,
+                    actor_id=actor_id, peer_node_id=data['peer_node_id']))
     elif 'requirements' in data:
         try:
             self.node.am.update_requirements(match.group(1), data['requirements'],
@@ -376,8 +396,8 @@ def handle_deploy(self, handle, connection, match, data, hdr):
                             }
            }
     }
-    Note that either a script or app_info must be supplied. 
-    
+    Note that either a script or app_info must be supplied.
+
     The matching rules are implemented as plug-ins, intended to be extended.
     The type "+" is "and"-ing rules together (actually the intersection of all
     possible nodes returned by the rules.) The type "-" is explicitly removing

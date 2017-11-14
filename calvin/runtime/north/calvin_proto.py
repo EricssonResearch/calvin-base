@@ -20,7 +20,6 @@ from calvin.utilities.utils import enum
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
-from calvin.utilities import proxyconfig
 import calvin.requests.calvinresponse as response
 
 _log = calvinlogger.get_logger(__name__)
@@ -185,9 +184,6 @@ class CalvinProto(CalvinCBClass):
             # Hence it is possible for others to register additional
             # functions that should be called. Either permanent here
             # or using the callback_register method.
-            'GET_ACTOR_MODULE': [CalvinCB(self.get_actor_module_handler)],
-            'PROXY_CONFIG': [CalvinCB(self.proxy_config_handler)],
-            'SLEEP_REQUEST': [CalvinCB(self.proxy_sleep_request_handler)],
             'ACTOR_NEW': [CalvinCB(self.actor_new_handler)],
             'ACTOR_MIGRATE': [CalvinCB(self.actor_migrate_handler)],
             'APP_DESTROY': [CalvinCB(self.app_destroy_handler)],
@@ -236,7 +232,6 @@ class CalvinProto(CalvinCBClass):
         # If generic handling of command is not possible or the method
         # is accepted during quitting it is left out from dict.
         resp = {
-            'PROXY_CONFIG': response.INTERNAL_ERROR,
             'ACTOR_NEW': response.INTERNAL_ERROR,
             'ACTOR_MIGRATE': response.NOT_FOUND,
             'APP_DESTROY': response.NOT_FOUND,
@@ -258,10 +253,6 @@ class CalvinProto(CalvinCBClass):
         """ Called by transport when a full payload has been received
         """
         _log.analyze(self.rt_id, "RECV", payload)
-        link = self.network.link_get(payload['from_rt_uuid'])
-        if link is None:
-            # TODO: Create own exception here
-            raise Exception("ERROR_UNKNOWN_RUNTIME")
 
         if payload['to_rt_uuid'] == self.rt_id:
             if not ('cmd' in payload and payload['cmd'] in self.callback_valid_names()):
@@ -277,58 +268,6 @@ class CalvinProto(CalvinCBClass):
     #
     # Remote commands supported by protocol
     #
-
-    def get_actor_module_handler(self, payload):
-        """ Handles actor module requests
-        """
-        # TODO: Create a generic handler for actor module requests and include
-        # information in the request needed to select the correct module
-        ok = False
-        actor_type = payload['actor_type']
-        data = None
-        path = _conf.get(None, 'compiled_actors_path')
-        if path is None:
-            _log.error("'compiled_actors_path' not set")
-        else:
-            if payload['compiler'] == 'mpy-cross':
-                try:
-                    path = path + '/mpy-cross/' + actor_type.replace('.', '/') + '.mpy'
-                    f = open(path, 'rb')
-                    data = f.read()
-                    f.close()
-                    ok = True
-                except IOError as e:
-                    _log.error("Failed to open '%s'" % path)
-            else:
-                _log.error("Unknown compiler '%s'" % payload['compiler'])
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'],
-                'module': data,
-                'actor_type': actor_type,
-                'value': response.CalvinResponse(ok).encode()}
-        self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    #### PROXY NODES ####
-
-    def proxy_config_handler(self, payload):
-        """ Configure a node using this node as a proxyconfig
-        """
-        proxyconfig.set_proxy_config(payload['from_rt_uuid'],
-            payload['capabilities'],
-            payload['port_property_capability'],
-            self.network.link_get(payload['from_rt_uuid']),
-            self.node.storage,
-            CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
-                callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'time': time.time()})),
-            payload.get('attributes'))
-
-    def proxy_sleep_request_handler(self, payload):
-        """ Handle node requesting sleep mode
-        """
-        proxyconfig.handle_sleep_request(payload['from_rt_uuid'],
-            self.network.link_get(payload['from_rt_uuid']),
-            payload['seconds_to_sleep'],
-            CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
-                callback=CalvinCB(send_message, msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
 
     #### ACTORS ####
 
@@ -364,6 +303,16 @@ class CalvinProto(CalvinCBClass):
         self.node.network.link_request(to_rt_uuid, CalvinCB(send_message,
             msg = {'cmd': 'ACTOR_MIGRATE',
                 'requirements': requirements, 'actor_id': actor_id, 'extend': extend, 'move': move},
+            callback=callback))
+
+    def actor_migrate_direct(self, to_rt_uuid, callback, actor_id, peer_node_id):
+        """ Request actor on to_rt_uuid node to migrate to new peer_node_id
+            callback: called when finished with the status respons as argument
+            actor_id: actor_id to migrate
+            peer_node_id: node to migrate to
+        """
+        self.node.network.link_request(to_rt_uuid, CalvinCB(send_message,
+            msg = {'cmd': 'ACTOR_MIGRATE', 'actor_id': actor_id, 'peer_node_id': peer_node_id},
             callback=callback))
 
     def actor_migrate_handler(self, payload):

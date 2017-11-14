@@ -66,10 +66,7 @@ function showInfo(message)
 // Clear log table
 function clearLog()
 {
-  var tableRef = document.getElementById('logTable');
-  for(var i = 0; i < tableRef.rows.length;) {
-     tableRef.deleteRow(i);
-  }
+  clearTableWithHeader(document.getElementById('logTable'));
 }
 
 function addActorToGraph(actor)
@@ -146,6 +143,13 @@ function addPortToGraph(port)
   }
 }
 
+$(window).resize(function() {
+  if (graphTimer) {
+    clearTimeout(graphTimer);
+  }
+  graphTimer = setTimeout(updateGraph, 1000);
+});
+
 function updateGraph()
 {
   graph.nodes().forEach(function(v) {
@@ -164,12 +168,14 @@ function updateGraph()
   // Run the renderer. This is what draws the final graph.
   render(svg.select("g"), graph);
 
-  svg.attr("width", 1000);
-  svg.attr("height", 600);
+  var applicationGraph = document.getElementById("applicationGraph");
+  svg.attr("width", applicationGraph.clientWidth);
+  svg.attr("height", window.innerHeight/1.5);
 }
 
 // Clear application graph
-function clearApplicationGraph() {
+function clearApplicationGraph()
+{
   document.getElementById("applicationGraph").innerHTML = "";
 
   graph = new dagreD3.graphlib.Graph({compound:true})
@@ -179,11 +185,7 @@ function clearApplicationGraph() {
               .setDefaultEdgeLabel(function() { return {}; });
   render = new dagreD3.render();
   svg = d3.select("#applicationGraph").append("svg");
-  svg.attr("width", document.getElementById("applicationGraph").width);
-  svg.attr("height", document.getElementById("applicationGraph").height);
   svgGroup = svg.append("g");
-  svg.attr("width", 1000);
-  svg.attr("height", 600);
 }
 
 function drawConnections()
@@ -371,6 +373,14 @@ function clearTable(tableRef)
   }
 }
 
+// Helper to clear table with header
+function clearTableWithHeader(tableRef)
+{
+  for(var i = 1; i < tableRef.rows.length;) {
+    tableRef.deleteRow(i);
+  }
+}
+
 // Helper to clear combobox
 function clearCombo(selectbox)
 {
@@ -435,8 +445,8 @@ function connect()
   var applicationSelector = document.getElementById("applicationSelector");
   var traceApplicationSelector = document.getElementById("traceApplicationSelector");
 
-  clearTable(document.getElementById("peersTable"));
-  clearTable(document.getElementById('logTable'));
+  clearTableWithHeader(document.getElementById("peersTable"));
+  clearTableWithHeader(document.getElementById('logTable'));
   clearTable(document.getElementById("applicationsTable"));
   clearTable(document.getElementById("actorsTable"));
   clearTable(document.getElementById("actorPortsTable"));
@@ -1499,6 +1509,10 @@ function migrate(actor_id)
     }
     var node = findRuntime(actor.peer_id);
     if (node) {
+      if (node.proxy) {
+        console.log("Using proxy for migration");
+        node = findRuntime(node.proxy);
+      }
       if (node.control_uris) {
         var url = node.control_uris[0] + '/actor/' + actor.id + '/migrate';
         var data = JSON.stringify({'peer_node_id': peer_id});
@@ -1865,10 +1879,10 @@ function eventHandler(event)
   var trace_size = $("#trace_size").val();
   var data = JSON.parse(event.data);
   var tableRef = document.getElementById('logTable');
-  if (tableRef.rows.length >= trace_size) {
-    tableRef.deleteRow(tableRef.rows.length -1);
+  if (tableRef.rows.length > trace_size) {
+    tableRef.deleteRow(tableRef.rows.length - 1);
   }
-  var newRow = tableRef.insertRow(0);
+  var newRow = tableRef.insertRow(1);
   var cell0 = newRow.insertCell(0);
   var cell1 = newRow.insertCell(1);
   var cell2 = newRow.insertCell(2);
@@ -2196,7 +2210,186 @@ function setRequirements(application, requirements)
   });
 }
 
+// Kappa fuctions
+
+function showKappaDialog()
+{
+  $("#kappaDialog").modal({
+    modal: true,
+    show: true
+  });
+}
+
+function createKappa()
+{
+  var url = $("#kappa_url").val();
+  var data = $("#kappa_script").val();
+
+  console.log("createKappa url: " + url + " data: " + data);
+
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    url: url,
+    type: 'PUT',
+    contentType: 'text/plain',
+    processData: false,
+    data: data,
+    success: function(data) {
+      showSuccess("Kappa " + data + " created");
+      getKappas();
+      getApplicationsAndActors();
+    },
+    error: function(data, status) {
+      console.log("Failed to create Kappa data: " + JSON.stringify(data) + " status: " + status);
+      showError("Failed to create Kappa:<br>" + data.responseText.replace(/\n/g, "<br>"));
+    }
+  });
+}
+
+function getKappas()
+{
+  var url = $("#kappa_url").val();
+
+  console.log("getKappas url: " + url);
+
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    dataType: 'json',
+    url: url,
+    type: 'GET',
+    contentType: 'html',
+    crossOrigin: true,
+    success: function(data) {
+      var kappaSelector = document.getElementById("kappaSelector");
+      clearCombo(kappaSelector);
+      if (data) {
+        console.log("getKappas - Response: " + JSON.stringify(data));
+        for (var key in data) {
+          var kappa = data[key];
+          var optKappa = new Option(kappa.name);
+          optKappa.id = key;
+          kappaSelector.options.add(optKappa);
+        }
+      } else {
+        showMessage("No Kappas");
+      }
+    },
+    error: function() {
+      showError("Failed to get Kappas");
+    }
+  });
+}
+
+function getKappaData()
+{
+  var selectedIndex = document.getElementById("kappaSelector").selectedIndex;
+  var selectOptions = document.getElementById("kappaSelector").options;
+  var kappaID = selectOptions[selectedIndex].id;
+  var url = document.getElementById('kappa_url').value + "/" + kappaID;
+
+  console.log("getKappaData - url: " + url);
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    dataType: 'json',
+    url: url,
+    type: 'GET',
+    success: function(data) {
+      console.log("getKappaData - Response: " + data);
+      document.getElementById('kappa_data').value = JSON.stringify(data);
+    },
+    error: function() {
+      showError("Failed to get Kappa data");
+    }
+  });
+}
+
+function postKappaData()
+{
+  var selectedIndex = document.getElementById("kappaSelector").selectedIndex;
+  var selectOptions = document.getElementById("kappaSelector").options;
+  var kappaID = selectOptions[selectedIndex].id;
+  var url = document.getElementById('kappa_url').value + "/" + kappaID;
+  var data = $("#kappa_data").val();
+
+  console.log("postKappaData url: " + url + " data: " + data);
+
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    url: url,
+    type: 'POST',
+    data: data,
+    contentType: 'application/json',
+    processData: false,
+    success: function(data) {
+      showSuccess("Kappa data posted");
+    },
+    error: function(data, status) {
+      console.log("Failed to post Kappa data, data: " + JSON.stringify(data) + " status: " + status);
+      showError("Failed to post Kappa data");
+    }
+  });
+}
+
+function deleteKappa()
+{
+  var selectedIndex = document.getElementById("kappaSelector").selectedIndex;
+  var selectOptions = document.getElementById("kappaSelector").options;
+  var kappaID = selectOptions[selectedIndex].id;
+  var url = document.getElementById('kappa_url').value + "/" + kappaID;
+
+  console.log("deleteKappa url: " + url)
+  $.ajax({
+    timeout: 5000,
+    beforeSend: function() {
+      startSpin();
+    },
+    complete: function() {
+      stopSpin();
+    },
+    url: url,
+    type: 'DELETE',
+    success: function() {
+      showSuccess("Kappa deleted");
+      getKappas();
+      getApplicationsAndActors();
+    },
+    error: function() {
+      showError("Failed to delete kappa");
+    }
+  });
+}
+
 jQuery(document).ready(function() {
+  $(".kappaDiv").hide();
+  var kappa = document.URL.match(/kappa=([0-9]+)/);
+  if (kappa && kappa[1] == 1) {
+    $(".kappaDiv").show();
+  }
+
   // handle file select in deploy app
   var fileInputDeploy = document.getElementById('fileInputDeploy');
   var fileDisplayDeploy = document.getElementById('deploy_script');
@@ -2255,13 +2448,18 @@ jQuery(document).ready(function() {
     reader.readAsText(file);
   });
 
-  $('#tabRuntimeConfig a').click(function (e) {
-    e.preventDefault();
-    $(this).tab('show');
-  })
+  // handle file select in kappa dialog
+  var fileInputKappa = document.getElementById('fileInputKappa');
+  var kappa_script = document.getElementById('kappa_script');
+  fileInputKappa.addEventListener('change', function(e) {
+    var file = fileInputKappa.files[0];
+    var reader = new FileReader();
 
-  $('#tabDeployApplication a').click(function (e) {
-    e.preventDefault();
-    $(this).tab('show');
-  })
+    reader.onload = function(e) {
+      console.log("Setting kappa script " + e.target.result);
+      kappa_script.innerHTML = e.target.result;
+    }
+
+    reader.readAsText(file);
+  });
 });

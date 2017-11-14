@@ -32,7 +32,7 @@
       </div>
       <div id="panelRuntimes" class="panel-collapse collapse in">
         <div class="panel-body">
-          <table class="table" id="peersTable">
+          <table class="table no-border" id="peersTable">
               <th align="left">ID</th>
               <th align="left">Name</th>
               <th align="left">URIs</th>
@@ -64,7 +64,7 @@
       </div>
       <div id="panelApplications" class="panel-collapse collapse in">
         <div class="panel-body">
-          <table class="table">
+          <table class="table no-border">
             <tr>
               <td>
                 Application
@@ -82,18 +82,18 @@
             <tr>
               <td>
                 <select id="applicationSelector" onchange="showApplication()"></select>
-                <table class="table" id="applicationsTable"></table>
+                <table class="table no-border" id="applicationsTable"></table>
               </td>
               <td>
                 <select id="actorSelector" onchange="updateSelectedActor()"></select>
-                <table class="table" id="actorsTable"></table>
+                <table class="table no-border" id="actorsTable"></table>
               </td>
               <td>
                 <select id="portSelector" onchange="showPort()"></select>
-                <table class="table" id="actorPortsTable"></table>
+                <table class="table no-border" id="actorPortsTable"></table>
               </td>
               <td>
-                <table class="table" id="actorPortFifoTable"></table>
+                <table class="table no-border" id="actorPortFifoTable"></table>
               </td>
             </tr>
           </table>
@@ -104,7 +104,84 @@
           <div id="applicationGraphDiv" class="collapse">
             <input type="checkbox" id="chkDrawConnections" onchange="showApplication()" checked>Draw connections<br>
             <input type="checkbox" id="chkShowPortNames" onchange="showApplication()" checked>Show portnames<br>
-            <div id="applicationGraph"></div>
+            <div id="applicationGraph" class="applicationGraph"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kappaDiv">
+    <div class="panel-group">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a class="accordion-toggle" data-toggle="collapse" href="#panelKappa">Kappa</a>
+          </h4>
+        </div>
+        <div id="panelKappa" class="panel-collapse collapse in">
+          <div class="panel-body">
+            <br>
+            <table class="table no-border">
+              <tr>
+                <td style="width: 30%">
+                  <table class="table no-border">
+                    <tr>
+                      <td>
+                        URL:
+                      </td>
+                      <td>
+                        <form onsubmit="getKappas(); return false;">
+                          <input type="text" name="kappa_url" id="kappa_url" size="35"/>
+                        </form>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                      </td>
+                      <td>
+                        <button type="button" class="btn btn-primary btn-xs" onclick="getKappas()">Get Kappas</button>
+                        <button type="button" class="btn btn-primary btn-xs" onclick="showKappaDialog()">New...</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Kappa:
+                      </td>
+                      <td>
+                        <select id="kappaSelector"></select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                      </td>
+                      <td>
+                        <button type="button" class="btn btn-danger btn-xs" onclick="deleteKappa()">Delete</button>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td style="width: 70%">
+                  <table class="table no-border" style="width: 100%">
+                    <tr>
+                      <td>
+                        Data:
+                      </td>
+                      <td>
+                        <textarea name="kappa_data" id="kappa_data" rows="10" style="width: 100%"></textarea>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                      </td>
+                      <td>
+                        <button type="button" class="btn btn-primary btn-xs" onclick="postKappaData()">Post</button>
+                        <button type="button" class="btn btn-primary btn-xs" onclick="getKappaData()">Get</button>
+                      </td>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </div>
         </div>
       </div>
@@ -120,7 +197,7 @@
       </div>
       <div id="panelLog" class="panel-collapse collapse in">
         <div class="panel-body">
-          <table class="table" id="logTable">
+          <table class="table no-border" id="logTable">
               <th align="left">Timestamp</th>
               <th align="left">Node id</th>
               <th align="left">Event type</th>
@@ -133,7 +210,7 @@
           </table>
         </div>
         <div class="panel-footer">
-          <button type="button" class="btn btn-primary btn-xs" onclick="startLog()">Start trace</button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="startLog()">Start trace...</button>
           <button type="button" class="btn btn-primary btn-xs" onclick="stopLog()">Stop trace</button>
           <button type="button" class="btn btn-primary btn-xs" onclick="clearLog()">Clear</button>
         </div>
@@ -363,6 +440,29 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-success" onclick="deployHandler()" data-dismiss="modal">Deploy</button>
+                <button class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kappa dialog -->
+<div class="modal fade" id="kappaDialog" tabindex="-1" role="dialog" aria-labelledby="kappaDialogLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="kappaDialogLabel">Create Kappa</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                  <label for="kappa_script">Function:</label>
+                  <br>
+                  <textarea name="kappa_script" id="kappa_script" rows="30" style="min-width: 100%"></textarea>
+                  <input type="file" id="fileInputKappa">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="createKappa()" data-dismiss="modal">Create</button>
                 <button class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
         </div>
