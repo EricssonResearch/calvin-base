@@ -20,6 +20,8 @@ class Endpoint(object):
 
     """docstring for Endpoint"""
 
+    _void_endpoint = None
+
     def __init__(self, port, former_peer_id=None):
         super(Endpoint, self).__init__()
         self.port = port
@@ -29,11 +31,25 @@ class Endpoint(object):
     def __str__(self):
         return "%s(port_id=%s)" % (self.__class__.__name__, self.port.id)
 
+    @classmethod
+    def void(cls):
+        if Endpoint._void_endpoint is None:
+           Endpoint._void_endpoint = Endpoint(None)
+        return Endpoint._void_endpoint
+
     def is_connected(self):
         return False
 
     def use_monitor(self):
         return False
+
+    def register(self, registry):
+        if self.use_monitor():
+            registry.register_endpoint(self)
+
+    def unregister(self, registry):
+        if self.use_monitor():
+            registry.unregister_endpoint(self)
 
     def communicate(self):
         """

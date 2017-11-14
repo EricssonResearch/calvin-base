@@ -23,7 +23,7 @@ _log = get_logger(__name__)
 class MessageServer(object):
     def __init__(self, node, actor_id):
         super(MessageServer, self).__init__()
-        self._trigger = node.sched.trigger_loop
+        self._trigger = node.sched.schedule_calvinsys
         self._listener = server_connection.UDPServerProtocol(self.trigger, actor_id)
 
     def trigger(self, actor_ids):
@@ -45,7 +45,7 @@ class MessageServer(object):
 class Server(object):
     def __init__(self, node, mode, delimiter, max_length, actor_id=None):
         super(Server, self).__init__()
-        self.connection_factory = server_connection.ServerProtocolFactory(node.sched.trigger_loop, mode,
+        self.connection_factory = server_connection.ServerProtocolFactory(node.sched.schedule_calvinsys, mode,
                                                                           delimiter, max_length, actor_id)
 
     def start(self, host, port):

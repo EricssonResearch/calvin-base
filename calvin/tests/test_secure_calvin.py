@@ -4304,6 +4304,52 @@ def rt_order3(request):
 def nbr_replicas(request):
     return request.param
 
+def setup_module(module):
+    global rt1, rt2, rt3
+    global request_handler
+    global test_type
+
+    request_handler = RequestHandler()
+    test_type, [rt1, rt2, rt3] = helpers.setup_test_type(request_handler)
+
+
+def teardown_module(module):
+    global rt1
+    global rt2
+    global rt3
+    global test_type
+    global request_handler
+
+    helpers.teardown_test_type(test_type, [rt1, rt2, rt3], request_handler)
+
+import numbers
+from collections import Counter
+
+
+def wait_for_migration(runtime, actors, retries=20):
+    retry = 0
+    if not isinstance(actors, list):
+        actors = [ actors ]
+    while retry < retries:
+        try:
+            current = request_handler.get_actors(runtime)
+            if set(actors).issubset(set(current)):
+                break
+            else:
+                _log.info("Migration not finished, retrying in %f" % (retry * 0.1,))
+                retry += 1
+                time.sleep(retry * 0.1)
+        except Exception as e:
+            _log.info("Migration not finished %s, retrying in %f" % (str(e), retry * 0.1,))
+            retry += 1
+            time.sleep(retry * 0.1)
+    if retry == retries:
+        _log.info("Migration failed, after %d retires" % (retry,))
+        raise Exception("Migration failed")
+
+def migrate(source, dest, actor):
+    request_handler.migrate(source, actor, dest.id)
+    wait_for_migration(dest, [actor])
 
 @pytest.mark.skipif(
     calvinconfig.get().get("testing","proxy_storage") != 1 and 

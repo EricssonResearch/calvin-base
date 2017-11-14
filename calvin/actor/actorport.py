@@ -20,6 +20,7 @@ from calvin.runtime.north.plugins.port import queue
 import calvin.requests.calvinresponse as response
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.north.plugins.port import DISCONNECT
+from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 
 import copy
 
@@ -172,7 +173,7 @@ class InPort(Port):
         # Check if this is a reconnect after migration
         match = [e for e in self.endpoints if e.peer_id == peer_id]
         if not match:
-            old_endpoint = None
+            old_endpoint = Endpoint.void()
         else:
             old_endpoint = match[0]
             self.detach_endpoint(old_endpoint)
@@ -321,7 +322,7 @@ class OutPort(Port):
         # Check if this is a reconnect after migration
         match = [e for e in self.endpoints if e.peer_id == peer_id]
         if not match:
-            old_endpoint = None
+            old_endpoint = Endpoint.void()
         else:
             old_endpoint = match[0]
             self.detach_endpoint(old_endpoint)

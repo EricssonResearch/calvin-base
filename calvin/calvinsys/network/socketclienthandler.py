@@ -29,7 +29,7 @@ class ClientHandler(object):
         self._connections = {}
 
     def _trigger_sched(self):
-        self._node.sched.trigger_loop(actor_ids=[self._actor.id])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor.id)
 
     # Callbacks from socket client imp
     def _disconnected(self, handle, addr, reason):

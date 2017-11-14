@@ -32,7 +32,7 @@ class GPIOPin(object):
           direction - pin direction (i=in, o=out)
           pull - pull resistor (u=up, d=down)
         """
-        self.gpio = gpiopin.GPIOPin(node.sched.trigger_loop, pin, direction, pull)
+        self.gpio = gpiopin.GPIOPin(node.sched.schedule_calvinsys, pin, direction, pull)
 
     def detect_edge(self, edge):
         """

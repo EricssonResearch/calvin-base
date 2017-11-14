@@ -18,7 +18,6 @@ from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 from calvin.runtime.north.plugins.port.queue.common import COMMIT_RESPONSE, QueueEmpty, QueueFull
 from calvin.runtime.north.plugins.port import DISCONNECT
-import time
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -33,13 +32,13 @@ class TunnelInEndpoint(Endpoint):
 
     """docstring for TunnelInEndpoint"""
 
-    def __init__(self, port, tunnel, peer_node_id, peer_port_id, peer_port_properties, trigger_loop):
+    def __init__(self, port, tunnel, peer_node_id, peer_port_id, peer_port_properties, scheduler):
         super(TunnelInEndpoint, self).__init__(port)
         self.tunnel = tunnel
         self.peer_id = peer_port_id
         self.peer_node_id = peer_node_id
         self.peer_port_properties = peer_port_properties
-        self.trigger_loop = trigger_loop
+        self.scheduler = scheduler
         self.pressure_count = 0
         self.pressure = [0] * PRESSURE_LENGTH
         self.pressure_last = 0
@@ -71,7 +70,7 @@ class TunnelInEndpoint(Endpoint):
             r = self.port.queue.com_write(Token.decode(payload['token']), self.peer_id, payload['sequencenbr'])
             if r == COMMIT_RESPONSE.handled:
                 # New token, trigger loop
-                self.trigger_loop()
+                self.scheduler.tunnel_rx(self)
             if r == COMMIT_RESPONSE.invalid:
                 ok = False
             else:
@@ -108,17 +107,15 @@ class TunnelOutEndpoint(Endpoint):
 
     """docstring for TunnelOutEndpoint"""
 
-    def __init__(self, port, tunnel, peer_node_id, peer_port_id, peer_port_properties, trigger_loop):
+    def __init__(self, port, tunnel, peer_node_id, peer_port_id, peer_port_properties, scheduler):
         super(TunnelOutEndpoint, self).__init__(port)
         self.tunnel = tunnel
         self.peer_id = peer_port_id
         self.peer_node_id = peer_node_id
         self.peer_port_properties = peer_port_properties
-        self.trigger_loop = trigger_loop
+        self.scheduler = scheduler
         # Keep track of acked tokens, only contains something post call if acks comes out of order
         self.sequencenbrs_acked = []
-        self.backoff = 0.0
-        self.time_cont = 0.0
         self.bulk = True
 
     def __str__(self):
@@ -161,9 +158,8 @@ class TunnelOutEndpoint(Endpoint):
     def _reply_ack(self, sequencenbr, status):
         # Back to full send speed directly
         self.bulk = True
-        self.backoff = 0.0
         # Maybe someone can fill the queue again
-        self.trigger_loop()
+        self.scheduler.tunnel_tx_ack(self)
         r = self.port.queue.com_commit(self.peer_id, sequencenbr)
         if r == COMMIT_RESPONSE.handled or r == COMMIT_RESPONSE.invalid:
             return
@@ -176,14 +172,9 @@ class TunnelOutEndpoint(Endpoint):
 
     def _reply_nack(self, sequencenbr, status):
         # Make send only send one token at a time and have increasing time between them
-        curr_time = time.time()
-        if self.bulk:
-            self.time_cont = curr_time
-        if self.time_cont <= curr_time:
-            # Need to trigger again due to either too late NACK or switched from series of ACK
-            self.trigger_loop()
         self.bulk = False
-        self.backoff = min(1.0, 0.1 if self.backoff < 0.1 else self.backoff * 2.0)
+        # Need to trigger again due to either too late NACK or switched from series of ACK
+        self.scheduler.tunnel_tx_nack(self)
 
         r = self.port.queue.com_cancel(self.peer_id, sequencenbr)
         if r == COMMIT_RESPONSE.handled:
@@ -196,7 +187,7 @@ class TunnelOutEndpoint(Endpoint):
                                                        self.peer_id,
                                                        self.port.name,
                                                        sequencenbr_sent,
-                                                       "" if self.bulk else "@%f/%f" % (self.time_cont, self.backoff)))
+                                                       "BULK" if self.bulk else "THROTTLE"))
         self.tunnel.send({
             'cmd': 'TOKEN',
             'token': token.encode(),
@@ -216,17 +207,16 @@ class TunnelOutEndpoint(Endpoint):
             while self.port.queue.tokens_available(1, self.peer_id):
                 sent = True
                 self._send_one_token()
-        elif (self.port.queue.tokens_available(1, self.peer_id) and
-              self.port.queue.com_is_committed(self.peer_id) and
-              time.time() >= self.time_cont):
+        elif (self.port.queue.tokens_available(1, self.peer_id) and self.port.queue.com_is_committed(self.peer_id)):
             # Send only one since other side sent NACK likely due to their FIFO is full
             # Something to read and last (N)ACK recived
             self._send_one_token()
             sent = True
-            self.time_cont = time.time() + self.backoff
             # Make sure that resend will be tried in backoff seconds
-            self.trigger_loop(self.backoff)
+            self.scheduler.tunnel_tx_throttle(self)
         return sent
+        
+        
 
     def get_peer(self):
         return (self.peer_node_id, self.peer_id)

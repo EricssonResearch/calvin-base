@@ -457,7 +457,9 @@ class Actor(object):
         _log.debug("actor.did_connect ENABLED %s %s " % (self._name, self._id))
 
         # Actor enabled, inform scheduler
-        self._calvinsys.scheduler_wakeup()
+        # We could at least have the courtesy to inform the scheduler about our identity...
+        get_calvinsys().scheduler_wakeup(self)
+        
 
     @verify_status([STATUS.ENABLED, STATUS.PENDING, STATUS.DENIED, STATUS.MIGRATABLE])
     def did_disconnect(self, port):
@@ -501,6 +503,7 @@ class Actor(object):
     #
     # FIXME: The following methods (_authorized, _warn_slow_actor, _handle_exhaustion) were
     #        extracted from fire() to make the logic easier to follow
+    # FIXME: Responsibility of scheduler, not actor class
     #
     def _authorized(self):
         authorized = self.check_authorization_decision()
@@ -539,11 +542,12 @@ class Actor(object):
             self._exhaust_cb = None
 
     @verify_status([STATUS.ENABLED])
-    def fire(self):
+    def fire_deprecated(self):
         """
         Fire an actor.
         Returns True if any action fired
         """
+        # FIXME: Deprecated
         # FIXME: Move authorization decision to scheduler
         #
         # First make sure we are allowed to run
@@ -589,6 +593,22 @@ class Actor(object):
                 done = True
 
         return actor_did_fire
+
+    @verify_status([STATUS.ENABLED])
+    def fire(self):
+        """
+        Fire an actor.
+        Returns tuple (did_fire, output_ok, exhausted)
+        """
+        #
+        # Go over the action priority list once
+        #
+        for action_method in self.__class__.action_priority:
+            did_fire, output_ok, exhausted = action_method(self)
+            # Action firing should fire the first action that can fire
+            if did_fire:
+                break
+        return did_fire, output_ok, exhausted
 
 
     def enabled(self):

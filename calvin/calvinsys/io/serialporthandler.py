@@ -70,7 +70,7 @@ class SerialPortHandler(object):
             timeout,
             xonxoff,
             rtscts,
-            self.node.sched.trigger_loop,
+            self.node.sched.schedule_calvinsys,
             self._actor.id)
 
     def close(self, port):

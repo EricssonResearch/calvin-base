@@ -22,6 +22,7 @@ from calvin.tests import DummyNode
 from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actorport import InPort, OutPort
 from calvin.runtime.north.plugins.port import queue
+from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 
 pytestmark = pytest.mark.unittest
 
@@ -62,7 +63,7 @@ def test_attach_endpoint_to_inport(inport, outport):
     assert inport.is_connected_to(first_outport.id)
 
     prev_endpoint = inport.attach_endpoint(endpoint)
-    assert prev_endpoint == None
+    assert prev_endpoint == Endpoint.void()
     assert inport.is_connected_to(outport.id)
     assert inport.is_connected_to(first_outport.id)
     assert inport.owner.did_connect.called

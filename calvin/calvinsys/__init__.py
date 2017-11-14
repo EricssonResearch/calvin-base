@@ -37,9 +37,11 @@ class Sys(object):
                 pass
 
     def scheduler_wakeup(self):
-        self._node.sched.trigger_loop()
+        print "calvin/calvinsys/__init__.py/Sys.scheduler_wakeup() DEPRECATED"
+        self._node.sched.schedule_calvinsys()
 
     def scheduler_maintenance_wakeup(self, delay=False):
+        print "calvin/calvinsys/__init__.py/Sys.scheduler_maintenance_wakeup() DEPRECATED"
         self._node.sched.trigger_maintenance_loop(delay)
 
     def _loadmodule(self, modulename):

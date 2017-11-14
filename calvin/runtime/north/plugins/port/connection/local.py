@@ -42,15 +42,7 @@ class LocalConnection(BaseConnection):
         # Local connect wants the first port to be an inport
         inport, outport = (port1, port2) if port1.direction == 'in' else (port2, port1)
         self._connect_via_local(inport, outport)
-        if self.callback:
-            self.callback(status=response.CalvinResponse(True),
-                     actor_id=self.port.owner.id,
-                     port_name=self.port.name,
-                     port_id=self.port.id,
-                     peer_node_id=self.peer_port_meta.node_id,
-                     peer_actor_id=self.peer_port_meta.actor_id,
-                     peer_port_name=self.peer_port_meta.port_name,
-                     peer_port_id=self.peer_port_meta.port_id)
+        self.async_reply(status=response.CalvinResponse(True))
         return None
 
     def _connect_via_local(self, inport, outport):
@@ -61,22 +53,14 @@ class LocalConnection(BaseConnection):
         ein = endpoint.LocalInEndpoint(inport, outport)
         eout = endpoint.LocalOutEndpoint(outport, inport)
 
-        if ein.use_monitor():
-            self.node.monitor.register_endpoint(ein)
-        if eout.use_monitor():
-            self.node.monitor.register_endpoint(eout)
-
         invalid_endpoint = outport.attach_endpoint(eout)
-        if invalid_endpoint:
-            if invalid_endpoint.use_monitor():
-                self.node.monitor.unregister_endpoint(invalid_endpoint)
-            invalid_endpoint.destroy()
-
+        invalid_endpoint.unregister(self.node.sched)
+        invalid_endpoint.destroy()
+        eout.register(self.node.sched)
         invalid_endpoint = inport.attach_endpoint(ein)
-        if invalid_endpoint:
-            if invalid_endpoint.use_monitor():
-                self.node.monitor.unregister_endpoint(invalid_endpoint)
-            invalid_endpoint.destroy()
+        invalid_endpoint.unregister(self.node.sched)
+        invalid_endpoint.destroy()
+        ein.register(self.node.sched)
 
         # Update storage
         self.node.storage.add_port(inport, self.node.id, inport.owner.id)
@@ -92,8 +76,7 @@ class LocalConnection(BaseConnection):
         # Can only be one for the one peer as argument to disconnect, but loop for simplicity
         for ep in endpoints:
             remaining_tokens.update(ep.remaining_tokens)
-            if ep.use_monitor():
-                self.node.monitor.unregister_endpoint(ep)
+            ep.unregister(self.node.sched)
             ep.destroy()
         _log.analyze(self.node.id, "+ EP DESTROYED", {'port_id': self.port.id})
 
@@ -105,8 +88,7 @@ class LocalConnection(BaseConnection):
         # Can only be one for the one peer as argument to disconnect, but loop for simplicity
         for ep in endpoints:
             peer_remaining_tokens.update(ep.remaining_tokens)
-            if ep.use_monitor():
-                self.node.monitor.unregister_endpoint(ep)
+            ep.unregister(self.node.sched)
             ep.destroy()
         _log.analyze(self.node.id, "+ DISCONNECTED", {'port_id': self.port.id})
 

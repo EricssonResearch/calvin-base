@@ -367,7 +367,7 @@ class Chart():
         import time
         time.sleep(3)
         request["image"] = result
-        self._node.sched.trigger_loop(actor_ids=[self._actor])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor)
 
     def _cb_error(self, *args, **kwargs):
         _log.error("%r: %r" % (args, kwargs))

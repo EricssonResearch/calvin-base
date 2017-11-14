@@ -45,7 +45,7 @@ class KubeCtl(object):
 
     def _trigger(self):
         _log.info("trigger")
-        self._node.sched.trigger_loop(actor_ids=[self._actor])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor)
 
     def has_metric(self, metric):
         return self._metrics[metric] is not None

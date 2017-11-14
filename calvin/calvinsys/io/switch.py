@@ -31,7 +31,7 @@ class Switch(object):
     def _new_measurement(self, measurement):
         self._measurement = measurement
         self._has_data = True
-        self._node.sched.trigger_loop(actor_ids=[self._actor])
+        self._node.sched.schedule_calvinsys(actor_id=self._actor)
 
     def has_data(self):
         return self._has_data

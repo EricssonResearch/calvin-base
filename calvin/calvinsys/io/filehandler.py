@@ -26,7 +26,7 @@ _log = get_logger(__name__)
 
 class File(object):
     def __init__(self, node, fname, mode):
-        self.fd = filedescriptor.FD(node.sched.trigger_loop, fname, mode)
+        self.fd = filedescriptor.FD(node.sched.schedule_calvinsys, fname, mode)
 
     def write(self, data):
         self.fd.write(data)
@@ -52,7 +52,7 @@ class File(object):
 
 class StdIn(File):
     def __init__(self, node):
-        self.fd = filedescriptor.FDStdIn(node.sched.trigger_loop)
+        self.fd = filedescriptor.FDStdIn(node.sched.schedule_calvinsys)
 
 
 def access_allowed(filename):

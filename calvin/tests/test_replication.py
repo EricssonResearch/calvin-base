@@ -71,7 +71,7 @@ def setup_module(module):
     global test_type
 
     request_handler = RequestHandler()
-    test_type, runtimes = helpers.setup_test_type(request_handler, 6)
+    test_type, runtimes = helpers.setup_test_type(request_handler, 6, proxy_storage=True)
     rt1, rt2, rt3 = runtimes[:3]
 
 def teardown_module(module):
@@ -131,7 +131,7 @@ class CalvinTestBase(unittest.TestCase):
         self.wait_for_migration(dest, [actor])
 
 
-@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
+#@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow
 class TestReplication(CalvinTestBase):
 
@@ -1267,10 +1267,12 @@ class TestReplication(CalvinTestBase):
         result_rep = request_handler.replicate(rt, ident, requirements={'op':"performance_scaling", 'kwargs':{'max': 6, 'alone': True}})
         print result_rep
         time.sleep(30)
+        replicas = request_handler.get_index(self.rt1, "replicas/actors/"+result_rep['replication_id'], root_prefix_level=3)['result']
+        assert len(replicas) >= 4
         print "------------ Burn less ----------------"
         actor_meta = request_handler.get_actor(self.rt1, ident)
         r = request_handler.report(rt_map[actor_meta["node_id"]], ident, kwargs={'duration': 0.001})
-        replicas = request_handler.get_index(self.rt1, "replicas/actors/"+result_rep['replication_id'])['result']
+        replicas = request_handler.get_index(self.rt1, "replicas/actors/"+result_rep['replication_id'], root_prefix_level=3)['result']
         for replica in replicas:
             print "replica", replica
             try:
@@ -1278,19 +1280,16 @@ class TestReplication(CalvinTestBase):
                 r = request_handler.report(rt_map[actor_meta["node_id"]], replica, kwargs={'duration': 0.001})
             except Exception as e:
                 print e
-        #for _ in range(10):
-        #    try:
-        #        request_handler.replicate(rt, ident, dereplicate=True, exhaust=True)
-        #        break
-        #    except Exception as e:
-        #        print e
         time.sleep(30)
+        replicas2 = request_handler.get_index(self.rt1, "replicas/actors/"+result_rep['replication_id'], root_prefix_level=3)['result']
+        assert len(replicas2) == 0
         # Stop the flood of tokens, to make sure all are passed
         r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
         print "STOPPED Counter", r
         time.sleep(2)
         actual = request_handler.report(self.rt1, snk)
         actors = request_handler.get_actors(self.rt1)
+        assert len(actual) == r
         for rt in self.runtimes:
             print rt.id, request_handler.get_actors(rt)
         helpers.delete_app(request_handler, self.rt1, response['application_id'])

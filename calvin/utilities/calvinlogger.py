@@ -20,6 +20,8 @@ import inspect
 import os
 import traceback
 
+from twisted.python import log as twisted_logger
+
 from colorlog import ColoredFormatter
 
 _name = "calvin"
