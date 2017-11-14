@@ -22,6 +22,7 @@ from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actor import Actor
 from calvin.runtime.north.plugins.port import queue
+from calvin.runtime.north.calvinsys import get_calvinsys
 
 pytestmark = pytest.mark.unittest
 
@@ -39,6 +40,7 @@ def create_actor(node):
 
 @pytest.fixture
 def actor():
+    get_calvinsys()._node = Mock()
     return create_actor(DummyNode())
 
 
@@ -58,10 +60,10 @@ def test_did_connect(actor, inport_ret_val, outport_ret_val, expected):
     actor.did_connect(None)
     if expected:
         actor.fsm.transition_to.assert_called_with(Actor.STATUS.ENABLED)
-        assert actor._calvinsys.scheduler_wakeup.called
+        assert get_calvinsys()._node.sched.schedule_calvinsys.called
     else:
         assert not actor.fsm.transition_to.called
-        assert not actor._calvinsys.scheduler_wakeup.called
+        assert not get_calvinsys()._node.sched.schedule_calvinsys.called
 
 
 @pytest.mark.parametrize("inport_ret_val,outport_ret_val,expected", [
