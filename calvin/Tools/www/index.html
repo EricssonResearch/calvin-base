@@ -7,13 +7,37 @@
 <body>
 
 <div class="container-fluid">
-
   <div class="panel-group">
+
+    <!-- Connect panel -->
     <div class="panel panel-default">
       <div id="panelConnect" class="panel panel-default">
         <form onsubmit="connect(); return false;">
           <div class="panel-body">
-            Control URI: <input type="text" name="connect_uri" id="connect_uri" size="35"/>
+            <div class="form-group">
+              <div class="col-xs-4">
+                <label for="connect_uri">
+                  Control URL
+                </label>
+                <input type="text" class="form-control" id="connect_uri" placeholder="Enter runtime control URL (example http://localhost:5001)">
+                <label data-toggle="collapse" data-target="#authenticationDiv" aria-expanded="false" aria-controls="authenticationDiv">
+                  <input type="checkbox">Authentication enabled
+                </label>
+                <div id="authenticationDiv" class="collapse">
+                  <label for="user_name">
+                    User
+                  </label>
+                  <input type="text" class="form-control" id="user_name" placeholder="Enter username">
+                  <label for="password">
+                    Password
+                  </label>
+                  <input type="password" class="form-control" id="password" aria-describedby="secHelp" placeholder="Enter pasword">
+                  <small id="secHelp" class="form-text text-muted">
+                    Username and password if runtime access control is enabled
+                  </small>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="panel-footer">
             <button type="button" class="btn btn-primary btn-xs" onclick="connect()">Connect</button>
@@ -21,9 +45,8 @@
         </form>
       </div>
     </div>
-  </div>
 
-  <div class="panel-group">
+    <!-- Runtimes panel -->
     <div class="panel panel-default">
       <div class="panel-heading">
         <h4 class="panel-title">
@@ -32,17 +55,12 @@
       </div>
       <div id="panelRuntimes" class="panel-collapse collapse in">
         <div class="panel-body">
-          <table class="table no-border" id="peersTable">
+          <table class="table no-border table-condensed" id="peersTable">
               <th align="left">ID</th>
               <th align="left">Name</th>
               <th align="left">URIs</th>
               <th align="left">Control URIs</th>
-              <th align="left">Proxy</th>
-              <th align="left">Sleeping</th>
-              <th align="left">Configure</th>
-              <th align="left">Destroy</th>
-              <th align="left">Abolish</th>
-              <th align="left">Deploy application</th>
+              <th align="left"></th>
           </table>
           <label data-toggle="collapse" data-target="#connectionsGraphDiv" aria-expanded="false" aria-controls="connectionsGraphDiv">
             <input type="checkbox" id="chkShowConnections" onchange="drawConnections()">View graph
@@ -53,9 +71,8 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="panel-group">
+    <!-- Applications panel -->
     <div class="panel panel-default">
       <div class="panel-heading">
         <h4 class="panel-title">
@@ -64,7 +81,7 @@
       </div>
       <div id="panelApplications" class="panel-collapse collapse in">
         <div class="panel-body">
-          <table class="table no-border">
+          <table class="table no-border table-condensed">
             <tr>
               <td>
                 Application
@@ -82,21 +99,20 @@
             <tr>
               <td>
                 <select id="applicationSelector" onchange="showApplication()"></select>
-                <table class="table no-border" id="applicationsTable"></table>
+                <table class="table no-border table-condensed" id="applicationsTable"></table>
               </td>
               <td>
                 <select id="actorSelector" onchange="updateSelectedActor()"></select>
-                <table class="table no-border" id="actorsTable"></table>
+                <table class="table no-border table-condensed" id="actorsTable"></table>
               </td>
               <td>
                 <select id="portSelector" onchange="showPort()"></select>
-                <table class="table no-border" id="actorPortsTable"></table>
+                <table class="table no-border table-condensed" id="actorPortsTable"></table>
               </td>
               <td>
-                <table class="table no-border" id="actorPortFifoTable"></table>
+                <table class="table no-border table-condensed" id="actorPortFifoTable"></table>
               </td>
             </tr>
-          </table>
           </table>
           <label data-toggle="collapse" data-target="#applicationGraphDiv" aria-expanded="false" aria-controls="applicationGraphDiv">
             <input type="checkbox" id="chkDrawApplication" onchange="showApplication()">View graph
@@ -109,86 +125,82 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="kappaDiv">
-    <div class="panel-group">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h4 class="panel-title">
-            <a class="accordion-toggle" data-toggle="collapse" href="#panelKappa">Kappa</a>
-          </h4>
-        </div>
-        <div id="panelKappa" class="panel-collapse collapse in">
-          <div class="panel-body">
-            <br>
-            <table class="table no-border">
-              <tr>
-                <td style="width: 30%">
-                  <table class="table no-border">
-                    <tr>
-                      <td>
-                        URL:
-                      </td>
-                      <td>
-                        <form onsubmit="getKappas(); return false;">
-                          <input type="text" name="kappa_url" id="kappa_url" size="35"/>
-                        </form>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                      </td>
-                      <td>
-                        <button type="button" class="btn btn-primary btn-xs" onclick="getKappas()">Get Kappas</button>
-                        <button type="button" class="btn btn-primary btn-xs" onclick="showKappaDialog()">New...</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Kappa:
-                      </td>
-                      <td>
-                        <select id="kappaSelector"></select>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                      </td>
-                      <td>
-                        <button type="button" class="btn btn-danger btn-xs" onclick="deleteKappa()">Delete</button>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-                <td style="width: 70%">
-                  <table class="table no-border" style="width: 100%">
-                    <tr>
-                      <td>
-                        Data:
-                      </td>
-                      <td>
-                        <textarea name="kappa_data" id="kappa_data" rows="10" style="width: 100%"></textarea>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                      </td>
-                      <td>
-                        <button type="button" class="btn btn-primary btn-xs" onclick="postKappaData()">Post</button>
-                        <button type="button" class="btn btn-primary btn-xs" onclick="getKappaData()">Get</button>
-                      </td>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </div>
+    <!-- Kappa panel -->
+    <div class="panel panel-default" id="kappaPanel">
+      <div class="panel-heading">
+        <h4 class="panel-title">
+          <a class="accordion-toggle" data-toggle="collapse" href="#panelKappa">Kappa</a>
+        </h4>
+      </div>
+      <div id="panelKappa" class="panel-collapse collapse in">
+        <div class="panel-body">
+          <br>
+          <table class="table no-border table-condensed">
+            <tr>
+              <td style="width: 30%">
+                <table class="table no-border table-condensed">
+                  <tr>
+                    <td>
+                      URL:
+                    </td>
+                    <td>
+                      <form onsubmit="getKappas(); return false;">
+                        <input type="text" name="kappa_url" id="kappa_url" size="35"/>
+                      </form>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-primary btn-xs" onclick="getKappas()">Get Kappas</button>
+                      <button type="button" class="btn btn-primary btn-xs" onclick="showKappaDialog()">New...</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Kappa:
+                    </td>
+                    <td>
+                      <select id="kappaSelector"></select>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-danger btn-xs" onclick="deleteKappa()">Delete</button>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td style="width: 70%">
+                <table class="table no-border table-condensed" style="width: 100%">
+                  <tr>
+                    <td>
+                      Data:
+                    </td>
+                    <td>
+                      <textarea name="kappa_data" id="kappa_data" rows="10" style="width: 100%"></textarea>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-primary btn-xs" onclick="postKappaData()">Post</button>
+                      <button type="button" class="btn btn-primary btn-xs" onclick="getKappaData()">Get</button>
+                    </td>
+                </table>
+              </td>
+            </tr>
+          </table>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="panel-group">
+    <!-- Trace panel -->
     <div class="panel panel-default">
       <div class="panel-heading">
         <h4 class="panel-title">
@@ -197,7 +209,7 @@
       </div>
       <div id="panelLog" class="panel-collapse collapse in">
         <div class="panel-body">
-          <table class="table no-border" id="logTable">
+          <table class="table no-border table-condensed" id="logTable">
               <th align="left">Timestamp</th>
               <th align="left">Node id</th>
               <th align="left">Event type</th>
@@ -219,180 +231,216 @@
   </div>
 </div>
 
-<!-- Configure runtime dialog -->
-<div id="configDialog" title="Configure runtime" style="display:none;" class="modal modal-dialog">
+<!-- Runtime info dialog -->
+<div id="infoDialog" class="modal fade" role="dialog" tabindex="-1">
+  <div class="modal-dialog">
     <div class="modal-content">
-        <div class="modal-header">
-            <h4 class="modal-title">Configure runtime</h4>
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Runtime info</h4>
+      </div>
+      <div class="modal-body">
+        <table class="table no-border table-condensed" id="nodeNameTable">
+          <tr>
+            <td>
+              ID
+            </td>
+            <td>
+              <p id="nodeInfoId"></p>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              Name
+            </td>
+            <td>
+              <p id="nodeInfoName"></p>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              Proxy
+            </td>
+            <td>
+              <p id="nodeInfoProxy"></p>
+            </td>
+          </tr>
+        </table>
+        <h4>Capabilities</h4>
+        <div style="height:300px;overflow:auto;">
+          <table class="table no-border table-condensed" id="capabilitiesTable"></table>
         </div>
-        <div class="modal-body">
-            <form>
-                <ul class="nav nav-tabs" id="tabRuntimeConfig">
-                    <li class="active"><a data-target="#tabNodeName" data-toggle="tab"><h4>Name</h4></a></li>
-                    <li><a data-target="#tabNodeAddress" data-toggle="tab"><h4>Address</h4></a></li>
-                    <li><a data-target="#tabNodeOwner" data-toggle="tab"><h4>Owner</h4></a></li>
-                </ul>
-
-                <div class="tab-content">
-                    <div id="tabNodeName" class="tab-pane active">
-                        <table class="table table-bordered table-striped" id="nodeNameTable" style="width: 20%">
-                            <tr>
-                            <td>
-                            <label for="conf_name_organization">Organization:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_name_organization" id="conf_name_organization" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_name_organizationalUnit">Organizational unit:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_name_organizationalUnit" id="conf_name_organizationalUnit" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_name_purpose">Purpose:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_name_purpose" id="conf_name_purpose" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_name_group">Group:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_name_group" id="conf_name_group" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_name_name">Name:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_name_name" id="conf_name_name" size="35" />
-                            </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div id="tabNodeAddress" class="tab-pane">
-                        <table class="table table-bordered table-striped" id="nodeAddressTable" style="width: 20%">
-                            <tr>
-                            <td>
-                            <label for="conf_address_country">Country:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_address_country" id="conf_address_country" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_address_stateOrProvince">State or province:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_address_stateOrProvince" id="conf_address_stateOrProvince" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_address_locality">Locality:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_address_locality" id="conf_address_locality" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_address_street">Street:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_address_street" id="conf_address_street" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_address_streetNumber">Street number:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_address_streetNumber" id="conf_address_streetNumber" size="35" />
-                            </td>
-                            </tr>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_address_building">Building:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_address_building" id="conf_address_building" size="35" />
-                            </td>
-                            </tr>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_address_floor">Floor:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_address_floor" id="conf_address_floor" size="35" />
-                            </td>
-                            </tr>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_address_room">Room:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_address_room" id="conf_address_room" size="35" />
-                            </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div id="tabNodeOwner" class="tab-pane">
-                        <table class="table table-bordered table-striped" id="nodeOwnerTable" style="width: 20%">
-                            <tr>
-                            <td>
-                            <label for="conf_owner_organization">Organization:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_owner_organization" id="conf_owner_organization" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_owner_organizationalUnit">Organizational unit:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_owner_organizationalUnit" id="conf_owner_organizationalUnit" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_owner_role">Role:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_owner_role" id="conf_owner_role" size="35" />
-                            </td>
-                            </tr>
-                            <tr>
-                            <td>
-                            <label for="conf_owner_personOrGroup">Person or group:</label>
-                            </td>
-                            <td>
-                            <input type="text" name="conf_owner_personOrGroup" id="conf_owner_personOrGroup" size="35" />
-                            </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" onclick="setRuntimeConfig()">Update</button>
-            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- Configure runtime dialog -->
+<div id="configDialog" class="modal fade" role="dialog" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Attributes</h4>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="setRuntimeConfig(); return false;">
+          <h4>Name</h4>
+          <table class="table no-border table-condensed" id="nodeNameTable">
+            <tr>
+              <td>
+                <label for="conf_name_organization">Organization:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_name_organization" id="conf_name_organization" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_name_organizationalUnit">Organizational unit:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_name_organizationalUnit" id="conf_name_organizationalUnit" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_name_purpose">Purpose:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_name_purpose" id="conf_name_purpose" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_name_group">Group:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_name_group" id="conf_name_group" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_name_name">Name:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_name_name" id="conf_name_name" size="35" />
+              </td>
+            </tr>
+          </table>
+          <h4>Addres</h4>
+          <table class="table no-border table-condensed" id="nodeAddressTable">
+            <tr>
+              <td>
+                <label for="conf_address_country">Country:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_address_country" id="conf_address_country" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_address_stateOrProvince">State or province:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_address_stateOrProvince" id="conf_address_stateOrProvince" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_address_locality">Locality:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_address_locality" id="conf_address_locality" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_address_street">Street:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_address_street" id="conf_address_street" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_address_streetNumber">Street number:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_address_streetNumber" id="conf_address_streetNumber" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_address_building">Building:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_address_building" id="conf_address_building" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_address_floor">Floor:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_address_floor" id="conf_address_floor" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_address_room">Room:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_address_room" id="conf_address_room" size="35" />
+              </td>
+            </tr>
+          </table>
+          <h4>Owner</h4>
+          <table class="table no-border table-condensed" id="nodeOwnerTable">
+            <tr>
+              <td>
+                <label for="conf_owner_organization">Organization:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_owner_organization" id="conf_owner_organization" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_owner_organizationalUnit">Organizational unit:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_owner_organizationalUnit" id="conf_owner_organizationalUnit" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_owner_role">Role:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_owner_role" id="conf_owner_role" size="35" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label for="conf_owner_personOrGroup">Person or group:</label>
+              </td>
+              <td>
+                <input type="text" name="conf_owner_personOrGroup" id="conf_owner_personOrGroup" size="35" />
+              </td>
+            </tr>
+          </table>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="setRuntimeConfig()">Update</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Application deployment dialog -->

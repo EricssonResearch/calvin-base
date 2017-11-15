@@ -32,6 +32,7 @@ class ProxyHandler(object):
     def __init__(self, node):
         self.node = node
         self.tunnels = {}
+        self.peer_capabilities = {}
         self._proxy_cmds = {'CONFIG': self.handle_config,
                             'REQ_MATCH': self.handle_req_match,
                             'SLEEP_REQUEST': self.handle_sleep_request,
@@ -76,6 +77,7 @@ class ProxyHandler(object):
         Store node
         """
         _log.info("Peer '%s' connected" % tunnel.peer_node_id)
+        self.peer_capabilities[tunnel.peer_node_id] = payload['capabilities']
         try:
             for c in list_port_property_capabilities(which=payload['port_property_capability']):
                 self.node.storage.add_index(['node', 'capabilities', c], tunnel.peer_node_id, root_prefix_level=3)
@@ -166,3 +168,9 @@ class ProxyHandler(object):
             self._proxy_send_reply(tunnel,
                 msgid,
                 response.CalvinResponse(response.INTERNAL_ERROR, {'actor_type': actor_type, 'module': None}).encode())
+
+    def get_capabilities(self, peer_id):
+        capabilities = []
+        if peer_id in self.peer_capabilities:
+            capabilities = self.peer_capabilities[peer_id]
+        return capabilities
