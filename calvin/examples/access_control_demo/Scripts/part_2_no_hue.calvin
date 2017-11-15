@@ -1,21 +1,19 @@
 component Lock() state -> {
   is_pressed        : flow.Bool()
-  open_string       : std.Constant(data="Door is open")
-  locked_string     : std.Constant(data="Door is locked")
   check_lock_status : flow.Deselect()
   lock              : io.Print()
 
   .state                 > is_pressed.token
   is_pressed.bool        > check_lock_status.select
-  locked_string.token    > check_lock_status.case_false
-  open_string.token      > check_lock_status.case_true
+  "Door is locked"       > check_lock_status.case_false
+  "Door is open"         > check_lock_status.case_true
   check_lock_status.data > lock.token
 }
 
-button : io.GPIOReader(edge="b", gpio_pin=23, pull="d")
+button : io.Button()
 lock   : Lock()
 
-button.state > lock.state 
+button.state > lock.state
 
 
 # Deployment

@@ -1,4 +1,4 @@
-button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+button : io.Button()
 camera : media.Camera()
 screen : media.ImageRenderer()
 

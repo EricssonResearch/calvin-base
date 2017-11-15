@@ -1,6 +1,14 @@
 {
-  "global": {
-    "gpio_plugin": "platform/raspberry_pi/rpigpio_impl",
-    "mediaplayer_plugin": "pygame_impl"
-  }
+    "global": {
+        "mediaplayer_plugin": "pygame_impl"
+    },
+    "calvinsys": {
+        "capabilities": {
+            "io.button": {
+                "comment": "Push-to-make button",
+                "module": "io.ky040knob.raspberry_pi.PIGPIOKY040",
+                "attributes": {"switch_pin": 23}
+            }
+        }
+    }
 }
