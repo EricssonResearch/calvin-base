@@ -290,7 +290,6 @@ requirements = \
         'calvinsys.network.serverhandler': DeprecatedCavinSysMock(),
         'calvinsys.network.socketclienthandler': DeprecatedCavinSysMock(),
         'calvinsys.network.websockethandler': DeprecatedCavinSysMock(),
-        'calvinsys.sensors.enclosure': DeprecatedCavinSysMock(),
         'calvinsys.sensors.kubectl': DeprecatedCavinSysMock(),
         'calvinsys.events.timer': DeprecatedCavinSysMock(),
         'calvinsys.sensors.rotary_encoder': DeprecatedCavinSysMock(),
@@ -431,7 +430,7 @@ def setup_calvinsys():
             "module": "mock.MockOutput",
             "attributes": {}
         },
-        
+
 
         "sys.timer.once": {
             "module": "mock.MockInputOutput",
