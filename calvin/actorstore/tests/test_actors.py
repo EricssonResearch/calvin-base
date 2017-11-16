@@ -290,7 +290,6 @@ requirements = \
         'calvinsys.network.serverhandler': DeprecatedCavinSysMock(),
         'calvinsys.network.socketclienthandler': DeprecatedCavinSysMock(),
         'calvinsys.network.websockethandler': DeprecatedCavinSysMock(),
-        'calvinsys.sensors.kubectl': DeprecatedCavinSysMock(),
         'calvinsys.events.timer': DeprecatedCavinSysMock(),
         'calvinsys.sensors.rotary_encoder': DeprecatedCavinSysMock(),
         'calvinsys.sensors.rfid': DeprecatedCavinSysMock(),
