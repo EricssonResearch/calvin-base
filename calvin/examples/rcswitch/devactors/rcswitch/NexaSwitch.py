@@ -63,32 +63,17 @@ class NexaSwitch(Actor):
       state : 1/0 for on/off
     """
 
-    @manage(['databits', 'repeat'])
+    @manage(['databits', 'repeat', 'tx'])
     def init(self, tx_id, group_cmd, channel, unit, repeat):
         self.databits = (tx_id & 0x03FFFFFF) << 6
         self.databits |= ((group_cmd & 0x1) << 5)
-        # self.databits |= ((int(state) & 0x1) << 4)
         self.databits |= ((channel & 0x3) << 2)
         self.databits |= (unit & 0x3)
         self.databits &= 0xFFFFFFEF
         self.repeat = repeat
-        self.tx = None
-        self.setup()
-        
-    def setup(self):
         self.tx = calvinsys.open(self, "io.tx433MHz")
-
-    def will_migrate(self):
-        calvinsys.close(self.tx)
-        self.tx = None
-
-    def will_end(self):
-        if self.tx:
-            calvinsys.close(self.tx)
-
-    def did_migrate(self):
-        self.setup()
-
+        
+        
     @stateguard(lambda self: calvinsys.can_write(self.tx))
     @condition(action_input=["state"])
     def switch_state(self, state):
