@@ -6,45 +6,39 @@
 </head>
 <body>
 
-<div class="container-fluid">
-  <div class="panel-group">
 
-    <!-- Connect panel -->
-    <div class="panel panel-default">
-      <div id="panelConnect" class="panel panel-default">
-        <form onsubmit="connect(); return false;">
-          <div class="panel-body">
-            <div class="form-group">
-              <div class="col-xs-4">
-                <label for="connect_uri">
-                  Control URL
-                </label>
-                <input type="text" class="form-control" id="connect_uri" placeholder="Enter runtime control URL (example http://localhost:5001)">
-                <label data-toggle="collapse" data-target="#authenticationDiv" aria-expanded="false" aria-controls="authenticationDiv">
-                  <input type="checkbox">Authentication enabled
-                </label>
-                <div id="authenticationDiv" class="collapse">
-                  <label for="user_name">
-                    User
-                  </label>
-                  <input type="text" class="form-control" id="user_name" placeholder="Enter username">
-                  <label for="password">
-                    Password
-                  </label>
-                  <input type="password" class="form-control" id="password" aria-describedby="secHelp" placeholder="Enter pasword">
-                  <small id="secHelp" class="form-text text-muted">
-                    Username and password if runtime access control is enabled
-                  </small>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="panel-footer">
-            <button type="button" class="btn btn-primary btn-xs" onclick="connect()">Connect</button>
-          </div>
-        </form>
-      </div>
+<div class="container-fluid">
+
+  <div class="panel panel-default">
+    <div class="panel-body">
+      <form class="navbar-form navbar-left" onsubmit="connect(); return false;">
+        <div class="input-group">
+          Control URI:
+        </div>
+
+        <div class="input-group">
+          <input id="connect_uri" type="text" class="form-control" name="connect_uri" placeholder="http://127.0.0.1:5001">
+        </div>
+
+        <div class="input-group">
+          <label><input id="showAuthentication" type="checkbox" onchange="toggleAuthenticate()"> Authenticate </label>
+        </div>
+
+        <div class="input-group">
+          <input style="display:none" id="user_name" type="text" class="form-control" name="user_name" placeholder="User">
+        </div>
+
+        <div class="input-group">
+          <input style="display:none" id="password" type="password" class="form-control" name="password" placeholder="Password">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Connect</button>
+      </form>
     </div>
+  </div>
+
+
+  <div class="panel-group">
 
     <!-- Runtimes panel -->
     <div class="panel panel-default">
@@ -66,7 +60,7 @@
             <input type="checkbox" id="chkShowConnections" onchange="drawConnections()">View graph
           </label>
           <div id="connectionsGraphDiv" class="collapse">
-            <div id="connectionsGraph"></div>
+            <div id="connectionsGraph" class="graphDiv"></div>
           </div>
         </div>
       </div>
@@ -120,7 +114,7 @@
           <div id="applicationGraphDiv" class="collapse">
             <input type="checkbox" id="chkDrawConnections" onchange="showApplication()" checked>Draw connections<br>
             <input type="checkbox" id="chkShowPortNames" onchange="showApplication()" checked>Show portnames<br>
-            <div id="applicationGraph" class="applicationGraph"></div>
+            <div id="applicationGraph" class="graphDiv"></div>
           </div>
         </div>
       </div>
@@ -222,8 +216,8 @@
           </table>
         </div>
         <div class="panel-footer">
-          <button type="button" class="btn btn-primary btn-xs" onclick="startLog()">Start trace...</button>
-          <button type="button" class="btn btn-primary btn-xs" onclick="stopLog()">Stop trace</button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="startLog()">Start...</button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="stopLog()">Stop</button>
           <button type="button" class="btn btn-primary btn-xs" onclick="clearLog()">Clear</button>
         </div>
       </div>

@@ -193,10 +193,12 @@ function drawConnections()
   var nodes = [];
   var links = [];
 
-  document.getElementById("connectionsGraph").innerHTML = "";
+  var connectionsGraph = document.getElementById("connectionsGraph");
 
-  var width = 800,
-  height = 600;
+  connectionsGraph.innerHTML = "";
+
+  var width = connectionsGraph.clientWidth;
+  var height = window.innerHeight/1.5;
 
   var svg_con = d3.select("#connectionsGraph").append("svg")
   .attr("width", width)
@@ -217,9 +219,11 @@ function drawConnections()
     var source = findNode(nodes, peers[index_peer].id);
     if (source) {
       var index_connection;
+      console.log("Peers " + peers[index_peer].peers);
       for (index_connection in peers[index_peer].peers) {
         var dest = findNode(nodes, peers[index_peer].peers[index_connection]);
         if (dest) {
+          console.log("Addig link");
           links.push({source:source, target:dest});
         }
       }
@@ -566,6 +570,7 @@ function getPeers(peer)
       null,
       function(data, kwargs) {
         if (data) {
+          kwargs.peer.peers = data;
           var index;
           for (index in data) {
             if (!findRuntime(data[index])) {
@@ -575,7 +580,7 @@ function getPeers(peer)
         }
       },
       null,
-      null
+      {"peer": peer}
     );
   }
 }
@@ -1103,7 +1108,7 @@ function showPeer(peer)
   btnConfigure.type = 'button';
   btnConfigure.className = "btn btn-primary btn-xs";
   btnConfigure.id = peer.id;
-  btnConfigure.value = 'Configure...';
+  btnConfigure.value = 'Attributes...';
   btnConfigure.setAttribute("onclick", "showRuntimeConfig(this.id)");
 
   var btnGroup = document.createElement('div');
@@ -1188,16 +1193,21 @@ function showApplication()
     btnDestroy.id = application.id;
     btnDestroy.value = 'Destroy';
     btnDestroy.setAttribute("onclick", "destroyApplication(this.id)");
-    AddTableItem(tableRef, document.createTextNode("Destroy"), btnDestroy);
 
     // Set requirements
     var btnSetRequirements = document.createElement('input');
     btnSetRequirements.type = 'button';
     btnSetRequirements.className = "btn btn-primary btn-xs";
     btnSetRequirements.id = application.id;
-    btnSetRequirements.value = 'Set requirements...';
+    btnSetRequirements.value = 'Requirements...';
     btnSetRequirements.setAttribute("onclick", "showSetRequirements(this.id)");
-    AddTableItem(tableRef, document.createTextNode("Set requirements"), btnSetRequirements);
+
+    var btnGroup = document.createElement('div');
+    btnGroup.class = "btn-group";
+    btnGroup.appendChild(btnSetRequirements);
+    btnGroup.appendChild(btnDestroy);
+
+    AddTableItem(tableRef, btnGroup);
 
     var index;
     for (index in application.actors) {
@@ -2196,6 +2206,12 @@ function deleteKappa()
       showError("Failed to delete kappa");
     }
   });
+}
+
+function toggleAuthenticate()
+{
+  $("#user_name").toggle();
+  $("#password").toggle();
 }
 
 jQuery(document).ready(function() {
