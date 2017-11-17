@@ -56,21 +56,18 @@ class Waveform(object):
 class NexaSwitch(Actor):
     """
     Control a wireless power outlet
-    
-    N.B. The repeat argument is not yet functional
-    
+        
     Inputs:
       state : 1/0 for on/off
     """
 
-    @manage(['databits', 'repeat', 'tx'])
-    def init(self, tx_id, group_cmd, channel, unit, repeat):
+    @manage(['databits', 'tx'])
+    def init(self, tx_id, group_cmd, channel, unit):
         self.databits = (tx_id & 0x03FFFFFF) << 6
         self.databits |= ((group_cmd & 0x1) << 5)
         self.databits |= ((channel & 0x3) << 2)
         self.databits |= (unit & 0x3)
         self.databits &= 0xFFFFFFEF
-        self.repeat = repeat
         self.tx = calvinsys.open(self, "io.tx433MHz")
         
         

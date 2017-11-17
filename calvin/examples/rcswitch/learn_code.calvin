@@ -8,7 +8,7 @@ define HELP_TEXT="\n\n"
 
 
 /* Actors */
-switch : rcswitch.NexaSwitch(tx_id=TX_ID, group_cmd=1, channel=3, unit=3, repeat=1)
+switch : rcswitch.NexaSwitch(tx_id=TX_ID, group_cmd=1, channel=3, unit=3)
 delay : std.ClassicDelay(delay=0.1)
 iip : flow.Init(data=true)
 

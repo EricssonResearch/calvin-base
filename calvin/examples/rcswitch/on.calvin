@@ -2,7 +2,7 @@
 define TX_ID=101
 
 /* Actors */
-switch : rcswitch.NexaSwitch(tx_id=TX_ID, group_cmd=1, channel=3, unit=3, repeat=3)
+switch : rcswitch.NexaSwitch(tx_id=TX_ID, group_cmd=1, channel=3, unit=3)
 iip : flow.Init(data=1)
 
 /* Connections */
