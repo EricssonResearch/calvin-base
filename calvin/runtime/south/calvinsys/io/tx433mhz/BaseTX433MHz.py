@@ -29,6 +29,11 @@ class BaseTX433MHz(base_calvinsys_object.BaseCalvinsysObject):
                 "description": "Pin number",
                 "type": "integer",
                 "minimum": 0
+            }, 
+            "repeat": {
+                "description": "Number of repetitions",
+                "type": "integer",
+                "minimum": 1
             }
         }
     }

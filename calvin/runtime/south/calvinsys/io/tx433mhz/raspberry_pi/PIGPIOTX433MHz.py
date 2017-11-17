@@ -61,8 +61,9 @@ class PIGPIOTX433MHz(BaseTX433MHz.BaseTX433MHz):
     """
     Calvinsys object handling 433Mhz transmitters using the pigpio package (& daemon)
     """
-    def init(self, pin, **kwargs):
-        self._pin = pin
+    def init(self, pin, repeat, **kwargs):
+        self._pin = pin 
+        self._repeat = repeat & 0xFF
         self._gpio = pigpio.pi()
         self._gpio.set_mode(self._pin, pigpio.OUTPUT)
 
@@ -88,7 +89,7 @@ class PIGPIOTX433MHz(BaseTX433MHz.BaseTX433MHz):
         self._gpio.wave_clear()
         self._gpio.wave_add_generic(wf)
         seq = self._gpio.wave_create()
-        self._gpio.wave_send_once(seq)
+        self._gpio.wave_chain([255, 0, seq, 255, 2, 0x88, 0x13, 255, 1, self._repeat, 0])
 
     def close(self):
         del self._gpio
