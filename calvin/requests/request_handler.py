@@ -67,6 +67,7 @@ ENROLLMENT_PASSWORD = '/certificate_authority/certificate_enrollment_password/{}
 AUTHENTICATION = '/authentication'
 AUTHENTICATION_USERS_DB = '/authentication/users_db'
 AUTHENTICATION_GROUPS_DB = '/authentication/groups_db'
+PROXY_PEER_ABOLISH = '/proxy/{}/migrate'
 def get_runtime(value):
     if isinstance(value, basestring):
         return RT(value)
@@ -226,7 +227,7 @@ class RequestHandler(object):
         r = self._post(rt, timeout, async, CONNECT, data)
         return self.check_response(r)
 
-    def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=None, 
+    def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=None,
                    timeout=DEFAULT_TIMEOUT, async=False):
         data = {
             'actor_id': actor_id,
@@ -466,3 +467,6 @@ class RequestHandler(object):
         r = self._put(rt, timeout, async, AUTHENTICATION_USERS_DB, data=data)
         return self.check_response(r)
 
+    def abolish_proxy_peer(self, rt, peer_id, timeout=DEFAULT_TIMEOUT, async=False):
+        r = self._delete(rt, timeout, async, PROXY_PEER_ABOLISH.format(peer_id))
+        return self.check_response(r)

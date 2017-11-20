@@ -1111,52 +1111,45 @@ function showPeer(peer)
   btnConfigure.value = 'Attributes...';
   btnConfigure.setAttribute("onclick", "showRuntimeConfig(this.id)");
 
-  var btnGroup = document.createElement('div');
-  btnGroup.class = "btn-group";
-  btnGroup.appendChild(btnInfo);
-  btnGroup.appendChild(btnConfigure);
-
   if (peer.control_uris) {
-    var btnDestroy = document.createElement('input');
-    btnDestroy.type = 'button';
-    btnDestroy.className = "btn btn-danger btn-xs";
-    btnDestroy.id = peer.id;
-    btnDestroy.value = 'Destroy';
-    btnDestroy.setAttribute("onclick", "destroyPeer(this.id)");
-
-    var btnAbolish = document.createElement('input');
-    btnAbolish.type = 'button';
-    btnAbolish.className = "btn btn-danger btn-xs";
-    btnAbolish.id = peer.id;
-    btnAbolish.value = 'Abolish';
-    btnAbolish.setAttribute("onclick", "destroyPeerByMethod(this.id, 'migrate')");
-
     var btnDeploy = document.createElement('input');
     btnDeploy.type = 'button';
     btnDeploy.className = "btn btn-primary btn-xs";
     btnDeploy.id = peer.id;
     btnDeploy.value = 'Deploy...';
     btnDeploy.setAttribute("onclick", "showDeployApplication(this.id)");
-
-    btnGroup.appendChild(btnDeploy);
-    btnGroup.appendChild(btnDestroy);
-    btnGroup.appendChild(btnAbolish);
-
-    row = AddTableItem(tableRef,
-      document.createTextNode(peer.id),
-      document.createTextNode(peer.node_name.name),
-      document.createTextNode(peer.uris),
-      document.createTextNode(peer.control_uris),
-      btnGroup);
-  } else {
-    row = AddTableItem(tableRef,
-      document.createTextNode(peer.id),
-      document.createTextNode(peer.node_name.name),
-      document.createTextNode(peer.uris),
-      document.createTextNode(peer.control_uris),
-      btnGroup);
   }
 
+  var btnDestroy = document.createElement('input');
+  btnDestroy.type = 'button';
+  btnDestroy.className = "btn btn-danger btn-xs";
+  btnDestroy.id = peer.id;
+  btnDestroy.value = 'Destroy';
+  btnDestroy.setAttribute("onclick", "destroyPeer(this.id)");
+
+  var btnAbolish = document.createElement('input');
+  btnAbolish.type = 'button';
+  btnAbolish.className = "btn btn-danger btn-xs";
+  btnAbolish.id = peer.id;
+  btnAbolish.value = 'Abolish';
+  btnAbolish.setAttribute("onclick", "destroyPeerByMethod(this.id, 'migrate')");
+
+  var btnGroup = document.createElement('div');
+  btnGroup.class = "btn-group";
+  btnGroup.appendChild(btnInfo);
+  btnGroup.appendChild(btnConfigure);
+  if (peer.control_uris) {
+    btnGroup.appendChild(btnDeploy);
+  }
+  btnGroup.appendChild(btnDestroy);
+  btnGroup.appendChild(btnAbolish);
+
+  row = AddTableItem(tableRef,
+    document.createTextNode(peer.id),
+    document.createTextNode(peer.node_name.name),
+    document.createTextNode(peer.uris),
+    document.createTextNode(peer.control_uris),
+    btnGroup);
   row.id = peer.id;
 }
 
@@ -1521,8 +1514,21 @@ function destroyPeerByMethod(peer_id, method)
 {
   var peer = findRuntime(peer_id);
   if (peer) {
+    var url = "";
+    if (peer.proxy) {
+      var proxy = findRuntime(peer.proxy);
+      if (proxy)
+        url = proxy.control_uris[0] + "/proxy/" + peer.id + "/" + method;
+      else {
+        showError("Proxy not found for " + peer_id);
+        return;
+      }
+    } else {
+      url = peer.control_uris[0] + '/node/' + method;
+    }
+
     send_request("DELETE",
-      peer.control_uris[0] + '/node/' + method,
+      url,
       null,
       function(data, kwargs) {
         if (peer.source != null) {
