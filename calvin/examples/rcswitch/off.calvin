@@ -1,0 +1,11 @@
+/* Off */
+define TX_ID=101
+
+/* Actors */
+switch : rcswitch.NexaSwitch(tx_id=TX_ID, group_cmd=1, channel=3, unit=3)
+iip : flow.Init(data=0)
+
+/* Connections */
+iip.out > switch.state
+voidport > iip.in
+

@@ -1,12 +1,16 @@
-/* defines */
-define startbit = [{"state":1, "time":250}, {"state":0, "time":2500}]
-define stopbit = [{"state":1, "time":250}, {"state":0, "time":10000}]
-define onebit=[{"state":1, "time":250}, {"state":0, "time":1250}]
-define zerobit=[{"state":1, "time":250}, {"state":0, "time":250}]
+/* Blink */
+define TX_ID=101
 
 /* Actors */
-btn : io.GPIOReader(gpio_pin=22, edge="b", pull="d")
-switch : rcswitch.RCSwitch(gpio_pin=17, homecode=2476015488, grp=0, channel=0, startBit=startbit, stopBit=stopbit, oneBit=onebit, zeroBit=zerobit, repeat=6)
+switch : rcswitch.NexaSwitch(tx_id=TX_ID, group_cmd=1, channel=3, unit=3)
+delay : std.ClassicDelay(delay=1)
+not : std.Compare(rel="!=")
+iip : flow.Init(data=true)
+log : io.Print()
 
 /* Connections */
-btn.state > switch.state
+iip.out > switch.state, delay.token, log.token
+delay.token > not.a
+true > not.b
+not.result > iip.in
+

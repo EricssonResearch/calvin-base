@@ -1,10 +1,8 @@
-button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+button : io.Button()
 lock   : hue.StopLight(address="192.168.0.101", username="newdeveloper", lightno=1)
-sink   : flow.Terminator()
 
 button.state > lock.state
-lock.status > sink.void
-
+lock.status > voidport
 
 
 # Deployment

@@ -1,0 +1,24 @@
+/* Desired TX_ID */
+define TX_ID=101
+
+define HELP_TEXT="\n\n"
+"Power cycle the switch that should learn to respond to this id.\n"
+"Stop the program when your hear the switch click a number of times.\n"
+"\n\n"
+
+
+/* Actors */
+switch : rcswitch.NexaSwitch(tx_id=TX_ID, group_cmd=1, channel=3, unit=3)
+delay : std.ClassicDelay(delay=0.005)
+iip : flow.Init(data=true)
+
+
+/* Connections */
+iip.out > switch.state, delay.token
+delay.token > iip.in
+
+/* help text */
+log : io.Print()
+info :flow.Init(data=HELP_TEXT)
+info.out > log.token
+voidport > info.in
