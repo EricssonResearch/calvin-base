@@ -317,7 +317,12 @@ class CalvinProto(CalvinCBClass):
 
     def actor_migrate_handler(self, payload):
         """ Peer request new actor with state and connections """
-        self.node.am.update_requirements(payload['actor_id'], payload['requirements'],
+        if 'peer_node_id' in payload:
+            self.node.am.migrate(payload['actor_id'], payload['peer_node_id'],
+                callback=CalvinCB(self.node.network.link_request, payload['from_rt_uuid'], callback=CalvinCB(send_message,
+                                           msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
+        else:
+            self.node.am.update_requirements(payload['actor_id'], payload['requirements'],
                                          payload['extend'], payload['move'],
                                          callback=CalvinCB(self.node.network.link_request, payload['from_rt_uuid'], callback=CalvinCB(send_message,
                                                                     msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
