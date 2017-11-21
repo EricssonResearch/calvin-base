@@ -75,7 +75,7 @@ class NexaSwitch(Actor):
     @condition(action_input=["state"])
     def switch_state(self, state):
         data = self.databits
-        data |= ((int(bool(state)) & 0x1) << 4)
+        data |= ((int(not state) & 0x1) << 4)
         wf = Waveform()
         calvinsys.write(self.tx, wf.sequence(data))
 
