@@ -72,3 +72,29 @@ class Event_Monitor(object):
 
         return did_comm
 
+class VisualizingMonitor(Event_Monitor):
+    
+    def communicate(self, endpoints):
+        
+        # Helper function
+        def visualize(ports):
+            for port in ports:
+                actor = port.owner
+                queue = port.queue
+                wp = queue.write_pos if type(queue.write_pos) is int else max(queue.write_pos.values())
+                rp = min(queue.read_pos.values())
+                n = wp - rp
+                _log.debug("    {}.{} {}".format(actor.name, port.name, n))
+
+        # Grab all ports
+        outports = [e.port for e in endpoints]
+        inports = [e.peer_port for p in outports for e in p.endpoints]        
+        ports = outports + inports
+        _log.debug("------------------------")
+        _log.debug("Before commmunicate")
+        visualize(ports)
+        # Call the actual communication method        
+        super(VisualizingMonitor, self).communicate(endpoints)
+        _log.debug("After communicate")
+        visualize(ports)
+        _log.debug("------------------------")

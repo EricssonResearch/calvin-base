@@ -17,8 +17,9 @@
 import sys
 import time
 import random
+import logging
 
-from monitor import Event_Monitor
+from monitor import Event_Monitor, VisualizingMonitor
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
@@ -266,7 +267,9 @@ class SimpleScheduler(BaseScheduler):
 
     def __init__(self, node, actor_mgr):
         super(SimpleScheduler, self).__init__(node, actor_mgr)
-        self.monitor = Event_Monitor()
+        monitor_class = VisualizingMonitor if _log.getEffectiveLevel() is logging.DEBUG else Event_Monitor
+        _log.debug("monitor_class is {}".format(monitor_class.__name__))
+        self.monitor = monitor_class()
 
     def tunnel_rx(self, endpoint):
         """Token recieved on endpoint"""
