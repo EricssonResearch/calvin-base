@@ -2,68 +2,64 @@
     "connections": {
         "access_control_demo_part2:lock:id.token": [
             "access_control_demo_part2:sink.void"
-        ],
+        ], 
         "access_control_demo_part2:button.state": [
             "access_control_demo_part2:lock:id.token"
         ]
-    },
+    }, 
     "port_properties": {
         "access_control_demo_part2:lock:id": [
             {
-                "direction": "in",
-                "port": "token",
+                "direction": "out", 
+                "port": "token", 
                 "properties": {
                     "nbr_peers": 1
                 }
-            },
+            }, 
             {
-                "direction": "out",
-                "port": "token",
+                "direction": "in", 
+                "port": "token", 
                 "properties": {
                     "nbr_peers": 1
                 }
             }
-        ],
+        ], 
         "access_control_demo_part2:sink": [
             {
-                "direction": "in",
-                "port": "void",
+                "direction": "in", 
+                "port": "void", 
                 "properties": {
                     "nbr_peers": 1
                 }
             }
-        ],
+        ], 
         "access_control_demo_part2:button": [
             {
-                "direction": "out",
-                "port": "state",
+                "direction": "out", 
+                "port": "state", 
                 "properties": {
                     "nbr_peers": 1
                 }
             }
         ]
-    },
-    "valid": true,
+    }, 
+    "valid": true, 
     "actors": {
         "access_control_demo_part2:lock:id": {
-            "args": {},
-            "actor_type": "std.Identity",
+            "args": {}, 
+            "actor_type": "std.Identity", 
             "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
-        },
+        }, 
         "access_control_demo_part2:sink": {
-            "args": {},
-            "actor_type": "flow.Terminator",
+            "args": {}, 
+            "actor_type": "flow.Terminator", 
             "signature": "d020e4a1dc9953df2924eba3ceed61544fff2bd4fab9f602758cce0e8957d522"
-        },
+        }, 
         "access_control_demo_part2:button": {
-            "args": {
-                "pull": "d",
-                "edge": "b",
-                "gpio_pin": 23
-            },
-            "actor_type": "io.GPIOReader",
-            "signature": "b8a738b359dd1aa1327b5e298cb13ef3eb267368d221e35ae28697c010a8c2ce"
+            "args": {}, 
+            "actor_type": "io.Button", 
+            "signature": "489cd10a57de72e45ea1202fff45e6ae1a742ba336715264f98af4aa8b1b55d6"
         }
-    },
+    }, 
     "name": "access_control_demo_part2"
 }

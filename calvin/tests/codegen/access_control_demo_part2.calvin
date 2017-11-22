@@ -5,7 +5,7 @@ component StopLight() state -> status {
     id.token > .status
 }
 
-button : io.GPIOReader(gpio_pin=23, edge="b", pull="d")
+button : io.Button()
 lock   : StopLight()
 sink   : flow.Terminator()
 
