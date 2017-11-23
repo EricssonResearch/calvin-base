@@ -88,7 +88,7 @@ class VisualizingMonitor(Event_Monitor):
 
         # Grab all ports
         outports = [e.port for e in endpoints]
-        inports = [e.peer_port for p in outports for e in p.endpoints]        
+        inports = [e.peer_port for p in outports for e in p.endpoints if hasattr(e, 'peer_port')]        
         ports = outports + inports
         _log.debug("------------------------")
         _log.debug("Before commmunicate")
