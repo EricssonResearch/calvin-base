@@ -5,7 +5,8 @@ from calvin.runtime.north import scheduler, calvinsys
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
-
+from calvin.csparser.codegen import calvin_codegen
+        
 
 def create_actor(kind, args):
     node = Mock()
@@ -15,6 +16,39 @@ def create_actor(kind, args):
     actor._calvinsys = Mock()
     return actor
 
+def app_from_script(script, script_name):
+    deployable, issuetracker = calvin_codegen(script, script_name, verify=False)
+    errors = issuetracker.errors(sort_key='reason')
+    warnings = issuetracker.warnings(sort_key='reason')
+    if errors:
+        return {}, errors, warnings
+
+    actors = {}
+    for name, setup in deployable['actors'].iteritems():
+        a_type = setup['actor_type']
+        a_args = setup['args']
+        a_args.update({"name":name}) # Optional, for human readability only
+        a = create_actor(a_type, a_args)
+        actors[name] = a
+
+    for src, dests in deployable['connections'].iteritems():
+        for dest in dests:
+            a_name, p_name = src.split('.')
+            outport = actors[a_name].outports[p_name]
+            # FIXME: setup port properties (queue) from deployable info
+            outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
+            
+            a_name, p_name = dest.split('.')
+            inport = actors[a_name].inports[p_name]
+            # FIXME: setup port properties (queue) from deployable info
+            inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
+            
+            outport.attach_endpoint(LocalOutEndpoint(outport, inport))
+            inport.attach_endpoint(LocalInEndpoint(inport, outport))
+    
+                
+    return actors, errors, warnings
+    
 
 class TestBase(unittest.TestCase):
 
@@ -75,4 +109,34 @@ class SchedulerCheckStrategy(TestBase):
         assert src.outports['token'].endpoints[0].peer_port.owner == filter
         assert src.outports['token'].endpoints[0].peer_port.name == "token"
         assert src.outports['token'].endpoints[0].peer_port == filter.inports['token']
-          
+        
+        # This is the same test as test_simple above, but using app_from_script to set up the application from a script. Much better in the long run. 
+    def test_simple_script(self):
+        script = """
+        src : std.Constant(data=42)
+        filter : std.Identity()
+        snk : flow.Terminator()
+
+        src.token > filter.token
+        filter.token > snk.void
+        """
+        actors, errors, warnings = app_from_script(script, "test")
+        
+        assert not errors
+        assert actors
+        
+        src = actors['test:src']
+        filter = actors['test:filter']       
+        skn = actors['test:snk']
+        
+        assert src.name == "test:src"    
+        assert filter.name == "test:filter"          
+        # Verify that src.token is connected to filter.token
+        assert len(src.outports['token'].endpoints) == 1     
+        assert src.outports['token'].endpoints[0].peer_port.owner.name == filter.name 
+        assert src.outports['token'].endpoints[0].peer_port.owner == filter
+        assert src.outports['token'].endpoints[0].peer_port.name == "token"
+        assert src.outports['token'].endpoints[0].peer_port == filter.inports['token']
+
+        
+        
