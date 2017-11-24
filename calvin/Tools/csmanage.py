@@ -513,7 +513,6 @@ def manage_cs_sign(args):
 ######################
 
 def manage_runtime_create(args):
-    print args
     if not args.attr:
         raise Exception("No runtime attributes supplied")
     if not args.domain:
@@ -527,7 +526,7 @@ def manage_runtime_create(args):
     node_name=attributes.get_node_name_as_str()
     nodeid = calvinuuid.uuid("NODE")
     rt_cred = runtime_credentials.RuntimeCredentials(node_name, domain=args.domain, security_dir=args.dir, nodeid=nodeid, hostnames=args.hostnames)
-    print "node_name_start<{}>node_name_stop\n".format(rt_cred.get_node_name())
+    print "node_name_start<{}>node_name_stop".format(rt_cred.get_node_name())
 
 def manage_runtime_export(args):
     raise Exception("manage_runtime_export is not yet implemented")
