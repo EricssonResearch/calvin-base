@@ -97,6 +97,7 @@ class ProxyHandler(object):
 
     def tunnel_down(self, tunnel):
         """ Callback that the tunnel is not accepted or is going down """
+        del self.tunnels[tunnel.peer_node_id]
         return True
 
     def tunnel_up(self, tunnel):
