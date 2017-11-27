@@ -35,7 +35,7 @@ class Sink(Actor):
     def init(self, buffer_size=5):
         self.tokens = []
         self.buffer_size = buffer_size if buffer_size < 10 else 10
-    
+
     @stateguard(lambda actor: len(actor.tokens) < actor.buffer_size)
     @condition(action_input=['in'])
     def store(self, token):
@@ -51,10 +51,10 @@ class Sink(Actor):
 
     test_set = [
         {
-            'in': {'in': ['aa', 'ba', 'ca', 'da']},
-            'out': {},
+            'inports': {'in': ['aa', 'ba', 'ca', 'da']},
+            'outports': {},
             'postcond': [lambda self: self.tokens == ['aa', 'ba', 'ca', 'da']]
         }
     ]
-    
+
     requires = ['kappa']

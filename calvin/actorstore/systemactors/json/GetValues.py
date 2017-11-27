@@ -66,16 +66,16 @@ class GetValues(GetValue):
         # Error conditions
         # FIXME: Can't test when output is list?!
         # {
-        #     'in': {'container': [[1, 2]], 'keys':[[0,2,1]]},
-        #     'out': {'values': [[1, ExceptionToken(), 2]]},
+        #     'inports': {'container': [[1, 2]], 'keys':[[0,2,1]]},
+        #     'outports': {'values': [[1, ExceptionToken(), 2]]},
         # },
         #
         # {
-        #     'in': {'container': [1], 'keys':[["a"]]},
-        #     'out': {'values': [[ExceptionToken()]]},
+        #     'inports': {'container': [1], 'keys':[["a"]]},
+        #     'outports': {'values': [[ExceptionToken()]]},
         # },
         # {
-        #     'in': {'container': [{"b":2}], 'keys':[["a"]]},
-        #     'out': {'values': [['Exception']]},
+        #     'inports': {'container': [{"b":2}], 'keys':[["a"]]},
+        #     'outports': {'values': [['Exception']]},
         # },
     ]

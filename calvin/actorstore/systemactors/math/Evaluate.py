@@ -62,13 +62,13 @@ class Evaluate(Actor):
     test_set = [
         {
             'setup': [lambda self: self.init('x * y')],
-            'in': {'x': [1, 2, 3, 4], 'y':[1, 2, 3, 4]},
-            'out': {'result': [1, 4, 9, 16]},
+            'inports': {'x': [1, 2, 3, 4], 'y':[1, 2, 3, 4]},
+            'outports': {'result': [1, 4, 9, 16]},
         },
         {
             'setup': [lambda self: self.init('2*x + y + x * y')],
-            'in': {'x': [1, 2, 3, 4], 'y':[3, 3, 3, 3]},
-            'out': {'result': [8, 13, 18, 23]},
+            'inports': {'x': [1, 2, 3, 4], 'y':[3, 3, 3, 3]},
+            'outports': {'result': [8, 13, 18, 23]},
         },
 
     ]

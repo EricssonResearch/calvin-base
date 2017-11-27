@@ -56,32 +56,32 @@ class SetDefaults(SetDefault):
 
     test_set = [
         {
-            'in': {'container': [{'a':1}], 'keys':[['a']], 'values':[[42]]},
-            'out': {'container': [{'a':1}]},
+            'inports': {'container': [{'a':1}], 'keys':[['a']], 'values':[[42]]},
+            'outports': {'container': [{'a':1}]},
         },
         {
-            'in': {'container': [{'a':2}], 'keys':[['c']], 'values':[[42]]},
-            'out': {'container': [{'a':2, 'c': 42}]},
+            'inports': {'container': [{'a':2}], 'keys':[['c']], 'values':[[42]]},
+            'outports': {'container': [{'a':2, 'c': 42}]},
         },
         {
-            'in': {'container': [[1,{'a':3},3]], 'keys':[[[1, 'a']]], 'values':[[42]]},
-            'out': {'container': [[1,{'a':3},3]]},
+            'inports': {'container': [[1,{'a':3},3]], 'keys':[[[1, 'a']]], 'values':[[42]]},
+            'outports': {'container': [[1,{'a':3},3]]},
         },
         {
-            'in': {'container': [[1,{'c':4},3]], 'keys':[[[1, 'a']]], 'values':[[42]]},
-            'out': {'container': [[1,{'a': 42, 'c':4},3]]},
+            'inports': {'container': [[1,{'c':4},3]], 'keys':[[[1, 'a']]], 'values':[[42]]},
+            'outports': {'container': [[1,{'a': 42, 'c':4},3]]},
         },
         # Error conditions
         {
-            'in': {'container': [[1,2,3]], 'keys':[[1]], 'values':[[42]]},
-            'out': {'container': ['Exception']},
+            'inports': {'container': [[1,2,3]], 'keys':[[1]], 'values':[[42]]},
+            'outports': {'container': ['Exception']},
         },
         {
-            'in': {'container': [{'a':5}], 'keys':[[1]], 'values':[[42]]},
-            'out': {'container': ['Exception']},
+            'inports': {'container': [{'a':5}], 'keys':[[1]], 'values':[[42]]},
+            'outports': {'container': ['Exception']},
         },
         {
-            'in': {'container': [{'a':6}], 'keys':[[1]], 'values':[[42]]},
-            'out': {'container': ['Exception']},
+            'inports': {'container': [{'a':6}], 'keys':[[1]], 'values':[[42]]},
+            'outports': {'container': ['Exception']},
         }
     ]
