@@ -1,50 +1,68 @@
-define RED = [127,0,0]
-define GREEN = [0, 127, 0]
+component CheckLimit(lower, upper) in -> warning {
+    lowerlimit : math.Evaluate(expr="x < y")
+    upperlimit : math.Evaluate(expr="x > y")
+    or : math.Evaluate(expr="x or y")
+    
+    .in > lowerlimit.x
+    lower > lowerlimit.y
+
+    .in > upperlimit.x
+    upper > upperlimit.y
+
+    lowerlimit.result > or.x
+    upperlimit.result > or.y
+
+    or.result > .warning
+}
+
+
+component FormatResult(alarm_prefix, postfix) in, warning -> out {
+    select : flow.Select()
+    prefix : text.PrefixString(prefix=alarm_prefix)   
+    postfix: text.PostfixString(postfix=postfix)
+    collect : flow.Collect()
+    log : io.LogWarning()
+
+
+    .in > postfix.in
+    postfix.out > select.data
+    .warning > select.select
+
+    select.case_true > prefix.in
+    prefix.out > collect.token
+    prefix.out > log.data
+    select.case_false > collect.token
+    collect.token > .out
+}
+
+
 
 /* Actors */
-src : std.Trigger(data=null tick=5.0)
-hygrometer : sensor.Humidity()
-humid_range : std.SetLimits(lower=40, upper=80)
-thermometer : sensor.Temperature()
-temp_range: std.SetLimits(lower=20, upper=33)
+src : std.Trigger(data=1 tick=20.0)
+hygrometer : sensor.TriggeredRelativeHumidity()
+thermometer : sensor.TriggeredTemperature()
+humid_alarm_limit : CheckLimit(lower=40, upper=80)
+temp_alarm_limit : CheckLimit(lower=20, upper=33)
+humid_result : FormatResult(alarm_prefix="WARNING:", postfix="%")
+temp_result : FormatResult(alarm_prefix="WARNING:", postfix="C")
 alt : flow.Alternate2()
-pacer : std.ClassicDelay(delay=5)
-formatter: text.Format(fmt="{value}{unit}")
-display : io.Display()
-display_format : json.SetValue()
-set_background : json.SetValue()
-bgselect : flow.Deselect()
-alarm : std.Alarm()
-print: io.Print()
-sel : flow.Select()
+pacer : std.ClassicDelay(delay=10)
+display : io.Print()
 
-/* Connections */
-src.data > hygrometer.trigger
+/* Measure and check limit for huminity*/
+src.data > hygrometer.measure
+hygrometer.percent > humid_alarm_limit.in
+hygrometer.percent > humid_result.in
+humid_alarm_limit.warning > humid_result.warning
+humid_result.out > alt.token_1
+
+/* Measure and check limit for temperature*/
 src.data > thermometer.trigger
+thermometer.centigrade > temp_alarm_limit.in
+thermometer.centigrade > temp_result.in
+temp_alarm_limit.warning > temp_result.warning
+temp_result.out > alt.token_2
 
-hygrometer.humidity > humid_range.dict
-thermometer.temperature > temp_range.dict
-
-temp_range.dict > alt.token_2
-humid_range.dict > alt.token_1
-
-alt.token > formatter.dict
-alt.token > alarm.dict
-
-formatter.text > pacer.token
-pacer.token > display_format.value
-"text" > display_format.key
-{} > set_background.container
-alarm.warning > bgselect.select
-RED > bgselect.case_true
-GREEN > bgselect.case_false
-
-alarm.warning > sel.select
-formatter.text > sel.data
-sel.case_true > print.token
-sel.case_false > voidport
-
-bgselect.data > set_background.value
-"bgcolor" > set_background.key
-set_background.container > display_format.container
-display_format.container > display.dict
+/* Display result*/
+alt.token > pacer.token
+pacer.token > display.token 

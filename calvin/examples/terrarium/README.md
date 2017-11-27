@@ -8,13 +8,13 @@ with a [Sense HAT](https://www.raspberrypi.org/products/sense-hat/).
 
 The allowed range can be changed by modifying the following lines in the Calvin script.
 
-    humid_range : std.SetLimits(lower=40, upper=80)
-    temp_range: std.SetLimits(lower=20, upper=33)
+    humid_alarm_limit : CheckLimit(lower=40, upper=80)
+    temp_alarm_limit : CheckLimit(lower=20, upper=33)
 
 and substituting whatever temperature and humidity is suitable. Note: Temperature is in centigrade (C).
 
-When a value falls outside of the given interval, the background of the
-SenseHat display will change to red and a tweet with the offending value will
+When a value falls outside of the given interval, the value will be prefixed with
+a WARNING note on the SenseHat display. A tweet with the offending value will
 be sent (if the twitter credentials are correctly configured in the
 `twitter_credentials.json` file)
 
@@ -45,10 +45,10 @@ if this is not already done using [`raspi-config`](https://www.raspberrypi.org/d
 
 ### Calvin configuration
 
-The following plugins and paths needs to be loaded to run this script:
-- `display_plugin`
-- `environmental_sensor_plugin`
-- `actor_paths`
+The following capabilities needs to be loaded to run this script:
+- `io.temperature`
+- `io.humidity`
+- `io.stdout`
 
 A `calvin.conf` file is prepared for this purpose. For the `calvin.conf` to be
 loaded, start the calvin script from within the directory the `calvin.conf`
