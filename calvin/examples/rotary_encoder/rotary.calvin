@@ -1,6 +1,27 @@
-rotary : sensor.RotaryEncoder()
-knob : io.Print()
-button: io.Print()
+component Formatter(case_true, case_false) val -> result {
+    select : flow.Deselect()
+    eval : math.Evaluate(expr="x == y")
 
-rotary.direction > knob.token
-rotary.button > button.token
+    .val > eval.x
+    1 > eval.y
+
+    eval.result > select.select
+    case_true > select.case_true
+    case_false > select.case_false
+
+    select.data > .result    
+}
+
+rotary : io.Knob()
+button : io.Button()
+collect : flow.Collect()
+print: io.Print()
+turn_formatter : Formatter(case_true="Knob turned left", case_false="Knob turned right")
+button_formatter : Formatter(case_true="Button released", case_false="Button pressed")
+
+rotary.direction > turn_formatter.val
+turn_formatter.result > collect.token
+button.state > button_formatter.val
+button_formatter.result > collect.token
+
+collect.token > print.token
