@@ -31,37 +31,20 @@ class TriggeredTemperature(Actor):
         centigrade :  temperature, in centigrade
     """
 
-    @manage([])
+    @manage(['temperature'])
     def init(self):
-        self.setup()
+        self.temperature = calvinsys.open(self, "io.temperature")
 
-    def setup(self):
-        self._temperature = calvinsys.open(self, "io.temperature")
-
-    def teardown(self):
-        if self._temperature:
-            calvinsys.close(self._temperature)
-        self._temperature = None
-
-    def will_migrate(self):
-        self.teardown()
-
-    def did_migrate(self):
-        self.setup()
-
-    def will_end(self):
-        self.teardown()
-
-    @stateguard(lambda self: calvinsys.can_read(self._temperature))
+    @stateguard(lambda self: calvinsys.can_read(self.temperature))
     @condition([], ['centigrade'])
     def read_measurement(self):
-        temperature = calvinsys.read(self._temperature)
-        return (temperature,)
+        data = calvinsys.read(self.temperature)
+        return (data,)
 
-    @stateguard(lambda self: calvinsys.can_write(self._temperature))
+    @stateguard(lambda self: calvinsys.can_write(self.temperature))
     @condition(['trigger'], [])
     def trigger_measurement(self, _):
-        calvinsys.write(self._temperature, True)
+        calvinsys.write(self.temperature, True)
 
     action_priority = (read_measurement, trigger_measurement)
     requires = ['io.temperature']
