@@ -32,9 +32,9 @@ class Temperature(Actor):
     def init(self, period):
         self.period = period
         self.temperature = calvinsys.open(self, "io.temperature")
-        self.timer = calvinsys.open(self, "sys.timer.once", period=0)
+        self.timer = calvinsys.open(self, "sys.timer.once", period=period)
 
-    @stateguard(lambda self: calvinsys.can_read(self.temperature) and calvinsys.can_write(self.timer))
+    @stateguard(lambda self: calvinsys.can_read(self.temperature) and calvinsys.can_read(self.timer))
     @condition([], ['centigrade'])
     def read_measurement(self):
         value = calvinsys.read(self.temperature)
