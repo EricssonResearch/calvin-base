@@ -41,6 +41,15 @@ class MockInput(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Get data, verifies that can_read has been called."
     }
 
+    can_write_schema = {
+        "description": "Always returns True",
+        "type": "boolean"
+    }
+
+    write_schema = {
+        "description": "Any data"
+    }
+
     def init(self, data, **kwargs):
         self.read_called = False
         self._read_allowed = True
@@ -61,6 +70,12 @@ class MockInput(base_calvinsys_object.BaseCalvinsysObject):
             raise AssertionError("read() called without preceding can_read()")
         self._read_allowed = False
         return self.data.pop(0)
+
+    def can_write(self):
+        return True
+
+    def write(self, data):
+        pass
 
     def close(self):
         self.data = []
