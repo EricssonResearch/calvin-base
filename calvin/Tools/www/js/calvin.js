@@ -1391,7 +1391,7 @@ function migrate(actor_id)
           function(data, kwargs) {
             if (kwargs.actor) {
               showSuccess("Actor " + kwargs.actor.id + " migrated");
-              getActor(kwargs.actor.id, true, false);
+              setTimeout(function() { getActor(kwargs.actor.id, true, false); }, 5000);
             }
           },
           function(request, status, error, kwargs) {
