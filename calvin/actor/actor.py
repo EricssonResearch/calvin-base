@@ -459,7 +459,7 @@ class Actor(object):
         # Actor enabled, inform scheduler
         # We could at least have the courtesy to inform the scheduler about our identity...
         get_calvinsys().scheduler_wakeup(self)
-        
+
 
     @verify_status([STATUS.ENABLED, STATUS.PENDING, STATUS.DENIED, STATUS.MIGRATABLE])
     def did_disconnect(self, port):
@@ -696,7 +696,8 @@ class Actor(object):
 
     def _set_private_state(self, state):
         """Deserialize and apply state common to all actors"""
-        get_calvinsys().deserialize(actor=self, csobjects=state["_calvinsys"])
+        if "_calvinsys" in state:
+            get_calvinsys().deserialize(actor=self, csobjects=state["_calvinsys"])
         for port in state['inports']:
             # Uses setdefault to support shadow actor
             self.inports.setdefault(port, actorport.InPort(port, self))._set_state(state['inports'][port])
@@ -876,6 +877,7 @@ class ShadowActor(Actor):
                  disable_state_checks=False, actor_id=None, security=None):
         self.inport_properties = {}
         self.outport_properties = {}
+        self.calvinsys_state = {}
         super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions,
                                             disable_transition_checks=disable_transition_checks,
                                             disable_state_checks=disable_state_checks, actor_id=actor_id,
@@ -918,3 +920,14 @@ class ShadowActor(Actor):
         else:
             _log.error("Shadow actor %s - %s miss signature" % (self._name, self._id))
             return self._deployment_requirements
+
+    def _set_private_state(self, state):
+        """Pop _calvinsys state and call super class"""
+        self.calvinsys_state = state.pop("_calvinsys")
+        super(ShadowActor, self)._set_private_state(state)
+
+    def _private_state(self, remap):
+        """Call super class and add stored calvinsys state"""
+        state = super(ShadowActor, self)._private_state(remap)
+        state["_calvinsys"] = self.calvinsys_state
+        return state
