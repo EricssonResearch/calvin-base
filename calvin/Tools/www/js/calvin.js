@@ -2231,14 +2231,13 @@ jQuery(document).ready(function() {
 
   // handle file select in deploy app
   var fileInputDeploy = document.getElementById('fileInputDeploy');
-  var fileDisplayDeploy = document.getElementById('deploy_script');
   fileInputDeploy.addEventListener('change', function(e) {
     var file = fileInputDeploy.files[0];
     var reader = new FileReader();
     document.getElementById('script_name').value = file.name.split(".")[0];
 
     reader.onload = function(e) {
-      fileDisplayDeploy.innerHTML = e.target.result;
+      $("#deploy_script").val(e.target.result);
     }
 
     reader.readAsText(file);
@@ -2246,13 +2245,12 @@ jQuery(document).ready(function() {
 
   // handle file select in migrate application
   var fileInputMigrate = document.getElementById('fileInputMigrateApplication');
-  var fileDisplayMigrate = document.getElementById('migrate_reqs');
   fileInputMigrate.addEventListener('change', function(e) {
     var file = fileInputMigrate.files[0];
     var reader = new FileReader();
 
     reader.onload = function(e) {
-      fileDisplayMigrate.innerHTML = e.target.result;
+      $("#migrate_reqs").val(e.target.result);
     }
 
     reader.readAsText(file);
@@ -2260,14 +2258,12 @@ jQuery(document).ready(function() {
 
   // handle file select in credentials
   var fileInputCredentials = document.getElementById('fileInputCredentials');
-  var fileDisplayCredentials = document.getElementById('credentials_conf');
   fileInputCredentials.addEventListener('change', function(e) {
     var file = fileInputCredentials.files[0];
     var reader = new FileReader();
 
     reader.onload = function(e) {
-      console.log(e.target.result);
-      fileDisplayCredentials.innerHTML = e.target.result;
+      $("#credentials_conf").val(e.target.result);
     }
 
     reader.readAsText(file);
@@ -2275,13 +2271,12 @@ jQuery(document).ready(function() {
 
   // handle file select in set requirements
   var fileInputRequirements = document.getElementById('fileInputRequirements');
-  var fileDisplayRequirements = document.getElementById('requirements');
   fileInputRequirements.addEventListener('change', function(e) {
     var file = fileInputRequirements.files[0];
     var reader = new FileReader();
 
     reader.onload = function(e) {
-      fileDisplayRequirements.innerHTML = e.target.result;
+      $("#requirements").val(e.target.result);
     }
 
     reader.readAsText(file);
@@ -2289,14 +2284,12 @@ jQuery(document).ready(function() {
 
   // handle file select in kappa dialog
   var fileInputKappa = document.getElementById('fileInputKappa');
-  var kappa_script = document.getElementById('kappa_script');
   fileInputKappa.addEventListener('change', function(e) {
     var file = fileInputKappa.files[0];
     var reader = new FileReader();
 
     reader.onload = function(e) {
-      console.log("Setting kappa script " + e.target.result);
-      kappa_script.innerHTML = e.target.result;
+      $("#kappa_script").val(e.target.result);
     }
 
     reader.readAsText(file);
