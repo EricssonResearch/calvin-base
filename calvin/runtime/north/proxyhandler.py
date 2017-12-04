@@ -204,7 +204,7 @@ class ProxyHandler(object):
                 response.CalvinResponse(response.OK, {'actor_type': actor_type, 'module': data}).encode())
         else:
             self._proxy_send_reply(tunnel,
-                msgid,
+                payload['msg_uuid'],
                 response.CalvinResponse(response.INTERNAL_ERROR, {'actor_type': actor_type, 'module': None}).encode())
 
     def get_capabilities(self, peer_id):
