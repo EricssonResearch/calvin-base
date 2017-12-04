@@ -289,7 +289,6 @@ requirements = \
         'calvinsys.network.mqtthandler': DeprecatedCavinSysMock(),
         'calvinsys.network.serverhandler': DeprecatedCavinSysMock(),
         'calvinsys.network.socketclienthandler': DeprecatedCavinSysMock(),
-        'calvinsys.network.websockethandler': DeprecatedCavinSysMock(),
         'calvinsys.events.timer': DeprecatedCavinSysMock(),
         'calvinsys.sensors.rotary_encoder': DeprecatedCavinSysMock(),
         'calvinsys.sensors.rfid': DeprecatedCavinSysMock(),
@@ -426,6 +425,10 @@ def setup_calvinsys():
             "attributes": {}
         },
         "web.pushbullet.channel.post": {
+            "module": "mock.MockOutput",
+            "attributes": {}
+        },
+        "web.websocket.broadcast": {
             "module": "mock.MockOutput",
             "attributes": {}
         },

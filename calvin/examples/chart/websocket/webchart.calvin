@@ -11,8 +11,8 @@ define CHART_PARAMETERS = {"chart_title": "A Dynamic Line Chart",
 //              Actor definitions              //
 /////////////////////////////////////////////////
 line_chart : chart.DynamicLine(chart_param=CHART_PARAMETERS)
-collect : flow.CollectDict(mapping={"chart":&line_chart.img}) // NOTE! tag "chart" must correspond to the img id in index.html
-websocket : net.WSBroadcast(host="localhost", port=8123)
+collect : flow.CollectDict(mapping={"chart":&line_chart.b64image}) // NOTE! tag "chart" must correspond to the img id in index.html
+websocket : web.WSBroadcast(host="localhost", port=8123)
 counter : std.CountTimer(sleep=1)
 random : math.RandomInteger(lower=1, upper=100)
 
@@ -24,6 +24,6 @@ counter.integer > line_chart.label
 counter.integer > random.trigger
 
 random.integer > line_chart.value
-line_chart.img > collect.token
+line_chart.b64image > collect.token
 
 collect.dict > websocket.token

@@ -25,23 +25,48 @@ from calvin.utilities import calvinconfig
 _conf = calvinconfig.get()
 
 
-class WSServerProtocol(WebSocketServerProtocol):
-    def onConnect(self, request):
-        _log.debug("Client connecting: {0}".format(request.peer))
+class BroadcastServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
         self.factory.register(self)
 
     def connectionLost(self, reason):
-        _log.debug("WebSocket connection lost: {0}".format(reason))
-        self.factory.unregister(self)
         WebSocketServerProtocol.connectionLost(self, reason)
+        self.factory.unregister(self)
 
     def onClose(self, wasClean, code, reason):
-        _log.debug("WebSocket connection closed: {0}".format(reason))
+        _log.info("WebSocket connection closed: {0}".format(reason))
 
 
-class WSServerProtocolFactory(WebSocketServerFactory):
+class BroadcastServerFactory(WebSocketServerFactory):
+
+    def __init__(self, url):
+        WebSocketServerFactory.__init__(self, url)
+        self.clients = []
+        self.tickcount = 0
+
+    def register(self, client):
+        if client not in self.clients:
+            _log.info("registered client {}".format(client.peer))
+            self.clients.append(client)
+
+    def unregister(self, client):
+        if client in self.clients:
+            _log.info("unregistered client {}".format(client.peer))
+            self.clients.remove(client)
+
+    def broadcast(self, msg):
+        for c in self.clients:
+            c.sendMessage(json.dumps(msg))
+            _log.debug("message sent to {}".format(c.peer))
+
+    def sendClose(self):
+        for c in self.clients:
+            c.sendClose()
+
+
+class MyBroadcastServer(object):
+
     def __init__(self, host, port, actor_id=None, node_name=None):
         # WebSocketServerFactory will set self.isSecure, self.host, self.port, etc, from parsing url string
         control_interface_security = _conf.get("security", "control_interface_security")
@@ -49,29 +74,16 @@ class WSServerProtocolFactory(WebSocketServerFactory):
             url = "wss://{}:{}".format(host, port)
         else:
             url = "ws://{}:{}".format(host, port)
-        super(WSServerProtocolFactory, self).__init__(url=url)
-        self.clients = []
-        self._port = None
         self._actor_id = actor_id
         self._node_name = node_name
 
-    def register(self, client):
-        if client not in self.clients:
-            self.clients.append(client)
-
-    def unregister(self, client):
-        if client in self.clients:
-            self.clients.remove(client)
+        self.factory = BroadcastServerFactory(url)
+        self.factory.protocol = BroadcastServerProtocol
+        self._port = server_connection.reactor_listen(self._node_name, self.factory, host, port)
 
     def broadcast(self, msg):
-        for c in self.clients:
-            c.sendMessage(json.dumps(msg))
-
-    def start(self, host, port):
-        self.protocol = WSServerProtocol
-        self._port = server_connection.reactor_listen(self._node_name, self, host, port)
+        self.factory.broadcast(msg)
 
     def stop(self):
         self._port.stopListening()
-        for c in self.clients:
-            c.sendClose()
+        self.factory.sendClose()
