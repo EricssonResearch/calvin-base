@@ -23,7 +23,7 @@ class Dispatch(Actor):
     Inputs:
         token : incoming token stream
     Outputs:
-        token(routing="balanced") : outgoing token stream
+        token(routing="round-robin") : outgoing token stream
     """
 
     def init(self):
