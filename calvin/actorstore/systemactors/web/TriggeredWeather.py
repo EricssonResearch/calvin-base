@@ -44,7 +44,7 @@ class TriggeredWeather(Actor):
         calvinsys.write(self._service, self._city)
 
     def teardown(self):
-        calvinsys.close(self._pb)
+        calvinsys.close(self._service)
 
     def will_migrate(self):
         self.teardown()

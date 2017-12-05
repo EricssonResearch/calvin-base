@@ -42,7 +42,7 @@ class LocationWeather(Actor):
         self._service = calvinsys.open(self, "weather")
 
     def teardown(self):
-        calvinsys.close(self._pb)
+        calvinsys.close(self._service)
 
     def will_migrate(self):
         self.teardown()
