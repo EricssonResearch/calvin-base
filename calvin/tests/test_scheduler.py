@@ -58,7 +58,7 @@ class TestBase(unittest.TestCase):
         cs.init(node)
         actor_manager = Mock()
         actor_manager.enabled_actors = Mock(return_value=[1, 3, 7])
-        self.scheduler = scheduler.Onebyone_Scheduler(node, actor_manager) 
+        self.scheduler = scheduler.SimpleScheduler(node, actor_manager) 
         node.sched = self.scheduler
 
     def tearDown(self):
