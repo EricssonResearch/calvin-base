@@ -51,7 +51,7 @@ def pre_check(node, **kwargs):
     op = data.operation
     _log.debug("MANUAL REPLICATION OP %s" % PRE_CHECK.reverse_mapping[op])
     data.operation = PRE_CHECK.NO_OPERATION
-    if op == PRE_CHECK.REPLICATING:
+    if op == PRE_CHECK.SCALE_OUT:
         data._sni = data.selected_node_id
     return op
 
