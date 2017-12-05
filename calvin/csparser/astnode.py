@@ -471,7 +471,6 @@ def node_decoder(o):
         'InPort':InPort,
         'OutPort':OutPort,
         'ImplicitPort':ImplicitPort,
-        'InternalPort':InternalPort,
         'InternalInPort':InternalInPort,
         'InternalOutPort':InternalOutPort,
         'Block':Block,
