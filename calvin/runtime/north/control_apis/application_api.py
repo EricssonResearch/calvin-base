@@ -10,7 +10,7 @@ from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities.security import security_enabled
 from routes import handler, register, uuid_re
 from authentication import authentication_decorator
-from calvin.requests import calvinresponse
+from calvin.utilities.replication_defs import PRE_CHECK
 
 _log = get_logger(__name__)
 
@@ -75,6 +75,7 @@ def handle_new_actor(self, handle, connection, match, data, hdr):
                                  deploy_args=data['deploy_args'])
         status = calvinresponse.OK
     except:
+        _log.exception("Failed when creating actor %s" % data['actor_type'])
         actor_id = None
         status = calvinresponse.INTERNAL_ERROR
     self.send_response(
@@ -223,43 +224,62 @@ def handle_actor_disable(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status)
 
 
-@handler(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/replicate\sHTTP/1")
+@handler(r"POST /actor/(REPLICATION_" + uuid_re + "|" + uuid_re + ")/replicate\sHTTP/1")
 @authentication_decorator
 def handle_actor_replicate(self, handle, connection, match, data, hdr):
     """
-    POST /actor/{actor-id}/replicate
-    ONLY FOR TEST. Will replicate an actor directly
+    POST /actor/{replication-id}/replicate
+    ONLY FOR TEST CURRENTLY. 
+    Will replicate an actor having manual_scaling requirement applied
     Response status code: OK or NOT_FOUND
-    Response: {'actor_id': <replicated actor instance id>}
     """
     data = {} if data is None else data
     # TODO When feature ready, only requirement based scaling should be accessable (if not also that removed)
     # TODO Make replication requirements a part of deployment requirements
     # Dereplication
-    if data.get('dereplicate', False):
-        exhaust = data.get('exhaust', False)
-        try:
-            self.node.rm.dereplicate(
-                match.group(1), CalvinCB(self.handle_actor_replicate_cb, handle, connection), exhaust)
-        except:
-            _log.exception("Dereplication failed")
-            self.send_response(handle, connection, None, calvinresponse.INTERNAL_ERROR)
-        return
+    # if data.get('dereplicate', False):
+    #     exhaust = data.get('exhaust', False)
+    #     try:
+    #         self.node.rm.dereplicate(
+    #             match.group(1), CalvinCB(self.handle_actor_replicate_cb, handle, connection), exhaust)
+    #     except:
+    #         _log.exception("Dereplication failed")
+    #         self.send_response(handle, connection, None, calvinresponse.INTERNAL_ERROR)
+    #     return
+    # try:
+    #     # Supervise with potential autoscaling in requirements
+    #     requirements = data.get('requirements', {})
+    #     status_supervise = self.node.rm.supervise_actor(match.group(1), requirements)
+    #     if status_supervise.status != calvinresponse.OK:
+    #         _log.debug("Replication supervised failed %s %s" % (status_supervise.status, match.group(1),))
+    #         self.send_response(handle, connection, None, status_supervise.status)
+    #         return
+    #     if not requirements:
+    #         # Direct replication only
+    #         node_id = data.get('peer_node_id', self.node.id)
+    #         self.node.rm.replicate(
+    #             match.group(1), node_id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
+    #         return
+    #     self.send_response(handle, connection, json.dumps(status_supervise.data), calvinresponse.OK)
+    # except:
+    #     _log.exception("Failed test replication")
+    #     self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
+
     try:
-        # Supervise with potential autoscaling in requirements
-        requirements = data.get('requirements', {})
-        status_supervise = self.node.rm.supervise_actor(match.group(1), requirements)
-        if status_supervise.status != calvinresponse.OK:
-            _log.debug("Replication supervised failed %s" % (match.group(1),))
-            self.send_response(handle, connection, None, status_supervise.status)
+        _log.debug("MANUAL REPLICATION ORDERED")
+        replication_id = match.group(1)
+        node_id = data.get('peer_node_id', None)
+        replicate = not data.get('dereplicate', False)
+        op = PRE_CHECK.SCALE_OUT if replicate else PRE_CHECK.SCALE_IN
+        if self.node.rm.managed_replications[replication_id].operation != PRE_CHECK.NO_OPERATION:
+            # Can't order another operation while processing previous
+            self.send_response(handle, connection, None, calvinresponse.SERVICE_UNAVAILABLE)
             return
-        if not requirements:
-            # Direct replication only
-            node_id = data.get('peer_node_id', self.node.id)
-            self.node.rm.replicate(
-                match.group(1), node_id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
-            return
-        self.send_response(handle, connection, json.dumps(status_supervise.data), calvinresponse.OK)
+        # TODO this must be done on the node that is elected leader for the replication_id
+        self.node.rm.managed_replications[replication_id].operation = op
+        self.node.rm.managed_replications[replication_id].selected_node_id = node_id
+        _log.debug("MANUAL REPLICATION APPLIED %s" % PRE_CHECK.reverse_mapping[op])
+        self.send_response(handle, connection, None, calvinresponse.OK)
     except:
         _log.exception("Failed test replication")
         self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
@@ -517,6 +537,7 @@ def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
         self.send_response(handle, connection,
                            json.dumps({'application_id': deployer.app_id,
                                        'actor_map': deployer.actor_map,
+                                       'replication_map': deployer.replication_map,
                                        'placement': kwargs.get('placement', None),
                                        'requirements_fulfilled': status.status == calvinresponse.OK}
                                       ) if deployer.app_id else None,

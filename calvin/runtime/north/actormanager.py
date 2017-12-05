@@ -93,6 +93,9 @@ class ActorManager(object):
         if connection_list:
             # Migrated actor
             self.connect(a.id, connection_list, callback=callback)
+        elif state is not None and 'replication' in state:
+            # Replicated actor
+            self.connect_replica(a.id, state['replication'], callback=callback)
         else:
             # Nothing to connect then we are OK
             if callback:
@@ -300,8 +303,9 @@ class ActorManager(object):
                 callback(status=response.CalvinResponse(response.BAD_REQUEST))
             return
         actor = self.actors[actor_id]
-        actor._replication_data.inhibate(actor_id, True)
+        self.node.rm.inhibate(actor_id, True)
         actor.requirements_add(requirements, extend)
+        self.node.storage.add_actor(actor, self.node.id)  # Update requirements in registry
         r = ReqMatch(self.node,
                      callback=CalvinCB(self._update_requirements_placements, actor_id=actor_id, move=move, cb=callback))
         r.match_for_actor(actor_id)
@@ -313,12 +317,12 @@ class ActorManager(object):
             possible_placements.discard(self.node.id)
         actor = self.actors[actor_id]
         if not possible_placements:
-            actor._replication_data.inhibate(actor_id, False)
+            self.node.rm.inhibate(actor_id, False)
             if cb:
                 cb(status=response.CalvinResponse(False))
             return
         if self.node.id in possible_placements:
-            actor._replication_data.inhibate(actor_id, False)
+            self.node.rm.inhibate(actor_id, False)
             # Actor could stay, then do that
             if cb:
                 cb(status=response.CalvinResponse(True))
@@ -378,7 +382,7 @@ class ActorManager(object):
             return
         actor = self.actors[actor_id]
         # No need to inhibate replication anymore (could still be locked out by _migrating_to set below)
-        actor._replication_data.inhibate(actor_id, False)
+        self.node.rm.inhibate(actor_id, False)
         if node_id == self.node.id:
             # No need to migrate to ourself
             if callback:
@@ -476,6 +480,34 @@ class ActorManager(object):
             self._actor_not_found(actor_id)
 
         return self.actors[actor_id].connections(self.node.id)
+
+    def connect_replica(self, actor_id, state, callback):
+        # Need to first build connection_list from previous connections
+        _log.debug("REPLICA CONNECT")
+        connection_list = []
+        ports = [p['id'] for p in state['inports'].values() + state['outports'].values()]
+        _log.debug("REPLICA CONNECT %s " % ports)
+
+        def _got_port(key, value, port_id):
+            ports.remove(port_id)
+            _log.debug("REPLICA CONNECT got port %s %s" % (port_id, value))
+            if response.isnotfailresponse(value) and 'peers' in value:
+                connection_list.extend(
+                    [(self.node.id, port_id, None if p[0] == 'local' else p[0], p[1]) for p in value['peers']])
+            else:
+                # TODO Don't know how to handle this, retry? Why would the original port be gone from registry?
+                # Potentially when destroying application while we replicate, seems OK to ignore
+                _log.warning("During replication failed to find original port in repository")
+            if not ports:
+                # Got all responses
+                _log.debug("REPLICA CONNECT final")
+                self.connect(actor_id, connection_list, callback=callback)
+
+        for port in state['inports'].values():
+            self.node.storage.get_port(port['org_id'], cb=CalvinCB(_got_port, port_id=port['id']))
+        for port in state['outports'].values():
+            self.node.storage.get_port(port['org_id'], cb=CalvinCB(_got_port, port_id=port['id']))
+        _log.debug("REPLICA CONNECT end")
 
     def dump(self, actor_id):
         if actor_id not in self.actors:

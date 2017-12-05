@@ -129,7 +129,7 @@ def test_state(actor):
         '_id': actor.id,
         '_port_property_capabilities': None,
         '_migration_info': None,
-        '_replication_data': {},
+        '_replication_id': {},
         'inports': {'token': {'properties': {'direction': 'in',
                                              'routing': 'default',
                                              'nbr_peers': 1},

@@ -46,6 +46,26 @@ class ReqMatch(object):
                     actor_id=actor_id,
                     component_ids=actor.component_members())
 
+    def match_actor_registry(self, actor_id):
+        """ Helper function to first fetch requirements from registry """
+        # TODO no component level handling currently
+        def _got_requirements(key, value):
+            if response.isnotfailresponse(value):
+                try:
+                    req = value['requirements']
+                    self.match(req, actor_id)
+                except:
+                    if callable(self.callback):
+                        self.callback(status=response.CalvinResponse(response.BAD_REQUEST), possible_placements=set([]))
+            else:
+                if callable(self.callback):
+                    self.callback(status=value, possible_placements=set([]))
+        if actor_id in self.node.am.actors:
+            # Don't waste time if local
+            return self.match_for_actor(actor_id)
+        else:
+            self.node.storage.get_actor(actor_id, cb=_got_requirements)
+
     def match(self, requirements, actor_id=None, component_ids=None):
         """ Match the list of requirements either from a local actor or on behalf of
             another runtime.

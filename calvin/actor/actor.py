@@ -23,7 +23,7 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 # from calvin.runtime.north import calvincontrol
-from calvin.runtime.north.replicationmanager import ReplicationData
+from calvin.runtime.north.replicationmanager import ReplicationId
 import calvin.requests.calvinresponse as response
 from calvin.runtime.south.plugins.async import async
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
@@ -257,7 +257,8 @@ class Actor(object):
     _security_state_keys = ('_subject_attributes')
 
     # These are the instance variables that will always be serialized, see serialize()/deserialize() below
-    _private_state_keys = ('_id', '_name', '_has_started', '_deployment_requirements', '_signature', '_migration_info', "_port_property_capabilities", "_replication_data")
+    _private_state_keys = ('_id', '_name', '_has_started', '_deployment_requirements',
+                           '_signature', '_migration_info', "_port_property_capabilities", "_replication_id")
 
     # Internal state (status)
     class FSM(object):
@@ -348,7 +349,7 @@ class Actor(object):
         self.sec = security
         self._subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
         self.authorization_checks = None
-        self._replication_data = ReplicationData(initialize=False)
+        self._replication_id = ReplicationId()
         self._exhaust_cb = None
 
         self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.items()}
@@ -646,6 +647,19 @@ class Actor(object):
                 else:
                     self.__dict__[key] = state.pop(key, None)
 
+    def _set_replication_state(self, state):
+        """Deserialize and apply state related to a replicating actor """
+        for port in state['inports'].values():
+            port['org_id'] = port.pop('id')
+            # Uses setdefault to support shadow actor
+            self.inports.setdefault(port['name'], actorport.InPort(port, self))._set_state(port)
+            port['id'] = self.inports[port['name']].id
+        for port in state['outports'].values():
+            port['org_id'] = port.pop('id')
+            # Uses setdefault to support shadow actor
+            self.outports.setdefault(port['name'], actorport.OutPort(port, self))._set_state(port)
+            port['id'] = self.outports[port['name']].id
+
     def _security_state(self):
         """
         Serialize security state.
@@ -689,6 +703,8 @@ class Actor(object):
     def deserialize(self, state):
         """Restore an actor's state from the serialized state."""
         self._set_private_state(state['private'])
+        if 'replication' in state:
+            self._set_replication_state(state['replication'])
         self._set_security_state(state['security'])
         self._set_managed_state(state['managed'])
         self.set_state(state['custom'])
@@ -740,16 +756,9 @@ class Actor(object):
             }]
         else:
             capability_require = []
-        if self._replication_data.id is None:
-            replica_nodes = []
-        else:
-            # exclude node with replicas
-            replica_nodes = [{
-                'op': 'replica_nodes',
-                'kwargs': {},
-                'type': '-'
-            }]
-        return self._deployment_requirements + capability_require + capability_port + replica_nodes
+
+        return (self._deployment_requirements + capability_require + 
+                capability_port + self._replication_id._placement_req)
 
     def _derive_port_property_capabilities(self):
         port_property_capabilities = set([])
@@ -841,13 +850,14 @@ class ShadowActor(Actor):
     def requirements_get(self):
         # If missing signature we can't add requirement for finding actor's requires.
         if self._signature:
-            return self._deployment_requirements + [{'op': 'shadow_actor_reqs_match',
+            return self._deployment_requirements + self._replication_id._placement_req + [
+                                                {'op': 'shadow_actor_reqs_match',
                                                  'kwargs': {'signature': self._signature,
                                                             'shadow_params': self._shadow_args.keys()},
                                                  'type': '+'}]
         else:
             _log.error("Shadow actor %s - %s miss signature" % (self._name, self._id))
-            return self._deployment_requirements
+            return self._deployment_requirements + self._replication_id._placement_req
 
     def _set_private_state(self, state):
         """Pop _calvinsys state and call super class"""

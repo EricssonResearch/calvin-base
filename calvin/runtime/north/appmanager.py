@@ -210,28 +210,23 @@ class AppManager(object):
         application.replication_ids = []
         for actor_id in application.actors.keys():
             if actor_id in self._node.am.list_actors():
-                # TODO fix this if master can switch from original actor
-                replicas = self._node.am.actors[actor_id]._replication_data.get_replicas(actor_id)
-                _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id, 'replicas': replicas})
-                application.actor_replicas.extend(replicas)
                 application.update_node_info(self._node.id, actor_id)
+                replication_id = self._node.am.actors[actor_id]._replication_id.id
+                _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id, 'replication_id': replication_id})
+                if replication_id is not None:
+                    application.replication_ids.append(replication_id)
+                    self._node.storage.get_replica(
+                        replication_id, 
+                        cb=CalvinCB(func=self._replicas_cb, replication_id=replication_id,
+                                    master_id=self._node.am.actors[actor_id]._replication_id.original_actor_id,
+                                    application=application))
             else:
                 _log.analyze(self._node.id, "+ REMOTE ACTOR", {'actor_id': actor_id})
                 self.storage.get_actor(actor_id, CalvinCB(func=self._destroy_actor_cb, application=application))
 
-        _log.analyze(self._node.id, "+ LOCAL REPLICAS", {'replicas': application.actor_replicas})
-        for actor_id in application.actor_replicas[:]:
-            application.actors[actor_id] = "noname"
-            application.actor_replicas.remove(actor_id)
-            if actor_id in self._node.am.list_actors():
-                application.update_node_info(self._node.id, actor_id)
-            else:
-                self.storage.get_actor(actor_id,
-                    CalvinCB(func=self._destroy_actor_cb, application=application, check_replica=False))
-
-        if application.complete_node_info() and not application.replication_ids and not application.actor_replicas:
-            # All actors were local
-            _log.analyze(self._node.id, "+ DONE", {'actors': application.actors, 'replicas': application.actor_replicas})
+        if application.complete_node_info() and not application.replication_ids:
+            # All actors were local and no replicas
+            _log.analyze(self._node.id, "+ DONE", {'actors': application.actors})
             self._destroy_final(application)
 
     def _destroy_actor_cb(self, key, value, application, retries=0, check_replica=True):
@@ -241,6 +236,11 @@ class AppManager(object):
         _log.debug("Destroy app peers actor cb %s - retry: %d\n%s" % (key, retries, str(value)))
         if response.isnotfailresponse(value) and 'node_id' in value:
             application.update_node_info(value['node_id'], key)
+            try:
+                # When this is the callback for finding a replica we need to remove it as well
+                application.actor_replicas.remove(key)
+            except:
+                pass
             if 'replication_id' in value and check_replica:
                 application.replication_ids.append(value['replication_id'])
                 self.storage.get_replica(value['replication_id'],
@@ -269,8 +269,8 @@ class AppManager(object):
                 application.actor_replicas.remove(actor_id)
                 continue
             application.actors[actor_id] = "noname"
-            application.actor_replicas.remove(actor_id)
             if actor_id in self._node.am.list_actors():
+                application.actor_replicas.remove(actor_id)
                 application.update_node_info(self._node.id, actor_id)
             else:
                 self.storage.get_actor(actor_id,
@@ -577,6 +577,7 @@ class Deployer(object):
         self.sec = security
         self.actorstore = ActorStore(security=self.sec)
         self.actor_map = {}
+        self.replication_map = {}
         self.actor_connections = {}
         self.node = node
         self.cb = cb
@@ -692,12 +693,14 @@ class Deployer(object):
              info['signature'] is the GlobalStore actor-signature to lookup the actor
           - 'access_decision' is a boolean indicating if access is permitted
         """
+        #TODO component ns needs to be stored in registry /component/<app-id>/ns[0]/ns[1]/.../actor_name: actor_id
         try:
             if 'port_properties' in self.deployable:
                 port_properties = self.deployable['port_properties'].get(actor_name, None)
             else:
                 port_properties = None
             info['args']['name'] = actor_name
+            # TODO add requirements should be part of actor_manager new
             actor_id = self.node.am.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'], 
                                         actor_def=actor_def, security=self.sec, access_decision=access_decision, 
                                         shadow_actor='shadow_actor' in info, port_properties=port_properties)
@@ -706,16 +709,20 @@ class Deployer(object):
             deploy_req = self.get_req(actor_name)
             if deploy_req:
                 # Seperate replication and placement requirements
-                actor_reqs = copy.deepcopy(deploy_req)
-                reqs_replication = [r for r in actor_reqs if self._requirement_type(r) == "replication"]
-                if reqs_replication:
-                    actor_reqs.remove(reqs_replication[0])
-                    # Replication requirements
-                    self.node.rm.supervise_actor(actor_id, reqs_replication[0])
-                    if actor_reqs:
-                        self.node.am.actors[actor_id]._replication_data.inhibate(actor_id, True)
+                actor_reqs = [r for r in deploy_req if self._requirement_type(r) != "replication"]
+                replication_reqs = [r for r in deploy_req if self._requirement_type(r) == "replication"]
+                if replication_reqs:
+                    # Replication requirements (should only be one)
+                    replication_result = self.node.rm.supervise_actor(actor_id, replication_reqs[0], actor_args=info['args'])
+                    if replication_result:
+                        self.replication_map[actor_name] = replication_result.data['replication_id']
+                    else:
+                        _log.error("ERROR {} when applying scaling requirements {} on actor {}".format(
+                                    replication_result, replication_reqs, actor_name))
                 # Placement requirements
                 self.node.am.actors[actor_id].requirements_add(actor_reqs, extend=False)
+                # Update requirements in registry
+                self.node.storage.add_actor(self.node.am.actors[actor_id], self.node.id)
             self.actor_map[actor_name] = actor_id
             self.node.app_manager.add(self.app_id, actor_id)
         except Exception as e:

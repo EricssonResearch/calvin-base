@@ -706,6 +706,9 @@ class Storage(object):
                          "control_uris": [node.external_control_uri],
                          "attributes": {'public': node.attributes.get_public(),
                                         'indexed_public': node.attributes.get_indexed_public(as_list=False)}}, cb=cb)
+        # add this node to set of super nodes if fulfill criteria
+        self._add_super_node(node)
+        # Fill the index
         self._add_node_index(node)
         # Store all actors on this node in storage
         GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
@@ -759,6 +762,27 @@ class Storage(object):
             _log.debug("No runtime credentials, err={}".format(err))
             return None
 
+    def _add_super_node(self, node):
+        """ The term super node is to list runtimes that are more capable/central than others.
+            Currently it will contain calvin-base runtimes not using proxy storage,
+            but this might change to include other criteria, like computational power,
+            steady/temporary, etc.
+            We will have 4 classes: 0-3 with class 3 most super.
+            It is possible to search for a class or higher
+        """
+        if self.proxy is not None:
+            node.super_node_class = 1
+        else:
+            node.super_node_class = 0
+        self.add_index(['supernode'] + map(str, range(node.super_node_class + 1)), node.id, root_prefix_level=1)
+
+    def _remove_super_node(self, node):
+        if node.super_node_class is not None:
+            self.remove_index(['supernode'] + map(str, range(node.super_node_class + 1)), node.id, root_prefix_level=1)
+
+    def get_super_node(self, super_node_class, cb):
+        self.get_index(['supernode'] + map(str, range(super_node_class + 1)), root_prefix_level=1, cb=cb)
+
     def _add_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()
         try:
@@ -805,6 +829,7 @@ class Storage(object):
         Delete node from storage
         """
         self.delete(prefix="node-", key=node.id, cb=None if node.attributes.get_indexed_public() else cb)
+        self._remove_super_node(node)
         if node.attributes.get_indexed_public():
             self._delete_node_index(node, cb=cb)
         _sec_conf = _conf.get('security', 'security_conf')
@@ -878,6 +903,7 @@ class Storage(object):
         """
         Add actor and its ports to storage
         """
+        # TODO need to store app-id
         _log.debug("Add actor %s id %s" % (actor, node_id))
         data = {"name": actor.name, "type": actor._type, "node_id": node_id}
         inports = []
@@ -893,9 +919,11 @@ class Storage(object):
             self.add_port(p, node_id, actor.id)
         data["outports"] = outports
         data["is_shadow"] = isinstance(actor, ShadowActor)
-        if actor._replication_data.id:
-            data["replication_id"] = actor._replication_data.id
-            data["replication_master_id"] = actor._replication_data.master
+        if actor._replication_id.id is not None:
+            data["replication_id"] = actor._replication_id.id
+            data["replication_master_id"] = actor._replication_id.original_actor_id
+            data["replication_index"] = actor._replication_id.index
+        data["requirements"] = actor.requirements_get()
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):
@@ -965,6 +993,48 @@ class Storage(object):
 
     def get_replica_nodes(self, replication_id, cb=None):
         self.get_index(['replicas', 'nodes', replication_id], root_prefix_level=3, cb=cb)
+
+    def set_replication_data(self, replication_data, cb=None):
+        """ Save the replication data state any replica instances are stored seperate continously """
+        state = replication_data.state()
+        state.pop('instances', None)
+        self.set(prefix="replicationdata-", key=replication_data.id, value=state, cb=cb)
+
+    def get_replication_data(self, replication_id, cb=None):
+        """ Get replication data """
+        self.get(prefix="replicationdata-", key=replication_id, cb=cb)
+
+    def get_full_replication_data(self, replication_id, cb=None):
+        """ Get replication data as well as the replica instances """
+        state = {}
+        def _rd_cb(key, value):
+            if calvinresponse.isnotfailresponse(value):
+                try:
+                    state.update(value)
+                except:
+                    state['id'] = calvinresponse.CalvinResponse(False)
+            else:
+                state['id'] = value
+            if 'instances' in state:
+                # Got both main data and instances
+                if calvinresponse.isnotfailresponse(value):
+                    state['instances'].append(state['original_actor_id'])
+                    cb(key=replication_id, value=state)
+                else:
+                    cb(key=replication_id, value=value)
+
+        def _rd_instances_cb(value):
+            state['instances'] = value
+            if 'id' in state:
+                # Got both main data and instances
+                if calvinresponse.isnotfailresponse(state['id']):
+                    state['instances'].append(state['original_actor_id'])
+                    cb(key=replication_id, value=state)
+                else:
+                    cb(key=replication_id, value=state['id'])
+
+        self.get(prefix="replicationdata-", key=replication_id, cb=None if cb is None else _rd_cb)
+        self.get_replica(replication_id, cb=None if cb is None else _rd_instances_cb)
 
     ### Storage proxy server ###
 

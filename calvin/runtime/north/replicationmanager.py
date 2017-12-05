@@ -34,14 +34,43 @@ from calvin.utilities.utils import enum
 _log = get_logger(__name__)
 
 
+class ReplicationId(object):
+    """An actors replication identity"""
+    def __init__(self, replication_id=None, original_actor_id=None, index=None):
+        super(ReplicationId, self).__init__()
+        self.id = replication_id
+        self.original_actor_id = original_actor_id
+        self.index = index
+        self._terminate_with_node = False
+        self._placement_req = []
+
+    def state(self, remap=None):
+        state = {}
+        if self.id:
+            state['id'] = self.id
+            state['original_actor_id'] = self.original_actor_id
+            state['index'] = self.index
+            state['_terminate_with_node'] = self._terminate_with_node
+            state['_placement_req'] = self._placement_req
+        return state
+
+    def set_state(self, state):
+        self.id = state.get('id', None)
+        self.original_actor_id = state.get('original_actor_id', None)
+        self.index = state.get('index', None)
+        self._terminate_with_node = state.get('_terminate_with_node', False)
+        self._placement_req = state.get('_placement_req', [])
+
+    def terminate_with_node(self, actor_id):
+        return self._terminate_with_node and not (actor_id == self.original_actor_id)
+
 class ReplicationData(object):
-    """An actors replication data"""
-    def __init__(self, actor_id=None, master=None, requirements=None, initialize=True):
+    """Replication state"""
+    def __init__(self, actor_id=None, original_actor_id=None, requirements=None):
         super(ReplicationData, self).__init__()
-        self.id = uuid("REPLICATION") if initialize else None
-        self.master = master
+        self.id = uuid("REPLICATION")
+        self.original_actor_id = original_actor_id
         self.instances = [] if actor_id is None else [actor_id]
-        # TODO requirements should be plugin operation, now just do target number
         self.requirements = requirements
         self.counter = 0
         # {<actor_id>: {'known_peer_ports': [peer-ports id list], <org-port-id: <replicated-port-id>, ...}, ...}
@@ -49,41 +78,46 @@ class ReplicationData(object):
         self.status = REPLICATION_STATUS.UNUSED
         self._terminate_with_node = False
         self._one_per_runtime = False
+        self._placement_req = []
+        self.leader_election = None
+        self.leader_node_id = None
+        self.actor_state = None
 
-    def state(self, remap=None):
+    def state(self):
         state = {}
-        if self.id is not None:
-            # Replicas only need to keep track of id, master actor and their count number
-            # Other data need to be synced from registry anyway when e.g. switching master
-            state['id'] = self.id
-            state['master'] = self.master
-            state['counter'] = self.counter
-            state['_terminate_with_node'] = self._terminate_with_node
-            state['_one_per_runtime'] = self._one_per_runtime
-            if remap is None:
-                # For normal migration include these
-                state['instances'] = self.instances
-                state['requirements'] = self.requirements
-                state['remaped_ports'] = self.remaped_ports
-                # We might migrate at the same time as we (de)replicate
-                # To not lock the replication manager just change the migration state
-                state['status'] = REPLICATION_STATUS.READY if self.is_busy() else self.status 
-                try:
-                    state['req_op'] = req_operations[self.requirements['op']].get_state(self)
-                except:
-                    pass
+        state['id'] = self.id
+        state['original_actor_id'] = self.original_actor_id
+        state['counter'] = self.counter
+        state['_terminate_with_node'] = self._terminate_with_node
+        state['_one_per_runtime'] = self._one_per_runtime
+        state['_placement_req'] = self._placement_req
+        state['leader_election'] = self.leader_election
+        state['leader_node_id'] = self.leader_node_id
+        state['actor_state'] = self.actor_state
+        state['instances'] = self.instances
+        state['requirements'] = self.requirements
+        state['remaped_ports'] = self.remaped_ports
+        state['status'] = REPLICATION_STATUS.READY
+        try:
+            state['req_op'] = req_operations[self.requirements['op']].get_state(self)
+        except:
+            pass
         return state
 
     def set_state(self, state):
         self.id = state.get('id', None)
-        self.master = state.get('master', None)
+        self.original_actor_id = state.get('original_actor_id', None)
         self.instances = state.get('instances', [])
         self.requirements = state.get('requirements', {})
         self.counter = state.get('counter', 0)
         self._terminate_with_node = state.get('_terminate_with_node', False)
         self._one_per_runtime = state.get('_one_per_runtime', False)
+        self._placement_req = state.get('_placement_req', [])
         self.remaped_ports = state.get('remaped_ports', {})
         self.status = state.get('status', REPLICATION_STATUS.UNUSED)
+        self.leader_election = state.get('leader_election', None)
+        self.leader_node_id = state.get('leader_node_id', None)
+        self.actor_state = state.get('actor_state', None)
         try:
             req_operations[self.requirements['op']].set_state(self, state['req_op'])
         except:
@@ -104,13 +138,13 @@ class ReplicationData(object):
         return actor_id
 
     def get_replicas(self, when_master=None):
-        if self.id and self.instances and (when_master is None or when_master == self.master):
-            return [a for a in self.instances if a != self.master]
+        if self.id and self.instances and (when_master is None or when_master == self.original_actor_id):
+            return [a for a in self.instances if a != self.original_actor_id]
         else:
             return []
 
     def is_master(self, actor_id):
-        return self.id is not None and self.master == actor_id
+        return self.id is not None and self.original_actor_id == actor_id
 
     def is_busy(self):
         return self.status in [REPLICATION_STATUS.REPLICATING, REPLICATION_STATUS.DEREPLICATING]
@@ -148,105 +182,195 @@ class ReplicationData(object):
     def init_requirements(self, requirements=None):
         if requirements is not None:
             self.requirements = requirements
+        if not self.requirements:
+            return
         try:
-            if not self.requirements:
-                return
             req_operations[self.requirements['op']].init(self)
         except:
             _log.exception("init_requirements")
+
+class LeaderElection(object):
+    def __init__(self, node, replication_data):
+        """ Implements all the different leader election methods """
+        super(LeaderElection, self).__init__()
+        self.replication_data = replication_data
+        self.node = node
+
+    def elect(self, cb):
+        method = self.replication_data.leader_election
+        if method == 'actor':
+            if self.replication_data.original_actor_id in self.node.am.list_actors():
+                cb(status=calvinresponse.OK, leader=self.node.id)
+                return
+            else:
+                def master_node(key, value):
+                    if calvinresponse.isnotfailresponse(value) and 'node_id' in value:
+                        cb(status=calvinresponse.OK, leader=value['node_id'])
+                    else:
+                        cb(status=calvinresponse.NOT_FOUND, leader=self.node.id)
+
+                self.node.storage.get_actor(actor_id=self.replication_data.master, cb=master_node)
+                return
+        elif method == 'registry_central':
+            def super_node(value):
+                if calvinresponse.isnotfailresponse(value):
+                    if self.node.id in value:
+                        cb(status=calvinresponse.OK, leader=self.node.id)
+                    else:
+                        cb(status=calvinresponse.OK, leader=value[0])
+                else:
+                    cb(status=calvinresponse.NOT_FOUND, leader=self.node.id)
+            self.node.storage.get_super_node(1, cb=super_node)
 
 class ReplicationManager(object):
     def __init__(self, node):
         super(ReplicationManager, self).__init__()
         self.node = node
+        self.managed_replications = {}  # {<rep_id>: <rep_data>, ...} for which we are elected leader
 
-    def supervise_actor(self, actor_id, requirements):
+    def inhibate(self, *args, **kwargs):
+        # FIXME need to implement this if still needed
+        _log.debug("FIXME FIXME inhibate FIXME FIXME")
+        pass
+
+    def supervise_actor(self, actor_id, requirements, actor_args):
         try:
             actor = self.node.am.actors[actor_id]
         except:
+            # Only possible to supervise a local actor
             return calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND)
 
-        if actor._replication_data.id is None:
-            actor._replication_data = ReplicationData(
-                actor_id=actor_id, master=actor_id, requirements=requirements)
-            actor._replication_data.init_requirements()
-        elif actor._replication_data.is_master(actor_id):
-            # If we already is master that is OK, update requirements
-            # FIXME should not update during a replication, fix when we get the 
-            # requirements from the deployment requirements
-            actor._replication_data.init_requirements(requirements)
-            return calvinresponse.CalvinResponse(True, {'replication_id': actor._replication_data.id})
-        else:
+        if actor._replication_id.id is not None:
+            # We don't allow changing scaling requirements
             return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
-        actor._replication_data.status = REPLICATION_STATUS.READY
 
-        # TODO add a callback to make sure storing worked
+        # Create main replication data
+        replication_data = ReplicationData(actor_id=actor_id, original_actor_id=actor_id, requirements=requirements)
+        replication_data.init_requirements()
+        # Copy some data that is needed on each replica
+        actor._replication_id = ReplicationId(replication_id=replication_data.id, original_actor_id=actor.id, index=0)
+        actor._replication_id._terminate_with_node = replication_data._terminate_with_node
+        actor._replication_id._placement_req = replication_data._placement_req
+
+        # Create the base state of actor, that is used for initial replica states
+        # The actor is not neccessarily connected, hence peer port (queue) information
+        # need to be updated when replicating
+        state = actor.serialize()
+        # Some data is missing from serialized state that is needed, place it in replication state ns
+        state['replication'] = {'_type': actor._type}
+        # Move port id, name and property (not queue, i.e. peer and tokens) into replication ns
+        state['replication']['inports'] = {k:
+            {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['inports'].items()}
+        state['replication']['outports'] = {k:
+            {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['outports'].items()}
+        state['private']['inports'] = []
+        state['private']['outports'] = []
+        if actor_args is not None:
+            # We got actor_args hence we should create an initial state that looks like a shadow actor
+            # Replace managed actor attributes with the shadow args, i.e. init args
+            state['managed'] = {'_shadow_args': actor_args}
+            state['private']['_has_started'] = False
+        replication_data.actor_state = state
+        self.add_replication_leader(replication_data)
+
+        def _leader_elected(status, leader):
+            _log.debug("LEADER ELECTED %s, %s" % (status, leader))
+            self.move_replication_leader(replication_data.id, leader)
+
+        if replication_data.leader_election is not None:
+            LeaderElection(self.node, replication_data).elect(cb=_leader_elected)
+
         self.node.storage.add_actor(actor, self.node.id, cb=None)
+
         #TODO trigger replication loop
-        return calvinresponse.CalvinResponse(True, {'replication_id': actor._replication_data.id})
+
+        return calvinresponse.CalvinResponse(True, {'replication_id': replication_data.id})
 
     def list_master_actors(self):
-        return [a for a_id, a in self.node.am.actors.items() if a._replication_data.master == a_id]
+        return [a for a_id, a in self.node.am.actors.items() if a._replication_id.original_actor_id == a_id]
 
     def list_replication_actors(self, replication_id):
-        return [a_id for a_id, a in self.node.am.actors.items() if a._replication_data.id == replication_id]
+        return [a_id for a_id, a in self.node.am.actors.items() if a._replication_id.id == replication_id]
+
+    def move_replication_leader(self, replication_id, dst_node_id, cb=None):
+        if replication_id not in self.managed_replications:
+            return cb(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+        if self.node.id == dst_node_id:
+            return cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+        rd = self.managed_replications.pop(replication_id)
+        def _elected_cb(reply):
+            if not reply:
+                # Failed, put it back in
+                _log.debug("Failed to move to the new elected leader")
+                self.add_replication_leader(rd)
+            if cb:
+                cb(reply)
+        self.node.proto.leader_elected(peer_node_id=dst_node_id, leader_type="replication", data=rd.state(),
+                                       callback=_elected_cb)
+
+    def add_replication_leader(self, replication_data):
+        if isinstance(replication_data, dict):
+            try:
+                replication_data = ReplicationData(initialize=False).set_state(replication_data)
+            except:
+                return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
+
+        if not isinstance(replication_data, ReplicationData):
+            return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
+
+        replication_data.leader_node_id = self.node.id
+        self.managed_replications[replication_data.id] = replication_data
+        self.node.storage.set_replication_data(replication_data, cb=None)
+        replication_data.status = REPLICATION_STATUS.READY
+        return calvinresponse.CalvinResponse(calvinresponse.OK)
+
+    def remove_replication_leader(self, replication_id):
+        try:
+            return self.managed_replications.pop(replication_id)
+        except:
+            return None
 
     #
     # Replicate
     #
-    def replicate(self, actor_id, dst_node_id, callback):
+    def replicate(self, replication_id, dst_node_id, callback):
         try:
-            actor = self.node.am.actors[actor_id]
+            replication_data = self.managed_replications[replication_id]
         except:
             if callback:
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
-        if not actor._replication_data.is_master(actor.id):
-            # Only replicate master actor
-            if callback:
-                callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
-            return
-        if actor._replication_data.status != REPLICATION_STATUS.READY:
+        if replication_data.status != REPLICATION_STATUS.READY:
             if callback:
                 callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
             return
-        _log.analyze(self.node.id, "+", {'actor_id': actor_id, 'dst_node_id': dst_node_id})
-        actor._replication_data.status = REPLICATION_STATUS.REPLICATING
-        cb_status = CalvinCB(self._replication_status_cb, replication_data=actor._replication_data, cb=callback)
+        _log.analyze(self.node.id, "+", {'replication_id': replication_id, 'dst_node_id': dst_node_id})
+        replication_data.status = REPLICATION_STATUS.REPLICATING
+        
+        cb_status = CalvinCB(self._replication_status_cb, replication_data=replication_data, cb=callback)
         # TODO make name a property that combine name and counter in actor
         new_id = uuid("ACTOR")
-        actor._replication_data.check_instances = time.time()
-        actor._replication_data.add_replica(new_id)
-        new_name = actor.name + "/{}".format(actor._replication_data.counter)
-        actor_type = actor._type
-        ports = actor.connections(self.node.id)
-        ports['actor_name'] = new_name
-        ports['actor_id'] = new_id
-        remap_ports = {pid: uuid("PORT") for pid in ports['inports'].keys() + ports['outports'].keys()}
-        actor._replication_data.set_remaped_ports(new_id, remap_ports, ports)
-        ports['inports'] = {remap_ports[pid]: v for pid, v in ports['inports'].items()}
-        ports['outports'] = {remap_ports[pid]: v for pid, v in ports['outports'].items()}
-        _log.analyze(self.node.id, "+ GET STATE", remap_ports)
-        state = actor.serialize(remap_ports)
+        # FIXME change this time stuff when changing replication_loop
+        replication_data.check_instances = time.time()
+        replication_data.add_replica(new_id)
+        new_name = replication_data.actor_state['private']["_name"] + "/{}".format(replication_data.counter)
+        actor_type = replication_data.actor_state['replication']['_type']
+        state = copy.deepcopy(replication_data.actor_state)
         state['private']['_name'] = new_name
         state['private']['_id'] = new_id
-        # Make copy to make sure no objects are shared between actors or master actor state is changed 
-        state = copy.deepcopy(state)
-        actor.will_replicate(ActorState(state, actor._replication_data))
+        state['private']['_replication_id']['index'] = replication_data.counter
         if dst_node_id == self.node.id:
-            # Make copy to make sure no objects are shared between actors
-            ports = copy.deepcopy(ports)
             self.node.am.new_from_migration(
-                actor_type, state=state, prev_connections=ports, callback=CalvinCB(
+                actor_type, state=state, callback=CalvinCB(
                     self._replicated,
-                    replication_id=actor._replication_data.id,
-                    actor_id=new_id, callback=cb_status, master_id=actor.id, dst_node_id=dst_node_id))
+                    replication_id=replication_data.id,
+                    actor_id=new_id, callback=cb_status, master_id=replication_data.original_actor_id, dst_node_id=dst_node_id))
         else:
             self.node.proto.actor_new(
-                dst_node_id, CalvinCB(self._replicated, replication_id=actor._replication_data.id,
-                                         actor_id=new_id, callback=cb_status, master_id=actor.id,
+                dst_node_id, CalvinCB(self._replicated, replication_id=replication_data.id,
+                                         actor_id=new_id, callback=cb_status, master_id=replication_data.original_actor_id,
                                          dst_node_id=dst_node_id),
-                actor_type, state, ports)
+                actor_type, state, None)
 
     def _replicated(self, status, replication_id=None, actor_id=None, callback=None, master_id=None, dst_node_id=None):
         _log.analyze(self.node.id, "+", {'status': status, 'replication_id': replication_id, 'actor_id': actor_id})
@@ -261,6 +385,8 @@ class ReplicationManager(object):
             callback(status)
 
     def connect_verification(self, actor_id, port_id, peer_port_id, peer_node_id):
+        # FIXME This need to be solved
+        return
         actor = self.node.am.actors[actor_id]
         connects = actor._replication_data.connect_verification(actor_id, port_id, peer_port_id)
         for actor_id, port_id, peer_port_id in connects:
@@ -306,17 +432,12 @@ class ReplicationManager(object):
     # Dereplication
     #
 
-    def dereplicate(self, actor_id, callback, exhaust=False):
-        _log.analyze(self.node.id, "+", {'actor_id': actor_id, 'exhaust': exhaust})
+    def dereplicate(self, replication_id, callback, exhaust=False):
+        _log.analyze(self.node.id, "+", {'replication_id': replication_id, 'exhaust': exhaust})
         terminate = DISCONNECT.EXHAUST if exhaust else DISCONNECT.TERMINATE
         try:
-            replication_data = self.node.am.actors[actor_id]._replication_data
+            replication_data = self.managed_replications[replication_id]
         except:
-            if callback:
-                callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
-            return
-        if not replication_data.is_master(actor_id):
-            # Only dereplicate by master actor
             if callback:
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
@@ -332,6 +453,7 @@ class ReplicationManager(object):
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
         cb_status = CalvinCB(self._replication_status_cb, replication_data=replication_data, cb=callback)
+        # FIXME change this time stuff when changing replication_loop
         replication_data.check_instances = time.time()
         if last_replica_id in self.node.am.actors:
             self.node.am.destroy_with_disconnect(last_replica_id, terminate=terminate,
@@ -364,7 +486,7 @@ class ReplicationManager(object):
             if node_id == self.node.id:
                 self.node.storage.remove_replica_node(replication_data.id, last_replica_id)
             self.node.control.log_actor_dereplicate(
-                actor_id=replication_data.master, replica_actor_id=last_replica_id,
+                actor_id=replication_data.original_actor_id, replica_actor_id=last_replica_id,
                 replication_id=replication_data.id)
         if cb:
             status.data = {'actor_id': last_replica_id}
@@ -400,6 +522,39 @@ class ReplicationManager(object):
     #
 
     def replication_loop(self):
+        # FIXME Need to do the new replication loop properly
+        _log.debug("REPLICATION LOOP")
+        for replication_data in self.managed_replications.values():
+            _log.debug("REPLICATION LOOP %s %s" % (replication_data.id, REPLICATION_STATUS.reverse_mapping[replication_data.status]))
+            if replication_data.status != REPLICATION_STATUS.READY:
+                continue
+            try:
+                req = replication_data.requirements
+                if not req:
+                    continue
+                pre_check = req_operations[req['op']].pre_check(self.node,
+                                replication_data=replication_data, **req['kwargs'])
+            except:
+                _log.exception("Pre check exception")
+                pre_check = PRE_CHECK.NO_OPERATION
+            if pre_check == PRE_CHECK.SCALE_OUT:
+                _log.info("Auto-replicate")
+                self.replicate_by_requirements(replication_data, 
+                    CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id))
+            elif pre_check == PRE_CHECK.SCALE_IN:
+                _log.info("Auto-dereplicate")
+                self.dereplicate(replication_data.id, CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id), exhaust=True)
+            # elif pre_check == PRE_CHECK.NO_OPERATION:
+            #     if not hasattr(actor._replication_data, "check_instances"):
+            #         actor._replication_data.check_instances = time.time()
+            #     t = time.time()
+            #     if t > (actor._replication_data.check_instances + 2.0):
+            #         actor._replication_data.check_instances = t
+            #         self.node.storage.get_replica(actor._replication_data.id, CalvinCB(self._current_actors_cb, actor=actor))
+        return
+        
+        ######################################################
+        
         if self.node.quitting:
             return
         replicate = []
@@ -447,44 +602,39 @@ class ReplicationManager(object):
         for actor_id in missing:
             actor._replication_data.instances.remove(actor_id)
 
-    def _replication_loop_log_cb(self, status, actor_id):
-        _log.info("Auto-(de)replicated %s: %s" % (actor_id, str(status)))
+    def _replication_loop_log_cb(self, status, replication_id):
+        _log.info("Auto-(de)replicated %s: %s" % (replication_id, str(status)))
 
-    def replicate_by_requirements(self, actor, callback=None):
+    def replicate_by_requirements(self, replication_data, callback=None):
         """ Update requirements and trigger a replication """
-        actor._replicate_callback = callback
-        req = actor._replication_data.requirements
+        replication_data._replicate_callback = callback
+        req = replication_data.requirements
         # Initiate any scaling specific actions
-        req_operations[req['op']].initiate(self.node, actor, **req['kwargs'])
+        req_operations[req['op']].initiate(self.node, replication_data, **req['kwargs'])
         r = ReqMatch(self.node,
-                     callback=CalvinCB(self._update_requirements_placements, actor=actor))
-        r.match_for_actor(actor.id)
-        _log.analyze(self.node.id, "+ END", {'actor_id': actor.id})
+                     callback=CalvinCB(self._update_requirements_placements, replication_data=replication_data))
+        r.match_actor_registry(replication_data.original_actor_id)
+        _log.analyze(self.node.id, "+ END", {'replication_data_id': replication_data.id})
 
-    def _update_requirements_placements(self, actor, possible_placements, status=None):
-        _log.analyze(self.node.id, "+ BEGIN", {}, tb=True)
+    def _update_requirements_placements(self, replication_data, possible_placements, status=None):
+        _log.analyze(self.node.id, "+ BEGIN", {'possible_placements':possible_placements, 'status':status}, tb=True)
         # All possible actor placements derived
         if not possible_placements:
-            if actor._replicate_callback:
-                actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            if replication_data._replicate_callback:
+                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
         # Select, always a list of node_ids, could be more than one
-        req = actor._replication_data.requirements
-        selected = req_operations[req['op']].select(self.node, actor, possible_placements, **req['kwargs'])
+        req = replication_data.requirements
+        selected = req_operations[req['op']].select(self.node, replication_data, possible_placements, **req['kwargs'])
         _log.analyze(self.node.id, "+", {'possible_placements': possible_placements, 'selected': selected})
         if selected is None:
             # When None - selection will never succeed
-            if actor._replicate_callback:
-                actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
-            return
-        if actor._migrating_to is not None:
-            # If actor started migration skip replication
-            if actor._replicate_callback:
-                actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            if replication_data._replicate_callback:
+                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
         if not selected:
-            if actor._replicate_callback:
-                actor._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            if replication_data._replicate_callback:
+                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
         # FIXME create as many replicas as nodes in list (would need to serialize)
-        self.replicate(actor.id, selected[0], callback=actor._replicate_callback)
+        self.replicate(replication_data.id, selected[0], callback=replication_data._replicate_callback)

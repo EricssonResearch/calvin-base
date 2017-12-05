@@ -193,6 +193,7 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_NEW': [CalvinCB(self.tunnel_new_handler)],
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
+            'LEADER_ELECTED': [CalvinCB(self.leader_elected_handler)],
             'REPLY': [CalvinCB(self.reply_handler)],
             'AUTHENTICATION_DECISION': [CalvinCB(self.authentication_decision_handler)],
             'AUTHORIZATION_REGISTER': [CalvinCB(self.authorization_register_handler)],
@@ -570,6 +571,25 @@ class CalvinProto(CalvinCBClass):
         self.node.pm.connect(port_id=payload['port_id'], peer_port_id=payload['peer_port_id'],
                 callback=CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
                     callback=CalvinCB(send_message, msg={'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
+
+    #### LEADER ELECTION ####
+
+    def leader_elected(self, peer_node_id, leader_type, data, callback=None):
+        msg = {'cmd': 'LEADER_ELECTED', 'type': leader_type, 'data': data}
+        self.network.link_request(peer_node_id, callback=CalvinCB(send_message, msg=msg, callback=callback))
+
+    def leader_elected_handler(self, payload):
+        """ Handle request for selecting this runtime as leader for a <type> task """
+        try:
+            if payload["type"] == "replication":
+                reply = self.node.rm.add_replication_leader(replication_data=payload["data"])
+            else:
+                reply = response.CalvinResponse(response.BAD_REQUEST)
+        except:
+            reply = response.CalvinResponse(False)
+        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
+        self.node.network.link_request(payload['from_rt_uuid'],
+                            callback=CalvinCB(send_message, msg=msg))
 
     #### AUTHENTICATION ####
 

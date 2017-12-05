@@ -40,7 +40,7 @@ rt3 = None
 runtimes = []
 test_type = None
 request_handler = None
-
+NBR_RUNTIMES = 3  # At least 3
 
 def deploy_app(deployer, runtimes=None):
     runtimes = runtimes if runtimes else [ deployer.runtime ]
@@ -71,7 +71,7 @@ def setup_module(module):
     global test_type
 
     request_handler = RequestHandler()
-    test_type, runtimes = helpers.setup_test_type(request_handler, 6, proxy_storage=True)
+    test_type, runtimes = helpers.setup_test_type(request_handler, NBR_RUNTIMES, proxy_storage=True)
     rt1, rt2, rt3 = runtimes[:3]
 
 def teardown_module(module):
@@ -130,6 +130,60 @@ class CalvinTestBase(unittest.TestCase):
         request_handler.migrate(source, actor, dest.id)
         self.wait_for_migration(dest, [actor])
 
+
+@pytest.mark.slow
+class TestManualReplication(CalvinTestBase):
+    def testManualReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            sum   : std.Sum()
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > sum.integer
+            sum.integer > snk.token
+            rule manual: manual_scaling()
+            apply sum: manual
+        """
+
+        response = helpers.deploy_script(request_handler, "testScript", script, self.rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        asum = response['actor_map']['testScript:sum']
+        snk = response['actor_map']['testScript:snk']
+
+        time.sleep(0.3)
+
+        result = request_handler.replicate(self.rt1, replication_id=response['replication_map']['testScript:sum'])
+        print "REPLICATION RESULT:", result
+        time.sleep(2)
+        replication_data = request_handler.get_storage(self.rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_node = request_handler.get_node(self.rt1, leader_id)
+        print leader_node
+        leader_uri = leader_node['control_uris'][0]
+        replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+        print replicas
+        print "ORIGINAL:", request_handler.get_actor(self.rt1, asum)
+        for r in replicas:
+            print "REPLICA:", request_handler.get_actor(self.rt1, r)
+        actor_place = [request_handler.get_actors(r) for r in self.runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        time.sleep(0.4)
+        actual = sorted(request_handler.report(self.runtimes[snk_place], snk))
+        keys = set([k.keys()[0] for k in actual])
+        print keys
+        print [k.values()[0] for k in actual]
+        result = request_handler.replicate(leader_uri, replication_id=response['replication_map']['testScript:sum'], dereplicate=True)
+        print "DEREPLICATION RESULT:", result
+        time.sleep(3)
+        actual = sorted(request_handler.report(self.runtimes[snk_place], snk))
+        print [k.values()[0] for k in actual]
+        replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+        print "REPLICAS", replicas
 
 #@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow
@@ -1268,7 +1322,7 @@ class TestReplication(CalvinTestBase):
         print result_rep
         time.sleep(30)
         replicas = request_handler.get_index(self.rt1, "replicas/actors/"+result_rep['replication_id'], root_prefix_level=3)['result']
-        assert len(replicas) >= 4
+        assert len(replicas) >= (NBR_RUNTIMES - 2)
         print "------------ Burn less ----------------"
         actor_meta = request_handler.get_actor(self.rt1, ident)
         r = request_handler.report(rt_map[actor_meta["node_id"]], ident, kwargs={'duration': 0.001})
@@ -1336,12 +1390,17 @@ class TestReplication(CalvinTestBase):
         result_rep = request_handler.replicate(rt, ident, requirements={'op':"device_scaling", 'kwargs':{}})
         print result_rep
         time.sleep(30)
+        replicas = request_handler.get_index(self.rt1, "replicas/actors/"+result_rep['replication_id'], root_prefix_level=3)['result']
+        print len(replicas), replicas
+        assert len(replicas) >= (NBR_RUNTIMES - 2)
+        
         # Stop the flood of tokens, to make sure all are passed
         r = request_handler.report(self.rt1, src, kwargs={'stopped': True})
         print "STOPPED Counter", r
         time.sleep(2)
         actual = request_handler.report(self.rt1, snk)
         actors = request_handler.get_actors(self.rt1)
+        assert len(actual) == r
         for rt in self.runtimes:
             print rt.id, request_handler.get_actors(rt)
         helpers.delete_app(request_handler, self.rt1, response['application_id'])

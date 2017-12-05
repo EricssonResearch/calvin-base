@@ -18,17 +18,8 @@ from calvin.utilities import dynops
 
 req_type = "placement"
 
-def req_op(node, actor_id=None, component=None):
+def req_op(node, actor_id=None, component=None, replication_id=None):
     """ Returns any nodes that have replicas of actor """
-    #FIXME Need to handle when actor_id is not local actor!!!
-    try:
-        actor = node.am.actors[actor_id]
-        replication_id = actor._replication_data.id
-        if not actor._replication_data._one_per_runtime:
-            replication_id = None
-    except:
-        replication_id = None
-
     if replication_id is None:
         #empty
         it = dynops.List()

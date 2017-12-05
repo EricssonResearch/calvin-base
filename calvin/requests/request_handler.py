@@ -247,7 +247,7 @@ class RequestHandler(object):
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
-    def replicate(self, rt, actor_id, dst_id=None, dereplicate=False, exhaust=False, requirements=None, timeout=DEFAULT_TIMEOUT, async=False):
+    def replicate(self, rt, replication_id=None, dst_id=None, dereplicate=False, exhaust=False, requirements=None, timeout=DEFAULT_TIMEOUT, async=False):
         data = {}
         if dst_id:
             data['peer_node_id'] = dst_id
@@ -259,7 +259,7 @@ class RequestHandler(object):
             data['requirements'] = requirements
         if not data:
             data = None
-        path = ACTOR_REPLICATE.format(actor_id)
+        path = ACTOR_REPLICATE.format(replication_id)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 

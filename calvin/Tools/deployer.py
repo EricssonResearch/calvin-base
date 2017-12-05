@@ -55,7 +55,7 @@ class Deployer(object):
         result = self.request_handler.deploy_app_info(self.runtime, self.name, self.deployable, check=self.verify)
         self.app_id = result['application_id']
         self.actor_map = result['actor_map']
-
+        self.replication_map = result.get('replication_map', {})
         return self.app_id
 
     def destroy(self):

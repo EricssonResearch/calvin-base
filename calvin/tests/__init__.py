@@ -29,8 +29,9 @@ class DummyNode:
 
 class _DummyRepSet:
     def __init__(self):
-        self.id = calvinuuid.uuid("")
-        self.master = None
+        self.id = None  # calvinuuid.uuid("")
+        self.original_actor_id = None
+        self.index = 0
 
     def store(self):
         pass
@@ -56,7 +57,7 @@ class TestActor:
         self._type = type
         self.inports = inports
         self.outports = outports
-        self._replication_data = _DummyRepSet()
+        self._replication_id = _DummyRepSet()
 
 class TestPort:
 
