@@ -257,6 +257,57 @@ class BaseScheduler(object):
 
         return actor_did_fire
 
+    def _fire_actor_non_preemptive(self, actor):
+        """
+        Try to fire actions on actor on this runtime.
+        Returns boolean that is True if actor fired
+        """
+        #
+        # First make sure we are allowed to run
+        #
+        if not actor._authorized():
+            return False
+
+        #
+        # Repeatedly go over the action priority list
+        #
+        done = False
+        actor_did_fire = False
+        while not done:
+            did_fire, output_ok, exhausted = actor.fire()
+            actor_did_fire |= did_fire
+            if not did_fire:
+                #
+                # We reached the end of the list without ANY firing during this round
+                # => handle exhaustion and return
+                #
+                # FIXME: Move exhaust handling to scheduler
+                actor._handle_exhaustion(exhausted, output_ok)
+                done = True
+
+        return actor_did_fire
+
+        
+    def _fire_actor_once(self, actor):
+        """
+        Try to fire action on actor on this runtime.
+        Returns boolean that is True if actor fired
+        """
+        #
+        # First make sure we are allowed to run
+        #
+        if not actor._authorized():
+            return False
+
+        did_fire, output_ok, exhausted = actor.fire()
+        if not did_fire:
+            # => handle exhaustion and return
+            #
+            # FIXME: Move exhaust handling to scheduler
+            actor._handle_exhaustion(exhausted, output_ok)
+
+        return did_fire
+
 
 ######################################################################
 # SIMPLE SCHEDULER
@@ -330,7 +381,40 @@ class SimpleScheduler(BaseScheduler):
         _log.warning("WATCHDOG TRIGGERED")
         self.insert_task(self.strategy, 0)
 
+######################################################################
+# ROUND-ROBIN SCHEDULER
+######################################################################
+class RoundRobinScheduler(SimpleScheduler):
+    
+    def strategy(self):
+        # Communicate
+        list_of_endpoints = self.monitor.endpoints
+        did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
+        # Round Robin
+        actors_to_fire = self.actor_mgr.enabled_actors()
+        did_fire_actor_ids = [actor.id for actor in actors_to_fire if self._fire_actor_once(actor)]
+        # Repeat if there was any activity
+        activity = did_transfer_tokens or bool(did_fire_actor_ids)
+        if activity:
+            self.insert_task(self.strategy, 0)
 
+
+######################################################################
+# NON-PREEMPTIVE SCHEDULER
+######################################################################
+class NonPreemptiveScheduler(SimpleScheduler):
+    
+    def strategy(self):
+        # Communicate
+        list_of_endpoints = self.monitor.endpoints
+        did_transfer_tokens = self.monitor.communicate(list_of_endpoints)
+        # Non-preemptive
+        actors_to_fire = self.actor_mgr.enabled_actors()
+        did_fire_actor_ids = [actor.id for actor in actors_to_fire if self._fire_actor_non_preemptive(actor)]
+        # Repeat if there was any activity
+        activity = did_transfer_tokens or bool(did_fire_actor_ids)
+        if activity:
+            self.insert_task(self.strategy, 0)
 
 ######################################################################
 # DEPRECATED SCHEDULER
