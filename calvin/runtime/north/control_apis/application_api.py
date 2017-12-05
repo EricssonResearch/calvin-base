@@ -275,9 +275,11 @@ def handle_actor_replicate(self, handle, connection, match, data, hdr):
             # Can't order another operation while processing previous
             self.send_response(handle, connection, None, calvinresponse.SERVICE_UNAVAILABLE)
             return
-        # TODO this must be done on the node that is elected leader for the replication_id
+        # This must be done on the node that is elected leader for the replication_id
+        # Return NOT_FOUND otherwise
         self.node.rm.managed_replications[replication_id].operation = op
         self.node.rm.managed_replications[replication_id].selected_node_id = node_id
+        self.node.sched.replication_direct(replication_id=replication_id)
         _log.debug("MANUAL REPLICATION APPLIED %s" % PRE_CHECK.reverse_mapping[op])
         self.send_response(handle, connection, None, calvinresponse.OK)
     except:

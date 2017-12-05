@@ -98,6 +98,11 @@ class BaseScheduler(object):
     def unregister_endpoint(self, endpoint):
         pass
 
+    def replication_direct(self, replication_id=None):
+        """ Schedule an early replication management for at least replication_id """
+        # TODO make use of replication_id when we have that granularity in the scheduler
+        self.insert_task(self._check_replication, 0)
+
     ######################################################################
     # Stuff that needs to be implemented in a subclass
     ######################################################################

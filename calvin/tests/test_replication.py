@@ -156,17 +156,28 @@ class TestManualReplication(CalvinTestBase):
 
         time.sleep(0.3)
 
-        result = request_handler.replicate(self.rt1, replication_id=response['replication_map']['testScript:sum'])
-        print "REPLICATION RESULT:", result
-        time.sleep(2)
+        counter = 0
+        fails = 0
+        while counter < 4 and fails < 20:
+            try:
+                result = request_handler.replicate(self.rt1, replication_id=response['replication_map']['testScript:sum'])
+                counter += 1
+                fails = 0
+            except:
+                fails += 1
+                time.sleep(0.1)
+        print "REPLICATED", counter, fails
         replication_data = request_handler.get_storage(self.rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
         print replication_data
         leader_id = replication_data['leader_node_id']
         leader_node = request_handler.get_node(self.rt1, leader_id)
         print leader_node
         leader_uri = leader_node['control_uris'][0]
-        replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
-        print replicas
+        replicas = []
+        while len(replicas) < counter:
+            replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+            time.sleep(0.1)
+        print "REPLICAS", replicas
         print "ORIGINAL:", request_handler.get_actor(self.rt1, asum)
         for r in replicas:
             print "REPLICA:", request_handler.get_actor(self.rt1, r)
@@ -179,11 +190,21 @@ class TestManualReplication(CalvinTestBase):
         print [k.values()[0] for k in actual]
         result = request_handler.replicate(leader_uri, replication_id=response['replication_map']['testScript:sum'], dereplicate=True)
         print "DEREPLICATION RESULT:", result
-        time.sleep(3)
+        time.sleep(0.3)
         actual = sorted(request_handler.report(self.runtimes[snk_place], snk))
         print [k.values()[0] for k in actual]
         replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
         print "REPLICAS", replicas
+        helpers.delete_app(request_handler, self.rt1, response['application_id'])
+        actors_left = []
+        for r in self.runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert asum not in actors_left
+        assert snk not in actors_left
+        for r in replicas:
+            assert r not in actors_left
 
 #@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow
