@@ -18,7 +18,10 @@ def handle_post_certificate_signing_request(self, handle, connection, match, dat
     {"certificate":<value>}
     """
     try:
-        cert = self.node.certificate_authority.sign_csr_request(data)
+        jsondata = json.loads(data)
+        csr = jsondata["csr"]
+        enrollment_password = jsondata["enrollment_password"]
+        cert = self.node.certificate_authority.sign_csr(csr, enrollment_password)
         status = calvinresponse.OK
     except:
         _log.exception("handle_post_certificate_signing_request")
@@ -26,7 +29,7 @@ def handle_post_certificate_signing_request(self, handle, connection, match, dat
     self.send_response(handle, connection, json.dumps({"certificate": cert}) if status == calvinresponse.OK else None,
                        status=status)
 
-#Only authorized users, e.g.,an admin, should be allowed to query certificate enrollment passwords
+#Only authorized users, e.g., an admin, should be allowed to query certificate enrollment passwords
 # from the CA runtime
 @handler(r"GET /certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
 @authentication_decorator

@@ -221,10 +221,9 @@ class RuntimeCredentials():
                 _log.error("creation of new runtime credentials failed")
                 raise
         self.cert_name = self.get_own_cert_name()
-        if self.enrollment_password and self.domain:
-            _log.info("enrollment_password={}".format(self.enrollment_password))
-            #Loop through all configured CAs and create encrypted CSRs for them all
-            self.cert_enrollment_encrypt_csr(domain_name=self.domain)
+#        if self.enrollment_password and self.domain:
+#            #Loop through all configured CAs and create encrypted CSRs for them all
+#            self.cert_enrollment_encrypt_csr(domain_name=self.domain)
 
     def get_credentials_path(self):
         """Return the full path of the node's own certificate"""
@@ -358,8 +357,7 @@ class RuntimeCredentials():
                 return _ca_conf["domain_name"]
         except Exception as err:
             _log.debug("get_domain: err={}".format(err))
-            _log.warning("get_domain: Could not read security domain from config. [Security not enabled]")  
-              
+            _log.debug("get_domain: Could not read security domain from config. [Security not enabled]")  
         _log.debug("get_domain: Domain not found in Calvin config, let's use supplied domain")
         if domain:
             return domain
@@ -387,23 +385,31 @@ class RuntimeCredentials():
         private_key = self.get_private_key()
         return runtime_cert_chain + private_key
 
-    def get_encrypted_csr(self):
+    def get_csr_and_enrollment_password(self):
         import json
-        """Return the the encrypt csr for the runtime"""
-        _log.debug("get_encrypted_csr_path")
-        path = self.get_encrypted_csr_path()
+        """Return a JSON containing the csr and the enrollment password"""
+        _log.debug("get_csr_and_enrollment_password")
+        path = self.get_csr_path()
         try:
             with open(path, 'r') as fd:
-                result = json.load(fd)
+                csr =fd.read()
         except Exception as err:
             _log.error("Failed to read encrypted CSR, path={}, err={}".format(path, err))
             raise
-        return result
+        if not self.enrollment_password:
+            console.error("No enrollemnt password configured")
+            raise Exception("No enrollemnt password configured")
+        return {"csr":csr, "enrollment_password":self.enrollment_password}
 
     def get_encrypted_csr_path(self):
         """Return the path to the csr for the runtime"""
         _log.debug("get_encrypted_csr_path: my_node_name={}".format(self.node_name))
         return os.path.join(self.runtime_dir, "{}.csr.encrypted".format(self.node_name))
+
+    def get_csr_json_path(self):
+        """Return the path to the csr for the runtime"""
+        _log.debug("get_csr_path: my_node_name={}".format(self.node_name))
+        return os.path.join(self.runtime_dir, "{}.csr.json".format(self.node_name))
 
     def get_csr_path(self):
         """Return the path to the csr for the runtime"""
@@ -701,6 +707,8 @@ class RuntimeCredentials():
 #        _log.debug("store_cert:\n\ttype={}\n\tcertstring={}\n\tcertpath={}\n\tforce=={}".format(type, certstring, certpath, force))
         if certpath:
             try:
+                if os.path.islink(certpath):
+                    certpath = os.readlink(certpath)
                 with open(certpath, 'rb') as f:
                     certstring = f.read()
             except Exception as exc:
@@ -755,7 +763,6 @@ class RuntimeCredentials():
     def remove_runtime(self):
         shutil.rmtree(self.runtime_dir,ignore_errors=True)
 
-
     def cert_enrollment_encrypt_csr(self, csr_path=None, domain_name=None, ca_cert_str=None):
         """
         """
@@ -786,7 +793,7 @@ class RuntimeCredentials():
             _log.exception("Failed to load unencrypted CSR, err={}".format(err))
             raise
 
-        plaintext = {'csr':csr, 'challenge_password':self.enrollment_password}
+        plaintext = {'csr':csr, 'enrollment_password':self.enrollment_password}
         encrypted_csr = certificate.encrypt_object_with_RSA(ca_cert, json.dumps(plaintext),unencrypted_data=self.node_name)
         try:
             encrypted_filepath = csr_path + ".encrypted"

@@ -331,15 +331,15 @@ def runtime_certificate(rt_attributes):
                     # Potential improvement would be to have domain name in response and only try
                     # appropriate CAs
                     i=0
+                    csr = json.dumps(runtime.get_csr_and_enrollment_password())
                     while not cert_available and i<len(ca_control_uris):
                         certstr=None
                         #Repeatedly (maximum 10 attempts) send CSR to CA until a certificate is returned (this to remove the requirement of the CA
                         #node to be be the first node to start)
-                        rsa_encrypted_csr = runtime.get_encrypted_csr()
                         j=0
                         while not certstr and j<10:
                             try:
-                                certstr = request_handler.sign_csr_request(ca_control_uris[i], rsa_encrypted_csr)['certificate']
+                                certstr = request_handler.sign_csr_request(ca_control_uris[i], csr)['certificate']
                             except requests.exceptions.RequestException as err:
                                 time_to_sleep = 1 + j*j*j
                                 _log.debug("RequestException, CSR not accepted or CA not up and running yet, sleep {} seconds and try again, err={}".format(time_to_sleep, err))

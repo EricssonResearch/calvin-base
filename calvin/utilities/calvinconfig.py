@@ -112,7 +112,10 @@ class CalvinConfig(object):
             'developer': {
                 'comment': 'Experimental settings',
             },
-            'security': {},
+            'security': {
+                'security_conf':{},
+                'certificate_authority':{}
+            },
             'calvinsys': {
                 "capabilities": {
                     "sys.timer.once": {

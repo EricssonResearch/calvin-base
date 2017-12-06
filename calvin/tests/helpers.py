@@ -753,11 +753,8 @@ def _generate_certiticates(ca, runtimes, domain_name, credentials_testdir):
                                                        nodeid=runtimes[i]["id"],
                                                        enrollment_password=runtimes[i]["enrollment_password"])
         runtimes[i]["credentials"] = runtime
-        csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-        #Decrypt encrypted CSR with CAs private key
-        rsa_encrypted_csr = runtime.get_encrypted_csr()
-        csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request=rsa_encrypted_csr)
-        csr_path = ca.store_csr_with_enrollment_password(csr)
+        csr_path = runtime.get_csr_path() 
+        #CAs generated certificate for runtime
         cert_path = ca.sign_csr(csr_path)
         runtime.store_own_cert(certpath=cert_path)
 

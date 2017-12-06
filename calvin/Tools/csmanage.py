@@ -325,6 +325,8 @@ def parse_args():
     ##############################
     cmd_runtime_encrypt_csr = runtime_parser.add_parser('encrypt_csr', help='encrypt the CSR and embed the enrollment password')
     #required arguments
+    cmd_runtime_encrypt_csr.add_argument('domain', metavar='<domain>', type=str,
+                           help='Name of the domain')
     cmd_runtime_encrypt_csr.add_argument('node_name', metavar='<node_name>', type=str,
                            help='Name of the runtime to configure, e.g. org.testorg----testNode1')
     cmd_runtime_encrypt_csr.add_argument('enrollment_password', metavar='<enrollment_password>', type=str,
@@ -562,11 +564,13 @@ def manage_runtime_encrypt_csr_with_enrollment_password(args):
         raise Exception("No node name supplied")
     if not args.enrollment_password:
         raise Exception("No enrollment password supplied")
+    if not args.domain:
+        raise Exception("No CA domain name supplied")
     rt_cred= runtime_credentials.RuntimeCredentials(args.node_name,
                                                     security_dir=args.dir,
                                                     enrollment_password=args.enrollment_password)
     try:
-        encr_csr = rt_cred.cert_enrollment_encrypt_csr()
+        encr_csr = rt_cred.cert_enrollment_encrypt_csr(domain_name=args.domain)
     except Exception as err:
         print "Failed to encrypt CSR, err={}".format(err)
         raise
