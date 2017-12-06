@@ -58,6 +58,31 @@ def actual_tokens(rt, actor_id, size=5, retries=20):
 def actual_tokens_multiple(rt, actor_ids, size=5, retries=20):
     return helpers.actual_tokens_multiple(request_handler, rt, actor_ids, size, retries)
 
+def wait_for_migration(runtime, actors, retries=20):
+    retry = 0
+    if not isinstance(actors, list):
+        actors = [ actors ]
+    while retry < retries:
+        try:
+            current = request_handler.get_actors(runtime)
+            if set(actors).issubset(set(current)):
+                break
+            else:
+                _log.info("Migration not finished, retrying in %f" % (retry * 0.1,))
+                retry += 1
+                time.sleep(retry * 0.1)
+        except Exception as e:
+            _log.info("Migration not finished %s, retrying in %f" % (str(e), retry * 0.1,))
+            retry += 1
+            time.sleep(retry * 0.1)
+    if retry == retries:
+        _log.info("Migration failed, after %d retires" % (retry,))
+        raise Exception("Migration failed")
+
+def migrate(source, dest, actor):
+    request_handler.migrate(source, actor, dest.id)
+    wait_for_migration(dest, [actor])
+
 def get_runtime(n=1):
     import random
     r = runtimes[:]
@@ -131,9 +156,14 @@ class CalvinTestBase(unittest.TestCase):
         self.wait_for_migration(dest, [actor])
 
 
+@pytest.fixture(params=[("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")])
+def rt_order3(request):
+    return [globals()[p] for p in request.param]
+
+
 @pytest.mark.slow
-class TestManualReplication(CalvinTestBase):
-    def testManualReplication(self):
+class TestManualReplication(object):
+    def testManualReplication(self, rt_order3):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.CountTimer(sleep=0.03)
@@ -147,12 +177,19 @@ class TestManualReplication(CalvinTestBase):
             apply sum: manual
         """
 
-        response = helpers.deploy_script(request_handler, "testScript", script, self.rt1)
+        rt1 = rt_order3[0]
+        rt2 = rt_order3[1]
+        rt3 = rt_order3[2]
+        runtimes = [rt1, rt2, rt3]
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
         print response
 
         src = response['actor_map']['testScript:src']
         asum = response['actor_map']['testScript:sum']
         snk = response['actor_map']['testScript:snk']
+
+        migrate(rt1, rt2, asum)
 
         time.sleep(0.3)
 
@@ -160,44 +197,48 @@ class TestManualReplication(CalvinTestBase):
         fails = 0
         while counter < 4 and fails < 20:
             try:
-                result = request_handler.replicate(self.rt1, replication_id=response['replication_map']['testScript:sum'])
+                result = request_handler.replicate(rt1, replication_id=response['replication_map']['testScript:sum'], dst_id=rt3.id)
                 counter += 1
                 fails = 0
             except:
                 fails += 1
                 time.sleep(0.1)
         print "REPLICATED", counter, fails
-        replication_data = request_handler.get_storage(self.rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
+        assert counter == 4
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
         print replication_data
         leader_id = replication_data['leader_node_id']
-        leader_node = request_handler.get_node(self.rt1, leader_id)
+        leader_node = request_handler.get_node(rt1, leader_id)
         print leader_node
         leader_uri = leader_node['control_uris'][0]
         replicas = []
-        while len(replicas) < counter:
+        fails = 0
+        while len(replicas) < counter and fails < 20:
             replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+            fails += 1
             time.sleep(0.1)
+        assert len(replicas) == counter
         print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(self.rt1, asum)
+        print "ORIGINAL:", request_handler.get_actor(rt1, asum)
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(self.rt1, r)
-        actor_place = [request_handler.get_actors(r) for r in self.runtimes]
+            print "REPLICA:", request_handler.get_actor(rt1, r)
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
-        actual = sorted(request_handler.report(self.runtimes[snk_place], snk))
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
         keys = set([k.keys()[0] for k in actual])
         print keys
         print [k.values()[0] for k in actual]
         result = request_handler.replicate(leader_uri, replication_id=response['replication_map']['testScript:sum'], dereplicate=True)
         print "DEREPLICATION RESULT:", result
         time.sleep(0.3)
-        actual = sorted(request_handler.report(self.runtimes[snk_place], snk))
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
         print [k.values()[0] for k in actual]
         replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
         print "REPLICAS", replicas
-        helpers.delete_app(request_handler, self.rt1, response['application_id'])
+        helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
-        for r in self.runtimes:
+        for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
         print actors_left
         assert src not in actors_left
