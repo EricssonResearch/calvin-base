@@ -470,7 +470,7 @@ class CalvinNetwork(object):
         """
         status = kwargs.pop('status', True)
         if not status:
-            callback(peer_id, None, status)
+            callback(peer_id, None, status=status)
 
         if peer_id in self._links:
             # We have a link lets give it back
