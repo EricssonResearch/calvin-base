@@ -173,7 +173,9 @@ class CalvinConfig(object):
                     },
                     "mustache": {
                         "module": "textformatlib.Pystache",
-                        "attributes": {}
+                    },
+                    "time": {
+                        "module": "timelib.Time",
                     }
                 }
             }

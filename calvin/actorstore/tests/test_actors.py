@@ -311,31 +311,34 @@ def setup_calvinlib():
     from calvin.runtime.north.calvinlib import get_calvinlib
     lib = get_calvinlib()
     lib.init(capabilities={
-                     "math.arithmetic.compare": {
-                         "module": "mathlib.Arithmetic"
-                     },
-                     "math.arithmetic.operator": {
-                         "module": "mathlib.Arithmetic"
-                     },
-                     "math.arithmetic.eval": {
-                         "module": "mathlib.Arithmetic"
-                     },
-                     "math.random": {
-                         "module": "mathlib.Random",
-                         "attributes": {"seed": 10}
-                     },
-                     "json": {
-                         "module": "jsonlib.Json"
-                     },
-                     "base64": {
-                         "module": "base64lib.Base64"
-                     },
-                     "copy": {
-                         "module": "datalib.Copy"
-                     },
-                     "mustache": {
-                         "module": "textformatlib.Pystache"
-                     }
+        "math.arithmetic.compare": {
+            "module": "mathlib.Arithmetic"
+        },
+        "math.arithmetic.operator": {
+            "module": "mathlib.Arithmetic"
+        },
+        "math.arithmetic.eval": {
+            "module": "mathlib.Arithmetic"
+        },
+        "math.random": {
+            "module": "mathlib.Random",
+            "attributes": {"seed": 10}
+        },
+        "json": {
+            "module": "jsonlib.Json"
+        },
+        "base64": {
+            "module": "base64lib.Base64"
+        },
+        "copy": {
+            "module": "datalib.Copy"
+        },
+        "mustache": {
+            "module": "textformatlib.Pystache"
+        },
+        "time": {
+            "module": "timelib.Time"
+        }
     })
 
 
