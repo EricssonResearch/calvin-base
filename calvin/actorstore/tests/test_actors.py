@@ -332,6 +332,9 @@ def setup_calvinlib():
                      },
                      "copy": {
                          "module": "datalib.Copy"
+                     },
+                     "mustache": {
+                         "module": "textformatlib.Pystache"
                      }
     })
 

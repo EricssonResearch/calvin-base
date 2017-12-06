@@ -147,32 +147,36 @@ class CalvinConfig(object):
                         "attributes": { "level": "error"}
                     }
                 }
-             },
-             'calvinlib': {
-                 "capabilities": {
-                     "math.arithmetic.compare": {
-                         "module": "mathlib.Arithmetic"
-                     },
-                     "math.arithmetic.operator": {
-                         "module": "mathlib.Arithmetic"
-                     },
-                     "math.arithmetic.eval": {
-                         "module": "mathlib.Arithmetic"
-                     },
-                     "math.random": {
-                         "module": "mathlib.Random"
-                     },
-                     "json": {
-                         "module": "jsonlib.Json"
-                     },
-                     "base64": {
-                         "module": "base64lib.Base64"
-                     },
-                     "copy": {
-                         "module": "datalib.Copy"
-                     }
-                 }
-             }
+            },
+            'calvinlib': {
+                "capabilities": {
+                    "math.arithmetic.compare": {
+                        "module": "mathlib.Arithmetic"
+                    },
+                    "math.arithmetic.operator": {
+                        "module": "mathlib.Arithmetic"
+                    },
+                    "math.arithmetic.eval": {
+                        "module": "mathlib.Arithmetic"
+                    },
+                    "math.random": {
+                        "module": "mathlib.Random"
+                    },
+                    "json": {
+                        "module": "jsonlib.Json"
+                    },
+                    "base64": {
+                        "module": "base64lib.Base64"
+                    },
+                    "copy": {
+                        "module": "datalib.Copy"
+                    },
+                    "mustache": {
+                        "module": "textformatlib.Pystache",
+                        "attributes": {}
+                    }
+                }
+            }
         }
         return default
 

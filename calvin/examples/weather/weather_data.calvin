@@ -2,7 +2,7 @@
 component PeriodicForecast(city, interval) -> csvrow {
     tick     : std.Trigger(data=city, tick=interval)
     service : web.LocationWeather()
-    fmt      : text.Mustache(fmt="{{city}},{{country}},{{weather}},{{temperature}},{{humidity}},{{pressure}}")
+    fmt      : text.Mustache(fmt="City:{{city}} Country:{{country}} Weather:{{weather}} Temperature:{{temperature}} Humidity:{{humidity}} Pressure:{{pressure}}")
 
     tick.data > service.location
     service.forecast > fmt.dict
