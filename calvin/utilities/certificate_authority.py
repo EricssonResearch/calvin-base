@@ -465,47 +465,6 @@ class CA():
             raise IOError(stderr)
         return sign_file
 
-    def decrypt_encrypted_csr(self, encrypted_enrollment_request=None, encrypted_enrollment_request_path=None):
-        """
-        In case an enrollment password is attached to the
-        the CSR, the entire CSR is encrypted using
-        the CAs public key. This funciton decrypts the
-        CSR using the CAs private key
-        """
-        #TODO: currenlty, the same key pair is used for
-        #signing certificates as for encrypting/decrypting
-        #CSRs during enrollment, different key pairs should be
-        #used
-        if not encrypted_enrollment_request and encrypted_enrollment_request_path:
-            try:
-                with open(encrypted_enrollment_request_path, 'r') as fd:
-                    encrypted_enrollment_request = json.load(fd)
-            except EnvironmentError as err:
-                _log.exception("Failed to write encrypted CSR to file, err={}".format(err))
-                raise
-        elif not encrypted_enrollment_request:
-            raise CsrMissingPassword()
-
-        private = self.configuration["CA_default"]["private_dir"]
-        password_file = os.path.join(private, "ca_password")
-        _log.info("ca_cert={}".format(private))
-        try:
-            with open(self.configuration["CA_default"]["private_key"], 'r') as fd:
-                private_key = fd.read()
-            with open(password_file, 'r') as fd:
-                password=fd.read()
-        except EnvironmentError as err:
-            _log.exception("Failed to read private key or password")
-            raise
-        try:
-            plaintext = certificate.decrypt_object_with_RSA(private_key=private_key,
-                                                password=password,
-                                                encrypted_object=encrypted_enrollment_request
-                                               )
-        except Exception as err:
-            _log.exception("decrypt_encrypted_csr: Failed to decrypt encrypted CSR, err={}".format(err))
-            raise
-        return plaintext
 
     def store_csr(self, csr):
         """

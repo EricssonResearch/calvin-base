@@ -221,9 +221,6 @@ class RuntimeCredentials():
                 _log.error("creation of new runtime credentials failed")
                 raise
         self.cert_name = self.get_own_cert_name()
-#        if self.enrollment_password and self.domain:
-#            #Loop through all configured CAs and create encrypted CSRs for them all
-#            self.cert_enrollment_encrypt_csr(domain_name=self.domain)
 
     def get_credentials_path(self):
         """Return the full path of the node's own certificate"""
@@ -400,16 +397,6 @@ class RuntimeCredentials():
             console.error("No enrollemnt password configured")
             raise Exception("No enrollemnt password configured")
         return {"csr":csr, "enrollment_password":self.enrollment_password}
-
-    def get_encrypted_csr_path(self):
-        """Return the path to the csr for the runtime"""
-        _log.debug("get_encrypted_csr_path: my_node_name={}".format(self.node_name))
-        return os.path.join(self.runtime_dir, "{}.csr.encrypted".format(self.node_name))
-
-    def get_csr_json_path(self):
-        """Return the path to the csr for the runtime"""
-        _log.debug("get_csr_path: my_node_name={}".format(self.node_name))
-        return os.path.join(self.runtime_dir, "{}.csr.json".format(self.node_name))
 
     def get_csr_path(self):
         """Return the path to the csr for the runtime"""
@@ -762,47 +749,6 @@ class RuntimeCredentials():
 
     def remove_runtime(self):
         shutil.rmtree(self.runtime_dir,ignore_errors=True)
-
-    def cert_enrollment_encrypt_csr(self, csr_path=None, domain_name=None, ca_cert_str=None):
-        """
-        """
-        import json
-        import base64
-        from cryptography.hazmat.primitives import padding
-        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-        from cryptography.hazmat.backends import default_backend
-        _log.debug("cert_enrollment_encrypt_csr:\n\tcsr_path={}, domain_name={}".format(csr_path, domain_name))
-        try:
-            if domain_name:
-                ca_cert = self.get_trusted_CA_cert(certificate.TRUSTSTORE_TRANSPORT, domain_name)
-            elif ca_cert_str:
-                ca_cert = ca_cert_str
-            else:
-                raise Exception("Please supply either the CommonName of the CA, or the certificate of the CA")
-            if not ca_cert:
-                _log.error("Truststore empty, please configure runtime with  a trusted CA cert")
-                raise Exception("Truststore empty, please configure runtime with  a trusted CA cert")
-        except Exception as err:
-            _log.error("Failed to load CA cert from truststore, err={}".format(err))
-            raise
-        try:
-            csr_path = self.get_csr_path()
-            with open(csr_path, 'r') as csr_fd:
-                csr= csr_fd.read()
-        except Exception as err:
-            _log.exception("Failed to load unencrypted CSR, err={}".format(err))
-            raise
-
-        plaintext = {'csr':csr, 'enrollment_password':self.enrollment_password}
-        encrypted_csr = certificate.encrypt_object_with_RSA(ca_cert, json.dumps(plaintext),unencrypted_data=self.node_name)
-        try:
-            encrypted_filepath = csr_path + ".encrypted"
-            with open(encrypted_filepath, 'w') as fd:
-                json.dump(encrypted_csr, fd)
-        except Exception as err:
-            _log.error("Failed to write encrypted CSR to file, err={}".format(err))
-            raise
-        return encrypted_csr
 
     def sign_data(self, data):
         from OpenSSL import crypto
