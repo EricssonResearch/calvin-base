@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinlib
 
 
 def value_for_key(d, keypath):
@@ -43,9 +43,9 @@ class Format(Actor):
     @manage(['fmt', 'fmtkeys'])
     def init(self, fmt):
         self.fmt = fmt
-        self.use('calvinsys.native.python-re', shorthand="regex")
+        self.regexp = calvinlib.use('regexp')
         tmp = fmt.replace(r"\{", "").replace(r"\}", "")
-        self.fmtkeys = self['regex'].findall(Format.REGEX, tmp)
+        self.fmtkeys = self.regexp.findall(Format.REGEX, tmp)
 
     @condition(['dict'], ['text'])
     def action(self, d):
@@ -63,7 +63,7 @@ class Format(Actor):
         return (retval, )
 
     action_priority = (action, )
-    requires = ['calvinsys.native.python-re']
+    requires = ['regexp']
 
 
     test_args = [r"{huey.dewey.louie} \{huey.dewey.louie\}"]

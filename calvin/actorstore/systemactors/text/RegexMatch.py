@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # import re
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 
 
 class RegexMatch(Actor):
@@ -41,10 +41,16 @@ class RegexMatch(Actor):
         self.regex = regex
         self.result = None
         self.did_match = False
-        self.use('calvinsys.native.python-re', shorthand='re')
+        self.setup()
+
+    def setup(self):
+        self.re = calvinlib.use('regexp')
+
+    def did_migrate(self):
+        self.setup()
 
     def perform_match(self, text):
-        m = self['re'].match(self.regex, text)
+        m = self.re.match(self.regex, text)
         self.did_match = m is not None
         self.result = m.groups()[0] if m and m.groups() else text
 
@@ -69,7 +75,7 @@ class RegexMatch(Actor):
         return (result,)
 
     action_priority = (match, output_match, output_no_match)
-    requires = ['calvinsys.native.python-re']
+    requires = ['regexp']
 
 
     test_args = [".* (FLERP).* "]

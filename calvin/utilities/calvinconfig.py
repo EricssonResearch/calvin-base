@@ -176,6 +176,9 @@ class CalvinConfig(object):
                     },
                     "time": {
                         "module": "timelib.Time",
+                    },
+                    "regexp": {
+                        "module": "regexp.Re",
                     }
                 }
             }

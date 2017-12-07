@@ -338,6 +338,9 @@ def setup_calvinlib():
         },
         "time": {
             "module": "timelib.Time"
+        },
+        "regexp": {
+            "module": "regexp.Re",
         }
     })
 

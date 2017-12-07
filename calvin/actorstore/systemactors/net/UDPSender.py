@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -59,7 +59,7 @@ class UDPSender(Actor):
 
     def setup(self):
         self.use('calvinsys.network.socketclienthandler', shorthand='socket')
-        self.use('calvinsys.native.python-re', shorthand='regexp')
+        self.regexp = calvinlib.use('regexp')
 
     @stateguard(lambda self: self.sender)
     @condition(action_input=['data_in'])
@@ -72,7 +72,7 @@ class UDPSender(Actor):
     def parse_uri(self, uri):
         status = False
         try:
-            parsed_uri = self['regexp'].findall(self.URI_REGEXP, uri)[0]
+            parsed_uri = self.regexp.findall(self.URI_REGEXP, uri)[0]
             protocol = parsed_uri[0]
             if protocol != 'udp':
                 _log.warn("Protocol '%s' not supported, assuming udp" % (protocol,))
@@ -103,7 +103,7 @@ class UDPSender(Actor):
         self.sender = None
 
     action_priority = (control, send)
-    requires = ['calvinsys.network.socketclienthandler', 'calvinsys.native.python-re']
+    requires = ['calvinsys.network.socketclienthandler', 'regexp']
 
 
     test_set = [

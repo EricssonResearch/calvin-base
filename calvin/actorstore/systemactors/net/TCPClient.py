@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -60,7 +60,7 @@ class TCPClient(Actor):
 
     def setup(self):
         self.use('calvinsys.network.socketclienthandler', shorthand='socket')
-        self.use('calvinsys.native.python-re', shorthand='regexp')
+        self.regexp = calvinlib.use('regexp')
 
     @stateguard(lambda self: self.cc and self.cc.is_connected())
     @condition(action_input=['data_in'])
@@ -89,7 +89,7 @@ class TCPClient(Actor):
 
 
     def _new_connection(self, control):
-        uri = self['regexp'].findall(self.URI_REGEXP, control['uri'])
+        uri = self.regexp.findall(self.URI_REGEXP, control['uri'])
         uri_parts = uri[0]
         protocol = uri_parts[0]
 
@@ -109,7 +109,7 @@ class TCPClient(Actor):
         self.EOST_token_received = True
 
     action_priority = (control, receive, send)
-    requires = ['calvinsys.network.socketclienthandler', 'calvinsys.native.python-re']
+    requires = ['calvinsys.network.socketclienthandler', 'regexp']
 
 
     test_set = [
