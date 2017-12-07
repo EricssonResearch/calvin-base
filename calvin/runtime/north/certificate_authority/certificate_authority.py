@@ -42,7 +42,7 @@ class CertificateAuthority(object):
         domain = None
         try:
             _ca_conf = _conf.get("security","certificate_authority")
-            if "is_ca" in _ca_conf and _ca_conf["is_ca"]=="True":
+            if "is_ca" in _ca_conf and _ca_conf["is_ca"]==True:
                 _log.debug("CertificateAuthority::__init__  Runtime is a CA")
                 domain = _ca_conf["domain_name"]
                 security_dir = _conf.get("security","security_dir")

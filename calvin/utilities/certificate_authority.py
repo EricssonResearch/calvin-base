@@ -199,6 +199,7 @@ class CA():
         self.commonName = commonName or 'runtime'
         self.config = ConfigParser.SafeConfigParser()
         self.config.optionxform = str
+        self.enrollment_challenge_db_path =None
         self.enrollment_challenge_db = {}
         self.allowed_authentication_servers = None
         self.allowed_authorization_servers = None
@@ -237,6 +238,7 @@ class CA():
 #            print "Made new configuration at " \
 #                  "{}".format(self.configfile)
             self.cert_enrollment_update_db_file()
+        self.enrollment_challenge_db_path = os.path.join(self.configuration["CA_default"]["private_dir"],"enrollment_challenge_db.json")
 
     def new_ca_credentials(self, security_dir=None, force=False, readonly=False):
         """
@@ -252,7 +254,7 @@ class CA():
         out = self.configuration["CA_default"]["certificate"]
 
         password_file = os.path.join(private, "ca_password")
-        enrollment_challenge_db_file = os.path.join(private, "enrollment_challenge_db.json")
+        self.enrollment_challenge_db_path = os.path.join(private, "enrollment_challenge_db.json")
 
         os.umask(0077)
         try:
@@ -282,7 +284,7 @@ class CA():
         # store it in the password file
         password = self.generate_password(20)
         try:
-            with open(enrollment_challenge_db_file,'w') as fd:
+            with open(self.enrollment_challenge_db_path,'w') as fd:
                 fd.write("{}")
         except Exception as err:
             _log.error("Failed to creat CA enrollment_challenge_db file")
@@ -771,8 +773,8 @@ class CA():
             is_ca = _ca_conf["is_ca"]
             domain_name = _ca_conf["domain_name"]
         except:
-            is_ca = "False"
-        if is_ca=="True":
+            is_ca = False
+        if is_ca==True:
             if self.security_dir:
                 cert_conf_file = os.path.join(self.security_dir, domain_name, "openssl.conf")
             else:
@@ -818,9 +820,8 @@ class CA():
 
     def cert_enrollment_load_db_file(self):
         import json
-        enrollment_challenge_db_path = os.path.join(self.configuration["CA_default"]["dir"],"enrollment_challenge_db.json")
         try:
-            with open(enrollment_challenge_db_path,'r') as f:
+            with open(self.enrollment_challenge_db_path,'r') as f:
                 self.enrollment_challenge_db = json.load(f)
         except Exception as exc:
             _log.exception("Failed to load Certificate Enrollment Authority password database")
@@ -831,9 +832,8 @@ class CA():
 
     def cert_enrollment_update_db_file(self):
         import json
-        enrollment_challenge_db_path = os.path.join(self.configuration["CA_default"]["dir"],"enrollment_challenge_db.json")
         try:
-            with open(enrollment_challenge_db_path,'w') as f:
+            with open(self.enrollment_challenge_db_path,'w') as f:
                 json.dump(self.enrollment_challenge_db, f)
         except Exception as exc:
             _log.exception("Failed to create/update Certificate Enrollment Authority password database")

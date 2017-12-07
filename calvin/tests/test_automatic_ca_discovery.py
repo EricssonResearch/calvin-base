@@ -110,7 +110,7 @@ class TestSecurity(unittest.TestCase):
         rt0_conf = copy.deepcopy(rt_conf)
         rt0_conf.set('security','certificate_authority',{
                     'domain_name':domain_name,
-                    'is_ca':'True'
+                    'is_ca':True
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
 
@@ -118,7 +118,7 @@ class TestSecurity(unittest.TestCase):
             rt_conf.set('security','certificate_authority',
                         {
                             'domain_name':domain_name,
-                            'is_ca':'False',
+                            'is_ca':False,
                             'enrollment_password': runtimes[i]["enrollment_password"]
                         })
             rt_conf.save("/tmp/calvin{}.conf".format(5000+i))

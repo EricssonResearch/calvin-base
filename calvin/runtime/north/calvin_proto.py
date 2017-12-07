@@ -596,7 +596,7 @@ class CalvinProto(CalvinCBClass):
         A Policy Decision Point (PDP) is used to determine if access is permitted.
         """
         _log.debug("authentication_decision_handler:\n\tpayload={}".format(payload))
-        if ('authentication' in _sec_conf) and 'accept_external_requests' in _sec_conf['authentication']:
+        if ('authentication' in _sec_conf) and 'accept_external_requests' in _sec_conf['authentication'] and _sec_conf['authentication']["accept_external_requests"]:
             try:
                 self.node.authentication.decode_request(payload,
                                                         CalvinCB(self._authentication_decision_handler_jwt_decoded_cb,

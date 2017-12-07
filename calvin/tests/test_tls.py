@@ -141,7 +141,7 @@ class TestSecurity(unittest.TestCase):
         rt0_conf.set('global','storage_type','local')
         rt0_conf.set('security','certificate_authority',{
             'domain_name':domain_name,
-            'is_ca':'True'
+            'is_ca':True
             })
         rt0_conf.save("/tmp/calvin5000.conf")
 
@@ -150,7 +150,7 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % hostname )
         rt_conf.set('security','certificate_authority',{
             'domain_name':domain_name,
-            'is_ca':'False'
+            'is_ca':False
             })
 
         for i in range(1, NBR_OF_RUNTIMES):

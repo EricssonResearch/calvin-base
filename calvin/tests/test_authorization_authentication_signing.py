@@ -110,7 +110,7 @@ class TestSecurity(unittest.TestCase):
         rt0_conf.set('global','storage_type','local')
         rt0_conf.set('security','certificate_authority',{
             'domain_name':domain_name,
-            'is_ca':'True'
+            'is_ca':True
             })
         rt0_conf.set("security", "security_conf", {
                         "comment": "Certificate Authority",
@@ -134,7 +134,7 @@ class TestSecurity(unittest.TestCase):
         rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
         rt_conf.set('security','certificate_authority',{
             'domain_name':domain_name,
-            'is_ca':'False'
+            'is_ca':False
         })
         rt_conf.set("security", "security_conf", {
                         "comment": "External authentication, external authorization",

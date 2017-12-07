@@ -217,7 +217,7 @@ def parse_args():
     cmd_ca_sign_csr.add_argument('domain', metavar='<domain>', type=str,
                            help='name of domain for which the certificate is to be signed')
     cmd_ca_sign_csr.add_argument('CSR', metavar='<CSR>', type=str,
-                           help='path to encrypted CSR to be signed')
+                           help='path to CSR to be signed')
     #optional arguments
     cmd_ca_sign_csr.add_argument('--force', dest='force', action='store_true',
                            help='overwrite file that exists at destination')
@@ -229,7 +229,7 @@ def parse_args():
     ########################################################################################
     # parser for runtime cmds
     ########################################################################################
-    runtime_commands = ['create', 'export', 'import', 'trust', 'do_it_all', 'encrypt_csr', 'c_rehash']
+    runtime_commands = ['create', 'export', 'import', 'trust', 'c_rehash', 'get_name']
 
     runtime_parser = cmdparsers.add_parser('runtime', help='manage runtime certificates and keys')
     runtime_parser = runtime_parser.add_subparsers(help='sub-command help', dest='runtime_subparser_name')
@@ -303,39 +303,6 @@ def parse_args():
 
     cmd_runtime_trust.set_defaults(func=manage_runtime_trust)
 
-    ##############################
-    #parser for runtime do_it_all cmd
-    ##############################
-    cmd_runtime_do_it_all = runtime_parser.add_parser('do_it_all', help='Creates runtime (and CA if not already available), and certificate all in one. This requires that the CA is local.')
-    #required arguments
-    cmd_runtime_do_it_all.add_argument('domain', metavar='<domain>', type=str,
-                           help='Name of the domain')
-    cmd_runtime_do_it_all.add_argument('attr', metavar='<attr>', type=str,
-                           help='runtime attributes, at least name and organization of node_name needs to be supplied, e.g. \'{"indexed_public":{"node_name":{"name":"testName", "organization":"testOrg"}}}\'')
-    #optional arguments
-    cmd_runtime_do_it_all.add_argument('--dir', metavar='<dir>', type=str,
-                           help='Path to the runtime at')
-    cmd_runtime_do_it_all.add_argument('--force', dest='force', action='store_true',
-                           help='overwrite file that exists at destination')
-
-    cmd_runtime_do_it_all.set_defaults(func=manage_runtime_do_it_all)
-
-    ##############################
-    # parser for runtime encrypt CSR  cmd
-    ##############################
-    cmd_runtime_encrypt_csr = runtime_parser.add_parser('encrypt_csr', help='encrypt the CSR and embed the enrollment password')
-    #required arguments
-    cmd_runtime_encrypt_csr.add_argument('domain', metavar='<domain>', type=str,
-                           help='Name of the domain')
-    cmd_runtime_encrypt_csr.add_argument('node_name', metavar='<node_name>', type=str,
-                           help='Name of the runtime to configure, e.g. org.testorg----testNode1')
-    cmd_runtime_encrypt_csr.add_argument('enrollment_password', metavar='<enrollment_password>', type=str,
-                           help='enrollment password to authorize the CSR towards the CA')
-    #optional arguments
-    cmd_runtime_encrypt_csr.add_argument('--dir', metavar='<directory>', type=str, default="",
-                           help='security directory, defaults to ~/.calvin/security')
-
-    cmd_runtime_encrypt_csr.set_defaults(func=manage_runtime_encrypt_csr_with_enrollment_password)
 
     ##############################
     # parser for runtime c_rehash cmd
@@ -349,6 +316,25 @@ def parse_args():
                            help='security directory, defaults to ~/.calvin/security')
 
     cmd_runtime_c_rehash.set_defaults(func=manage_runtime_c_rehash)
+
+    ##############################
+    # parser for runtime get_name
+    ##############################
+    cmd_runtime_c_rehash = runtime_parser.add_parser('get_name', help='Create symbolic links to trusted certificates')
+    #required arguments
+    #optional arguments
+    cmd_runtime_c_rehash.add_argument('--attr', metavar='<attr>', type=str,
+                           help='JSON coded attributes for started node '
+                                'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
+                                ', see documentation',
+                           dest='attr', default=None)
+
+    cmd_runtime_c_rehash.add_argument('--attr-file', metavar='<attr>', type=str,
+                           help='File with JSON coded attributes for started node '
+                                'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
+                                ', see documentation',
+                           dest='attr_file', default=None)
+    cmd_runtime_c_rehash.set_defaults(func=manage_runtime_get_name)
 
 
 
@@ -444,14 +430,12 @@ def manage_ca_sign_csr(args):
     if not args.domain:
         raise Exception("No domain supplied")
     if not args.CSR:
-        raise exception("supply path to encrypted csr")
+        raise exception("supply path to CSR")
     exist = os.path.isfile(args.CSR)
     if not exist:
         raise Exception("The CSR path supplied is not an existing file")
     ca = certificate_authority.CA(domain=args.domain, security_dir=args.dir, force=args.force)
-    csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request_path=args.CSR)
-    csr_path = ca.store_csr_with_enrollment_password(csr)
-    cert_path = ca.sign_csr(csr_path)
+    cert_path = ca.sign_csr(args.CSR)
     print "signed_cert_path_start<{}>signed_cert_path_stop".format(cert_path)
 
 ######################
@@ -559,24 +543,6 @@ def manage_runtime_trust(args):
     elif args.type=="code_authenticity":
         certificate.store_trusted_root_cert(args.cacert, "truststore_for_signing", security_dir=args.dir)
 
-def manage_runtime_encrypt_csr_with_enrollment_password(args):
-    if not args.node_name:
-        raise Exception("No node name supplied")
-    if not args.enrollment_password:
-        raise Exception("No enrollment password supplied")
-    if not args.domain:
-        raise Exception("No CA domain name supplied")
-    rt_cred= runtime_credentials.RuntimeCredentials(args.node_name,
-                                                    security_dir=args.dir,
-                                                    enrollment_password=args.enrollment_password)
-    try:
-        encr_csr = rt_cred.cert_enrollment_encrypt_csr(domain_name=args.domain)
-    except Exception as err:
-        print "Failed to encrypt CSR, err={}".format(err)
-        raise
-    encr_csr_path = rt_cred.get_encrypted_csr_path()
-    print "encr_csr_path_start<{}>encr_csr_path_stop".format(encr_csr_path)
-
 def manage_runtime_c_rehash(args):
     if args.type=="CA":
         certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=args.dir)
@@ -585,38 +551,31 @@ def manage_runtime_c_rehash(args):
     else:
         print "Error, only type={CA, CS} are suppored"
 
-def manage_runtime_do_it_all(args):
-    if not args.attr:
-        raise Exception("No runtime attributes supplied")
-    if not args.domain:
-        raise Exception("No domain name supplied")
-    attr = json.loads(args.attr)
-    if not all (k in attr['indexed_public']['node_name'] for k in ("organization","name")):
-        raise Exception("please supply name and organization of runtime")
+def manage_runtime_get_name(args):
+    from calvin.utilities.attribute_resolver import AttributeResolver
+    # Attributes
+    runtime_attr = {}
 
-    ca = certificate_authority.CA(domain=args.domain,
-                                  commonName=args.domain+" CA",
-                                  security_dir=args.dir)
-    ca_cert_path = ca.export_ca_cert("/tmp")
-    certificate.store_trusted_root_cert(ca_cert_path, certificate.TRUSTSTORE_TRANSPORT, security_dir=args.dir)
-    os.remove(ca_cert_path)
-    attributes=AttributeResolver(attr)
-    node_name=attributes.get_node_name_as_str()
-    nodeid = calvinuuid.uuid("NODE")
-    enrollment_password = ca.cert_enrollment_add_new_runtime(node_name)
-    rt_cred = runtime_credentials.RuntimeCredentials(node_name,
-                                                     domain=args.domain,
-                                                     security_dir=args.dir,
-                                                     nodeid=nodeid,
-                                                     enrollment_password=enrollment_password)
-    ca_cert = rt_cred.get_truststore(type=certificate.TRUSTSTORE_TRANSPORT)[0][0]
-    #Encrypt CSR with CAs public key (to protect enrollment password)
-    rsa_encrypted_csr_path = rt_cred.get_encrypted_csr_path(ca.commonName)
-    #Decrypt encrypted CSR with CAs private key
-    csr = ca.decrypt_encrypted_csr(encrypted_enrollment_request_path=rsa_encrypted_csr_path)
-    csr_path = ca.store_csr_with_enrollment_password(csr)
-    cert_path = ca.sign_csr(csr_path)
-    print "\ncertificate stored at: {}\n".format(rt_cred.store_own_cert(certpath=cert_path))
+    if args.attr_file:
+        try:
+            runtime_attr = json.load(open(args.attr_file))
+        except Exception as e:
+            print "Attribute file not JSON:\n", e
+            return -1
+    elif args.attr:
+        try:
+            runtime_attr = json.loads(args.attr)
+        except Exception as e:
+            print "Attributes not JSON:\n", e
+            return -1
+    else:
+        print "Error, either supply the attributes of the runtime, or the path to the file containg the attributes"
+        return -1
+
+    attributes = AttributeResolver(runtime_attr)
+    print "node_name_start<{}>node_name_stop\n".format(attributes.get_node_name_as_str())
+
+
 
 def main():
     args = parse_args()

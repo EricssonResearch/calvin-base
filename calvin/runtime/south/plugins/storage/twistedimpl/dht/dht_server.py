@@ -172,7 +172,7 @@ class AutoDHTServer(StorageBase):
         is_ca = False
         try:
             _ca_conf = _conf.get("security", "certificate_authority")
-            if "is_ca" in _ca_conf and _ca_conf["is_ca"] == "True":
+            if "is_ca" in _ca_conf and _ca_conf["is_ca"] == True:
                 is_ca = True
         except:
             is_ca = False

@@ -293,7 +293,7 @@ def runtime_certificate(rt_attributes):
             certpath, cert, certstr = runtime.get_own_cert()
             if not cert:
                 csr_path = os.path.join(runtime.runtime_dir, node_name + ".csr")
-                if is_ca == "True":
+                if is_ca:
                     _log.debug("No runtime certificate, but node is a CA, just sign csr, domain={}".format(domain_name))
                     ca = certificate_authority.CA(domain=domain_name,
                                                   security_dir=security_dir)

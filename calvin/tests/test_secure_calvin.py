@@ -191,19 +191,19 @@ class CalvinSecureTestBase(unittest.TestCase):
             rt0_conf.set('global','storage_type','dht')
         rt0_conf.set('security','certificate_authority',{
                         'domain_name':domain_name,
-                        'is_ca':'True'
+                        'is_ca':True
                     })
         rt0_conf.set("security", "security_conf", {
                         "comment": "Authorization-,Authentication service accepting external requests",
                         "authentication": {
                             "procedure": "local",
                             "identity_provider_path": identity_provider_path,
-                            "accept_external_requests": "True"
+                            "accept_external_requests": True
                         },
                         "authorization": {
                             "procedure": "local",
                             "policy_storage_path": policy_storage_path,
-                            "accept_external_requests": "True"
+                            "accept_external_requests": True
                         }
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
@@ -252,7 +252,7 @@ class CalvinSecureTestBase(unittest.TestCase):
         for i in range(1, NBR_OF_RUNTIMES):
             rt_conf.set('security','certificate_authority',{
                             'domain_name':domain_name,
-                            'is_ca':'False',
+                            'is_ca':False,
                             'ca_control_uri':"https://%s:5020" % hostname,
                             'enrollment_password':runtimes[i]["enrollment_password"]
                         })
