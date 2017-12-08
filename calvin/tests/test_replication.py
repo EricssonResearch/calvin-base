@@ -25,6 +25,8 @@ from calvin.Tools import deployer
 from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RequestHandler
 from . import helpers
+from calvin.csparser.dscodegen import calvin_dscodegen
+
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -80,7 +82,14 @@ def wait_for_migration(runtime, actors, retries=20):
         raise Exception("Migration failed")
 
 def migrate(source, dest, actor):
-    request_handler.migrate(source, actor, dest.id)
+    fails = 0
+    while fails < 20:
+        try:
+            request_handler.migrate(source, actor, dest.id)
+            break
+        except:
+            time.sleep(0.1)
+            fails += 1
     wait_for_migration(dest, [actor])
 
 def get_runtime(n=1):
@@ -246,6 +255,112 @@ class TestManualReplication(object):
         assert snk not in actors_left
         for r in replicas:
             assert r not in actors_left
+
+    def testForceMigratingShadow(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            shadow  : test.FakeShadow()
+            snk   : test.Sink(store_tokens=1, quiet=false)
+            src.integer > shadow.token
+            shadow.token > snk.token
+        """
+
+        app_info, issuetracker = compiler.compile_script(script, "testScript")
+        if issuetracker.error_count:
+            _log.warning("Calvinscript contained errors:")
+            _log.warning(issuetracker.formatted_issues())
+        #print "APP_INFO", app_info
+
+        response = request_handler.deploy_app_info(rt1, "testScript", app_info)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        shadow = response['actor_map']['testScript:shadow']
+        snk = response['actor_map']['testScript:snk']
+
+        migrate(rt1, rt2, shadow)
+        time.sleep(0.3)
+        migrate(rt2, rt1, shadow)
+        time.sleep(0.3)
+        migrate(rt1, rt2, shadow)
+        time.sleep(0.3)
+        actual = request_handler.report(rt1, snk)
+        print actual
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert shadow not in actors_left
+        assert snk not in actors_left
+
+    def testRequirementMigratingShadow(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            shadow  : test.FakeShadow()
+            snk   : test.Sink(store_tokens=1, quiet=false)
+            src.integer > shadow.token
+            shadow.token > snk.token
+            rule anyplace: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test"}])
+            apply shadow: anyplace
+        """
+
+        rt_by_id = {r.id: r for r in runtimes}
+
+        app_info, issuetracker = compiler.compile_script(script, "testScript")
+        if issuetracker.error_count:
+            _log.warning("Calvinscript contained errors:")
+            _log.warning(issuetracker.formatted_issues())
+        #print "APP_INFO", app_info
+
+        deploy_info, ds_issuestracker = calvin_dscodegen(script, "testScript")
+        if ds_issuestracker.error_count:
+            _log.warning("Deployscript contained errors:")
+            _log.warning(ds_issuestracker.formatted_issues())
+            deploy_info = None
+        elif not deploy_info['requirements']:
+            deploy_info = None
+        #print "DEPLOY_INFO", deploy_info
+
+        response = request_handler.deploy_app_info(rt1, "testScript", app_info, deploy_info)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        shadow = response['actor_map']['testScript:shadow']
+        snk = response['actor_map']['testScript:snk']
+
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        shadow_rt = runtimes[map(lambda x: shadow in x, actor_place).index(True)]
+        snk_rt = runtimes[map(lambda x: snk in x, actor_place).index(True)]
+
+        # Don't wait, try to race a migration, which should give 503 error and we retry
+        migrate(shadow_rt, rt2, shadow)
+
+        # Force back to shadow
+        nbr_tokens = len(request_handler.report(snk_rt, snk))
+        wait_for_tokens(snk_rt, snk, nbr_tokens+5)
+        migrate(rt2, rt1, shadow)
+
+        # No new tokens since shadow just migrate again
+        migrate(rt1, rt2, shadow)
+
+        # Landed again as none shadow and produced tokens
+        nbr_tokens = len(request_handler.report(snk_rt, snk))
+        wait_for_tokens(snk_rt, snk, nbr_tokens+5)
+
+        actual = request_handler.report(snk_rt, snk)
+        print actual
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert shadow not in actors_left
+        assert snk not in actors_left
 
 #@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow

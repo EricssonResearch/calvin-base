@@ -345,6 +345,7 @@ class Actor(object):
         # self.control = calvincontrol.get_calvincontrol()
         self._migration_info = None
         self._migrating_to = None  # During migration while on the previous node set to the next node id
+        self._migration_connected = True  # False while setup the migrated actor, to prevent further migrations
         self._last_time_warning = 0.0
         self.sec = security
         self._subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
@@ -606,6 +607,8 @@ class Actor(object):
         state['outports'] = {
             port: self.outports[port]._state(remap=remap) for port in self.outports}
         state['_component_members'] = list(self._component_members)
+        # Place requires in state, in the event we become a ShadowActor
+        state['_requires'] = self.requires if hasattr(self, 'requires') else None
 
         # FIXME: The objects in _private_state_keys are well known, they are private after all,
         #        and we shouldn't need this generic handler.
@@ -639,25 +642,30 @@ class Actor(object):
         #        and we shouldn't need this generic handler.
         for key in self._private_state_keys:
             if key not in self.__dict__:
-                self.__dict__[key] = state.pop(key, None)
+                self.__dict__[key] = state.get(key, None)
             else:
                 obj = self.__dict__[key]
                 if _implements_state(obj):
-                    obj.set_state(state.pop(key))
+                    obj.set_state(state.get(key))
                 else:
-                    self.__dict__[key] = state.pop(key, None)
+                    self.__dict__[key] = state.get(key, None)
+
+    def _replication_state(self):
+        return None
 
     def _set_replication_state(self, state):
         """Deserialize and apply state related to a replicating actor """
+        if state is None:
+            return
         for port in state['inports'].values():
             port['org_id'] = port.pop('id')
             # Uses setdefault to support shadow actor
-            self.inports.setdefault(port['name'], actorport.InPort(port, self))._set_state(port)
+            self.inports.setdefault(port['name'], actorport.InPort(port['name'], self))._set_state(port)
             port['id'] = self.inports[port['name']].id
         for port in state['outports'].values():
             port['org_id'] = port.pop('id')
             # Uses setdefault to support shadow actor
-            self.outports.setdefault(port['name'], actorport.OutPort(port, self))._set_state(port)
+            self.outports.setdefault(port['name'], actorport.OutPort(port['name'], self))._set_state(port)
             port['id'] = self.outports[port['name']].id
 
     def _security_state(self):
@@ -695,6 +703,9 @@ class Actor(object):
         """Returns the serialized state of an actor."""
         state = {}
         state['private'] = self._private_state(remap)
+        rstate = self._replication_state()
+        if rstate is not None:
+            state['replication'] = rstate
         state['managed'] = self._managed_state()
         state['security']= self._security_state()
         state['custom'] = self.state()
@@ -703,8 +714,7 @@ class Actor(object):
     def deserialize(self, state):
         """Restore an actor's state from the serialized state."""
         self._set_private_state(state['private'])
-        if 'replication' in state:
-            self._set_replication_state(state['replication'])
+        self._set_replication_state(state.get('replication', None))
         self._set_security_state(state['security'])
         self._set_managed_state(state['managed'])
         self.set_state(state['custom'])
@@ -815,6 +825,7 @@ class ShadowActor(Actor):
         self.inport_properties = {}
         self.outport_properties = {}
         self.calvinsys_state = {}
+        self._replication_state_data = None
         super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions,
                                             disable_transition_checks=disable_transition_checks,
                                             disable_state_checks=disable_state_checks, actor_id=actor_id,
@@ -848,20 +859,24 @@ class ShadowActor(Actor):
         return
 
     def requirements_get(self):
-        # If missing signature we can't add requirement for finding actor's requires.
-        if self._signature:
-            return self._deployment_requirements + self._replication_id._placement_req + [
-                                                {'op': 'shadow_actor_reqs_match',
-                                                 'kwargs': {'signature': self._signature,
-                                                            'shadow_params': self._shadow_args.keys()},
-                                                 'type': '+'}]
-        else:
-            _log.error("Shadow actor %s - %s miss signature" % (self._name, self._id))
-            return self._deployment_requirements + self._replication_id._placement_req
+        # Get standard actor requirements first
+        reqs = super(ShadowActor, self).requirements_get()
+        if self._signature and hasattr(self, '_shadow_args'):
+            # Fresh ShadowActor, needs to find placement based on signature
+            # Since actor requires is not known locally
+            reqs += [{'op': 'shadow_actor_reqs_match',
+                     'kwargs': {'signature': self._signature,
+                                'shadow_params': self._shadow_args.keys()},
+                     'type': '+'}]
+        return reqs
 
     def _set_private_state(self, state):
-        """Pop _calvinsys state and call super class"""
+        """Pop _calvinsys state, set requires and call super class"""
         self.calvinsys_state = state.pop("_calvinsys")
+        if state['_requires'] is not None:
+            # Been real actor before and know the requires
+            # Done only in ShadowActor since requires is normally part of the real Actor sub-class
+            self.requires = state['_requires']
         super(ShadowActor, self)._set_private_state(state)
 
     def _private_state(self, remap):
@@ -869,3 +884,15 @@ class ShadowActor(Actor):
         state = super(ShadowActor, self)._private_state(remap)
         state["_calvinsys"] = self.calvinsys_state
         return state
+
+    def _set_replication_state(self, state):
+        """ Save the replication state, besides ports since they are already handled on the shadow instance """
+        super(ShadowActor, self)._set_replication_state(state)
+        self._replication_state_data = state
+        if state is None:
+            return
+        self._replication_state_data['inports'] = {}
+        self._replication_state_data['outports'] = {}
+
+    def _replication_state(self):
+        return self._replication_state_data

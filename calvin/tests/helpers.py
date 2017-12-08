@@ -334,6 +334,14 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
         calvin.runtime.north.storage._conf.set('global', 'storage_proxy', host[0])
     _log.info("started runtime %s %s" % host)
 
+    if True:
+        import calvin.runtime.north.storage
+        calvin.runtime.north.storage._conf.update('calvinsys', 'capabilities', 
+                    {"mock.shadow": {
+                        "module": "mock.MockInputOutput",
+                        "attributes": {"data": []}
+                    }})
+
     count = 2
     for host in hosts[1:]:
         if nbr > 3:

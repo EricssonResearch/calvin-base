@@ -82,6 +82,8 @@ class ActorManager(object):
 
         self.actors[a.id] = a
 
+        a._migration_connected = False
+
         self.node.storage.add_actor(a, self.node.id)
 
         if prev_connections:
@@ -98,6 +100,7 @@ class ActorManager(object):
             self.connect_replica(a.id, state['replication'], callback=callback)
         else:
             # Nothing to connect then we are OK
+            a._migration_connected = True
             if callback:
                 callback(status=response.CalvinResponse(True), actor_id=a.id)
             else:
@@ -381,6 +384,16 @@ class ActorManager(object):
                 callback(status=response.CalvinResponse(False))
             return
         actor = self.actors[actor_id]
+        if actor._migrating_to is not None:
+            # We can't migrate while migrating
+            if callback:
+                callback(status=response.CalvinResponse(response.BAD_REQUEST))
+            return
+        if not actor._migration_connected:
+            # We can't migrate before finished with setup actor from previous migration
+            if callback:
+                callback(status=response.CalvinResponse(response.SERVICE_UNAVAILABLE))
+            return
         # No need to inhibate replication anymore (could still be locked out by _migrating_to set below)
         self.node.rm.inhibate(actor_id, False)
         if node_id == self.node.id:
@@ -464,6 +477,7 @@ class ActorManager(object):
         """
         # Send negative response if not already done it
         if not status and peer_port_ids:
+            self.actors[actor_id]._migration_connected = True
             if _callback:
                 del peer_port_ids[:]
                 _callback(status=response.CalvinResponse(False), actor_id=actor_id)
@@ -472,6 +486,7 @@ class ActorManager(object):
             peer_port_ids.remove(peer_port_id)
             # If all ports done send OK
             if not peer_port_ids:
+                self.actors[actor_id]._migration_connected = True
                 if _callback:
                     _callback(status=response.CalvinResponse(True), actor_id=actor_id)
 

@@ -733,7 +733,7 @@ class Deployer(object):
             if cb:
                 cb()
 
-    def connectid(self, connection):
+    def connectid(self, connection, cb):
         src_actor, src_port, dst_actor, dst_port = connection
         # connect from dst to src
         # use node info if exists, otherwise assume local node
@@ -748,7 +748,8 @@ class Deployer(object):
             peer_node_id=src_node,
             peer_actor_id=src_actor_id,
             peer_port_name=src_port,
-            peer_port_dir='out')
+            peer_port_dir='out',
+            cb=cb)
         return result
 
     def deploy(self):
@@ -791,13 +792,23 @@ class Deployer(object):
                 self.node.pm.set_port_properties(actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port,
                                                  **kwargs)
 
+        self._connection_count = sum(map(len, self.deployable['connections'].values()))
+        self._connection_status = response.CalvinResponse(True)
         for src, dst_list in self.deployable['connections'].iteritems():
             src_actor, src_port = src.split('.')
             for dst in dst_list:
                 dst_actor, dst_port = dst.split('.')
                 c = (src_actor, src_port, dst_actor, dst_port)
-                self.connectid(c)
+                self.connectid(c, cb=self._wait_for_all_connections)
 
-        self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False,
-                                       cb=CalvinCB(self.cb, deployer=self))
-
+    def _wait_for_all_connections(self, status, *args, **kwargs):
+        _log.debug("_wait_for_all_connections %d" % self._connection_count)
+        self._connection_count -= 1
+        if not status:
+            # TODO handle connection errors
+            _log.error("Deployer failed a port connection status: %s port info: %s" % (str(status), str(kwargs)))
+            self._connection_status = status
+        if self._connection_count == 0:
+            _log.debug("_wait_for_all_connections final")
+            self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False,
+                                   cb=CalvinCB(self.cb, deployer=self))
