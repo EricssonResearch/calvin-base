@@ -4,7 +4,7 @@
 define CHART_PARAMETERS = {"chart_title": "A Vertical Bar Chart",
                            "chart_size": [600, 450],
                            "chart_bar": [30, 20],
-                           "chart_color": "4D89F9",
+                           "chart_color": ["4D89F9"],
                            "axes_type": "xxyy",
                            "axes_label": [[1, "Title x-axis"], [3, "Title y-axis"]]}
 
@@ -13,17 +13,17 @@ define CHART_PARAMETERS = {"chart_title": "A Vertical Bar Chart",
 /////////////////////////////////////////////////
 chart : chart.DynamicVBar(chart_param=CHART_PARAMETERS, left_to_right=false)
 screen : media.ImageSink()
-trigger : std.Trigger(data=true, tick=1.0)
+counter : std.CountTimer(sleep=1)
 random : math.RandomInteger(lower=1, upper=101)
 
 
 /////////////////////////////////////////////////
 //                  Main script                //
 /////////////////////////////////////////////////
-trigger.data > chart.label
+counter.integer > chart.label
 
-trigger.data > random.trigger
+counter.integer > random.trigger
 random.integer > chart.value
 
-chart.img > screen.b64image
+chart.b64image > screen.b64image
 

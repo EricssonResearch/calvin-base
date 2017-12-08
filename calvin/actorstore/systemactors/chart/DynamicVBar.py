@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.utilities.calvinlogger import get_actor_logger
-from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib, calvinsys
 
 _log = get_actor_logger(__name__)
 
@@ -29,49 +29,39 @@ class DynamicVBar(Actor):
     chart_param:         Initial settings for the chart specific parameters
     dimension:           The number of accumulated values to show simultaneously
     left_to_right:       If set to false the new values will roll in from right to left
-    max_req_in_progress: Max nbr of async threads for requesting chart images
 
     Inputs:
       label
       value
 
     Outputs:
-      b64image : base64 representation of the chart. After decoding, use from_string() \
-            in the image library to unpack the image.
+      b64image : base64 representation of the chart.
     """
 
-    @manage(['params', 'dimension', 'left_to_right', 'max_req_in_progress', 'labels', 'values'])
-    def init(self, chart_param={}, dimension=10, left_to_right=True, max_req_in_progress=5):
-        self.params = chart_param
+    @manage(['dimension', 'labels', 'values', '_chart'])
+    def init(self, chart_param={}, dimension=10, left_to_right=True):
         self.dimension = dimension
-        self.left_to_right = left_to_right
-        self.max_req_in_progress = max_req_in_progress
         self.labels = self.dimension*['']
         self.values = self.dimension*[0]
+        self._chart = calvinsys.open(self, 'chart.dynamic.vbar', chart_param=chart_param, left_to_right=left_to_right)
 
         self.setup()
 
     def setup(self):
-        self.req_in_progress = []
-        self.use("calvinsys.media.image", shorthand="image")
-        self.base64 = calvinlib.use('base64')
-        self.use('calvinsys.charts.chart_handler', shorthand="chart")
-        self.chart_api = self['chart'].create_vbar_chart(self.params)
+        self._base64 = calvinlib.use('base64')
 
     def did_migrate(self):
         self.setup()
 
-    @stateguard(lambda self: self.req_in_progress and self.chart_api.image_available())
+    @stateguard(lambda self: calvinsys.can_read(self._chart))
     @condition([], ['b64image'])
     def handle_response(self):
-        handle = self.req_in_progress.pop(0)
-        image = self.chart_api.receive_image(handle)
-        img_str = self['image'].to_string(image, "PNG")
-        result = self.base64.encode(img_str)
+        img_str = calvinsys.read(self._chart)
+        result = self._base64.encode(img_str)
 
         return (result, )
 
-    @stateguard(lambda self: len(self.req_in_progress) <= self.max_req_in_progress)
+    @stateguard(lambda self: calvinsys.can_write(self._chart))
     @condition(['label', 'value'], [])
     def send_request(self, label, value):
         self.labels.pop(0)
@@ -79,24 +69,19 @@ class DynamicVBar(Actor):
         self.labels.insert(self.dimension, label)
         self.values.insert(self.dimension, value)
 
-        if self.left_to_right:
-            self.chart_api.set_axes_label([0] + self.labels[::-1])
-            self.chart_api.set_chart_dataset(self.values[::-1])
-        else:
-            self.chart_api.set_axes_label([0] + self.labels)
-            self.chart_api.set_chart_dataset(self.values)
+        calvinsys.write(self._chart, {'labels': self.labels, 'values': self.values})
 
-        handle = self.chart_api.request_image()
-        self.req_in_progress.append(handle)
+
+
 
     action_priority = (handle_response, send_request, )
-    requires = ['calvinsys.media.image', 'base64', 'calvinsys.charts.chart_handler']
+    requires = ['base64', 'chart.dynamic.vbar']
 
-#    TBD: Reenable test after updating to use new calvinsys API
-#    test_set = [
-#        {
-#            'inports': {'label': [],
-#                        'value': []},
-#            'outports': {'b64image': []}
-#        }
-#    ]
+    test_calvinsys = {'io.chart': {'read': ["dummy"]}}
+    test_set = [
+        {
+            'inports': {'label': [],
+                        'value': []},
+            'outports': {'b64image': ["ZHVtbXk="]}
+        }
+    ]

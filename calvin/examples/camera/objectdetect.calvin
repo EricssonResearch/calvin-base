@@ -5,6 +5,6 @@ detect: media.ObjectCounter()
 sink : io.Print()
 
 tick.data > cam.trigger
-# cam.image > sink.b64image
-cam.image > detect.b64image
+# cam.b64image > sink.b64image
+cam.b64image > detect.b64image
 detect.objects > sink.token

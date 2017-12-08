@@ -22,15 +22,10 @@ depends on an implementation in autobahn. Install it using:
 
 ### Calvin configuration
 
-The following plugins needs to be loaded to run this script:
-- chart_plugin
-- websocket_plugin
-
-A `calvin.conf` file is prepared for this purpose. For the `calvin.conf` to be
-loaded, start the calvin script from within the directory the `calvin.conf`
-file is placed. For other ways of loading the configuration, please see
-the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/calvin-base/wiki/Configuration)
-
+A `calvin.conf` file has been prepared for loading necessary capabilities.
+For the `calvin.conf` to be loaded, start the calvin script from within the
+directory the `calvin.conf` file is placed. For other ways of loading the
+configuration, please see the Calvin Wiki page about [Configuration](https://github.com/EricssonResearch/calvin-base/wiki/Configuration)
 
 ## Running
 

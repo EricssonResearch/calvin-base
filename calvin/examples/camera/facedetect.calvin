@@ -4,5 +4,5 @@ detect: media.FaceCounter()
 sink : io.Print()
 
 tick.data > cam.trigger
-cam.image > detect.b64image
+cam.b64image > detect.b64image
 detect.objects > sink.token

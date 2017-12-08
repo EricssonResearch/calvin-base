@@ -14,15 +14,15 @@ define CHART_PARAMETERS = {"chart_title": "A Horizontal Bar Chart",
 /////////////////////////////////////////////////
 chart : chart.DynamicHBar(chart_param=CHART_PARAMETERS)
 screen : media.ImageSink()
-trigger : std.Trigger(data=true, tick=1.0)
+counter : std.CountTimer(sleep=1)
 random : math.RandomInteger(lower=1, upper=101)
 
 
 /////////////////////////////////////////////////
 //                  Main script                //
 /////////////////////////////////////////////////
-trigger.data > chart.label
-trigger.data > random.trigger
+counter.integer > chart.label
+counter.integer > random.trigger
 
 random.integer > chart.value
-chart.img > screen.b64image
+chart.b64image > screen.b64image

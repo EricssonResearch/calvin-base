@@ -3,7 +3,7 @@ cam : media.ImageSource()
 sink : media.ImageSink()
 
 tick.data > cam.trigger
-cam.image > sink.b64image
+cam.b64image > sink.b64image
 
 rule here : runtime_name(name="sthlm")
 rule there : runtime_name(name="lund")

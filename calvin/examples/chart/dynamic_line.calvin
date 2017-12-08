@@ -12,16 +12,16 @@ define CHART_PARAMETERS = {"chart_title": "A Simple Line Chart",
 /////////////////////////////////////////////////
 chart : chart.DynamicLine(chart_param=CHART_PARAMETERS)
 screen : media.ImageSink()
-trigger : std.Trigger(data=true, tick=1.0)
+counter : std.CountTimer(sleep=1)
 random : math.RandomInteger(lower=25, upper=76)
 
 
 /////////////////////////////////////////////////
 //                  Main script                //
 /////////////////////////////////////////////////
-trigger.data > chart.label
+counter.integer > chart.label
 
-trigger.data > random.trigger
+counter.integer > random.trigger
 random.integer > chart.value
 
-chart.img > screen.b64image
+chart.b64image > screen.b64image

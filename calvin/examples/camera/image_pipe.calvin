@@ -3,4 +3,4 @@ cam : media.ImageSource()
 sink : media.ImageSink()
 
 tick.data > cam.trigger
-cam.image > sink.b64image
+cam.b64image > sink.b64image

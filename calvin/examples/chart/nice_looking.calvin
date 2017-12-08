@@ -46,4 +46,4 @@ time.out > chart.label
 trigger.data > random.trigger
 random.integer > chart.value
 
-chart.img > screen.b64image
+chart.b64image > screen.b64image

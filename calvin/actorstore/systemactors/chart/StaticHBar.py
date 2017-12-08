@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.utilities.calvinlogger import get_actor_logger
-from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib, calvinsys
 
 _log = get_actor_logger(__name__)
 
@@ -26,66 +26,51 @@ class StaticHBar(Actor):
 
     chart_param:   Initial settings for the chart specific parameters
     dimension:     The number of accumulated values to show simultaneously
-    max_req_in_progress: Max nbr of async threads for requesting chart images
 
     Inputs:
       values: list of values
       labels: list of labels
 
     Outputs:
-      b64image : base64 representation of the chart. After decoding, use from_string() \
-            in the image library to unpack the image.
+      b64image : base64 representation of the chart.
     """
 
-    @manage(['params', 'dimension', 'max_req_in_progress', 'labels', 'values'])
-    def init(self, chart_param={}, dimension=8, max_req_in_progress=5):
-        self.params = chart_param
+    @manage(['dimension', 'labels', 'values', '_chart'])
+    def init(self, chart_param={}, dimension=8):
         self.dimension = dimension
-        self.max_req_in_progress = max_req_in_progress
         self.labels = self.dimension*['']
         self.values = self.dimension*[0]
+        self._chart = calvinsys.open(self, 'chart.static.hbar', chart_param=chart_param)
 
         self.setup()
 
     def setup(self):
-        self.req_in_progress = []
-        self.use("calvinsys.media.image", shorthand="image")
-        self.base64 = calvinlib.use('base64')
-        self.use('calvinsys.charts.chart_handler', shorthand="chart")
-        self.chart_api = self['chart'].create_hbar_chart(self.params)
+        self._base64 = calvinlib.use('base64')
 
     def did_migrate(self):
         self.setup()
 
-    @stateguard(lambda self: self.req_in_progress and self.chart_api.image_available())
+    @stateguard(lambda self: calvinsys.can_read(self._chart))
     @condition([], ['b64image'])
     def handle_response(self):
-        handle = self.req_in_progress.pop(0)
-        image = self.chart_api.receive_image(handle)
-        img_str = self['image'].to_string(image, "PNG")
-        result = self.base64.encode(img_str)
+        img_str = calvinsys.read(self._chart)
+        result = self._base64.encode(img_str)
 
         return (result, )
 
-    @stateguard(lambda self: len(self.req_in_progress) <= self.max_req_in_progress)
+    @stateguard(lambda self: calvinsys.can_write(self._chart))
     @condition(['values', 'labels'], [])
     def send_request(self, values, labels):
-        self.chart_api.set_chart_dataset(values)
-
-        # Note, assumes axes_type "xxyy" are used:
-        self.chart_api.set_axes_label([2] + labels[::-1])
-
-        handle = self.chart_api.request_image()
-        self.req_in_progress.append(handle)
+        calvinsys.write(self._chart, {'labels': labels, 'values': values})
 
     action_priority = (handle_response, send_request, )
-    requires = ['calvinsys.media.image', 'base64', 'calvinsys.charts.chart_handler']
+    requires = ['base64', 'chart.static.hbar']
 
-#    TBD: Reenable test after updating to use new calvinsys API
-#    test_set = [
-#        {
-#            'inports': {'labels': [],
-#                        'values': []},
-#            'outports': {'b64image': []}
-#        }
-#    ]
+    test_calvinsys = {'io.chart': {'read': ["dummy"]}}
+    test_set = [
+        {
+            'inports': {'labels': [],
+                        'values': []},
+            'outports': {'b64image': ["ZHVtbXk="]}
+        }
+    ]

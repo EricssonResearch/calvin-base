@@ -4,5 +4,5 @@ detect: media.ObjectFinder()
 sink : media.ImageSink()
 
 tick.data > cam.trigger
-cam.image > detect.b64image
+cam.b64image > detect.b64image
 detect.b64image > sink.b64image

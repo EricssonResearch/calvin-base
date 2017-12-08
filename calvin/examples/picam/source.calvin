@@ -2,4 +2,4 @@ tick : std.Trigger(data=true, tick=5)
 cam : media.ImageSource()
 
 tick.data > cam.trigger
-cam.image > voidport
+cam.b64image > voidport

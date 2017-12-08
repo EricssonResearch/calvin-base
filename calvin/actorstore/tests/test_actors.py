@@ -440,7 +440,7 @@ def setup_calvinsys():
         "web.websocket.broadcast": {
             "module": "mock.MockOutput",
             "attributes": {}
-        },
+       },
 
 
         "sys.timer.once": {
@@ -515,6 +515,31 @@ def setup_calvinsys():
             "module": "mock.MockInputOutput",
             "attributes": {"data": ["dummy"]}
         },
+        "chart.dynamic.meter": {
+            "module": "mock.MockInputOutput",
+            "attributes": {"data": ["dummy"]}
+        },
+        "chart.static.vbar": {
+            "module": "mock.MockInputOutput",
+            "attributes": {"data": ["dummy"]}
+        },
+        "chart.dynamic.vbar": {
+            "module": "mock.MockInputOutput",
+            "attributes": {"data": ["dummy"]}
+        },
+        "chart.static.hbar": {
+            "module": "mock.MockInputOutput",
+            "attributes": {"data": ["dummy"]}
+        },
+        "chart.dynamic.hbar": {
+            "module": "mock.MockInputOutput",
+            "attributes": {"data": ["dummy"]}
+        },
+        "chart.dynamic.line": {
+            "module": "mock.MockInputOutput",
+            "attributes": {"data": ["dummy"]}
+        }
+
 
 
 
