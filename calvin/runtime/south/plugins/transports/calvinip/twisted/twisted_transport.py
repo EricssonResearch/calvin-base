@@ -58,7 +58,7 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
             _log.debug("TwistedCalvinServer with TLS chosen")
             try:
                 self._runtime_credentials = runtime_credentials.RuntimeCredentials(self._node_name)
-                ca_cert_list_str, ca_cert_list_x509, truststore =certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
+                ca_cert_list_str =certificate.get_truststore_as_list_of_strings(certificate.TRUSTSTORE_TRANSPORT)
                 for ca_cert in ca_cert_list_str:
                     trusted_ca_certs.append(ssl.Certificate.loadPEM(ca_cert))
                 server_credentials_data = self._runtime_credentials.get_credentials()
@@ -199,7 +199,7 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
             trusted_ca_certs = []
             try:
                 self._runtime_credentials = runtime_credentials.RuntimeCredentials(self._node_name)
-                ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
+                ca_cert_list_str = certificate.get_truststore_as_list_of_strings(certificate.TRUSTSTORE_TRANSPORT)
                 for ca_cert in ca_cert_list_str:
                     trusted_ca_certs.append(crypto.load_certificate(crypto.FILETYPE_PEM, ca_cert))
                 ca_certs = OpenSSLCertificateAuthorities(trusted_ca_certs)

@@ -35,6 +35,7 @@ from calvin.utilities import calvinconfig
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import get_home
 from calvin.utilities import certificate
+from calvin.utilities.certificate import Certificate
 from calvin.utilities.calvin_callback import CalvinCB
 
 _log = get_logger(__name__)
@@ -99,7 +100,7 @@ class RuntimeCredentials():
 #                            'certificate': '$dir/mine/cert.pem',
                             'private_dir': '$dir/private/',
                             'new_certs_dir': '$dir/newcerts',
-                            'private_key': '$dir/private/ca.key',
+                            'private_key': '$dir/private/ca.key ',
                             'runtimes_dir': '$dir/runtimes',
                             'email_in_dn': 'no',
                             'x509_extensions': 'usr_cert',
@@ -136,7 +137,9 @@ class RuntimeCredentials():
         self.runtime_dir=None
         self.private_key=None
         self.cert=None
+        self.cert_str=None
         self.cert_name=None
+        self.cert_path=None
         self.configfile = None
         self.config=ConfigParser.SafeConfigParser()
         self.configuration=None
@@ -149,7 +152,8 @@ class RuntimeCredentials():
         #Create generic runtimes folder and trust store folders
         self.security_dir=security_dir
         self.truststore_for_transport=None
-        runtimes_dir = certificate.get_runtimes_credentials_path(security_dir=self.security_dir)
+        self.certificate = Certificate(security_dir=security_dir)
+        runtimes_dir = self.certificate.runtimes_dir
         if not os.path.isdir(runtimes_dir):
             try:
                 os.makedirs(runtimes_dir)
@@ -206,6 +210,7 @@ class RuntimeCredentials():
             self.runtime_dir=self.configuration['RT_default']['dir']
             self.private_key=self.configuration['RT_default']['private_key']
             self.cert=None
+            self.cert_str=None
         else:
             _log.debug("Runtime openssl.conf does not exist, let's create it")
             self.domain = self.get_domain(domain=domain)
@@ -221,11 +226,12 @@ class RuntimeCredentials():
                 _log.error("creation of new runtime credentials failed")
                 raise
         self.cert_name = self.get_own_cert_name()
+        self.cert_path = self.get_own_cert_path()
 
     def get_credentials_path(self):
         """Return the full path of the node's own certificate"""
         _log.debug("__init__::get_credentials_path, security_dir={}".format(self.security_dir))
-        return os.path.join(certificate.get_runtimes_credentials_path(security_dir=self.security_dir), self.node_name)
+        return os.path.join(self.certificate.runtimes_dir, self.node_name)
 
     def _new_opensslconf(self):
         """
@@ -411,7 +417,7 @@ class RuntimeCredentials():
             _log.debug("Look for runtimes own certificate {} in {{mine}} folder, err={}".format(cert_name, err))
             try:
                 certpath = self.get_own_cert_path()
-                certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath, security_dir=self.security_dir)
+                self.certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath)
                 with open(certpath, 'rb') as fd:
                     certstr=fd.read()
                 return certstr
@@ -425,7 +431,7 @@ class RuntimeCredentials():
                 files = os.listdir(os.path.join(self.runtime_dir, "others"))
                 matching = [s for s in files if cert_name in s]
                 certpath = os.path.join(self.runtime_dir, "others", matching[0])
-                certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath, security_dir=self.security_dir)
+                self.certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath)
                 with open(certpath, 'rb') as fd:
                     certstr=fd.read()
                 return certstr
@@ -476,8 +482,7 @@ class RuntimeCredentials():
     def verify_certificate(self, cert_str, type, store_cert=False):
 #        _log.debug("verify_certificate:\n\tcert_str={}\n\ttype={}".format(cert_str, type))
         try:
-            cert = certificate.verify_certificate(type, cert_str, security_dir=self.security_dir)
-            return cert
+            return self.certificate.verify_certificate_str(type, cert_str)
         except Exception as err:
             _log.error("Failed to verify certificate, err={}".format(err))
             raise
@@ -637,15 +642,17 @@ class RuntimeCredentials():
         return cert.public_key()
 
 
-    def store_trusted_root_cert(self, cert_file, trusted_root):
+    def store_trusted_root_cert(self, cert_file, type):
         """
         Copy the certificate giving it the name that can be stored in
         trustStore for verification of signatures.
         file is the out file
 
         """
-        return certificate.store_trusted_root_cert(cert_file, trusted_root,
-                                                   security_dir=self.security_dir)
+        if type==certificate.TRUSTSTORE_TRANSPORT:
+            return self.certificate.truststore_transport.store_trusted_root_cert(cert_file)
+        elif type==certificate.TRUSTSTORE_SIGN:
+            return self.certificate.truststore_sign.store_trusted_root_cert(cert_file)
 
 
 
@@ -662,6 +669,7 @@ class RuntimeCredentials():
 #        self.configuration['RT_default']['certificate'] = path
 #        self.update_opensslconf()
         self.cert_name = self.get_own_cert_name()
+        self.cert_path = self.get_own_cert_path()
         return path
 
     def others_cert_stored(self, certstring):
@@ -735,17 +743,13 @@ class RuntimeCredentials():
             ca_cert_list_x509: list of CA certificate as OpenSSL certificate objects
             truststore: OpenSSL X509 store object with trusted CA certificates
         """
-        return certificate.get_truststore(type, security_dir=self.security_dir)
+        return self.certificate.get_truststore(type, security_dir=self.security_dir)
 #        ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(type, 
 #                                                    security_dir=self.security_dir)
 #        return ca_cert_list_str, ca_cert_list_x509, truststore
 
     def get_truststore_path(self, type):
-        return certificate.get_truststore_path(type, security_dir=self.security_dir)
-
-    def get_trusted_CA_cert(self, type, domain_name):
-        return certificate.get_trusted_CA_cert(type, domain_name, security_dir=self.security_dir)
-
+        return self.certificate.get_truststore_path(type)
 
     def remove_runtime(self):
         shutil.rmtree(self.runtime_dir,ignore_errors=True)

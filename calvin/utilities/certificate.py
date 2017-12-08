@@ -289,19 +289,6 @@ def store_trusted_root_cert(cert_file, type, security_dir=None):
     shutil.copy(cert_file, store_dir)
     return
 
-def get_trusted_CA_cert(type, domain_name, security_dir=None):
-    truststore_path = get_truststore_path(type, security_dir=security_dir)
-    ca_cert_path = os.path.join(truststore_path, domain_name+".pem")
-    if not os.path.isfile(ca_cert_path):
-        return None
-    try:
-        with open(ca_cert_path,'r') as fd:
-            certstr = fd.read()
-    except Exception as err:
-        _log.error("Failed when trying to read the CA cert, err={}".format(err))
-        raise Exception("Failed when trying to read the CA cert")
-    return certstr
-
 def get_security_credentials_path(security_dir=None):
     """Return the path to the folder with all security credentials"""
 #    _log.debug("get_security_credentials_path, security_dir={}".format(security_dir))
@@ -360,6 +347,34 @@ def load_certdata(certdata):
         raise Exception("certificate is malformed")
     return certdata
 
+def get_truststore_as_list_of_strings(type, security_dir=None):
+    """
+    Returns the truststore for the type of usage as list of
+    certificate strings, a list of OpenSSL objects and as a 
+    OpenSSL truststore object
+    Args:
+        type: either of [ceritificate.TRUSTSTORE_SIGN, certificate.TRUSTSTORE_TRANSPORT]
+        security_dir: path to security directory, if other than default value (OPTIONAL)
+    Return values:
+        ca_cert_list_str: list of CA certitificate in string format
+    """
+#    _log.debug("get_truststore: type={}".format(type))
+    ca_cert_list_str = []
+    try:
+        truststore_path = get_truststore_path(type, security_dir=security_dir)
+        ca_files = [f for f in os.listdir(truststore_path) if not f.startswith('.')]
+        for file_name in ca_files:
+            if file_name.endswith(".pem"):
+                filepath = os.path.join(truststore_path, file_name)
+                with open(filepath, 'rb') as f:
+                    cert_str = f.read()
+                    ca_cert_list_str.append(cert_str)
+    except Exception as err:
+        _log.error("Failed to load truststore = %s",err)
+        raise
+    return ca_cert_list_str
+
+#Deprecated, to be removed
 def get_truststore(type, security_dir=None):
     """
     Returns the truststore for the type of usage as list of
@@ -639,4 +654,216 @@ def decrypt_object_with_RSA(private_key, password, encrypted_object):
     #Unwrap the plaintext using symmetric cryptography
     plaintext = _unwrap_object_with_symmetric_key(wrapped_object)
     return plaintext
+
+class TrustStore():
+    def __init__(self, truststore_dir):
+        self.truststore_dir=truststore_dir
+        self.truststore = self._initialize_truststore()
+
+    def _initialize_truststore(self):
+        truststore = OpenSSL.crypto.X509Store()
+        try:
+            ca_files = [f for f in os.listdir(self.truststore_dir) if not f.startswith('.')]
+            for file_name in ca_files:
+                if file_name.endswith(".pem"):
+                    filepath = os.path.join(self.truststore_dir, file_name)
+                    with open(filepath, 'rb') as f:
+                        cert_str = f.read()
+                        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_str)
+                        truststore.add_cert(cert)
+        except Exception as err:
+            _log.error("Failed to load truststore = %s",err)
+            raise
+        return truststore
+
+    def _get_truststore_context(self, certificate):
+        """
+        Returns a OpenSSL truststore context usefull for verification of X.509 certificate verification
+        Args:
+            certificate: certificate to be verified, should be OpenSSL X509 object
+        Return values:
+            truststore_ctx: OpenSSL X509 store context object with trusted CA certificates
+        """
+        try:
+            store_ctx = OpenSSL.crypto.X509StoreContext(self.truststore, certificate)
+            return store_ctx
+        except Exception as e:
+            _log.error("_get_truststore_context::Failed to create X509StoreContext: %s" % e)
+            raise
+
+    def verify_certificate_from_path(self, certpath):
+        try:
+            with open(certpath, 'rb') as fd:
+                certstring = fd.read()
+        except Exception as err:
+            _log.error("verify_certificate_from_path::Failed to open certificate, err={}".format(err))
+        return verify_certificate_str(certstring)
+
+    def verify_certificate_str(self, certstring):
+        """Verify certificate using the CA certificate"""
+    #    _log.debug("verify_certificate: \n\tcertstring={}".format(certstring))
+        try:
+            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstring)
+        except Exception as e:
+            _log.error("verify_certificate_str::Failed to load certstring: certstring={}, error={}".format(certstring, e))
+            raise Exception("verify_certificate_str::Failed to load certstring")
+        return self.verify_certificate(cert)
+
+    def verify_certificate(self, cert):
+        """Verify certificate using the CA certificate
+        Args:
+            cert: a X509 PyOpenSSL object
+        Return values:
+
+            """
+    #    _log.debug("verify_certificate: \n\tcertstring={}".format(certstring))
+        subject = cert.get_subject()
+        serial = cert.get_serial_number()
+        if cert.has_expired():
+            _log.error("Certificate has expired")
+            raise CertificateInvalid("Certificate has expired.")
+        if serial < 0:
+            _log.error("Serial number was negative")
+            raise CertificateDeniedMalformed("Serial number was negative.")
+        try:
+            self._verify_cert_with_policy(cert)
+            cert.get_signature_algorithm()  # TODO: Check sig alg strength
+        except ValueError as err:
+            _log.error("Unknown signature algorithm, err={}".format(err))
+            raise CertificateDeniedMalformed("Unknown signature algorithm.")
+        # Verify the certificate chain using truststore.
+        try:
+            self._verify_certificate_chain(cert)
+        except Exception as e:
+            _log.error("Failed to create X509StoreContext: %s" % e)
+            raise
+
+    def _verify_cert_with_policy(self, cert):
+        pubkey = cert.get_pubkey()
+        if pubkey.type() is TYPE_ECC and pubkey.bits() < 256:
+            raise CertificateDeniedConfiguration("Too small ECC key in cert.")
+        if pubkey.type() is OpenSSL.crypto.TYPE_RSA and pubkey.bits < 2048:
+            raise CertificateDeniedConfiguration("Too small RSA key in cert.")
+        if pubkey.type() is OpenSSL.crypto.TYPE_DSA and pubkey.bits < 2048:
+            raise CertificateDeniedConfiguration("Too small DSA key in cert.")
+
+    def _verify_certificate_chain(self, certificate):
+        """
+        Verifies a certificate chain using the truststore. Raise exception
+        if verification fails
+        Args:
+            certificate: certificate to be verified, should be OpenSSL X509 object
+        """
+        store_ctx = self._get_truststore_context(certificate)
+        try:
+            store_ctx.verify_certificate()
+        except Exception as e:
+            _log.error("Failed to verify certificate:"
+                       "\n\terr={}"
+                       "".format(err))
+
+    def store_trusted_root_cert(self, cert_file):
+        """
+        Copy the certificate giving it the name that can be stored in
+        trustStore for verification of signatures.
+        file is the out file
+
+        """
+        try:
+            certificate_hash = cert_hash(certpath=cert_file)
+        except:
+            _log.error("Failed to get certificate hash")
+            raise Exception("Failed to get certificate hash")
+        name = os.path.basename(cert_file)
+        new_path = os.path.join(self.truststore_dir, name)
+        shutil.copy(cert_file, self.truststore_dir)
+        self._ce_rehash_file(new_path)
+        return
+
+    def _c_rehash_file(self, path):
+        """
+        """
+        if path.endswith(".pem"):
+            try:
+                certificate_hash = cert_hash(path)
+            except Exception as err:
+                print "Failed to get certificate hash, err={}".format(err)
+                _log.error("Failed to get certificate hash, err={}".format(err))
+                raise Exception("Failed to get certificate hash")
+            i=0
+            filename_exist=True
+            #if filename collides with another certificate, increase last number
+            #E.g., if two certificates get same has, the first file is name <cert_hash>.0
+            # and the second <cert_hash>.1
+            while filename_exist:
+                out_file = os.path.join(path, certificate_hash+"."+`i`)
+                if os.path.isfile(out_file):
+                    i += 1
+                else:
+                    filename_exist=False
+            os.symlink(path, out_file)
+            return
+        else:
+            raise Exception("File does not exist or does not have a .pem")
+
+    def c_rehash(self):
+        """
+        Copy the certificate giving it the name that can be stored in
+        trustStore for verification of signatures.
+        file is the out file
+        -certpath: path of the certificate to be exported
+        -path: directory where the cert will be exported to
+        """
+        for filename in os.listdir(self.truststore_dir):
+            self._c_rehash_file(filename)
+        return
+
+class Certificate():
+    def __init__(self, security_dir=None):
+        homefolder = get_home()
+        default_path = os.path.join(homefolder, ".calvin", "security")
+        self.security_dir = security_dir if security_dir else self._get_security_credentials_path()
+        self.runtimes_dir = os.path.join(self.security_dir, "runtimes")
+        self.truststore_transport_dir = os.path.join(self.runtimes_dir, TRUSTSTORE_TRANSPORT)
+        if not os.path.isdir(self.truststore_transport_dir):
+            try:
+                os.makedirs(self.truststore_transport_dir)
+            except OSError:
+                pass
+        self.truststore_sign_dir = os.path.join(self.runtimes_dir, TRUSTSTORE_SIGN)
+        if not os.path.isdir(self.truststore_sign_dir):
+            try:
+                os.makedirs(self.truststore_sign_dir)
+            except OSError:
+                pass
+        self.truststore_transport = TrustStore(self.truststore_transport_dir)
+        self.truststore_sign = TrustStore(self.truststore_sign_dir)
+
+    def _get_security_credentials_path(self):
+        security_dir_in_conf = _conf.get("security", "security_dir")
+        if security_dir_in_conf:
+            return security_dir_in_conf
+        else:
+            homefolder = get_home()
+            return os.path.join(homefolder, ".calvin", "security")
+
+    def get_runtimes_credentials_path(self):
+        return self.runtimes_dir
+
+    def get_truststore_path(self, type):
+        if type==TRUSTSTORE_TRANSPORT:
+            return self.truststore_transport_dir
+        elif type==TRUSTSTORE_SIGN:
+            return self.truststore_sign_dir
+        else:
+           raise Exception("trust store type does not exist")
+
+    def verify_certificate_str(self, type, cert_str):
+        if type==TRUSTSTORE_TRANSPORT:
+            return self.truststore_transport.verify_certificate_str(cert_str)
+        elif type==TRUSTSTORE_SIGN:
+            return self.truststore_sign.verify_certificate_str(cert_str)
+        else:
+           raise Exception("trust store type does not exist")
+
 
