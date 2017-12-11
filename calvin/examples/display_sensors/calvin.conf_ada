@@ -2,7 +2,7 @@
     "calvinsys": {
         "capabilities": {
             "io.stdout": {
-                "module": "io.adafruit16x2lcd.Display",
+                "module": "io.adafruit16x2lcd.raspberry_pi.NOplate",
                 "attributes": {}
             }
         }

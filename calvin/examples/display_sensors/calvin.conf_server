@@ -1,6 +1,10 @@
 {
-  "global": {
-    "display_plugin": "stdout_impl",
-    "actor_paths": ["./devactors"]
-  }
+    "calvinsys": {
+        "capabilities": {
+            "io.stdout": {
+                "module": "term.StandardOut",
+                "attributes": {}
+            }
+        }
+    }
 }

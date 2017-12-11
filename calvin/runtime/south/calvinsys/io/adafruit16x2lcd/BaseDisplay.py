@@ -15,11 +15,11 @@
 # limitations under the License.
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-import calvin.runtime.south.plugins.io.display.platform.raspberry_pi.adafruitcharlcdNOplate_impl.display as display
 
-class Display(base_calvinsys_object.BaseCalvinsysObject):
+
+class BaseDisplay(base_calvinsys_object.BaseCalvinsysObject):
     """
-    Display messages on AdaFruit 16x2 LCD display (without back plate) 
+    Display messages on AdaFruit 16x2 LCD display (without back plate)
     """
 
     init_schema = {
@@ -38,18 +38,3 @@ class Display(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Set message to display",
         "type": ["boolean", "integer", "number", "string", "array", "object", "null"]
     }
-
-    def init(self, prefix=None, **kwargs):
-        self._prefix = prefix
-        self.display = display.Display()
-        self.display.enable(True)
-
-    def can_write(self):
-        return True
-
-    def write(self, data=None):
-        self.display.show_text(str(data))
-
-    def close(self):
-        self.display.enable(False)
-        self.display.clear()

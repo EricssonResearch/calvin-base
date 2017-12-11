@@ -29,18 +29,22 @@ The example assumes the following devices:
 Rename the relevant config file on each device to calvin.conf
 
 For the Adafruit Character LCD the calvin.conf is set to use 
-Adafruit Character LCD with plate. I.e. `Adafruit_CharLCDPlate`.
-If `Adafruit_CharLCD` (_no plate_) is requested, change the
+Adafruit Character LCD with no plate. I.e. `Adafruit_CharLCD`.
+If `Adafruit_CharLCDPlate` (_with plate_) is requested, change the
 calvin.conf to:
 
     {
-      "global": {
-        "display_plugin": "platform/raspberry_pi/adafruitcharlcdNOplate_impl",
-        "actor_paths": ["./devactors"]
-      }
+        "calvinsys": {
+            "capabilities": {
+                "io.stdout": {
+                    "module": "io.adafruit16x2lcd.raspberry_pi.Plate",
+                    "attributes": {}
+                }
+            }
+        }
     }
 
-Note that if using the adafruitcharlcdNOplate_impl, the pins are hardcoded to:
+Note that when using __NOplate__, the pins are hardcoded to:
 
     lcd_rs=26
     lcd_en=21
