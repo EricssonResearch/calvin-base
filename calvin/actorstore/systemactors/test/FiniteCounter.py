@@ -38,12 +38,13 @@ class FiniteCounter(Actor):
         self.replicate_mult = replicate_mult
         self.stopped = stopped
 
-    def will_replicate(self, state):
-        if state.replication_count > 0 and self.replicate_mult:
-            m = state.replication_count + 1
-        else:
-            m = 1
-        state.count = self.start * m
+    def did_replicate(self, index):
+        diff = self.start * index if self.replicate_mult else 0
+        # Offset by diff for each new replica
+        self.start += diff
+        self.count += diff
+        self.ends += diff
+        self.restart += diff
 
     @stateguard(lambda self: not self.stopped and self.count < self.ends)
     @condition(action_output=['integer'])

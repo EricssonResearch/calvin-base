@@ -172,7 +172,7 @@ def rt_order3(request):
 
 @pytest.mark.slow
 class TestManualReplication(object):
-    def testManualReplication(self, rt_order3):
+    def testManualNormalReplication(self, rt_order3):
         _log.analyze("TESTRUN", "+", {})
         script = """
             src   : std.CountTimer(sleep=0.03)
@@ -189,7 +189,7 @@ class TestManualReplication(object):
         rt1 = rt_order3[0]
         rt2 = rt_order3[1]
         rt3 = rt_order3[2]
-        runtimes = [rt1, rt2, rt3]
+        rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
         print response
@@ -198,15 +198,28 @@ class TestManualReplication(object):
         asum = response['actor_map']['testScript:sum']
         snk = response['actor_map']['testScript:snk']
 
-        migrate(rt1, rt2, asum)
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        asum_rt = rt_by_id[response['placement'][asum][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+
+        # Move src & snk back to first and place sum on second
+        migrate(src_rt, rt1, src)
+        migrate(asum_rt, rt2, asum)
+        migrate(snk_rt, rt1, snk)
 
         time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
 
         counter = 0
         fails = 0
         while counter < 4 and fails < 20:
             try:
-                result = request_handler.replicate(rt1, replication_id=response['replication_map']['testScript:sum'], dst_id=rt3.id)
+                result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:sum'], dst_id=rt3.id)
                 counter += 1
                 fails = 0
             except:
@@ -214,16 +227,10 @@ class TestManualReplication(object):
                 time.sleep(0.1)
         print "REPLICATED", counter, fails
         assert counter == 4
-        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
-        print replication_data
-        leader_id = replication_data['leader_node_id']
-        leader_node = request_handler.get_node(rt1, leader_id)
-        print leader_node
-        leader_uri = leader_node['control_uris'][0]
         replicas = []
         fails = 0
         while len(replicas) < counter and fails < 20:
-            replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
             fails += 1
             time.sleep(0.1)
         assert len(replicas) == counter
@@ -238,12 +245,12 @@ class TestManualReplication(object):
         keys = set([k.keys()[0] for k in actual])
         print keys
         print [k.values()[0] for k in actual]
-        result = request_handler.replicate(leader_uri, replication_id=response['replication_map']['testScript:sum'], dereplicate=True)
+        result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:sum'], dereplicate=True)
         print "DEREPLICATION RESULT:", result
         time.sleep(0.3)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
         print [k.values()[0] for k in actual]
-        replicas = request_handler.get_index(leader_uri, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+        replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
         print "REPLICAS", replicas
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
@@ -252,6 +259,210 @@ class TestManualReplication(object):
         print actors_left
         assert src not in actors_left
         assert asum not in actors_left
+        assert snk not in actors_left
+        for r in replicas:
+            assert r not in actors_left
+
+    def testManualReplicationDidReplicate(self, rt_order3):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : test.FiniteCounter(start=10000, replicate_mult=true)
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            snk.token(routing="collect-tagged")
+            src.integer > snk.token
+            rule manual: manual_scaling()
+            apply src: manual
+        """
+
+        rt1 = rt_order3[0]
+        rt2 = rt_order3[1]
+        rt3 = rt_order3[2]
+        rt_by_id = {r.id: r for r in runtimes}
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        snk = response['actor_map']['testScript:snk']
+
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+
+        time.sleep(1)
+
+        # Move src & snk back to first and place sum on second
+        migrate(src_rt, rt1, src)
+        migrate(snk_rt, rt1, snk)
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:src'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
+
+        counter = 0
+        fails = 0
+        while counter < 4 and fails < 20:
+            try:
+                result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:src'], dst_id=rt3.id)
+                counter += 1
+                fails = 0
+            except:
+                fails += 1
+                time.sleep(0.1)
+        print "REPLICATED", counter, fails
+        assert counter == 4
+        replicas = []
+        fails = 0
+        while len(replicas) < counter and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:src'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.1)
+        assert len(replicas) == counter
+        print "REPLICAS", replicas
+        print "ORIGINAL:", request_handler.get_actor(rt1, src)
+        for r in replicas:
+            print "REPLICA:", request_handler.get_actor(rt1, r)
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        time.sleep(0.4)
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        keys = set([k.keys()[0] for k in actual])
+        print keys
+        #print [k.values()[0] for k in actual]
+        result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:src'], dereplicate=True)
+        print "DEREPLICATION RESULT:", result
+        time.sleep(0.3)
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        #print [k.values()[0] for k in actual]
+        counters = {p:[] for p in set([k.keys()[0] for k in actual])}
+        for p in counters.keys():
+            counters[p] = [k.values()[0] for k in actual if k.keys()[0] == p]
+        #print counters
+        countersmm = {p: (min(v), max(v)) for p, v in counters.items()}
+        # All min and max belongs in same 10000 range
+        assert all([v[0]/10000 == v[1]/10000 for v in countersmm.values()])
+        # All 5 10000 ranges included
+        assert len(set([v[0]/10000 for v in countersmm.values()])) == 5
+        print "MAX MIN", countersmm
+        replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:src'], root_prefix_level=3)['result']
+        print "REPLICAS", replicas
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert snk not in actors_left
+        for r in replicas:
+            assert r not in actors_left
+
+    def testManualReplicationShadow(self, rt_order3):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            shadow : test.FakeShadow()
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > shadow.token
+            shadow.token > snk.token
+            rule manual: manual_scaling()
+            apply shadow: manual
+        """
+
+        rt1 = rt_order3[0]
+        rt2 = rt_order3[1]
+        rt3 = rt_order3[2]
+        rt_by_id = {r.id: r for r in runtimes}
+
+        app_info, issuetracker = compiler.compile_script(script, "testScript")
+        if issuetracker.error_count:
+            _log.warning("Calvinscript contained errors:")
+            _log.warning(issuetracker.formatted_issues())
+        #print "APP_INFO", app_info
+
+        deploy_info, ds_issuestracker = calvin_dscodegen(script, "testScript")
+        if ds_issuestracker.error_count:
+            _log.warning("Deployscript contained errors:")
+            _log.warning(ds_issuestracker.formatted_issues())
+            deploy_info = None
+        elif not deploy_info['requirements']:
+            deploy_info = None
+        #print "DEPLOY_INFO", deploy_info
+
+        response = request_handler.deploy_app_info(rt1, "testScript", app_info, deploy_info)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        shadow = response['actor_map']['testScript:shadow']
+        snk = response['actor_map']['testScript:snk']
+
+        time.sleep(1)
+
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        src_rt = runtimes[map(lambda x: src in x, actor_place).index(True)]
+        shadow_rt = runtimes[map(lambda x: shadow in x, actor_place).index(True)]
+        snk_rt = runtimes[map(lambda x: snk in x, actor_place).index(True)]
+
+        # Move src & snk back to first and place shadow on second
+        migrate(src_rt, rt1, src)
+        migrate(shadow_rt, rt2, shadow)
+        migrate(snk_rt, rt1, snk)
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:shadow'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
+
+        counter = 0
+        fails = 0
+        while counter < 4 and fails < 20:
+            try:
+                result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:shadow'], dst_id=rt3.id)
+                counter += 1
+                fails = 0
+            except:
+                fails += 1
+                time.sleep(0.1)
+        print "REPLICATED", counter, fails
+        assert counter == 4
+        replicas = []
+        fails = 0
+        while len(replicas) < counter and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:shadow'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.1)
+        assert len(replicas) == counter
+        print "REPLICAS", replicas
+        print "ORIGINAL:", request_handler.get_actor(rt1, shadow)
+        for r in replicas:
+            print "REPLICA:", request_handler.get_actor(rt1, r)
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        time.sleep(0.4)
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        keys = set([k.keys()[0] for k in actual])
+        print keys
+        print [k.values()[0] for k in actual]
+        result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:shadow'], dereplicate=True)
+        print "DEREPLICATION RESULT:", result
+        time.sleep(0.3)
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        print [k.values()[0] for k in actual]
+        replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:shadow'], root_prefix_level=3)['result']
+        print "REPLICAS", replicas
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert shadow not in actors_left
         assert snk not in actors_left
         for r in replicas:
             assert r not in actors_left

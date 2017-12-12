@@ -24,8 +24,8 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import dynops
 from calvin.utilities.requirement_matching import ReqMatch
 from calvin.utilities.replication_defs import REPLICATION_STATUS, PRE_CHECK
+from calvin.actorstore.store import GlobalStore
 from calvin.runtime.south.plugins.async import async
-from calvin.actor.actorstate import ActorState
 from calvin.runtime.north.plugins.requirements import req_operations
 from calvin.actor.actorport import PortMeta
 from calvin.runtime.north.plugins.port import DISCONNECT
@@ -221,6 +221,8 @@ class LeaderElection(object):
                 else:
                     cb(status=calvinresponse.NOT_FOUND, leader=self.node.id)
             self.node.storage.get_super_node(1, cb=super_node)
+        elif method is None:
+            cb(status=calvinresponse.OK, leader=self.node.id)
 
 class ReplicationManager(object):
     def __init__(self, node):
@@ -251,11 +253,14 @@ class ReplicationManager(object):
         actor._replication_id = ReplicationId(replication_id=replication_data.id, original_actor_id=actor.id, index=0)
         actor._replication_id._terminate_with_node = replication_data._terminate_with_node
         actor._replication_id._placement_req = replication_data._placement_req
+        # Update registry with the actors replication id
+        self.node.storage.add_actor(actor, self.node.id, cb=None)
 
         # Create the base state of actor, that is used for initial replica states
         # The actor is not neccessarily connected, hence peer port (queue) information
         # need to be updated when replicating
         state = actor.serialize()
+        _log.debug("supervise_actor type %s state %s" % (type(actor), state))
         # Some data is missing from serialized state that is needed, place it in replication state ns
         state['replication'] = {'_type': actor._type}
         # Move port id, name and property (not queue, i.e. peer and tokens) into replication ns
@@ -270,21 +275,66 @@ class ReplicationManager(object):
             # Replace managed actor attributes with the shadow args, i.e. init args
             state['managed'] = {'_shadow_args': actor_args}
             state['private']['_has_started'] = False
+
         replication_data.actor_state = state
-        self.add_replication_leader(replication_data)
+        # UNUSED until leader election settled and any shadow actor data fetched
+        self.add_replication_leader(replication_data, status=REPLICATION_STATUS.UNUSED)
+
+        replication_data._wait_for_outstanding = ['leader', 'ports']
+        # If supervised actor is ShadowActor, the ports and requires are missing
+        if actor.is_shadow():
+            replication_data._wait_for_outstanding.append('requires')
+            # Find requires
+            def _desc_cb(signature, description):
+                _log.debug("REQUIRES BACK %s \n%s" % (replication_data._wait_for_outstanding, description))
+                requires = None
+                for actor_desc in description:
+                    # We get list of possible descriptions back matching the signature
+                    # In reality it is only one
+                    if 'requires' in actor_desc:
+                        requires = actor_desc['requires']
+                if requires is not None:
+                    replication_data.actor_state['private']['_requires'] = requires
+                replication_data._wait_for_outstanding.remove('requires')
+                if not replication_data._wait_for_outstanding:
+                    self.move_replication_leader(replication_data.id, replication_data._move_to_leader)
+            try:
+                GlobalStore(node=self.node).global_signature_lookup(actor._signature, cb=_desc_cb)
+            except:
+                _log.exception("supervise actor GlobalStore exception")
+                replication_data._wait_for_outstanding.remove('requires')
 
         def _leader_elected(status, leader):
             _log.debug("LEADER ELECTED %s, %s" % (status, leader))
-            self.move_replication_leader(replication_data.id, leader)
-
-        if replication_data.leader_election is not None:
-            LeaderElection(self.node, replication_data).elect(cb=_leader_elected)
-
-        self.node.storage.add_actor(actor, self.node.id, cb=None)
-
-        #TODO trigger replication loop
+            replication_data._wait_for_outstanding.remove('leader')
+            if not replication_data._wait_for_outstanding:
+                self.move_replication_leader(replication_data.id, leader)
+            else:
+                replication_data._move_to_leader = leader
+        LeaderElection(self.node, replication_data).elect(cb=_leader_elected)
 
         return calvinresponse.CalvinResponse(True, {'replication_id': replication_data.id})
+
+    def deployed_actors_connected(self, actor_ids):
+        for replication_data in self.managed_replications.values():
+            if replication_data.original_actor_id not in actor_ids:
+                continue
+            # supervised actor now fully connected
+            try:
+                actor = self.node.am.actors[replication_data.original_actor_id]
+            except Exception as e:
+                # This should never happen
+                _log.exception("deployed_actors_connected, actor %s missing" % replication_data.original_actor_id)
+                raise(e)
+            state = actor.serialize()
+            # Move port id, name and property (not queue, i.e. peer and tokens) into replication ns
+            replication_data.actor_state['replication']['inports'] = {k:
+                {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['inports'].items()}
+            replication_data.actor_state['replication']['outports'] = {k:
+                {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['outports'].items()}
+            replication_data._wait_for_outstanding.remove('ports')
+            if not replication_data._wait_for_outstanding:
+                self.move_replication_leader(replication_data.id, replication_data._move_to_leader)
 
     def list_master_actors(self):
         return [a for a_id, a in self.node.am.actors.items() if a._replication_id.original_actor_id == a_id]
@@ -293,11 +343,14 @@ class ReplicationManager(object):
         return [a_id for a_id, a in self.node.am.actors.items() if a._replication_id.id == replication_id]
 
     def move_replication_leader(self, replication_id, dst_node_id, cb=None):
+        _log.debug("move_replication_leader")
         if replication_id not in self.managed_replications:
             return cb(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
-        if self.node.id == dst_node_id:
-            return cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
         rd = self.managed_replications.pop(replication_id)
+        if self.node.id == dst_node_id:
+            # Even if moving to same node insert it again
+            self.add_replication_leader(rd)
+            return cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
         def _elected_cb(reply):
             if not reply:
                 # Failed, put it back in
@@ -308,7 +361,7 @@ class ReplicationManager(object):
         self.node.proto.leader_elected(peer_node_id=dst_node_id, leader_type="replication", data=rd.state(),
                                        callback=_elected_cb)
 
-    def add_replication_leader(self, replication_data):
+    def add_replication_leader(self, replication_data, status=None):
         if isinstance(replication_data, dict):
             try:
                 replication_data = ReplicationData(initialize=False).set_state(replication_data)
@@ -321,10 +374,15 @@ class ReplicationManager(object):
         replication_data.leader_node_id = self.node.id
         self.managed_replications[replication_data.id] = replication_data
         self.node.storage.set_replication_data(replication_data, cb=None)
-        replication_data.status = REPLICATION_STATUS.READY
+        if status is None:
+            replication_data.status = REPLICATION_STATUS.READY
+        else:
+            replication_data.status = status
+        #TODO trigger replication loop
         return calvinresponse.CalvinResponse(calvinresponse.OK)
 
     def remove_replication_leader(self, replication_id):
+        # TODO for final removal, update registry
         try:
             return self.managed_replications.pop(replication_id)
         except:
@@ -522,7 +580,6 @@ class ReplicationManager(object):
     #
 
     def replication_loop(self):
-        # FIXME Need to do the new replication loop properly
         _log.debug("REPLICATION LOOP")
         for replication_data in self.managed_replications.values():
             _log.debug("REPLICATION LOOP %s %s" % (replication_data.id, REPLICATION_STATUS.reverse_mapping[replication_data.status]))
@@ -612,7 +669,8 @@ class ReplicationManager(object):
         # Initiate any scaling specific actions
         req_operations[req['op']].initiate(self.node, replication_data, **req['kwargs'])
         r = ReqMatch(self.node,
-                     callback=CalvinCB(self._update_requirements_placements, replication_data=replication_data))
+                     callback=CalvinCB(self._update_requirements_placements, replication_data=replication_data),
+                     replace_infinite=True)
         r.match_actor_registry(replication_data.original_actor_id)
         _log.analyze(self.node.id, "+ END", {'replication_data_id': replication_data.id})
 

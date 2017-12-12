@@ -31,23 +31,27 @@ class FakeShadow(Actor):
     Outputs:
       token : the same token
     """
-    @manage(['dump', 'last', 'node_id', 'jumps'])
+    @manage(['dump', 'last', 'node_id', 'jumps', 'index'])
     def init(self, dump=False):
         self.dump = dump
         self.last = None
         self.node_id = get_calvinsys()._node.id
         self.jumps = 0
+        self.index = 0
 
     def did_migrate(self):
         self.node_id = get_calvinsys()._node.id
         self.jumps += 1
+
+    def did_replicate(self, index):
+        self.index = index
 
     def log(self, data):
         print "%s<%s,%s>: %s" % (self.__class__.__name__, self.name, self.id, data)
 
     @condition(['token'], ['token'])
     def donothing(self, input):
-        token = str(self.jumps) + ":" + self.node_id + ":" + str(input)
+        token = str(self.index) + ":" + str(self.jumps) + ":" + self.node_id + ":" + str(input)
         if self.dump:
             self.log(token)
         self.last = token

@@ -810,5 +810,7 @@ class Deployer(object):
             self._connection_status = status
         if self._connection_count == 0:
             _log.debug("_wait_for_all_connections final")
+            # Replication manager needs to fetch port info if supervise ShadowActor
+            self.node.rm.deployed_actors_connected(self.actor_map.values())
             self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False,
                                    cb=CalvinCB(self.cb, deployer=self))

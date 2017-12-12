@@ -52,7 +52,7 @@ class TestProcess(Actor):
         self.last = res
         return (res, )
 
-    def will_replicate(self, state):
+    def did_replicate(self, index):
         if self.replicate_str is None:
             return
         try:

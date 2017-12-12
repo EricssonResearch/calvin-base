@@ -26,11 +26,13 @@ class ReqMatch(object):
     """ ReqMatch Do requirement matching for an actor.
         node: the node
         callback: takes arguments possible_placements (set) and status (CalvinResponse)
+        replace_infinite: when the possible placement would be InfinteElement replace it with all known node ids
     """
-    def __init__(self, node, callback=None):
+    def __init__(self, node, callback=None, replace_infinite=False):
         super(ReqMatch, self).__init__()
         self.node = node
         self.callback = callback
+        self.replace_infinite = replace_infinite
 
     def match_for_actor(self, actor_id):
         """ Helper function for matching locally found actors """
@@ -166,6 +168,14 @@ class ReqMatch(object):
             # All possible actor placements derived
             _log.analyze(self.node.id, "+ ALL", {})
             self.done = True
+            if self.replace_infinite:
+                # Replace Infinte Element with all known real ids
+                if any([isinstance(node_id, dynops.InfiniteElement) for node_id in self.possible_placements]):
+                    try:
+                        replace_ids = self.node.network._links.keys() + [self.node.id]
+                    except:
+                        replace_ids = [self.node.id]
+                    self.possible_placements = set(replace_ids)
             if callable(self.callback):
                 status = response.CalvinResponse(True if self.possible_placements else False)
                 self.callback(possible_placements=self.possible_placements, status=status)

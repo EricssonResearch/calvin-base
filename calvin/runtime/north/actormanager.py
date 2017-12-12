@@ -186,15 +186,23 @@ class ActorManager(object):
                 # We were a shadow, do a full init
                 args = state['managed'].pop('_shadow_args')
                 a.init(**args)
-                # If still shadow don't call did_migrate
-                did_migrate = isinstance(a, ShadowActor)
+                # If still shadow don't call did_replicate even when replication
+                did_replicate = (not isinstance(a, ShadowActor)) and 'replication' in state
+                # If still shadow don't call did_migrate also skip if replication
+                did_migrate = isinstance(a, ShadowActor) and not did_replicate
             else:
                 did_migrate = True
+                did_replicate = False
             # Always do a set_state for the port's state
             a.deserialize(state)
             self.node.pm.add_ports_of_actor(a)
             if did_migrate:
                 a.did_migrate()
+            if did_replicate:
+                try:
+                    a.did_replicate(state['private']['_replication_id']['index'])
+                except:
+                    _log.exception("did_replicate failed for actor %s" % a.name)
             a.setup_complete()
         except Exception as e:
             _log.exception("Catched new from state %s %s" % (a, dir(a)))
