@@ -562,18 +562,30 @@ class GlobalStore(ActorStore):
             cb is callback with signature and list of full descriptions
         """
         signature = GlobalStore.actor_signature(desc)
-        self.node.storage.get_index(['actor', 'signature', signature],
+        self.global_signature_lookup(signature, cb)
+
+    def global_signature_lookup(self, signature, cb):
+        """ Lookup the actor signature
+            signature is an actor signature
+            cb is callback with signature and list of full descriptions
+        """
+        self.node.storage.get_index(['actor', 'signature', signature], root_prefix_level=3,
                                     cb=CalvinCB(self._global_lookup_cb, signature=signature, org_cb=cb))
 
     def _global_lookup_cb(self, value, signature, org_cb):
+        _log.debug("_global_lookup_cb %s" % value)
         if value:
             nbr = [len(value)]
             actors = []
             for a in value:
                 self.node.storage.get('actor_type-', a,
-                            CalvinCB(self._global_lookup_collect, nbr, actors, signature=signature, org_cb=org_cb))
+                            CalvinCB(self._global_lookup_collect, nbr=nbr, actors=actors, signature=signature, org_cb=org_cb))
+        else:
+            # Not found
+            org_cb(signature=signature, description=[])
 
     def _global_lookup_collect(self, key, value, nbr, actors, signature, org_cb):
+        _log.debug("_global_lookup_collect %s" % value)
         actors.append(value)
         nbr[0] -= 1
         if nbr[0] == 0:
