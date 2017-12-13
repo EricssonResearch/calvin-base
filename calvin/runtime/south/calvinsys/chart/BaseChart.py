@@ -28,13 +28,11 @@ class BaseChart(base_calvinsys_object.BaseCalvinsysObject):
     """
 
     init_schema = {
-        "description": "Initialize chart",
+        "description": "Initialize chart with chart parameters described in [readme.md](https://github.com/EricssonResearch/calvin-base/blob/develop/calvin/examples/chart/readme.md). The functions in [BaseChart.py](https://github.com/EricssonResearch/calvin-base/blob/develop/calvin/runtime/south/calvinsys/chart/BaseChart.py) might also give some clues for how to set the parameters.",
         "type": "object",
         "properties": {
             "chart_param": {
-                "description": "Parameters described in [readme.md](https://github.com/EricssonResearch/calvin-base/blob/develop/calvin/examples/chart/readme.md). \
-                The functions in [BaseChart.py](https://github.com/EricssonResearch/calvin-base/blob/develop/calvin/runtime/south/calvinsys/chart/BaseChart.py) \
-                for setting the parameters might also give some clues of how to set the paramter",
+                "description": "See description of init_scheme",
                 "type": "object"
             }
         }

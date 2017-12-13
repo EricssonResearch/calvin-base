@@ -76,9 +76,17 @@ class CalvinSys(object):
             raise Exception("No such capability '%s'", capability_name)
         pymodule = capability.get('module', None)
         if pymodule is None:
-            pymodule = importlib.import_module('calvin.runtime.south.calvinsys.' + capability['path'])
+            calvinsys_paths = _conf.get(None, 'calvinsys_paths') or []
+            failed_paths = []
+            for path in calvinsys_paths:
+                search_path = path.replace('/', '.') + '.' + capability['path']
+                try:
+                    pymodule = importlib.import_module(search_path)
+                except:
+                    failed_paths.append(search_path)
+                    pass
             if pymodule is None:
-                raise Exception("Failed to import module '%s'" % capability_name)
+                raise Exception("Failed to import module '{}'\nTried:{}".format(capability_name, failed_paths))
             capability['module'] = pymodule
         class_name = capability["path"].rsplit(".", 1)
         pyclass = getattr(pymodule, class_name[1])

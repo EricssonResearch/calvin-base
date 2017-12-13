@@ -102,7 +102,8 @@ class CalvinConfig(object):
                 'transports': ['calvinip'],
                 'control_proxy': None,
                 'fcm_server_secret': None,
-                'compiled_actors_path': None
+                'compiled_actors_path': None,
+                "calvinsys_paths": ['calvin/runtime/south/calvinsys']
             },
             'testing': {
                 'comment': 'Test settings',
