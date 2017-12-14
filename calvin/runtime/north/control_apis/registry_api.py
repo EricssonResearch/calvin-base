@@ -114,7 +114,14 @@ def handle_get_storage(self, handle, connection, match, data, hdr):
     Response status code: OK or NOT_FOUND
     Response: {"result": <value>}
     """
-    self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection))
+    self.node.storage.get("", match.group(1), cb=CalvinCB(self.get_storage_cb, handle=handle, connection=connection))
+
+
+@register
+def get_storage_cb(self, key, value, handle, connection):
+    missing = calvinresponse.isfailresponse(value)
+    self.send_response(handle, connection, None if missing else json.dumps({'result': value}),
+                       status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
 
 
 @handler(r"GET /dumpstorage\sHTTP/1")
@@ -177,8 +184,6 @@ def handle_post_node_attribute_indexed_public(self, handle, connection, match, d
     except Exception as e:
         _log.error("Failed to update node %s", e)
         self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
-
-
 
 
 @register
