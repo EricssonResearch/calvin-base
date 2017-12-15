@@ -36,6 +36,7 @@ try:
 except:
     HAS_JWT = False
 from calvin.utilities import certificate
+from calvin.utilities.certificate import Certificate
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 from calvin.utilities.utils import get_home
@@ -123,11 +124,7 @@ class Security(object):
         self.sec_conf = _conf.get("security","security_conf")
         self.node = node
         self.subject_attributes = {}
-        try:
-            self.truststore_for_signing = certificate.get_truststore_path(certificate.TRUSTSTORE_SIGN)
-        except Exception as err:
-            _log.error("Failed to determine trust store path" % err)
-            raise Exception("Failed to load trust store path ")
+#        self.certificate = node.runtime_credentials.certificate
 
     def __str__(self):
         return "Subject: %s:" % self.subject_attributes
@@ -599,17 +596,16 @@ class Security(object):
             try:
                 # Check if the certificate is stored in the truststore (name is <cert_hash>.0)
                 #TODO: remove signature_trust_store dependency
-                trusted_cert_path = os.path.join(self.truststore_for_signing, cert_hash + ".0")
+                truststore_path = self.node.runtime_credentials.certificate.get_truststore_path(certificate.TRUSTSTORE_SIGN)
+                trusted_cert_path = os.path.join(truststore_path, cert_hash + ".0")
                 with open(trusted_cert_path, 'rt') as f:
                     certstr=f.read()
-                    trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstr)
                     try:
 #                        # Verify signature
-                        certificate.verify_signature(certificate.TRUSTSTORE_SIGN,
-                                                     content['file'],
-                                                     signature, certstr,
-                                                     security_dir=certificate.get_security_credentials_path())
-                        signer = [trusted_cert.get_issuer().CN]  # The Common Name field for the issuer
+                        cert = self.node.runtime_credentials.certificate.truststore_sign.verify_signature(content['file'],
+                                                          signature,
+                                                          certstr )
+                        signer = [cert.get_issuer().CN]  # The Common Name field for the issuer
                         return (True, signer)
                     except Exception as e:
                         _log.error("OpenSSL verification error, err={}".format(e), exc_info=True)

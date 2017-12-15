@@ -227,6 +227,9 @@ class RuntimeCredentials():
                 raise
         self.cert_name = self.get_own_cert_name()
         self.cert_path = self.get_own_cert_path()
+        self.cert_str = self.get_own_cert_as_string()
+        self.cert = self.get_own_cert_as_openssl_object()
+        self.cert_dict={}
 
     def get_credentials_path(self):
         """Return the full path of the node's own certificate"""
@@ -416,28 +419,33 @@ class RuntimeCredentials():
         if cert_name == self.node_id:
             _log.debug("Look for runtimes own certificate {} in {{mine}} folder, err={}".format(cert_name, err))
             try:
-                certpath = self.get_own_cert_path()
-                self.certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath)
-                with open(certpath, 'rb') as fd:
-                    certstr=fd.read()
-                return certstr
+#                certpath = self.get_own_cert_path()
+#                self.certificate.truststore_transport.verify_certificate_from_path(certpath)
+#                with open(certpath, 'rb') as fd:
+#                    certstr=fd.read()
+                return self.cert_str
             except Exception as err:
                 _log.debug("Certificate {} is not in {{mine}} folder, return None, err={}".format(cert_name, err))
                 return None
         else:
-            try:
-                _log.debug("Look for certificate in others folder, cert_name={}".format(cert_name))
-                # Check if the certificate is in the 'others' folder for runtime my_node_name.
-                files = os.listdir(os.path.join(self.runtime_dir, "others"))
-                matching = [s for s in files if cert_name in s]
-                certpath = os.path.join(self.runtime_dir, "others", matching[0])
-                self.certificate.verify_certificate_from_path(TRUSTSTORE_TRANSPORT, certpath)
-                with open(certpath, 'rb') as fd:
-                    certstr=fd.read()
-                return certstr
-            except Exception as err:
-                _log.debug("Certificate {} is not in {{others}} folder, return None, err={}".format(cert_name, err))
-                return None
+            if cert_name in self.cert_dict:
+                return self.cert_dict[cert_name]
+            else:
+                try:
+                    _log.debug("Look for certificate in others folder, cert_name={}".format(cert_name))
+                    # Check if the certificate is in the 'others' folder for runtime my_node_name.
+                    files = os.listdir(os.path.join(self.runtime_dir, "others"))
+                    matching = [s for s in files if cert_name in s]
+                    certpath = os.path.join(self.runtime_dir, "others", matching[0])
+                    self.certificate.truststore_transport.verify_certificate_from_path(certpath)
+                    with open(certpath, 'rb') as fd:
+                        certstr=fd.read()
+                    #TODO: some cleaning of self.cert_dict is probably a good idea
+                    self.cert_dict[cert_name]=certstr
+                    return certstr
+                except Exception as err:
+                    _log.debug("Certificate {} is not in {{others}} folder, return None, err={}".format(cert_name, err))
+                    return None
 
     def get_certificate(self, cert_name, callback=None):
         """Return certificate with name cert_name from disk or storage"""

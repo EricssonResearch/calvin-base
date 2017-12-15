@@ -525,21 +525,6 @@ def sign_files_for_security_tests(credentials_testdir):
     application_store_path = os.path.join(credentials_testdir, "scripts")
     print "Create test folders"
     try:
-#        os.makedirs(actor_store_path)
-#        os.makedirs(os.path.join(actor_store_path,"test"))
-#        shutil.copy(os.path.join(orig_actor_store_path,"test","__init__.py"), os.path.join(actor_store_path,"test","__init__.py"))
-#        os.makedirs(os.path.join(actor_store_path,"std"))
-#        shutil.copy(os.path.join(orig_actor_store_path,"std","__init__.py"), os.path.join(actor_store_path,"std","__init__.py"))
-#        os.makedirs(os.path.join(actor_store_path,"flow"))
-#        shutil.copy(os.path.join(orig_actor_store_path,"flow","__init__.py"), os.path.join(actor_store_path,"flow","__init__.py"))
-#        os.makedirs(os.path.join(actor_store_path,"misc"))
-#        shutil.copy(os.path.join(orig_actor_store_path,"misc","__init__.py"), os.path.join(actor_store_path,"misc","__init__.py"))
-#        os.makedirs(os.path.join(actor_store_path,"io"))
-#        shutil.copy(os.path.join(orig_actor_store_path,"io","__init__.py"), os.path.join(actor_store_path,"io","__init__.py"))
-#        os.makedirs(os.path.join(actor_store_path,"text"))
-#        shutil.copy(os.path.join(orig_actor_store_path,"text","__init__.py"), os.path.join(actor_store_path,"text","__init__.py"))
-#        os.makedirs(os.path.join(actor_store_path,"exception"))
-#        shutil.copy(os.path.join(orig_actor_store_path,"exception","__init__.py"), os.path.join(actor_store_path,"exception","__init__.py"))
         shutil.copytree(orig_application_store_path, application_store_path)
     except Exception as err:
         _log.error("Failed to create test folder structure, err={}".format(err))

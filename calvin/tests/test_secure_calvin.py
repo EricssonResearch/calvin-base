@@ -63,6 +63,7 @@ actor_store_path = ""
 application_store_path = ""
 
 USE_TLS=True
+USE_AUTHZ=True
 #NOTE, only proxy storage currently work, dynamically finding authz and auth
 # servers fails for DHT and SecureDHT for some reason
 PROXY_STORAGE = bool(int(os.environ.get("CALVIN_TESTING_PROXY_STORAGE", True)))
@@ -83,6 +84,7 @@ try:
     skip = False
 except:
     skip = True
+    hostname=None
 
 runtimes=[]
 rt_attributes=[]
@@ -130,69 +132,69 @@ def get_runtime(n=1):
     random.shuffle(_runtimes)
     return _runtimes[:n]
 
-@pytest.mark.slow
-@pytest.mark.skipif(skip, reason="Test all security could not resolve hostname, you might need to edit /etc/hosts")
-class CalvinSecureTestBase(unittest.TestCase):
-
-    @pytest.fixture(autouse=True, scope="class")
-    def setup(self, request):
-        from calvin.Tools.csruntime import csruntime
-        from conftest import _config_pytest
-        import fileinput
-        global storage_verified
-        global runtimes
-        global rt_attributes
-        global request_handler
-        global actor_store_path
-        global application_store_path
-        global rt1
-        global rt2
-        global rt3
-        try:
-            shutil.rmtree(credentials_testdir)
-        except Exception as err:
-            print "Failed to remove old tesdir, err={}".format(err)
-            pass
-        try:
-            shutil.copytree(orig_identity_provider_path, identity_provider_path)
-        except Exception as err:
-            _log.error("Failed to create test folder structure, err={}".format(err))
-            print "Failed to create test folder structure, err={}".format(err)
-            raise
-        actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
-        if USE_TLS:
-            runtimes = helpers.create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
-        else:
-            #CA does not listen to http for ceritifate requests, so we'll have to create them before starting test
-            runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
-
+configured=False
+def setup_persistant_data():
+    from calvin.Tools.csruntime import csruntime
+    from conftest import _config_pytest
+    import fileinput
+    global storage_verified
+    global runtimes
+    global rt_attributes
+    global request_handler
+    global actor_store_path
+    global application_store_path
+    global rt1
+    global rt2
+    global rt3
+    global hostname
+    global configured
+    try:
+        shutil.rmtree(credentials_testdir)
+    except Exception as err:
+        print "Failed to remove old tesdir, err={}".format(err)
+        pass
+    try:
+        shutil.copytree(orig_identity_provider_path, identity_provider_path)
+    except Exception as err:
+        _log.error("Failed to create test folder structure, err={}".format(err))
+        print "Failed to create test folder structure, err={}".format(err)
+        raise
+    actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
+    if USE_TLS:
+        runtimes = helpers.create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
         #Initiate Requesthandler with trusted CA cert
         truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
                                                          security_dir=credentials_testdir)
         request_handler = RequestHandler(verify=truststore_dir)
-        #Let's use the admin user0 for request_handler 
-        request_handler.set_credentials({"user": "user0", "password": "pass0"})
+    else:
+        #CA does not listen to http (only https) for certificate requests, so we'll have to create them before starting test
+        runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
-        rt_conf = copy.deepcopy(_conf)
-        if USE_TLS:
-            rt_conf.set('security', 'runtime_to_runtime_security', "tls")
-            rt_conf.set('security', 'control_interface_security', "tls")
-        rt_conf.set('security', 'security_dir', credentials_testdir)
-        rt_conf.set('global', 'actor_paths', [actor_store_path])
+        request_handler = RequestHandler()
+    #Let's use the admin user0 for request_handler 
+    request_handler.set_credentials({"user": "user0", "password": "pass0"})
 
-        # Runtime 0: Certificate authority, authentication server, authorization server.
-        rt0_conf = copy.deepcopy(rt_conf)
-        if PROXY_STORAGE:
-            rt0_conf.set('global','storage_type','local')
-        elif SECURE_DHT:
-            rt0_conf.set('global','storage_type','securedht')
-        else:
-            #Default storage is DHT
-            rt0_conf.set('global','storage_type','dht')
-        rt0_conf.set('security','certificate_authority',{
-                        'domain_name':domain_name,
-                        'is_ca':True
-                    })
+    rt_conf = copy.deepcopy(_conf)
+    if USE_TLS:
+        rt_conf.set('security', 'runtime_to_runtime_security', "tls")
+        rt_conf.set('security', 'control_interface_security', "tls")
+    rt_conf.set('security', 'security_dir', credentials_testdir)
+    rt_conf.set('global', 'actor_paths', [actor_store_path])
+
+    # Runtime 0: Certificate authority, authentication server, authorization server.
+    rt0_conf = copy.deepcopy(rt_conf)
+    if PROXY_STORAGE:
+        rt0_conf.set('global','storage_type','local')
+    elif SECURE_DHT:
+        rt0_conf.set('global','storage_type','securedht')
+    else:
+        #Default storage is DHT
+        rt0_conf.set('global','storage_type','dht')
+    rt0_conf.set('security','certificate_authority',{
+                    'domain_name':domain_name,
+                    'is_ca':True
+                })
+    if USE_AUTHZ:
         rt0_conf.set("security", "security_conf", {
                         "comment": "Authorization-,Authentication service accepting external requests",
                         "authentication": {
@@ -206,57 +208,66 @@ class CalvinSecureTestBase(unittest.TestCase):
                             "accept_external_requests": True
                         }
                     })
-        rt0_conf.save("/tmp/calvin5000.conf")
-        helpers.start_runtime0(runtimes, hostname, request_handler, tls=USE_TLS)
-        helpers.get_enrollment_passwords(runtimes, method="controlapi_set", request_handler=request_handler)
-        # Other runtimes: external authentication, external authorization.
-        if PROXY_STORAGE:
-            rt_conf.set('global','storage_type','proxy')
+    rt0_conf.save("/tmp/calvin5000.conf")
+    if not USE_TLS or hostname==None:
+        print "Don't user TLS or hostname none, hostname={}".format(hostname)
+        hostname="localhost"
+    helpers.start_runtime0(runtimes, hostname, request_handler, tls=USE_TLS)
+    helpers.get_enrollment_passwords(runtimes, method="controlapi_set", request_handler=request_handler)
+    # Other runtimes: external authentication, external authorization.
+    if PROXY_STORAGE:
+        rt_conf.set('global','storage_type','proxy')
+        if USE_TLS:
             rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % hostname )
-            rt_conf.set("security", "security_conf", {
-                            "comment": "External authentication, external authorization",
-                            "authentication": {
-                                "procedure": "external"
-                            },
-                            "authorization": {
-                                "procedure": "external"
-                            }
-                        })
-        elif DHT:
-            rt_conf.set('global','storage_type','dht')
-            rt_conf.set("security", "security_conf", {
-                            "comment": "External authentication, external authorization",
-                            "authentication": {
-                                "procedure": "external",
-                                "server_uuid": runtimes[0]["id"]
-                            },
-                            "authorization": {
-                                "procedure": "external",
-                                "server_uuid": runtimes[0]["id"]
-                            }
-                        })
         else:
-            rt_conf.set('global','storage_type','securedht')
+            rt_conf.set('global','storage_proxy',"calvinip://localhost:5000" )
+        if USE_AUTHZ:
             rt_conf.set("security", "security_conf", {
                             "comment": "External authentication, external authorization",
                             "authentication": {
-                                "procedure": "external",
-                                "server_uuid": runtimes[0]["id"]
+                                "procedure": "external"
                             },
                             "authorization": {
-                                "procedure": "external",
-                                "server_uuid": runtimes[0]["id"]
+                                "procedure": "external"
                             }
                         })
+    elif DHT:
+        rt_conf.set('global','storage_type','dht')
+        rt_conf.set("security", "security_conf", {
+                        "comment": "External authentication, external authorization",
+                        "authentication": {
+                            "procedure": "external",
+                            "server_uuid": runtimes[0]["id"]
+                        },
+                        "authorization": {
+                            "procedure": "external",
+                            "server_uuid": runtimes[0]["id"]
+                        }
+                    })
+    else:
+        rt_conf.set('global','storage_type','securedht')
+        rt_conf.set("security", "security_conf", {
+                        "comment": "External authentication, external authorization",
+                        "authentication": {
+                            "procedure": "external",
+                            "server_uuid": runtimes[0]["id"]
+                        },
+                        "authorization": {
+                            "procedure": "external",
+                            "server_uuid": runtimes[0]["id"]
+                        }
+                    })
 
-        for i in range(1, NBR_OF_RUNTIMES):
-            rt_conf.set('security','certificate_authority',{
-                            'domain_name':domain_name,
-                            'is_ca':False,
-                            'ca_control_uri':"https://%s:5020" % hostname,
-                            'enrollment_password':runtimes[i]["enrollment_password"]
-                        })
-            rt_conf.save("/tmp/calvin500{}.conf".format(i))
+    for i in range(1, NBR_OF_RUNTIMES):
+        rt_conf.set('security','certificate_authority',{
+                        'domain_name':domain_name,
+                        'is_ca':False,
+                        'ca_control_uri':"https://%s:5020" % hostname,
+                        'enrollment_password':runtimes[i]["enrollment_password"]
+                    })
+        rt_conf.save("/tmp/calvin500{}.conf".format(i))
+
+    configured=True
 
 #        # Runtime 3: external authentication (RADIUS).
 #        rt3_conf = copy.deepcopy(rt1_conf)
@@ -274,23 +285,45 @@ class CalvinSecureTestBase(unittest.TestCase):
 #                        }
 #                    })
 #        rt3_conf.save("/tmp/calvin5003.conf")
+    helpers.start_other_runtimes(runtimes, hostname, request_handler, tls=USE_TLS)
+    rt1=runtimes[1]["RT"]
+    rt2=runtimes[2]["RT"]
+    rt3=runtimes[3]["RT"]
+    for i in range(1, NBR_OF_RUNTIMES):
+        try:
+            runtimes[i]["RT"].id = request_handler.get_node_id(runtimes[i]["RT"])
+        except Exception as e:
+            if isinstance(e, Timeout):
+                raise Exception("Can't connect to runtime.\n\te={}".format(e))
+            _log.exception("Test deploy failed")
+            raise Exception("Failed to get node id, e={}".format(e))
 
-        helpers.start_other_runtimes(runtimes, hostname, request_handler, tls=USE_TLS)
-        rt1=runtimes[1]["RT"]
-        rt2=runtimes[2]["RT"]
-        rt3=runtimes[3]["RT"]
-        for i in range(1, NBR_OF_RUNTIMES):
-            try:
-                runtimes[i]["RT"].id = request_handler.get_node_id(runtimes[i]["RT"])
-            except Exception as e:
-                if isinstance(e, Timeout):
-                    raise Exception("Can't connect to runtime.\n\te={}".format(e))
-                _log.exception("Test deploy failed")
-                raise Exception("Failed to get node id, e={}".format(e))
+@pytest.mark.slow
+@pytest.mark.skipif(skip, reason="Test all security could not resolve hostname, you might need to edit /etc/hosts")
+class CalvinSecureTestBase(unittest.TestCase):
+
+    @pytest.fixture(autouse=True, scope="module")
+    def setup(self, request):
+        from calvin.Tools.csruntime import csruntime
+        from conftest import _config_pytest
+        import fileinput
+        global storage_verified
+        global runtimes
+        global rt_attributes
+        global request_handler
+        global actor_store_path
+        global application_store_path
+        global rt1
+        global rt2
+        global rt3
+        global hostname
+
+        if not configured:
+            setup_persistant_data()
+
         request.addfinalizer(self.teardown)
 
     def teardown(self):
-        pass
         helpers.teardown_slow(runtimes, request_handler, hostname)
 
     def assert_lists_equal(self, expected, actual, min_length=5):
@@ -348,6 +381,7 @@ class CalvinSecureTestBase(unittest.TestCase):
 ###################################
 #   Signature related tests
 ###################################
+@pytest.mark.skipif(USE_AUTHZ!=True, reason="Makes no sense without authorization enabled")
 @pytest.mark.slow
 @pytest.mark.essential
 class TestSignedCode(CalvinSecureTestBase):
@@ -455,6 +489,7 @@ class TestSignedCode(CalvinSecureTestBase):
 ###################################
 #   Policy related tests
 ###################################
+@pytest.mark.skipif(USE_AUTHZ!=True, reason="Makes no sense without authorization enabled")
 @pytest.mark.slow
 @pytest.mark.essential
 class TestAuthorization(CalvinSecureTestBase):
@@ -626,6 +661,7 @@ class TestAuthorization(CalvinSecureTestBase):
 #   Control interface authorization 
 #   as well as user db management
 ###################################
+@pytest.mark.skipif(USE_AUTHZ!=True, reason="Makes no sense without authorization enabled")
 @pytest.mark.slow
 @pytest.mark.essential
 class TestControlInterfaceAuthorization(CalvinSecureTestBase):

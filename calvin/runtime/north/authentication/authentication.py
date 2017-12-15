@@ -27,6 +27,7 @@ from calvin.runtime.north.authentication.authentication_retrieval_point import F
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 from calvin.utilities import certificate
+from calvin.utilities.certificate import Certificate
 import os
 
 _log = get_logger(__name__)
@@ -154,7 +155,7 @@ class Authentication(object):
         if value:
             certstr = value[0]
             try:
-                certx509 = certificate.verify_certificate(certificate.TRUSTSTORE_TRANSPORT, certstr)
+                certx509 = self.node.runtime_credentials.certificate.truststore_transport.verify_certificate_str(certstr)
             except Exception as err:
                 _log.error("Failed to verify the authentication servers certificate from storage, err={}".format(err))
                 raise

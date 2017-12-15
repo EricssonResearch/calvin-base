@@ -155,44 +155,6 @@ def cert_DN_Qualifier(certstring=None, certpath=None):
     cert = get_cert_data(certstring=certstring, certpath=certpath)
     return cert.get_subject().dnQualifier
 
-def verify_certificate_from_path(type, certpath, security_dir=None):
-    try:
-        with open(certpath, 'rb') as fd:
-            certstring = fd.read()
-    except Exception as err:
-        _log.error("Failed to open certificate, err={}".format(err))
-    return verify_certificate(type, certstring, security_dir)
-
-def verify_certificate(type, certstring, security_dir=None):
-    """Verify certificate using the CA certificate"""
-#    _log.debug("verify_certificate: \n\ttype={}\n\tcertstring={}\n\tsecurity_dir={}".format(type, certstring, security_dir))
-    try:
-        certx509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstring)
-    except Exception as e:
-        _log.error("Failed to load certstring: certstring={}, error={}".format(certstring, e))
-        raise Exception("Failed to load certstring")
-    #Do sanity checks of cert
-    subject = certx509.get_subject()
-    serial = certx509.get_serial_number()
-    if certx509.has_expired():
-        _log.error("Certificate has expired")
-        raise CertificateInvalid("Certificate has expired.")
-    if serial < 0:
-        _log.error("Serial number was negative")
-        raise CertificateDeniedMalformed("Serial number was negative.")
-    try:
-        verify_certstr_with_policy(certstring)
-        certx509.get_signature_algorithm()  # TODO: Check sig alg strength
-    except ValueError as err:
-        _log.error("Unknown signature algorithm, err={}".format(err))
-        raise CertificateDeniedMalformed("Unknown signature algorithm.")
-    # Verify the certificate chain using truststore given by type.
-    try:
-        verify_certificate_chain(type, certx509, security_dir=security_dir)
-    except Exception as e:
-        _log.error("Failed to create X509StoreContext: %s" % e)
-        raise
-    return certx509
 
 def verify_cert_with_policy(certpath):
     """
@@ -513,20 +475,6 @@ def c_rehash(type, security_dir=None):
     return
 
 
-def verify_signature(type, data, signature, certstring, security_dir=None):
-    """Verify signed data"""
-    try:
-        verify_certificate(type, certstring, security_dir=security_dir)
-    except:
-        raise
-    try:
-        certx509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certstring)
-        # Verify signature
-        OpenSSL.crypto.verify(certx509, signature, data, 'sha256')
-    except Exception as e:
-        _log.error("Signature verification failed, err={}".format(e))
-        raise
-
 def _wrap_object_with_symmetric_key(plaintext):
     import json
     import base64
@@ -697,7 +645,7 @@ class TrustStore():
                 certstring = fd.read()
         except Exception as err:
             _log.error("verify_certificate_from_path::Failed to open certificate, err={}".format(err))
-        return verify_certificate_str(certstring)
+        return self.verify_certificate_str(certstring)
 
     def verify_certificate_str(self, certstring):
         """Verify certificate using the CA certificate"""
@@ -714,8 +662,8 @@ class TrustStore():
         Args:
             cert: a X509 PyOpenSSL object
         Return values:
-
-            """
+            cert: a X509 PyOpenSSL object
+        """
     #    _log.debug("verify_certificate: \n\tcertstring={}".format(certstring))
         subject = cert.get_subject()
         serial = cert.get_serial_number()
@@ -737,6 +685,7 @@ class TrustStore():
         except Exception as e:
             _log.error("Failed to create X509StoreContext: %s" % e)
             raise
+        return cert
 
     def _verify_cert_with_policy(self, cert):
         pubkey = cert.get_pubkey()
@@ -817,6 +766,21 @@ class TrustStore():
         for filename in os.listdir(self.truststore_dir):
             self._c_rehash_file(filename)
         return
+
+    def verify_signature(self, data, signature, certstring):
+        """Verify signed data"""
+        try:
+            cert = self.verify_certificate_str(certstring)
+        except:
+            raise
+        try:
+            # Verify signature
+            OpenSSL.crypto.verify(cert, signature, data, 'sha256')
+        except Exception as e:
+            _log.error("Signature verification failed, err={}".format(e))
+            raise
+        return cert
+
 
 class Certificate():
     def __init__(self, security_dir=None):

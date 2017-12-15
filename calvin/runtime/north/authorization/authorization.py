@@ -28,6 +28,7 @@ from calvin.runtime.north.authorization.policy_retrieval_point import FilePolicy
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
 from calvin.utilities import certificate
+from calvin.utilities.certificate import Certificate
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
@@ -157,7 +158,7 @@ class Authorization(object):
         if value:
             certstr = value[0]
             try:
-                certx509 = certificate.verify_certificate(certificate.TRUSTSTORE_TRANSPORT, certstr)
+                certx509 = self.node.runtime_credentials.certificate.truststore_transport.verify_certificate_str(certstr)
             except Exception as err:
                 _log.error("Failed to verify the authorization servers certificate from storage, err={}".format(err))
                 raise

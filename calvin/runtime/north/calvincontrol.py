@@ -68,6 +68,7 @@ class CalvinControl(object):
         self.tunnel_client = None
         self.metering = None
         self.security = None
+        self.token_dict = None
         self.routes = routes.install_handlers(self)
 
     def start(self, node, uri, tunnel=False, external_uri=None):

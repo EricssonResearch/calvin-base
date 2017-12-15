@@ -392,10 +392,6 @@ class CA():
             raise ConfigurationMalformed(err)
 
 
-
-
-
-
     def remove_domain(self, domain, directory=None):
         """
         Remove an existing domain uses default security
@@ -406,7 +402,6 @@ class CA():
         configfile = os.path.join(domaindir, "openssl.conf")
         if os.path.isfile(configfile):
             shutil.rmtree(domaindir, ignore_errors=True)
-
 
 
     def get_ca_cert(self):
@@ -511,7 +506,6 @@ class CA():
         return filepath
 
     def validate_enrollment_password(self, enrollment_password, common_name):
-        _log.info("Hakan::validate_enrollment_password")
         if not self.enrollment_challenge_db:
             self.cert_enrollment_load_db_file()
         if self.enrollment_challenge_db and self.enrollment_challenge_db[common_name]['password'] != enrollment_password:
@@ -519,20 +513,6 @@ class CA():
                                        "\n\t{}"
                                        "\n\t{}".format(self.enrollment_challenge_db[common_name]['password'],enrollment_password))
 
-#    def validate_enrollment_password(self, csr_path, common_name):
-#        try:
-#            with open(csr_path + ".enrollment_password",'r') as fd:
-#                enrollment_password=fd.read()
-#        except EnvironmentError as err:
-#            _log.exception("Failed to open CSR challenge password file")
-#            enrollment_password = None
-#        if not self.enrollment_challenge_db:
-#            self.cert_enrollment_load_db_file()
-#
-#        if self.enrollment_challenge_db and self.enrollment_challenge_db[common_name]['password'] != enrollment_password:
-#            raise CsrIncorrectPassword("Incorrect challenge password, "
-#                                       "\n\t{}"
-#                                       "\n\t{}".format(self.enrollment_challenge_db[common_name]['password'],enrollment_password))
 
     def validate_csr(self, csr_path, enrollment_password=None, is_ca=False):
         """
