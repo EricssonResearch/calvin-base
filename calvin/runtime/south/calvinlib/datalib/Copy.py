@@ -35,6 +35,9 @@ class Copy(base_calvinlib_object.BaseCalvinlibObject):
     def init(self):
         pass
         
-    def copy(self, string):
-        return copy.copy(string)
+    def copy(self, data):
+        return copy.copy(data)
+        
+    def deepcopy(self, data):
+        return copy.deepcopy(data)
 
