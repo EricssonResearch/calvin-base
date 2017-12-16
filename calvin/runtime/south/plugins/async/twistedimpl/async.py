@@ -26,7 +26,9 @@ class DelayedCall(object):
         self.callback = dc_callback
         self.reset()
 
-    def reset(self):
+    def reset(self, new_delay = None):
+        if new_delay is not None:
+            self.delay = new_delay
         self.delayedCall = reactor.callLater(self.delay, self.callback, *self._args, **self._kwargs)
 
     def active(self):
