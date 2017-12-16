@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from calvin.runtime.south.plugins.async import threads
 from calvin.runtime.south.plugins.web import pbullet
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
@@ -48,39 +50,63 @@ class Pushbullet(base_calvinsys_object.BaseCalvinsysObject):
 
     write_schema = {
         "description": "Post update to configured pushbullet channel",
-        "type": "object",
+        "type": ["object", "string"],
         "properties": {
             "title": {"type": "string", "description": "title of message"},
             "message": {"type": "string", "description": "message to post to channel"}
         }
     }
 
-    def init(self, api_key, channel_tag):
-        try:
-            self._pbullet = pbullet.Pushbullet({"api_key": api_key})
-        except Exception as e:
-            self._pbullet = None
-            _log.error("Could not connect to pushbullet: {}".format(e))
-            return
-        self._channel = None
-        self._set_channel(self._pbullet.get_channel(channel_tag))
+    def init(self, api_key, channel_tag, title=None):
+        def init_pb():
+            _log.info("Init pb")
+            try:
+                pushbullet = pbullet.Pushbullet({"api_key": api_key})
+                channel = pushbullet.get_channel(channel_tag)
+                return (pushbullet, channel)
+            except Exception as e:
+                _log.error("Failed to initialize pushbullet: {}".format(e))
+            
+        def done(pb_chan):
+            self.pushbullet, self.channel = pb_chan
+            self.busy = False
+            _log.info("Init pb done")
+            
+        self.title = title
+        self.busy = True
+        in_progress = threads.defer_to_thread(init_pb)
+        in_progress.addCallback(done)
 
-    def _set_channel(self, channel_tag):
-        self._channel = channel_tag
         
     def can_write(self):
-        return self._pbullet is not None and self._channel is not None
+        return not self.busy
         
     def write(self, data):
-        message = data.get("message")
-        title = data.get("title")
-        try:
-            self._pbullet.push_to_channel(self._channel, title, message)
-        except Exception as e:
-            _log.error("Could not push to channel: {}".format(e))
+        def send():
+            _log.info("pb sending")
+            try:
+                self.pushbullet.push_to_channel(self.channel, title, message)
+            except Exception as e:
+                _log.error("Failed to send pushbullet: {}".format(e))
+                done()
+        
+        def done(*args, **kwargs):
+            self.busy = False
+            _log.info("sending done")
+            
+        if isinstance(data, basestring):
+            message = data
+            title = self.title
+        else :
+            message = data.get("message")
+            title = data.get("title")
+            
+        self.busy = True
+        in_progress = threads.defer_to_thread(send)
+        in_progress.addBoth(done)
         
     def close(self):
-        del self._channel
-        self._channel = None
-        del self._pbullet
-        self._pbullet = None
+        del self.channel
+        self.channel = None
+        del self.pushbullet
+        self.pushbullet = None
