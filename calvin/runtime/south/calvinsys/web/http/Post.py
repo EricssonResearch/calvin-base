@@ -46,9 +46,18 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
             "timeout": {
                 "description": "Timeout (in seconds) for command. Default 5 seconds)",
                 "type" : "number"
+            },
+            "nodata": {
+                "description": "Not interested in result of operation (no read)",
+                "type": "boolean"
+            },
+            "headers": {
+                "description": "additional headers to include in request",
+                "type": "object"
             }
         },
-        "description": "Setup HTTP command"
+        "description": "Setup HTTP command",
+        "required": ["url", "cmd"]
     }
     
     can_write_schema = {
@@ -71,7 +80,9 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
         "type" : "string"
     }
 
-    def init(self, url=None, data=None, cmd="POST", timeout=5.0):
+    def init(self, url, cmd="POST", data=None, nodata=False, timeout=5.0, headers=None):
+        self._headers = headers or {}
+        self._nodata = nodata
         self._url = url
         self._data = data
         self._cmd = requests.put if cmd == "PUT" else requests.post
@@ -80,27 +91,26 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
         self._timeout = timeout
 
     def can_write(self):
-        # No on-going request and no pending result
-        return self._in_progress is None and self._result is None
-    
-    def _request_finished(self, request, *args, **kwargs):
-        if request.status_code == requests.codes.ok:
-            # Everything checks out, return it
-            self._result = request.text
+        if self._nodata:
+            return self._in_progress is None
         else:
-            # something went wrong
-            _log.warning("Request failed with: {}".format(request.status_code))
-            self._result = ""
-        self._in_progress = None
-        self.scheduler_wakeup()
+            # No on-going request and no pending result
+            return self._in_progress is None and self._result is None
 
-    def _request_error(self, *args, **kwargs):
-        _log.error("Request had errors: {} / {}".format(args, kwargs))
-        self._result = ""
-        self._in_progress = None
-        self.scheduler_wakeup()
-        
     def write(self, write_data):
+
+        def finished(request):
+            request.raise_for_status()
+            self._result = request.text
+
+        def error(*args, **kwargs):
+            _log.error("Request had errors: {} / {}".format(args, kwargs))
+            self._result = ""
+
+        def reset(*args, **kwargs):
+            self._in_progress = None
+            self.scheduler_wakeup()
+            
         assert self._in_progress is None
         url = self._url
         data = self._data
@@ -109,9 +119,10 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
             data = write_data
         elif url is None:
             url = write_data
-        self._in_progress = threads.defer_to_thread(self._cmd, url, data=data, timeout=self._timeout)
-        self._in_progress.addCallback(self._request_finished)
-        self._in_progress.addErrback(self._request_error)
+        self._in_progress = threads.defer_to_thread(self._cmd, url, data=data, timeout=self._timeout, headers=self._headers)
+        self._in_progress.addCallback(finished)
+        self._in_progress.addErrback(error)
+        self._in_progress.addBoth(reset)
 
     def can_read(self):
         return self._result is not None
