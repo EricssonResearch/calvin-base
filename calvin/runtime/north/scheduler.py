@@ -101,7 +101,7 @@ class BaseScheduler(object):
     def replication_direct(self, replication_id=None):
         """ Schedule an early replication management for at least replication_id """
         # TODO make use of replication_id when we have that granularity in the scheduler
-        self.insert_task(self._check_replication, 0)
+        self.insert_task_when_needed(self._check_replication, 0)
 
     ######################################################################
     # Stuff that needs to be implemented in a subclass
@@ -125,8 +125,13 @@ class BaseScheduler(object):
     def _check_replication(self):
         # Control replication
         self.node.rm.replication_loop()
-        self.insert_task(self.strategy, 0)
-        self.insert_task(self._check_replication, self._replication_interval)
+        # Need to only insert task if none before replication interval, otherwise build up more and more tasks
+        tt = time.time() + self._replication_interval
+        if not any([t[0] < tt for t in self._tasks if t[1] == self._check_replication]):
+            self.insert_task(self._check_replication, self._replication_interval)
+        _log.debug("Next replication loop in %s %d %d" % (str([t[0] - time.time() for t in self._tasks if t[1] == self._check_replication]), 
+                    [t[1] == self._check_replication for t in self._tasks].index(True), len(self._tasks)))
+        self.insert_task_when_needed(self.strategy, 0)
 
     #
     # Maintenance loop
@@ -141,9 +146,9 @@ class BaseScheduler(object):
             actor.enable_or_migrate()
         # TODO: try to migrate shadow actors as well.
         # Since we may have moved stuff around, schedule strategy
-        self.insert_task(self.strategy, 0)
+        self.insert_task_when_needed(self.strategy, 0)
         # Schedule next maintenance
-        self.insert_task(self._maintenance_loop, self._maintenance_delay)
+        self.insert_task_when_needed(self._maintenance_loop, self._maintenance_delay)
 
     def trigger_maintenance_loop(self, delay=False):
         """Public API"""
@@ -183,6 +188,38 @@ class BaseScheduler(object):
         if index == 0:
             self._schedule_next(delay, self._process_next)
 
+    def insert_task_when_needed(self, what, delay):
+        """Call to insert a task"""
+        # Insert a task in time order,
+        # if it ends up first in list, re-schedule _process_next
+        t = time.time() + delay
+        # task is (time, func)
+        task = (t, what)
+        index = len(self._tasks)
+        if index:
+            for i, ti in enumerate(self._tasks):
+                if ti[0] > t:
+                    index = i
+                    break
+        if self._tasks[index][1] == what:
+            # We already had one such task in queue replace it
+            # to not build up long series of same task starving other activity
+            # Typically a problem with strategy inserting first in queue
+            self._tasks[index] = task
+        if index > 0 and self._tasks[index - 1][1] == what:
+            # Don't insert at all if the same task is already scheduled just before
+            pass
+        else:
+            # If list was empty => index = 0
+            # If slot found => index is insertion point
+            # If slot not found => index is length of list <=> append
+            self._tasks.insert(index, task)
+        # print "INSERTING TASK AT SLOT", index
+        # print "TASKS:", [(t, f.__name__) for t, f in self._tasks]
+        # If we're first, reschedule
+        if index == 0:
+            self._schedule_next(delay, self._process_next)
+
     # Don't call directly
     def _schedule_next(self, delay, what):
         if self._scheduled:
@@ -194,6 +231,7 @@ class BaseScheduler(object):
         # Get next task from queue and do it unless next task is in the future,
         # in that case, schedule _process_next (this method) at that time
         _, todo = self._tasks.pop(0)
+        _log.debug("PROCESS %s" % todo.__name__)
         todo()
         if self._tasks:
             t, _ = self._tasks[0]
@@ -333,13 +371,13 @@ class SimpleScheduler(BaseScheduler):
     def tunnel_rx(self, endpoint):
         """Token recieved on endpoint"""
         # We got a token, meaning that the corrsponding actor could possibly fire
-        self.insert_task(self.strategy, 0)
+        self.insert_task_when_needed(self.strategy, 0)
 
     def tunnel_tx_ack(self, endpoint):
         """Token successfully sent on endpoint"""
         # We got back ACK on sent token; at least one slot free in out queue, endpoint can send again at any time
         self.monitor.clear_backoff(endpoint)
-        self.insert_task(self.strategy, 0)
+        self.insert_task_when_needed(self.strategy, 0)
 
     def tunnel_tx_nack(self, endpoint):
         """Token unsuccessfully sent on endpoint"""
@@ -358,7 +396,7 @@ class SimpleScheduler(BaseScheduler):
 
     def schedule_calvinsys(self, actor_id=None):
         """Incoming platform event"""
-        self.insert_task(self.strategy, 0)
+        self.insert_task_when_needed(self.strategy, 0)
 
     def register_endpoint(self, endpoint):
         self.monitor.register_endpoint(endpoint)
@@ -385,7 +423,7 @@ class SimpleScheduler(BaseScheduler):
         did_fire_actor_ids = self._fire_actors(actors_to_fire)
         activity = did_transfer_tokens or bool(did_fire_actor_ids)
         if activity:
-            self.insert_task(self.strategy, 0)
+            self.insert_task_when_needed(self.strategy, 0)
 
     def watchdog(self):
         # Log and try to get back on track....
