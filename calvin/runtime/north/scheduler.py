@@ -167,6 +167,10 @@ class BaseScheduler(object):
         # If list was empty => index = 0
         # If slot found => index is insertion point
         # If slot not found => index is length of list <=> append
+        # coalesce => don't add a task b/c we already will do that
+        coalesce = (index > 0 and delay == 0 and self._tasks[index-1][1] == what)
+        if coalesce:
+            return
         self._tasks.insert(index, task)
         # print "INSERTING TASK AT SLOT", index
         # print "TASKS:", [(t, f.__name__) for t, f in self._tasks]
