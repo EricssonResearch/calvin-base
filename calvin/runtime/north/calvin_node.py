@@ -117,8 +117,8 @@ class Node(object):
 
         # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         # _scheduler = scheduler.NonPreemptiveScheduler
-        _scheduler = scheduler.RoundRobinScheduler
-        # _scheduler = scheduler.SimpleScheduler
+        # _scheduler = scheduler.RoundRobinScheduler
+        _scheduler = scheduler.SimpleScheduler
         # _scheduler = scheduler.BaselineScheduler
         self.sched = _scheduler(self, self.am)
         self.async_msg_ids = {}
