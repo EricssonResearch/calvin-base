@@ -110,9 +110,9 @@ class Port(object):
         """Set port state."""
         self.name = state.get('name')
         self.id = state.get('id', calvinuuid.uuid("PORT"))
+        self.properties.update(state.get('properties', {}))
         if 'queue' in state:
             self.queue._set_state(state.get('queue'))
-        self.properties.update(state.get('properties', {}))
 
     def attach_endpoint(self, endpoint_):
         """

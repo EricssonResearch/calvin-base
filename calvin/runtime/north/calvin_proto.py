@@ -272,7 +272,7 @@ class CalvinProto(CalvinCBClass):
 
     #### ACTORS ####
 
-    def actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections):
+    def actor_new(self, to_rt_uuid, callback, actor_type, state, prev_connections, connection_list=None):
         """ Creates a new actor on to_rt_uuid node, but is only intended for migrating actors
             callback: called when finished with the peers respons as argument
             actor_type: see actor manager
@@ -281,7 +281,10 @@ class CalvinProto(CalvinCBClass):
         """
         self.node.network.link_request(to_rt_uuid, CalvinCB(send_message,
                                                             msg = {'cmd': 'ACTOR_NEW',
-                                                                   'state': {'actor_type': actor_type, 'actor_state': state, 'prev_connections': prev_connections}},
+                                                                   'state': {'actor_type': actor_type,
+                                                                             'actor_state': state,
+                                                                             'prev_connections': prev_connections,
+                                                                             'connection_list': connection_list}},
                                                             callback=callback))
 
     def actor_new_handler(self, payload):
@@ -290,6 +293,7 @@ class CalvinProto(CalvinCBClass):
         self.node.am.new_from_migration(payload['state']['actor_type'],
                                         payload['state']['actor_state'],
                                         payload['state']['prev_connections'],
+                                        connection_list=payload['state'].get('connection_list', None),
                                         callback=CalvinCB(self.node.network.link_request, payload['from_rt_uuid'], callback=CalvinCB(send_message,
                                             msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
 

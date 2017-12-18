@@ -656,20 +656,7 @@ class Actor(object):
 
     def _set_replication_state(self, state):
         """Deserialize and apply state related to a replicating actor """
-        _log.debug("_set_replication_state BEGIN %s" % state)
-        if state is None:
-            return
-        for port in state['inports'].values():
-            port['org_id'] = port.pop('id')
-            # Uses setdefault to support shadow actor
-            self.inports.setdefault(port['name'], actorport.InPort(port['name'], self))._set_state(port)
-            port['id'] = self.inports[port['name']].id
-        for port in state['outports'].values():
-            port['org_id'] = port.pop('id')
-            # Uses setdefault to support shadow actor
-            self.outports.setdefault(port['name'], actorport.OutPort(port['name'], self))._set_state(port)
-            port['id'] = self.outports[port['name']].id
-        _log.debug("_set_replication_state END %s" % state)
+        pass
 
     def _security_state(self):
         """
@@ -900,8 +887,6 @@ class ShadowActor(Actor):
         self._replication_state_data = copy.copy(state)
         if state is None:
             return
-        self._replication_state_data['inports'] = {}
-        self._replication_state_data['outports'] = {}
 
     def _replication_state(self):
         return self._replication_state_data

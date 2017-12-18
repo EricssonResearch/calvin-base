@@ -65,7 +65,8 @@ class ActorManager(object):
           2) a mangled list of tuples with (in_node_id, in_port_id, out_node_id, out_port_id) supplied as
              connection_list
         """
-        _log.debug("class: %s args: %s state: %s, signature: %s" % (actor_type, args, state, signature))
+        _log.debug("class: %s args: %s state: %s, signature: %s\nprev_connections: %s connection_list:%s" %
+                    (actor_type, args, state, signature, prev_connections, connection_list))
         _log.analyze(self.node.id, "+", {'actor_type': actor_type, 'state': state})
 
         try:
@@ -95,9 +96,6 @@ class ActorManager(object):
         if connection_list:
             # Migrated actor
             self.connect(a.id, connection_list, callback=callback)
-        elif state is not None and 'replication' in state:
-            # Replicated actor
-            self.connect_replica(a.id, state['replication'], callback=callback)
         else:
             # Nothing to connect then we are OK
             a._migration_connected = True
@@ -147,7 +145,7 @@ class ActorManager(object):
             raise(e)
         return a
 
-    def new_from_migration(self, actor_type, state, prev_connections=None, callback=None):
+    def new_from_migration(self, actor_type, state, prev_connections=None, connection_list=None, callback=None):
         """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
@@ -168,13 +166,15 @@ class ActorManager(object):
             self.check_requirements_and_sec_policy(requirements, security, state['private']['_id'],
                                                    signer, migration_info,
                                                    CalvinCB(self.new, actor_type, None,
-                                                            state, prev_connections,
+                                                            state, prev_connections=prev_connections,
+                                                            connection_list=connection_list,
                                                             callback=callback,
                                                             actor_def=actor_def,
                                                             security=security))
         except Exception:
             # Still want to create shadow actor.
-            self.new(actor_type, None, state, prev_connections, callback=callback, shadow_actor=True)
+            self.new(actor_type, None, state, prev_connections=prev_connections,
+                    connection_list=connection_list, callback=callback, shadow_actor=True)
 
     def _new_from_state(self, actor_type, state, actor_def, security,
                              access_decision=None, shadow_actor=False):
@@ -461,9 +461,10 @@ class ActorManager(object):
         Reconnecting the ports can be done using a connection_list
         of tuples (node_id i.e. our id, port_id, peer_node_id, peer_port_id)
         """
+        _log.debug("ACTOR CONNECT BEGIN %s" % actor_id)
         if actor_id not in self.actors:
             self._actor_not_found(actor_id)
-
+        _log.debug("ACTOR CONNECT LIST %s %s\n%s" % (actor_id, self.actors[actor_id]._name, connection_list))
         peer_port_ids = [c[3] for c in connection_list]
 
         for node_id, port_id, peer_node_id, peer_port_id in connection_list:
@@ -483,6 +484,7 @@ class ActorManager(object):
             peer_port_ids: list of port ids kept in context between calls when *changed* by this function,
                            do not replace it
         """
+        _log.debug("_actor_connected %s %s" % (actor_id, status))
         # Send negative response if not already done it
         if not status and peer_port_ids:
             self.actors[actor_id]._migration_connected = True
@@ -503,34 +505,6 @@ class ActorManager(object):
             self._actor_not_found(actor_id)
 
         return self.actors[actor_id].connections(self.node.id)
-
-    def connect_replica(self, actor_id, state, callback):
-        # Need to first build connection_list from previous connections
-        _log.debug("REPLICA CONNECT")
-        connection_list = []
-        ports = [p['id'] for p in state['inports'].values() + state['outports'].values()]
-        _log.debug("REPLICA CONNECT %s " % ports)
-
-        def _got_port(key, value, port_id):
-            ports.remove(port_id)
-            _log.debug("REPLICA CONNECT got port %s %s" % (port_id, value))
-            if response.isnotfailresponse(value) and 'peers' in value:
-                connection_list.extend(
-                    [(self.node.id, port_id, None if p[0] == 'local' else p[0], p[1]) for p in value['peers']])
-            else:
-                # TODO Don't know how to handle this, retry? Why would the original port be gone from registry?
-                # Potentially when destroying application while we replicate, seems OK to ignore
-                _log.warning("During replication failed to find original port in repository")
-            if not ports:
-                # Got all responses
-                _log.debug("REPLICA CONNECT final")
-                self.connect(actor_id, connection_list, callback=callback)
-
-        for port in state['inports'].values():
-            self.node.storage.get_port(port['org_id'], cb=CalvinCB(_got_port, port_id=port['id']))
-        for port in state['outports'].values():
-            self.node.storage.get_port(port['org_id'], cb=CalvinCB(_got_port, port_id=port['id']))
-        _log.debug("REPLICA CONNECT end")
 
     def dump(self, actor_id):
         if actor_id not in self.actors:

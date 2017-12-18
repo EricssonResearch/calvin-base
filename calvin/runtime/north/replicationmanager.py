@@ -268,8 +268,8 @@ class ReplicationManager(object):
             {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['inports'].items()}
         state['replication']['outports'] = {k:
             {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['outports'].items()}
-        state['private']['inports'] = []
-        state['private']['outports'] = []
+        state['private']['inports'] = {}
+        state['private']['outports'] = {}
         if actor_args is not None:
             # We got actor_args hence we should create an initial state that looks like a shadow actor
             # Replace managed actor attributes with the shadow args, i.e. init args
@@ -417,7 +417,47 @@ class ReplicationManager(object):
     #
     # Replicate
     #
+    def replicate_by_requirements(self, replication_data, callback=None):
+        """ Update requirements and trigger a replication """
+        if replication_data.status != REPLICATION_STATUS.READY:
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
+            return
+        replication_data.status = REPLICATION_STATUS.REPLICATING
+        replication_data._replicate_callback = callback
+        req = replication_data.requirements
+        # Initiate any scaling specific actions
+        req_operations[req['op']].initiate(self.node, replication_data, **req['kwargs'])
+        r = ReqMatch(self.node,
+                     callback=CalvinCB(self._update_requirements_placements, replication_data=replication_data),
+                     replace_infinite=True)
+        r.match_actor_registry(replication_data.original_actor_id)
+        _log.analyze(self.node.id, "+ END", {'replication_data_id': replication_data.id})
+
+    def _update_requirements_placements(self, replication_data, possible_placements, status=None):
+        _log.analyze(self.node.id, "+ BEGIN", {'possible_placements':possible_placements, 'status':status}, tb=True)
+        # All possible actor placements derived
+        if not possible_placements:
+            replication_data.status = REPLICATION_STATUS.READY
+            if replication_data._replicate_callback:
+                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            return
+        # Select, always a list of node_ids, could be more than one
+        req = replication_data.requirements
+        selected = req_operations[req['op']].select(self.node, replication_data, possible_placements, **req['kwargs'])
+        _log.analyze(self.node.id, "+", {'possible_placements': possible_placements, 'selected': selected})
+        if not selected:
+            replication_data.status = REPLICATION_STATUS.READY
+            if replication_data._replicate_callback:
+                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            return
+        # FIXME create as many replicas as nodes in list (would need to serialize)
+        self.replicate(replication_data.id, selected[0], callback=replication_data._replicate_callback)
+
     def replicate(self, replication_id, dst_node_id, callback):
+        """ Can't be called directly, only via replicate_by_requirements
+            Will perform the actual replication.
+        """
         try:
             replication_data = self.managed_replications[replication_id]
         except:
@@ -426,21 +466,54 @@ class ReplicationManager(object):
             return
         _log.analyze(self.node.id, "+", {'replication_id': replication_id, 'dst_node_id': dst_node_id})
         
-        cb_status = CalvinCB(self._replication_status_cb, replication_data=replication_data, cb=callback)
         # TODO make name a property that combine name and counter in actor
         new_id = uuid("ACTOR")
         # FIXME change this time stuff when changing replication_loop
         replication_data.check_instances = time.time()
         replication_data.add_replica(new_id)
         new_name = replication_data.actor_state['private']["_name"] + "/{}".format(replication_data.counter)
-        actor_type = replication_data.actor_state['replication']['_type']
         state = copy.deepcopy(replication_data.actor_state)
         state['private']['_name'] = new_name
         state['private']['_id'] = new_id
         state['private']['_replication_id']['index'] = replication_data.counter
+        # Remove unneeded port states since will populate the standard private ones
+        del state['replication']['inports']
+        del state['replication']['outports']
+        rep_state = replication_data.actor_state['replication']
+        # Need to first build connection_list from previous connections
+        connection_list = []
+        ports = [p['id'] for p in rep_state['inports'].values() + rep_state['outports'].values()]
+        _log.debug("REPLICA CONNECT %s " % ports)
+
+        def _got_port(key, value, port, dir):
+            ports.remove(port['id'])
+            _log.debug("REPLICA CONNECT got port %s %s" % (port['id'], value))
+            if calvinresponse.isnotfailresponse(value) and 'peers' in value:
+                new_port_id = uuid("PORT")
+                connection_list.extend(
+                    [(dst_node_id, new_port_id, self.node.id if p[0] == 'local' else p[0], p[1]) for p in value['peers']])
+                state['private'][dir + 'ports'][port['name']] = copy.deepcopy(port)
+                state['private'][dir + 'ports'][port['name']]['id'] = new_port_id
+            else:
+                # TODO Don't know how to handle this, retry? Why would the original port be gone from registry?
+                # Potentially when destroying application while we replicate, seems OK to ignore
+                _log.warning("During replication failed to find original port in repository")
+            if not ports:
+                # Got all responses
+                self._replicate_cont(replication_data, state, connection_list, dst_node_id, callback=callback)
+
+        for port in rep_state['inports'].values():
+            self.node.storage.get_port(port['id'], cb=CalvinCB(_got_port, port=port, dir="in"))
+        for port in rep_state['outports'].values():
+            self.node.storage.get_port(port['id'], cb=CalvinCB(_got_port, port=port, dir="out"))
+
+    def _replicate_cont(self, replication_data, state, connection_list, dst_node_id, callback):
+        cb_status = CalvinCB(self._replication_status_cb, replication_data=replication_data, cb=callback)
+        actor_type = replication_data.actor_state['replication']['_type']
+        new_id = state['private']['_id']
         if dst_node_id == self.node.id:
             self.node.am.new_from_migration(
-                actor_type, state=state, callback=CalvinCB(
+                actor_type, state=state, connection_list=connection_list, callback=CalvinCB(
                     self._replicated,
                     replication_id=replication_data.id,
                     actor_id=new_id, callback=cb_status, master_id=replication_data.original_actor_id, dst_node_id=dst_node_id))
@@ -449,7 +522,7 @@ class ReplicationManager(object):
                 dst_node_id, CalvinCB(self._replicated, replication_id=replication_data.id,
                                          actor_id=new_id, callback=cb_status, master_id=replication_data.original_actor_id,
                                          dst_node_id=dst_node_id),
-                actor_type, state, None)
+                actor_type, state, None, connection_list=connection_list)
 
     def _replicated(self, status, replication_id=None, actor_id=None, callback=None, master_id=None, dst_node_id=None):
         _log.analyze(self.node.id, "+", {'status': status, 'replication_id': replication_id, 'actor_id': actor_id})
@@ -682,41 +755,4 @@ class ReplicationManager(object):
 
     def _replication_loop_log_cb(self, status, replication_id):
         _log.info("Auto-(de)replicated %s: %s" % (replication_id, str(status)))
-
-    def replicate_by_requirements(self, replication_data, callback=None):
-        """ Update requirements and trigger a replication """
-        if replication_data.status != REPLICATION_STATUS.READY:
-            if callback:
-                callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
-            return
-        replication_data.status = REPLICATION_STATUS.REPLICATING
-        replication_data._replicate_callback = callback
-        req = replication_data.requirements
-        # Initiate any scaling specific actions
-        req_operations[req['op']].initiate(self.node, replication_data, **req['kwargs'])
-        r = ReqMatch(self.node,
-                     callback=CalvinCB(self._update_requirements_placements, replication_data=replication_data),
-                     replace_infinite=True)
-        r.match_actor_registry(replication_data.original_actor_id)
-        _log.analyze(self.node.id, "+ END", {'replication_data_id': replication_data.id})
-
-    def _update_requirements_placements(self, replication_data, possible_placements, status=None):
-        _log.analyze(self.node.id, "+ BEGIN", {'possible_placements':possible_placements, 'status':status}, tb=True)
-        # All possible actor placements derived
-        if not possible_placements:
-            replication_data.status = REPLICATION_STATUS.READY
-            if replication_data._replicate_callback:
-                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
-            return
-        # Select, always a list of node_ids, could be more than one
-        req = replication_data.requirements
-        selected = req_operations[req['op']].select(self.node, replication_data, possible_placements, **req['kwargs'])
-        _log.analyze(self.node.id, "+", {'possible_placements': possible_placements, 'selected': selected})
-        if not selected:
-            replication_data.status = REPLICATION_STATUS.READY
-            if replication_data._replicate_callback:
-                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
-            return
-        # FIXME create as many replicas as nodes in list (would need to serialize)
-        self.replicate(replication_data.id, selected[0], callback=replication_data._replicate_callback)
 
