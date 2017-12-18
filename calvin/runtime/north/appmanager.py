@@ -214,6 +214,9 @@ class AppManager(object):
                 replication_id = self._node.am.actors[actor_id]._replication_id.id
                 _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id, 'replication_id': replication_id})
                 if replication_id is not None:
+                    # Destroy the replication manager
+                    self._node.rm.destroy_replication_leader(replication_id)
+                    # Destroy the replicas
                     application.replication_ids.append(replication_id)
                     self._node.storage.get_replica(
                         replication_id, 
@@ -242,6 +245,9 @@ class AppManager(object):
             except:
                 pass
             if 'replication_id' in value and check_replica:
+                # Destroy the replication manager
+                self._node.rm.destroy_replication_leader(value['replication_id'])
+                # Destroy the replicas
                 application.replication_ids.append(value['replication_id'])
                 self.storage.get_replica(value['replication_id'],
                     cb=CalvinCB(func=self._replicas_cb, replication_id=value['replication_id'], master_id=key,
@@ -375,7 +381,7 @@ class AppManager(object):
             del self.applications[application_id]
         if callback:
             if missing:
-                callback(status=response.CalvinResponse(False, missing=missing))
+                callback(status=response.CalvinResponse(False, data={'missing': missing}))
             else:
                 callback(status=response.CalvinResponse(True))
 

@@ -10,7 +10,7 @@ from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities.security import security_enabled
 from routes import handler, register, uuid_re
 from authentication import authentication_decorator
-from calvin.utilities.replication_defs import PRE_CHECK
+from calvin.utilities.replication_defs import PRE_CHECK, REPLICATION_STATUS
 
 _log = get_logger(__name__)
 
@@ -234,46 +234,17 @@ def handle_actor_replicate(self, handle, connection, match, data, hdr):
     Response status code: OK or NOT_FOUND
     """
     data = {} if data is None else data
-    # TODO When feature ready, only requirement based scaling should be accessable (if not also that removed)
-    # TODO Make replication requirements a part of deployment requirements
-    # Dereplication
-    # if data.get('dereplicate', False):
-    #     exhaust = data.get('exhaust', False)
-    #     try:
-    #         self.node.rm.dereplicate(
-    #             match.group(1), CalvinCB(self.handle_actor_replicate_cb, handle, connection), exhaust)
-    #     except:
-    #         _log.exception("Dereplication failed")
-    #         self.send_response(handle, connection, None, calvinresponse.INTERNAL_ERROR)
-    #     return
-    # try:
-    #     # Supervise with potential autoscaling in requirements
-    #     requirements = data.get('requirements', {})
-    #     status_supervise = self.node.rm.supervise_actor(match.group(1), requirements)
-    #     if status_supervise.status != calvinresponse.OK:
-    #         _log.debug("Replication supervised failed %s %s" % (status_supervise.status, match.group(1),))
-    #         self.send_response(handle, connection, None, status_supervise.status)
-    #         return
-    #     if not requirements:
-    #         # Direct replication only
-    #         node_id = data.get('peer_node_id', self.node.id)
-    #         self.node.rm.replicate(
-    #             match.group(1), node_id, CalvinCB(self.handle_actor_replicate_cb, handle, connection))
-    #         return
-    #     self.send_response(handle, connection, json.dumps(status_supervise.data), calvinresponse.OK)
-    # except:
-    #     _log.exception("Failed test replication")
-    #     self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
-
     try:
         _log.debug("MANUAL REPLICATION ORDERED")
         replication_id = match.group(1)
         node_id = data.get('peer_node_id', None)
         replicate = not data.get('dereplicate', False)
         op = PRE_CHECK.SCALE_OUT if replicate else PRE_CHECK.SCALE_IN
-        if self.node.rm.managed_replications[replication_id].operation != PRE_CHECK.NO_OPERATION:
+        if (self.node.rm.managed_replications[replication_id].operation != PRE_CHECK.NO_OPERATION or
+            self.node.rm.managed_replications[replication_id].status != REPLICATION_STATUS.READY):
             # Can't order another operation while processing previous
             self.send_response(handle, connection, None, calvinresponse.SERVICE_UNAVAILABLE)
+            _log.debug("MANUAL REPLICATION NOT APPLIED %s" % PRE_CHECK.reverse_mapping[op])
             return
         # This must be done on the node that is elected leader for the replication_id
         # Return NOT_FOUND otherwise

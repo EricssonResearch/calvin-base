@@ -358,8 +358,8 @@ class ReplicationManager(object):
                 self.add_replication_leader(rd)
             if cb:
                 cb(reply)
-        self.node.proto.leader_elected(peer_node_id=dst_node_id, leader_type="replication", data=rd.state(),
-                                       callback=_elected_cb)
+        self.node.proto.leader_elected(peer_node_id=dst_node_id, leader_type="replication", cmd="create",
+                                       data=rd.state(), callback=_elected_cb)
 
     def add_replication_leader(self, replication_data, status=None):
         if isinstance(replication_data, dict):
@@ -384,9 +384,35 @@ class ReplicationManager(object):
     def remove_replication_leader(self, replication_id):
         # TODO for final removal, update registry
         try:
-            return self.managed_replications.pop(replication_id)
+            rd = self.managed_replications.pop(replication_id)
+            self.node.storage.delete_replication_data(replication_id)
+            return rd
         except:
+            _log.exception("remove_replication_leader %s" % replication_id)
             return None
+
+    def destroy_replication_leader(self, replication_id, cb=None):
+        _log.debug("destroy_replication_leader %s" % replication_id)
+        if replication_id in self.managed_replications.keys():
+            _log.debug("destroy_replication_leader %s" % replication_id)
+            self.remove_replication_leader(replication_id)
+            if cb:
+                cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+            return calvinresponse.CalvinResponse(calvinresponse.OK)
+        # Remote leader
+        def _leader_node_cb(key, value):
+            # Tell leader to be destroyed
+            _log.debug("destroy_replication_leader _leader_node_cb %s" % replication_id)
+            try:
+                self.node.proto.leader_elected(peer_node_id=value['leader_node_id'], leader_type="replication", cmd="destroy", 
+                                                data=replication_id, callback=cb)
+            except:
+                _log.exception("fail destroy_replication_leader _leader_node_cb %s" % replication_id)
+                if cb:
+                    cb(status=calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
+        # Find leader
+        self.node.storage.get_replication_data(replication_id, cb=_leader_node_cb)
+        return calvinresponse.CalvinResponse(calvinresponse.ACCEPTED)
 
     #
     # Replicate
@@ -398,12 +424,7 @@ class ReplicationManager(object):
             if callback:
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
-        if replication_data.status != REPLICATION_STATUS.READY:
-            if callback:
-                callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
-            return
         _log.analyze(self.node.id, "+", {'replication_id': replication_id, 'dst_node_id': dst_node_id})
-        replication_data.status = REPLICATION_STATUS.REPLICATING
         
         cb_status = CalvinCB(self._replication_status_cb, replication_data=replication_data, cb=callback)
         # TODO make name a property that combine name and counter in actor
@@ -581,6 +602,8 @@ class ReplicationManager(object):
 
     def replication_loop(self):
         _log.debug("REPLICATION LOOP")
+        if self.node.quitting:
+            return
         for replication_data in self.managed_replications.values():
             _log.debug("REPLICATION LOOP %s %s" % (replication_data.id, REPLICATION_STATUS.reverse_mapping[replication_data.status]))
             if replication_data.status != REPLICATION_STATUS.READY:
@@ -612,8 +635,6 @@ class ReplicationManager(object):
         
         ######################################################
         
-        if self.node.quitting:
-            return
         replicate = []
         dereplicate = []
         no_op = []
@@ -664,6 +685,11 @@ class ReplicationManager(object):
 
     def replicate_by_requirements(self, replication_data, callback=None):
         """ Update requirements and trigger a replication """
+        if replication_data.status != REPLICATION_STATUS.READY:
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
+            return
+        replication_data.status = REPLICATION_STATUS.REPLICATING
         replication_data._replicate_callback = callback
         req = replication_data.requirements
         # Initiate any scaling specific actions
@@ -678,6 +704,7 @@ class ReplicationManager(object):
         _log.analyze(self.node.id, "+ BEGIN", {'possible_placements':possible_placements, 'status':status}, tb=True)
         # All possible actor placements derived
         if not possible_placements:
+            replication_data.status = REPLICATION_STATUS.READY
             if replication_data._replicate_callback:
                 replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
@@ -685,14 +712,11 @@ class ReplicationManager(object):
         req = replication_data.requirements
         selected = req_operations[req['op']].select(self.node, replication_data, possible_placements, **req['kwargs'])
         _log.analyze(self.node.id, "+", {'possible_placements': possible_placements, 'selected': selected})
-        if selected is None:
-            # When None - selection will never succeed
-            if replication_data._replicate_callback:
-                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
-            return
         if not selected:
+            replication_data.status = REPLICATION_STATUS.READY
             if replication_data._replicate_callback:
                 replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
             return
         # FIXME create as many replicas as nodes in list (would need to serialize)
         self.replicate(replication_data.id, selected[0], callback=replication_data._replicate_callback)
+

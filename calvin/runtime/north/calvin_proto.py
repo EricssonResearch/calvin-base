@@ -574,15 +574,20 @@ class CalvinProto(CalvinCBClass):
 
     #### LEADER ELECTION ####
 
-    def leader_elected(self, peer_node_id, leader_type, data, callback=None):
-        msg = {'cmd': 'LEADER_ELECTED', 'type': leader_type, 'data': data}
+    def leader_elected(self, peer_node_id, leader_type, cmd, data, callback=None):
+        msg = {'cmd': 'LEADER_ELECTED', 'type': leader_type, 'type_cmd': cmd, 'data': data}
         self.network.link_request(peer_node_id, callback=CalvinCB(send_message, msg=msg, callback=callback))
 
     def leader_elected_handler(self, payload):
         """ Handle request for selecting this runtime as leader for a <type> task """
         try:
             if payload["type"] == "replication":
-                reply = self.node.rm.add_replication_leader(replication_data=payload["data"])
+                if payload["type_cmd"] == "create":
+                    reply = self.node.rm.add_replication_leader(replication_data=payload["data"])
+                elif payload["type_cmd"] == "destroy":
+                    reply = self.node.rm.destroy_replication_leader(replication_id=payload["data"])
+                else:
+                    reply = response.CalvinResponse(response.BAD_REQUEST)
             else:
                 reply = response.CalvinResponse(response.BAD_REQUEST)
         except:

@@ -1000,6 +1000,10 @@ class Storage(object):
         state.pop('instances', None)
         self.set(prefix="replicationdata-", key=replication_data.id, value=state, cb=cb)
 
+    def delete_replication_data(self, replication_id, cb=None):
+        """ Delete the replication id """
+        self.delete(prefix="replicationdata-", key=replication_id, cb=cb)
+
     def get_replication_data(self, replication_id, cb=None):
         """ Get replication data """
         self.get(prefix="replicationdata-", key=replication_id, cb=cb)
