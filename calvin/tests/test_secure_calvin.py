@@ -4340,24 +4340,6 @@ def rt_order3(request):
 def nbr_replicas(request):
     return request.param
 
-def setup_module(module):
-    global rt1, rt2, rt3
-    global request_handler
-    global test_type
-
-    request_handler = RequestHandler()
-    test_type, [rt1, rt2, rt3] = helpers.setup_test_type(request_handler)
-
-
-def teardown_module(module):
-    global rt1
-    global rt2
-    global rt3
-    global test_type
-    global request_handler
-
-    helpers.teardown_test_type(test_type, [rt1, rt2, rt3], request_handler)
-
 import numbers
 from collections import Counter
 
