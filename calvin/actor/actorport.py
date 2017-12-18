@@ -419,6 +419,18 @@ class PortMeta(object):
                 return False
         return self.node_id == self.pm.node.id
 
+    def check_still_local(self):
+        """ Check if a retrived port meta still is local.
+        """
+        node = self.pm.node
+        if self.actor_id is not None and self.actor_id not in node.am.actors:
+            # Actor not hear anymore
+            return False
+        if self.port_id is not None and self.port_id not in node.pm.ports:
+            # Port not hear anymore
+            return False
+        return True
+
     @property
     def port(self):
         """ Return the port instance, only relevant if local.

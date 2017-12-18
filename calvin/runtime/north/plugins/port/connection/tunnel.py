@@ -39,13 +39,18 @@ class TunnelConnection(BaseConnection):
     def connect(self, status=None, port_meta=None):
         # TODO: status & port_meta unused
         if self.peer_port_meta.node_id == self.node.id:
-            # FIXME the factory should provide the verification method instead of a simple node id match
             # The peer port has moved to this node!
+            if not self.peer_port_meta.check_still_local():
+                # but gone before we reacted, chase it again
+                # TODO check retry to not get into infinte loop?
+                self.peer_port_meta.retry(callback=self.connect)
+                return
             # Need ConnectionFactory to redo its job.
             _log.analyze(self.node.id, "+ TUNNELED-TO-LOCAL", {'factory': self.factory})
             self.factory.get(self.port, self.peer_port_meta, self.callback).connect()
             return
         tunnel = None
+        self.peer_port_meta.retries = 0
         if self.peer_port_meta.node_id not in self.token_tunnel.tunnels.iterkeys():
             # No tunnel to peer, get one first
             _log.analyze(self.node.id, "+ GET TUNNEL", self.peer_port_meta, peer_node_id=self.peer_port_meta.node_id)
