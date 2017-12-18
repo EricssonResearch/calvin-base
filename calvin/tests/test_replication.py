@@ -285,13 +285,11 @@ class TestManualReplication(object):
         src = response['actor_map']['testScript:src']
         snk = response['actor_map']['testScript:snk']
 
-        # Assuming the migration was successful for the first possible placement
-        src_rt = rt_by_id[response['placement'][src][0]]
-        snk_rt = rt_by_id[response['placement'][snk][0]]
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        src_rt = runtimes[map(lambda x: src in x, actor_place).index(True)]
+        snk_rt = runtimes[map(lambda x: snk in x, actor_place).index(True)]
 
-        time.sleep(1)
-
-        # Move src & snk back to first and place sum on second
+        # Move src & snk back to first
         migrate(src_rt, rt1, src)
         migrate(snk_rt, rt1, snk)
 
@@ -311,12 +309,12 @@ class TestManualReplication(object):
                 fails = 0
             except:
                 fails += 1
-                time.sleep(0.1)
+                time.sleep(0.2)
         print "REPLICATED", counter, fails
         assert counter == 4
         replicas = []
         fails = 0
-        while len(replicas) < counter and fails < 20:
+        while len(replicas) < counter and fails < 40:
             replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:src'], root_prefix_level=3)['result']
             fails += 1
             time.sleep(0.1)
@@ -400,8 +398,6 @@ class TestManualReplication(object):
         shadow = response['actor_map']['testScript:shadow']
         snk = response['actor_map']['testScript:snk']
 
-        time.sleep(1)
-
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         src_rt = runtimes[map(lambda x: src in x, actor_place).index(True)]
         shadow_rt = runtimes[map(lambda x: shadow in x, actor_place).index(True)]
@@ -428,7 +424,7 @@ class TestManualReplication(object):
                 fails = 0
             except:
                 fails += 1
-                time.sleep(0.1)
+                time.sleep(0.2)
         print "REPLICATED", counter, fails
         assert counter == 4
         replicas = []
@@ -436,7 +432,7 @@ class TestManualReplication(object):
         while len(replicas) < counter and fails < 20:
             replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:shadow'], root_prefix_level=3)['result']
             fails += 1
-            time.sleep(0.1)
+            time.sleep(0.2)
         assert len(replicas) == counter
         print "REPLICAS", replicas
         print "ORIGINAL:", request_handler.get_actor(rt1, shadow)
