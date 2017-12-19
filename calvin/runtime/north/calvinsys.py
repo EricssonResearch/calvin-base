@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import importlib
+from functools import partial
 from jsonschema import validate
 
 from calvin.utilities import calvinconfig
@@ -103,6 +104,15 @@ class CalvinSys(object):
         validate(data, obj.init_schema)
         obj.init(**data)
         return obj
+
+    def schedule_timer(self, timer, timeout):
+        self._node.sched.insert_task(partial(self._fire_timer, timer=timer), timeout)
+        
+    def _fire_timer(self, timer):
+        # Make sure timer is still valid.
+        valid_objs = (self._objects[key]['obj'] for key in self._objects)
+        if timer in valid_objs and timer._armed:
+            timer._fire()
 
     def scheduler_wakeup(self, actor):
         """

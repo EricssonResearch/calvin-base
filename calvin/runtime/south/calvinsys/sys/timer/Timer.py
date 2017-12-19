@@ -14,9 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.runtime.south.plugins.async import async
-
 
 class Timer(base_calvinsys_object.BaseCalvinsysObject):
     """
@@ -27,11 +26,11 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Initialize timer",
         "properties" : {
             "repeats" :  {
-                "description": "Should the timer automatically reset once triggered?",
+                "description": "Should the timer automatically reset once acknowledged (read)?",
                 "type": "boolean"
             },
             "period" : {
-                "description": "The period of measurements, in seconds. If set to 0 timer triggers immediately",
+                "description": "Timeout, in seconds. If set to 0 timer triggers immediately",
                 "type": "number"
             }
         }
@@ -42,33 +41,36 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     read_schema = {
-        "description": "Ack triggered timer"
+        "description": "Acknowledge triggered timer"
     }
 
     can_write_schema = {
-        "description": "Always True"
+        "description": "False if trigger is armed or trigger not acknowledged"
     }
 
     write_schema = {
-        "description": "Set or cancel timer; number indicates set/reset, and false cancels",
-        "type": ["number", "boolean"]
+        "description": "Set timeout",
+        "type": ["number"]
     }
 
     def init(self, repeats=False, period=None, **kwargs):
-        self._timer = None
         self._timeout = period
+        self._armed = False
         self._triggered = False
         self._repeats = repeats
-        if self._timeout is 0:
-            self._triggered = True
-        if self._timeout:
-            self._timer = self._reset_timer(self._timeout)
-
-    def _reset_timer(self, timeout):
-        return async.DelayedCall(timeout, self._timer_cb)
-
-    def _timer_cb(self):
+        # Don't start timer on creation unless period is given
+        if period is not None:
+            self._set_timer(self._timeout)
+    
+    def _set_timer(self, timeout):
+        self._armed = True
+        self._next_time = time.time() + timeout
+        self.calvinsys.schedule_timer(self, timeout)
+        
+    # Prvate method called by calvinsys
+    def _fire(self):
         self._triggered = True
+        self._armed = False
         self.scheduler_wakeup()
 
     def can_read(self):
@@ -77,44 +79,37 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
     def read(self):
         self._triggered = False
         if self._repeats:
-            self._timer = self._reset_timer(self._timeout)
+            self._set_timer(self._timeout)
 
-    def write(self, set_reset_or_cancel):
-        cancel_only = isinstance(set_reset_or_cancel, bool)
-        # cancel timer if running
-        if self._timer and self._timer.active():
-            self._timer.cancel()
-
-        if not cancel_only:
-            self._timeout = float(set_reset_or_cancel)
-            self._timer = self._reset_timer(self._timeout)
+    def write(self, timeout):
+        if not self.can_write():
+            return
+        self._timeout = timeout
+        self._set_timer(self._timeout)
 
     def can_write(self):
         # Can always stop & reset a timer
-        return True
+        return not (self._triggered or self._armed)
 
     def close(self):
-        if self._timer:
-            self._timer.cancel()
-            del self._timer
-            self._timer = None
+        if self._armed:
+            self._armed = False
         self._triggered = False
 
     # Serialize/deserialize calvinsys
     def serialize(self):
         return {"triggered": self._triggered, "timeout": self._timeout,
-                "repeats": self._repeats, "nexttrigger": self._timer.nextcall() if self._timer else None}
+                "repeats": self._repeats, "nexttrigger": self._next_time if self._armed else None}
 
+    # FIXME: Migrating a triggered but not ack'd timer require that its actor be scheduled on wakeup. 
+    #        I guess, but haven't verified that it is OK to call scheduler_wakeup() before returning.
     def deserialize(self, state, **kwargs):
-        import time
         self._triggered = state["triggered"]
         self._timeout = state["timeout"]
         self._repeats = state["repeats"]
         if state["nexttrigger"]:
             timeout = state["nexttrigger"] - time.time()
-            if timeout < 0:
-                timeout = 0
-            self._timer = self._reset_timer(timeout)
+            self._set_timer(max(timeout, 0))
         else:
-            self._timer = None
+            self._armed = False
         return self

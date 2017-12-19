@@ -35,7 +35,7 @@ class CountTimer(Actor):
         self.timer = calvinsys.open(self, 'sys.timer.once', period=self.sleep)
 
     # The counting action, first 3 use non periodic for testing purpose
-    @stateguard(lambda self: self.count < self.start + 3 and self.count < self.steps and calvinsys.can_read(self.timer) and calvinsys.can_write(self.timer))
+    @stateguard(lambda self: self.count < self.start + 3 and self.count < self.steps and calvinsys.can_read(self.timer))
     @condition(action_output=('integer',))
     def step_no_periodic(self):
         calvinsys.read(self.timer) # Ack
@@ -43,6 +43,7 @@ class CountTimer(Actor):
             # now continue with periodic timer events
             calvinsys.close(self.timer)
             self.timer = calvinsys.open(self, 'sys.timer.repeating')
+        calvinsys.can_write(self.timer) # Dummy read    
         calvinsys.write(self.timer, self.sleep)
         self.count += 1
         return (self.count - 1, )
