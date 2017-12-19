@@ -111,7 +111,7 @@
                 "port": "token", 
                 "properties": {
                     "nbr_peers": 3, 
-                    "routing": "balanced"
+                    "routing": "round-robin"
                 }
             }
         ], 
