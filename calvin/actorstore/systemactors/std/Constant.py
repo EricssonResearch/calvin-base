@@ -14,30 +14,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
-
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Constant(Actor):
-    """
-    Send predetermined data on output. Never ending sequence.
-    Outputs:
-      token : Some data
-    """
-    @manage(['data'])
-    def init(self, data):
-        self.data = data
+   """
+   Send predetermined data on output. Never ending sequence.
 
-    @condition([], ['token'])
-    def send_it(self):
-        return (self.data,)
+   Outputs:
+       token : given data
+   """
 
-    action_priority = (send_it, )
+   @manage(['data', 'schedule'])
+   def init(self, data):
+       self.data = data
+       self.schedule = calvinsys.open(self, "sys.schedule")
 
-    test_args = (42,)
 
-    test_set = [
-        {
-            'inports': {},
-            'outports': {'token': [42]}
-        } for i in range(3)
-    ]
+   @stateguard(lambda self: calvinsys.can_read(self.schedule))
+   @condition([], ['token'])
+   def timeout(self):
+       calvinsys.read(self.schedule) # ack
+       calvinsys.can_write(self.schedule)
+       calvinsys.write(self.schedule, 0) #reset
+       return (self.data, )
+
+   action_priority = (timeout, )
+   requires = ['sys.schedule']
+
+
+   test_kwargs = {'data': "data_to_forward"}
+   NTOKENS = 10
+   test_calvinsys = {'sys.schedule': {'read': ["dummy_data_read"]*NTOKENS, 'write': [0]*NTOKENS}}
+   test_set = [
+       {
+           'outports': {'token': ["data_to_forward"]*NTOKENS}
+       }
+   ]

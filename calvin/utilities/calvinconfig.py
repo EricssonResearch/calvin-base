@@ -118,6 +118,10 @@ class CalvinConfig(object):
             },
             'calvinsys': {
                 "capabilities": {
+                    "sys.schedule": {
+                        "module": "sys.timer.Timer",
+                        "attributes": { "repeats": False, "period": 0}
+                    },
                     "sys.timer.once": {
                         "module": "sys.timer.Timer",
                         "attributes": {}

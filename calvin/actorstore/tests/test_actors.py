@@ -443,6 +443,10 @@ def setup_calvinsys():
        },
 
 
+        "sys.schedule": {
+            "module": "mock.MockInputOutput",
+            "attributes": {'data': ["dummy"]}
+        },
         "sys.timer.once": {
             "module": "mock.MockInputOutput",
             "attributes": {'data': ["dummy"]}

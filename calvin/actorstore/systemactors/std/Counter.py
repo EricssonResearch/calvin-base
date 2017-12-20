@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
-
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Counter(Actor):
     """
@@ -24,24 +23,32 @@ class Counter(Actor):
       integer : Integer
     """
 
-    @manage(['count', 'stopped'])
+    @manage(['count', 'stopped', 'schedule'])
     def init(self):
         self.count = 0
         self.stopped = False
+        self.schedule = calvinsys.open(self, "sys.schedule")
 
-    @stateguard(lambda self: not self.stopped)
+    @stateguard(lambda self: not self.stopped and calvinsys.can_read(self.schedule))
     @condition(action_output=['integer'])
     def cnt(self):
+        calvinsys.read(self.schedule) # ack
+        calvinsys.can_write(self.schedule)
+        calvinsys.write(self.schedule, 0) #reset
         self.count += 1
         return (self.count, )
 
     action_priority = (cnt,)
+    requires = ['sys.schedule']
+
 
     def report(self, **kwargs):
         self.stopped = kwargs.get("stopped", self.stopped)
         return self.count
 
-    test_args = []
+    NTOKENS = 10
+    test_calvinsys = {'sys.schedule': {'read': ["dummy_data_read"]*NTOKENS, 'write': [0]*NTOKENS}}
     test_set = [
-        {'inports': {}, 'outports': {'integer': [n]}} for n in range(1, 10)
+        {'outports': {'integer': list(range(1, NTOKENS+1))}}
     ]
+

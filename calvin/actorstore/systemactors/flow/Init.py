@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Init(Actor):
 
@@ -29,29 +29,31 @@ class Init(Actor):
       out: Data given as parameter followed by data from in port
     """
 
-    @manage(['done', 'data'])
+    @manage(['data', 'schedule'])
     def init(self, data):
-        self.done = False
         self.data = data
+        self.schedule = calvinsys.open(self, "sys.schedule")
 
-    @stateguard(lambda self: not self.done)
+    @stateguard(lambda self: self.schedule and calvinsys.can_read(self.schedule))
     @condition([], ['out'])
     def initial_action(self):
-        self.done = True
+        calvinsys.read(self.schedule) # ack
+        calvinsys.close(self.schedule)
+        self.schedule = None
         return (self.data,)
 
-    @stateguard(lambda self: self.done)
+    @stateguard(lambda self: not self.schedule)
     @condition(['in'], ['out'])
     def passthrough(self, data):
         return (data,)
 
     action_priority = (passthrough, initial_action)
 
-    test_args = [0]
-
+    test_kwargs = {'data': 0}
+    test_calvinsys = {'sys.schedule': {'read': ["dummy_data_read"]}}
     test_set = [
-        {
-            'inports': {'in': [1,2,3]},
-            'outports': {'out': [0,1,2,3]},
-        },
+       {
+           'inports': {'in': [1,2,3]},
+           'outports': {'out': [0,1,2,3]},
+       },
     ]
