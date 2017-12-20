@@ -456,10 +456,6 @@ class Actor(object):
         self.fsm.transition_to(Actor.STATUS.ENABLED)
         _log.debug("actor.did_connect ENABLED %s %s " % (self._name, self._id))
 
-        # Actor enabled, inform scheduler
-        # We could at least have the courtesy to inform the scheduler about our identity...
-        get_calvinsys().scheduler_wakeup(self)
-
 
     @verify_status([STATUS.ENABLED, STATUS.PENDING, STATUS.DENIED, STATUS.MIGRATABLE])
     def did_disconnect(self, port):

@@ -60,10 +60,8 @@ def test_did_connect(actor, inport_ret_val, outport_ret_val, expected):
     actor.did_connect(None)
     if expected:
         actor.fsm.transition_to.assert_called_with(Actor.STATUS.ENABLED)
-        assert get_calvinsys()._node.sched.schedule_calvinsys.called
     else:
         assert not actor.fsm.transition_to.called
-        assert not get_calvinsys()._node.sched.schedule_calvinsys.called
 
 
 @pytest.mark.parametrize("inport_ret_val,outport_ret_val,expected", [
