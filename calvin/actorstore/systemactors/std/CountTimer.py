@@ -43,7 +43,7 @@ class CountTimer(Actor):
             # now continue with periodic timer events
             calvinsys.close(self.timer)
             self.timer = calvinsys.open(self, 'sys.timer.repeating')
-        calvinsys.can_write(self.timer) # Dummy read    
+        calvinsys.can_write(self.timer) # Dummy read
         calvinsys.write(self.timer, self.sleep)
         self.count += 1
         return (self.count - 1, )
