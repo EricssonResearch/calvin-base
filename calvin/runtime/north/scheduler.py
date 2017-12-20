@@ -358,6 +358,8 @@ class SimpleScheduler(BaseScheduler):
 
     def register_endpoint(self, endpoint):
         self.monitor.register_endpoint(endpoint)
+        # Possibly after reconnect
+        # self.insert_task(self.strategy, 0)
 
     def unregister_endpoint(self, endpoint):
         self.monitor.unregister_endpoint(endpoint)
