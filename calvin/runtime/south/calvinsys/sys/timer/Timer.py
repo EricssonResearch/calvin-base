@@ -88,7 +88,6 @@ class Timer(base_calvinsys_object.BaseCalvinsysObject):
         self._set_timer(self._timeout)
 
     def can_write(self):
-        # Can always stop & reset a timer
         return not (self._triggered or self._armed)
 
     def close(self):
