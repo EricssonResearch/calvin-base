@@ -20,17 +20,11 @@ import pystache
 
 class Pystache(base_calvinlib_object.BaseCalvinlibObject):
     """
-    Functions for manipulating strings.
+    Module for formatting strings using Mustache-style templates.
     """
 
-    init_schema = {
-        "description": "setup mustache formated strings",
-        "type": "object",
-        "properties": {}
-    }
-
-    render = {
-        "description": "convert dict structure into string",
+    render_schema = {
+        "description": "Return template string rendered using given dictionary",
         "type": "object",
         "properties": {
             "template": {"type": "string"},
@@ -41,5 +35,5 @@ class Pystache(base_calvinlib_object.BaseCalvinlibObject):
     def init(self):
         pass
 
-    def render(self, template, *context, **kwargs):
-        return pystache.render(template, *context, **kwargs)
+    def render(self, template, dictionary):
+        return pystache.render(template, **dictionary)
