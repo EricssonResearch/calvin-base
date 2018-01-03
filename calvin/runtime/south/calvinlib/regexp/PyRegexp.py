@@ -18,19 +18,15 @@ from calvin.runtime.south.calvinlib import base_calvinlib_object
 import re
 
 
-class Re(base_calvinlib_object.BaseCalvinlibObject):
+class PyRegexp(base_calvinlib_object.BaseCalvinlibObject):
     """
-    Functions for handling regexp.
+    Python-based regular expressions - (currently limited functionality)
+
+    Note: See documentation for python re module for details
     """
 
-    init_schema = {
-        "description": "setup regexp module",
-        "type": "object",
-        "properties": {}
-    }
-
-    findall = {
-        "description": "wrapper for python regexp findall",
+    findall_schema = {
+        "description": "Find all occurrences matching 'pattern' as per python re.findall()",
         "type": "object",
         "properties": {
             "pattern": {"type": "string"},
@@ -38,8 +34,8 @@ class Re(base_calvinlib_object.BaseCalvinlibObject):
         }
     }
 
-    match = {
-        "description": "wrapper for python regexp match",
+    match_schema = {
+        "description": "Match pattern with start of string as per python re.match().",
         "type": "object",
         "properties": {
             "pattern": {"type": "string"},
