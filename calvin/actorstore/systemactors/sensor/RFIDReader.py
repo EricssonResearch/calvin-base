@@ -29,24 +29,21 @@ class RFIDReader(Actor):
     Outputs:
         data : {"cardno": uid, "data": <data>, "timestamp": <timestamp>}
     """
-        
+
 
     def init(self):
         self.time = calvinlib.use('time')
         self.rfid = calvinsys.open(self, "io.rfid")
-        self.active_uid = []
-        self.active_uid_string = "1234567890abcdef"
-        self.now = self.time.timestamp()
 
     @stateguard(lambda actor: calvinsys.can_read(actor.rfid))
     @condition([], ["data"])
     def read_card(self):
-        _log.info("read_card")
-        result = {"cardno":self.active_uid_string, "data":calvinsys.read(self.rfid), "timestamp":self.time.timestamp()}
+        result = calvinsys.read(self.rfid)
+        result['timestamp'] = self.time.timestamp()
         return (result,)
 
     action_priority = (read_card,)
-    
+
     requires = ['time', 'io.rfid']
 
 

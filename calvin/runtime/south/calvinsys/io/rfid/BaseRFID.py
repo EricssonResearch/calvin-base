@@ -46,5 +46,5 @@ class BaseRFID(base_calvinsys_object.BaseCalvinsysObject):
     
     read_schema = {
         "description": "RFID data",
-        "type": "array"
+        "type": "object"
     }

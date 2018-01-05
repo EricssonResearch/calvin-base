@@ -149,7 +149,7 @@ class MFRC522:
 ########################################################################################
 
   # FIXME: Separate the hardware (GPIO/SPI) from the protocol
-  def __init__(self):
+  def __init__(self, callback):
     self.pio = pigpio.pi()
     self.pio.write(MFRC522.RST_PIN, 1)
     self.pio.set_mode(MFRC522.IRQ_PIN, pigpio.INPUT)
@@ -159,6 +159,7 @@ class MFRC522:
     self.state  = S_INIT
     self.uid = None
     self.readout = None
+    self._readout_cb = callback
         
     self.MFRC522_Init()
 
@@ -214,7 +215,7 @@ class MFRC522:
       # print "irq_status : 0x%02x, div_status : 0x%02x" % (irq_status, div_status)
   
   def _fsm_restart(self):
-      print "_fsm_restart"
+      # print "_fsm_restart"
       self.state = S_DETECT
       self.MFRC522_DetectCard()
       
@@ -248,13 +249,13 @@ class MFRC522:
               return
                         
           if self.state == S_DETECT:
-              print "S_DETECT"
+              # print "S_DETECT"
               self.state = S_ANTICOLL
               self.async_anticoll()
               return
               
           if self.state == S_ANTICOLL:
-              print "S_ANTICOLL"
+              # print "S_ANTICOLL"
               status = self._get_result()
               data, nBits = self._recv()
               # print status, data, nBits
@@ -267,7 +268,7 @@ class MFRC522:
               return
                   
           if self.state == S_SELECT:
-              print "S_SELECT"
+              # print "S_SELECT"
               status = self._get_result()
               data, nBits = self._recv()
               # print status, data, nBits
@@ -280,7 +281,7 @@ class MFRC522:
               return
            
           if self.state == S_AUTHENTICATE:
-              print "S_AUTHENTICATE"
+              # print "S_AUTHENTICATE"
               status = self._get_result()
               # print status
               if status == self.MI_OK:
@@ -291,7 +292,7 @@ class MFRC522:
               return
               
           if self.state == S_READ:
-              print "S_READ"
+              # print "S_READ"
               status = self._get_result()
               data, nBits = self._recv()
               # print status, data, nBits
@@ -299,12 +300,14 @@ class MFRC522:
           if status == self.MI_OK:
               self.state = S_STOP
               self.readout = data
+              self._readout_cb()
           else:
               self._fsm_restart()
           return
                              
       else:
-          print "BOGUS interrupt"
+          pass
+          # print "BOGUS interrupt"
                        
   def reg_write(self, addr, val):
     self.pio.spi_xfer(self.spi_handle, [(addr<<1) & 0x7E, val])
@@ -504,7 +507,7 @@ class MFRC522:
     self.reg_write(self.CommIEnReg, IR.DisableAll)
         
     # FIXME: Make parameter 
-    self.timer_setup(0.2)
+    self.timer_setup(0.1)
 
     self.reg_write(self.TxAutoReg, 0x40)
     self.reg_write(self.ModeReg, 0x3D)

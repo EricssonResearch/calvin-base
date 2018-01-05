@@ -18,7 +18,7 @@ from calvin.runtime.south.calvinsys.io.rfid.BaseRFID import BaseRFID
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.async import async
 
-# import MFRC522
+import MFRC522
 
 _log = get_logger(__name__)
 
@@ -27,15 +27,23 @@ class PIGPIORFID(BaseRFID):
     Calvinsys object handling RFID device
     """
     def init(self, **kwargs):
-        pass
+        self.reader = MFRC522.MFRC522(callback=self._readout_cb)
+        self.has_readout = False
+        self.reader.MFRC522_DetectCard()
+        
+    def _readout_cb(self):
+        self.has_readout = True
+        self.scheduler_wakeup()
 
     def can_read(self):
-        return True
-        
+        return self.has_readout
+
     def read(self):
-        dummy = list(range(0,16))
-        return dummy
-        
+        self.has_readout = False
+        card = {"cardno":self.reader.uid, "data":self.reader.readout}
+        self.reader.MFRC522_DetectCard()
+        return card
+
     def close(self):
         pass
 
