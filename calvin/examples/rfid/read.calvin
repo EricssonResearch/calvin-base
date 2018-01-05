@@ -1,0 +1,4 @@
+src : sensor.RFIDReader()
+snk : io.Print()
+
+src.data > snk.token
