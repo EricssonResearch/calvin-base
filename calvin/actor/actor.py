@@ -537,58 +537,58 @@ class Actor(object):
             async.DelayedCall(0, self._exhaust_cb, status=response.CalvinResponse(True))
             self._exhaust_cb = None
 
-    @verify_status([STATUS.ENABLED])
-    def fire_deprecated(self):
-        """
-        Fire an actor.
-        Returns True if any action fired
-        """
-        # FIXME: Deprecated
-        # FIXME: Move authorization decision to scheduler
-        #
-        # First make sure we are allowed to run
-        #
-        if not self._authorized():
-            return False
-
-        start_time = time.time()
-        actor_did_fire = False
-        #
-        # Repeatedly go over the action priority list
-        #
-        done = False
-        while not done:
-            for action_method in self.__class__.action_priority:
-                did_fire, output_ok, exhausted = action_method(self)
-                actor_did_fire |= did_fire
-                # Action firing should fire the first action that can fire,
-                # hence when fired start from the beginning priority list
-                if did_fire:
-                    # # FIXME: Add hooks for metering and probing
-                    # self.metering.fired(self._id, action_method.__name__)
-                    # self.control.log_actor_firing( ... )
-                    break
-
-            #
-            # We end up here when an action fired or when all actions have failed to fire
-            #
-            if did_fire:
-                #
-                # Limit time given to actors even if it could continue a new round of firing
-                #
-                # FIXME: IMHO this decision should be made in the scheduler. No timing here.
-                time_spent = time.time() - start_time
-                done = time_spent > 0.020
-            else:
-                #
-                # We reached the end of the list without ANY firing during this round
-                # => handle exhaustion and return
-                #
-                # FIXME: Move exhaust handling to scheduler
-                self._handle_exhaustion(exhausted, output_ok)
-                done = True
-
-        return actor_did_fire
+    # @verify_status([STATUS.ENABLED])
+    # def fire_deprecated(self):
+    #     """
+    #     Fire an actor.
+    #     Returns True if any action fired
+    #     """
+    #     # FIXME: Deprecated
+    #     # FIXME: Move authorization decision to scheduler
+    #     #
+    #     # First make sure we are allowed to run
+    #     #
+    #     if not self._authorized():
+    #         return False
+    #
+    #     start_time = time.time()
+    #     actor_did_fire = False
+    #     #
+    #     # Repeatedly go over the action priority list
+    #     #
+    #     done = False
+    #     while not done:
+    #         for action_method in self.__class__.action_priority:
+    #             did_fire, output_ok, exhausted = action_method(self)
+    #             actor_did_fire |= did_fire
+    #             # Action firing should fire the first action that can fire,
+    #             # hence when fired start from the beginning priority list
+    #             if did_fire:
+    #                 # # FIXME: Add hooks for metering and probing
+    #                 # self.metering.fired(self._id, action_method.__name__)
+    #                 # self.control.log_actor_firing( ... )
+    #                 break
+    #
+    #         #
+    #         # We end up here when an action fired or when all actions have failed to fire
+    #         #
+    #         if did_fire:
+    #             #
+    #             # Limit time given to actors even if it could continue a new round of firing
+    #             #
+    #             # FIXME: IMHO this decision should be made in the scheduler. No timing here.
+    #             time_spent = time.time() - start_time
+    #             done = time_spent > 0.020
+    #         else:
+    #             #
+    #             # We reached the end of the list without ANY firing during this round
+    #             # => handle exhaustion and return
+    #             #
+    #             # FIXME: Move exhaust handling to scheduler
+    #             self._handle_exhaustion(exhausted, output_ok)
+    #             done = True
+    #
+    #     return actor_did_fire
 
     @verify_status([STATUS.ENABLED])
     def fire(self):
