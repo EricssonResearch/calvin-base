@@ -269,20 +269,15 @@ class DeprecatedCavinSysMock(object):
         return method
 
 
-def load_simple_requirement(req):
-    # For 'simple' requirements with no external dependencies,
-    import importlib
-    loaded = importlib.import_module("calvin." + req)
-    return loaded.register()
+# def load_simple_requirement(req):
+#     # For 'simple' requirements with no external dependencies,
+#     import importlib
+#     loaded = importlib.import_module("calvin." + req)
+#     return loaded.register()
 
 requirements = \
     {
         'calvinsys.io.filehandler': CalvinSysFileMock(),
-        'calvinsys.media.image': DeprecatedCavinSysMock(),
-        'calvinsys.charts.chart_handler': DeprecatedCavinSysMock(),
-        'calvinsys.io.gpiohandler': DeprecatedCavinSysMock(),
-        'calvinsys.media.camerahandler': DeprecatedCavinSysMock(),
-        'calvinsys.media.mediaplayer': DeprecatedCavinSysMock(),
         'calvinsys.network.httpclienthandler': DeprecatedCavinSysMock(),
         'calvinsys.network.mqtthandlerreg_sysobjects': DeprecatedCavinSysMock(),
         'calvinsys.opcua.client': DeprecatedCavinSysMock(),
@@ -300,7 +295,8 @@ class CalvinSysMock(dict):
         if requirement in requirements:
             return requirements[requirement]
         elif requirement.startswith("calvinsys.native"):
-            return load_simple_requirement(requirement)
+            raise Exception("Previously deprecated '%s' no longer exists" % (requirement,))
+            # return load_simple_requirement(requirement)
         else:
             raise Exception("Test framework does not know how to handle requirement '%s'" % (requirement,))
 
