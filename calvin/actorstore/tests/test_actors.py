@@ -21,7 +21,6 @@ import traceback
 from calvin.actorstore.store import ActorStore
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint import Endpoint
-# from calvin.runtime.north import metering
 from calvin.runtime.north import scheduler
 from calvin.runtime.north.plugins.port import queue
 from calvin.utilities import calvinlogger
@@ -574,7 +573,6 @@ class ActorTester(object):
         self.illegal_actors = {}
         self.components = {}
         self.id = "ActorTester"
-        # self.metering = metering.set_metering(metering.Metering(self))
         setup_calvinlib()
         self.test_sys = setup_calvinsys()
 
@@ -673,7 +671,6 @@ class ActorTester(object):
 
             sched = scheduler.BaseScheduler(None, None)
             sched._fire_actor(aut)
-            # aut.fire_deprecated()
 
             for port, values in outputs.iteritems():
                 try:

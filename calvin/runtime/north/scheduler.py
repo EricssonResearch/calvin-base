@@ -215,7 +215,6 @@ class BaseScheduler(object):
         for actor in actors:
             try:
                 _log.debug("Fire actor %s (%s, %s)" % (actor.name, actor._type, actor.id))
-                # did_fire_action = actor.fire_deprecated()
                 did_fire_action = self._fire_actor(actor)
                 if did_fire_action:
                     did_fire_actor_ids.add(actor.id)
