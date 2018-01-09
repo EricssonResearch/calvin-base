@@ -454,6 +454,26 @@ class ReplicationManager(object):
         # FIXME create as many replicas as nodes in list (would need to serialize)
         self.replicate(replication_data.id, selected[0], callback=replication_data._replicate_callback)
 
+    def replicate_by_known_placement(self, replication_data, callback=None):
+        """ Trigger a replication """
+        if replication_data.status != REPLICATION_STATUS.READY:
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
+            return
+        replication_data.status = REPLICATION_STATUS.REPLICATING
+        replication_data._replicate_callback = callback
+        # Select, always a list of node_ids, could be more than one
+        req = replication_data.requirements
+        selected = req_operations[req['op']].select(self.node, replication_data, set([]), **req['kwargs'])
+        _log.analyze(self.node.id, "+", {'selected': selected})
+        if not selected:
+            replication_data.status = REPLICATION_STATUS.READY
+            if replication_data._replicate_callback:
+                replication_data._replicate_callback(status=calvinresponse.CalvinResponse(False))
+            return
+        self.replicate(replication_data.id, selected[0], callback=replication_data._replicate_callback)
+        _log.analyze(self.node.id, "+ END", {'replication_data_id': replication_data.id})
+
     def replicate(self, replication_id, dst_node_id, callback):
         """ Can't be called directly, only via replicate_by_requirements
             Will perform the actual replication.
@@ -648,6 +668,11 @@ class ReplicationManager(object):
         replication_data.status = REPLICATION_STATUS.READY
         if cb:
             cb(status)
+        req = replication_data.requirements
+        if req and req_operations[req['op']].direct_replication(self.node,
+                                                                replication_data=replication_data, **req['kwargs']):
+            # More replicas should be created directly trigger scheduler
+            self.node.sched.replication_direct(replication_id=replication_data.id)
 
     #
     # Terminate specific replica
@@ -693,6 +718,10 @@ class ReplicationManager(object):
             if pre_check == PRE_CHECK.SCALE_OUT:
                 _log.info("Auto-replicate")
                 self.replicate_by_requirements(replication_data, 
+                    CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id))
+            if pre_check == PRE_CHECK.SCALE_OUT_KNOWN:
+                _log.info("Auto-replicate known")
+                self.replicate_by_known_placement(replication_data, 
                     CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id))
             elif pre_check == PRE_CHECK.SCALE_IN:
                 _log.info("Auto-dereplicate")

@@ -16,19 +16,24 @@
 
 from calvin.utilities.replication_defs import PRE_CHECK
 import random
+import sys
 
 req_type = "replication"
 leader_election = "registry_central"
 
 def init(replication_data):
-    replication_data.known_runtimes = [None, None]
+    replication_data.known_runtimes = set([])
     replication_data.check_count = 0
-    replication_data.limit_count = 10
+    replication_data.limit_count = 1
     replication_data._terminate_with_node = True
     replication_data._one_per_runtime = True
     replication_data._placement_req = [{
                 'op': 'replica_nodes',
                 'kwargs': {'replication_id': replication_data.id},
+                'type': '-'
+            },{
+                'op': 'actor_nodes',
+                'kwargs': {},
                 'type': '-'
             }]
     replication_data.leader_election = leader_election
@@ -39,39 +44,40 @@ def set_state(replication_data, state):
 def get_state(replication_data):
     return {}
 
-def pre_check(node, **kwargs):
+def pre_check(node, replication_data, **kwargs):
     """ Check if actor should scale out/in
     """
-    # TODO check if scale in as well
-    actor_id = kwargs['actor_id']
-    actor = node.am.actors[actor_id]
-    data = actor._replication_data
     # Check limits
-    if 'max' in kwargs and len(data.instances) == kwargs['max']:
+    if 'max' in kwargs and len(replication_data.instances) == kwargs['max']:
         return PRE_CHECK.NO_OPERATION
-    if 'max' in kwargs and len(data.instances) > kwargs['max']:
+    if 'max' in kwargs and len(replication_data.instances) > kwargs['max']:
         return PRE_CHECK.SCALE_IN
-    if 'min' in kwargs and len(data.instances) < kwargs['min']:
-        return PRE_CHECK.SCALE_OUT
-    data.check_count += 1
-    if len(data.known_runtimes) > 1 or data.check_count > data.limit_count:
-        data.check_count = 0
+    replication_data.check_count += 1
+    if replication_data.known_runtimes:
+        replication_data.check_count = 0
+        return PRE_CHECK.SCALE_OUT_KNOWN
+    elif replication_data.check_count > replication_data.limit_count:
+        replication_data.check_count = 0
         return PRE_CHECK.SCALE_OUT
     else:
         return PRE_CHECK.NO_OPERATION
 
-def initiate(node, actor, **kwargs):
+def initiate(node, replication_data, **kwargs):
     pass
 
-def select(node, actor, possible_placements, **kwargs):
+def select(node, replication_data, possible_placements, **kwargs):
+    if replication_data.known_runtimes and not possible_placements:
+        # Called without new possible placements use known
+        possible_placements = replication_data.known_runtimes
     if not possible_placements:
+        replication_data.limit_count = min(replication_data.limit_count + 1, 10)
         return []
-    prefered_placements = possible_placements - set([node.id])
-    actor._replication_data.known_runtimes = prefered_placements
-    if not prefered_placements:
-        actor._replication_data.limit_count = min(actor._replication_data.limit_count + 10, 100)
-        return None
     else:
-        actor._replication_data.limit_count = 10
-    # TODO Send out all
-    return [random.choice(list(prefered_placements))]
+        replication_data.limit_count = 1
+    replication_data.known_runtimes = possible_placements
+    selected = random.choice(list(possible_placements))
+    replication_data.known_runtimes -= set([selected])
+    return [selected]
+
+def direct_replication(node, replication_data, **kwargs):
+    return bool(replication_data.known_runtimes) and len(replication_data.instances) < kwargs.get('max', sys.maxint)

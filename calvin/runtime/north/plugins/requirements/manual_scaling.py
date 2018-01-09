@@ -24,7 +24,7 @@ req_type = "replication"
 leader_election = "registry_central"
 
 def init(replication_data):
-    replication_data.known_runtimes = [None, None]
+    replication_data.known_runtimes = set([])
     replication_data.check_count = 0
     replication_data.limit_count = 10
     replication_data._terminate_with_node = False
@@ -73,3 +73,6 @@ def select(node, replication_data, possible_placements, **kwargs):
         replication_data.limit_count = 10
     # TODO Send out all
     return [random.choice(list(prefered_placements))]
+
+def direct_replication(node, replication_data, **kwargs):
+    return False

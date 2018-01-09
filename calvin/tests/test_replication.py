@@ -569,6 +569,85 @@ class TestManualReplication(object):
         assert shadow not in actors_left
         assert snk not in actors_left
 
+    def testDeviceNormalReplication(self, rt_order3):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            sum   : std.Sum()
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > sum.integer
+            sum.integer > snk.token
+            rule device: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}]) & device_scaling(max=6)
+            apply sum: device
+        """
+
+        global rt2
+
+        nbr_possible = NBR_RUNTIMES - (2 if rt2 == rt_order3[1] else 1)
+        rt1 = rt_order3[0]
+        rrt2 = rt_order3[1]
+        rt3 = rt_order3[2]
+        rt_by_id = {r.id: r for r in runtimes}
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        asum = response['actor_map']['testScript:sum']
+        snk = response['actor_map']['testScript:snk']
+
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        asum_rt = rt_by_id[response['placement'][asum][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+
+        # Move src & snk back to first and place sum on second
+        migrate(src_rt, rt1, src)
+        migrate(asum_rt, rrt2, asum)
+        migrate(snk_rt, rt1, snk)
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
+
+        replicas = []
+        fails = 0
+        while len(replicas) < nbr_possible and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.2)
+        assert len(replicas) == nbr_possible
+        print "REPLICAS", replicas
+        print "ORIGINAL:", request_handler.get_actor(rt1, asum)
+        for r in replicas:
+            print "REPLICA:", request_handler.get_actor(rt1, r)
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        time.sleep(0.4)
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        keys = set([k.keys()[0] for k in actual])
+        print keys
+        print [k.values()[0] for k in actual]
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        print [k.values()[0] for k in actual]
+        replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+        print "REPLICAS", replicas
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert asum not in actors_left
+        assert snk not in actors_left
+        for r in replicas:
+            assert r not in actors_left
+
 #@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow
 class TestReplication(CalvinTestBase):
