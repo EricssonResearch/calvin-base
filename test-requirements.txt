@@ -4,4 +4,3 @@ pytest>=1.4.25
 pytest-twisted
 tox
 requests-futures
-MySQL-python
