@@ -23,7 +23,6 @@ from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 # from calvin.runtime.north import calvincontrol
-# from calvin.runtime.north import metering
 from calvin.runtime.north.replicationmanager import ReplicationData
 import calvin.requests.calvinresponse as response
 from calvin.runtime.south.plugins.async import async
@@ -346,7 +345,6 @@ class Actor(object):
         self.calvinsys = None
         self._using = {}
         # self.control = calvincontrol.get_calvincontrol()
-        # self.metering = metering.get_metering()
         self._migration_info = None
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._last_time_warning = 0.0
@@ -367,7 +365,6 @@ class Actor(object):
                              allow_invalid_transitions=allow_invalid_transitions,
                              disable_transition_checks=disable_transition_checks,
                              disable_state_checks=disable_state_checks)
-        # self.metering.add_actor_info(self)
 
     def set_authorization_checks(self, authorization_checks):
         self.authorization_checks = authorization_checks

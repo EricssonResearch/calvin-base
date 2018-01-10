@@ -79,14 +79,11 @@ class ActorManagerTests(unittest.TestCase):
         self.assertEqual(len(self.am.actors), 1)
 
     @patch('calvin.runtime.north.storage.Storage.delete_actor')
-    @patch('calvin.runtime.north.metering.Metering.remove_actor_info')
-    def test_destroy_actor(self, remove_actor_info, delete_actor):
+    def test_destroy_actor(self, delete_actor):
         actor, actor_id = self._new_actor('std.Constantify', {'constant': 42})
-
         self.am.destroy(actor_id)
 
         assert actor_id not in self.am.actors
-        remove_actor_info.assert_called_with(actor_id)
         assert self.am.node.storage.delete_actor.call_args[0][0] == actor_id
         self.am.node.control.log_actor_destroy.assert_called_with(actor_id)
 

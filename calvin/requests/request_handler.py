@@ -68,6 +68,8 @@ AUTHENTICATION = '/authentication'
 AUTHENTICATION_USERS_DB = '/authentication/users_db'
 AUTHENTICATION_GROUPS_DB = '/authentication/groups_db'
 PROXY_PEER_ABOLISH = '/proxy/{}/migrate'
+
+
 def get_runtime(value):
     if isinstance(value, basestring):
         return RT(value)
@@ -345,27 +347,6 @@ class RequestHandler(object):
             "check": check
         }
         r = self._post(rt, timeout, async, DEPLOY, data=data)
-        return self.check_response(r)
-
-    def register_metering(self, rt, user_id=None, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'user_id': user_id} if user_id else None
-        r = self._post(rt, timeout, async, METER, data=data)
-        return self.check_response(r)
-
-    def unregister_metering(self, rt, user_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._delete(rt, timeout, async, METER_PATH.format(user_id))
-        return self.check_response(r)
-
-    def get_timed_metering(self, rt, user_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, METER_PATH_TIMED.format(user_id))
-        return self.check_response(r)
-
-    def get_aggregated_metering(self, rt, user_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, METER_PATH_AGGREGATED.format(user_id))
-        return self.check_response(r)
-
-    def get_actorinfo_metering(self, rt, user_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, METER_PATH_METAINFO.format(user_id))
         return self.check_response(r)
 
     def add_index(self, rt, index, value, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):

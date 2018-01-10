@@ -32,7 +32,6 @@ from calvin.runtime.north import appmanager
 from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
 from calvin.runtime.north import calvincontrol
-from calvin.runtime.north import metering
 from calvin.runtime.north.certificate_authority import certificate_authority
 from calvin.runtime.north.authentication import authentication
 from calvin.runtime.north.authorization import authorization
@@ -110,7 +109,6 @@ class Node(object):
         self.certificate_authority = certificate_authority.CertificateAuthority(self)
         self.authentication = authentication.Authentication(self)
         self.authorization = authorization.Authorization(self)
-        self.metering = metering.set_metering(metering.Metering(self))
         self.am = actormanager.ActorManager(self)
         self.rm = replicationmanager.ReplicationManager(self)
         self.control = calvincontrol.get_calvincontrol()

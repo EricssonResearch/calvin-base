@@ -1,7 +1,6 @@
 
 from mock import Mock
 
-from calvin.runtime.north import metering
 from calvin.utilities import calvinuuid
 from calvin.runtime.north.plugins.port.queue.fanout_fifo import FanoutFIFO
 from calvin.utilities import attribute_resolver
@@ -23,7 +22,6 @@ class DummyNode:
         self.pm = Mock()
         self.storage = Mock()
         self.control = Mock()
-        self.metering = metering.set_metering(metering.Metering(self))
         self.attributes = attribute_resolver.AttributeResolver({})
 
     def calvinsys(self):
@@ -83,7 +81,6 @@ class TestNode:
         self._calvinsys = DummySys(self)
         self.storage = Mock()
         self.control = Mock()
-        self.metering = metering.set_metering(metering.Metering(self))
         self.attributes = attribute_resolver.AttributeResolver({})
 
 class TestActor:

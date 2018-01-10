@@ -202,7 +202,6 @@ class ActorManager(object):
             self._actor_not_found(actor_id)
 
         # @TOOD - check order here
-        self.node.metering.remove_actor_info(actor_id)
         a = self.actors[actor_id]
         a._will_end()
         port_ids = self.node.pm.remove_ports_of_actor(a)
