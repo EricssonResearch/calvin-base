@@ -1,5 +1,14 @@
-mqtt : net.MQTTPublisher(host="iot.eclipse.org", port=1883, settings=null)
+define settings={
+    "client_id": "Calvin-RT",
+    "will": {
+        "topic": "calvinmqtt/this is the end",
+        "payload": "Calvin has left the building"
+        },
+        "topic": "calvinmqtt/"
+}
+
+mqtt : net.MQTTPublisher(hostname="broker.hivemq.com", port=1883, settings=settings)
 counter : std.CountTimer(sleep=2.0)
 
-"testing/calvin/topic1/subtopic1/nontheless" > mqtt.topic
+"testing" > mqtt.topic
 counter.integer > mqtt.payload

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, calvinsys, stateguard
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -26,20 +26,21 @@ class MQTTPublisher(Actor):
     Publish all incoming messages to given broker"
 
     Arguments:
-      host: <ip/name of of mqtt broker>,
+      hostname: <ip/name of of mqtt broker>,
       port: <port to use on mqtt broker>,
 
-    Settings is a dictionary with optional arguments:
+    Settings is a dictionary with optional arguments.
 
         {
-          "ca-cert-file": <ca certificate file>,
-          "verify-hostname": <False iff hostname in cert should not be verified>,
-          "client-cert-file" : <client certificate file>,
-          "client-key-file" : <client key file>,
-          "username": <self explanatory>,
-          "password": <self explanatory>,
-          "will-topic" : <topic of mqtt will>
-          "will-payload" : <payload of mqtt will>
+          "tls": {
+              "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>, 
+              "tls_version": <tls version>, "ciphers": <ciphers>
+          },
+          "auth": { "username": <username "password": <password> },
+          "will": { "topic": <topic>, "payload": <payload> },
+          "transport": <tcp or websocket>,
+          "client_id": <id of this mqtt client>
+          "topic": <prefix all outgoing message topics with this>
         }
 
     input:
@@ -47,36 +48,19 @@ class MQTTPublisher(Actor):
       payload: payload of message
     """
 
-    @manage(['host', 'port', 'settings'])
-    def init(self, host, port, settings):
-        self.host = host
-        self.port = port
-        self.settings = settings if settings else {}
-        self.setup()
+    @manage(['mqtt'])
+    def init(self, hostname, port, settings):
+        if not settings:
+            settings = {}
+        self.mqtt = calvinsys.open(self, "mqtt.publish", hostname=hostname, port=port, **settings)
 
-    def did_migrate(self):
-        self.setup()
-
-    def will_migrate(self):
-        if self.publisher:
-            self.publisher.stop()
-            self.publisher = None
-
-    def will_end(self):
-        if self.publisher:
-            self.publisher.stop()
-
-    def setup(self):
-        self.use('calvinsys.network.mqtthandler', shorthand='mqtt')
-        self.publisher = self['mqtt']
-        self.publisher.start(self.host, self.port, self.settings)
-
+    @stateguard(lambda actor: calvinsys.can_write(actor.mqtt))
     @condition(action_input=['topic', 'payload'])
     def send_message(self, topic, payload):
-        self.publisher.publish(topic, payload)
+        calvinsys.write(self.mqtt, {"topic": topic, "payload": payload })
 
     action_priority = (send_message, )
-    requires = ['calvinsys.network.mqtthandler']
+    requires = ['mqtt.publish']
 
 # TBD: Reenable test after updating to use new calvinsys API
 #    test_kwargs = {'host': "dummy",
