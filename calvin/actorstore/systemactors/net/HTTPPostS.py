@@ -23,9 +23,13 @@ _log = get_logger(__name__)
 class HTTPPostS(Actor):
     """
     HTTP method POST
+        url : url to send to
+        params : dictionary with query parameters (or null)
+        headers: dictionary with headers to include in request (or null)
+        auth : dictionary with authtype (basic/digest), username and password (or null)
 
     Input:
-        data : execute request, if data is non-null, it is added in request
+        data : execute request, include data as body if not null or boolean
     Output:
       status: status of request
       headers: JSON dictionary of incoming headers
@@ -33,8 +37,8 @@ class HTTPPostS(Actor):
     """
 
     @manage(['command'])
-    def init(self, url, headers, auth):
-        self.command = calvinsys.open(self, "http.post", url=url, headers=headers or None, auth=auth or None)
+    def init(self, url, headers, params, auth):
+        self.command = calvinsys.open(self, "http.post", url=url, headers=headers or None, params=params or None, auth=auth or None)
 
     @stateguard(lambda actor: calvinsys.can_write(actor.command))
     @condition(["data"],[])
