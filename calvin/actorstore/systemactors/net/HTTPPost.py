@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2018 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,91 +14,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
-from calvin.utilities.calvinlogger import get_actor_logger
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
+from calvin.utilities.calvinlogger import get_logger
 
-_log = get_actor_logger(__name__)
+_log = get_logger(__name__)
 
 
 class HTTPPost(Actor):
     """
-    POST data to URL, retrieving reply
+    Post data to URL
 
     Input:
       URL : URL to post to
-      params : Optional parameters to request as a JSON dictionary
-      header: JSON dictionary with headers to include in request
-      data : data to send to URL
+      data : Data to post
+      params : dictionary with query parameters (optional)
+      headers: dictionary with headers to include in request (optional)
+      auth : dictionary with authtype (basic/digest), username and password (optional)
     Output:
-      status: 200/404/whatever
-      header: JSON dictionary of incoming headers
-      data : body of request
+      status: HTTP status of request
+      headers: dictionary of response headers
+      data : body of response (only if body is non-empty)
     """
 
     @manage()
     def init(self):
-        self.setup()
+        self.cmd = calvinsys.open(self, "http.post")
+        self.response = None
 
-    def did_migrate(self):
-        self.setup()
+    @stateguard(lambda actor: calvinsys.can_write(actor.cmd))
+    @condition(action_input=['URL', 'data', 'params', 'headers', 'auth'])
+    def new_request(self, url, data, params, headers, auth):
+        calvinsys.write(self.cmd, {"url": url, "data": data, "params": params, "headers": headers, "auth": auth})
 
-    def setup(self):
-        self.request = None
-        self.received_headers = False
-        self.use('calvinsys.network.httpclienthandler', shorthand='http')
-
-    def reset_request(self):
-        if self.request:
-            self['http'].finalize(self.request)
-            self.request = None
-        self.received_headers = False
-
-    @stateguard(lambda self: not self.request)
-    @condition(action_input=['URL', 'params', 'header', 'data'])
-    def new_request(self, url, params, header, data):
-        url = url.encode('ascii', 'ignore')
-        data = data.encode('ascii', 'ignore')
-        self.request = self['http'].post(url, params, header, data)
-
-
-    @stateguard(lambda self: self.request and not self.received_headers and self['http'].received_headers(self.request))
-    @condition(action_output=['status', 'header'])
-    def handle_headers(self):
-        self.received_headers = True
-        status = self['http'].status(self.request)
-        headers = self['http'].headers(self.request)
-        return (status, headers)
-
-    @stateguard(lambda self: self.received_headers and self['http'].received_body(self.request))
-    @condition(action_output=['data'])
-    def handle_body(self):
-        body = self['http'].body(self.request)
-        self.reset_request()
-        return (body,)
-
-    @stateguard(lambda self: self.received_headers and self['http'].received_empty_body(self.request))
+    @stateguard(lambda actor: calvinsys.can_read(actor.cmd))
     @condition()
-    def handle_empty_body(self):
-        self.reset_request()
-        return ()
+    def handle_reply(self):
+        self.response = calvinsys.read(self.cmd)
 
-    @stateguard(lambda actor: actor.request and actor['http'].received_error(actor.request))
-    @condition()
-    def handle_error(self):
-        _log.warning("There was an error handling the request")
-        self.reset_request()
-        return ()
+    @stateguard(lambda actor: actor.response and actor.response.get("body"))
+    @condition(action_output=['status', 'headers', 'data'])
+    def reply_with_body(self):
+        response = self.response
+        self.response = None
+        return (response.get("status"), response.get("headers"), response.get("body"))
 
-    action_priority = (handle_error, handle_body, handle_empty_body, handle_headers, new_request)
-    requires = ['calvinsys.network.httpclienthandler']
+    @stateguard(lambda actor: actor.response and not actor.response.get("body"))
+    @condition(action_output=['status', 'headers'])
+    def reply_without_body(self):
+        response = self.response
+        self.response = None
+        return (response.get("status"), response.get("headers"))
+
+    action_priority = (new_request, handle_reply, reply_with_body, reply_without_body)
+    requires = ['http.post']
 
 
     test_set = [
         {
             'inports': {'URL': [],
                         'params': [],
-                        'header': [],
-                        'data': []},
+                        'header': []},
             'outports': {'status': [],
                          'header': [],
                          'data': []}
