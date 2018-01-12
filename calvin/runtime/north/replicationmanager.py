@@ -43,6 +43,7 @@ class ReplicationId(object):
         self.index = index
         self._terminate_with_node = False
         self._placement_req = []
+        self._measure_pressure = False
 
     def state(self, remap=None):
         state = {}
@@ -52,6 +53,7 @@ class ReplicationId(object):
             state['index'] = self.index
             state['_terminate_with_node'] = self._terminate_with_node
             state['_placement_req'] = self._placement_req
+            state['_measure_pressure'] = self._measure_pressure
         return state
 
     def set_state(self, state):
@@ -60,6 +62,10 @@ class ReplicationId(object):
         self.index = state.get('index', None)
         self._terminate_with_node = state.get('_terminate_with_node', False)
         self._placement_req = state.get('_placement_req', [])
+        self._measure_pressure = state.get('_measure_pressure', False)
+
+    def measure_pressure(self):
+        return self._measure_pressure
 
     def terminate_with_node(self, actor_id):
         return self._terminate_with_node and not (actor_id == self.original_actor_id)
@@ -229,6 +235,7 @@ class ReplicationManager(object):
         super(ReplicationManager, self).__init__()
         self.node = node
         self.managed_replications = {}  # {<rep_id>: <rep_data>, ...} for which we are elected leader
+        self.leaders_cache = {}  # {<rep_id>: <node_id>, ...} elected leader node id for replication ids
 
     def inhibate(self, *args, **kwargs):
         # FIXME need to implement this if still needed
@@ -253,6 +260,7 @@ class ReplicationManager(object):
         actor._replication_id = ReplicationId(replication_id=replication_data.id, original_actor_id=actor.id, index=0)
         actor._replication_id._terminate_with_node = replication_data._terminate_with_node
         actor._replication_id._placement_req = replication_data._placement_req
+        actor._replication_id._measure_pressure = replication_data._measure_pressure
         # Update registry with the actors replication id
         self.node.storage.add_actor(actor, self.node.id, cb=None)
 
@@ -270,6 +278,8 @@ class ReplicationManager(object):
             {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['outports'].items()}
         state['private']['inports'] = {}
         state['private']['outports'] = {}
+        # Only original that needs to measure pressure
+        state['private']['_replication_id']['_measure_pressure'] = False
         if actor_args is not None:
             # We got actor_args hence we should create an initial state that looks like a shadow actor
             # Replace managed actor attributes with the shadow args, i.e. init args
@@ -350,7 +360,9 @@ class ReplicationManager(object):
         if self.node.id == dst_node_id:
             # Even if moving to same node insert it again
             self.add_replication_leader(rd)
-            return cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+            if cb:
+                cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+            return
         def _elected_cb(reply):
             if not reply:
                 # Failed, put it back in
@@ -785,3 +797,64 @@ class ReplicationManager(object):
     def _replication_loop_log_cb(self, status, replication_id):
         _log.info("Auto-(de)replicated %s: %s" % (replication_id, str(status)))
 
+
+    #
+    # Queue pressure
+    #
+    def check_pressure(self, actor_ids):
+        if not actor_ids:
+            # No actors, then check all for too low pressure
+            for actor_id, actor in self.node.am.actors.items():
+                actor._replication_id.measure_pressure()
+                actor_ids.add(actor_id)
+        for actor_id in actor_ids:
+            try:
+                pressure = self.node.am.actors[actor_id].get_pressure()
+            except:
+                _log.exception("check_pressure")
+                pressure = None
+            _log.analyze(self.node.id, "+", {'actor_id': actor_id, 'pressure': pressure})
+            if not pressure:
+                continue
+            replication_id = self.node.am.actors[actor_id]._replication_id.id
+            if replication_id in self.leaders_cache:
+                self.send_pressure(actor_id, replication_id, self.leaders_cache[replication_id], pressure)
+            else:
+                def _got_leader_node(key, value):
+                    try:
+                        self.leaders_cache[replication_id] = value["leader_node_id"]
+                        self.send_pressure(actor_id, replication_id, self.leaders_cache[replication_id], pressure)
+                    except:
+                        pass
+                self.node.storage.get_replication_data(replication_id, cb=_got_leader_node)
+
+    def send_pressure(self, actor_id, replication_id, node_id,  pressure):
+        def _got_leader_node(key, value):
+            try:
+                self.leaders_cache[replication_id] = value["leader_node_id"]
+                self.send_pressure(actor_id, replication_id, self.leaders_cache[replication_id], pressure)
+            except:
+                pass
+        if node_id == self.node.id:
+            if not self.update_pressure(actor_id, replication_id,  pressure):
+                # Wrong node update cache and retry
+                self.node.storage.get_replication_data(replication_id, cb=_got_leader_node)
+        else:
+            def _sent_pressure(status):
+                # Wrong node update cache and retry
+                if not status:
+                    self.node.storage.get_replication_data(replication_id, cb=_got_leader_node)
+            self.node.proto.queue_pressure(actor_id=actor_id, replication_id=replication_id,
+                                           node_id=node_id, pressure=pressure, callback=_sent_pressure)
+
+    def update_pressure(self, actor_id, replication_id, pressure):
+        _log.analyze(self.node.id, "+", {'actor_id': actor_id, 'replication_id': replication_id, 'pressure': pressure})
+        try:
+            replication_data = self.managed_replications[replication_id]
+            req = replication_data.requirements
+            # inform about pressure
+            req_operations[req['op']].pressure_update(self.node, replication_data, pressure)
+            self.node.sched.replication_direct(replication_id=replication_id)
+            return calvinresponse.CalvinResponse(True)
+        except:
+            return calvinresponse.CalvinResponse(False)

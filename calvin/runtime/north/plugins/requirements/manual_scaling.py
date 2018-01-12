@@ -29,6 +29,7 @@ def init(replication_data):
     replication_data.limit_count = 10
     replication_data._terminate_with_node = False
     replication_data._one_per_runtime = False
+    replication_data._measure_pressure = False
     replication_data.leader_election = leader_election
     replication_data.operation = PRE_CHECK.NO_OPERATION
     replication_data.selected_node_id = None

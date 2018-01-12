@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty, QueueFull
 from calvin.runtime.north.plugins.port import DISCONNECT
@@ -25,18 +27,19 @@ _log = get_logger(__name__)
 # Local endpoints
 #
 
-PRESSURE_LENGTH = 20
+PRESSURE_LENGTH = 3
 
 class LocalInEndpoint(Endpoint):
 
     """docstring for LocalEndpoint"""
 
-    def __init__(self, port, peer_port):
+    def __init__(self, port, peer_port, scheduler=None):
         super(LocalInEndpoint, self).__init__(port)
         self.peer_port = peer_port
         self.peer_id = peer_port.id
+        self.scheduler = scheduler
         self.pressure_count = 0
-        self.pressure = [0] * PRESSURE_LENGTH
+        self.pressure = [(None, 0)] * PRESSURE_LENGTH  # list with (sequence nbr, time)
         self.pressure_last = 0
 
     def is_connected(self):
@@ -64,11 +67,12 @@ class LocalOutEndpoint(Endpoint):
 
     """docstring for LocalEndpoint"""
 
-    def __init__(self, port, peer_port):
+    def __init__(self, port, peer_port, scheduler=None):
         super(LocalOutEndpoint, self).__init__(port)
         self.peer_port = peer_port
         self.peer_id = peer_port.id
         self.peer_endpoint = None
+        self.scheduler = scheduler
 
     def is_connected(self):
         return True
@@ -116,11 +120,15 @@ class LocalOutEndpoint(Endpoint):
                 break
             except QueueFull:
                 # Could not write, rollback read
+                _log.debug("LOCAL QUEUE FULL %d %s" % (self.peer_endpoint.pressure_count, self.peer_id))
                 self.port.queue.com_cancel(self.peer_id, nbr)
                 if (self.peer_endpoint and
-                        self.peer_endpoint.pressure[(self.peer_endpoint.pressure_count - 1) % PRESSURE_LENGTH] == nbr):
-                    self.peer_endpoint.pressure[self.peer_endpoint.pressure_count % PRESSURE_LENGTH] = nbr
+                        self.peer_endpoint.pressure[(self.peer_endpoint.pressure_count - 1) % PRESSURE_LENGTH][0] != nbr):
+                    self.peer_endpoint.pressure[self.peer_endpoint.pressure_count % PRESSURE_LENGTH] = (nbr, time.time())
                     self.peer_endpoint.pressure_count += 1
+                    # Inform scheduler about potential pressure event
+                    if self.scheduler:
+                        self.scheduler.trigger_pressure_event(self.peer_port.owner.id)
                 break
         if self.peer_endpoint and nbr is not None:
             self.peer_endpoint.pressure_last = nbr

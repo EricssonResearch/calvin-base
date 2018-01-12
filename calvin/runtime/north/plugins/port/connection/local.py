@@ -50,8 +50,8 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+", {})
         inport.set_queue(queue.get(inport, peer_port=outport))
         outport.set_queue(queue.get(outport, peer_port=inport))
-        ein = endpoint.LocalInEndpoint(inport, outport)
-        eout = endpoint.LocalOutEndpoint(outport, inport)
+        ein = endpoint.LocalInEndpoint(inport, outport, self.node.sched)
+        eout = endpoint.LocalOutEndpoint(outport, inport, self.node.sched)
 
         invalid_endpoint = outport.attach_endpoint(eout)
         invalid_endpoint.unregister(self.node.sched)

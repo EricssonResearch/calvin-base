@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 from calvin.runtime.north.plugins.port.queue.common import COMMIT_RESPONSE, QueueEmpty, QueueFull
@@ -26,7 +28,7 @@ _log = get_logger(__name__)
 # Remote tunnel endpoints
 #
 
-PRESSURE_LENGTH = 20
+PRESSURE_LENGTH = 3
 
 class TunnelInEndpoint(Endpoint):
 
@@ -40,8 +42,8 @@ class TunnelInEndpoint(Endpoint):
         self.peer_port_properties = peer_port_properties
         self.scheduler = scheduler
         self.pressure_count = 0
-        self.pressure = [0] * PRESSURE_LENGTH
-        self.pressure_last = 0
+        self.pressure = [(None, 0)] * PRESSURE_LENGTH
+        self.pressure_last = (0, 0)
 
     def __str__(self):
         str = super(TunnelInEndpoint, self).__str__()
@@ -79,10 +81,14 @@ class TunnelInEndpoint(Endpoint):
             _log.debug("recv_token %s %s: %d %s => %s %d" % (self.port.id, self.port.name, payload['sequencenbr'], payload['token'], "True" if ok else "False", r))
         except QueueFull:
             # Queue full just send NACK
+            _log.debug("REMOTE QUEUE FULL %d %s" % (self.pressure_count, self.port.id))
             ok = False
-            if self.pressure[(self.pressure_count - 1) % PRESSURE_LENGTH] != payload['sequencenbr']:
-                self.pressure[self.pressure_count % PRESSURE_LENGTH] = payload['sequencenbr']
+            if self.pressure[(self.pressure_count - 1) % PRESSURE_LENGTH][0] != payload['sequencenbr']:
+                # Log a QueueFull event
+                self.pressure[self.pressure_count % PRESSURE_LENGTH] = (payload['sequencenbr'], time.time())
                 self.pressure_count += 1
+                # Inform scheduler about potential pressure event
+                self.scheduler.trigger_pressure_event(self.port.owner.id)
         self.pressure_last = payload['sequencenbr']
         reply = {
             'cmd': 'TOKEN_REPLY',

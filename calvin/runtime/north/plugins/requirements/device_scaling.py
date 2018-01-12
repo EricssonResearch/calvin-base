@@ -27,6 +27,7 @@ def init(replication_data):
     replication_data.limit_count = 1
     replication_data._terminate_with_node = True
     replication_data._one_per_runtime = True
+    replication_data._measure_pressure = False
     replication_data._placement_req = [{
                 'op': 'replica_nodes',
                 'kwargs': {'replication_id': replication_data.id},

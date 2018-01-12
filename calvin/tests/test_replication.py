@@ -18,6 +18,7 @@
 import unittest
 import time
 import pytest
+import os
 
 from calvin.utilities import calvinconfig
 from calvin.csparser import cscompile as compiler
@@ -42,7 +43,8 @@ rt3 = None
 runtimes = []
 test_type = None
 request_handler = None
-NBR_RUNTIMES = 3  # At least 3
+
+NBR_RUNTIMES = max(3, int(os.environ.get("CALVIN_NBR_RUNTIMES", 3)))  # At least 3
 
 def deploy_app(deployer, runtimes=None):
     runtimes = runtimes if runtimes else [ deployer.runtime ]
@@ -107,6 +109,7 @@ def setup_module(module):
     request_handler = RequestHandler()
     test_type, runtimes = helpers.setup_test_type(request_handler, NBR_RUNTIMES, proxy_storage=True)
     rt1, rt2, rt3 = runtimes[:3]
+    print "CREATED", len(runtimes), "RUNTIMES"
 
 def teardown_module(module):
     global runtimes
@@ -165,7 +168,10 @@ class CalvinTestBase(unittest.TestCase):
         self.wait_for_migration(dest, [actor])
 
 
-@pytest.fixture(params=[("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")])
+@pytest.fixture(params=[("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
+,("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
+,("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
+])
 def rt_order3(request):
     return [globals()[p] for p in request.param]
 
@@ -644,6 +650,202 @@ class TestManualReplication(object):
         print actors_left
         assert src not in actors_left
         assert asum not in actors_left
+        assert snk not in actors_left
+        for r in replicas:
+            assert r not in actors_left
+
+    def testPerformanceOutInReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.01)
+            burn   : std.Burn(duration=1.0)
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > burn.token
+            burn.token > snk.token
+            rule single: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "first"}])
+            rule scale: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}]) & performance_scaling(alone=true, max=6)
+            apply burn: scale
+            apply src, snk: single
+        """
+
+        global rt1, rt2, rt3
+
+        nbr_possible = NBR_RUNTIMES - 2
+        #rt1 = rt_order3[0]
+        #rrt2 = rt_order3[1]
+        #rt3 = rt_order3[2]
+        rrt2 = rt2
+        rt_by_id = {r.id: r for r in runtimes}
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        burn = response['actor_map']['testScript:burn']
+        snk = response['actor_map']['testScript:snk']
+
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        burn_rt = rt_by_id[response['placement'][burn][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+
+        # Move src & snk back to first and place burn on second
+        #migrate(src_rt, rt1, src)
+        migrate(burn_rt, rrt2, burn)
+        #migrate(snk_rt, rt1, snk)
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:burn'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
+
+        replicas = []
+        fails = 0
+        while len(replicas) < nbr_possible and fails < 100:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.2)
+        assert len(replicas) == nbr_possible
+        print "REPLICAS", replicas
+        placed_burn = {burn: rt2.id}
+        print "ORIGINAL:", request_handler.get_actor(rt1, burn)
+        for r in replicas:
+            d = request_handler.get_actor(rt1, r)
+            placed_burn[r] = d['node_id']
+            print "REPLICA:", d
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        time.sleep(0.4)
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        keys = set([k.keys()[0] for k in actual])
+        print keys
+        print [k.values()[0] for k in actual]
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        print [k.values()[0] for k in actual]
+
+        # Make them dereplicate
+        print "DEREPLICATE"
+        for aid, nid in placed_burn.items():
+            try:
+                request_handler.report(rt_by_id[nid], aid, kwargs={'duration':0.01})
+            except:
+                print "FAILED DURATION CHANGE", aid
+        fails = 0
+        # This takes forever ..., but dereplication is slow
+        monotonic_decrease = len(replicas)
+        while len(replicas) > 0 and fails < nbr_possible * 30 + 60:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
+            fails += 1
+            assert monotonic_decrease >= len(replicas)
+            monotonic_decrease = len(replicas)
+            # Fail early if no progress
+            if fails > 100:
+                assert len(replicas) <= nbr_possible - 2
+            elif fails > 70:
+                assert len(replicas) <= nbr_possible - 1
+            time.sleep(1)
+        assert len(replicas) == 0
+        replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
+        print "REPLICAS", replicas
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert burn not in actors_left
+        assert snk not in actors_left
+        for r in replicas:
+            assert r not in actors_left
+
+    def testPerformanceSteadyReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.01)
+            burn   : std.Burn(duration=0.005)
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > burn.token
+            burn.token > snk.token
+            rule single: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "first"}])
+            rule scale: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}]) & performance_scaling(alone=true, max=6)
+            apply burn: scale
+            apply src, snk: single
+        """
+
+        global rt1, rt2, rt3
+
+        nbr_possible = NBR_RUNTIMES - 2
+        #rt1 = rt_order3[0]
+        #rrt2 = rt_order3[1]
+        #rt3 = rt_order3[2]
+        rrt2 = rt2
+        rt_by_id = {r.id: r for r in runtimes}
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        burn = response['actor_map']['testScript:burn']
+        snk = response['actor_map']['testScript:snk']
+
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        burn_rt = rt_by_id[response['placement'][burn][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+
+        # Place burn on second
+        migrate(burn_rt, rrt2, burn)
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:burn'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
+
+        nbr_replicas = {}
+        for duration in [0.005, 0.015, 0.025, 0.035]:
+            placed_burn = {burn: rt2.id}
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
+            for r in replicas:
+                d = request_handler.get_actor(rt1, r)
+                placed_burn[r] = d['node_id']
+            for aid, nid in placed_burn.items():
+                try:
+                    request_handler.report(rt_by_id[nid], aid, kwargs={'duration':duration})
+                except:
+                    print "FAILED DURATION CHANGE", aid
+            duration_str = str(duration)
+            for i in range(40):
+                replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
+                nbr_replicas.setdefault(duration_str, []).append(replicas)
+                time.sleep(1)
+            print "NBR REPLICAS", duration_str, ":", map(len, nbr_replicas[duration_str])
+
+        def mean(array):
+            a = map(len, array)
+            return sum(a)/float(len(a))
+
+        assert mean(nbr_replicas[str(0.005)]) < 0.2
+        assert mean(nbr_replicas[str(0.015)]) > 0.5 and mean(nbr_replicas[str(0.015)]) < 1.5
+        assert mean(nbr_replicas[str(0.025)]) > 1.5 and mean(nbr_replicas[str(0.025)]) < 2.5
+        if nbr_possible > 3:
+            assert mean(nbr_replicas[str(0.035)]) > 2.5 and mean(nbr_replicas[str(0.035)]) < 3.5
+        replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
+        print "REPLICAS", replicas
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert burn not in actors_left
         assert snk not in actors_left
         for r in replicas:
             assert r not in actors_left

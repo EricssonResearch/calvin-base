@@ -353,6 +353,7 @@ class Actor(object):
         self.authorization_checks = None
         self._replication_id = ReplicationId()
         self._exhaust_cb = None
+        self._pressure_event = 0  # Time of last pressure event time (not in state only local)
 
         self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.items()}
         self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.items()}
@@ -476,14 +477,37 @@ class Actor(object):
         self._exhaust_cb = callback
 
     def get_pressure(self):
+        _log.debug("get_pressure %s" % self._replication_id.measure_pressure())
+        if not self._replication_id.measure_pressure():
+            return None
+        t = time.time()
         pressure = {}
         for port in self.inports.values():
             for e in port.endpoints:
                 PRESSURE_LENGTH = len(e.pressure)
-                pressure[(port.id, e.peer_id)] = (
-                    e.pressure_last, e.pressure_count, [e.pressure[t % PRESSURE_LENGTH] for t in range(
-                                        max(0, e.pressure_count - PRESSURE_LENGTH), e.pressure_count)])
-        return pressure
+                pressure[port.id + "," + e.peer_id] = {'last': e.pressure_last, 'count': e.pressure_count,
+                    'pressure': [e.pressure[i % PRESSURE_LENGTH] for i in range(
+                                        max(0, e.pressure_count - PRESSURE_LENGTH), e.pressure_count)]}
+        pressure_event = False
+        for p in pressure.values():
+            if len(p['pressure']) < 2:
+                continue
+            if ((p['pressure'][-1][1] - p['pressure'][-2][1]) < 10 and
+                 p['pressure'][-1][1] > self._pressure_event):
+                # Less than 10 sec between queue full and not reported, maybe scale out
+                self._pressure_event = max(p['pressure'][-1][1], self._pressure_event)
+                pressure_event = True
+                break
+            if (p['pressure'][-1][1] < (t - 30) and
+                p['last'] > p['pressure'][-1][0] + 3 and
+                p['pressure'][-1][1] > self._pressure_event):
+                # More than 30 sec since queue full, received at least 3 tokens and not reported, maybe scale in
+                self._pressure_event = max(p['pressure'][-1][1], self._pressure_event)
+                pressure_event = True
+                break
+        pressure['time'] = t
+        _log.debug("get_pressure pressure_event:%s, pressure: %s" % (pressure_event, pressure))
+        return pressure if pressure_event else None
 
     #
     # FIXME: The following methods (_authorized, _warn_slow_actor, _handle_exhaustion) were
