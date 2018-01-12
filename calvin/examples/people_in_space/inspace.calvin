@@ -17,9 +17,9 @@ component PrintFormattedList(item_fmt) list ->  {
 
 
 /* Actors */
-tick : std.Trigger(tick=3600.0, data="http://api.open-notify.org/astros.json")
+tick : std.Trigger(tick=10.0, data=null)
 iip : flow.Init(data="nothing")
-client : net.HTTPGet()
+client : net.HTTPGetS(url="http://api.open-notify.org/astros.json", params=null, headers={"content-type": "application/json"}, auth=null)
 cmp : std.Compare(rel="=")
 sel : flow.Select()
 to_json: json.FromString()
@@ -28,11 +28,9 @@ print : PrintFormattedList(item_fmt="{name}, {craft}")
 
 
 /* Connections */
-tick.data > client.URL
-{} > client.header
-{} > client.params
+tick.data > client.data
 client.status > voidport
-client.header > voidport
+client.headers > voidport
 client.data > cmp.a
 iip.out > cmp.b
 cmp.result > sel.select

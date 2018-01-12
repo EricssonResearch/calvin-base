@@ -10,12 +10,13 @@ component PhilipsHue(address, username, lightno) on, saturation, brightness, hue
     .hue > command.hue
 
     url.url > light.URL
-    {} > light.params
+    null > light.params
+    null > light.auth
     command.string > light.data
-    {"Content-Type": "application/json"} > light.header
+    {"Content-Type": "application/json"} > light.headers
 
     light.status > .status
-    light.header > voidport
+    light.headers > voidport
     light.data > voidport
 }
 

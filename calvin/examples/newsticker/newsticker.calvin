@@ -147,10 +147,11 @@ component GetCommitData() url, params -> status, data {
 
   .url > request.URL
   .params > request.params
-  header_gen.header > request.header
+  null > request.auth
+  header_gen.header > request.headers
 
   request.data > body_to_json.string
-  request.header > header_gen.header
+  request.headers > header_gen.header
   request.status > .status
   body_to_json.data > .data
 
@@ -163,7 +164,6 @@ print_commits: PrintCommits()
 
 timer.url > get_commit.url
 param_gen.params > get_commit.params
-
 get_commit.data > param_gen.data, print_commits.commits
 get_commit.status > param_gen.status
 

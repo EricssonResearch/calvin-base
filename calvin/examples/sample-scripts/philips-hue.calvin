@@ -9,8 +9,9 @@ header_data : std.Constant(data={"Content-type" : "application/json"})
 
 format_data.token > format.dict
 format.text > client.URL
-header_data.token > client.header
-{} > client.params
+header_data.token > client.headers
+null > client.params
+null > client.auth
 
 # Set light to a reddish hue
 {"on": true, "sat": 255, "bri": 100, "hue": 1000} > to_string.data
@@ -18,4 +19,4 @@ to_string.string > client.data
 
 client.status > status.token
 client.data > data.token
-client.header > headers.token
+client.headers > headers.token

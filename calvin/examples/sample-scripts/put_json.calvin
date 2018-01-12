@@ -8,12 +8,13 @@ header : std.Constant(data={"Content-type": "application/json"})
 
 /* Connections */
 url.token > client.URL
-header.token > client.header
-{} > client.params
+header.token > client.headers
+null > client.params
+null > client.auth
 body_data.token > body_to_string.data
 body_to_string.string > client.data
 
 client.status > status.token
 client.data > voidport
-client.header > voidport
+client.headers > voidport
 
