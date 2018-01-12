@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Main cib file base name</key>
+	<string>MainMenu.cib</string>
+	<key>CPBundleName</key>
+	<string>EACalvin</string>
+  <key>CPBundleVersion</key>
+  <string>Requires Calvin >= v0.7</string>
+  <key>CPBundleShortVersionString</key>
+  <string>1.0</string>
+  <key>CPHumanReadableCopyright</key>
+  <string>Copyright © 2016, Your Company All rights reserved.</string>
+  <key>CPApplicationIcon</key>
+  <string>Resources/Calvin.png</string>
+  <key>CalvinInfo</key>
+  <dict>
+    <key>RequiredVersion</key>
+    <dict>
+      <key>Branch</key>
+      <string>Develop</string>
+      <key>Commit</key>
+      <string>#e6335174</string>
+    </dict>
+  </dict>
+</dict>
+</plist>

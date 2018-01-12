@@ -1,0 +1,259 @@
+@import <Foundation/Foundation.j>
+@import <AppKit/AppKit.j>
+@import "CSGProgramBuilder.j"
+
+// FIXME: Make this class operate on projects instead of programs
+
+// FIXME: move run/stop app here from AppController
+@implementation CSGRunner : CPObject
+{
+    CPArray running @accessors;
+    CPArray names @accessors;
+    CSGBackend backend @accessors;
+    JSObject runtimeInfo @accessors;
+    // Stop tasks
+    @outlet CPWindow    stopSheet;
+    @outlet CPTableView runningTable;
+    @outlet CPTextField    stopSheetLabel;
+    // Set deploy info
+    @outlet CPWindow    deployInfoSheet;
+    @outlet CPTableView deployTable;
+    @outlet CPPopUpButton deploySelection;
+    CPArray selections @accessors;
+
+    CPMutableDictionary active;
+}
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        active = @{};
+        selections = [];
+        running = [];
+    }
+    return self;
+}
+
+- (void)runProgram:(CSGProgram)program
+{
+    [backend deployScript:[program scriptRepresentation] program:program sender:self]; // Calls setAppID:forProgram:
+}
+
+- (void)updateActorViewForApp:(CPString)appID reason:(CPString)reason
+{
+    console.log("updateActorViewForApp:reason:", appID, reason);
+    if (reason === "stop") {
+        [self clearAppID:appID];
+        return;
+    }
+    var program = [active valueForKey:appID];
+    if (!program) {
+        return;
+    }
+    var actors = [program actors];
+    for (var i=0; i<actors.length; i++) {
+        var actor = actors[i];
+        [backend setNodeNameForActorID:[actor identifier] sender:actor];
+    }
+}
+
+- (void)setAppID:(CPString)appID forProgram:(CSGProgram)program
+{
+    [active setValue:program forKey:appID];
+    [running addObject:appID];
+    [self updateProgramInfo:appID];
+}
+
+- (BOOL)isRunningProgram:(CSGProgram)program
+{
+    var tentativeKeys = [active allKeysForObject:program];
+    if (tentativeKeys.length == 0) {
+        return NO;
+    }
+    return (running.indexOf(tentativeKeys[0]) >= 0);
+}
+
+- (void)stopProgram
+{
+    if (![active count]) {
+        return;
+    }
+    [self setRunning:[active allKeys]];
+    var tmp = [];
+    for (var i=0; i<running.length; i++) {
+        var appid = running[i];
+        [tmp addObject:[[active valueForKey:appid] name]];
+    }
+    [self setNames:tmp];
+    if (stopSheet === nil) {
+        [CPBundle loadCibNamed: @"StopSheet" owner:self];
+    }
+    [stopSheetLabel setStringValue:@"Stop application:"];
+    var theApp = [CPApplication sharedApplication];
+    var theWindow = [[theApp delegate] valueForKey:@"theWindow"];
+    [theApp beginSheet:stopSheet
+        modalForWindow:theWindow
+         modalDelegate:self
+        didEndSelector:@selector(didEndStopSheet:returnCode:contextInfo:)
+           contextInfo:@""];
+}
+
+- (@action)closeStopSheet:(id)sender
+{
+    var retCode = ([sender title] === "Cancel") ? 0 : 1;
+    [[CPApplication sharedApplication] endSheet:stopSheet returnCode:retCode];
+}
+
+- (void)didEndStopSheet:(CPWindow)sheet returnCode:(CPInteger)returnCode contextInfo:(id)contextInfo
+{
+    [sheet orderOut:self];
+    var selectionIndex = [runningTable selectedRow];
+    if (returnCode == 1 && selectionIndex >= 0) {
+        var appID = running[selectionIndex];
+        [running removeObjectAtIndex:selectionIndex];
+        [backend stopRunningScript:appID sender:self];
+        // [self clearAppID:appID];
+    }
+}
+
+
+- (void)selectProgram
+{
+    if (![active count]) {
+        return;
+    }
+    [self setRunning:[active allKeys]];
+    var tmp = [];
+    for (var i=0; i<running.length; i++) {
+        var appid = running[i];
+        [tmp addObject:[[active valueForKey:appid] name]];
+    }
+    [self setNames:tmp];
+    if (stopSheet === nil) {
+        [CPBundle loadCibNamed: @"StopSheet" owner:self];
+    }
+    [stopSheetLabel setStringValue:@"Select application:"];
+    var theApp = [CPApplication sharedApplication];
+    var theWindow = [[theApp delegate] valueForKey:@"theWindow"];
+    [theApp beginSheet:stopSheet
+        modalForWindow:theWindow
+         modalDelegate:self
+        didEndSelector:@selector(didEndSelectSheet:returnCode:contextInfo:)
+           contextInfo:@""];
+}
+
+
+- (void)didEndSelectSheet:(CPWindow)sheet returnCode:(CPInteger)returnCode contextInfo:(id)contextInfo
+{
+    [sheet orderOut:self];
+    var selectionIndex = [runningTable selectedRow];
+    if (returnCode == 1 && selectionIndex >= 0) {
+        var appID = running[selectionIndex];
+        var theApp = [CPApplication sharedApplication];
+        [[theApp delegate] setProgram:[active objectForKey:appID]];
+    }
+}
+
+
+- (void)attachApplication
+{
+    [backend updateAvailableApplicationsUsingBlock: function(applist) {
+        // Build program for all appIDs not in running, then call setAppID:forProgram:
+        for (var i=0; i<applist.length; i++) {
+            var appID = applist[i];
+            if (![active containsKey:appID]) {
+                var builder = [[CSGProgramBuilder alloc] initWithAppID:appID];
+                [builder setBackend:backend];
+                [self setAppID:appID forProgram:[builder program]];
+                [builder start];
+            }
+        }
+    }];
+}
+
+- (void)setDeployInfo
+{
+    if (![active count]) {
+        return;
+    }
+    [self setRunning:[active allKeys]];
+    var tmp = [];
+    for (var i=0; i<running.length; i++) {
+        var appid = running[i];
+        [tmp addObject:[[active valueForKey:appid] name]];
+    }
+    [self setNames:tmp];
+    [self setSelections:["part_1", "part_2", "part_3", "part_4", "part_5"]];
+    if (deployInfoSheet === nil) {
+        [CPBundle loadCibNamed: @"DeployInfoSheet" owner:self];
+    }
+    var theApp = [CPApplication sharedApplication];
+    var theWindow = [[theApp delegate] valueForKey:@"theWindow"];
+    [theApp beginSheet:deployInfoSheet
+        modalForWindow:theWindow
+         modalDelegate:self
+        didEndSelector:@selector(didEndDeployInfoSheet:returnCode:contextInfo:)
+           contextInfo:@""];
+}
+
+- (@action)closeDeployInfoSheet:(id)sender
+{
+    var retCode = ([sender title] === "Cancel") ? 0 : 1;
+    [[CPApplication sharedApplication] endSheet:deployInfoSheet returnCode:retCode];
+}
+
+- (void)didEndDeployInfoSheet:(CPWindow)sheet returnCode:(CPInteger)returnCode contextInfo:(id)contextInfo
+{
+    [sheet orderOut:self];
+    var selectionIndex = [deployTable selectedRow];
+    // console.log("didEndDeployInfoSheet", returnCode);
+    if (returnCode == 1 && selectionIndex >= 0) {
+        var appID = running[selectionIndex];
+        var fname = [selections objectAtIndex:[deploySelection selectedIndex]];
+        var URL = "file:///Users/eperspe/Source/calvin-base/calvin/examples/access_control_demo/Scripts/" + fname + ".deployjson";
+        [backend readLocalFileURL:URL sender:self userInfo:appID];
+    }
+}
+
+- (void)setFile:(id)data userInfo:(CPString)appID
+{
+    // console.log(data, appID);
+    var msg = "{\"reqs\":" + data + "}";
+    [backend setDeployInfo:msg forAppID:appID sender:self];
+}
+
+- (void)clearAppID:(CPString)appID
+{
+    [self setRuntimeInfo:nil];
+    var program = [active valueForKey:appID];
+    [[program actors] setValue:nil forKey:@"identifier"];
+    [[program actors] setValue:nil forKey:@"nodeName"];
+    [active removeObjectForKey:appID];
+}
+
+- (void)updateProgramInfo:(CPString)appID
+{
+    [backend infoForAppID:appID runner:self]; // Calls setRuntimeInfo:forAppID:
+}
+
+- (void)setRuntimeInfo:(JSObject)rti forAppID:(CPString)appID
+{
+    runtimeInfo = rti;
+    if (!rti) {
+        return;
+    }
+    var actor_ids = rti.actors;
+    var namespace = rti.ns;
+    var name_map = [CPDictionary dictionaryWithJSObject:rti.actors_name_map];
+    var program = [active valueForKey:appID];
+    var actors = [program actors];
+    for (var i=0; i<actors.length; i++) {
+        var actor = actors[i];
+        var qualified_name = namespace + ":" + actor.name;
+        var id = [name_map allKeysForObject:qualified_name][0];
+        [actor setIdentifier:id];
+    }
+}
+
+@end

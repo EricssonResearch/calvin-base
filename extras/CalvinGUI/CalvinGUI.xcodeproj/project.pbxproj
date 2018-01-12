@@ -1,0 +1,276 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXFileReference section */
+		0148461BA2D874A8A26BBBD1 /* CSGProgram+Rendering.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CSGProgram+Rendering.m"; path = ".XcodeSupport/CSGProgram+Rendering.m"; sourceTree = SOURCE_ROOT; };
+		048D4541BDAB5103F643B770 /* CSGProgram.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGProgram.m; path = .XcodeSupport/CSGProgram.m; sourceTree = SOURCE_ROOT; };
+		085E4DD39018D134FF903A06 /* CSGProjectController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGProjectController.h; path = .XcodeSupport/CSGProjectController.h; sourceTree = SOURCE_ROOT; };
+		08C845238250231C03725714 /* CSGActorTreeController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGActorTreeController.h; path = .XcodeSupport/CSGActorTreeController.h; sourceTree = SOURCE_ROOT; };
+		08D547B0ACD50337BAB3A452 /* CSGPort+Rendering.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "CSGPort+Rendering.h"; path = ".XcodeSupport/CSGPort+Rendering.h"; sourceTree = SOURCE_ROOT; };
+		0B8A41B8B595DEA34AA6464D /* CSGActor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGActor.m; path = .XcodeSupport/CSGActor.m; sourceTree = SOURCE_ROOT; };
+		0F8548E7AF0FF0078084A614 /* CSGScriptViewer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGScriptViewer.m; path = .XcodeSupport/CSGScriptViewer.m; sourceTree = SOURCE_ROOT; };
+		1228482D9225AFA478082F8C /* CSGHelpViewer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGHelpViewer.h; path = .XcodeSupport/CSGHelpViewer.h; sourceTree = SOURCE_ROOT; };
+		13EE4C0DABE6AE20C2F6CE94 /* CSGGeometryUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGGeometryUtils.h; path = .XcodeSupport/CSGGeometryUtils.h; sourceTree = SOURCE_ROOT; };
+		168F4C8A9E4D94A4D31968C1 /* CSGGeometryUtils.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGGeometryUtils.m; path = .XcodeSupport/CSGGeometryUtils.m; sourceTree = SOURCE_ROOT; };
+		1E3A496985DA0E30B6A38380 /* CSGTheme.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGTheme.j; path = CSGTheme.j; sourceTree = SOURCE_ROOT; };
+		1E7B400596801C93020BACF7 /* CSGCapabilitiesInspector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGCapabilitiesInspector.h; path = .XcodeSupport/CSGCapabilitiesInspector.h; sourceTree = SOURCE_ROOT; };
+		1F5B42738266F9B55D142D81 /* CSGConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGConnection.h; path = .XcodeSupport/CSGConnection.h; sourceTree = SOURCE_ROOT; };
+		237541488CC42ECBBCD8F2A1 /* CSGActor.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGActor.j; path = CSGActor.j; sourceTree = SOURCE_ROOT; };
+		27644E54AE9B271613A422E9 /* CSGActorTreeController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGActorTreeController.m; path = .XcodeSupport/CSGActorTreeController.m; sourceTree = SOURCE_ROOT; };
+		29B04C8A92D0FD9CDB36D1EA /* CSGPort+Rendering.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CSGPort+Rendering.m"; path = ".XcodeSupport/CSGPort+Rendering.m"; sourceTree = SOURCE_ROOT; };
+		2A924D139DCD66303F0D941B /* CSGInspector.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGInspector.m; path = .XcodeSupport/CSGInspector.m; sourceTree = SOURCE_ROOT; };
+		2B424253837EF4EDDBC38BEF /* CPString+Rendering.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CPString+Rendering.m"; path = ".XcodeSupport/CPString+Rendering.m"; sourceTree = SOURCE_ROOT; };
+		2BB34F269B56E13B6EB95C79 /* CSGBackend.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGBackend.j; path = CSGBackend.j; sourceTree = SOURCE_ROOT; };
+		30F94CD7BC0D18ADFE068805 /* CSGCapabilitiesInspector.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGCapabilitiesInspector.j; path = CSGCapabilitiesInspector.j; sourceTree = SOURCE_ROOT; };
+		401C4777908C1A8AD687CDA8 /* CSGProjectController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGProjectController.m; path = .XcodeSupport/CSGProjectController.m; sourceTree = SOURCE_ROOT; };
+		407144F0902C44504E54D94B /* CSGActor+Rendering.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "CSGActor+Rendering.h"; path = ".XcodeSupport/CSGActor+Rendering.h"; sourceTree = SOURCE_ROOT; };
+		4E444F3AA48825053EDDBADE /* CSGProgram.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGProgram.j; path = CSGProgram.j; sourceTree = SOURCE_ROOT; };
+		501440EFB51ED249976DA0EB /* CSGHostConfig.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGHostConfig.m; path = .XcodeSupport/CSGHostConfig.m; sourceTree = SOURCE_ROOT; };
+		527142E9A1CB7D49BEA069BD /* CSGPort.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGPort.m; path = .XcodeSupport/CSGPort.m; sourceTree = SOURCE_ROOT; };
+		54924214A4448479410E801D /* CSGDataPersistance.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGDataPersistance.m; path = .XcodeSupport/CSGDataPersistance.m; sourceTree = SOURCE_ROOT; };
+		572A4018959F920DA6DCCE58 /* CSGConsole.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGConsole.j; path = CSGConsole.j; sourceTree = SOURCE_ROOT; };
+		57754B849D3D0963E6528A4A /* CSGEventListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGEventListener.h; path = .XcodeSupport/CSGEventListener.h; sourceTree = SOURCE_ROOT; };
+		5B1F4BD491A634E91296D1B2 /* CSGProgramView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGProgramView.m; path = .XcodeSupport/CSGProgramView.m; sourceTree = SOURCE_ROOT; };
+		5C914461A827F1259172567F /* CSGProgram.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGProgram.h; path = .XcodeSupport/CSGProgram.h; sourceTree = SOURCE_ROOT; };
+		5EAB4B4E964B89230EF4EEE3 /* CSGActor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGActor.h; path = .XcodeSupport/CSGActor.h; sourceTree = SOURCE_ROOT; };
+		60104B88BF389BDFA473BC5D /* CSGScriptViewer.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGScriptViewer.j; path = CSGScriptViewer.j; sourceTree = SOURCE_ROOT; };
+		61C544F191B0C163592FBE17 /* CSGEventListener.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGEventListener.j; path = CSGEventListener.j; sourceTree = SOURCE_ROOT; };
+		682547D08BC58FF9D6375E77 /* CSGActorTreeNode.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGActorTreeNode.m; path = .XcodeSupport/CSGActorTreeNode.m; sourceTree = SOURCE_ROOT; };
+		68D84867841C934A6BF91391 /* CSGConnection.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGConnection.j; path = CSGConnection.j; sourceTree = SOURCE_ROOT; };
+		6B634F9FB4CE32435C759F23 /* CSGPort+Rendering.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CSGPort+Rendering.j"; path = "CSGPort+Rendering.j"; sourceTree = SOURCE_ROOT; };
+		6C1341B98BC7266EFE4851F8 /* CSGRuntimeInspector.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGRuntimeInspector.j; path = CSGRuntimeInspector.j; sourceTree = SOURCE_ROOT; };
+		6D424404AC89776143D6786F /* CSGProject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGProject.h; path = .XcodeSupport/CSGProject.h; sourceTree = SOURCE_ROOT; };
+		70974BF1B505A7F71BF32A14 /* CSGHostConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGHostConfig.h; path = .XcodeSupport/CSGHostConfig.h; sourceTree = SOURCE_ROOT; };
+		73294A0A91725BD1967A3F5D /* CSGRuntimeInspector.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGRuntimeInspector.m; path = .XcodeSupport/CSGRuntimeInspector.m; sourceTree = SOURCE_ROOT; };
+		7376479CA36018DFC359D692 /* AppController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AppController.h; path = .XcodeSupport/AppController.h; sourceTree = SOURCE_ROOT; };
+		775C44D6AB17180F55F8B8D5 /* CSGInspector.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGInspector.j; path = CSGInspector.j; sourceTree = SOURCE_ROOT; };
+		77D3465BB2F8639006873246 /* CSGActorTreeController.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGActorTreeController.j; path = CSGActorTreeController.j; sourceTree = SOURCE_ROOT; };
+		78B14477BE9D09615B504258 /* CSGProgram+Rendering.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "CSGProgram+Rendering.h"; path = ".XcodeSupport/CSGProgram+Rendering.h"; sourceTree = SOURCE_ROOT; };
+		78B54C4B96FA2DEA2F46E344 /* CSGComponent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGComponent.h; path = .XcodeSupport/CSGComponent.h; sourceTree = SOURCE_ROOT; };
+		79184CDEB3301EACD0654A94 /* CSGActorUIView.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGActorUIView.j; path = CSGActorUIView.j; sourceTree = SOURCE_ROOT; };
+		792C4134ADC6E4313BA8BAF9 /* CSGAppUIViewer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGAppUIViewer.h; path = .XcodeSupport/CSGAppUIViewer.h; sourceTree = SOURCE_ROOT; };
+		7A264978A8126DAB4A00BCB3 /* CSGActorTreeNode.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGActorTreeNode.j; path = CSGActorTreeNode.j; sourceTree = SOURCE_ROOT; };
+		7C154080A52A6421B1439690 /* CSGInspector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGInspector.h; path = .XcodeSupport/CSGInspector.h; sourceTree = SOURCE_ROOT; };
+		827C4196BF0998C1199A0A1E /* CSGEventListener.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGEventListener.m; path = .XcodeSupport/CSGEventListener.m; sourceTree = SOURCE_ROOT; };
+		836E4EF39637E5A1B1A9B030 /* CSGGeometryUtils.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGGeometryUtils.j; path = CSGGeometryUtils.j; sourceTree = SOURCE_ROOT; };
+		8C5E4C6E8F88E46ACE14F8C4 /* CSGDataPersistance.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGDataPersistance.h; path = .XcodeSupport/CSGDataPersistance.h; sourceTree = SOURCE_ROOT; };
+		8D714512BC8A410D405C2A3D /* CSGHostConfig.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGHostConfig.j; path = CSGHostConfig.j; sourceTree = SOURCE_ROOT; };
+		95994D6894BD839AC665E6AA /* CSGBackend.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGBackend.m; path = .XcodeSupport/CSGBackend.m; sourceTree = SOURCE_ROOT; };
+		96364FBDB84A30F937E6F491 /* CSGConnection+Rendering.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "CSGConnection+Rendering.h"; path = ".XcodeSupport/CSGConnection+Rendering.h"; sourceTree = SOURCE_ROOT; };
+		982F41A4AD7028B7B8869246 /* CSGProgramView.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGProgramView.j; path = CSGProgramView.j; sourceTree = SOURCE_ROOT; };
+		9C1943A3B07E048460B753DD /* CSGProject.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGProject.m; path = .XcodeSupport/CSGProject.m; sourceTree = SOURCE_ROOT; };
+		9D45449AB9392339A2E55F56 /* AppController.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AppController.j; path = AppController.j; sourceTree = SOURCE_ROOT; };
+		9DF442058A73C17D28715E83 /* CSGConnection+Rendering.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CSGConnection+Rendering.j"; path = "CSGConnection+Rendering.j"; sourceTree = SOURCE_ROOT; };
+		9F7E4317B5EA50ED6D982878 /* CSGHelpViewer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGHelpViewer.m; path = .XcodeSupport/CSGHelpViewer.m; sourceTree = SOURCE_ROOT; };
+		A08043E080B539799B46D3C3 /* CSGTheme.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGTheme.h; path = .XcodeSupport/CSGTheme.h; sourceTree = SOURCE_ROOT; };
+		A12048F786C4A532162DC8A2 /* CSGPort.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGPort.j; path = CSGPort.j; sourceTree = SOURCE_ROOT; };
+		A226453F9A943053B2832214 /* CSGAppUIView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGAppUIView.h; path = .XcodeSupport/CSGAppUIView.h; sourceTree = SOURCE_ROOT; };
+		A2BE4082B05E5E9BB83C46AD /* CSGTheme.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGTheme.m; path = .XcodeSupport/CSGTheme.m; sourceTree = SOURCE_ROOT; };
+		A6B24A0FA014E884416E499A /* xcc_general_include.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = xcc_general_include.h; path = .XcodeSupport/xcc_general_include.h; sourceTree = SOURCE_ROOT; };
+		A75949E584C7ED71DC36B290 /* CSGConsole.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGConsole.h; path = .XcodeSupport/CSGConsole.h; sourceTree = SOURCE_ROOT; };
+		A7974FC5A64F3AD9E7FCADD9 /* CSGAppUIViewer.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGAppUIViewer.j; path = CSGAppUIViewer.j; sourceTree = SOURCE_ROOT; };
+		A90446C29FC86EB96B39221B /* CSGAppUIViewer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGAppUIViewer.m; path = .XcodeSupport/CSGAppUIViewer.m; sourceTree = SOURCE_ROOT; };
+		AFF54A78B87DD559338976BE /* CSGDataPersistance.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGDataPersistance.j; path = CSGDataPersistance.j; sourceTree = SOURCE_ROOT; };
+		B06342198C5540CAF373AC18 /* CSGActorUIView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGActorUIView.m; path = .XcodeSupport/CSGActorUIView.m; sourceTree = SOURCE_ROOT; };
+		B26A4626A03B71993EB4C934 /* CSGProjectController.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGProjectController.j; path = CSGProjectController.j; sourceTree = SOURCE_ROOT; };
+		B64C47AAB465F90E9D480F99 /* CSGConnection.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGConnection.m; path = .XcodeSupport/CSGConnection.m; sourceTree = SOURCE_ROOT; };
+		BCC741A4BF30FA1884C8D5CB /* CSGScriptViewer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGScriptViewer.h; path = .XcodeSupport/CSGScriptViewer.h; sourceTree = SOURCE_ROOT; };
+		C0F14F0BA0C8A085C618941C /* CSGActor+Rendering.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CSGActor+Rendering.m"; path = ".XcodeSupport/CSGActor+Rendering.m"; sourceTree = SOURCE_ROOT; };
+		C71043DFAA4D0066EAC36990 /* CSGAppUIView.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGAppUIView.j; path = CSGAppUIView.j; sourceTree = SOURCE_ROOT; };
+		CE8D41C49BE9399D429A0F2D /* CSGActor+Rendering.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CSGActor+Rendering.j"; path = "CSGActor+Rendering.j"; sourceTree = SOURCE_ROOT; };
+		D931473796F6A1ED142139F6 /* CPString+Rendering.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "CPString+Rendering.h"; path = ".XcodeSupport/CPString+Rendering.h"; sourceTree = SOURCE_ROOT; };
+		DAE24248B699458CAE66FE7F /* CSGProgramView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGProgramView.h; path = .XcodeSupport/CSGProgramView.h; sourceTree = SOURCE_ROOT; };
+		DBC546388BF0E25AFDEF30CD /* CSGProgram+Rendering.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CSGProgram+Rendering.j"; path = "CSGProgram+Rendering.j"; sourceTree = SOURCE_ROOT; };
+		DBE34A1AB0F9F11FC49EC2EC /* CSGActorTreeNode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGActorTreeNode.h; path = .XcodeSupport/CSGActorTreeNode.h; sourceTree = SOURCE_ROOT; };
+		E08248C68DD20FBE6045ADA7 /* CSGRuntimeInspector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGRuntimeInspector.h; path = .XcodeSupport/CSGRuntimeInspector.h; sourceTree = SOURCE_ROOT; };
+		E164FE29172185F500263CE3 /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
+		E6824EBABCE9E7AF8EA02110 /* CSGActorUIView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGActorUIView.h; path = .XcodeSupport/CSGActorUIView.h; sourceTree = SOURCE_ROOT; };
+		E7964B8798521B467C2F099B /* CPString+Rendering.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CPString+Rendering.j"; path = "CPString+Rendering.j"; sourceTree = SOURCE_ROOT; };
+		E8BC44B19558AA4832ECECB1 /* CSGConnection+Rendering.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "CSGConnection+Rendering.m"; path = ".XcodeSupport/CSGConnection+Rendering.m"; sourceTree = SOURCE_ROOT; };
+		EFD94CB1ABF2012E82416127 /* CSGComponent.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGComponent.m; path = .XcodeSupport/CSGComponent.m; sourceTree = SOURCE_ROOT; };
+		F1C54BB1B2FF4543A2AE2BA4 /* CSGAppUIView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGAppUIView.m; path = .XcodeSupport/CSGAppUIView.m; sourceTree = SOURCE_ROOT; };
+		F5E147508D33A98214863552 /* CSGComponent.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGComponent.j; path = CSGComponent.j; sourceTree = SOURCE_ROOT; };
+		F6854BA6A38E66850636DAEA /* CSGProject.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGProject.j; path = CSGProject.j; sourceTree = SOURCE_ROOT; };
+		FA464528978C4F91AFEDE17F /* CSGHelpViewer.j */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGHelpViewer.j; path = CSGHelpViewer.j; sourceTree = SOURCE_ROOT; };
+		FB1C4C6CA0476A66AE938A3F /* CSGPort.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGPort.h; path = .XcodeSupport/CSGPort.h; sourceTree = SOURCE_ROOT; };
+		FBE64533AC0FB26B1D9F9A26 /* CSGBackend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CSGBackend.h; path = .XcodeSupport/CSGBackend.h; sourceTree = SOURCE_ROOT; };
+		FBF54F12A3846ECBE33D7896 /* CSGCapabilitiesInspector.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGCapabilitiesInspector.m; path = .XcodeSupport/CSGCapabilitiesInspector.m; sourceTree = SOURCE_ROOT; };
+		FD3B47A6B1AA5BFEF79C0943 /* CSGConsole.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CSGConsole.m; path = .XcodeSupport/CSGConsole.m; sourceTree = SOURCE_ROOT; };
+		FF8F431BAE3ABE0DCA7254B2 /* AppController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AppController.m; path = .XcodeSupport/AppController.m; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		61CB439691DCFE4450DB5D0A /* Cocoa Classes */ = {
+			isa = PBXGroup;
+			children = (
+				7376479CA36018DFC359D692 /* AppController.h */,
+				FF8F431BAE3ABE0DCA7254B2 /* AppController.m */,
+				D931473796F6A1ED142139F6 /* CPString+Rendering.h */,
+				2B424253837EF4EDDBC38BEF /* CPString+Rendering.m */,
+				407144F0902C44504E54D94B /* CSGActor+Rendering.h */,
+				C0F14F0BA0C8A085C618941C /* CSGActor+Rendering.m */,
+				5EAB4B4E964B89230EF4EEE3 /* CSGActor.h */,
+				0B8A41B8B595DEA34AA6464D /* CSGActor.m */,
+				08C845238250231C03725714 /* CSGActorTreeController.h */,
+				27644E54AE9B271613A422E9 /* CSGActorTreeController.m */,
+				DBE34A1AB0F9F11FC49EC2EC /* CSGActorTreeNode.h */,
+				682547D08BC58FF9D6375E77 /* CSGActorTreeNode.m */,
+				E6824EBABCE9E7AF8EA02110 /* CSGActorUIView.h */,
+				B06342198C5540CAF373AC18 /* CSGActorUIView.m */,
+				A226453F9A943053B2832214 /* CSGAppUIView.h */,
+				F1C54BB1B2FF4543A2AE2BA4 /* CSGAppUIView.m */,
+				792C4134ADC6E4313BA8BAF9 /* CSGAppUIViewer.h */,
+				A90446C29FC86EB96B39221B /* CSGAppUIViewer.m */,
+				FBE64533AC0FB26B1D9F9A26 /* CSGBackend.h */,
+				95994D6894BD839AC665E6AA /* CSGBackend.m */,
+				1E7B400596801C93020BACF7 /* CSGCapabilitiesInspector.h */,
+				FBF54F12A3846ECBE33D7896 /* CSGCapabilitiesInspector.m */,
+				78B54C4B96FA2DEA2F46E344 /* CSGComponent.h */,
+				EFD94CB1ABF2012E82416127 /* CSGComponent.m */,
+				96364FBDB84A30F937E6F491 /* CSGConnection+Rendering.h */,
+				E8BC44B19558AA4832ECECB1 /* CSGConnection+Rendering.m */,
+				1F5B42738266F9B55D142D81 /* CSGConnection.h */,
+				B64C47AAB465F90E9D480F99 /* CSGConnection.m */,
+				A75949E584C7ED71DC36B290 /* CSGConsole.h */,
+				FD3B47A6B1AA5BFEF79C0943 /* CSGConsole.m */,
+				8C5E4C6E8F88E46ACE14F8C4 /* CSGDataPersistance.h */,
+				54924214A4448479410E801D /* CSGDataPersistance.m */,
+				57754B849D3D0963E6528A4A /* CSGEventListener.h */,
+				827C4196BF0998C1199A0A1E /* CSGEventListener.m */,
+				13EE4C0DABE6AE20C2F6CE94 /* CSGGeometryUtils.h */,
+				168F4C8A9E4D94A4D31968C1 /* CSGGeometryUtils.m */,
+				1228482D9225AFA478082F8C /* CSGHelpViewer.h */,
+				9F7E4317B5EA50ED6D982878 /* CSGHelpViewer.m */,
+				70974BF1B505A7F71BF32A14 /* CSGHostConfig.h */,
+				501440EFB51ED249976DA0EB /* CSGHostConfig.m */,
+				7C154080A52A6421B1439690 /* CSGInspector.h */,
+				2A924D139DCD66303F0D941B /* CSGInspector.m */,
+				08D547B0ACD50337BAB3A452 /* CSGPort+Rendering.h */,
+				29B04C8A92D0FD9CDB36D1EA /* CSGPort+Rendering.m */,
+				FB1C4C6CA0476A66AE938A3F /* CSGPort.h */,
+				527142E9A1CB7D49BEA069BD /* CSGPort.m */,
+				78B14477BE9D09615B504258 /* CSGProgram+Rendering.h */,
+				0148461BA2D874A8A26BBBD1 /* CSGProgram+Rendering.m */,
+				5C914461A827F1259172567F /* CSGProgram.h */,
+				048D4541BDAB5103F643B770 /* CSGProgram.m */,
+				DAE24248B699458CAE66FE7F /* CSGProgramView.h */,
+				5B1F4BD491A634E91296D1B2 /* CSGProgramView.m */,
+				6D424404AC89776143D6786F /* CSGProject.h */,
+				9C1943A3B07E048460B753DD /* CSGProject.m */,
+				085E4DD39018D134FF903A06 /* CSGProjectController.h */,
+				401C4777908C1A8AD687CDA8 /* CSGProjectController.m */,
+				E08248C68DD20FBE6045ADA7 /* CSGRuntimeInspector.h */,
+				73294A0A91725BD1967A3F5D /* CSGRuntimeInspector.m */,
+				BCC741A4BF30FA1884C8D5CB /* CSGScriptViewer.h */,
+				0F8548E7AF0FF0078084A614 /* CSGScriptViewer.m */,
+				A08043E080B539799B46D3C3 /* CSGTheme.h */,
+				A2BE4082B05E5E9BB83C46AD /* CSGTheme.m */,
+				A6B24A0FA014E884416E499A /* xcc_general_include.h */,
+			);
+			name = "Cocoa Classes";
+			sourceTree = "<group>";
+		};
+		C14B468099ABE7E240392EFA /* Cappuccino Source */ = {
+			isa = PBXGroup;
+			children = (
+				9D45449AB9392339A2E55F56 /* AppController.j */,
+				E7964B8798521B467C2F099B /* CPString+Rendering.j */,
+				CE8D41C49BE9399D429A0F2D /* CSGActor+Rendering.j */,
+				237541488CC42ECBBCD8F2A1 /* CSGActor.j */,
+				77D3465BB2F8639006873246 /* CSGActorTreeController.j */,
+				7A264978A8126DAB4A00BCB3 /* CSGActorTreeNode.j */,
+				79184CDEB3301EACD0654A94 /* CSGActorUIView.j */,
+				C71043DFAA4D0066EAC36990 /* CSGAppUIView.j */,
+				A7974FC5A64F3AD9E7FCADD9 /* CSGAppUIViewer.j */,
+				2BB34F269B56E13B6EB95C79 /* CSGBackend.j */,
+				30F94CD7BC0D18ADFE068805 /* CSGCapabilitiesInspector.j */,
+				F5E147508D33A98214863552 /* CSGComponent.j */,
+				9DF442058A73C17D28715E83 /* CSGConnection+Rendering.j */,
+				68D84867841C934A6BF91391 /* CSGConnection.j */,
+				572A4018959F920DA6DCCE58 /* CSGConsole.j */,
+				AFF54A78B87DD559338976BE /* CSGDataPersistance.j */,
+				61C544F191B0C163592FBE17 /* CSGEventListener.j */,
+				836E4EF39637E5A1B1A9B030 /* CSGGeometryUtils.j */,
+				FA464528978C4F91AFEDE17F /* CSGHelpViewer.j */,
+				8D714512BC8A410D405C2A3D /* CSGHostConfig.j */,
+				775C44D6AB17180F55F8B8D5 /* CSGInspector.j */,
+				6B634F9FB4CE32435C759F23 /* CSGPort+Rendering.j */,
+				A12048F786C4A532162DC8A2 /* CSGPort.j */,
+				DBC546388BF0E25AFDEF30CD /* CSGProgram+Rendering.j */,
+				4E444F3AA48825053EDDBADE /* CSGProgram.j */,
+				982F41A4AD7028B7B8869246 /* CSGProgramView.j */,
+				F6854BA6A38E66850636DAEA /* CSGProject.j */,
+				B26A4626A03B71993EB4C934 /* CSGProjectController.j */,
+				6C1341B98BC7266EFE4851F8 /* CSGRuntimeInspector.j */,
+				60104B88BF389BDFA473BC5D /* CSGScriptViewer.j */,
+				1E3A496985DA0E30B6A38380 /* CSGTheme.j */,
+			);
+			name = "Cappuccino Source";
+			sourceTree = "<group>";
+		};
+		E164FE221721857400263CE3 /*  */ = {
+			isa = PBXGroup;
+			children = (
+				E164FE29172185F500263CE3 /* Resources */,
+				61CB439691DCFE4450DB5D0A /* Cocoa Classes */,
+				C14B468099ABE7E240392EFA /* Cappuccino Source */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXProject section */
+		E164FE231721857400263CE3 /* Project Object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0460;
+			};
+			buildConfigurationList = E164FE261721857400263CE3 /* Build configuration list for PBXProject "Unity-iPhone" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = E164FE221721857400263CE3 /*  */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		E164FE271721857400263CE3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		E164FE281721857400263CE3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E164FE261721857400263CE3 /* Build configuration list for PBXProject "Unity-iPhone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E164FE271721857400263CE3 /* Debug */,
+				E164FE281721857400263CE3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E164FE231721857400263CE3 /* Project Object */;
+}

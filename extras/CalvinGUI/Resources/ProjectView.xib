@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="10116" systemVersion="16F73" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" customObjectInstantitationMethod="direct">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="10116"/>
+    </dependencies>
+    <objects>
+        <customObject id="-2" userLabel="File's Owner" customClass="CSGProjectController">
+            <connections>
+                <outlet property="programView" destination="yOE-gk-fez" id="syo-fR-R2h"/>
+                <outlet property="view" destination="c22-O7-iKe" id="cST-D6-Fkc"/>
+            </connections>
+        </customObject>
+        <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
+        <customObject id="-3" userLabel="Application" customClass="NSObject"/>
+        <customView id="c22-O7-iKe">
+            <rect key="frame" x="0.0" y="0.0" width="828" height="603"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <scrollView autohidesScrollers="YES" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" usesPredominantAxisScrolling="NO" id="RdQ-TV-16r">
+                    <rect key="frame" x="0.0" y="0.0" width="828" height="565"/>
+                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                    <clipView key="contentView" id="LTk-me-ubG">
+                        <rect key="frame" x="1" y="1" width="811" height="548"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view id="yOE-gk-fez" customClass="CSGProgramView">
+                                <rect key="frame" x="0.0" y="0.0" width="2048" height="2048"/>
+                                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                            </view>
+                        </subviews>
+                    </clipView>
+                    <scroller key="horizontalScroller" verticalHuggingPriority="750" horizontal="YES" id="lXL-qN-xcr">
+                        <rect key="frame" x="1" y="549" width="811" height="15"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </scroller>
+                    <scroller key="verticalScroller" verticalHuggingPriority="750" doubleValue="1" horizontal="NO" id="wAi-C1-e4z">
+                        <rect key="frame" x="812" y="1" width="15" height="548"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </scroller>
+                </scrollView>
+                <button id="QWD-wZ-61K">
+                    <rect key="frame" x="252" y="575" width="108" height="18"/>
+                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    <buttonCell key="cell" type="check" title="Show I/O view" bezelStyle="regularSquare" imagePosition="left" inset="2" id="czK-14-aFL">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <binding destination="-2" name="enabled" keyPath="currentProject.appID" id="URC-jU-Rb6">
+                            <dictionary key="options">
+                                <string key="NSValueTransformerName">NSIsNotNil</string>
+                            </dictionary>
+                        </binding>
+                        <binding destination="-2" name="value" keyPath="currentProject.showUIView" id="Fwj-uD-PVW"/>
+                    </connections>
+                </button>
+                <popUpButton verticalHuggingPriority="750" id="i6o-AA-yZB">
+                    <rect key="frame" x="18" y="571" width="211" height="26"/>
+                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    <popUpButtonCell key="cell" type="push" title="Item 1" bezelStyle="rounded" alignment="center" lineBreakMode="truncatingTail" state="on" borderStyle="border" imageScaling="proportionallyDown" inset="2" selectedItem="tjT-ii-C7r" id="qdD-ai-tTn">
+                        <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                        <font key="font" metaFont="menu"/>
+                        <menu key="menu" id="vxe-4c-jjk">
+                            <items>
+                                <menuItem title="Item 1" state="on" id="tjT-ii-C7r"/>
+                                <menuItem title="Item 2" id="NiS-jC-Rg3"/>
+                                <menuItem title="Item 3" id="p83-H5-anS"/>
+                            </items>
+                        </menu>
+                        <connections>
+                            <binding destination="DyZ-uI-bY5" name="contentValues" keyPath="arrangedObjects.name" id="Hqp-JQ-6Ek"/>
+                        </connections>
+                    </popUpButtonCell>
+                    <connections>
+                        <binding destination="DyZ-uI-bY5" name="content" keyPath="arrangedObjects" id="yi1-65-bIm"/>
+                        <binding destination="DyZ-uI-bY5" name="contentValues" keyPath="arrangedObjects.name" previousBinding="yi1-65-bIm" id="eif-lb-Yek"/>
+                        <binding destination="-2" name="selectedObject" keyPath="currentProject" previousBinding="eif-lb-Yek" id="nAc-km-MSt"/>
+                    </connections>
+                </popUpButton>
+            </subviews>
+            <point key="canvasLocation" x="504" y="347.5"/>
+        </customView>
+        <arrayController id="DyZ-uI-bY5">
+            <connections>
+                <binding destination="-2" name="contentArray" keyPath="projects" id="HA9-PY-2fx"/>
+            </connections>
+        </arrayController>
+    </objects>
+</document>
