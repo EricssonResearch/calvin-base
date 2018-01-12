@@ -1,0 +1,10 @@
+tick : std.Trigger(data="This is some data for HTTP Post", tick=2.0)
+cmd : net.HTTPPostS(url="http://httpbin.org/post", headers={"content-type": "application/json"}, params=null, auth=null)
+s_out : io.Print()
+b_out : io.Print()
+h_out : io.Print()
+
+tick.data > cmd.data
+cmd.status > s_out.token
+cmd.data > b_out.token
+cmd.headers > h_out.token

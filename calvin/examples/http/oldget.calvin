@@ -1,0 +1,14 @@
+tick : std.Trigger(data="Data for HTTP-GET", tick=2.0)
+cmd : net.HTTPGet()
+s_out : io.Print()
+b_out : io.Print()
+h_out : io.Print()
+
+
+tick.data > /"http://httpbin.org/get"/ cmd.URL
+{"content-type": "application/json"} > cmd.headers
+null > cmd.auth
+null > cmd.params
+cmd.status > s_out.token
+cmd.data > b_out.token
+cmd.headers > h_out.token

@@ -1,0 +1,15 @@
+tick : std.Trigger(data="This is some put data", tick=2.0)
+cmd : net.HTTPPut()
+s_out : io.Print()
+b_out : io.Print()
+h_out : io.Print()
+
+
+tick.data > /"http://httpbin.org/put"/ cmd.URL
+tick.data > cmd.data
+{"content-type": "application/json"} > cmd.headers
+null > cmd.auth
+null > cmd.params
+cmd.status > s_out.token
+cmd.data > b_out.token
+cmd.headers > h_out.token

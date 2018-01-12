@@ -1,0 +1,10 @@
+tick : std.Trigger(data="Data for HTTP-GET", tick=2.0)
+cmd : net.HTTPGetS(url="http://httpbin.org/basic-auth/user/pass", headers={"content-type": "application/json"}, params=null, auth={"authtype": "basic", "username": "user", "password": "pass"})
+s_out : io.Print()
+b_out : io.Print()
+h_out : io.Print()
+
+tick.data > cmd.data
+cmd.status > s_out.token
+cmd.data > b_out.token
+cmd.headers > h_out.token
