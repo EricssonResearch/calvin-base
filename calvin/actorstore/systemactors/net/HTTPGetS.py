@@ -34,7 +34,7 @@ class HTTPGetS(Actor):
     Output:
       status: status of request
       headers: JSON dictionary of incoming headers
-      body : body of response (if any)
+      data : body of response (if any)
     """
 
     @manage(['command'])
@@ -47,7 +47,7 @@ class HTTPGetS(Actor):
         calvinsys.write(self.command, data)
         
     @stateguard(lambda actor: calvinsys.can_read(actor.command))
-    @condition([], ["status", "headers", "body"])
+    @condition([], ["status", "headers", "data"])
     def send_result(self):
         result = calvinsys.read(self.command)
         return (result.get("status"), result.get("headers"), result.get("body"))
