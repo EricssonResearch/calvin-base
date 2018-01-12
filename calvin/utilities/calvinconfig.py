@@ -151,6 +151,30 @@ class CalvinConfig(object):
                     "log.error": {
                         "module": "term.Log",
                         "attributes": { "level": "error"}
+                    },
+                    "http.delete": {
+                        "module": "web.http.Command",
+                        "attributes": {
+                            "cmd": "DELETE"
+                        }
+                    },
+                    "http.get": {
+                        "module": "web.http.Command",
+                        "attributes": {
+                            "cmd": "GET"
+                        }
+                    },
+                    "http.post": {
+                        "module": "web.http.Command",
+                        "attributes": {
+                            "cmd": "POST"
+                        }
+                    },
+                    "http.put": {
+                        "module": "web.http.Command",
+                        "attributes": {
+                            "cmd": "PUT"
+                        }
                     }
                 }
             },
