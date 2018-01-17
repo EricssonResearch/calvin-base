@@ -68,14 +68,3 @@ class HTTPPut(Actor):
     action_priority = (new_request, handle_reply, reply_with_body, reply_without_body)
     requires = ['http.put']
 
-
-    test_set = [
-        {
-            'inports': {'URL': [],
-                        'params': [],
-                        'header': []},
-            'outports': {'status': [],
-                         'header': [],
-                         'data': []}
-        }
-    ]

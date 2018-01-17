@@ -38,11 +38,3 @@ class PlayAudio(Actor):
 
     action_priority = (play, )
     requires =  ['media.audio']
-
-
-    test_kwargs = {'audiofile': "dummy"}
-    test_set = [
-        {
-            'inports': {'play': []},
-        }
-    ]
