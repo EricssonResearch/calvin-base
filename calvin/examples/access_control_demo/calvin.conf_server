@@ -1,8 +1,26 @@
 {
-  "global": {
-    "actor_paths": ["./devactors"],
-    "image_plugin": "opencv_impl",
-    "camera_plugin": "opencv_impl"
-  }
+    "global": {
+        "actor_paths": [
+            "./devactors"
+        ],
+        "image_plugin": "opencv_impl",
+        "camera_plugin": "opencv_impl"
+    },
+    "calvinsys": {
+        "capabilities": {
+            "image.source": {
+                "module": "media.webcam.opencv.Webcam",
+                "attributes": {"device": 0, "height": 480, "width": 640}
+            },
+            "image.render": {
+                "module": "media.image.render.tkinter.Renderer",
+                "attributes": { }
+            },
+            "image.facedetection": {
+                "description": "See https://github.com/opencv/opencv/tree/master/data/haarcascades for some classifiers",
+                "module": "media.image.analytics.detectobjects.opencv.DetectObjects",
+                "attributes": { "mark_objects": false, "haarcascade_file": "haarcascade_frontalface_default.xml"}
+            }
+        }
+    }
 }
-

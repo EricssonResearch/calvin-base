@@ -3,15 +3,15 @@
         "access_control_demo_part3:button.state": [
             "access_control_demo_part3:camera.trigger"
         ], 
-        "access_control_demo_part3:camera.image": [
-            "access_control_demo_part3:screen.image"
+        "access_control_demo_part3:camera.b64image": [
+            "access_control_demo_part3:screen.b64image"
         ]
     }, 
     "port_properties": {
         "access_control_demo_part3:camera": [
             {
                 "direction": "out", 
-                "port": "image", 
+                "port": "b64image", 
                 "properties": {
                     "nbr_peers": 1
                 }
@@ -27,7 +27,7 @@
         "access_control_demo_part3:screen": [
             {
                 "direction": "in", 
-                "port": "image", 
+                "port": "b64image", 
                 "properties": {
                     "nbr_peers": 1
                 }
@@ -47,13 +47,13 @@
     "actors": {
         "access_control_demo_part3:camera": {
             "args": {}, 
-            "actor_type": "media.Camera", 
-            "signature": "9030eabce45c273b2f43402fa5dfd72e219937fb57978ddfabe944025b22d2fe"
+            "actor_type": "media.ImageSource", 
+            "signature": "24be25ab36ecd3f14d8ff9616f735cd4b72d826385715156fc2bee84179b87d9"
         }, 
         "access_control_demo_part3:screen": {
             "args": {}, 
-            "actor_type": "media.ImageRenderer", 
-            "signature": "e7a548b578fa70c317dfaf8ed2d2132bde8c1f568600a13b775c5aee25d336ec"
+            "actor_type": "media.ImageSink", 
+            "signature": "a4dda0c10a7073d7f27a96d152ed6371dc012d7db0e92c43570b8773ff9b9fc7"
         }, 
         "access_control_demo_part3:button": {
             "args": {}, 

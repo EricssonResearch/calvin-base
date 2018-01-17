@@ -1,5 +1,7 @@
 # Android Access Control Example #
 
+__NOTE__: The Android Calvin contrained platform is not actively maintained, thus this example is unlikely to work out of the box.
+
 This example shows how an access control system for a door can be used together with a Calvin runtime on an Android device.
 
 ## Setup

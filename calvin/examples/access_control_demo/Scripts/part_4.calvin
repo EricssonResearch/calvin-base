@@ -1,10 +1,10 @@
 button : io.Button()
 bell: media.PlayAudio(audiofile="dingdong.ogg")
-camera : media.Camera()
-screen : media.ImageRenderer()
+camera : media.ImageSource()
+screen : media.ImageSink()
 
 button.state > camera.trigger
-camera.image > screen.image
+camera.b64image > screen.b64image
 button.state > bell.play
 
 

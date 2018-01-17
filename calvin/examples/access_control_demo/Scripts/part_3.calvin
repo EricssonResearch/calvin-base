@@ -1,9 +1,9 @@
 button : io.Button()
-camera : media.Camera()
-screen : media.ImageRenderer()
+camera : media.ImageSource()
+screen : media.ImageSink()
 
 button.state > camera.trigger
-camera.image > screen.image
+camera.b64image > screen.b64image
 
 
 # Deployment
