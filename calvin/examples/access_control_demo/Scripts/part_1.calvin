@@ -1,6 +1,6 @@
 button : io.Button()
 check  : std.Identity(dump=true)
-bell   : media.MediaPlayer(media_file="dingdong.ogg")
+bell   : media.PlayAudio(audiofile="dingdong.ogg")
 
 button.state > check.token
 check.token > bell.play

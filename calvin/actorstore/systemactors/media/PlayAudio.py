@@ -14,46 +14,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 
-class MediaPlayer(Actor):
+class PlayAudio(Actor):
 
     """
-    Play media file  <mediafile>.
+    Play audio file  <audiofile>.
 
     Inputs:
-      play: Play <mediafile> when True
+      play: starts playing file when true
     """
 
-    @manage(['media_file'])
-    def init(self, media_file):
-        self.media_file = media_file
-        self.setup()
+    @manage(['player'])
+    def init(self, audiofile):
+        self.player = calvinsys.open(self, "media.audio", audiofile=audiofile)
 
-    def setup(self):
-        self.use("calvinsys.media.mediaplayer", shorthand="player")
-        self.player = self["player"]
-
-    def did_migrate(self):
-        self.setup()
-
-    def will_migrate(self):
-        self.player.close()
-
-    def will_end(self):
-        self.player.close()
-
+    @stateguard(lambda actor: calvinsys.can_write(actor.player))
     @condition(['play'], [])
     def play(self, play):
-        if play:
-            self.player.play(self.media_file)
+        if bool(play):
+            calvinsys.write(self.player, None)
 
     action_priority = (play, )
-    requires =  ['calvinsys.media.mediaplayer']
+    requires =  ['media.audio']
 
 
-    test_kwargs = {'media_file': "dummy"}
+    test_kwargs = {'audiofile': "dummy"}
     test_set = [
         {
             'inports': {'play': []},

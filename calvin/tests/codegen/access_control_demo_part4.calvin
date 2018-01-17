@@ -1,5 +1,5 @@
 button : io.Button()
-bell: media.MediaPlayer(media_file="dingdong.ogg")
+bell: media.PlayAudio(audiofile="dingdong.ogg")
 camera : media.Camera()
 screen : media.ImageRenderer()
 

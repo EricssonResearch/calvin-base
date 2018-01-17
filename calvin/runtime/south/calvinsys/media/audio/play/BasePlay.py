@@ -29,7 +29,6 @@ class BasePlay(base_calvinsys_object.BaseCalvinsysObject):
                 "type": "string"
             }
         },
-        "required": ["audiofile"],
         "description": "Set up audio player"
     }
     
@@ -39,6 +38,6 @@ class BasePlay(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     write_schema = {
-        "description": "Start playing",
+        "description": "Play specified audio file, either specified in argument or at init",
         "type": ["null", "boolean", "string"]
     }

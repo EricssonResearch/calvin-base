@@ -17,7 +17,7 @@
 import pygame
 
 from calvin.runtime.south.calvinsys.media.audio.play import BasePlay
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -25,32 +25,54 @@ _log = get_logger(__name__)
 
 class Play(BasePlay.BasePlay):
     """
-    Implementation of Play Calvinsys API
+    Implementation of Play API based on pygame - note: only suitable for audioclips around a few seconds long
     """
-    def init(self, audiofile):
-        self._playing = None
-        self._player = None
-        async.call_in_thread(self._init_audio, audiofile)
+    def init(self, audiofile=None):
+        def done(*args, **kwargs):
+            self.is_playing = False
 
-    def _init_audio(self, audiofile):
-        try:
-            pygame.mixer.init()
-            self._player = pygame.mixer.Sound(audiofile)
-        except Exception as e:
-            _log.warning("Failed to initialize audio: {}".format(e))
-            
+        self.audiofile = audiofile
+        self.is_playing = None
+        self.player = None
+
+        defered = threads.defer_to_thread(pygame.mixer.init)
+        defered.addBoth(done)
+
     def can_write(self):
-        return bool(self._player) and not self._playing
+        return self.is_playing is False
 
-    def _play(self):
-        self._playing = self._player.play()
-        
-    def write(self, _):
-        self._playing = True
-        async.call_in_thread(self._play)
+    def write(self, audiofile=None):
+        def play_it(player, audiofile):
+            try:
+                if not player:
+                    player = pygame.mixer.Sound(audiofile)
+                if player:
+                    player.play()
+                else :
+                    _log.warning("Failed to initialize audio")
+                return player if self.audiofile else None # keep player if audio is given in init
+            except Exception as e:
+                _log.info("Error playing file: {}".format(e))
+            
+        def finished(player):
+            if player:
+                self.player = player
+                
+        def done(*args, **kwargs):
+            self.is_playing = False
+            self.scheduler_wakeup()
+
+        self.is_playing = True
+    
+        if self.audiofile:
+            audiofile = self.audiofile
+    
+        defered = threads.defer_to_thread(play_it, player=self.player, audiofile=audiofile)
+        defered.addCallback(finished)
+        defered.addBoth(done)
+        _log.info("Done")
  
     def close(self):
-        if self._player is not None:
-            # de init
+        if self.player:
             self.mixer.quit()
         

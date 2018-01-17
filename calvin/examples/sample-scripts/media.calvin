@@ -1,13 +1,12 @@
 /* actors */
-timer : std.ClassicDelay(interval=1)
+timer : std.Trigger(data=true, tick=1.0)
 camera : media.Camera()
 screen : media.ImageRenderer()
-player : media.MediaPlayer(media_file="calvin/examples/doorlock/dingdong.ogg")
+player : media.PlayAudio(audofile="dingdong.ogg")
 detect : media.FaceDetect()
 
 /* Connections */
-1 > timer.token
-timer.token  > camera.trigger
+timer.data > camera.trigger
 camera.image > screen.image
 camera.image > detect.image
 detect.faces > player.play

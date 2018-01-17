@@ -59,10 +59,10 @@
         }, 
         "access_control_demo_part1:bell": {
             "args": {
-                "media_file": "dingdong.ogg"
+                "audiofile": "dingdong.ogg"
             }, 
-            "actor_type": "media.MediaPlayer", 
-            "signature": "09bd0a9af355aecb05c65508494ef3580ca8f4a2d0b026058effad3fbfc7bf9a"
+            "actor_type": "media.PlayAudio", 
+            "signature": "eccae54926401a99a86bc2f10fe10c8b30c6064270bacdf6bedd685c6f703d51"
         }
     }, 
     "name": "access_control_demo_part1"
