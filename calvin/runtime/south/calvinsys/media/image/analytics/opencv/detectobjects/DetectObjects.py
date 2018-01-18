@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinsys.media.image.analytics.detectobjects import BaseDetectObjects
+from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.async import threads
 import cv2
@@ -25,7 +25,7 @@ import base64
 _log = get_logger(__name__)
 
 
-class DetectObjects(BaseDetectObjects.BaseDetectObjects):
+class DetectObjects(base_calvinsys_object.BaseCalvinsysObject):
     """
     DetectObjects: Find (and optionally mark) preconfigured objects in image, (uses OpenCV)
     
