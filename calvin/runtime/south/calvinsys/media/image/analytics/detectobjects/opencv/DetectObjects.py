@@ -16,8 +16,9 @@
 
 from calvin.runtime.south.calvinsys.media.image.analytics.detectobjects import BaseDetectObjects
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.plugins.async import async
-from calvin.runtime.south.plugins.opencv import opencv
+from calvin.runtime.south.plugins.async import threads
+import cv2
+import numpy
 import base64
 
 
@@ -26,27 +27,82 @@ _log = get_logger(__name__)
 
 class DetectObjects(BaseDetectObjects.BaseDetectObjects):
     """
-    OpenCV implementation of detect objetcs API.
+    DetectObjects: Find (and optionally mark) preconfigured objects in image, (uses OpenCV)
+    
+    See https://github.com/opencv/opencv/tree/master/data/haarcascades for some objects classifiers
     """
 
-    def init(self, mark_objects=False, **kwargs):
-        self._haarcascade_file = kwargs.get("haarcascade_file", "")
-        if not self._haarcascade_file:
+    init_schema = {
+        "description": "Setup DetectObjetcs",
+        "type": "object",
+        "properties": {
+            "mark_objects": {
+                "description": "Mark found objects in image",
+                "type": "boolean"
+            },
+            "haarcascade_file": {
+                "description": "Haarcascade file defining the objects",
+                "type": "string"
+            }
+        },
+        "required": ["haarcascade_file"]
+    }
+    
+    can_write_schema = {
+        "description": "True if ready for next analysis image"
+    }
+    
+    write_schema = {
+        "description": "Count objects as defined by haarcascade file. Works on b64 encoded image",
+        "type": "string"
+    }
+    
+    can_read_schema = {
+        "description": "True iff prevoius image has finished processing"
+    }
+    
+    read_schema = {
+        "description": "Mark objects as defined by haarcascade file. Input b64 encoded image, return b64 encoded image with found objects marked",
+        "type": ["string", "integer"]
+    }
+
+    def init(self, mark_objects=False, haarcascade_file=None):
+        if not haarcascade_file:
             _log.warning("DetectObjects: No classifier file given - this is unlikely to work")
+        else:
+            self.classifier = cv2.CascadeClassifier(haarcascade_file)
         self._mark_objects = mark_objects
         self._result = None
 
-    def _detect_objects(self, b64image):
+    def detect_objects(self, b64image):
+        def find_objects(image, haarcascade_file, mark):
+            # classifier = cv2.CascadeClassifier(haarcascade_file)
+            jpg = numpy.fromstring(image, numpy.int8)
+            image = cv2.imdecode(jpg, 1)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # The following line probably needs some further work
+            objects = self.classifier.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5, minSize=(50,50))
+            if mark:
+                for (x, y, w, h) in objects :
+                    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                _, new_image = cv2.imencode(".jpg", image)
+                return new_image
+            else :
+                return objects
+        
         image = base64.b64decode(b64image)
-        result = None
         try:
-            result = opencv.detect_objects(image=image, haarcascade_file=self._haarcascade_file, mark=self._mark_objects)
+            image = cv2.imdecode(numpy.fromstring(image, numpy.int8), 1)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # Probably needs some more fine-tuning
+            objects = self.classifier.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5, minSize=(50,50))
             if self._mark_objects:
-                # Result is a new image with objects marked
-                self._result = base64.b64encode(result)
+                for (x, y, w, h) in objects:
+                    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                _, new_image = cv2.imencode(".jpg", image)
+                return base64.b64encode(new_image)
             else:
-                # Result is a list of objects found
-                self._result = len(result)
+                return len(objects)
         except Exception as e:
             _log.error("Failed to detect objects: {}".format(e))
 
@@ -54,7 +110,14 @@ class DetectObjects(BaseDetectObjects.BaseDetectObjects):
         return self._result is None
 
     def write(self, b64image):
-        async.call_in_thread(self._detect_objects, b64image)
+        def success(result):
+            self._result = result
+            
+        def done(*args, **kwargs):
+            self.scheduler_wakeup()
+        defered = threads.defer_to_thread(self.detect_objects, b64image)
+        defered.addCallback(success)
+        defered.addBoth(done)
 
     def can_read(self):
         return self._result is not None
