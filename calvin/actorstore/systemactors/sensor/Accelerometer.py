@@ -16,47 +16,32 @@
 
 from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
-class PickUpGesture(Actor):
+class Accelerometer(Actor):
 
     """
-    Senses a pick-up gesture
+    Measure the acceleration. Takes the period of measurements, in microseconds, as input.
 
     Outputs:
-        pickup :  A trigger that a pick-up gesture was measured.
+        acceleration :  Acceleration as a dict with the x,y, and z directions.
     """
 
-    @manage(exclude=['level'])
-    def init(self):
-        self.setup()
-
-    def setup(self):
-        self.level = calvinsys.open(self, "io.pickupgesture")
-
-    def teardown(self):
-        calvinsys.close(self.level)
-
-    def will_migrate(self):
-        self.teardown()
-
-    def did_migrate(self):
-        self.setup()
-
-    def will_end(self):
-        self.teardown()
+    @manage(['level', 'period'])
+    def init(self, period):
+        self.period = period
+        self.level = calvinsys.open(self, "io.accelerometer", period=self.period)
 
     @stateguard(lambda self: calvinsys.can_read(self.level))
-    @condition([], ['pickup'])
+    @condition([], ['acceleration'])
     def read_measurement(self):
         level = calvinsys.read(self.level)
         return (level,)
 
-    action_priority = (read_measurement, )
-    requires = ['io.pickupgesture']
+    action_priority = (read_measurement,)
+    requires = ['io.accelerometer']
 
-
-    test_calvinsys = {'io.pickupgesture': {'read': [True, False, True, False]}}
+    test_calvinsys = {'io.accelerometer': {'read': [10, 12, 0, 5]}}
     test_set = [
         {
-            'outports': {'pickup': [True, False, True, False]}
+            'outports': {'acceleration': [10, 12, 0, 5]}
         }
     ]

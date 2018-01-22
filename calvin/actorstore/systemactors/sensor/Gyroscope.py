@@ -16,41 +16,19 @@
 
 from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
-class TriggeredGyroscope(Actor):
+class Gyroscope(Actor):
 
     """
-    Measure the rotation
-
-    Inputs:
-        trigger : any token triggers meausurement
+    Measure the rotation. Takes the period of measurements, in microseconds, as input.
 
     Outputs:
         rotation :  Rotation around the x,y and z axis. Is returned as a dict with the x,y, and z keys.
     """
 
-    @manage(exclude=['level'])
-    def init(self):
-        self.setup()
-
-    def setup(self):
-        self.level = calvinsys.open(self, "io.gyroscope")
-
-    def teardown(self):
-        calvinsys.close(self.level)
-
-    def will_migrate(self):
-        self.teardown()
-
-    def did_migrate(self):
-        self.setup()
-
-    def will_end(self):
-        self.teardown()
-
-    @stateguard(lambda self: calvinsys.can_write(self.level))
-    @condition(['trigger'], [])
-    def trigger_measurement(self, _):
-        calvinsys.write(self.level, True)
+    @manage(['level', 'period'])
+    def init(self, period):
+        self.period = period
+        self.level = calvinsys.open(self, "io.gyroscope", period=self.period)
 
     @stateguard(lambda self: calvinsys.can_read(self.level))
     @condition([], ['rotation'])
@@ -58,15 +36,12 @@ class TriggeredGyroscope(Actor):
         level = calvinsys.read(self.level)
         return (level,)
 
-    action_priority = (read_measurement, trigger_measurement)
+    action_priority = (read_measurement,)
     requires = ['io.gyroscope']
 
-
-    test_calvinsys = {'io.gyroscope': {'read': [{'x': 90, 'y': 180, 'z': 45}],
-                                           'write': [True]}}
+    test_calvinsys = {'io.gyroscope': {'read': [{'x': 90, 'y': 180, 'z': 45}]}}
     test_set = [
         {
-            'inports': {'trigger': [True]},
             'outports': {'rotation': [{'x': 90, 'y': 180, 'z': 45}]}
         }
     ]
