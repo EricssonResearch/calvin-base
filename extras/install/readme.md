@@ -1,6 +1,6 @@
 # Installation
 
-The following has been tested on Raspbian Jessie (2016-05-27) and Ubuntu 16.04. It is mainly aimed at simplifying the installation of Calvin on systems that will not be used for much else, such as Raspberry Pi's or in virtual machines. It is not the recommended way of installing Calvin on your production server. See [the installation descriptions](Installation) for the recommended way of installing Calvin.
+The following has been tested on Raspbian Jessie (2016-05-27) and Ubuntu 16.04. It is mainly aimed at simplifying the installation of Calvin on systems that will not be used for much else, such as Raspberry Pi's or in virtual machines. It is not the recommended way of installing Calvin on your production server. See [the installation descriptions](https://www.github.com/EricssonResearch/calvin-base/wiki/Installation) for the recommended way of installing Calvin.
 
 ### Debian-based systems, installation script
 
