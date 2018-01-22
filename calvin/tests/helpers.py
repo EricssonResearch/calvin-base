@@ -19,7 +19,7 @@ def retry(retries, function, criterion, error_msg):
     """
         Executes 'result = function()' until 'criterion(result)' evaluates to a true value.
         Raises 'Exception(error_msg)' if criterion is not fulfilled after 'retries' attempts
-    
+
     """
     delay = 0.1
     retry = 0
@@ -31,14 +31,13 @@ def retry(retries, function, criterion, error_msg):
                 if criterion(result):
                     if retry > 0:
                         _log.info("Criterion %s(%s) satisfied after %d retries" %
-                                    (str(criterion), str(function), retry,))
+                            (str(criterion), str(function), retry,))
                     return result
             except Exception as e:
                 _log.error("Erroneous criteria '%r" % (e, ))
                 raise e
         except Exception as e:
             _log.exception("Encountered exception when retrying '%s'" % (e,))
-            #_log.info("Encountered exception when retrying '%s'" % (e,))
         delay = min(2, delay * 1.5); retry += 1
         time.sleep(delay)
         try:
@@ -87,7 +86,7 @@ def actual_tokens_multiple(request_handler, rt, actor_ids, size=5, retries=10):
 
 def destroy_app(deployer, retries=10):
     """
-    Tries to destroy the app connected with deployer. 
+    Tries to destroy the app connected with deployer.
     """
     return delete_app(deployer.request_handler, deployer.runtime, deployer.app_id, retries=retries)
 
@@ -98,7 +97,7 @@ def deploy_app(request_handler, deployer, runtimes, retries=10):
     presence in registry (for all runtimes).
     """
     deployer.deploy()
-    
+
     def check_application():
         for rt in runtimes:
             try:
@@ -194,7 +193,7 @@ def delete_app(request_handler, runtime, app_id, check_actor_ids=None, retries=1
 
     retry(retries, partial(verify_app_gone, request_handler, runtime, app_id), lambda r: r, "Application not deleted")
     if check_actor_ids:
-        retry(retries, partial(verify_actors_gone, request_handler, runtime, check_actor_ids), 
+        retry(retries, partial(verify_actors_gone, request_handler, runtime, check_actor_ids),
               lambda r: r, "Application actors not deleted")
 
 
@@ -221,24 +220,24 @@ def deploy_script(request_handler, name, script, runtime, retries=10):
 
 def flatten_zip(lz):
     return [] if not lz else [ lz[0][0], lz[0][1] ] + flatten_zip(lz[1:])
-    
+
 
 # Helper for 'std.CountTimer' actor
 def expected_counter(n):
     return [i for i in range(1, n + 1)]
 
-# Helper for 'std.Sum' 
+# Helper for 'std.Sum'
 def expected_sum(n):
     def cumsum(l):
         s = 0
         for n in l:
             s = s + n
             yield s
-        
+
     return list(cumsum(range(1, n + 1)))
 
 def expected_tokens(request_handler, rt, actor_id, t_type):
-    
+
     tokens = request_handler.report(rt, actor_id)
     if t_type == 'seq':
         return expected_counter(tokens)
@@ -251,23 +250,23 @@ def expected_tokens(request_handler, rt, actor_id, t_type):
 
 def setup_distributed(control_uri, purpose, request_handler):
     from functools import partial
-    
+
     remote_node_count = 3
     test_peers = None
     runtimes = []
-    
+
     runtime = RT(control_uri)
     index = {"node_name": {"organization": "com.ericsson", "purpose": purpose}}
     index_string = format_index_string(index)
-    
+
     get_index = partial(request_handler.get_index, runtime, index_string)
-    
+
     def criteria(peers):
         return peers and peers.get("result", None) and len(peers["result"]) >= remote_node_count
-    
+
     test_peers = retry(10, get_index, criteria, "Not all nodes found")
     test_peers = test_peers["result"]
-    
+
     for peer_id in test_peers:
         peer = request_handler.get_node(runtime, peer_id)
         if not peer:
@@ -279,8 +278,8 @@ def setup_distributed(control_uri, purpose, request_handler):
         runtimes.append(rt)
 
     return runtimes
-    
-def setup_local(ip_addr, request_handler, nbr, proxy_storage):  
+
+def setup_local(ip_addr, request_handler, nbr, proxy_storage):
     def check_storage(rt, n, index):
         index_string = format_index_string(index)
         retries = 0
@@ -322,7 +321,7 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
     attr_rest['indexed_public']['node_name']['group'] = u'rest'
 
     _log.info("starting runtime %s %s" % host)
-    
+
     if proxy_storage:
         import calvin.runtime.north.storage
         calvin.runtime.north.storage._conf.set('global', 'storage_type', 'local')
@@ -349,12 +348,15 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
         _log.info("started runtime %s %s" % host)
         runtimes += [rt]
 
-    for host in hosts:
-        check_storage(RT(host[1]), nbr, attr['indexed_public'])
-        
-    for host in hosts:
-        request_handler.peer_setup(RT(host[1]), [h[0] for h in hosts if h != host])
-    
+    if len(hosts) > 1:
+        for host in hosts:
+            _log.info("Checking storage for {}".format(host))
+            check_storage(RT(host[1]), nbr, attr['indexed_public'])
+
+        for host in hosts:
+            _log.info("Peer setup for {}".format(host))
+            request_handler.peer_setup(RT(host[1]), [h[0] for h in hosts if h != host])
+
     return runtimes
 
 def setup_bluetooth(bt_master_controluri, request_handler):
@@ -458,7 +460,7 @@ def setup_test_type(request_handler, nbr=3, proxy_storage=False):
         runtimes = setup_local(ip_addr, request_handler, nbr, proxy_storage)
 
     return test_type, runtimes
-    
+
 
 def teardown_test_type(test_type, runtimes, request_handler):
     from functools import partial
@@ -469,7 +471,7 @@ def teardown_test_type(test_type, runtimes, request_handler):
             except Exception:
                 return True
         return False
-        
+
     if test_type == "local":
         for peer in runtimes:
             request_handler.quit(peer)
@@ -494,7 +496,7 @@ def sign_files_for_security_tests(credentials_testdir):
         # Read in the file
         filedata = None
         with open(file_path, 'r') as file :
-              filedata = file.read()
+            filedata = file.read()
 
         # Replace the target string
         filedata = filedata.replace(text_to_be_replaced, text_to_insert)
@@ -572,27 +574,27 @@ def sign_files_for_security_tests(credentials_testdir):
     _copy_and_sign_actor("exception","ExceptionHandler.py")
 
     #Create unsigned version of CountTimer actor
-    actor_CountTimerUnsigned_path = actor_CountTimer_path.replace(".py", "Unsigned.py") 
+    actor_CountTimerUnsigned_path = actor_CountTimer_path.replace(".py", "Unsigned.py")
     shutil.copy(actor_CountTimer_path, actor_CountTimerUnsigned_path)
     replace_text_in_file(actor_CountTimerUnsigned_path, "CountTimer", "CountTimerUnsigned")
 
     #Create unsigned version of Sum actor
-    actor_SumUnsigned_path = actor_Sum_path.replace(".py", "Unsigned.py") 
+    actor_SumUnsigned_path = actor_Sum_path.replace(".py", "Unsigned.py")
     shutil.copy(actor_Sum_path, actor_SumUnsigned_path)
     replace_text_in_file(actor_SumUnsigned_path, "Sum", "SumUnsigned")
 
     #Create incorrectly signed version of Sum actor
-    actor_SumFake_path = actor_Sum_path.replace(".py", "Fake.py") 
+    actor_SumFake_path = actor_Sum_path.replace(".py", "Fake.py")
     shutil.copy(actor_Sum_path, actor_SumFake_path)
     #Change the class name to SumFake
     replace_text_in_file(actor_SumFake_path, "Sum", "SumFake")
     cs.sign_file(actor_SumFake_path)
     #Now append to the signed file so the signature verification fails
     with open(actor_SumFake_path, "a") as fd:
-            fd.write(" ")
+        fd.write(" ")
 
     #Create unsigned version of Sink actor
-    actor_SinkUnsigned_path = actor_Sink_path.replace(".py", "Unsigned.py") 
+    actor_SinkUnsigned_path = actor_Sink_path.replace(".py", "Unsigned.py")
     shutil.copy(actor_Sink_path, actor_SinkUnsigned_path)
     replace_text_in_file(actor_SinkUnsigned_path, "Sink", "SinkUnsigned")
 
@@ -602,7 +604,7 @@ def sign_files_for_security_tests(credentials_testdir):
     cs.sign_file(os.path.join(application_store_path, "incorrectly_signed.calvin"))
     #Now append to the signed file so the signature verification fails
     with open(os.path.join(application_store_path, "incorrectly_signed.calvin"), "a") as fd:
-            fd.write(" ")
+        fd.write(" ")
 
     print "Export Code Signers certificate to the truststore for code signing"
     out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
@@ -630,7 +632,7 @@ def security_verify_storage(runtimes, request_handler):
         rt_id[j] = retry(30, partial(request_handler.get_node_id, runtimes[j]['RT']), lambda _: True, "Failed to get node id")
     _log.info("RUNTIMES:{}".format(rt_id))
     # Wait for storage to be connected
-    index = "node/capabilities/json" 
+    index = "node/capabilities/json"
     failed = True
     def test():
         count=[0]*len(runtimes)
@@ -738,7 +740,7 @@ def _generate_certiticates(ca, runtimes, domain_name, credentials_testdir):
                                                        nodeid=runtimes[i]["id"],
                                                        enrollment_password=runtimes[i]["enrollment_password"])
         runtimes[i]["credentials"] = runtime
-        csr_path = runtime.get_csr_path() 
+        csr_path = runtime.get_csr_path()
         #CAs generated certificate for runtime
         cert_path = ca.sign_csr(csr_path)
         runtime.store_own_cert(certpath=cert_path)
@@ -850,7 +852,7 @@ def teardown_slow(runtimes, request_handler, hostname):
     for i in range(1, len(runtimes)):
         _log.info("kill runtime {}".format(i))
         try:
-            request_handler.quit(runtmes[i]["RT"])
+            request_handler.quit(runtimes[i]["RT"])
         except Exception:
             _log.error("Failed quit for node {}".format(i))
     # Kill Auth/Authz node last since the other nodes need it for authorization
@@ -879,4 +881,3 @@ def teardown(runtimes, request_handler, hostname):
     for i in range(len(runtimes)):
         os.system("pkill -9 -f 'csruntime -n {} -p 500{}'" .format(hostname,i))
     time.sleep(0.2)
-
