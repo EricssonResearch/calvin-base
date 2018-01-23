@@ -35,8 +35,19 @@ class LocalConnection(BaseConnection):
         _log.analyze(self.node.id, "+ LOCAL", {'local_port': self.port, 'peer_port': self.peer_port_meta},
                         peer_node_id=self.peer_port_meta.node_id)
         port1 = self.port
-        port2 = self.peer_port_meta.port
-
+        try:
+            port2 = self.peer_port_meta.port
+        except:
+            # Should have been local but have moved
+            # Need ConnectionFactory to redo its job.
+            _log.analyze(self.node.id, "+ LOCAL-TO-TUNNELED", {'factory': self.factory})
+            def _factory_connect(status, port_meta):
+                # TODO check retry to not get into infinte loop?
+                if not status:
+                    self.async_reply(status=status.status)
+                self.factory.get(self.port, self.peer_port_meta, self.callback).connect()
+            self.peer_port_meta.retry(_factory_connect)
+            return
         self.node.rm.connect_verification(port2.owner.id, port2.id, port1.id, self.node.id)
 
         # Local connect wants the first port to be an inport
