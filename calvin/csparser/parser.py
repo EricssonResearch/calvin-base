@@ -23,6 +23,13 @@ import astnode as ast
 from astprint import BraceFormatter
 from calvin.utilities.issuetracker import IssueTracker
 
+_parser_instance = None
+def get_parser():
+    global _parser_instance
+    if _parser_instance is None:
+        _parser_instance = CalvinParser()
+    return _parser_instance
+
 
 class CalvinParser(object):
     """docstring for CalvinParser"""
@@ -504,11 +511,10 @@ class CalvinParser(object):
 
         return ir, self.issuetracker
 
-
 # FIXME: [PP] Optionally supply an IssueTracker
 def calvin_parse(source_text):
     """Parse source text and return ir (AST) and issuetracker."""
-    parser = CalvinParser()
+    parser = get_parser()
     return parser.parse(source_text)
 
 def printable_ir(source_text):
@@ -562,7 +568,7 @@ apply src, snk : simple
             print "Error: Could not read file: '%s'" % script
             sys.exit(1)
 
-    parser = CalvinParser()
+    parser = get_parser()
     ir, it = parser.parse(source_text, logger=log)
     if it.issue_count == 0:
         print "No issues"
