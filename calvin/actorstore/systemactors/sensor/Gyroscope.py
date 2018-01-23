@@ -39,6 +39,7 @@ class Gyroscope(Actor):
     action_priority = (read_measurement,)
     requires = ['io.gyroscope']
 
+    test_kwargs = {'period': 10}
     test_calvinsys = {'io.gyroscope': {'read': [{'x': 90, 'y': 180, 'z': 45}]}}
     test_set = [
         {

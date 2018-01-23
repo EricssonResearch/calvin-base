@@ -39,6 +39,7 @@ class Accelerometer(Actor):
     action_priority = (read_measurement,)
     requires = ['io.accelerometer']
 
+    test_kwargs = {'period': 10}
     test_calvinsys = {'io.accelerometer': {'read': [10, 12, 0, 5]}}
     test_set = [
         {
