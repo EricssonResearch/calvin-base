@@ -236,7 +236,6 @@ class AppManager(object):
         """ Get actor callback """
         _log.analyze(self._node.id, "+", {'actor_id': key, 'value': value, 'retries': retries,
                                         'check_replica': check_replica})
-        _log.debug("Destroy app peers actor cb %s - retry: %d\n%s" % (key, retries, str(value)))
         if response.isnotfailresponse(value) and 'node_id' in value:
             application.update_node_info(value['node_id'], key)
             try:
@@ -263,33 +262,37 @@ class AppManager(object):
                 application.update_node_info(None, key)
 
         if application.complete_node_info() and not application.replication_ids and not application.actor_replicas:
+            _log.debug("_destroy_actor_cb final")
             self._destroy_final(application)
 
     def _replicas_cb(self, value, replication_id, master_id, application):
-        _log.analyze(self._node.id, "+", {'value': value})
+        _log.analyze(self._node.id, "+", {'value': value, 'replication_id': replication_id, 'replication_ids': application.replication_ids})
         application.replication_ids.remove(replication_id)
-        if isinstance(value, (list, tuple, set)):
-            application.actor_replicas.extend(value)
-        for actor_id in application.actor_replicas[:]:
+        application.actor_replicas.extend(value)
+        for actor_id in value:
             if actor_id == master_id:
                 application.actor_replicas.remove(actor_id)
                 continue
             application.actors[actor_id] = "noname"
             if actor_id in self._node.am.list_actors():
+                _log.debug("_replicas_cb actor %s LOCAL" % actor_id)
                 application.actor_replicas.remove(actor_id)
                 application.update_node_info(self._node.id, actor_id)
             else:
+                _log.debug("_replicas_cb actor %s REMOTE" % actor_id)
                 self.storage.get_actor(actor_id,
                     CalvinCB(func=self._destroy_actor_cb, application=application, check_replica=False))
         if application.complete_node_info() and not application.replication_ids:
+            _log.debug("_replicas_cb final")
             self._destroy_final(application)
 
     def _destroy_final(self, application):
         """ Final destruction of the application on this node and send request to peers to also destroy the app """
+        _log.analyze(self._node.id, "+ BEGIN 1", {'node_info': application.node_info, 'origin_node_id': application.origin_node_id})
         if hasattr(application, '_destroy_node_ids'):
             # Already called
             return
-        _log.analyze(self._node.id, "+", {'node_info': application.node_info, 'origin_node_id': application.origin_node_id})
+        _log.analyze(self._node.id, "+ BEGIN 2", {'node_info': application.node_info, 'origin_node_id': application.origin_node_id})
         application._destroy_node_ids = {n: None for n in application.node_info.keys()}
         for node_id, actor_ids in application.node_info.iteritems():
             if not node_id:

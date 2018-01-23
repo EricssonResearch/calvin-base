@@ -168,6 +168,7 @@ class CalvinTestBase(unittest.TestCase):
         self.wait_for_migration(dest, [actor])
 
 
+#@pytest.fixture(params=[("rt1", "rt2", "rt3")])
 @pytest.fixture(params=[("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
 ,("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
 ,("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
@@ -849,6 +850,141 @@ class TestManualReplication(object):
         assert snk not in actors_left
         for r in replicas:
             assert r not in actors_left
+
+    def testManualConcurrentReplication(self, rt_order3):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            sum   : std.Sum()
+            ident : std.Identity()
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            ident.token[in](routing="collect-tagged")
+            ident.token[out](routing="random")
+            src.integer > sum.integer
+            sum.integer > ident.token
+            ident.token > snk.token
+            rule manual: manual_scaling()
+            apply sum, ident: manual
+        """
+
+        rt1 = rt_order3[0]
+        rt2 = rt_order3[1]
+        rt3 = rt_order3[2]
+        rt_by_id = {r.id: r for r in runtimes}
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        asum = response['actor_map']['testScript:sum']
+        ident = response['actor_map']['testScript:ident']
+        snk = response['actor_map']['testScript:snk']
+
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        asum_rt = rt_by_id[response['placement'][asum][0]]
+        ident_rt = rt_by_id[response['placement'][ident][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+
+        # Move src & snk back to first and place sum on second
+        migrate(src_rt, rt1, src)
+        migrate(asum_rt, rt2, asum)
+        migrate(ident_rt, rt2, ident)
+        migrate(snk_rt, rt1, snk)
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
+        print replication_data
+        sum_leader_id = replication_data['leader_node_id']
+        sum_leader_rt = rt_by_id[sum_leader_id]
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:ident'])['result']
+        print replication_data
+        ident_leader_id = replication_data['leader_node_id']
+        ident_leader_rt = rt_by_id[ident_leader_id]
+
+        sum_counter = 0
+        ident_counter = 0
+        fails = 0
+        while (sum_counter < 4 or ident_counter < 4) and fails < 20:
+            failed = False
+            if sum_counter < 4:
+                sum_result = request_handler.async_replicate(sum_leader_rt, replication_id=response['replication_map']['testScript:sum'], dst_id=rt3.id)
+            if ident_counter < 4:
+                ident_result = request_handler.async_replicate(ident_leader_rt, replication_id=response['replication_map']['testScript:ident'], dst_id=rt3.id)
+            if sum_counter < 4:
+                try:
+                    request_handler.async_response(sum_result)
+                    sum_counter += 1
+                    fails = 0
+                except:
+                    failed = True
+            if ident_counter < 4:
+                try:
+                    request_handler.async_response(ident_result)
+                    ident_counter += 1
+                    fails = 0
+                except:
+                    failed = True
+            if failed:
+                fails += 1
+                time.sleep(0.1)
+        print "REPLICATED", sum_counter, ident_counter, fails
+        assert sum_counter == 4 and ident_counter == 4
+        sum_replicas = []
+        fails = 0
+        while len(sum_replicas) < sum_counter and fails < 20:
+            sum_replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.1)
+        assert len(sum_replicas) == sum_counter
+        ident_replicas = []
+        fails = 0
+        while len(ident_replicas) < ident_counter and fails < 20:
+            ident_replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.1)
+        assert len(ident_replicas) == ident_counter
+        print "REPLICAS SUM:", sum_replicas
+        print "REPLICAS ident:", ident_replicas
+        print "ORIGINAL:", request_handler.get_actor(rt1, asum)
+        for r in sum_replicas + ident_replicas:
+            print "REPLICA:", request_handler.get_actor(rt1, r)
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        tagtag = []
+        fails = 0
+        # Should get 25 combinations of port tags, i.e. paths thru scaled actors, otherwise not fully connected
+        while len(tagtag) < 25 and fails < 10:
+            time.sleep(0.5)
+            actual = request_handler.report(runtimes[snk_place], snk)
+            tagtag = set([k.keys()[0] + "+" + k.values()[0].keys()[0] for k in actual])
+            fails += 1
+        print "TAG-TAG combinations", len(tagtag), tagtag
+        assert len(tagtag) == 25
+        #keys = set([k.keys()[0] for k in actual])
+        #print keys
+        #print [k.values()[0] for k in actual]
+        
+        sum_replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+        ident_replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
+        replicas = sum_replicas + ident_replicas
+        print "REPLICAS", replicas
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert asum not in actors_left
+        assert snk not in actors_left
+        for r in replicas:
+            assert r not in actors_left
+
+
 
 #@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow

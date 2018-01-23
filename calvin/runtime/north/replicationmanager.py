@@ -88,6 +88,11 @@ class ReplicationData(object):
         self.leader_election = None
         self.leader_node_id = None
         self.actor_state = None
+        self.peer_replication_ids = []
+        self.given_lock_replication_ids = set([])  # We are locked out against these
+        self.aquired_lock_replication_ids = set([])  # We have lock against these
+        self.queued_lock_replication_ids = set([])  # We attempt to get lock against these
+        self.queued_lock_callback = None
 
     def state(self):
         state = {}
@@ -104,6 +109,10 @@ class ReplicationData(object):
         state['requirements'] = self.requirements
         state['remaped_ports'] = self.remaped_ports
         state['status'] = REPLICATION_STATUS.READY
+        state['peer_replication_ids'] = self.peer_replication_ids
+        state['given_lock_replication_ids'] = list(self.given_lock_replication_ids)
+        state['aquired_lock_replication_ids'] = list(self.aquired_lock_replication_ids)
+        state['queued_lock_replication_ids'] = list(self.queued_lock_replication_ids)
         try:
             state['req_op'] = req_operations[self.requirements['op']].get_state(self)
         except:
@@ -124,6 +133,10 @@ class ReplicationData(object):
         self.leader_election = state.get('leader_election', None)
         self.leader_node_id = state.get('leader_node_id', None)
         self.actor_state = state.get('actor_state', None)
+        self.peer_replication_ids = state.get('peer_replication_ids', [])
+        self.given_lock_replication_ids = set(state.get('given_lock_replication_ids', []))
+        self.aquired_lock_replication_ids = set(state.get('aquired_lock_replication_ids', []))
+        self.queued_lock_replication_ids = set(state.get('queued_lock_replication_ids', []))
         try:
             req_operations[self.requirements['op']].set_state(self, state['req_op'])
         except:
@@ -342,6 +355,18 @@ class ReplicationManager(object):
                 {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['inports'].items()}
             replication_data.actor_state['replication']['outports'] = {k:
                 {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['outports'].items()}
+            # Find which peers also has replication, will prevent simultaneous replication
+            collect = set([])
+            for port in actor.inports.values() + actor.outports.values():
+                try:
+                    # Should still be local
+                    for endpoint in port.endpoints:
+                        if endpoint.peer_port.owner._replication_id.id is not None:
+                            collect.add(endpoint.peer_port.owner._replication_id.id)
+                except:
+                    _log.exception("Is replicating actors port peer also replicating? SHOULD STILL BE LOCAL!")
+            replication_data.peer_replication_ids = list(collect)
+            _log.debug("%s peer replication ids %s" % (replication_data.id, replication_data.peer_replication_ids))
             replication_data._wait_for_outstanding.remove('ports')
             if not replication_data._wait_for_outstanding:
                 self.move_replication_leader(replication_data.id, replication_data._move_to_leader)
@@ -376,8 +401,11 @@ class ReplicationManager(object):
     def add_replication_leader(self, replication_data, status=None):
         if isinstance(replication_data, dict):
             try:
-                replication_data = ReplicationData(initialize=False).set_state(replication_data)
+                rd_state = replication_data
+                replication_data = ReplicationData()
+                replication_data.set_state(rd_state)
             except:
+                _log.exception("Failed leader elect set state of replication data")
                 return calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST)
 
         if not isinstance(replication_data, ReplicationData):
@@ -404,9 +432,8 @@ class ReplicationManager(object):
             return None
 
     def destroy_replication_leader(self, replication_id, cb=None):
-        _log.debug("destroy_replication_leader %s" % replication_id)
+        _log.debug("destroy_replication_leader BEGIN %s cb=%s" % (replication_id, cb))
         if replication_id in self.managed_replications.keys():
-            _log.debug("destroy_replication_leader %s" % replication_id)
             self.remove_replication_leader(replication_id)
             if cb:
                 cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
@@ -415,16 +442,179 @@ class ReplicationManager(object):
         def _leader_node_cb(key, value):
             # Tell leader to be destroyed
             _log.debug("destroy_replication_leader _leader_node_cb %s" % replication_id)
+            def _silent(*args, **kwargs):
+                status = kwargs.get("status", args[0])
+                _log.debug("destroy_replication_leader log cb %s status=%s" % (replication_id, status))
             try:
                 self.node.proto.leader_elected(peer_node_id=value['leader_node_id'], leader_type="replication", cmd="destroy", 
-                                                data=replication_id, callback=cb)
+                                                data=replication_id, callback=_silent if cb is None else cb)
             except:
                 _log.exception("fail destroy_replication_leader _leader_node_cb %s" % replication_id)
                 if cb:
                     cb(status=calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
         # Find leader
         self.node.storage.get_replication_data(replication_id, cb=_leader_node_cb)
+        _log.debug("destroy_replication_leader END (return ACCEPTED) %s" % replication_id)
         return calvinresponse.CalvinResponse(calvinresponse.ACCEPTED)
+
+    #
+    # Locks towards peer replications
+    #
+    def call_peer_leader(self, peer_replication_id, func, callback, retry=0):
+        """ Call local/remote function for peer replication leader.
+            A NOT_FOUND status in callback gives retry otherwise return all other status in callback
+        """
+        # Read backwards
+        # Final actual response
+        def _got_response(status):
+            if calvinresponse.isfailresponse(status) and status.status == calvinresponse.NOT_FOUND:
+                # Leader moved? Retry
+                del self.leaders_cache[peer_replication_id]
+                if retry < 3:
+                    self.call_peer_leader(peer_replication_id, func, callback, retry=retry+1)
+                    return
+            callback(status=status)
+        # Populate leader node cache, call func(..., cb=<callback>)
+        if peer_replication_id in self.leaders_cache:
+            func(peer_replication_id=peer_replication_id, peer_node_id=self.leaders_cache[peer_replication_id], cb=_got_response)
+        else:
+            def _got_leader_node(key, value):
+                try:
+                    self.leaders_cache[peer_replication_id] = value["leader_node_id"]
+                except:
+                    # If replication id not in registry
+                    return callback(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+                func(peer_replication_id=peer_replication_id, peer_node_id=self.leaders_cache[peer_replication_id], cb=_got_response)
+            self.node.storage.get_replication_data(peer_replication_id, cb=_got_leader_node)
+
+
+    def busy_peer_replication(self, replication_id):
+        """ Returns if any known locks, we can only do one attempt at a time
+            Nothing more is needed anyway since each replication manager is serialized.
+        """
+        try:
+            replication_data = self.managed_replications[replication_id]
+        except:
+            return True
+        return (bool(replication_data.given_lock_replication_ids) or
+                bool(replication_data.queued_lock_replication_ids) or
+                bool(replication_data.aquired_lock_replication_ids))
+
+    def lock_peer_replication(self, replication_id, callback):
+        """ Continues in callback when locks released
+            internal status index:
+                    OK:                     got lock
+                    BAD_REQUEST:            (peer) replication ids does not exist
+                    NOT_FOUND:              chased the replication manager, but moved to many times
+                    SERVICE_UNAVAILABLE:    lock held by other party
+                    INTERNAL_ERROR:         already have queued lock
+        """
+        try:
+            replication_data = self.managed_replications[replication_id]
+        except:
+            return callback(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+        # No lock needed
+        if not replication_data.peer_replication_ids:
+            return callback(status=calvinresponse.CalvinResponse(True))
+        # Check if a lock already queued
+        if replication_data.queued_lock_callback is not None:
+            # Caller need to serialize this (which it already do)
+            return callback(status=calvinresponse.CalvinResponse(False))
+        # Queue my lock
+        replication_data.queued_lock_callback = callback
+        replication_data.queued_lock_replication_ids = set(replication_data.peer_replication_ids)
+        _log.debug("replication lock %s" % ("WAIT" if replication_data.given_lock_replication_ids else "GO"))
+        self.cont_lock_peer_replication(replication_data)
+
+    def cont_lock_peer_replication(self, replication_data):
+        if replication_data.aquired_lock_replication_ids:
+            # TODO Keep or release and aquire again, test to keep, see if we starv the other, log only
+            _log.debug("WHAT TO DO IF WE ALREADY HAVE SOME LOCKS\nqueued: %s\naquired: %s" %
+                (replication_data.queued_lock_replication_ids, replication_data.aquired_lock_replication_ids))
+        # Get any locks which are not held by us or peer, the given locks will be aquired when released
+        # FIXME could get into deadlock if 3 parts or more in a circle :-(, since collecting locks
+        get_lock_ids = (replication_data.queued_lock_replication_ids -
+                         replication_data.aquired_lock_replication_ids -
+                         replication_data.given_lock_replication_ids)
+
+        def _try_lock(replication_id, peer_replication_id, peer_node_id, cb):
+            if peer_node_id == self.node.id:
+                self._try_replication_lock(replication_id, peer_replication_id, cb)
+            else:
+                self.node.proto.leader_elected(peer_node_id, "replication", "lock",
+                    {"replication_id": replication_id, "peer_replication_id": peer_replication_id},
+                    callback=cb)
+        def _response_lock(peer_replication_id, status):
+            if status.status == calvinresponse.OK:
+                replication_data.aquired_lock_replication_ids.add(peer_replication_id)
+                replication_data.queued_lock_replication_ids.remove(peer_replication_id)
+            if not replication_data.queued_lock_replication_ids:
+                cb = replication_data.queued_lock_callback
+                replication_data.queued_lock_callback = None
+                cb(status=status)
+        for peer_replication_id in get_lock_ids:
+            self.call_peer_leader(peer_replication_id, CalvinCB(_try_lock, replication_id=replication_data.id),
+                                    CalvinCB(_response_lock, peer_replication_id=peer_replication_id))
+
+    def _try_replication_lock(self, replication_id, peer_replication_id, cb):
+        try:
+            replication_data = self.managed_replications[peer_replication_id]
+        except:
+            return cb(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+        if replication_id in replication_data.aquired_lock_replication_ids:
+            # It is held by asked node, there will be a retry when released
+            _log.debug("replication lock held by asked")
+            return cb(status=calvinresponse.CalvinResponse(calvinresponse.SERVICE_UNAVAILABLE))
+        if replication_id in replication_data.given_lock_replication_ids:
+            # It is held by asking node already
+            _log.debug("replication lock held by asking")
+            return cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+        replication_data.given_lock_replication_ids.add(replication_id)
+        return cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+
+    def release_peer_replication(self, replication_id):
+        # TODO callback to known that we are done?
+        try:
+            replication_data = self.managed_replications[replication_id]
+        except:
+            _log.error("Tried to release unknown replication id locks %s" % replication_id)
+            return
+        _log.debug("Lock release %s" % (replication_data.queued_lock_replication_ids))
+        def _release_lock(replication_id, peer_replication_id, peer_node_id, cb):
+            if peer_node_id == self.node.id:
+                self._release_replication_lock(replication_id, peer_replication_id, cb)
+            else:
+                def _silent(*args, **kwargs):
+                    pass
+                self.node.proto.leader_elected(peer_node_id, "replication", "release",
+                    {"replication_id": replication_id, "peer_replication_id": peer_replication_id},
+                    callback=_silent if cb is None else cb)
+        def _response_release(peer_replication_id, status):
+            if status.status == calvinresponse.OK:
+                replication_data.aquired_lock_replication_ids.remove(peer_replication_id)
+                if peer_replication_id in replication_data.queued_lock_replication_ids:
+                    _log.debug("Lock released and we have queue %s" % replication_data.queued_lock_replication_ids)
+                    self.cont_lock_peer_replication(replication_data)
+            else:
+                _log.debug("FAIL RELEASE LOCK, WHY???")
+        for peer_replication_id in replication_data.aquired_lock_replication_ids.copy():
+            self.call_peer_leader(peer_replication_id, CalvinCB(_release_lock, replication_id=replication_data.id),
+                                    CalvinCB(_response_release, peer_replication_id=peer_replication_id))
+
+    def _release_replication_lock(self, replication_id, peer_replication_id, cb):
+        try:
+            replication_data = self.managed_replications[peer_replication_id]
+        except:
+            return cb(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
+        if replication_id not in replication_data.given_lock_replication_ids:
+            # It is NOT held by asked node
+            _log.debug("replication release not held by asked")
+            return cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+        replication_data.given_lock_replication_ids.remove(replication_id)
+        cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+        if replication_data.queued_lock_replication_ids:
+            _log.debug("Lock released and we have queue %s" % replication_data.queued_lock_replication_ids)
+            self.cont_lock_peer_replication(replication_data)
 
     #
     # Replicate
@@ -486,10 +676,20 @@ class ReplicationManager(object):
         self.replicate(replication_data.id, selected[0], callback=replication_data._replicate_callback)
         _log.analyze(self.node.id, "+ END", {'replication_data_id': replication_data.id})
 
-    def replicate(self, replication_id, dst_node_id, callback):
-        """ Can't be called directly, only via replicate_by_requirements
-            Will perform the actual replication.
+    def replicate(self, replication_id, dst_node_id, callback, status=None, locked=False):
+        """ Can't be called directly, only via replicate_by_requirements or replicate_by_known_placement
+            due to READY check is handled in these functions
+            Will perform the actual replication after aquiring a lock towards connected peers'
+            potential replication manager.
         """
+        if not locked:
+            # Retry when we have lock
+            return self.lock_peer_replication(replication_id,
+                CalvinCB(self.replicate, replication_id, dst_node_id, callback, locked=True))
+        elif locked and calvinresponse.isfailresponse(status):
+            # Locked callback and failed status, abort
+            if callback:
+                callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
         try:
             replication_data = self.managed_replications[replication_id]
         except:
@@ -497,7 +697,6 @@ class ReplicationManager(object):
                 callback(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
         _log.analyze(self.node.id, "+", {'replication_id': replication_id, 'dst_node_id': dst_node_id})
-        
         # TODO make name a property that combine name and counter in actor
         new_id = uuid("ACTOR")
         # FIXME change this time stuff when changing replication_loop
@@ -558,6 +757,7 @@ class ReplicationManager(object):
 
     def _replicated(self, status, replication_id=None, actor_id=None, callback=None, master_id=None, dst_node_id=None):
         _log.analyze(self.node.id, "+", {'status': status, 'replication_id': replication_id, 'actor_id': actor_id})
+        self.release_peer_replication(replication_id)
         if status:
             # TODO add callback for storing
             self.node.storage.add_replica(replication_id, actor_id, dst_node_id)

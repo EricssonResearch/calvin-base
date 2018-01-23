@@ -605,12 +605,32 @@ class CalvinProto(CalvinCBClass):
                     reply = self.node.rm.add_replication_leader(replication_data=payload["data"])
                 elif payload["type_cmd"] == "destroy":
                     reply = self.node.rm.destroy_replication_leader(replication_id=payload["data"])
+                elif payload["type_cmd"] == "lock":
+                    def _tried_lock(status):
+                        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
+                        self.node.network.link_request(payload['from_rt_uuid'],
+                                            callback=CalvinCB(send_message, msg=msg))
+                    self.node.rm._try_replication_lock(replication_id=payload["data"]["replication_id"],
+                                                       peer_replication_id=payload["data"]["peer_replication_id"],
+                                                       cb=_tried_lock)
+                    reply = None
+                elif payload["type_cmd"] == "release":
+                    def _released(status):
+                        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': status.encode()}
+                        self.node.network.link_request(payload['from_rt_uuid'],
+                                            callback=CalvinCB(send_message, msg=msg))
+                    self.node.rm._release_replication_lock(replication_id=payload["data"]["replication_id"],
+                                                       peer_replication_id=payload["data"]["peer_replication_id"],
+                                                       cb=_released)
+                    reply = None
                 else:
                     reply = response.CalvinResponse(response.BAD_REQUEST)
             else:
                 reply = response.CalvinResponse(response.BAD_REQUEST)
         except:
             reply = response.CalvinResponse(False)
+        if reply is None:
+            return
         msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
         self.node.network.link_request(payload['from_rt_uuid'],
                             callback=CalvinCB(send_message, msg=msg))
