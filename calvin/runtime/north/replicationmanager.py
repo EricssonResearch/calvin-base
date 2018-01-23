@@ -171,15 +171,6 @@ class ReplicationData(object):
     def terminate_with_node(self, actor_id):
         return self._terminate_with_node and not self.is_master(actor_id)
 
-    def inhibate(self, actor_id, inhibate):
-        if inhibate:
-            if self.requirements:
-                self.status = REPLICATION_STATUS.INHIBATED
-        elif self.is_master(actor_id):
-            self.status = REPLICATION_STATUS.READY
-        else:
-            self.status = REPLICATION_STATUS.UNUSED
-
     def set_remaped_ports(self, actor_id, remap_ports, ports):
         self.remaped_ports[actor_id] = remap_ports
         # Remember the ports that we knew at replication time
@@ -237,11 +228,6 @@ class ReplicationManager(object):
         self.node = node
         self.managed_replications = {}  # {<rep_id>: <rep_data>, ...} for which we are elected leader
         self.leaders_cache = {}  # {<rep_id>: <node_id>, ...} elected leader node id for replication ids
-
-    def inhibate(self, *args, **kwargs):
-        # FIXME need to implement this if still needed
-        _log.debug("FIXME FIXME inhibate FIXME FIXME")
-        pass
 
     def supervise_actor(self, actor_id, requirements, actor_args):
         try:

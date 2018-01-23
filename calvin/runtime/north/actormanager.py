@@ -314,7 +314,6 @@ class ActorManager(object):
                 callback(status=response.CalvinResponse(response.BAD_REQUEST))
             return
         actor = self.actors[actor_id]
-        self.node.rm.inhibate(actor_id, True)
         actor.requirements_add(requirements, extend)
         self.node.storage.add_actor(actor, self.node.id)  # Update requirements in registry
         r = ReqMatch(self.node,
@@ -328,12 +327,10 @@ class ActorManager(object):
             possible_placements.discard(self.node.id)
         actor = self.actors[actor_id]
         if not possible_placements:
-            self.node.rm.inhibate(actor_id, False)
             if cb:
                 cb(status=response.CalvinResponse(False))
             return
         if self.node.id in possible_placements:
-            self.node.rm.inhibate(actor_id, False)
             # Actor could stay, then do that
             if cb:
                 cb(status=response.CalvinResponse(True))
@@ -402,8 +399,6 @@ class ActorManager(object):
             if callback:
                 callback(status=response.CalvinResponse(response.SERVICE_UNAVAILABLE))
             return
-        # No need to inhibate replication anymore (could still be locked out by _migrating_to set below)
-        self.node.rm.inhibate(actor_id, False)
         if node_id == self.node.id:
             # No need to migrate to ourself
             if callback:
