@@ -137,7 +137,7 @@ class CalvinTransport(base_transport.BaseTransport):
 
             sid = data_obj['sid']
 
-            for coder in self.get_coders():
+            for coder in self.get_coders_prio():
                 if coder in data_obj['serializers']:
                     self._coder = self.get_coders()[coder]
                     coder_name = coder

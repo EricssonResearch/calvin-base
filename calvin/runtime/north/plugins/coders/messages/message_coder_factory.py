@@ -17,15 +17,35 @@
 # Coders
 import json_coder
 import msgpack_coder
+import cbor_coder
+from calvin.utilities import calvinconfig
+
+from calvin.utilities.calvinlogger import get_logger
+
+_log = get_logger(__name__)
+_conf = calvinconfig.get()
+
+_coder_priority_list = None
 
 def get_prio_list():
-    return ['json', 'msgpack']
+    global _coder_priority_list
+    
+    if not _coder_priority_list:
+        _coder_priority_list = _conf.get("global", "static_coder") or ["json"]
+        if "json" not in _coder_priority_list:
+            _coder_priority_list.append("json")
+        
+    return _coder_priority_list
 
-def get(type_):
-    if type_ == "json":
+def get(t):
+    
+    if t == "cbor":
+        return cbor_coder.MessageCoder()
+        
+    if t == "json":
         return json_coder.MessageCoder()
 
-    if type_ == "msgpack":
+    if t == "msgpack":
         return msgpack_coder.MessageCoder()
 
-    raise Exception("Coder {} requested is not supported".format(type_))
+    raise Exception("Coder {} requested is not supported".format(t))

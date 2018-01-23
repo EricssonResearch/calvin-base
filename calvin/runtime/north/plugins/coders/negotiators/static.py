@@ -15,19 +15,30 @@
 # limitations under the License.
 
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
-from calvin.utilities import calvinconfig
+from calvin.utilities.calvinlogger import get_logger
 import negotiator_base
 
-_conf = calvinconfig.get()
+
+_log = get_logger(__name__)
 
 
 class StaticNegotiator(negotiator_base.NegotiatorBase):
 
     def get_coder(self, prio_list):
-        coder = _conf.get("static_coder", None)
-        if prio_list and coder not in prio_list:
-            raise Exception("Coder not supported!")
+        available_coders = message_coder_factory.get_prio_list()
+        if prio_list:
+            # pick first common coder
+            coder = [c for c in prio_list if c in available_coders ][0]
+        else :
+            # Available is in order of priority
+            coder = available_coders[0]
+
+        if not coder :
+            # No coder found, i.e. at least one list was empty (should never happen)
+            _log.warning("No available coder found, using json")
+            coder = "json"
+        
         return message_coder_factory.get(coder)
 
     def get_list(self):
-        return [_conf.get("static_coder", None)]
+        return message_coder_factory.get_prio_list()

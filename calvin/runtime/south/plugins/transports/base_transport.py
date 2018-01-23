@@ -101,6 +101,12 @@ class BaseTransport(CalvinCBClass):
         """
         return self._coder
 
+    def get_coders_prio(self):
+        """
+            Return priority list of coders for this runtime
+        """
+        return message_coder_factory.get_prio_list()
+
     def get_coders(self):
         """
             Return the filtered coders on this transport
