@@ -82,7 +82,11 @@ class VisualizingMonitor(Event_Monitor):
                 actor = port.owner
                 queue = port.queue
                 wp = queue.write_pos if type(queue.write_pos) is int else max(queue.write_pos.values())
-                rp = min(queue.read_pos.values())
+                try:
+                    rp = queue.read_pos if type(queue.read_pos) is int else min(queue.read_pos.values())
+                except:
+                    # Might not have a read pos yet
+                    rp = 0
                 n = wp - rp
                 _log.debug("    {}.{} {}".format(actor.name, port.name, n))
 
