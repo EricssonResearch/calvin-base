@@ -180,9 +180,6 @@ class TunnelConnection(BaseConnection):
             _log.analyze(self.node.id, "+ WRONG TUNNEL", payload, peer_node_id=self.peer_port_meta.node_id)
             return response.CalvinResponse(response.GONE)
 
-        self.node.rm.connect_verification(
-            self.port.owner.id, self.port.id, payload['port_id'], self.peer_port_meta.node_id)
-
         self.port.set_queue(queue.get(self.port, peer_port_meta=self.peer_port_meta))
         cls = endpoint.TunnelInEndpoint if self.port.direction == 'in' else endpoint.TunnelOutEndpoint
         endp = cls(self.port,

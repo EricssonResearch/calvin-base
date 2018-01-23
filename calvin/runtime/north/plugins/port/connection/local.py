@@ -48,7 +48,6 @@ class LocalConnection(BaseConnection):
                 self.factory.get(self.port, self.peer_port_meta, self.callback).connect()
             self.peer_port_meta.retry(_factory_connect)
             return
-        self.node.rm.connect_verification(port2.owner.id, port2.id, port1.id, self.node.id)
 
         # Local connect wants the first port to be an inport
         inport, outport = (port1, port2) if port1.direction == 'in' else (port2, port1)
