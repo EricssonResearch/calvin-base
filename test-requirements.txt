@@ -2,5 +2,6 @@
 mock>=1.0.1
 pytest>=1.4.25
 pytest-twisted
+pytest-xdist
 tox
 requests-futures
