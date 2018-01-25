@@ -367,6 +367,34 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
 
     return runtimes
 
+def setup_extra_local(ip_addr, request_handler, nbr, proxy_storage):
+    first_calvinip = "calvinip://%s:%d" % (ip_addr, 5200)
+    host = ("calvinip://%s:%d" % (ip_addr, 5198 + nbr * 2), "http://%s:%d" % (ip_addr, 5199 + nbr * 2))
+
+    attr_rest = {u'indexed_public': {u'node_name': {
+        u'organization': u'com.ericsson',
+        u'purpose': u'distributed-test',
+        u'group': u'rest',
+        u'name': u'runtime' + str(nbr)}}}
+    if proxy_storage:
+        import calvin.runtime.north.storage
+        calvin.runtime.north.storage._conf.set('global', 'storage_type', 'proxy')
+        calvin.runtime.north.storage._conf.set('global', 'storage_proxy', first_calvinip)
+
+    if True:
+        import calvin.runtime.north.storage
+        calvin.runtime.north.storage._conf.update('calvinsys', 'capabilities', 
+                    {"mock.shadow": {
+                        "module": "mock.MockInputOutput",
+                        "attributes": {"data": []}
+                    }})
+
+    _log.info("starting extra runtime %s %s" % host)
+    rt, _ = dispatch_node([host[0]], host[1], attributes=attr_rest)
+    _log.info("started extra runtime %s %s" % host)
+
+    return rt
+
 def setup_bluetooth(bt_master_controluri, request_handler):
     runtime = RT(bt_master_controluri)
     runtimes = []

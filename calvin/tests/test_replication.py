@@ -169,10 +169,11 @@ class CalvinTestBase(unittest.TestCase):
 
 
 #@pytest.fixture(params=[("rt1", "rt2", "rt3")])
-@pytest.fixture(params=[("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
-,("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
-,("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
-])
+#@pytest.fixture(params=[("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
+#,("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
+#,("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")
+#])
+@pytest.fixture(params=[("rt1", "rt1", "rt1"), ("rt1", "rt2", "rt3"), ("rt1", "rt2", "rt2")])
 def rt_order3(request):
     return [globals()[p] for p in request.param]
 
@@ -811,7 +812,8 @@ class TestManualReplication(object):
         leader_rt = rt_by_id[leader_id]
 
         nbr_replicas = {}
-        for duration in [0.005, 0.015, 0.025, 0.035]:
+        durations = [0.005, 0.015, 0.025, 0.035]
+        for duration in durations[:nbr_possible + 1]:
             placed_burn = {burn: rt2.id}
             replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
             for r in replicas:
@@ -834,10 +836,11 @@ class TestManualReplication(object):
             return sum(a)/float(len(a))
 
         assert mean(nbr_replicas[str(0.005)]) < 0.2
-        assert mean(nbr_replicas[str(0.015)]) > 0.5 and mean(nbr_replicas[str(0.015)]) < 1.5
-        assert mean(nbr_replicas[str(0.025)]) > 1.5 and mean(nbr_replicas[str(0.025)]) < 2.5
-        if nbr_possible > 3:
-            assert mean(nbr_replicas[str(0.035)]) > 2.5 and mean(nbr_replicas[str(0.035)]) < 3.5
+        assert mean(nbr_replicas[str(0.015)]) > 0.5 and mean(nbr_replicas[str(0.015)]) < 1.9
+        if nbr_possible > 1:
+            assert mean(nbr_replicas[str(0.025)]) > 1.5 and mean(nbr_replicas[str(0.025)]) < 2.9
+        if nbr_possible > 2:
+            assert mean(nbr_replicas[str(0.035)]) > 2.5 and mean(nbr_replicas[str(0.035)]) < 3.9
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
         print "REPLICAS", replicas
         helpers.delete_app(request_handler, rt1, response['application_id'])
@@ -868,7 +871,6 @@ class TestManualReplication(object):
             rule manual: manual_scaling()
             apply sum, ident: manual
         """
-
         rt1 = rt_order3[0]
         rt2 = rt_order3[1]
         rt3 = rt_order3[2]
@@ -984,10 +986,127 @@ class TestManualReplication(object):
         for r in replicas:
             assert r not in actors_left
 
+    def testDeviceTerminationReplication(self, rt_order3):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            sum   : std.Sum()
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > sum.integer
+            sum.integer > snk.token
+            rule device: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}]) & device_scaling(max=6)
+            apply sum: device
+        """
+        global rt2
+        from requests.exceptions import ConnectionError
+        nbr_possible = NBR_RUNTIMES - (2 if rt2 == rt_order3[1] else 1) + 1
+        rt1 = rt_order3[0]
+        rrt2 = rt_order3[1]
+        rt3 = rt_order3[2]
+        rt_by_id = {r.id: r for r in runtimes}
+
+        try:
+            import re
+            first_ip_addr = re.match("http://([0-9\.]*):.*", rt1.control_uri).group(1)
+        except:
+            raise Exception("Failed to get ip address from %s" % rt1.control_uri)
+        rt_extra = helpers.setup_extra_local(first_ip_addr, request_handler, NBR_RUNTIMES + 1, proxy_storage=True)
+        rt_by_id[rt_extra.id] = rt_extra
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        asum = response['actor_map']['testScript:sum']
+        snk = response['actor_map']['testScript:snk']
+
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        asum_rt = rt_by_id[response['placement'][asum][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+
+        # Move src & snk back to first and place sum on second
+        migrate(src_rt, rt1, src)
+        migrate(asum_rt, rrt2, asum)
+        migrate(snk_rt, rt1, snk)
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
+
+        replicas = []
+        fails = 0
+        while len(replicas) < nbr_possible and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.2)
+        assert len(replicas) == nbr_possible
+        print "REPLICAS", replicas
+        print "ORIGINAL:", request_handler.get_actor(rt1, asum)
+        for r in replicas:
+            print "REPLICA:", request_handler.get_actor(rt1, r)
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        time.sleep(0.4)
+        actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        #keys = set([k.keys()[0] for k in actual])
+        #print keys
+        #print [k.values()[0] for k in actual]
+        #actual = sorted(request_handler.report(runtimes[snk_place], snk))
+        #print [k.values()[0] for k in actual]
+        request_handler.quit(rt_extra, method="migrate")
+        replicas = []
+        fails = 0
+        while len(replicas) != (nbr_possible - 1) and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.2)
+        assert len(replicas) == (nbr_possible - 1)
+        # Make sure extra runtime is gone
+        fails = 0
+        while fails < 20:
+            try:
+                request_handler.get_node_id(rt_extra)
+                # Should fail otherwise need to retry
+                fails += 1
+                time.sleep(0.2)
+            except ConnectionError:
+                _log.exception("expected ConnectionError exception for extra runtime")
+                # Can't connect, i.e. gone
+                break
+            except Exception as e:
+                _log.exception("expected exception for extra runtime")
+                msg = str(e.message)
+                if msg.startswith("504"):
+                    # Timeout error, i.e. gone
+                    break
+                else:
+                    # While quiting runtime send 500 errors, continue trying
+                    fails += 1
+                    time.sleep(0.2)
+        assert fails != 20
+        replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
+        print "REPLICAS", replicas
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+        actors_left = []
+        for r in runtimes:
+            actors_left.extend(request_handler.get_actors(r))
+        print actors_left
+        assert src not in actors_left
+        assert asum not in actors_left
+        assert snk not in actors_left
+        for r in replicas:
+            assert r not in actors_left
 
 
 #@pytest.mark.skipif(calvinconfig.get().get("testing","proxy_storage") != 1, reason="Will likely fail with DHT")
 @pytest.mark.slow
+@pytest.mark.skip("For previous replication implementation")
 class TestReplication(CalvinTestBase):
 
     def testSimpleReplication(self):

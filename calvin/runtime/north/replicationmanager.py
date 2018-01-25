@@ -68,6 +68,16 @@ class ReplicationId(object):
         return self._measure_pressure
 
     def terminate_with_node(self, actor_id):
+        # FIXME The reasons to handle original actor different is for the app destroy
+        # and for retriving peer ports when creating new replica, also what happens if all
+        # would disappear?
+        # 1) The app -> original actor -> replicas
+        # If the original actor goes away the application don't know which replicas
+        # 2) original actor -> ports -> peer ports => new replica -> new ports -> peer ports
+        # If the original actor goes away we would have no way of lookup peer ports (which could change)
+        # 3) If all replicas and actors goes away and a up/downstream actor migrates or replicats then what should they
+        # connect to, need to verify that it worked when a new replica becomes active.
+        # Anyway all the above is fixable
         return self._terminate_with_node and not (actor_id == self.original_actor_id)
 
 class ReplicationData(object):
@@ -93,6 +103,7 @@ class ReplicationData(object):
         self.aquired_lock_replication_ids = set([])  # We have lock against these
         self.queued_lock_replication_ids = set([])  # We attempt to get lock against these
         self.queued_lock_callback = None
+        self._missing_replica_time = 0
 
     def state(self):
         state = {}
@@ -462,18 +473,6 @@ class ReplicationManager(object):
             self.node.storage.get_replication_data(peer_replication_id, cb=_got_leader_node)
 
 
-    def busy_peer_replication(self, replication_id):
-        """ Returns if any known locks, we can only do one attempt at a time
-            Nothing more is needed anyway since each replication manager is serialized.
-        """
-        try:
-            replication_data = self.managed_replications[replication_id]
-        except:
-            return True
-        return (bool(replication_data.given_lock_replication_ids) or
-                bool(replication_data.queued_lock_replication_ids) or
-                bool(replication_data.aquired_lock_replication_ids))
-
     def lock_peer_replication(self, replication_id, callback):
         """ Continues in callback when locks released
             internal status index:
@@ -822,17 +821,17 @@ class ReplicationManager(object):
 
     def terminate(self, actor_id, terminate=DISCONNECT.TERMINATE, callback=None):
         try:
-            replication_data = self.node.am.actors[actor_id]._replication_data
+            replication_id = self.node.am.actors[actor_id]._replication_id
         except:
             if callback:
                 callback(status=calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST))
             return
-        replication_data._is_terminating = True
-        self.node.storage.remove_replica(replication_data.id, actor_id)
-        self.node.storage.remove_replica_node(replication_data.id, actor_id)
+        replication_id._is_terminating = True
+        self.node.storage.remove_replica(replication_id.id, actor_id)
+        self.node.storage.remove_replica_node(replication_id.id, actor_id)
         self.node.control.log_actor_dereplicate(
-                actor_id=replication_data.master, replica_actor_id=actor_id,
-                replication_id=replication_data.id)
+                actor_id=replication_id.original_actor_id, replica_actor_id=actor_id,
+                replication_id=replication_id.id)
         self.node.am.destroy_with_disconnect(actor_id, terminate=terminate,
             callback=callback)
 
@@ -861,68 +860,31 @@ class ReplicationManager(object):
                 _log.info("Auto-replicate")
                 self.replicate_by_requirements(replication_data, 
                     CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id))
+                replication_data._missing_replica_time = time.time() + 10  # Don't check missing for a while
             if pre_check == PRE_CHECK.SCALE_OUT_KNOWN:
                 _log.info("Auto-replicate known")
                 self.replicate_by_known_placement(replication_data, 
                     CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id))
+                replication_data._missing_replica_time = time.time() + 10  # Don't check missing for a while
             elif pre_check == PRE_CHECK.SCALE_IN:
                 _log.info("Auto-dereplicate")
                 self.dereplicate(replication_data.id, CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id), exhaust=True)
-            # elif pre_check == PRE_CHECK.NO_OPERATION:
-            #     if not hasattr(actor._replication_data, "check_instances"):
-            #         actor._replication_data.check_instances = time.time()
-            #     t = time.time()
-            #     if t > (actor._replication_data.check_instances + 2.0):
-            #         actor._replication_data.check_instances = t
-            #         self.node.storage.get_replica(actor._replication_data.id, CalvinCB(self._current_actors_cb, actor=actor))
-        return
-        
-        ######################################################
-        
-        replicate = []
-        dereplicate = []
-        no_op = []
-        for actor in self.list_master_actors():
-            if actor._replication_data.status != REPLICATION_STATUS.READY:
-                continue
-            if actor._migrating_to is not None:
-                continue
-            if not actor.enabled():
-                continue
-            try:
-                req = actor._replication_data.requirements
-                if not req:
-                    continue
-                pre_check = req_operations[req['op']].pre_check(self.node, actor_id=actor.id,
-                                        component=actor.component_members(), **req['kwargs'])
-            except:
-                _log.exception("Pre check exception")
-                pre_check = PRE_CHECK.NO_OPERATION
-            if pre_check == PRE_CHECK.SCALE_OUT:
-                 replicate.append(actor)
-            elif pre_check == PRE_CHECK.SCALE_IN:
-                 dereplicate.append(actor)
+                replication_data._missing_replica_time = time.time() + 10  # Don't check missing for a while
             elif pre_check == PRE_CHECK.NO_OPERATION:
-                 no_op.append(actor)
-        for actor in replicate:
-            _log.info("Auto-replicate")
-            self.replicate_by_requirements(actor, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id))
-        for actor in dereplicate:
-            _log.info("Auto-dereplicate")
-            self.dereplicate(actor.id, CalvinCB(self._replication_loop_log_cb, actor_id=actor.id), exhaust=True)
-        for actor in no_op:
-            if not hasattr(actor._replication_data, "check_instances"):
-                actor._replication_data.check_instances = time.time()
-            t = time.time()
-            if t > (actor._replication_data.check_instances + 2.0):
-                actor._replication_data.check_instances = t
-                self.node.storage.get_replica(actor._replication_data.id, CalvinCB(self._current_actors_cb, actor=actor))
+                # While idle check if any of the replicas has gone missing
+                # Should the scheduler call this seperate instead, but need it to not clash with (de)replication
+                t = time.time()
+                if t > replication_data._missing_replica_time:
+                    replication_data._missing_replica_time = t + 30
+                    self.node.storage.get_replica(replication_data.id,
+                        CalvinCB(self._current_actors_cb, replication_data=replication_data))
+        return
 
-    def _current_actors_cb(self, value, actor):
-        collect_actors = [] if calvinresponse.isfailresponse(value) else value
-        missing = set(actor._replication_data.instances) - set(collect_actors + [actor.id])
+    def _current_actors_cb(self, value, replication_data):
+        missing = set(replication_data.instances) - set(value + [replication_data.original_actor_id])
         for actor_id in missing:
-            actor._replication_data.instances.remove(actor_id)
+            _log.debug("replicated actor %s missing (due to runtime terminated)" % actor_id)
+            replication_data.instances.remove(actor_id)
 
     def _replication_loop_log_cb(self, status, replication_id):
         _log.info("Auto-(de)replicated %s: %s" % (replication_id, str(status)))
