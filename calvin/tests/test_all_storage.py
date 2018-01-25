@@ -47,8 +47,9 @@ calvin.utilities.certificate.verify_certificate_chain = chain_dummy
 _log = calvinlogger.get_logger(__name__)
 _conf = calvin.utilities.calvinconfig.get()
 
-storage_types = ["notstarted", "dht", "securedht", "proxy", "sql"]
-#storage_types = ["securedht"]
+storage_types = ["notstarted", "dht", "securedht", "proxy"]
+# Removing the SQL-tests temporarily
+# storage_types = ["notstarted", "dht", "securedht", "proxy", "sql"]
 
 class FakeTunnel(calvin_proto.CalvinTunnel):
     def send(self, payload):
