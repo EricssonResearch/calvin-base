@@ -125,7 +125,7 @@ class Storage(object):
             return
 
         _log.debug("Flush remove_index on %s: %s" % (key, list(value)))
-        self.storage.remove_index(prefix="index-", index=list(key), value=list(value),
+        self.storage.remove_index(prefix="index-", indexes=list(key), value=list(value),
             cb=CalvinCB(self.remove_index_cb, org_value=value, org_cb=None, index_items=list(key), silent=True))
 
     def started_cb(self, *args, **kwargs):
