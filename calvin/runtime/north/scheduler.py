@@ -215,7 +215,6 @@ class BaseScheduler(object):
         # Get next task from queue and do it unless next task is in the future,
         # in that case, schedule _process_next (this method) at that time
         _, todo = self._tasks.pop(0)
-        _log.debug("PROCESS %s" % todo.__name__)
         todo()
         if self._tasks:
             t, _ = self._tasks[0]
