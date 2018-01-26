@@ -41,7 +41,6 @@ class FiniteCounter(Actor):
     def did_replicate(self, index):
         diff = self.start * index if self.replicate_mult else 0
         # Offset by diff for each new replica
-        self.start += diff
         self.count += diff
         self.ends += diff
         self.restart += diff
