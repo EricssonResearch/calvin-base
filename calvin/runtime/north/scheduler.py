@@ -147,7 +147,8 @@ class BaseScheduler(object):
         _log.debug("_check_pressure %s" % self._pressure_event_actor_ids)
         self.node.rm.check_pressure(self._pressure_event_actor_ids)
         self._pressure_event_actor_ids = set([])
-        self.insert_task(self._check_pressure, 30)
+        if not [True for t in self._tasks if t[1] == self._check_pressure]:
+            self.insert_task(self._check_pressure, 30)
 
     #
     # Maintenance loop
