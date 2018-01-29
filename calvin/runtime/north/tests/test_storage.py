@@ -22,6 +22,7 @@ from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.tests import DummyNode
 from calvin.tests.helpers_twisted import create_callback, wait_for
+from calvin.utilities import calvinconfig
 import calvin.tests
 import Queue
 import pytest
@@ -33,6 +34,9 @@ def _dummy_inline(*args):
 
 if not hasattr(pytest, 'inlineCallbacks'):
     pytest.inlineCallbacks = _dummy_inline
+
+def setup_module(module):
+    calvinconfig.get().set('global', 'storage_type', 'dht')
 
 @pytest.mark.skipif(pytest.inlineCallbacks == _dummy_inline,
                     reason="No inline twisted plugin enabled, please use --twisted to py.test")
