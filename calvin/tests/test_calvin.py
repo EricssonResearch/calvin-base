@@ -111,7 +111,7 @@ def setup_module(module):
     global test_type
 
     request_handler = RequestHandler()
-    test_type, [rt1, rt2, rt3] = helpers.setup_test_type(request_handler)
+    test_type, [rt1, rt2, rt3] = helpers.setup_test_type(request_handler, 3, True)
 
 
 def teardown_module(module):
@@ -4141,7 +4141,7 @@ def nbr_replicas(request):
 
 
 @pytest.mark.skipif(
-    calvinconfig.get().get("testing","proxy_storage") != 1 and 
+    calvinconfig.get().get("testing","proxy_storage") != 1 and
     calvinconfig.get().get("testing","force_replication") != 1,
     reason="Will fail on some systems with DHT")
 @pytest.mark.essential
