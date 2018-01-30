@@ -48,6 +48,7 @@ class Init(Actor):
         return (data,)
 
     action_priority = (passthrough, initial_action)
+    requires = ['sys.schedule']
 
     test_kwargs = {'data': 0}
     test_calvinsys = {'sys.schedule': {'read': ["dummy_data_read"]}}
