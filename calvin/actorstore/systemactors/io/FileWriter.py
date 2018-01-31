@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 from calvin.utilities.calvinlogger import get_logger
@@ -66,43 +66,33 @@ class FileWriter(Actor):
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.io.filehandler', shorthand='file')
         fname = new_filename(self.basename, self.counter, self.suffix)
         self.counter += 1
-        self.file = self['file'].open(fname, "w")
-
-    def exception_handler(self, action, args):
-        self['file'].close(self.file)
-        self.file = None
-
-    @stateguard(lambda self: not self.file)
-    @condition(action_input=['data'])
-    def openf(self, data):
-        self.setup()
-        self.file.write_line(data.encode('utf-8'))
-
-    @stateguard(lambda self: self.file)
-    @condition(action_input=['data'])
-    def writef(self, data):
-        self.file.write_line(data.encode('utf-8'))
+        self.file = calvinsys.open(self, "io.filewriter", filename=fname, mode="w")
 
     def did_migrate(self):
         self.file = None
         self.setup()
 
-    action_priority = (writef, openf)
-    requires = ['calvinsys.io.filehandler']
+    def will_end(self):
+        if self.file is not None:
+            calvinsys.close(self.file)
+            self.file = None
 
+    @stateguard(lambda self: self.file and calvinsys.can_write(self.file))
+    @condition(action_input=['data'])
+    def writef(self, data):
+        calvinsys.write(self.file, data.encode('utf-8'))
 
-    test_args = [absolute_basename('test_file'), 'testing']
-    test_data = ['line-1', 'line-2']
+    action_priority = (writef,)
+    requires = ['io.filewriter']
+
+    test_kwargs = {'basename': 'test'}
+    test_calvinsys = {
+        'io.filewriter': {'write': ['the quick brown fox jumped over the lazy dog']},
+    }
     test_set = [
         {
-            'inports': {'data': [file_data[0], file_data[1], EOSToken()]},
-            'postcond': [verify_file]
-        },
-        {
-            'inports': {'data': [file_data[0], file_data[1], EOSToken()]},
-            'postcond': [verify_file]
+            'inports': {'data': ['the quick brown fox jumped over the lazy dog']}
         }
     ]

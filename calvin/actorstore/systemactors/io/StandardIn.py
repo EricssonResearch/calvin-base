@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 
 class StandardIn(Actor):
@@ -27,22 +27,31 @@ class StandardIn(Actor):
 
     @manage([])
     def init(self):
-        self.use(requirement='calvinsys.io.filehandler', shorthand='file')
-        self.file = self['file'].open_stdin()
+        self.setup()
 
-    @stateguard(lambda self: self.file and self.file.has_data())
+    def setup(self):
+        self.file = calvinsys.open(self, "io.stdin")
+
+    def did_migrate(self):
+        self.setup()
+
+    def will_end(self):
+        if self.file is not None:
+            calvinsys.close(self.file)
+            self.file = None
+
+    @stateguard(lambda self: self.file and calvinsys.can_read(self.file))
     @condition([], ['out'])
     def read(self):
-        line = self.file.read_line()
+        line = calvinsys.read(self.file)
         return (line, )
 
     action_priority = (read, )
-    requires = ['calvinsys.io.filehandler']
-
-
-    # StdInMock reads "stdin\nstdin_second_line"
+    requires = ['io.stdin']
+    
+    test_calvinsys = {'io.stdin': {'read': ['the', 'quick', 'brown', 'fox', 'jumped', 'over', 'the', 'lazy', 'dog']}}
     test_set = [
         {
-            'out': {'out': ["stdin", "stdin_second_line"]}
-        },
+            'outports': {'out': ['the', 'quick', 'brown', 'fox', 'jumped', 'over', 'the', 'lazy', 'dog']},
+        }
     ]

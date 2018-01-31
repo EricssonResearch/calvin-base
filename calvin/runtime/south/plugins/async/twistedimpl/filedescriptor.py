@@ -23,8 +23,9 @@ from twisted.internet import fdesc
 
 class FD(FileDescriptor):
     """A Calvin file object"""
-    def __init__(self, trigger, fname, mode):
+    def __init__(self, actor, trigger, fname, mode):
         super(FD, self).__init__()
+        self.actor = actor
         self.trigger = trigger
         self._init_fp(fname, mode)
         fdesc.setNonBlocking(self)
@@ -61,7 +62,7 @@ class FD(FileDescriptor):
         self.data += data
 
     def doRead(self):
-        self.trigger()
+        self.trigger(self.actor)
         return fdesc.readFromFD(self.fp.fileno(), self.dataRead)
 
     def hasData(self):
@@ -87,8 +88,8 @@ class FD(FileDescriptor):
 
 
 class FDStdIn(FD):
-    def __init__(self, trigger):
-        super(FDStdIn, self).__init__(trigger, None, None)
+    def __init__(self, actor, trigger):
+        super(FDStdIn, self).__init__(actor, trigger, None, None)
 
     def _init_fp(self, *args):
         self.fp = sys.stdin

@@ -175,6 +175,22 @@ class CalvinConfig(object):
                         "attributes": {
                             "cmd": "PUT"
                         }
+                    },
+                    "io.filereader": {
+                        "module": "io.filehandler.Descriptor",
+                        "attributes": {"basedir": ".", "mode": "r"}
+                    },
+                    "io.filewriter": {
+                        "module": "io.filehandler.Descriptor",
+                        "attributes": {"basedir": ".", "mode": "w"}
+                    },
+                    "io.filesize": {
+                        "module": "io.filehandler.GetSize",
+                        "attributes": {"basedir": "."}
+                    },
+                    "io.stdin": {
+                        "module": "io.filehandler.StdIn",
+                        "attributes": {}
                     }
                 }
             },

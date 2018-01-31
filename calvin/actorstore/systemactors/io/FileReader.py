@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
@@ -42,23 +42,29 @@ class FileReader(Actor):
         self.setup()
 
     def setup(self):
-        self.did_read = False
         self.file_not_found = False
         self.file = None
-        self.use(requirement='calvinsys.io.filehandler', shorthand='file')
+        self.filelen = 0
+        self.totalread = 0
 
     def did_migrate(self):
         self.setup()
 
+    def will_end(self):
+        if self.file is not None:
+            calvinsys.close(self.file)
+            self.file = None
+
     @stateguard(lambda self: not self.file)
     @condition(['filename'], [])
     def open_file(self, filename):
-        try:
-            self.file = self['file'].open(filename, "r")
-        except:
-            self.file = None
+        obj = calvinsys.open(self, "io.filesize", filename=filename)
+        if calvinsys.can_read(obj):
+            self.filelen = calvinsys.read(obj)
+            calvinsys.close(obj)
+            self.file = calvinsys.open(self, "io.filereader", filename=filename)
+        if self.file is None:
             self.file_not_found = True
-
 
     @stateguard(lambda self: self.file_not_found)
     @condition([], ['out'])
@@ -67,38 +73,32 @@ class FileReader(Actor):
         self.file_not_found = False  # Only report once
         return (token, )
 
-    @stateguard(lambda self: self.file and self.file.has_data())
+    @stateguard(lambda self: self.file is not None and calvinsys.can_read(self.file))
     @condition([], ['out'])
-    def readline(self):
-        line = self.file.read_line()
-        return (line, )
+    def read(self):
+        data = calvinsys.read(self.file)
+        self.totalread += len(data)
+        return (data, )
 
-    @stateguard(lambda self: self.file and self.file.eof())
+    @stateguard(lambda self: self.file is not None and self.totalread == self.filelen)
     @condition([], ['out'])
     def eof(self):
-        self['file'].close(self.file)
+        calvinsys.close(self.file)
         self.file = None
+        self.filelen = 0
+        self.totalread = 0
         return (EOSToken(), )
 
-    action_priority = (open_file, file_not_found, readline, eof)
-    requires = ['calvinsys.io.filehandler']
+    action_priority = (open_file, file_not_found, read, eof)
+    requires = ['io.filereader', 'io.filesize']
 
-
-    # Assumes file contains "A\nB\nC\nD\nE\nF\nG\nH\nI"
+    test_calvinsys = {
+        'io.filereader': {'read': ['the quick brown fox jumped over the lazy dog']},
+        'io.filesize': {'read': [44]}
+    }
     test_set = [
-        {  # Test 3, read a non-existing file
-            'inports': {'filename': "no such file"},
-            'outports': {'out': ["File not found"]}
-        },
-        {  # Test 1, read a file
-            'inports': {'filename': absolute_filename('data.txt')},
-            'outports': {'out': ['A', 'B', 'C', 'D']}
-        },
-        {  # Test 2, read more of file
-            'outports': {'out': ['E', 'F', 'G', 'H']}
-        },
-        {  # Test 3, read last of file
-            'outports': {'out': ['I']}
+        {
+            'inports': {'filename': ['data.txt']},
+            'outports': {'out': ['the quick brown fox jumped over the lazy dog']},
         }
-
     ]

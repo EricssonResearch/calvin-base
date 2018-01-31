@@ -177,51 +177,6 @@ class DummyOutEndpoint(Endpoint):
     def is_connected(self):
         return True
 
-
-class FDMock(object):
-    def __init__(self, fname, mode):
-        self.fp = open(fname, mode)
-        if 'r' in mode:
-            self.buffer = self.fp.read()
-        else:
-            self.buffer = ""
-
-    def close(self):
-        self.fp.close()
-
-    def eof(self):
-        return len(self.buffer) == 0
-
-    def has_data(self):
-        return len(self.buffer) > 0
-
-    def read(self):
-        data = self.buffer
-        self.buffer = ""
-        return data
-
-    def write(self, data):
-        self.buffer += data
-        self.fp.write(data)
-
-    def read_line(self):
-        if '\n' in self.buffer:
-            line, self.buffer = self.buffer.split("\n", 1)
-        else:
-            line = self.buffer
-            self.buffer = ""
-        return line
-
-    def write_line(self, data):
-        self.buffer += data + "\n"
-        self.fp.write(data + "\n")
-
-
-class StdInMock(FDMock):
-    def __init__(self):
-        self.buffer = "stdin\nstdin_second_line"
-
-
 class TimerMock(object):
 
     def __init__(self):
@@ -251,17 +206,6 @@ class CalvinSysTimerMock(object):
         return TimerMock()
 
 
-class CalvinSysFileMock(object):
-    def open(self, fname, mode):
-        return FDMock(fname, mode)
-
-    def open_stdin(self):
-        return StdInMock()
-
-    def close(self, fdmock):
-        fdmock.close()
-
-
 class DeprecatedCavinSysMock(object):
     def __getattr__(self, name):
         def method(*args, **kwargs):
@@ -277,7 +221,6 @@ class DeprecatedCavinSysMock(object):
 
 requirements = \
     {
-        'calvinsys.io.filehandler': CalvinSysFileMock(),
         'calvinsys.network.httpclienthandler': DeprecatedCavinSysMock(),
         'calvinsys.network.mqtthandlerreg_sysobjects': DeprecatedCavinSysMock(),
         'calvinsys.opcua.client': DeprecatedCavinSysMock(),
@@ -507,6 +450,22 @@ def setup_calvinsys():
             "module": "mock.MockInputOutput",
             "attributes": {"data": ["dummy"]}
         },
+        "io.filesize": {
+            "module": "mock.MockInput",
+            "attributes": {"data": [44]}
+        },
+        "io.filereader": {
+            "module": "mock.MockInput",
+            "attributes": {"data": ["the quick brown fox jumped over the lazy dog"]}
+        },
+        "io.filewriter": {
+            "module": "mock.MockOutput",
+            "attributes": {}
+        },
+        "io.stdin": {
+            "module": "mock.MockInput",
+            "attributes": {"data": ["the quick brown fox jumped over the lazy dog"]}
+        },
         "weather": {
             "module": "mock.MockInputOutput",
             "attributes": {"data": ["dummy"]}
@@ -539,10 +498,6 @@ def setup_calvinsys():
             "module": "mock.MockInputOutput",
             "attributes": {"data": ["dummy"]}
         }
-
-
-
-
     })
     return sys
 
