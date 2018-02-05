@@ -229,8 +229,8 @@ def handle_actor_disable(self, handle, connection, match, data, hdr):
 def handle_actor_replicate(self, handle, connection, match, data, hdr):
     """
     POST /actor/{replication-id}/replicate
-    ONLY FOR TEST CURRENTLY. 
     Will replicate an actor having manual_scaling requirement applied
+    Currently must be sent to the runtime having the elected replication manager for the replication id
     Response status code: OK or NOT_FOUND
     """
     data = {} if data is None else data
@@ -254,7 +254,7 @@ def handle_actor_replicate(self, handle, connection, match, data, hdr):
         _log.debug("MANUAL REPLICATION APPLIED %s" % PRE_CHECK.reverse_mapping[op])
         self.send_response(handle, connection, None, calvinresponse.OK)
     except:
-        _log.exception("Failed test replication")
+        _log.exception("Failed manual replication")
         self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
 
 @register
