@@ -15,14 +15,11 @@
 # limitations under the License.
 
 
-import unittest
 import time
 import pytest
 import os
 
-from calvin.utilities import calvinconfig
 from calvin.csparser import cscompile as compiler
-from calvin.Tools import deployer
 from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RequestHandler
 from . import helpers
@@ -117,55 +114,6 @@ def teardown_module(module):
     global request_handler
 
     helpers.teardown_test_type(request_handler, runtimes, test_type)
-
-
-class CalvinTestBase(unittest.TestCase):
-
-    def setUp(self):
-        self.rt1 = rt1
-        self.rt2 = rt2
-        self.rt3 = rt3
-        self.runtimes = runtimes
-
-    def assert_lists_equal(self, expected, actual, min_length=5):
-        self.assertTrue(len(actual) >= min_length, "Received data too short (%d), need at least %d" % (len(actual), min_length))
-        self._assert_lists_equal(expected, actual)
-
-    def _assert_lists_equal(self, expected, actual):
-        assert actual
-        assert reduce(lambda a, b: a and b[0] == b[1], zip(expected, actual), True) 
-        
-    def compile_script(self, script, name):
-        # Instead of rewriting tests after compiler.compile_script changed
-        # from returning app_info, errors, warnings to app_info, issuetracker
-        # use this stub in tests to keep old behaviour
-        app_info, issuetracker = compiler.compile_script(script, name)
-        return app_info, issuetracker.errors(), issuetracker.warnings()
-
-    def wait_for_migration(self, runtime, actors, retries=20):
-        retry = 0
-        if not isinstance(actors, list):
-            actors = [ actors ]
-        while retry < retries:
-            try:
-                current = request_handler.get_actors(runtime)
-                if set(actors).issubset(set(current)):
-                    break
-                else:
-                    _log.info("Migration not finished, retrying in %f" % (retry * 0.1,))
-                    retry += 1
-                    time.sleep(retry * 0.1)
-            except Exception as e:
-                _log.info("Migration not finished %s, retrying in %f" % (str(e), retry * 0.1,))
-                retry += 1
-                time.sleep(retry * 0.1)
-        if retry == retries:
-            _log.info("Migration failed, after %d retires" % (retry,))
-            raise Exception("Migration failed")
-
-    def migrate(self, source, dest, actor):
-        request_handler.migrate(source, actor, dest.id)
-        self.wait_for_migration(dest, [actor])
 
 
 #@pytest.fixture(params=[("rt1", "rt2", "rt3")])
@@ -274,7 +222,7 @@ class TestReplication(object):
     def testManualReplicationDidReplicate(self, rt_order3):
         _log.analyze("TESTRUN", "+", {})
         script = """
-            src   : test.FiniteCounter(start=10000, replicate_mult=true)
+            src   : test.FiniteCounter(start=100000, replicate_mult=true)
             snk   : test.Sink(store_tokens=1, quiet=1)
             snk.token(routing="collect-tagged")
             src.integer > snk.token
@@ -348,10 +296,10 @@ class TestReplication(object):
             counters[p] = [k.values()[0] for k in actual if k.keys()[0] == p]
         #print counters
         countersmm = {p: (min(v), max(v)) for p, v in counters.items()}
-        # All min and max belongs in same 10000 range
-        assert all([v[0]/10000 == v[1]/10000 for v in countersmm.values()])
+        # All min and max belongs in same 100000 range
+        assert all([v[0]/100000 == v[1]/100000 for v in countersmm.values()])
         # All 5 10000 ranges included
-        assert len(set([v[0]/10000 for v in countersmm.values()])) == 5
+        assert len(set([v[0]/100000 for v in countersmm.values()])) == 5
         print "MAX MIN", countersmm
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:src'], root_prefix_level=3)['result']
         print "REPLICAS", replicas
@@ -1076,11 +1024,11 @@ class TestReplication(object):
                 fails += 1
                 time.sleep(0.2)
             except ConnectionError:
-                _log.exception("expected ConnectionError exception for extra runtime")
+                #_log.exception("expected ConnectionError exception for extra runtime")
                 # Can't connect, i.e. gone
                 break
             except Exception as e:
-                _log.exception("expected exception for extra runtime")
+                #_log.exception("expected exception for extra runtime")
                 msg = str(e.message)
                 if msg.startswith("504"):
                     # Timeout error, i.e. gone
@@ -1215,3 +1163,281 @@ class TestReplication(object):
         assert len(tokens2) == src_counter
 
         helpers.delete_app(request_handler, rt1, response['application_id'])
+
+@pytest.mark.skipif(not os.getenv("CALVIN_CONSTRAINED", False),
+    reason="Set env CALVIN_CONSTRAINED=<path>/calvin_c to run this test")
+@pytest.mark.slow
+class TestConstrainedReplication(object):
+    def testConstrainedDeviceReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            ident   : std.Identity()
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > ident.token
+            ident.token > snk.token
+            rule manual: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}]) & device_scaling()
+            rule first: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "first"}])
+            apply ident: manual
+            apply src, snk: first
+        """
+
+        #Start constrained
+        try:
+            import re
+            first_ip_addr = re.match("http://([0-9\.]*):.*", rt1.control_uri).group(1)
+            print "IP_ADDR", first_ip_addr
+        except:
+            raise Exception("Failed to get ip address from %s" % rt1.control_uri)
+        try:
+            # Remove state if exist
+            os.remove("calvin.msgpack")
+        except:
+            pass
+        from subprocess import Popen
+        constrained_p = range(3)
+        for i in range(3):
+            constrained_p[i] = Popen([os.getenv("CALVIN_CONSTRAINED"), '-a',
+            '{"indexed_public": {"node_name": {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest", "name": "constrained%d"}}}' % i,
+            '-u', 'calvinip://%s:5200' % first_ip_addr])
+            #time.sleep(1)
+
+        time.sleep(1)
+
+        constrained_id = range(3)
+        constrained_data = range(3)
+        for i in range(3):
+            fails = 0
+            while fails < 20:
+                try:
+                    constrained_id[i] = request_handler.get_index(rt1, "/node/attribute/node_name/com.ericsson//distributed-test/rest/constrained%d"%i)['result'][0]
+                    constrained_data[i] = request_handler.get_node(rt1, constrained_id[i])
+                    break
+                except:
+                    fails += 1
+                    time.sleep(0.1)
+            print "CONSTRAINED DATA", constrained_data[i]
+
+        rt_by_id = {r.id: r for r in runtimes}
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        ident = response['actor_map']['testScript:ident']
+        snk = response['actor_map']['testScript:snk']
+
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+        #ident_rt = rt_by_id[response['placement'][ident][0]]
+        ident_rt_id = response['placement'][ident][0]
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:ident'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
+
+        # Make sure we have all the replicas
+        replicas = []
+        fails = 0
+        while len(replicas) < 4 and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.3)
+        assert len(replicas) == 4
+        print "REPLICAS", replicas
+        print "ORIGINAL:", request_handler.get_actor(rt1, ident)
+        for r in replicas:
+            print "REPLICA:", request_handler.get_actor(rt1, r)
+        # Make sure that all paths thru replicas are used
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        keys = []
+        fails = 0
+        while len(keys) < 5 and fails < 20:
+            time.sleep(0.2)
+            actual = request_handler.report(runtimes[snk_place], snk)
+            keys = set([k.keys()[0] for k in actual])
+            fails += 1
+        print keys
+        print sorted([k.values()[0] for k in actual])
+        assert len(keys) == 5
+
+        # abolish a constrained runtime not having the original actor
+        c_id = constrained_id[:]
+        try:
+            c_id.remove(ident_rt_id)
+            print "original actor on constrained"
+        except:
+            print "original actor not on constrained"
+        request_handler.abolish_proxy_peer(rt_by_id[constrained_data[0]['proxy']], c_id[0])
+
+        # Make sure that the replica is gone
+        fails = 0
+        while len(replicas) > 3 and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.3)
+        print replicas
+        assert len(replicas) == 3
+
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+
+        # Now all replicas should be gone
+        fails = 0
+        while len(replicas) > 0 and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.1)
+        print replicas
+        assert not replicas
+
+        # Delete the remaining constrained runtimes
+        cc_id = constrained_id[:]
+        cc_id.remove(c_id[0])
+        for i in cc_id:
+            request_handler.abolish_proxy_peer(rt_by_id[constrained_data[0]['proxy']], i)
+        for i in range(3):
+            constrained_p[i].terminate()
+
+    def testConstrainedShadowDeviceReplication(self):
+        _log.analyze("TESTRUN", "+", {})
+        script = """
+            src   : std.CountTimer(sleep=0.03)
+            ident   : test.FakeShadow()
+            snk   : test.Sink(store_tokens=1, quiet=1)
+            src.integer(routing="random")
+            snk.token(routing="collect-tagged")
+            src.integer > ident.token
+            ident.token > snk.token
+            rule manual: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest"}]) & device_scaling()
+            rule first: node_attr_match(index=["node_name", {"organization": "com.ericsson", "purpose": "distributed-test", "group": "first"}])
+            apply ident: manual
+            apply src, snk: first
+        """
+
+        #Start constrained
+        try:
+            import re
+            first_ip_addr = re.match("http://([0-9\.]*):.*", rt1.control_uri).group(1)
+            print "IP_ADDR", first_ip_addr
+        except:
+            raise Exception("Failed to get ip address from %s" % rt1.control_uri)
+        try:
+            # Remove state if exist
+            os.remove("calvin.msgpack")
+        except:
+            pass
+        from subprocess import Popen
+        constrained_p = range(3)
+        for i in range(3):
+            constrained_p[i] = Popen([os.getenv("CALVIN_CONSTRAINED"), '-a',
+            '{"indexed_public": {"node_name": {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest", "name": "constrained%d"}}}' % i,
+            '-u', 'calvinip://%s:5200' % first_ip_addr])
+            #time.sleep(1)
+
+        time.sleep(1)
+
+        constrained_id = range(3)
+        constrained_data = range(3)
+        for i in range(3):
+            fails = 0
+            while fails < 20:
+                try:
+                    constrained_id[i] = request_handler.get_index(rt1, "/node/attribute/node_name/com.ericsson//distributed-test/rest/constrained%d"%i)['result'][0]
+                    constrained_data[i] = request_handler.get_node(rt1, constrained_id[i])
+                    break
+                except:
+                    fails += 1
+                    time.sleep(0.1)
+            print "CONSTRAINED DATA", constrained_data[i]
+
+        rt_by_id = {r.id: r for r in runtimes}
+
+        response = helpers.deploy_script(request_handler, "testScript", script, rt1)
+        print response
+
+        src = response['actor_map']['testScript:src']
+        ident = response['actor_map']['testScript:ident']
+        snk = response['actor_map']['testScript:snk']
+
+        # Assuming the migration was successful for the first possible placement
+        src_rt = rt_by_id[response['placement'][src][0]]
+        snk_rt = rt_by_id[response['placement'][snk][0]]
+        #ident_rt = rt_by_id[response['placement'][ident][0]]
+        ident_rt_id = response['placement'][ident][0]
+
+        time.sleep(0.3)
+
+        replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:ident'])['result']
+        print replication_data
+        leader_id = replication_data['leader_node_id']
+        leader_rt = rt_by_id[leader_id]
+
+        # Make sure we have all the replicas
+        replicas = []
+        fails = 0
+        while len(replicas) < 4 and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.3)
+        assert len(replicas) == 4
+        print "REPLICAS", replicas
+        print "ORIGINAL:", request_handler.get_actor(rt1, ident)
+        for r in replicas:
+            print "REPLICA:", request_handler.get_actor(rt1, r)
+        # Make sure that all paths thru replicas are used
+        actor_place = [request_handler.get_actors(r) for r in runtimes]
+        snk_place = map(lambda x: snk in x, actor_place).index(True)
+        keys = []
+        fails = 0
+        while len(keys) < 5 and fails < 20:
+            time.sleep(0.2)
+            actual = request_handler.report(runtimes[snk_place], snk)
+            keys = set([k.keys()[0] for k in actual])
+            fails += 1
+        print keys
+        print sorted([k.values()[0] for k in actual])
+        assert len(keys) == 5
+
+        # abolish a constrained runtime not having the original actor
+        c_id = constrained_id[:]
+        try:
+            c_id.remove(ident_rt_id)
+            print "original actor on constrained"
+        except:
+            print "original actor not on constrained"
+        request_handler.abolish_proxy_peer(rt_by_id[constrained_data[0]['proxy']], c_id[0])
+
+        # Make sure that the replica is gone
+        fails = 0
+        while len(replicas) > 3 and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.3)
+        print replicas
+        assert len(replicas) == 3
+
+        helpers.delete_app(request_handler, rt1, response['application_id'])
+
+        # Now all replicas should be gone
+        fails = 0
+        while len(replicas) > 0 and fails < 20:
+            replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
+            fails += 1
+            time.sleep(0.1)
+        print replicas
+        assert not replicas
+
+        # Delete the remaining constrained runtimes
+        cc_id = constrained_id[:]
+        cc_id.remove(c_id[0])
+        for i in cc_id:
+            request_handler.abolish_proxy_peer(rt_by_id[constrained_data[0]['proxy']], i)
+        for i in range(3):
+            constrained_p[i].terminate()

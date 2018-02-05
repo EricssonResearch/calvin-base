@@ -882,7 +882,7 @@ class ShadowActor(Actor):
     def requirements_get(self):
         # Get standard actor requirements first
         reqs = super(ShadowActor, self).requirements_get()
-        if self._signature and hasattr(self, '_shadow_args') and self.requires is not None:
+        if self._signature and hasattr(self, '_shadow_args') and self.requires is None:
             # Fresh ShadowActor, needs to find placement based on signature
             # Since actor requires is not known locally
             reqs += [{'op': 'shadow_actor_reqs_match',

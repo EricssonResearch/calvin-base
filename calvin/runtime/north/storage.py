@@ -923,7 +923,6 @@ class Storage(object):
             data["replication_id"] = actor._replication_id.id
             data["replication_master_id"] = actor._replication_id.original_actor_id
             data["replication_index"] = actor._replication_id.index
-        data["requirements"] = actor.requirements_get()
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):
@@ -938,6 +937,24 @@ class Storage(object):
         """
         _log.debug("Delete actor id %s" % (actor_id))
         self.delete(prefix="actor-", key=actor_id, cb=cb)
+        self.delete_actor_requirements(actor_id)
+        try:
+            replication_id = self.node.am.actors[actor_id]._replication_id.id
+            if replication_id is None or self.node.am.actors[actor_id]._replication_id.original_actor_id == actor_id:
+                return
+            self.remove_replica(replication_id, actor_id)
+            self.remove_replica_node(replication_id, actor_id)
+        except:
+            pass
+
+    def add_actor_requirements(self, actor, cb=None):
+        self.set(prefix="actorreq-", key=actor.id, value=actor.requirements_get(), cb=cb)
+
+    def get_actor_requirements(self, actor_id, cb=None):
+        self.get(prefix="actorreq-", key=actor_id, cb=cb)
+
+    def delete_actor_requirements(self, actor_id, cb=None):
+        self.delete(prefix="actorreq-", key=actor_id, cb=cb)
 
     def add_port(self, port, node_id, actor_id=None, exhausting_peers=None, cb=None):
         """
@@ -978,15 +995,24 @@ class Storage(object):
 
     def remove_replica_node(self, replication_id, actor_id, cb=None):
         # Only remove the node if we are last
+        if replication_id is None:
+            return
         replica_ids = self.node.rm.list_replication_actors(replication_id)
         _log.debug("remove_replica_node %s %s" % (actor_id, replica_ids))
         try:
             replica_ids.remove(actor_id)
+            replica_ids.remove(self.node.am.actors[actor_id]._replication_id.original_actor_id)
         except:
             pass
         if not replica_ids:
             _log.debug("remove_replica_node remove %s %s" % (self.node.id, actor_id))
             self.remove_index(['replicas', 'nodes', replication_id], self.node.id, root_prefix_level=3, cb=cb)
+
+    def remove_replica_node_force(self, replication_id, node_id, cb=None):
+        if replication_id is None:
+            return
+        _log.debug("remove_replica_node_force remove %s" % node_id)
+        self.remove_index(['replicas', 'nodes', replication_id], node_id, root_prefix_level=3, cb=cb)
 
     def get_replica(self, replication_id, cb=None):
         self.get_index(['replicas', 'actors', replication_id], root_prefix_level=3, cb=cb)

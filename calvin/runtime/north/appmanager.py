@@ -208,6 +208,8 @@ class AppManager(object):
         application.clear_node_info()
         application.actor_replicas = []
         application.replication_ids = []
+        application._replicas_actor_final = {}
+        application._replicas_node_final = {}
         for actor_id in application.actors.keys():
             if actor_id in self._node.am.list_actors():
                 application.update_node_info(self._node.id, actor_id)
@@ -243,6 +245,8 @@ class AppManager(object):
                 application.actor_replicas.remove(key)
             except:
                 pass
+            if 'replication_id' in value and not check_replica:
+                application._replicas_node_final.setdefault(value['replication_id'], set()).add(value['node_id'])
             if 'replication_id' in value and check_replica:
                 # Destroy the replication manager
                 self._node.rm.destroy_replication_leader(value['replication_id'])
@@ -269,6 +273,7 @@ class AppManager(object):
         _log.analyze(self._node.id, "+", {'value': value, 'replication_id': replication_id, 'replication_ids': application.replication_ids})
         application.replication_ids.remove(replication_id)
         application.actor_replicas.extend(value)
+        application._replicas_actor_final.setdefault(replication_id, []).extend(value)
         for actor_id in value:
             if actor_id == master_id:
                 application.actor_replicas.remove(actor_id)
@@ -330,7 +335,12 @@ class AppManager(object):
         if any([s is None for s in application._destroy_node_ids.values()]):
             return
         # Done
-        
+        for replication_id, replica_ids in application._replicas_actor_final.items():
+            for replica_id in replica_ids:
+                self._node.storage.remove_replica(replication_id, replica_id)
+        for replication_id, replica_node_ids in application._replicas_node_final.items():
+            for replica_node_id in replica_node_ids:
+                self._node.storage.remove_replica_node_force(replication_id, replica_node_id)
         if all(application._destroy_node_ids.values()):
             application.destroy_cb(status=response.CalvinResponse(True))
         else:
@@ -593,6 +603,8 @@ class Deployer(object):
         self._verified_actors = {}
         self._deploy_counter = 0
         self._instantiate_counter = 0
+        self._requires_counter = 0
+        self._connection_count = None
         if name:
             self.name = name
             self.app_id = self.node.app_manager.new(self.name)
@@ -732,6 +744,7 @@ class Deployer(object):
                 self.node.am.actors[actor_id].requirements_add(actor_reqs, extend=False)
                 # Update requirements in registry
                 self.node.storage.add_actor(self.node.am.actors[actor_id], self.node.id)
+            self.store_complete_requirements(actor_id)
             self.actor_map[actor_name] = actor_id
             self.node.app_manager.add(self.app_id, actor_id)
         except Exception as e:
@@ -741,6 +754,33 @@ class Deployer(object):
         finally:
             if cb:
                 cb()
+
+    def store_complete_requirements(self, actor_id):
+        actor = self.node.am.actors[actor_id]
+        if actor.is_shadow():
+            # Find requires
+            def _desc_cb(signature, description):
+                _log.debug("REQUIRES BACK %s" % description)
+                requires = None
+                for actor_desc in description:
+                    # We get list of possible descriptions back matching the signature
+                    # In reality it is only one
+                    if 'requires' in actor_desc:
+                        requires = actor_desc['requires']
+                if requires is not None:
+                    actor.requires = requires
+                    self.node.storage.add_actor_requirements(actor)
+                self._requires_counter += 1
+                if self._requires_counter >= len(self.deployable['actors']):
+                    self._wait_for_all_connections_and_requires()
+            try:
+                GlobalStore(node=self.node).global_signature_lookup(actor._signature, cb=_desc_cb)
+            except:
+                _log.exception("actor instanciate GlobalStore exception")
+                self._requires_counter += 1
+        else:
+            self._requires_counter += 1
+            self.node.storage.add_actor_requirements(actor)
 
     def connectid(self, connection, cb):
         src_actor, src_port, dst_actor, dst_port = connection
@@ -821,5 +861,9 @@ class Deployer(object):
             _log.debug("_wait_for_all_connections final")
             # Replication manager needs to fetch port info if supervise ShadowActor
             self.node.rm.deployed_actors_connected(self.actor_map.values())
+            self._wait_for_all_connections_and_requires()
+
+    def _wait_for_all_connections_and_requires(self):
+        if self._connection_count == 0 and self._requires_counter >= len(self.deployable['actors']):
             self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False,
                                    cb=CalvinCB(self.cb, deployer=self))
