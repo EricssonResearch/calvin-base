@@ -418,6 +418,10 @@ class ReplicationManager(object):
 
     def destroy_replication_leader(self, replication_id, cb=None):
         _log.debug("destroy_replication_leader BEGIN %s cb=%s" % (replication_id, cb))
+        if replication_id is None or not replication_id:
+            if cb:
+                cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
+            return calvinresponse.CalvinResponse(calvinresponse.OK)
         if replication_id in self.managed_replications.keys():
             self.remove_replication_leader(replication_id)
             if cb:

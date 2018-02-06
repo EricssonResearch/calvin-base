@@ -245,9 +245,9 @@ class AppManager(object):
                 application.actor_replicas.remove(key)
             except:
                 pass
-            if 'replication_id' in value and not check_replica:
+            if 'replication_id' in value and value['replication_id'] is not None and not check_replica:
                 application._replicas_node_final.setdefault(value['replication_id'], set()).add(value['node_id'])
-            if 'replication_id' in value and check_replica:
+            if 'replication_id' in value and value['replication_id'] is not None and check_replica:
                 # Destroy the replication manager
                 self._node.rm.destroy_replication_leader(value['replication_id'])
                 # Destroy the replicas
