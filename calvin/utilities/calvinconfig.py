@@ -94,7 +94,7 @@ class CalvinConfig(object):
                 'storage_sql': {},  # For SQL, should have the kwargs to connect + db-name. Defaults to insecure local
                 'capabilities_blacklist': [],
                 'remote_coder_negotiator': 'static',
-                'static_coder': ['json'],
+                'static_coder': ['json', 'msgpack'],
                 'display_plugin': 'stdout_impl',
                 'stdout_plugin': 'defaultimpl',
                 'transports': ['calvinip'],
@@ -190,6 +190,18 @@ class CalvinConfig(object):
                     },
                     "io.stdin": {
                         "module": "io.filehandler.StdIn",
+                        "attributes": {}
+                    },
+                    "network.socketclient": {
+                        "module": "network.SocketClient",
+                        "attributes": {}
+                    },
+                    "network.udplistener": {
+                        "module": "network.UDPListener",
+                        "attributes": {}
+                    },
+                    "network.tcpserver": {
+                        "module": "network.TCPServer",
                         "attributes": {}
                     }
                 }

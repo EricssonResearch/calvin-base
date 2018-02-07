@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib, calvinsys
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -46,11 +46,13 @@ class UDPSender(Actor):
         self.setup()
 
     def connect(self):
-        self.sender = self['socket'].connect(self.address, self.port, connection_type="UDP")
+        if self.sender:
+            calvinsys.close(self.sender)
+        self.sender = calvinsys.open(self, "network.socketclient", address=self.address, port=self.port, connection_type="UDP")
 
     def will_migrate(self):
         if self.sender:
-            self.sender.disconnect()
+            calvinsys.close(self.sender)
 
     def did_migrate(self):
         self.setup()
@@ -58,13 +60,12 @@ class UDPSender(Actor):
             self.connect()
 
     def setup(self):
-        self.use('calvinsys.network.socketclienthandler', shorthand='socket')
         self.regexp = calvinlib.use('regexp')
 
-    @stateguard(lambda self: self.sender)
+    @stateguard(lambda self: self.sender and calvinsys.can_write(self.sender))
     @condition(action_input=['data_in'])
     def send(self, token):
-        self.sender.send(token)
+        calvinsys.write(self.sender, token)
 
     # URI parsing - 0: protocol, 1: host, 2: port
     URI_REGEXP = r'([^:]+)://([^/:]*):([0-9]+)'
@@ -87,23 +88,22 @@ class UDPSender(Actor):
 
     @condition(action_input=['control_in'])
     def control(self, control):
-        if control.get('command', '') == 'connect' and not self.sender:
+        cmd = control.get('command', '')
+        if cmd == 'connect' and self.sender is None:
             self._new_connection(control)
-        elif control.get('command', '') == 'disconnect' and self.sender:
+        elif cmd == 'disconnect' and self.sender is not None:
             self._close_connection()
-
 
     def _new_connection(self, control):
         if self.parse_uri(control.get('uri', '')):
             self.connect()
 
     def _close_connection(self):
-        self.sender.disconnect()
-        del self.sender
+        calvinsys.close(self.sender)
         self.sender = None
 
     action_priority = (control, send)
-    requires = ['calvinsys.network.socketclienthandler', 'regexp']
+    requires = ['network.socketclient', 'regexp']
 
 
     test_set = [

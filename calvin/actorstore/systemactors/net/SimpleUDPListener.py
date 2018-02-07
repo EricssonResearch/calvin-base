@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -43,17 +43,16 @@ class SimpleUDPListener(Actor):
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.network.serverhandler', shorthand='server')
-        self.listener = self['server'].start(self.host, self.port, "udp")
+        self.listener = calvinsys.open(self, "network.udplistener", host=self.host, port=self.port)
 
-    @stateguard(lambda self: self.listener and self.listener.have_data())
+    @stateguard(lambda self: self.listener and calvinsys.can_read(self.listener))
     @condition(action_output=['data'])
     def receive(self):
-        message = self.listener.data_get()
+        message = calvinsys.read(self.listener)
         return (message["data"],)
 
     action_priority = (receive,)
-    requires = ['calvinsys.network.serverhandler']
+    requires = ['network.udplistener']
 
 
 #    TBD: Reenable test after updating to use new calvinsys API

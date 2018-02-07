@@ -67,7 +67,7 @@ class UDPServerProtocol(DatagramProtocol):
     def datagramReceived(self, data, (host, port)):
         message = {"host": host, "port": port, "data": data}
         self._data.append(message)
-        self._trigger(actor_ids=[self._actor_id])
+        self._trigger(self._actor_id)
 
     def have_data(self):
         return len(self._data) > 0
@@ -256,7 +256,7 @@ class ServerProtocolFactory(Factory):
         self._node_name          = node_name
 
     def trigger(self):
-        self._trigger(actor_ids=[self._actor_id])
+        self._trigger(self._actor_id)
 
     def buildProtocol(self, addr):
         if self.mode == 'line':

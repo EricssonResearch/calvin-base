@@ -16,7 +16,7 @@
 
 # encoding: utf-8
 
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 # from calvin.runtime.north.calvin_token import EOSToken
 
 from calvin.utilities.calvinlogger import get_logger
@@ -46,11 +46,9 @@ class TCPServer(Actor):
         self.mode                = mode
         self.delimiter           = delimiter.encode('utf-8')
         self.max_length          = max_length
-        self.connections = {}
-        self.use("calvinsys.network.serverhandler", shorthand="server")
 
     def will_migrate(self):
-        self['server'].stop()
+        calvinsys.close(self.server)
 
     def did_migrate(self):
         self.server = None
@@ -61,51 +59,33 @@ class TCPServer(Actor):
         self.host = host
         self.port = port
 
-
     @stateguard(lambda self: self.host and self.port and not self.server)
     @condition()
     def start(self):
         try:
-            self.server = self['server'].start(self.host, self.port, self.mode, self.delimiter, self.max_length)
+            self.server = calvinsys.open(self,
+                'network.tcpserver',
+                host=self.host,
+                port=self.port,
+                mode=self.mode,
+                delimiter=self.delimiter,
+                max_length=self.max_length)
         except Exception as e:
             _log.exception(e)
 
-
-    @stateguard(lambda self: self.server and self.server.connection_pending())
-    @condition()
-    def accept(self):
-        addr, conn = self.server.accept()
-        self.connections[addr] = conn
-
-
-    @stateguard(lambda self: self.connections)
-    @condition(['handle', 'token'])
-    def send(self, handle, token):
-        for h, c in self.connections.items():
-            if h == handle:
-                self.server.send(c, token.encode('utf-8'))
-
-    @stateguard(lambda self: self.connections and any([c.data_available for c in self.connections.values()]))
+    @stateguard(lambda self: self.server and calvinsys.can_read(self.server))
     @condition([], ['handle', 'token'])
     def receive(self):
-        for h, c in self.connections.items():
-            if c.data_available:
-                data = self.server.receive(c)
-                break
-        return (h, data)
+        data = calvinsys.read(self.server)
+        return (data["handle"], data["data"])
 
-    @stateguard(lambda self: self.connections and any([c.connection_lost for c in self.connections.values()]))
-    @condition()
-    def close(self):
-        for handle, connection in self.connections.items():
-            if connection.connection_lost:
-                connection.connection_lost = False
-                del self.connections[handle]
-                break
+    @stateguard(lambda self: self.server and calvinsys.can_write(self.server))
+    @condition(['handle', 'token'])
+    def send(self, handle, token):
+        calvinsys.write(self.server, {"handle": handle, "data": token.encode('utf-8')})
 
-    action_priority = (accept, receive, send, close, setup, start)
-    requires = ['calvinsys.network.serverhandler']
-
+    action_priority = (receive, send, setup, start)
+    requires = ['network.tcpserver']
 
     test_set = [
         {

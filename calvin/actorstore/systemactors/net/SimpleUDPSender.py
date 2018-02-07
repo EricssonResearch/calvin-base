@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -40,15 +40,15 @@ class SimpleUDPSender(Actor):
         self.setup()
 
     def setup(self):
-        self.use('calvinsys.network.socketclienthandler', shorthand='socket')
-        self.sender = self['socket'].connect(self.address, self.port, connection_type="UDP")
+        self.sender = calvinsys.open(self, "network.socketclient", address=self.address, port=self.port, connection_type="UDP")
 
+    @stateguard(lambda self: self.sender and calvinsys.can_write(self.sender))
     @condition(action_input=['data'])
     def send(self, token):
-        self.sender.send(token)
+        calvinsys.write(self.sender, token)
 
     action_priority = (send, )
-    requires = ['calvinsys.network.socketclienthandler']
+    requires = ['network.socketclient']
 
 
 #    TBD: Reenable test after updating to use new calvinsys API

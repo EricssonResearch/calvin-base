@@ -221,15 +221,10 @@ class DeprecatedCavinSysMock(object):
 
 requirements = \
     {
-        'calvinsys.network.httpclienthandler': DeprecatedCavinSysMock(),
         'calvinsys.network.mqtthandlerreg_sysobjects': DeprecatedCavinSysMock(),
         'calvinsys.opcua.client': DeprecatedCavinSysMock(),
         'calvinsys.network.mqtthandler': DeprecatedCavinSysMock(),
-        'calvinsys.network.serverhandler': DeprecatedCavinSysMock(),
-        'calvinsys.network.socketclienthandler': DeprecatedCavinSysMock(),
-        'calvinsys.events.timer': DeprecatedCavinSysMock(),
-        'calvinsys.sensors.rotary_encoder': DeprecatedCavinSysMock(),
-        'calvinsys.sensors.rfid': DeprecatedCavinSysMock(),
+        'calvinsys.events.timer': DeprecatedCavinSysMock()
     }
 
 class CalvinSysMock(dict):

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib, calvinsys
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -47,11 +47,11 @@ class TCPClient(Actor):
             self.connect()
 
     def connect(self):
-        self.cc = self['socket'].connect(self.address, self.port, mode=self.mode, delimiter=self.delimiter)
+        self.cc = calvinsys.open(self, "network.socketclient", address=self.address, port=self.port, connection_type="TCP")
 
     def will_migrate(self):
         if self.cc:
-            self.cc.disconnect()
+            calvinsys.close(self.cc)
 
     def did_migrate(self):
         self.setup()
@@ -59,22 +59,21 @@ class TCPClient(Actor):
             self.connect()
 
     def setup(self):
-        self.use('calvinsys.network.socketclienthandler', shorthand='socket')
         self.regexp = calvinlib.use('regexp')
 
-    @stateguard(lambda self: self.cc and self.cc.is_connected())
+    @stateguard(lambda self: self.cc and calvinsys.can_write(self.cc))
     @condition(action_input=['data_in'])
     def send(self, token):
         if isinstance(token, basestring):
             token = str(token)
-            self.cc.send(token)
+            calvinsys.write(self.cc, token)
         else:
             _log.error("Error token must be string or unicode, token is %s", repr(token))
 
-    @stateguard(lambda self: self.cc and self.cc.is_connected() and self.cc.have_data())
+    @stateguard(lambda self: self.cc and calvinsys.can_read(self.cc))
     @condition(action_output=['data_out'])
     def receive(self):
-        data = self.cc.get_data()
+        data = calvinsys.read(self.cc)
         return (data,)
 
     # URI parsing - 0: protocol, 1: address, 2: :port
@@ -86,7 +85,6 @@ class TCPClient(Actor):
             self._new_connection(control)
         elif control['control'] == 'disconnect' and self.cc:
             self._close_connection()
-
 
     def _new_connection(self, control):
         uri = self.regexp.findall(self.URI_REGEXP, control['uri'])
@@ -101,7 +99,7 @@ class TCPClient(Actor):
             self.connect()
 
     def _close_connection(self):
-        self.cc.disconnect()
+        calvinsys.close(self.cc)
         self.cc = None
 
     def exception_handler(self, action, args):
@@ -109,7 +107,7 @@ class TCPClient(Actor):
         self.EOST_token_received = True
 
     action_priority = (control, receive, send)
-    requires = ['calvinsys.network.socketclienthandler', 'regexp']
+    requires = ['network.socketclient', 'regexp']
 
 
     test_set = [

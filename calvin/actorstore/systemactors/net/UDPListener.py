@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib, calvinsys
 
 from calvin.utilities.calvinlogger import get_logger
 
@@ -47,7 +47,7 @@ class UDPListener(Actor):
         self.setup()
 
     def listen(self):
-        self.listener = self['server'].start(self.host, self.port, "udp")
+        self.listener = calvinsys.open(self, "network.udplistener", host=self.host, port=self.port)
 
     def did_migrate(self):
         self.setup()
@@ -55,13 +55,12 @@ class UDPListener(Actor):
             self.listen()
 
     def setup(self):
-        self.use('calvinsys.network.serverhandler', shorthand='server')
         self.regexp = calvinlib.use('regexp')
 
-    @stateguard(lambda self: self.listener and self.listener.have_data())
+    @stateguard(lambda self: self.listener and calvinsys.can_read(self.listener))
     @condition(action_output=['data_out'])
     def receive(self):
-        data = self.listener.data_get()
+        data = calvinsys.read(self.listener)
         return (data,)
 
     # URI parsing - 0: protocol, 1: host, 2: port
@@ -90,18 +89,16 @@ class UDPListener(Actor):
         elif control.get('command', '') == 'stop' and self.listener:
             self._close_port()
 
-
     def _new_port(self, control):
         if self.parse_uri(control.get('uri', '')):
             self.listen()
 
     def _close_port(self):
-        self.listener.stop()
-        del self.listener
+        calvinsys.close(self.listener)
         self.listener = None
 
     action_priority = (control, receive)
-    requires = ['calvinsys.network.serverhandler', 'regexp']
+    requires = ['network.udplistener', 'regexp']
 
 
     test_set = [
