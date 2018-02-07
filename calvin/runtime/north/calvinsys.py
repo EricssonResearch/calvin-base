@@ -83,9 +83,10 @@ class CalvinSys(object):
                 search_path = path.replace('/', '.') + '.' + capability['path']
                 try:
                     pymodule = importlib.import_module(search_path)
+                    if pymodule:
+                        break
                 except:
                     failed_paths.append(search_path)
-                    pass
             if pymodule is None:
                 raise Exception("Failed to import module '{}'\nTried:{}".format(capability_name, failed_paths))
             capability['module'] = pymodule
