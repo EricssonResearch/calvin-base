@@ -107,7 +107,7 @@ class CalvinSys(object):
 
     def schedule_timer(self, timer, timeout):
         self._node.sched.insert_task(partial(self._fire_timer, timer=timer), timeout)
-        
+
     def _fire_timer(self, timer):
         # Make sure timer is still valid.
         valid_objs = (self._objects[key]['obj'] for key in self._objects)
@@ -119,6 +119,9 @@ class CalvinSys(object):
         Trigger scheduler
         """
         self._node.sched.schedule_calvinsys(actor_id=actor.id)
+
+    def scheduler_maintenance_wakeup(self, delay=False):
+        self._node.sched.trigger_maintenance_loop(delay)
 
     def has_capability(self, requirement):
         """

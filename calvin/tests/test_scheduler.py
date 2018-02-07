@@ -14,7 +14,6 @@ def create_actor(kind, args):
     actor_manager = ActorManager(node)
     actor_id = actor_manager.new(kind, args)
     actor = actor_manager.actors[actor_id]
-    actor._calvinsys = Mock()
     return actor
 
 def app_from_script(script, script_name):
@@ -162,5 +161,3 @@ class SchedulerCheckStrategy(TestBase):
         assert src.outports['token'].endpoints[0].peer_port.owner == filter
         assert src.outports['token'].endpoints[0].peer_port.name == "token"
         assert src.outports['token'].endpoints[0].peer_port == filter.inports['token']
-
-

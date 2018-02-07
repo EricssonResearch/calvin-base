@@ -177,67 +177,6 @@ class DummyOutEndpoint(Endpoint):
     def is_connected(self):
         return True
 
-class TimerMock(object):
-
-    def __init__(self):
-        self._triggered = False
-
-    @property
-    def triggered(self):
-        return self._triggered
-
-    def ack(self):
-        assert self._triggered
-        self._triggered = False
-
-    def cancel(self):
-        del self._triggered
-
-    def trigger(self):
-        assert not self._triggered
-        self._triggered = True
-
-
-class CalvinSysTimerMock(object):
-    def repeat(self, delay):
-        return TimerMock()
-
-    def once(self, delay):
-        return TimerMock()
-
-
-class DeprecatedCavinSysMock(object):
-    def __getattr__(self, name):
-        def method(*args, **kwargs):
-            raise AssertionError("Not testable, method %s not mocked in deprecated calvinsys" % name)
-        return method
-
-
-# def load_simple_requirement(req):
-#     # For 'simple' requirements with no external dependencies,
-#     import importlib
-#     loaded = importlib.import_module("calvin." + req)
-#     return loaded.register()
-
-requirements = \
-    {
-        'calvinsys.network.mqtthandlerreg_sysobjects': DeprecatedCavinSysMock(),
-        'calvinsys.opcua.client': DeprecatedCavinSysMock(),
-        'calvinsys.network.mqtthandler': DeprecatedCavinSysMock()
-    }
-
-class CalvinSysMock(dict):
-    def use_requirement(self, actor, requirement):
-        _log.warning("Use of deprecated CalvinSysAPI for requirement %s by %s" % (requirement, actor.__class__))
-        if requirement in requirements:
-            return requirements[requirement]
-        elif requirement.startswith("calvinsys.native"):
-            raise Exception("Previously deprecated '%s' no longer exists" % (requirement,))
-            # return load_simple_requirement(requirement)
-        else:
-            raise Exception("Test framework does not know how to handle requirement '%s'" % (requirement,))
-
-
 def setup_calvinlib():
     import calvin.runtime.north.calvinlib as calvinlib
     calvinlib.TESTING=True
@@ -536,8 +475,6 @@ class ActorTester(object):
                 self.actors[actorname] = 'no_test'
                 _log.warning("%s not tested, no test_set defined." % actorname)
                 return
-            # For backward compability of use_requirement
-            actor._calvinsys = CalvinSysMock()
 
             actor.init(*actorclass.test_args, **actorclass.test_kwargs)
             actor.setup_complete()

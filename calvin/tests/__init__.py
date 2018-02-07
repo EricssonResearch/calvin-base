@@ -35,40 +35,6 @@ class _DummyRepSet:
     def store(self):
         pass
 
-class DummySys(object):
-    """ Dummy Calvin system object """
-    def __init__(self, node=None):
-        self._node = node
-        pass
-
-    def scheduler_wakeup(self):
-        pass
-
-    def scheduler_maintenance_wakeup(self, delay=False):
-        pass
-
-    def use_requirement(self, actor, modulename):
-        pass
-
-    def require(self, modulename):
-        pass
-
-    def has_capability(self, requirement):
-        """
-        Returns True if "requirement" is satisfied in this system,
-        otherwise False.
-        """
-        return False
-
-    def list_capabilities(self):
-        """
-        Returns list of requirements this system satisfies
-        """
-        return []
-
-    def get_node(self):
-        return self._node
-
 class TestNode:
 
     def __init__(self, uris, node_name=None, control_uri=None):
@@ -78,7 +44,6 @@ class TestNode:
         self.control_uri = control_uri or uris[0]
         self.external_control_uri = self.control_uri
         self.pm = Mock()
-        self._calvinsys = DummySys(self)
         self.storage = Mock()
         self.control = Mock()
         self.attributes = attribute_resolver.AttributeResolver({})

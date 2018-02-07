@@ -31,7 +31,6 @@ def create_actor(node):
     actor_manager = ActorManager(node)
     actor_id = actor_manager.new('std.Identity', {})
     actor = actor_manager.actors[actor_id]
-    actor._calvinsys = Mock()
     return actor
 
 
@@ -236,4 +235,3 @@ def test_set_inport_state(inport, outport):
         assert True
     except:
         assert False
-

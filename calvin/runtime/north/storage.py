@@ -770,8 +770,6 @@ class Storage(object):
             pass
         # Add the capabilities
         try:
-            for c in node._calvinsys.list_capabilities():
-                self.add_index(['node', 'capabilities', c], node.id, root_prefix_level=3)
             for c in get_calvinsys().list_capabilities():
                 self.add_index(['node', 'capabilities', c], node.id, root_prefix_level=3)
             for c in get_calvinlib().list_capabilities():

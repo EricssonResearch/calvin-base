@@ -341,9 +341,6 @@ class Actor(object):
         self._component_members = set([self._id])  # We are only part of component if this is extended
         self._managed = set()
         self._has_started = False
-        self._calvinsys = None
-        self.calvinsys = None
-        self._using = {}
         # self.control = calvincontrol.get_calvincontrol()
         self._migration_info = None
         self._migrating_to = None  # During migration while on the previous node set to the next node id
@@ -406,14 +403,6 @@ class Actor(object):
     def will_replicate(self, state):
         """Override in actor subclass if actions need to be taken before replication."""
         pass
-
-    def __getitem__(self, attr):
-        if attr in self._using:
-            return self._using[attr]
-        raise KeyError(attr)
-
-    def use(self, requirement, shorthand):
-        self._using[shorthand] = self._calvinsys.use_requirement(self, requirement)
 
     def __str__(self):
         ip = ""
@@ -795,11 +784,11 @@ class Actor(object):
             self.fsm.transition_to(Actor.STATUS.MIGRATABLE)
             _log.info("Migrate actor %s to node %s" % (self._name, self._migration_info["node_id"]))
             # Inform the scheduler that the actor is ready to migrate.
-            self._calvinsys.scheduler_maintenance_wakeup()
+            get_calvinsys().scheduler_maintenance_wakeup()
         else:
             _log.info("No possible migration destination found for actor %s" % self._name)
             # Try to enable/migrate actor again after a delay.
-            self._calvinsys.scheduler_maintenance_wakeup(delay=True)
+            get_calvinsys().scheduler_maintenance_wakeup(delay=True)
 
     @verify_status([STATUS.MIGRATABLE, STATUS.READY])
     def remove_migration_info(self, status):

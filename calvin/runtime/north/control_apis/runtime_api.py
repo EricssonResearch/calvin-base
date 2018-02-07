@@ -31,7 +31,7 @@ def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
     Response status code: OK
     Response: list of capabilities
     """
-    self.send_response(handle, connection, json.dumps(self.node._calvinsys.list_capabilities() + get_calvinsys().list_capabilities() + get_calvinlib().list_capabilities()))
+    self.send_response(handle, connection, json.dumps(get_calvinsys().list_capabilities() + get_calvinlib().list_capabilities()))
 
 
 @handler(r"POST /peer_setup\sHTTP/1")
