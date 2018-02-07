@@ -290,6 +290,7 @@ class ReplicationManager(object):
 
         replication_data._wait_for_outstanding = ['leader', 'ports']
         # If supervised actor is ShadowActor, the ports and requires are missing
+        # TODO remove requires search since now done for all actors during deployment
         if actor.is_shadow():
             replication_data._wait_for_outstanding.append('requires')
             # Find requires
