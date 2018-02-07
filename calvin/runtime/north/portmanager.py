@@ -329,9 +329,21 @@ class PortManager(object):
         for port in actor.inports.values():
             port_ids.append(port.id)
             self.ports.pop(port.id)
+            # Also unregister any left over endpoints (during app destroy we don't disconnect)
+            for e in port.endpoints:
+                try:
+                    self.node.sched.unregister_endpoint(e)
+                except:
+                    pass
         for port in actor.outports.values():
             port_ids.append(port.id)
             self.ports.pop(port.id)
+            # Also unregister any left over endpoints (during app destroy we don't disconnect)
+            for e in port.endpoints:
+                try:
+                    self.node.sched.unregister_endpoint(e)
+                except:
+                    pass
         return port_ids
 
     def _get_local_port(self, actor_id=None, port_name=None, port_dir=None, port_id=None):
