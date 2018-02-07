@@ -223,8 +223,7 @@ requirements = \
     {
         'calvinsys.network.mqtthandlerreg_sysobjects': DeprecatedCavinSysMock(),
         'calvinsys.opcua.client': DeprecatedCavinSysMock(),
-        'calvinsys.network.mqtthandler': DeprecatedCavinSysMock(),
-        'calvinsys.events.timer': DeprecatedCavinSysMock()
+        'calvinsys.network.mqtthandler': DeprecatedCavinSysMock()
     }
 
 class CalvinSysMock(dict):

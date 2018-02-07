@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import sys
-from calvin.actor.actor import Actor, manage, condition, stateguard
+from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class CountTimer(Actor):
 
@@ -26,74 +26,58 @@ class CountTimer(Actor):
       integer: Integer counter
     """
 
-    @manage(exclude=['timer'])
-    def init(self, sleep=0.1, steps=sys.maxint):
-        self.count = 0
+    @manage()
+    def init(self, sleep=0.1, start=1, steps=sys.maxint):
+        self.start = start
+        self.count = start
         self.sleep = sleep
-        self.steps = steps
-        self.setup()
-
-    def setup(self):
-        self.use("calvinsys.events.timer", shorthand="timer")
-        if self.count < 3:
-            self.timer = self['timer'].once(self.sleep)
-        else:
-            self.timer = self['timer'].repeat(self.sleep)
-
-    def will_migrate(self):
-        self.timer.cancel()
-
-    def did_migrate(self):
-        self.setup()
-
-    def will_end(self):
-        self.timer.cancel()
-
-    def timer_trigger_stepwise(self):
-        return self.timer.triggered and self.count < self.steps and self.count < 3
-
-    def timer_trigger_repeat(self):
-        return self.timer.triggered and self.count < self.steps
-
-    def timer_trigger_stopped(self):
-        return self.timer.triggered and self.count >= self.steps
+        self.steps = steps + start
+        self.timer = calvinsys.open(self, 'sys.timer.once', period=self.sleep)
 
     # The counting action, first 3 use non periodic for testing purpose
-    # need guard with triggered() since the actor might be fired for other
-    # reasons
-    @stateguard(timer_trigger_stepwise)
+    @stateguard(lambda self: self.count < self.start + 3 and self.count < self.steps and calvinsys.can_read(self.timer))
     @condition(action_output=('integer',))
     def step_no_periodic(self):
-        self.timer.ack()
-        if self.count == 2:
+        calvinsys.read(self.timer) # Ack
+        if self.count == self.start + 2:
             # now continue with periodic timer events
-            self.timer = self['timer'].repeat(self.sleep)
-        else:
-            self.timer = self['timer'].once(self.sleep)
+            calvinsys.close(self.timer)
+            self.timer = calvinsys.open(self, 'sys.timer.repeating')
+        calvinsys.can_write(self.timer) # Dummy read
+        calvinsys.write(self.timer, self.sleep)
         self.count += 1
-        return (self.count, )
+        return (self.count - 1, )
 
     # The counting action, handle periodic timer events hence no need to setup repeatedly
-    # need guard with triggered() since the actor might be fired for other
-    # reasons
-    @stateguard(timer_trigger_repeat)
+    @stateguard(lambda self: self.count < self.steps and calvinsys.can_read(self.timer))
     @condition(action_output=('integer',))
     def step_periodic(self):
-        self.timer.ack()
+        calvinsys.read(self.timer) # Ack
         self.count += 1
-        return (self.count, )
+        return (self.count - 1, )
 
-    # The stopping action, need guard with raised() since the actor might be
-    # fired for other reasons
-    @stateguard(timer_trigger_stopped)
+    # Stop after given number of steps
+    @stateguard(lambda self: self.count == self.steps)
     @condition()
     def stop(self):
-        self.timer.ack()
-        self.timer.cancel()
+        calvinsys.close(self.timer) # Stop
+        self.count += 1
+        self.timer = None
 
-
-    def report(self):
-        return self.count
+    def report(self, **kwargs):
+        if kwargs.get("stopped", False):
+            calvinsys.close(self.timer)
+        return self.count - self.start
 
     action_priority = (step_no_periodic, step_periodic, stop)
-    requires = ['calvinsys.events.timer']
+    requires = ['sys.timer.once', 'sys.timer.repeating']
+
+
+    test_calvinsys = {'sys.timer.once': {'read': ["dummy", "dummy", "dummy"],
+                                         'write': [0.1, 0.1]},
+                      'sys.timer.repeating': {'read': ["dummy", "dummy", "dummy", "dummy", "dummy"]}}
+    test_set = [
+        {
+            'outports': {'integer': [1, 2, 3, 4, 5, 6, 7, 8]}
+        }
+    ]

@@ -58,7 +58,7 @@ class PolicyDecisionPoint(object):
         """
         Use policies to return access decision for the request.
 
-        The request and response format is inspired by the XACML JSON Profile 
+        The request and response format is inspired by the XACML JSON Profile
         but has been simplified to be more compact.
 
         Request (example):
@@ -69,7 +69,7 @@ class PolicyDecisionPoint(object):
                 "actor_signer": "signer"
             },
             "action": {
-                "requires": ["runtime", "calvinsys.events.timer"]
+                "requires": ["runtime", "sys.timer.repeating"]
             },
             "resource": {
                 "node_id": "a77c0687-dce8-496f-8d81-571333be6116"
@@ -108,7 +108,7 @@ class PolicyDecisionPoint(object):
         if ("subject" in request) and ("actorstore_signature" in request["subject"]):
             try:
                 # Get actor_desc from storage if actorstore_signature is included in request.
-                pip.actor_desc_lookup(request["subject"]["actorstore_signature"], 
+                pip.actor_desc_lookup(request["subject"]["actorstore_signature"],
                                       callback=CalvinCB(self._authorize_cont, request, callback=callback))
             except Exception as err:
                 _log.error("authorize, failed to lookup actor_desc, err={}".format(err))
@@ -169,7 +169,7 @@ class PolicyDecisionPoint(object):
         Policy format (example):
         {
             "id": "policy1",
-            "description": "Security policy for user Tomas or Gustav 
+            "description": "Security policy for user Tomas or Gustav
                             Nilsson with actor signed by signer.",
             "rule_combining": "permit_overrides",
             "target": {
@@ -182,13 +182,13 @@ class PolicyDecisionPoint(object):
             "rules": [
                 {
                     "id": "policy1_rule1",
-                    "description": "Permit access to 'calvinsys.events.timer', 
-                                    'calvinsys.io.*' and 'runtime' between 
+                    "description": "Permit access to 'sys.timer.repeating',
+                                    'calvinsys.io.*' and 'runtime' between
                                     09:00 and 17:00 if condition is true.",
                     "effect": "permit",
                     "target": {
                         "action": {
-                            "requires": ["calvinsys.events.timer", 
+                            "requires": ["sys.timer.repeating", 
                                          "calvinsys.io.*", "runtime"]
                         }
                     },
@@ -197,14 +197,14 @@ class PolicyDecisionPoint(object):
                         "attributes": [
                             {
                                 "function": "equal",
-                                "attributes": ["attr:resource:address.country", 
+                                "attributes": ["attr:resource:address.country",
                                                ["SE", "DK"]]
                             },
                             {
                                 "function": "greater_than_or_equal",
-                                "attributes": ["attr:environment:current_date", 
+                                "attributes": ["attr:environment:current_date",
                                                "2016-03-04"]
-                            } 
+                            }
                         ]
                     },
                     "obligations": [
@@ -232,7 +232,7 @@ class PolicyDecisionPoint(object):
                 _log.error("Failed to get policies from PRP, exc={}".format(err))
                 raise
             _log.debug("For each policy, check result")
-            for policy_id in policies: 
+            for policy_id in policies:
                 policy = policies[policy_id]
                 _log.debug("\n\n\nLet's check a policy:\n\tpolicy_id={}\n\tpolicy={}".format(policy_id, policy))
                 # Check if policy target matches (policy without target matches everything).
@@ -249,7 +249,7 @@ class PolicyDecisionPoint(object):
                         _log.error("Failed to get policy decision, err={}".format(err))
                         raise
                     _log.debug("Policy decision\n\tdecision={}\n\tobligations={}\n".format(decision, obligations))
-                    if ((decision == "permit" and not obligations and self.config["policy_combining"] == "permit_overrides") or 
+                    if ((decision == "permit" and not obligations and self.config["policy_combining"] == "permit_overrides") or
                       (decision == "deny" and self.config["policy_combining"] == "deny_overrides")):
                         # Stop checking further rules.
                         # If "permit" with obligations, continue since "permit" without obligations may be found.
@@ -321,7 +321,7 @@ class PolicyDecisionPoint(object):
                     policy_value = [policy_value]
                 try:
                     # If the lists contain many values, only one of the values need to match.
-                    # Regular expressions are allowed for strings in policies 
+                    # Regular expressions are allowed for strings in policies
                     # (re.match checks for a match at the beginning of the string, $ marks the end of the string).
                     if not any([re.match(r+'$', x) for r in policy_value for x in request_value]):
                         _log.debug("No attributes are matching: %s %s %s" % (attribute_type, attribute, policy_value))
@@ -359,7 +359,7 @@ class PolicyDecisionPoint(object):
                 if not "rule_combining" in policy:
                     _log.error("No rule_combining in policy")
                     raise Exception("No rule_combining in policy")
-                if ((decision == "permit" and not obligations and policy["rule_combining"] == "permit_overrides") or 
+                if ((decision == "permit" and not obligations and policy["rule_combining"] == "permit_overrides") or
                   (decision == "deny" and policy["rule_combining"] == "deny_overrides")):
                     # Stop checking further rules.
                     # If "permit" with obligations, continue since "permit" without obligations may be found.
@@ -396,7 +396,7 @@ class PolicyDecisionPoint(object):
                 args = []
                 for attribute in rule["condition"]["attributes"]:
                     if isinstance(attribute, dict):  # Contains another function
-                        args.append(self.evaluate_function(attribute["function"], 
+                        args.append(self.evaluate_function(attribute["function"],
                                     attribute["attributes"], request, pip))
                     else:
                         args.append(attribute)
@@ -486,7 +486,7 @@ class PolicyDecisionPoint(object):
             }
         }
 
-        Response contains (node_id, authorization response) for the first match 
+        Response contains (node_id, authorization response) for the first match
         or None if no runtime is found.
         """
         _log.debug("runtime_search \n\trequest={}\n\truntime_whitelist={}\n\tcallback={}".format(request, runtime_whitelist, callback))
@@ -512,8 +512,8 @@ class PolicyDecisionPoint(object):
         node_request["resource"] = {
             "node_id": node_id
         }
-        self.authorize(node_request, 
-                       callback=CalvinCB(self._runtime_search_cont, node_id, callback=callback, 
+        self.authorize(node_request,
+                       callback=CalvinCB(self._runtime_search_cont, node_id, callback=callback,
                                          request=request, possible_nodes=possible_nodes, counter=counter))
 
     def _runtime_search_cont(self, node_id, authz_response, callback, request, possible_nodes, counter):
