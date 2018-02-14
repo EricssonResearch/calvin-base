@@ -285,33 +285,10 @@ class ReplicationManager(object):
             state['private']['_has_started'] = False
 
         replication_data.actor_state = state
-        # UNUSED until leader election settled and any shadow actor data fetched
+        # UNUSED until leader election settled and deployed actors connected
         self.add_replication_leader(replication_data, status=REPLICATION_STATUS.UNUSED)
 
         replication_data._wait_for_outstanding = ['leader', 'ports']
-        # If supervised actor is ShadowActor, the ports and requires are missing
-        # TODO remove requires search since now done for all actors during deployment
-        if actor.is_shadow():
-            replication_data._wait_for_outstanding.append('requires')
-            # Find requires
-            def _desc_cb(signature, description):
-                _log.debug("REQUIRES BACK %s \n%s" % (replication_data._wait_for_outstanding, description))
-                requires = None
-                for actor_desc in description:
-                    # We get list of possible descriptions back matching the signature
-                    # In reality it is only one
-                    if 'requires' in actor_desc:
-                        requires = actor_desc['requires']
-                if requires is not None:
-                    replication_data.actor_state['private']['_requires'] = requires
-                replication_data._wait_for_outstanding.remove('requires')
-                if not replication_data._wait_for_outstanding:
-                    self.move_replication_leader(replication_data.id, replication_data._move_to_leader)
-            try:
-                GlobalStore(node=self.node).global_signature_lookup(actor._signature, cb=_desc_cb)
-            except:
-                _log.exception("supervise actor GlobalStore exception")
-                replication_data._wait_for_outstanding.remove('requires')
 
         def _leader_elected(status, leader):
             _log.debug("LEADER ELECTED %s, %s" % (status, leader))
