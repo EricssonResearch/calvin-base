@@ -624,13 +624,13 @@ class Actor(object):
         """Deserialize and set custom state, implement in subclass if necessary"""
         pass
 
-    def _private_state(self, remap):
+    def _private_state(self):
         """Serialize state common to all actors"""
         state = {}
         state['inports'] = {
-            port: self.inports[port]._state(remap=remap) for port in self.inports}
+            port: self.inports[port]._state() for port in self.inports}
         state['outports'] = {
-            port: self.outports[port]._state(remap=remap) for port in self.outports}
+            port: self.outports[port]._state() for port in self.outports}
         state['_component_members'] = list(self._component_members)
         # Place requires in state, in the event we become a ShadowActor
         state['_requires'] = self.requires if hasattr(self, 'requires') else []
@@ -640,9 +640,6 @@ class Actor(object):
         for key in self._private_state_keys:
             obj = self.__dict__[key]
             if _implements_state(obj):
-                try:
-                    state[key] = obj.state(remap)
-                except:
                     state[key] = obj.state()
             else:
                 state[key] = obj
@@ -713,10 +710,10 @@ class Actor(object):
         for key, val in state.iteritems():
             self.__dict__[key] = val
 
-    def serialize(self, remap=None):
+    def serialize(self):
         """Returns the serialized state of an actor."""
         state = {}
-        state['private'] = self._private_state(remap)
+        state['private'] = self._private_state()
         rstate = self._replication_state()
         if rstate is not None:
             state['replication'] = rstate
@@ -898,9 +895,9 @@ class ShadowActor(Actor):
         self.requires = state['_requires']
         super(ShadowActor, self)._set_private_state(state)
 
-    def _private_state(self, remap):
+    def _private_state(self):
         """Call super class and add stored calvinsys state"""
-        state = super(ShadowActor, self)._private_state(remap)
+        state = super(ShadowActor, self)._private_state()
         state["_calvinsys"] = self.calvinsys_state
         return state
 

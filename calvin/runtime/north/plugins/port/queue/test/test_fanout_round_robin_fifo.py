@@ -167,23 +167,3 @@ class TestFanoutRoundRobinFIFO(unittest.TestCase):
         # check that 1 token has been consumed
         for i in [1,2,3]:
             self.assertEqual(port.peek("reader-%d" % i).value, "data-%d" % (i+3))
-    
-    def testSerialize_remap(self):
-        # write some tokens
-        for i in [1,2,3,4]:
-                self.outport.write(Token("data-%d" % i), None)
-        # peek at the tokens (will consume 1 token)
-        for i in [1,2,3]:
-            self.outport.peek("reader-%d" % i)
-        # save state
-        remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
-        state = self.outport._state(remap)
-        # recreate port
-        port = self.create_port()
-        port._set_state(state)
-        # check that no tokens available
-        for i in [1,2,3]:
-            self.assertTrue(port.tokens_available(0, "xreader-%d" % i))
-        # check that no old ports remain
-        for i in [1,2,3]:
-            self.assertFalse("reader-%d" % i in port.readers)

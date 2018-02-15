@@ -31,12 +31,9 @@ class FanoutMappedFIFO(FanoutBase):
         super(FanoutMappedFIFO, self).__init__(port_properties, peer_port_properties)
         self._type = "dispatch:mapped"
 
-    def _state(self, remap=None):
-        state = super(FanoutMappedFIFO, self)._state(remap)
-        if remap is None:
-            state['mapping'] = self.mapping
-        else :
-            state['mapping'] = {k : remap.get(pid, pid) for k, pid in self.mapping.iteritems()}
+    def _state(self):
+        state = super(FanoutMappedFIFO, self)._state()
+        state['mapping'] = self.mapping
         return state
 
     def _set_state(self, state):

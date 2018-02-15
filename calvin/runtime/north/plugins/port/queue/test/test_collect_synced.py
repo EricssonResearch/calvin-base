@@ -122,24 +122,6 @@ class TestCollectSyncedFIFO(unittest.TestCase):
         with self.assertRaises(QueueEmpty):
             self.inport.peek(None)
 
-    def testSerialize_remap(self):
-        self.setup_writers(3)
-        for i in [1,2,3]:
-            for j in [0,3]:
-                self.inport.write(Token("data-%d" % (i+j)), "writer-%d" % i)
-        self.inport.peek(None)
-        # save state
-        remap = {"writer-%d" % i: "xwriter-%d" % i for i in [1,2,3]}
-        state = self.inport._state(remap)
-        # recreate port
-        port = create_port(routing="collect-all-tagged")
-        port._set_state(state)
-        # check that no tokens available
-        self.assertFalse(port.tokens_available(1, "xwriter-%d" % i))
-        # check that no old ports remain
-        for i in [1,2,3]:
-            self.assertFalse("writer-%d" % i in port.writers)
-
     def testSerialize(self):
         self.setup_writers(3)
         for i in [1,2,3]:

@@ -173,29 +173,6 @@ class TestFanoutFIFO(unittest.TestCase):
         # check that 1 token has been consumed
         for i in [1,2,3]:
             self.assertEqual(port.peek("reader-%d" % i).value, "data-%d" % 2)
-    
-    def testSerialize_remap(self):
-        self.outport.add_reader("reader-1", {})
-        self.outport.add_reader("reader-2", {})
-        self.outport.add_reader("reader-3", {})
-        # write some tokens
-        for i in [1,2,3,4]:
-                self.outport.write(Token("data-%d" % i), None)
-        # peek at the tokens (will consume 1 token)
-        for i in [1,2,3]:
-            self.outport.peek("reader-%d" % i)
-        # save state
-        remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
-        state = self.outport._state(remap)
-        # recreate port
-        port = self.create_port()
-        port._set_state(state)
-        # check that no tokens available
-        for i in [1,2,3]:
-            self.assertFalse(port.tokens_available(1, "xreader-%d" % i))
-        # check that no old ports remain
-        for i in [1,2,3]:
-            self.assertFalse("reader-%d" % i in port.readers)
 
     def testExhaust_Normal(self):
         for i in [1,2,3]:

@@ -63,14 +63,10 @@ class FanoutOrderedFIFO(FanoutBase):
         # print "    self.reader_turn:", self.reader_turn
         return reader
 
-    def _state(self, remap=None):
-        state = super(FanoutOrderedFIFO, self)._state(remap)
-        if remap is None:
-            state['reader_turn'] = self.reader_turn
-            state['turn_pos'] = self.turn_pos
-        else :
-            state['reader_turn'] = None
-            state['turn_pos'] = 0
+    def _state(self):
+        state = super(FanoutOrderedFIFO, self)._state()
+        state['reader_turn'] = self.reader_turn
+        state['turn_pos'] = self.turn_pos
         return state
 
     def _set_state(self, state):

@@ -52,30 +52,17 @@ class FanoutFIFO(object):
     def __str__(self):
         return "Tokens: %s, w:%i, r:%s, tr:%s" % (self.fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
 
-    def _state(self, remap=None):
-        if remap is None:
-            state = {
-                'queuetype': self._type,
-                'fifo': [t.encode() for t in self.fifo],
-                'N': self.N,
-                'readers': list(self.readers),
-                'write_pos': self.write_pos,
-                'read_pos': self.read_pos,
-                'tentative_read_pos': self.tentative_read_pos,
-                'reader_offset': self.reader_offset
-            }
-        else:
-            # Remapping of port ids, also implies reset of tokens
-            state = {
-                'queuetype': self._type,
-                'fifo': [Token(0).encode()] * len(self.fifo),
-                'N': self.N,
-                'readers': [remap[pid] if pid in remap else pid for pid in self.readers],
-                'write_pos': 0,
-                'read_pos': {remap[pid] if pid in remap else pid: 0 for pid, pos in self.read_pos.items()},
-                'tentative_read_pos': {remap[pid] if pid in remap else pid: 0 for pid, pos in self.tentative_read_pos.items()},
-                'reader_offset': {remap[pid] if pid in remap else pid: 0 for pid, pos in self.reader_offset.items()}
-            }
+    def _state(self):
+        state = {
+            'queuetype': self._type,
+            'fifo': [t.encode() for t in self.fifo],
+            'N': self.N,
+            'readers': list(self.readers),
+            'write_pos': self.write_pos,
+            'read_pos': self.read_pos,
+            'tentative_read_pos': self.tentative_read_pos,
+            'reader_offset': self.reader_offset
+        }
         return state
 
     def _set_state(self, state):

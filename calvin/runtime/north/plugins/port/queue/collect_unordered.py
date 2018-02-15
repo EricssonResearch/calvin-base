@@ -32,12 +32,9 @@ class CollectUnordered(CollectBase):
         self._type = "collect:unordered"
         self.peek_turn_pos = -1
 
-    def _state(self, remap=None):
-        state = super(CollectUnordered, self)._state(remap)
-        if remap is None:
-            state['turn_pos'] = self.turn_pos
-        else:
-            state['turn_pos'] = 0
+    def _state(self):
+        state = super(CollectUnordered, self)._state()
+        state['turn_pos'] = self.turn_pos
         return state
 
     def _set_state(self, state):

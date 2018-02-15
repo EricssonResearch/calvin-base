@@ -210,23 +210,3 @@ class TestFanoutMappedFIFO(unittest.TestCase):
         port._set_state(state)
         for i in [1,2,3]:
             self.assertEqual(port.peek("reader-%d" % i).value, "data-%d" % (i+3))
-    
-    def testSerialize_remap(self):
-        self.setup_readers(3)
-        for i in [1,2,3]:
-            for j in [0,3]:
-                self.outport.write(wrap("data-%d" % (i+j), "%d" % i), None)
-        for i in [1,2,3]:
-            self.outport.peek("reader-%d" % i)
-        # save state
-        remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
-        state = self.outport._state(remap)
-        # recreate port
-        port = create_port()
-        port._set_state(state)
-        # check that no tokens available
-        for i in [1,2,3]:
-            self.assertFalse(port.tokens_available(1, "xreader-%d" % i))
-        # check that no old ports remain
-        for i in [1,2,3]:
-            self.assertFalse("reader-%d" % i in port.readers)

@@ -45,7 +45,7 @@ class ReplicationId(object):
         self._placement_req = []
         self._measure_pressure = False
 
-    def state(self, remap=None):
+    def state(self):
         state = {}
         if self.id:
             state['id'] = self.id
@@ -90,7 +90,6 @@ class ReplicationData(object):
         self.requirements = requirements
         self.counter = 0
         # {<actor_id>: {'known_peer_ports': [peer-ports id list], <org-port-id: <replicated-port-id>, ...}, ...}
-        self.remaped_ports = {}
         self.status = REPLICATION_STATUS.UNUSED
         self._terminate_with_node = False
         self._one_per_runtime = False
@@ -118,7 +117,6 @@ class ReplicationData(object):
         state['actor_state'] = self.actor_state
         state['instances'] = self.instances
         state['requirements'] = self.requirements
-        state['remaped_ports'] = self.remaped_ports
         state['status'] = REPLICATION_STATUS.READY
         state['peer_replication_ids'] = self.peer_replication_ids
         state['given_lock_replication_ids'] = list(self.given_lock_replication_ids)
@@ -139,7 +137,6 @@ class ReplicationData(object):
         self._terminate_with_node = state.get('_terminate_with_node', False)
         self._one_per_runtime = state.get('_one_per_runtime', False)
         self._placement_req = state.get('_placement_req', [])
-        self.remaped_ports = state.get('remaped_ports', {})
         self.status = state.get('status', REPLICATION_STATUS.UNUSED)
         self.leader_election = state.get('leader_election', None)
         self.leader_node_id = state.get('leader_node_id', None)
@@ -181,12 +178,6 @@ class ReplicationData(object):
 
     def terminate_with_node(self, actor_id):
         return self._terminate_with_node and not self.is_master(actor_id)
-
-    def set_remaped_ports(self, actor_id, remap_ports, ports):
-        self.remaped_ports[actor_id] = remap_ports
-        # Remember the ports that we knew at replication time
-        self.remaped_ports[actor_id]['known_peer_ports'] = (
-            [pp[1] for p in (ports['inports'].values() + ports['outports'].values()) for pp in p])
 
     def init_requirements(self, requirements=None):
         if requirements is not None:

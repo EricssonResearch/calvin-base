@@ -101,20 +101,3 @@ class TestFanoutRandomFIFO(TestFanoutRoundRobinFIFO):
                 self.outport.peek(r)
                 available += 1
         self.assertEqual(4 - consumed, available)
-        
-    def testSerialize_remap(self):
-        # write some tokens
-        for i in [1,2,3,4]:
-                self.outport.write(Token("data-%d" % i), None)
-        # save state
-        remap = {"reader-%d" % i: "xreader-%d" % i for i in [1,2,3]}
-        state = self.outport._state(remap)
-        # recreate port
-        port = self.create_port()
-        port._set_state(state)
-        # check that no tokens available
-        for i in [1,2,3]:
-            self.assertFalse(port.tokens_available(1, "xreader-%d" % i))
-        # check that no old ports remain
-        for i in [1,2,3]:
-            self.assertFalse("reader-%d" % i in port.readers)
