@@ -153,7 +153,7 @@ class Store(object):
                 pymodule = None
                 raise Exception("Invalid module")
         except Exception as e:
-            _log.exception("Could not load python module")
+            _log.exception("Could not load python module {}".format(name))
         finally:
             return (pymodule, signer)
 
