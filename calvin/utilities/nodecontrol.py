@@ -20,7 +20,7 @@ from calvin.utilities import storage_node
 from calvin.requests.request_handler import RequestHandler
 
 
-def node_control(control_uri, barrier=True):
+def node_control(control_uri, barrier=True, request_handler=None):
     class NodeControl(object):
 
         def __init__(self, control_uri, barrier):
@@ -28,7 +28,7 @@ def node_control(control_uri, barrier=True):
             self._id = None
             self._uris = None
             self.control_uri = control_uri
-            self.request_handler = RequestHandler()
+            self.request_handler = request_handler or RequestHandler()
             delay = 0.1
             # When barrier ordered make sure we can contact the runtime
             if barrier:
@@ -55,7 +55,7 @@ def node_control(control_uri, barrier=True):
             if self._uris is None:
                 self._uris = self.request_handler.get_node(self, self.id)["uris"]
             return self._uris
-
+        
     return NodeControl(control_uri, barrier=barrier)
 
 
