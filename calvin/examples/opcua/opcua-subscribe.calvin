@@ -1,38 +1,6 @@
-/*
-variable : {
-              "status": {
-                "doc": <human readable description of status code>,
-                "code": <status code>,
-                "name": <name of status code>
-                },
-              "serverts": <server timestamp>,
-              "sourcets": <source timestamp>,
-              "value": <variable value>,
-              "type": <type of variable (or contents for compound variables)>,
-              "id": <id of variable>,
-              "info": <description of variable>
-            }
-*/
+data : data.Source()
+conv : json.ToString()
+out : io.Print()
 
-define CONFIG={
-    "namespace": 1,
-    "parameters": {
-        "FanSpeed": {"address": "FanSpeed", "info": "Speed of fan"},
-        "PumpSpeed": {"address": "PumpSpeed", "info": "Speed of pump"},
-        "Pressure": {"address": "Pressure", "info": "Pressure of some kind"},
-        "TemperatureAnalogItem": {"address": "TemperatureAnalogItem", "info": "Temperature"},
-    }
-}
-opcclient: net.OPCUASubscriber(endpoint="opc.tcp://opcuaserver.com:26543", config=CONFIG)
-
-format: text.Format(fmt="========\n"
-    "Variable: {id}\nValue: {value} ({type})\n"
-    "ServerTimestamp: {serverts}\n"
-    "SourceTimestamp: {sourcets}\n"
-    "CalvinTimestamp: {calvints}\n"
-    "Status: {status.code}, {status.name}, {status.doc}\n"
-    "Information: {info}")
-out: io.Print()
-
-opcclient.variable > format.dict
-format.text > out.token
+data.parameter > conv.data
+conv.string > out.token

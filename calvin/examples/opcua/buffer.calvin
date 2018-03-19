@@ -1,0 +1,9 @@
+num : std.CountTimer()
+buff : data.PersistentBuffer(buffer_id="test", chunk_size=10, interval=1)
+coll : flow.Collect()
+out : io.Print()
+
+num.integer > buff.item
+buff.current > coll.token
+buff.buffered > coll.token
+coll.token > out.token
