@@ -143,7 +143,6 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
         self.watchdog = None
         self.retry_connection = None
         self.subscription = None
-        self.output = open("incoming.data", "w+")
 
         def notify_change(value):
             if not self.running:
@@ -154,7 +153,6 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
             value["calvints"] = time.time()
             value["id"] = paramconfig[value["tag"]]["address"]
             self.values.append(value)
-            self.output.write(json.dumps(value) + "\n")
             self.scheduler_wakeup()
 
         def watchdog(parameter):
@@ -299,10 +297,6 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
 
     def close(self):
         self.running = False
-        try:
-            self.output.close()
-        except IOError:
-            pass
         if self.watchdog:
             self.watchdog.cancel()
         if self.retry_connection:
