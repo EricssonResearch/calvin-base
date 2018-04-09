@@ -74,7 +74,7 @@ class DHT11(BaseDHT11):
         self._read_data_handle.cancel()
         self._read_data_handle = None
         self._humidity = self._humidity_last_reading
-        self.scheduler_wakekup()
+        self.scheduler_wakeup()
 
     def _read_data_cb(self, pin, edge, tick):
         self._edge_ticks.append(tick)
