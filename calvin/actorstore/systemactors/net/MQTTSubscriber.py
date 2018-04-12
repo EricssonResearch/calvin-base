@@ -33,7 +33,7 @@ class MQTTSubscriber(Actor):
     settings is a dictionary with optional arguments :
         {
           "tls": {
-              "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>, 
+              "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>,
               "tls_version": <tls version>, "ciphers": <ciphers>
           },
           "auth": { "username": <username "password": <password> },
@@ -60,7 +60,7 @@ class MQTTSubscriber(Actor):
         return (message,)
 
     action_priority = (read_message, )
-    requires = ['mqtt.publish']
+    requires = ['mqtt.subscribe']
 
 
 #    TBD: Reenable test after updating to use new calvinsys API
