@@ -80,7 +80,7 @@ class ChangeHandler(object):
         # I have no idea what this is
         _log.info("OPCUA Status change: {}".format(status))
 
-class Source(base_calvinsys_object.BaseCalvinsysObject):
+class TaggedSource(base_calvinsys_object.BaseCalvinsysObject):
     """
     Connect to OPCUA server and subscribe to configured parameters
     """
