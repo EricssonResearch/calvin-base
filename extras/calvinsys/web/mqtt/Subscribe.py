@@ -25,7 +25,7 @@ _log = get_logger(__name__)
 
 class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
     """
-    Subscribe to data on given MQTT broker (using paho.mqtt implementation) 
+    Subscribe to data on given MQTT broker (using paho.mqtt implementation)
     """
 
     init_schema = {
@@ -103,7 +103,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
             "transport": {
                 "description": "transport to use",
                 "enum": ["tcp", "websocket"]
-                
+
             },
             "topics": {
                 "description": "topics to subscribe to",
@@ -138,12 +138,12 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
             },
         },
     }
-    
+
     can_write_schema = {
         "description": "Does nothing, always return true",
         "type": "boolean"
     }
-    
+
     write_schema = {
         "description": "Does nothing"
     }
@@ -158,14 +158,14 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
 
         def on_disconnect(client, userdata, rc):
             _log.warning("MQTT broker {}:{} disconnected".format(hostname, port))
-            
+
         def on_message(client, userdata, message):
             self.data.append({"topic": message.topic, "payload": message.payload})
             self.scheduler_wakeup()
-            
+
         def on_subscribe(client, userdata, message_id, granted_qos):
             _log.info("MQTT subscription {}:{} started".format(hostname, port))
-            
+
         # Config
         self.settings = {
             "msg_count": 1,
@@ -178,33 +178,33 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
             "tls": tls,
             "transport": transport
         }
-        
+
         _log.info("TLS: {}".format(tls))
         self.payload_only = payload_only
         self.topics = [(topic.encode("ascii"), qos) for topic in topics]
         self.data = []
-        
+
         self.client = paho.mqtt.client.Client(client_id=client_id, transport=transport)
         self.client.on_connect = on_connect
         self.client.on_disconnect = on_disconnect
         self.client.on_message = on_message
         self.client.on_subscribe = on_subscribe
-        
+
         if will:
             # set will
-            _log.info("Setting will: {}: {}".format(will.get("topic"), will.get("payload")))
+            # _log.info("Setting will: {}: {}".format(will.get("topic"), will.get("payload")))
             self.client.will_set(topic=will.get("topic"), payload=will.get("payload"))
-            
+
         if auth:
             # set auth
-            _log.info("setting auth: {}/{}".format(auth.get("username"), auth.get("password")))
+            # _log.info("setting auth: {}/{}".format(auth.get("username"), auth.get("password")))
             self.client.username_pw_set(username=auth.get("username"), password=auth.get("password"))
 
         if tls:
-            _log.info("setting tls: {} / {} / {}".format(tls.get("ca_certs"), tls.get("certfile"), tls.get("keyfile")))
+            #_log.info("setting tls: {} / {} / {}".format(tls.get("ca_certs"), tls.get("certfile"), tls.get("keyfile")))
             self.client.tls_set(ca_certs=tls.get("ca_certs"), certfile=tls.get("certfile"), keyfile=tls.get("keyfile"))
-            
-        
+
+
         self.client.connect_async(host=hostname, port=port)
         self.client.loop_start()
 
