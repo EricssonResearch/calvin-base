@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2018 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,9 +53,9 @@ class PersistentBuffer(base_calvinsys_object.BaseCalvinsysObject):
             "reporting": {
                 "description": "Log some statistics on buffer at given interval (in seconds)",
                 "type": "number"
-
             }
         },
+        "required": ["buffer_id"],
         "description": "Initialize buffer"
     }
 
