@@ -88,6 +88,10 @@ class TaggedSource(base_calvinsys_object.BaseCalvinsysObject):
     init_schema = {
         "type": "object",
         "properties": {
+            "topic": {
+                "description": "topic to publish parameters under",
+                "type": "string"
+            },
             "endpoint": {
                 "description": "OPC-UA endpoint uri (opc.tcp://<ip:port>)",
                 "type": "string"
@@ -132,7 +136,7 @@ class TaggedSource(base_calvinsys_object.BaseCalvinsysObject):
     }
 
 
-    def init(self, endpoint, paramconfig, namespace, timeout, monitoring_interval, reconnect_interval=5, tags=None):
+    def init(self, endpoint, paramconfig, namespace, timeout, monitoring_interval, reconnect_interval=5, topic="", **kwargs):
         #pylint: disable=W0201
         self.values = {}
         self.running = False
@@ -153,7 +157,7 @@ class TaggedSource(base_calvinsys_object.BaseCalvinsysObject):
             # address = paramconfig[value["tag"]]["address"]
             tag = value.pop("tag")
             param_id = tag
-            self.values.setdefault(param_id, []).append(value)
+            self.values.setdefault(topic + param_id, []).append(value)
             self.scheduler_wakeup()
 
         def watchdog(parameter):
