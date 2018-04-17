@@ -148,7 +148,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Does nothing"
     }
 
-    def init(self, topics, hostname, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False):
+    def init(self, topics, hostname, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
         def on_connect(client, userdata, flags, rc):
             if rc != 0:
                 _log.warning("Connection to MQTT broker {}:{} failed".format(hostname, port))
