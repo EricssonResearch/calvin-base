@@ -72,7 +72,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
 
         if logging_interval is not None:
             # not more frequently than twice a minute
-            self.logging_interval = min(30.0, self.logging_interval)
+            self.logging_interval = max(30.0, self.logging_interval)
 
         self.busy = False
 
