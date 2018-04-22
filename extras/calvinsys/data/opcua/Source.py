@@ -151,10 +151,9 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
             if not self.running:
                 # In the process of closing down, just drop it.
                 return
-            import json
             self.data_changed = True
             value["calvints"] = time.time()
-            value["id"] = paramconfig[value["tag"]]["address"]
+            value["id"] = "ns=" + namespace + ";" + paramconfig[value["tag"]]["address"]
             self.values.append(value)
             self.scheduler_wakeup()
 
