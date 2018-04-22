@@ -85,7 +85,9 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
                 self.stats.reset()
 
         if self.logging_interval:
-        self.stats = async.DelayedCall(self.logging_interval, report)
+            self.stats = async.DelayedCall(self.logging_interval, report)
+        else:
+            self.stats = None
 
     def can_write(self):
         def get_collection():
