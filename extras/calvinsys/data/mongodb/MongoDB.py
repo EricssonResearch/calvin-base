@@ -82,6 +82,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
             try:
                 client = pymongo.MongoClient(self.db_host, self.db_port)
                 coll = client.FaceGrind[self.collection_name]
+                _log.info("Database connection opened successfully")
                 return client, coll
             except Exception as e:
                 _log.error("Failed to open database connection: {}".format(e))
@@ -94,7 +95,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
                 self.busy = False
 
         def error(err):
-            _log.error("There was an issue connecting ot the database: {}".format(err))
+            _log.error("There was an issue connecting to the database: {}".format(err))
 
         if not self.busy and self.client is None and self.collection is None:
             self.busy = True
@@ -127,6 +128,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
                     self.collection = None
             self.scheduler_wakeup()
 
+        print("Inserting documents {}".format(json.dumps(documents, indent=2)))
         self.busy = True
         deferred = threads.defer_to_thread(insert, documents)
         deferred.addCallback(done)
