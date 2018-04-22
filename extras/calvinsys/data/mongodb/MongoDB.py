@@ -105,6 +105,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
                 self.client = client
                 self.collection = collection
                 self.busy = False
+                self.scheduler_wakeup()
 
         def error(err):
             _log.error("There was an issue connecting to the database: {}".format(err))
