@@ -103,7 +103,11 @@ class CalvinSys(object):
         data = kwargs
         data.update(capability['attributes'])
         validate(data, obj.init_schema)
-        obj.init(**data)
+        try:
+            obj.init(**data)
+        except TypeError:
+            _log.exception("Could not open capability '{}'".format(capability_name))
+            print("data: {}".format(data))
         return obj
 
     def schedule_timer(self, timer, timeout):
@@ -154,7 +158,7 @@ class CalvinSys(object):
         try:
             validate(data, obj.can_write_schema)
         except Exception as e:
-            _log.exception("Failed to validate schema, exception={}".format(e))
+            _log.exception("Failed to validate schema for {}.can_write(), exception={}".format(obj.__class__.__name__, e))
         return data
 
     def write(self, ref, data):
@@ -163,7 +167,7 @@ class CalvinSys(object):
             validate(data, obj.write_schema)
             obj.write(data)
         except Exception as e:
-            _log.exception("Failed to validate schema, exception={}".format(e))
+            _log.exception("Failed to validate schema for {}.write(), exception={}".format(obj.__class__.__name__, e))
 
     def can_read(self, ref):
         obj = self._get_capability_object(ref)
@@ -171,7 +175,7 @@ class CalvinSys(object):
         try:
             validate(data, obj.can_read_schema)
         except Exception as e:
-            _log.exception("Failed to validate schema, exception={}".format(e))
+            _log.exception("Failed to validate schema for {}.can_read(), exception={}".format(obj.__class__.__name__, e))
         return data
 
     def read(self, ref):
@@ -180,7 +184,7 @@ class CalvinSys(object):
         try:
             validate(data, obj.read_schema)
         except Exception as e:
-            _log.exception("Failed to validate schema, exception={}".format(e))
+            _log.exception("Failed to validate schema for {}.read(), exception={}".format(obj.__class__.__name__, e))
         return data
 
     def close(self, ref):
