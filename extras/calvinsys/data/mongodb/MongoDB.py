@@ -42,6 +42,10 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
             "collection": {
                 "description": "Name of collection to write to",
                 "type": "string"
+            },
+            "logging_interval": {
+                "description": "How frequently to log data on database updates",
+                "type": "number"
             }
         },
         "required": ["db_host", "collection"]
@@ -57,25 +61,31 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
         "type": "array"
     }
 
-    def init(self, db_host, collection, db_port=27017):
+    def init(self, db_host, collection, db_port=27017, logging_interval=None, *kwargs):
         _log.info("Setup mongodb client")
         self.db_host = db_host
         self.collection_name = collection
         self.db_port = db_port
         self.client = None
         self.collection = None
+        self.logging_interval = logging_interval
+
+        if logging_interval is not None:
+            # not more frequently than twice a minute
+            self.logging_interval = min(30.0, self.logging_interval)
 
         self.busy = False
 
         self.items = 0
 
         def report():
-            _log.info("Storing {:5.2f} items per sec".format(self.items/10.0))
+            _log.info("Storing {:5.2f} items per sec".format(self.items/self.logging_interval))
             self.items = 0
             if self.stats:
                 self.stats.reset()
 
-        self.stats = async.DelayedCall(10, report)
+        if self.logging_interval:
+        self.stats = async.DelayedCall(self.logging_interval, report)
 
     def can_write(self):
         def get_collection():
