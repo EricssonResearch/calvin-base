@@ -54,7 +54,7 @@ class ChangeHandler(object):
                 if not sourcets :
                     sourcets = serverts
             return {
-                "type": data_value.Value.VariantType.name,
+                # "type": data_value.Value.VariantType.name,
                 "value": val,
                 "status": data_value.StatusCode.value,
                 "sourcets": sourcets,
@@ -130,7 +130,10 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
 
     read_schema = {
         "description": "Get next changed parameter",
-        "type": "object"
+        "type": "array",
+        "items": {
+            "type": "object"
+        }
     }
 
 
@@ -293,7 +296,9 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
         return self.running and len(self.values) > 0
 
     def read(self):
-        return self.values.popleft()
+        values = list(self.values)
+        self.values.clear()
+        return values
 
     def close(self):
         self.running = False
