@@ -79,7 +79,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
         self.items = 0
 
         def report():
-            _log.info("Storing {:5.2f} items per sec".format(self.items/self.logging_interval))
+            _log.info("Current rate: {} items in {} seconds ({:5.2f}/sec)".format(self.items, self.logging_interval, self.items/self.logging_interval))
             self.items = 0
             if self.stats:
                 self.stats.reset()
@@ -131,6 +131,8 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
         def done(ok):
             self.busy = False
             if ok:
+                if self.items == 0:
+                    _log.info("S: Stored {} documents in last operation".format(ok))
                 self.items += ok
             else :
                 _log.error("Failed to insert document - reconnecting")
