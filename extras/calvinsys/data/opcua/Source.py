@@ -162,6 +162,9 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 _log.info("{} - incoming {} ({}/sec), sent: {} ({}/sec)".format(incoming, speed_in, outgoing, speed_out))
                 self.stats["current_in"] = 0
                 self.stats["current_out"] = 0
+                if self.stat_logger:
+                    self.stat_logger.reset()
+
             self.stats = {"incoming": 0, "outgoing": 0, "current_in": 0, "current_out": 0}
             self.stat_logger = async.DelayedCall(logging_interval, show_stats)
 
@@ -173,8 +176,9 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
             value["calvints"] = time.time()
             value["id"] = "ns=" + namespace + ";" + paramconfig[value["tag"]]["address"]
             self.values.append(value)
-            self.stats["incoming"] += value
-            self.stats["current_in"] += value
+            if self.stat_logger:
+                self.stats["incoming"] += 1
+                self.stats["current_in"] += 1
             self.scheduler_wakeup()
 
         def watchdog(parameter):
@@ -321,16 +325,23 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
     def read(self):
         values = list(self.values)
         self.values.clear()
-        self.stats["outgoing"] += len(values)
-        self.stats["current_out"] += len(values)
+        if self.stat_logger:
+            self.stats["outgoing"] += len(values)
+            self.stats["current_out"] += len(values)
         return values
 
     def close(self):
         self.running = False
+        if self.stat_logger:
+            self.stat_logger.cancel()
+            self.statlogger = None
         if self.watchdog:
             self.watchdog.cancel()
+            self.watchdog = None
         if self.retry_connection:
             self.retry_connection.cancel()
+            self.retry_connection = None
+
         if self.client:
             self.client.disconnect()
 
