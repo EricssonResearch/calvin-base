@@ -159,7 +159,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 speed_in = self.stats["current_in"]/logging_interval
                 outgoing = self.stats["outgoing"]
                 speed_out = self.stats["current_out"]/logging_interval
-                _log.info("{} - incoming {} ({}/sec), sent: {} ({}/sec)".format(incoming, speed_in, outgoing, speed_out))
+                _log.info("{} - incoming {} ({}/sec), sent: {} ({}/sec)".format(endpoint, incoming, speed_in, outgoing, speed_out))
                 self.stats["current_in"] = 0
                 self.stats["current_out"] = 0
                 if self.stat_logger:
