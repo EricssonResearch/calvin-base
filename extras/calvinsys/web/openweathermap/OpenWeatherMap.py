@@ -24,7 +24,7 @@ _log = get_logger(__name__)
 class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
     """
     OpenWeatherMap - Fetch weather data from https://www.openweathermap.com. If no location is supplied, the runtime decides.
-    
+
     Location is given as "city name,ISO-3166 country code", "city name" or ",ISO-3166 country code" (note comma)
     """
 
@@ -41,14 +41,14 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
             },
             "quantity" : {
                 "type": "string",
-                "enum": ["temperature", "pressure", "humidity"], 
+                "enum": ["temperature", "pressure", "humidity"],
                 "description": "If present, restrict measurement to a single quantity"
             }
         },
         "required": ["appid"],
         "description": "Setup up api key for service"
     }
-    
+
     can_write_schema = {
         "description": "Returns True if location can be selected, otherwise False",
         "type": "boolean"
@@ -63,19 +63,19 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Returns True if weather data on selected location is available",
         "type": "boolean"
     }
-    
+
     read_schema = {
         "description": "Read weather data or selected quantity on location",
         "type" : ["object", "number"]
     }
 
-    def init(self, appid, location=None, quantity=None):
+    def init(self, appid, location=None, quantity=None, *args, **kwargs):
         self._api_key = appid
         self._location = location
         self._quantity = quantity
         self._in_progress = None
         self._data = None
-        
+
         if not self._location:
             self._location = self._guess_location()
 
@@ -84,11 +84,11 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
         city = self.calvinsys._node.attributes.get_indexed_public_with_keys().get("address.locality") or ""
         country = self.calvinsys._node.attributes.get_indexed_public_with_keys().get("address.country") or "SE"
         return "{},{}".format(city, country)
-        
-        
+
+
     def can_write(self):
         return not bool(self._in_progress)
-        
+
     def _filter_data(self, data):
         result = {}
         if self._quantity:
@@ -105,7 +105,7 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
             result['humidity'] = data['main']['humidity']
             result['pressure'] = data['main']['pressure']
         return result
-        
+
     def write(self, location):
         def _no_data(*args, **kwargs):
             self._data = None
@@ -120,12 +120,12 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
 
         if location is None or isinstance(location, bool) :
             # No location given, do we already have one?
-            location = self._location 
+            location = self._location
 
         if not location :
             # no location, cannot continue from here
             return
-            
+
         url = "http://api.openweathermap.org/data/2.5/weather?q={location}&appid={appid}".format(location=location, appid=self._api_key)
         self._in_progress = threads.defer_to_thread(requests.get, url)
         self._in_progress.addCallback(_new_data)
@@ -138,7 +138,7 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
         data = self._data
         self._data = None
         return data
-        
+
     def close(self):
         del self._api_key
         if self._in_progress:
