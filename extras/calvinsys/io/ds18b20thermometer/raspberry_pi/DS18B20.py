@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinsys.io.ds18b20thermometer.BaseDS18B20 import BaseDS18B20
+from extras.calvinsys.io.ds18b20thermometer.BaseDS18B20 import BaseDS18B20
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.async import async
 import glob
@@ -39,7 +39,7 @@ class DS18B20(BaseDS18B20):
             _log.warning("Failed to find device file: {}".format(e))
             device_file = None
         return device_file
-        
+
 
     def _read_temp_raw(self):
         try:
@@ -63,7 +63,7 @@ class DS18B20(BaseDS18B20):
             self._temperature = self._temperature
         else :
             self._in_progress = async.DelayedCall(1.0, self._read_temp)
-        
+
         # clear in_progress
         self._in_progress = None
 
@@ -79,12 +79,12 @@ class DS18B20(BaseDS18B20):
 
     def can_read(self):
         return self._temperature is not None
-        
+
     def read(self):
         temperature = self._temperature
         self._temperature = None
         return temperature
-        
+
     def close(self):
         self._device_file = None
 
